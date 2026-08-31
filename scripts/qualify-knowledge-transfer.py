@@ -26,6 +26,7 @@ def main() -> int:
     parser.add_argument("--input", type=Path)
     parser.add_argument("--files", type=int, choices=(100, 1000, 5000), default=100)
     parser.add_argument("--legacy-cli", action="store_true", help="measure the pre-transfer export/import surface")
+    parser.add_argument("--multi", action="store_true", help="qualify a two-bundle merge with exact overlap")
     parser.add_argument("--require-cross-os", action="store_true", help="refuse same-OS evidence in a cross-platform CI acceptance")
     args = parser.parse_args()
     work = args.work.resolve()
@@ -70,9 +71,8 @@ def main() -> int:
     def save() -> None:
         (work / "receipt.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    try:
-        user = work / "사용자 지식 with spaces"
-        config = user / ".hive/config/user-setup.yml"
+    def initialize_user(path: Path) -> Path:
+        config = path / ".hive/config/user-setup.yml"
         config.parent.mkdir(parents=True)
         config.write_text(json.dumps({
             "schema_version": 1, "interface_language": "en",
@@ -82,38 +82,82 @@ def main() -> int:
             "usage_guard": {"enabled": True, "stop_remaining_percent": 20,
                             "codexbar_fallback_enabled": True, "discord": {"enabled": False}},
         }), encoding="utf-8", newline="\n")
-        wiki = user / ".hive/knowledge/Wiki"
+        wiki = path / ".hive/knowledge/Wiki"
         wiki.mkdir(parents=True)
+        return wiki
+
+    def write_pages(wiki: Path, indices: range) -> dict[str, str]:
+        for index in indices:
+            page_id = f"transfer-{index:05d}"
+            text = (f"---\nschema_version: 1\nid: {page_id}\nkind: concept\nsummary: 이동 지식 {index}\n"
+                    "tags: [transfer]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\n"
+                    "created_at: '2026-08-01T00:00:00Z'\nupdated_at: '2026-08-01T00:00:00Z'\n---\n\n"
+                    f"Portable knowledge anchor{index:05d}. 한글 원문·수치 {index} 보존.\n")
+            (wiki / f"{page_id}.md").write_text(text, encoding="utf-8", newline="\n")
+        return {p.name: digest(p.read_bytes()) for p in sorted(wiki.glob("*.md"))}
+
+    try:
         if args.mode == "produce":
-            for index in range(args.files):
-                page_id = f"transfer-{index:05d}"
-                text = (f"---\nschema_version: 1\nid: {page_id}\nkind: concept\nsummary: 이동 지식 {index}\n"
-                        "tags: [transfer]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\n"
-                        "created_at: '2026-08-01T00:00:00Z'\nupdated_at: '2026-08-01T00:00:00Z'\n---\n\n"
-                        f"Portable knowledge anchor{index:05d}. 한글 원문·수치 {index} 보존.\n")
-                (wiki / f"{page_id}.md").write_text(text, encoding="utf-8", newline="\n")
-            call("knowledge", "refresh", "--user-root", str(user))
-            archive = work / "portable.hivekb"
-            command = ("knowledge", "export") if args.legacy_cli else ("knowledge", "transfer", "export", "--apply")
-            exported = call(*command, "--user-root", str(user), "--scope", "all-portable", "--bundle", str(archive))
-            inventory = {p.name: digest(p.read_bytes()) for p in sorted(wiki.glob("*.md"))}
-            expected = {"producer_os": platform.system(), "files": inventory,
-                        "archive_sha256": exported["archive_sha256"]}
+            user = work / "사용자 지식 with spaces"
+            wiki = initialize_user(user)
+            if args.multi:
+                first_user = work / "computer-a knowledge"
+                second_user = work / "computer-b knowledge"
+                first_wiki = initialize_user(first_user)
+                second_wiki = initialize_user(second_user)
+                overlap = max(1, args.files // 10)
+                first_inventory = write_pages(first_wiki, range(0, args.files // 2 + overlap))
+                second_inventory = write_pages(second_wiki, range(args.files // 2, args.files))
+                call("knowledge", "refresh", "--user-root", str(first_user))
+                call("knowledge", "refresh", "--user-root", str(second_user))
+                command = ("knowledge", "export") if args.legacy_cli else ("knowledge", "transfer", "export", "--apply")
+                first_archive = work / "portable-a.hivekb"
+                second_archive = work / "portable-b.hivekb"
+                first_export = call(*command, "--user-root", str(first_user), "--scope", "all-portable", "--bundle", str(first_archive))
+                second_export = call(*command, "--user-root", str(second_user), "--scope", "all-portable", "--bundle", str(second_archive))
+                expected = {"producer_os": platform.system(),
+                            "files": {**first_inventory, **second_inventory},
+                            "archives": {"portable-a.hivekb": first_export["archive_sha256"],
+                                         "portable-b.hivekb": second_export["archive_sha256"]}}
+                report["export"] = {"first": first_export, "second": second_export}
+            else:
+                inventory = write_pages(wiki, range(args.files))
+                call("knowledge", "refresh", "--user-root", str(user))
+                archive = work / "portable.hivekb"
+                command = ("knowledge", "export") if args.legacy_cli else ("knowledge", "transfer", "export", "--apply")
+                exported = call(*command, "--user-root", str(user), "--scope", "all-portable", "--bundle", str(archive))
+                expected = {"producer_os": platform.system(), "files": inventory,
+                            "archive_sha256": exported["archive_sha256"]}
+                report["export"] = exported
             (work / "expected.json").write_text(json.dumps(expected, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            report["export"] = exported
         else:
             if not args.input:
                 parser.error("consume requires --input containing portable.hivekb and expected.json")
             expected = json.loads((args.input / "expected.json").read_text(encoding="utf-8"))
             if args.require_cross_os and expected["producer_os"] == platform.system():
                 raise RuntimeError("cross-OS acceptance cannot use a same-OS producer")
-            archive = (args.input / "portable.hivekb").resolve(strict=True)
-            if digest(archive.read_bytes()) != expected["archive_sha256"]:
-                raise RuntimeError("archive changed during machine-to-machine handoff")
-            if args.legacy_cli:
-                call("knowledge", "import", "--dry-run", "--user-root", str(user), "--bundle", str(archive))
-                imported = call("knowledge", "import", "--apply", "--user-root", str(user), "--bundle", str(archive))
+            user = work / "사용자 지식 with spaces"
+            wiki = initialize_user(user)
+            if args.multi:
+                archives = []
+                for name, expected_digest in expected["archives"].items():
+                    archive = (args.input / name).resolve(strict=True)
+                    if digest(archive.read_bytes()) != expected_digest:
+                        raise RuntimeError("archive changed during machine-to-machine handoff")
+                    archives.append(archive)
+                preview = call("knowledge", "transfer", "merge", "preview", "--user-root", str(user),
+                               "--bundle", str(archives[0]), "--bundle", str(archives[1]))
+                if preview["merge"]["conflict_paths"] or preview["merge"]["semantic_candidates"]:
+                    raise RuntimeError("synthetic multi-bundle fixture unexpectedly needs review")
+                imported = call("knowledge", "transfer", "merge", "apply", "--user-root", str(user),
+                                "--bundle", str(archives[1]), "--bundle", str(archives[0]),
+                                "--preview-digest", preview["merge_preview_digest"])
+                if not imported["import"]["transfer"]["complete"]:
+                    raise RuntimeError("FTS not ready after merged import")
             else:
+                archive = (args.input / "portable.hivekb").resolve(strict=True)
+                if digest(archive.read_bytes()) != expected["archive_sha256"]:
+                    raise RuntimeError("archive changed during machine-to-machine handoff")
                 preview = call("knowledge", "transfer", "import", "--preview", "--user-root", str(user), "--bundle", str(archive),
                                "--expected-sha256", expected["archive_sha256"])
                 imported = call("knowledge", "transfer", "import", "--apply", "--user-root", str(user), "--bundle", str(archive),

@@ -207,3 +207,5 @@
 | [passed](runs/20260831T093728-9a78d3be1fba.md) | 5천파일 여러 지식 묶음 통합 측정 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T093920-231a8d4be44f.md) | 여러 지식 묶음 안내·사실 문서 검사 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T093921-9baa01006691.md) | Python conformance: documentation | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T094150-d21a5c2855aa.md) | 여러 지식 묶음 CI 계약 회귀 | a1513be2ed7a10d5e7b67951146bbe4f96d5bbca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T094156-382746b74e52.md) | 여러 지식 묶음 실행기 문법 검사 | a1513be2ed7a10d5e7b67951146bbe4f96d5bbca | Windows-11-10.0.26200-SP0 |

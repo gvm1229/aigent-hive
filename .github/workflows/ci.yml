@@ -251,12 +251,13 @@ jobs:
         with:
           toolchain: stable
       - run: python scripts/test-artifacts.py run --purpose '교차 운영체제 이전 바이너리' --path target/debug --command cargo build -p hive-cli --locked
-      - run: python scripts/test-artifacts.py run --purpose '운영체제 간 전달할 동일 묶음 생성' --path tests/work/transfer-producer --command python scripts/qualify-knowledge-transfer.py produce --hive ${{ matrix.binary }} --work tests/work/transfer-producer
+      - run: python scripts/test-artifacts.py run --purpose '운영체제 간 여러 묶음 통합 자료 생성' --path tests/work/transfer-producer --command python scripts/qualify-knowledge-transfer.py produce --multi --hive ${{ matrix.binary }} --work tests/work/transfer-producer
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: transfer-${{ matrix.os }}
           path: |
-            tests/work/transfer-producer/portable.hivekb
+            tests/work/transfer-producer/portable-a.hivekb
+            tests/work/transfer-producer/portable-b.hivekb
             tests/work/transfer-producer/expected.json
             tests/work/transfer-producer/receipt.json
           if-no-files-found: error
@@ -295,7 +296,7 @@ jobs:
           name: transfer-${{ matrix.producer }}
           path: tests/work/transfer-input
       - run: python scripts/test-artifacts.py run --purpose '이전 수신 바이너리' --path target/debug --command cargo build -p hive-cli --locked
-      - run: python scripts/test-artifacts.py run --purpose '다른 운영체제의 동일 묶음 복원' --path tests/work/transfer-consumer --command python scripts/qualify-knowledge-transfer.py consume --hive ${{ matrix.binary }} --work tests/work/transfer-consumer --input tests/work/transfer-input --require-cross-os
+      - run: python scripts/test-artifacts.py run --purpose '다른 운영체제의 여러 묶음 통합 복원' --path tests/work/transfer-consumer --command python scripts/qualify-knowledge-transfer.py consume --multi --hive ${{ matrix.binary }} --work tests/work/transfer-consumer --input tests/work/transfer-input --require-cross-os
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
