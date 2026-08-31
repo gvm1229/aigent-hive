@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import runpy
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -16,6 +18,84 @@ import yaml
 ROOT = Path(__file__).resolve().parents[3]
 NOTIFIER = ROOT / "scripts/publish-stable-discord-update.py"
 WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
+REGISTRAR_PATH = ROOT / "scripts/register-stable-summary-approval.py"
+REGISTRAR = runpy.run_path(str(REGISTRAR_PATH))
+
+
+class StableSummaryApprovalRegistration(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.summary = self.root / "docs/releases/0.10.0.subscriber.ko.md"
+        self.summary.parent.mkdir(parents=True)
+        self.summary.write_bytes("# Aigent Hive v0.10.0 업데이트 내역:\n\n- 승인 문구\n".encode())
+        self.digest = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval = self.summary.with_suffix(".sha256")
+        self.approval.write_text(f"{self.digest}  {self.summary.name}\n", encoding="utf-8")
+
+    def register(self, digest: str | None = None, version: str = "0.10.0") -> dict[str, str]:
+        return REGISTRAR["register_approval"](
+            version, self.digest if digest is None else digest, self.root
+        )
+
+    def test_registers_approved_digest_without_rewriting_or_sending(self) -> None:
+        before = (self.summary.read_bytes(), self.approval.read_bytes())
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as command:
+            self.assertEqual(self.register()["status"], "registered")
+        self.assertEqual(command.call_count, 1)
+        self.assertEqual(command.call_args.args[0], [
+            "gh", "secret", "set", "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST",
+            "--repo", "gvm1229/aigent-hive", "--env", "release-publication",
+        ])
+        self.assertEqual(command.call_args.kwargs["input"], self.digest)
+        self.assertEqual(before, (self.summary.read_bytes(), self.approval.read_bytes()))
+
+    def test_rewriting_both_files_cannot_replace_the_approved_digest(self) -> None:
+        self.summary.write_bytes(self.summary.read_bytes().replace("승인".encode(), "변경".encode()))
+        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
+        with patch("subprocess.run") as command:
+            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "externally approved"):
+                self.register()
+            command.assert_not_called()
+
+    def test_invalid_digest_or_version_never_contacts_github(self) -> None:
+        for digest, version in (("", "0.10.0"), ("invalid", "0.10.0"), (self.digest, "0.10.0-test.1")):
+            with self.subTest(digest=digest, version=version), patch("subprocess.run") as command:
+                with self.assertRaises(REGISTRAR["NotificationError"]):
+                    self.register(digest, version)
+                command.assert_not_called()
+
+    def test_title_must_match_version_even_if_digest_is_valid(self) -> None:
+        self.summary.write_bytes(self.summary.read_bytes().replace(b"0.10.0", b"0.9.5"))
+        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
+        with patch("subprocess.run") as command:
+            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "title does not match"):
+                self.register(changed)
+            command.assert_not_called()
+
+    def test_registration_failure_is_not_success_or_disclosure(self) -> None:
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1, stderr="private-detail")):
+            with self.assertRaises(REGISTRAR["NotificationError"]) as error:
+                self.register()
+        self.assertIn("registration failed", str(error.exception))
+        self.assertNotIn("private-detail", str(error.exception))
+
+    def test_timeout_and_missing_gh_preserve_retry_with_same_approval(self) -> None:
+        for error in (FileNotFoundError("private-detail"), subprocess.TimeoutExpired("gh", 30)):
+            with self.subTest(error=type(error).__name__), patch("subprocess.run", side_effect=error):
+                with self.assertRaisesRegex(REGISTRAR["NotificationError"], "retry the same approved digest"):
+                    self.register()
+
+    def test_cli_requires_explicit_digest(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(REGISTRAR_PATH), "--product-version", "0.10.0"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--approved-digest", result.stderr)
 
 
 class RecordingServer(ThreadingHTTPServer):
