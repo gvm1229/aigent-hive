@@ -245,3 +245,5 @@
 | [passed](runs/20260831T145953-396a5baf44be.md) | 공개 벡터 최초 설정 수용 검사 정적 계약 | 421a335a860551f0de557f17bfdc2e4a1ac8bdcc | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T150145-be82f1636d33.md) | 공개 벡터 최초 설정 release lane 회귀 | df6a94f25752090e29d44194c90d489356274540 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T150146-64a2f3506803.md) | Python conformance: release | df6a94f25752090e29d44194c90d489356274540 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T151355-bca2f6a84e2a.md) | 벡터 최초 설정 Source graph 자격 실패 재현 | 5f4239299a0c4309bf366223aa37bfc3c97ee052 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T151444-41c6ac22e0e7.md) | 벡터 최초 설정 Source graph 자격 재검증 | 5f4239299a0c4309bf366223aa37bfc3c97ee052 | Windows-11-10.0.26200-SP0 |
