@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -51,6 +52,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self,
         version: str = "0.9.5",
         summary_text: str | None = None,
+        approval_text: str | None = None,
         validate_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
@@ -59,6 +61,12 @@ class StableReleaseDiscordNotification(unittest.TestCase):
             summary.write_text(
                 summary_text
                 or "# Aigent Hive v0.9.5 업데이트 내역:\n\n- 설치 확인 개선\n- 지식 보호 강화\n",
+                encoding="utf-8",
+            )
+            approval = root / "summary.md.sha256"
+            approval.write_text(
+                approval_text
+                or f"sha256:{hashlib.sha256(summary.read_bytes()).hexdigest()}  summary.md\n",
                 encoding="utf-8",
             )
             banner = root / "hive-readme-banner-ko.png"
@@ -75,6 +83,8 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 version,
                 "--summary",
                 str(summary),
+                "--summary-approval",
+                str(approval),
                 "--banner",
                 str(banner),
                 "--allow-insecure-test-webhook",
@@ -113,6 +123,24 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertNotIn("http://", result.stderr)
         self.assertNotIn("/api/webhooks/", result.stderr)
         self.assertEqual(len(self.server.requests), 1)
+
+    def test_tampered_approved_summary_blocks_before_the_banner(self) -> None:
+        result = self.run_notifier(
+            summary_text="# Aigent Hive v0.9.5 업데이트 내역:\n\n- 승인 문구 변경\n",
+            approval_text="sha256:" + "0" * 64 + "  summary.md\n",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("approved digest", result.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_approval_must_bind_the_selected_summary_filename(self) -> None:
+        result = self.run_notifier(
+            approval_text="sha256:" + "0" * 64 + "  another-summary.md\n",
+            validate_only=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("approval does not bind", result.stderr)
+        self.assertEqual(self.server.requests, [])
 
     def test_nested_examples_reach_the_local_receiver_without_reformatting(self) -> None:
         summary = (
@@ -174,11 +202,26 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(self.server.requests), 2)
 
+    def test_approved_v010_payload_is_bound_to_its_checked_in_digest(self) -> None:
+        summary = ROOT / "docs/releases/0.10.0.subscriber.ko.md"
+        approval = ROOT / "docs/releases/0.10.0.subscriber.ko.sha256"
+        expected = (
+            "sha256:5cad1a39245f8d513a0133f70d8666d65f7c50bd32efc5118fec26bc2eaece37"
+            "  0.10.0.subscriber.ko.md\n"
+        )
+        self.assertEqual(approval.read_text(encoding="utf-8"), expected)
+        namespace = __import__("runpy").run_path(str(NOTIFIER))
+        self.assertEqual(
+            namespace["read_summary"](summary, "0.10.0", approval),
+            summary.read_text(encoding="utf-8").strip(),
+        )
+
     def test_publication_workflow_invokes_the_notifier_only_after_release_creation(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL", workflow)
         self.assertIn("if: ${{ inputs.channel == 'stable' }}", workflow)
         self.assertIn("--validate-only", workflow)
+        self.assertIn("--summary-approval", workflow)
         self.assertIn("scripts/publish-stable-discord-update.py", workflow)
         self.assertLess(workflow.index("--validate-only"), workflow.index("npm publish"))
         self.assertLess(workflow.index("gh release create"), workflow.index("Send stable Discord"))

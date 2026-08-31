@@ -309,6 +309,7 @@ jobs:
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
             --banner "docs/assets/branding/hive-readme-banner-ko.png" \
             --validate-only
       - name: Verify stable Skill history before publication
@@ -476,4 +477,5 @@ jobs:
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
             --banner "docs/assets/branding/hive-readme-banner-ko.png"
