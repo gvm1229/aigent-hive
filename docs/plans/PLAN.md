@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 302
-> 기준일: 2026-08-29
+> Revision: 303
+> 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 수용된 공개 시험: `0.10.0-test.6`
-> 현재 단계: 벡터 포함 공개 수용 완료, 안정판 제외. 별도 소스 산출물 정리는 다른 작업 소유
+> 현재 단계: 지식 이전 구현·교차 운영체제 검증, 안정판 제외
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -44,7 +44,7 @@
 
 ## 현재 연속 실행 경계
 
-- 현재 우선 요청: `VCF10-*` 지침 교정·검증·로컬 커밋. 지식 이전의 후속 구현·병합은 별도 보류
+- 현재 승인: `KTX10-*` 구현·검증·`develop` 병합·번호 시험판. 저장소의 수정된 `verified-workflow` 사용
 - 검증형 실행 적용 주장: 실제 작업에 연결된 실행 생성·검증 근거 필수
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
@@ -65,7 +65,7 @@
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
 | Vector onboarding | 0 | 8 | 0% |
-| Knowledge transfer | 2 | 5 | 28.6% |
+| Knowledge transfer | 5 | 2 | 71.4% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -78,7 +78,7 @@
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **119** | **20** | **85.6%** |
+| **합계** | **122** | **17** | **87.8%** |
 
 ## Required load order
 
