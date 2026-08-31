@@ -671,24 +671,32 @@ fn save_feature_answers(
     existing: Option<&[u8]>,
     answers: &UserFeatureAnswers,
 ) -> Result<(), SetupError> {
-    let mut desired = format!("schema_version: {}\n", answers.schema_version);
+    let mut desired = "schema_version: ".to_owned();
+    desired.push_str(&answers.schema_version.to_string());
+    desired.push('\n');
     if let Some(answer) = answers.vector_search {
         let answer = match answer {
             VectorFeatureAnswer::Yes => "yes",
             VectorFeatureAnswer::No => "no",
         };
-        desired.push_str(&format!("vector_search: \"{answer}\"\n"));
+        desired.push_str("vector_search: \"");
+        desired.push_str(answer);
+        desired.push_str("\"\n");
     }
     if let Some(introduced_in) = &answers.introduced_in {
-        desired.push_str(&format!("introduced_in: \"{introduced_in}\"\n"));
+        desired.push_str("introduced_in: \"");
+        desired.push_str(introduced_in);
+        desired.push_str("\"\n");
     }
     if let Some(answered_at_unix) = answers.answered_at_unix {
-        desired.push_str(&format!("answered_at_unix: {answered_at_unix}\n"));
+        desired.push_str("answered_at_unix: ");
+        desired.push_str(&answered_at_unix.to_string());
+        desired.push('\n');
     }
     if let Some(question_claimed_at_unix) = answers.question_claimed_at_unix {
-        desired.push_str(&format!(
-            "question_claimed_at_unix: {question_claimed_at_unix}\n"
-        ));
+        desired.push_str("question_claimed_at_unix: ");
+        desired.push_str(&question_claimed_at_unix.to_string());
+        desired.push('\n');
     }
     super::user_install::replace_user_setup_file(
         root,
