@@ -29,7 +29,8 @@
 ## 현재 실행 제외
 
 - `REL10-005–007`: 유지보수자 명시 제외. `0.10.0` 안정판 protected `main` 후보·게시·설치·승인 작업 시작 금지
-- `REL10-001–004`: 벡터 포함 test.6으로 재수용 완료. [정확한 근거와 한계](../../research/vector-public-test6-2026-08-29.md)
+- `REL10-001–004`: 벡터 최초 설정 안내의 현재 미완료 항목. 과거 [test.6 수용](../../research/vector-public-test6-2026-08-29.md)은 당시 범위의 근거만 보존
+- 지식 이전 `KTX10-*`: [test.7 공개 설치](../../../tests/results/knowledge-transfer-public-test7-2026-08-31.md) 수용 완료. 벡터 최초 설정 안내의 전체 완료 근거로 대체 금지
 
 ## 비벡터 수정 수용
 

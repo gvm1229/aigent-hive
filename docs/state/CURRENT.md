@@ -2,12 +2,12 @@
 
 - 작업 브랜치: `develop`
 - 제품 버전: `0.10.0`
-- 공개 시험판: `0.10.0-test.6`, 배포일 2026-08-29
-- 제품 수용 소스: `d331dc879cf51eab078c5e189b2fe7b8d729e541`
+- 공개 시험판: `0.10.0-test.7`, 배포일 2026-08-31
+- 제품 수용 소스: `75a803a7a85c0e136119dc4eff06143e09b9e832`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
 - 지식 이전: PR #41로 `develop@e1890c87` 병합. 기능 브랜치 원격·로컬 삭제, main·develop만 유지
-- `KTX10-001–006` 완료, `KTX10-007` 번호 시험판 공개 설치 수용 진행
+- `KTX10-001–007` 완료. 벡터 최초 설정 안내 `VON10-*`와 관련 출시 항목은 별도 미완료
 - 검증형 작업: 사용자 승인한 저장소의 수정된 Skill과 소스 종료 정책 적용. 전역 설치 변경·host 실행 graph 활성화 주장 없음
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
@@ -17,12 +17,12 @@
 - 파일·대상 원문 지문을 쓰기 잠금 안에서 재대조, 충돌 제외와 재시도 보존 회귀 13개 통과
 - 이전별 벡터 예·아니요·취소와 전역 설정 보존, 실제 모델 8개 원문 재생성과 완성 색인 재사용 통과
 - 프로젝트 사용자 지정 설정의 옛 Skill 대장 수정, `hive-render` 63개 통과. 과거 안정판 기준 파일 불변
-- Windows 100·1,000·5,000개 작은 Markdown의 원문·FTS 복원 확인. 같은 배포 빌드 조건의 변경 전후 측정 진행
+- Windows 100·1,000·5,000개 작은 Markdown의 원문·FTS 복원과 [동일 조건 변경 전후 측정](../../tests/results/knowledge-transfer-2026-08-31.md) 완료
 - [동일 묶음의 Windows→macOS/Linux, macOS→Windows 수용](../../tests/results/knowledge-transfer-cross-os-2026-08-31.md) 통과. CI `33366642438` 전체 성공
 
 - 연속 실행 지침: 실제 실행 근거·시도 중단과 전체 종료 구분·소스 경로·종료 결과 대조. [검증 결과와 한계](../../tests/results/continuation-directive-repair.md)
 - Windows 실행 계약 40개 통과·POSIX 전용 3개 제외, 제품 투영 38개 통과. 실제 호스트 종료 차단·응용 프로그램 재시작 검증 제외
-- Wiki 옛 Skill 경로와 계획 문체 오류 수정. 변경 원본을 참조한 지문 정합화 진행
+- Wiki 옛 Skill 경로와 계획 문체 오류 수정. 변경 원본 지문 정합화·Wiki 오류와 경고 0건
 - 출시 집계: 현재 체크리스트의 재개방된 `REL10-001–004` 반영. 과거 `test.6` 수용을 새 변경 완료로 집계 금지
 
 - 벡터 전용 브랜치 구현을 `develop`에 통합
@@ -35,18 +35,17 @@
 
 | 단계 | 실행 | 결과 |
 | --- | --- | --- |
-| 전체 CI | `33190877319` | Linux 전체 Rust·Python, Windows/macOS 시험, 문서·보안 통과 |
-| 후보 | `33191658413` | Windows x64·Mac 두 아키텍처·Linux 두 musl 아키텍처 및 npm 묶음 통과 |
-| 게시 | `33193036233` | 정확한 후보 파일로 `test.6` 게시, 안정 채널 불변 |
-| 공개 설치 | `33193323751` | Windows x64·macOS arm64·Linux musl x64의 실제 공개 바이너리 수용 통과 |
+| 구현 CI | `33366642438` | 전체 필수 검사·세 방향 교차 운영체제 이전 통과, PR #41 병합 |
+| 후보 | `33367751906` | Windows x64·Mac 두 아키텍처·Linux 두 musl 아키텍처 및 npm 묶음 통과 |
+| 게시 | `33368655619` | 정확한 후보 파일로 `test.7` 게시, 안정 채널 불변 |
+| 공개 설치 | `33369217961` | Windows x64·macOS arm64·Linux musl x64의 실제 공개 바이너리 수용 통과 |
 
-- npm 정확 버전·시험 채널과 GitHub 시험판 태그 독립 확인. 바이너리·원본 영수증 지문은 [수용 대장](../research/evidence/vector-public-test6-2026-08-29.json) 참조
+- npm 정확 버전·시험 채널과 GitHub 시험판 태그 독립 확인. 바이너리·원본 결과 지문은 [test.7 수용 대장](../../tests/results/knowledge-transfer-public-test7-2026-08-31.md) 참조
 - 공통: 한국어 활성 규칙·잘못된 규칙 거부·언어 팩 복구, 실제 임베딩·의미 인용·손상 시 FTS 복귀·비활성화·이전 세대 복구
 - 새 루트 원문 8개 복원·벡터 재생성, 공유 모음 3개·24청크 증분, 소스 81청크의 첫 생성과 새 생성 2회의 재개 관찰
 - 원본·FTS 보존, 묶음 파일에 벡터 포함 0건. Windows의 이미 할당된 실제 모델 자식 취소·복구 통과
-- 로컬 Windows 전체 Rust 893개 통과·수동 실행 전용 4개 제외
-- 로컬 Windows 전체 Python 789개: 748 통과·41 조건부 건너뜀·실패/누락 0개. 조건: symlink 권한, POSIX/macOS 전용 동작, 호스트 설정
-- 목록 대조: `tests/work/scope-audit-20260828/vector-test6-reconciled-tests.json`
+- 로컬 Windows 전체 Rust 900개 통과·수동 실행 전용 4개 제외. Python 다섯 lane와 수정 release lane 재실행 통과, 정확 기능 소스의 원격 전체 CI 성공
+- 이전 test.6의 시험 수·바이너리·원본 결과 지문: [당시 수용 기록](../research/vector-public-test6-2026-08-29.md). 새 제품의 검사 수와 혼합 금지
 - 비벡터 test.4와 취소된 test.3/test.5는 과거 기록. 현재 제품 수용의 대체 근거로 사용 금지
 
 ## 수용한 성능과 범위
@@ -70,7 +69,7 @@ Windows 합성 5만 청크·100모음 기준. [승인 정책](../research/vector
 ## 미증명 범위와 다음 작업
 
 - 요청 사이 모델 유지 방식의 warm 500ms: 미측정·범위 제외, 통과로 표시 금지
-- 새 루트 가져오기는 실제 실행. 한 묶음 파일을 물리 기기 사이에 전송하는 실험과 구분
+- 새 루트 공개 설치 검사와 세 방향 CI의 동일 묶음 전달 모두 실제 실행. 사용자 USB·네트워크 장치의 물리 전달 품질 검증 제외
 - Unix의 실제 모델 자식 취소, Windows 생성→Job 할당의 원자성, 모든 PC의 동일 성능: 이번 공개 수용에서 미증명
 - Intel Mac·Linux arm64 CLI 빌드와 벡터 설치 수용은 구분. Alpine musl Python은 현재 벡터 미지원
 - 실제 사용자 지식 변환·전역 벡터 설치 없음. 수용 대상은 격리 합성 자료
