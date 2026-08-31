@@ -51,6 +51,7 @@
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | Nested project scan `0.10.0` 범위 | [en](en/nested-project-scan-0-10.md) | [ko](ko/nested-project-scan-0-10.md) |
 | 전역 지식 번들 이전 | [en](en/global-knowledge-bundle-transfer.md) | [ko](ko/global-knowledge-bundle-transfer.md) |
+| 컴퓨터 간 지식 이전 | [en](en/knowledge-transfer-workflow.md) | [ko](ko/knowledge-transfer-workflow.md) |
 | 명시 프로젝트 간 지식 접근 | [en](en/knowledge-cross-project-access.md) | [ko](ko/knowledge-cross-project-access.md) |
 | 검토 지식 스캔 검증 정합성 | [en](en/source-knowledge-scan-validation.md) | [ko](ko/source-knowledge-scan-validation.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |

@@ -22,5 +22,5 @@ status: active
 
 독립 한국어 페이지 2개: Hive 핵심 기능과 간단한 stable 설치 경로.
 정본 logo, 960 px 구조, 벌집 금색 `#F5A623`; 각 HTML의 PNG 원본 byte 1회 내장, network·file-relative resource 0건.
-핵심 기능 지식 흐름: `(knowledge-capture)` 기록, `(knowledge-recall)` 조회, `(knowledge-scan)` 저장소 스캔, `(knowledge-promote)` 공유, `(knowledge-maintain)` 정비.
+공개 안정판 안내의 지식 흐름: `(knowledge-capture)` 기록, `(knowledge-recall)` 조회, `(knowledge-import)` 저장소 스캔, `(knowledge-promote)` 공유, `(knowledge-maintain)` 정비.
 설치 3단계: 단일·CSV·반복 `--host`, 전체 preflight와 부분 실패 JSON.
