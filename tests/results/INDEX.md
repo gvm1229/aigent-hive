@@ -189,3 +189,11 @@
 | [failed](runs/20260831T091558-47c6d0aa9cf0.md) | 여러 지식 묶음 FTS 생성 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T091616-378f800ea758.md) | 여러 지식 묶음 단일 FTS 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T091710-90a295f01983.md) | 검토형 의미 중복 여러 묶음 통합 회귀 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092237-3ee62806d184.md) | 여러 지식 묶음 Skill 투영 회귀 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092448-a09858c7b4c7.md) | 수정본 충돌 선택 통합 컴파일 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092519-477bff2bc968.md) | 수정본 충돌 선택 통합 단위 회귀 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092626-4abb6ce3cf96.md) | 수정본 선택 여러 묶음 CLI 컴파일 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092649-b5e5cca6612d.md) | 여러 지식 묶음 Skill 투영 재검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092653-03cf786a4d67.md) | 여러 지식 묶음 문서·schema 계약 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092734-e64165fe5c9d.md) | 세 묶음 수정본 선택 회귀 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T092845-c3824f188b52.md) | 여러 묶음 모음 대장 통합 컴파일 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |

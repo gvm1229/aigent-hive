@@ -236,6 +236,24 @@ pub struct BundleMergeCandidate {
     pub paths: Vec<String>,
 }
 
+/// One selectable canonical variant for a same-path conflict.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleMergeVariant {
+    /// Exact canonical payload digest.
+    pub sha256: String,
+}
+
+/// A canonical path with two or more divergent validated payload variants.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleMergeConflict {
+    /// Portable path requiring an explicit reviewed selection.
+    pub path: String,
+    /// Available exact payload variants in digest order.
+    pub variants: Vec<BundleMergeVariant>,
+}
+
 /// Host-reviewed disposition for one semantic merge candidate.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "action", rename_all = "kebab-case")]
@@ -251,6 +269,13 @@ pub enum BundleMergeDecision {
         candidate_id: String,
         /// One canonical portable Wiki path retained as active knowledge.
         primary_path: String,
+    },
+    /// Select one same-path canonical Wiki variant after a user-resolved conflict.
+    Choose {
+        /// Portable path from [`BundleMergeConflict`].
+        path: String,
+        /// SHA-256 of the selected canonical variant.
+        selected_sha256: String,
     },
 }
 
@@ -269,9 +294,12 @@ pub struct BundleMergePreview {
     pub exact_duplicate_count: usize,
     /// Canonical entries that cannot be selected automatically.
     pub conflict_paths: Vec<String>,
+    /// Selectable same-path payload variants. Other conflict types remain blocked.
+    pub conflicts: Vec<BundleMergeConflict>,
     /// Same-fact candidates requiring host review.
     pub semantic_candidates: Vec<BundleMergeCandidate>,
     request: BundleRequest,
+    conflicting_entries: BTreeMap<String, Vec<BundleEntryInput>>,
 }
 
 impl BundleMergePreview {
@@ -296,6 +324,7 @@ impl BundleMergePreview {
                 &self.archive_sha256s,
                 entries,
                 &self.conflict_paths,
+                &self.conflicts,
                 &self.semantic_candidates,
             ))
             .expect("merge preview values serialize"),
@@ -312,22 +341,48 @@ pub fn apply_bundle_merge_review(
     preview: &BundleMergePreview,
     decisions: &[BundleMergeDecision],
 ) -> Result<BundleRequest, WikiError> {
-    let decision_map = decisions
+    let semantic_decisions = decisions
         .iter()
-        .map(|decision| match decision {
+        .filter_map(|decision| match decision {
             BundleMergeDecision::Separate { candidate_id }
-            | BundleMergeDecision::Equivalent { candidate_id, .. } => (candidate_id, decision),
+            | BundleMergeDecision::Equivalent { candidate_id, .. } => {
+                Some((candidate_id, decision))
+            }
+            BundleMergeDecision::Choose { .. } => None,
         })
         .collect::<BTreeMap<_, _>>();
-    if decision_map.len() != decisions.len()
-        || decision_map.len() != preview.semantic_candidates.len()
+    let conflict_decisions = decisions
+        .iter()
+        .filter_map(|decision| match decision {
+            BundleMergeDecision::Choose { path, .. } => Some((path, decision)),
+            BundleMergeDecision::Separate { .. } | BundleMergeDecision::Equivalent { .. } => None,
+        })
+        .collect::<BTreeMap<_, _>>();
+    if semantic_decisions.len() + conflict_decisions.len() != decisions.len()
+        || semantic_decisions.len() != preview.semantic_candidates.len()
+        || conflict_decisions.len() != preview.conflicts.len()
         || preview
             .semantic_candidates
             .iter()
-            .any(|candidate| !decision_map.contains_key(&candidate.candidate_id))
+            .any(|candidate| !semantic_decisions.contains_key(&candidate.candidate_id))
+        || preview
+            .conflicts
+            .iter()
+            .any(|conflict| !conflict_decisions.contains_key(&conflict.path))
     {
         return Err(WikiError::InvalidInput(
-            "merge review must contain one decision for every semantic candidate".to_owned(),
+            "merge review must contain one decision for every candidate and selectable conflict"
+                .to_owned(),
+        ));
+    }
+    if preview.conflict_paths.iter().any(|path| {
+        !preview
+            .conflicts
+            .iter()
+            .any(|conflict| &conflict.path == path)
+    }) {
+        return Err(WikiError::Conflict(
+            "merge has a non-selectable collection or claim conflict".to_owned(),
         ));
     }
     let mut entries = preview
@@ -337,9 +392,70 @@ pub fn apply_bundle_merge_review(
         .cloned()
         .map(|entry| (entry.relative_path.clone(), entry))
         .collect::<BTreeMap<_, _>>();
+    for conflict in &preview.conflicts {
+        let Some(BundleMergeDecision::Choose {
+            selected_sha256, ..
+        }) = conflict_decisions.get(&conflict.path)
+        else {
+            unreachable!("validated conflict decision shape");
+        };
+        let variants = preview
+            .conflicting_entries
+            .get(&conflict.path)
+            .ok_or_else(|| {
+                WikiError::Verification("merge conflict variants are unavailable".to_owned())
+            })?;
+        let selected = variants
+            .iter()
+            .find(|variant| sha256_digest(&variant.bytes) == *selected_sha256)
+            .ok_or_else(|| {
+                WikiError::InvalidInput("selected merge variant is unavailable".to_owned())
+            })?
+            .clone();
+        if selected.classification != PortableEntryClassification::CanonicalMarkdown {
+            return Err(WikiError::Conflict(
+                "only canonical Wiki conflicts are selectable in a merge review".to_owned(),
+            ));
+        }
+        let (collection_id, leaf, Some(file_name)) = parse_portable_payload_path(&conflict.path)?
+        else {
+            return Err(WikiError::Verification(
+                "merge conflict path is malformed".to_owned(),
+            ));
+        };
+        if leaf != "Wiki" {
+            return Err(WikiError::Conflict(
+                "only portable Wiki conflicts are selectable in a merge review".to_owned(),
+            ));
+        }
+        entries.insert(conflict.path.clone(), selected.clone());
+        for variant in variants {
+            if variant.bytes == selected.bytes {
+                continue;
+            }
+            let original_markdown = String::from_utf8(variant.bytes.clone()).map_err(|error| {
+                WikiError::Verification(format!("conflicting Wiki page is not UTF-8: {error}"))
+            })?;
+            parse_page_bytes(
+                original_markdown.as_bytes(),
+                &format!("{WIKI_RELATIVE}/{file_name}"),
+            )?;
+            let record = MergeProvenance {
+                schema_version: 1,
+                primary_path: conflict.path.clone(),
+                original_path: conflict.path.clone(),
+                original_sha256: sha256_digest(&variant.bytes),
+                original_markdown,
+            };
+            let bytes = serde_json::to_vec(&record).map_err(|error| {
+                WikiError::Io(format!("cannot serialize merge provenance: {error}"))
+            })?;
+            insert_merge_provenance(&mut entries, &collection_id, bytes);
+        }
+    }
     for candidate in &preview.semantic_candidates {
         let Some(BundleMergeDecision::Equivalent { primary_path, .. }) =
-            decision_map.get(&candidate.candidate_id)
+            semantic_decisions.get(&candidate.candidate_id)
         else {
             continue;
         };
@@ -486,6 +602,29 @@ fn render_merge_page(page: &crate::WikiPage) -> Result<Vec<u8>, WikiError> {
         page.body.trim()
     )
     .into_bytes())
+}
+
+fn insert_merge_provenance(
+    entries: &mut BTreeMap<String, BundleEntryInput>,
+    collection_id: &str,
+    bytes: Vec<u8>,
+) {
+    let fingerprint = sha256_digest(&bytes);
+    let file_name = format!(
+        "merge-{}.json",
+        fingerprint
+            .strip_prefix("sha256:")
+            .expect("digest prefix is stable")
+    );
+    let relative_path = portable_merge_path(collection_id, &file_name);
+    entries.insert(
+        relative_path.clone(),
+        BundleEntryInput {
+            relative_path,
+            bytes,
+            classification: PortableEntryClassification::Provenance,
+        },
+    );
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -936,12 +1075,24 @@ pub fn preview_bundle_merge(
     let mut conflicts = Vec::new();
     let mut collections = BTreeMap::<String, PortableCollectionRecord>::new();
     let mut entries = BTreeMap::<String, BundleEntryInput>::new();
+    let mut conflicting_entries = BTreeMap::<String, Vec<BundleEntryInput>>::new();
     let mut claim_paths = BTreeMap::<String, String>::new();
 
     for (_, incoming) in &loaded {
         for collection in &incoming.metadata.collections {
-            match collections.get(&collection.collection_id) {
-                Some(existing) if existing == collection => exact_duplicate_count += 1,
+            match collections.get_mut(&collection.collection_id) {
+                Some(existing) if same_collection_identity(existing, collection) => {
+                    existing.aliases.extend(collection.aliases.iter().cloned());
+                    existing.aliases.sort_by(|left, right| {
+                        folded_alias(left)
+                            .cmp(&folded_alias(right))
+                            .then_with(|| left.cmp(right))
+                    });
+                    existing
+                        .aliases
+                        .dedup_by(|left, right| folded_alias(left) == folded_alias(right));
+                    exact_duplicate_count += 1;
+                }
                 Some(_) => conflicts.push(format!("collections/{}", collection.collection_id)),
                 None => {
                     collections.insert(collection.collection_id.clone(), collection.clone());
@@ -967,6 +1118,19 @@ pub fn preview_bundle_merge(
                     claim_paths.insert(claim_id.clone(), payload.relative_path.clone());
                 }
             }
+            if let Some(variants) = conflicting_entries.get_mut(&payload.relative_path) {
+                if !variants
+                    .iter()
+                    .any(|variant| variant.bytes == payload.bytes)
+                {
+                    variants.push(BundleEntryInput {
+                        relative_path: payload.relative_path.clone(),
+                        bytes: payload.bytes.clone(),
+                        classification,
+                    });
+                }
+                continue;
+            }
             match entries.get_mut(&payload.relative_path) {
                 Some(existing) if existing.bytes == payload.bytes => exact_duplicate_count += 1,
                 Some(existing)
@@ -975,7 +1139,29 @@ pub fn preview_bundle_merge(
                 {
                     existing.bytes = merge_suppression(Some(&existing.bytes), &payload.bytes)?;
                 }
-                Some(_) => conflicts.push(payload.relative_path.clone()),
+                Some(existing) => {
+                    let path = payload.relative_path.clone();
+                    let removed = existing.clone();
+                    entries.remove(&path);
+                    let variants = conflicting_entries.entry(path.clone()).or_default();
+                    if !variants
+                        .iter()
+                        .any(|variant| variant.bytes == removed.bytes)
+                    {
+                        variants.push(removed);
+                    }
+                    if !variants
+                        .iter()
+                        .any(|variant| variant.bytes == payload.bytes)
+                    {
+                        variants.push(BundleEntryInput {
+                            relative_path: path.clone(),
+                            bytes: payload.bytes.clone(),
+                            classification,
+                        });
+                    }
+                    conflicts.push(path);
+                }
                 None => {
                     entries.insert(
                         payload.relative_path.clone(),
@@ -1016,15 +1202,43 @@ pub fn preview_bundle_merge(
     };
     conflicts.sort();
     conflicts.dedup();
+    for variants in conflicting_entries.values_mut() {
+        variants
+            .sort_by(|left, right| sha256_digest(&left.bytes).cmp(&sha256_digest(&right.bytes)));
+    }
+    let conflicts_detail = conflicting_entries
+        .iter()
+        .map(|(path, variants)| BundleMergeConflict {
+            path: path.clone(),
+            variants: variants
+                .iter()
+                .map(|variant| BundleMergeVariant {
+                    sha256: sha256_digest(&variant.bytes),
+                })
+                .collect(),
+        })
+        .collect::<Vec<_>>();
     let semantic_candidates = semantic_merge_candidates(&request.entries)?;
     Ok(BundleMergePreview {
         archive_sha256s,
         input_entry_count,
         exact_duplicate_count,
         conflict_paths: conflicts,
+        conflicts: conflicts_detail,
         semantic_candidates,
         request,
+        conflicting_entries,
     })
+}
+
+fn same_collection_identity(
+    left: &PortableCollectionRecord,
+    right: &PortableCollectionRecord,
+) -> bool {
+    left.collection_id == right.collection_id
+        && left.kind == right.kind
+        && left.source_project_id == right.source_project_id
+        && left.default_visibility == right.default_visibility
 }
 
 fn merge_scope(registry: &PortableCollectionRegistry) -> Result<BundleScope, WikiError> {
@@ -2921,11 +3135,7 @@ fn validate_merge_provenance(bytes: &[u8]) -> Result<(), WikiError> {
         provenance.original_markdown.as_bytes(),
         &format!("{WIKI_RELATIVE}/{original_file}"),
     )?;
-    if primary_file == original_file && provenance.primary_path == provenance.original_path {
-        return Err(WikiError::Verification(
-            "merge provenance cannot point to itself".to_owned(),
-        ));
-    }
+    let _ = primary_file;
     Ok(())
 }
 
@@ -3664,15 +3874,36 @@ mod tests {
         let directory = tempfile::tempdir().expect("bundle directory");
         let first = directory.path().join("first.hivekb");
         let second = directory.path().join("second.hivekb");
+        let third = directory.path().join("third.hivekb");
         let _source_a = global_bundle(&first, &[("backup", "Keep backups for thirty days.")]);
         let _source_b = global_bundle(&second, &[("backup", "Keep backups for ninety days.")]);
+        let _source_c = global_bundle(&third, &[("backup", "Keep backups for one hundred days.")]);
 
-        let preview = preview_bundle_merge(&[first, second], BundleLimits::default())
+        let preview = preview_bundle_merge(&[first, second, third], BundleLimits::default())
             .expect("preview conflicting merge");
         assert!(preview
             .conflict_paths
             .iter()
             .any(|path| path.ends_with("Wiki/backup.md")));
+        assert_eq!(preview.conflicts.len(), 1);
+        let conflict = &preview.conflicts[0];
+        assert_eq!(conflict.variants.len(), 3);
+        let request = apply_bundle_merge_review(
+            &preview,
+            &[BundleMergeDecision::Choose {
+                path: conflict.path.clone(),
+                selected_sha256: conflict.variants[0].sha256.clone(),
+            }],
+        )
+        .expect("reviewed conflict selection");
+        assert!(request
+            .entries
+            .iter()
+            .any(|entry| entry.relative_path.ends_with("Wiki/backup.md")));
+        assert!(request
+            .entries
+            .iter()
+            .any(|entry| entry.relative_path.contains("/Merge/")));
     }
 
     #[test]

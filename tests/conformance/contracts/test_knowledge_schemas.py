@@ -21,6 +21,7 @@ SCHEMA_NAMES = (
     "knowledge-retrieval-result.schema.json",
     "knowledge-bundle-manifest.schema.json",
     "knowledge-import-result.schema.json",
+    "knowledge-transfer-merge-review.schema.json",
     "knowledge-scan-review.schema.json",
     "knowledge-scan-result.schema.json",
 )
@@ -662,6 +663,37 @@ class KnowledgeSchemaConformanceTests(unittest.TestCase):
         preference.update(kind="preference", version=None)
         hostile = scan_review()
         hostile["claims"] = [preference]
+        self.assert_invalid(name, hostile)
+
+    def test_merge_review_binds_exact_candidates_and_rejects_open_shapes(self) -> None:
+        name = "knowledge-transfer-merge-review.schema.json"
+        equivalent = {
+            "schema_version": 1,
+            "merge_preview_digest": digest("a"),
+            "decisions": [
+                {
+                    "action": "equivalent",
+                    "candidate_id": digest("b"),
+                    "primary_path": ".hive/portable/collections/user-root/Wiki/example.md",
+                }
+            ],
+        }
+        self.assert_valid(name, equivalent)
+        separate = copy.deepcopy(equivalent)
+        separate["decisions"][0] = {"action": "separate", "candidate_id": digest("b")}
+        self.assert_valid(name, separate)
+        choose = copy.deepcopy(equivalent)
+        choose["decisions"][0] = {
+            "action": "choose",
+            "path": ".hive/portable/collections/user-root/Wiki/example.md",
+            "selected_sha256": digest("c"),
+        }
+        self.assert_valid(name, choose)
+        hostile = copy.deepcopy(equivalent)
+        hostile["decisions"][0]["reason"] = "unbounded host transcript"
+        self.assert_invalid(name, hostile)
+        hostile = copy.deepcopy(equivalent)
+        hostile["merge_preview_digest"] = "not-a-digest"
         self.assert_invalid(name, hostile)
 
     def test_scan_result_covers_all_runtime_phases(self) -> None:

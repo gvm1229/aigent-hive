@@ -109,7 +109,7 @@ skills:
   consent_digest: null
 - name: knowledge-transfer
   source_type: built-in
-  content_digest: sha256:346bb709356120175e7e0ce8e558879d5ab4bb40f7b29c7c6878462d1d90b14c
+  content_digest: sha256:b3cbb09cbced628a812b381ec3f4d938e3b0ca3f103a83f9ea1da914f614a57d
   side_effect_class: external-write
   capabilities:
   - filesystem-read

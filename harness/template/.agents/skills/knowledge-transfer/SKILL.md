@@ -36,3 +36,31 @@ Use this Skill only for an existing Hive knowledge base moving between computers
 
 Treat imported project-private collections as detached until explicit destination-project attachment.
 Do not use a cloud account, move a bundle automatically, or infer approval for confidential data.
+
+
+## Merge multiple bundles
+
+When the user supplies two or more existing `.hivekb` files for one destination, use one
+merge operation instead of repeated import. Never modify the input bundles.
+
+1. Run `hive knowledge transfer merge preview --bundle <a.hivekb> --bundle <b.hivekb>
+   --user-root <root> --output json`. Keep `merge_preview_digest`, `merge_input_digest`,
+   every input archive digest, conflict path, and semantic candidate.
+2. Exact duplicate bytes are safe to merge automatically. If semantic candidates are present, the
+   active host reviews their kind, summary, body, conditions, numbers, dates, negation, and sources.
+   Write a temporary review JSON bound to `merge_input_digest` with exactly one decision per
+   semantic candidate: `separate` or `equivalent` plus one candidate path as `primary_path`.
+   For a `conflicts` entry, use `choose` with its exact `path` and one listed `selected_sha256`.
+3. Run `merge review` with `merge_input_digest` and the review JSON. The host may make this review
+   without asking the user when the evidence proves equivalence. It must keep candidates separate
+   when evidence is insufficient. A divergent canonical path or claim identity remains a user
+   conflict; show all such conflicts together and do not apply a partial merge.
+4. Run `merge apply` with the same input bundles, `merge_input_digest`, review JSON, and returned
+   review digest. It rechecks inputs and destination state, applies one canonical transaction,
+   rebuilds FTS once, and retains collapsed originals as portable merge provenance.
+5. After a completed merge, use the existing transfer and vector status flow. Ask the optional
+   vector rebuild question once for the whole merge only when the saved preference is `yes`.
+
+The review JSON is input data, never a provider credential or a source of authority beyond the
+current merge digest. Do not merge across collection visibility boundaries, install a model, enable
+a new collection, or include confidential knowledge.

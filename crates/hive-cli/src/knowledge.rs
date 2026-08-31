@@ -353,6 +353,7 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
         "input_entry_count": merge.input_entry_count,
         "exact_duplicate_count": merge.exact_duplicate_count,
         "conflict_paths": merge.conflict_paths,
+        "conflicts": merge.conflicts,
         "semantic_candidates": merge.semantic_candidates,
         "merge_digest": merge_digest,
     });
@@ -403,14 +404,6 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
             Some(digest),
         )
     };
-    if !merge_data["conflict_paths"]
-        .as_array()
-        .is_some_and(Vec::is_empty)
-    {
-        return Err(WikiError::Conflict(
-            "merge has unresolved canonical conflicts; resolve them before applying".to_owned(),
-        ));
-    }
     let encoded = encode_bundle(&request, BundleLimits::default())
         .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
     let mut temporary = tempfile::Builder::new()
