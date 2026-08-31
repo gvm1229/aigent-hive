@@ -8,8 +8,7 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
   response. Message language alone does not change this preference.
 - An authored or refined prompt defaults to English unless the maintainer requests another prompt
   language. Keep surrounding explanation in the selected response language.
-- Use plain language and lead with the result, decision, or blocker. Introduce internal terms only
-  after the concrete user-visible effect.
+- Lead with the result, decision, or blocker; apply the explanation policy below.
 - Keep one base language per passage. In Korean, retain English only for proper names, commands,
   identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent.
   Translate meaning rather than English word order; avoid mixed Korean-English compounds.
@@ -18,6 +17,18 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
 - For each passed, failed, skipped, deferred, unverified, or unsupported result, name the scope,
   exact reason, actual host or platform execution, proven range, and unproven range.
 - Human-readable project document style belongs only to `08-human-documentation-style.md`.
+
+## Explanation policy
+
+- Explain as if to a five-year-old in user replies and all explanatory writing, including guides,
+  blogs, reports, and feature descriptions. Assume no technical background; avoid baby talk.
+- Give the purpose or effect first, then how and why it works, one idea at a time. Use familiar
+  words and short sentences; retain core technical names with plain definitions on first use.
+- Use helpful examples, analogies, numbered steps, or comparisons without forcing a format or
+  extra length. Name an analogy's limits when they affect the conclusion.
+- Preserve meaning, numbers, units, commands, conditions, exceptions, uncertainty, evidence limits,
+  and safety or approval boundaries. Before sending or saving, check that a novice can follow it
+  without looking up jargon. An explicit audience/detail override applies to that request only.
 
 ## Work selection
 
