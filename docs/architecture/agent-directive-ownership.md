@@ -11,7 +11,7 @@
 
 | Rule ID | Canonical owner | Entry 요약 허용 |
 | --- | --- | --- |
-| `behavior` | `.agents/directives/01-behavior.md` | 언어·활성 version·continuation 중단 3조건 |
+| `behavior` | `.agents/directives/01-behavior.md` | 언어·활성 version·continuation 중단 3조건·쉬운 설명 |
 | `architecture` | `.agents/directives/02-architecture.md` | Provider API·credential 금지 |
 | `git-release` | `.agents/directives/03-workflow.md` | 안정판 version별 명시 승인 |
 | `documentation-state` | `.agents/directives/04-documentation-state.md` | 계획·fact route |
@@ -38,6 +38,9 @@
 - 소스 루트의 소비자 상태 생성 금지 유지. 격리 수용 성공을 실제 작업 완료 근거로 대체 금지
 
 ## 중복 허용
+
+설명 정본: `01-behavior.md#explanation-policy`. 사용자 대화와 모든 설명형 글에 적용,
+`08-human-documentation-style.md`에서 참조. 쉬운 말·용어 풀이·정확성 보존 규칙의 중복 복사 제외.
 
 - Entry router의 한 문장 안전 요약과 canonical owner
 - 영어·한국어 사용자 marker의 동일 의미 projection

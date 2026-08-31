@@ -27,6 +27,14 @@
 | 사용량 보호 | `.agents/directives/07-installed-usage-guard.md` |
 | 사람용 문서 말투 | `.agents/directives/08-human-documentation-style.md` |
 
+## 소스 설명 규칙 후속 정리
+
+- 사용자 요청: 다섯 살 아이도 이해할 수준의 쉬운 설명을 대화·설명형 글 전체에 기본 적용
+- 정본: `01-behavior.md`의 쉬운 말·용어 풀이·원인과 결과·정확성 보존, `08-human-documentation-style.md`에서 참조
+- 검증: 기존 지침의 중복·크기·경로 검사, 문서·Source Wiki 정합성. 읽기 수준의 기계적 완전 보장 주장 금지
+- 범위: 소스 지침·문서만 변경, 소비자 제품·승인된 업데이트 안내문·기존 출시 수용 불변
+- 완료 근거: Windows 기존 정적 계약 22개 통과, 비허용 중복 0건·지침 크기 기준 유지
+
 ## 보존 경계
 
 - `harness/project-bases/**`, `harness/user-bases/**`: byte 변경 `0건`

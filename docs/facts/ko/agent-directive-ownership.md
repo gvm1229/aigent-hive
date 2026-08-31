@@ -9,9 +9,9 @@ summary: "Source·소비자 작업 규칙군의 단일 정본 연결, 새 versio
 tags: [directives, routing, v0-10]
 aliases: ["Directive 최적화"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:3a8450ff3e496f4e6bafc7b8d10cdd9fe38f15932b465d131a69ca0bdf9ef2f3"
+  - "repo:.agents/directives/01-behavior.md#sha256:4b22be47789033b39654596bb345fd56017e54bf4cd8ef12ad1cac7ae9c8e4d4"
   - "repo:AGENTS.md#sha256:d1a4541174db15faf38f3c90432fbea8cb4b4da6448bfccce2a7e069982031b6"
-  - "repo:docs/architecture/agent-directive-ownership.md#sha256:2a586992fe1cce417bcc278e6dc332467e5ebe758070a31e926692521bbb90de"
+  - "repo:docs/architecture/agent-directive-ownership.md#sha256:77cf75a4f3c815fa9a75635e7b43f95035bdeebf0ca47a1bd7c94df14c7942c4"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"
   - "repo:scripts/check-agent-directives.py#sha256:4c9fe2ff89d0429b76c1e7a36fa2a3c5e9a953f29c592fde8b8199d793ab2332"
 links: [agent-autonomous-continuation, artifact-boundaries, historical-project-base-coverage]
