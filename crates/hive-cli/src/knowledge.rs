@@ -81,6 +81,8 @@ USAGE:
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer status --id <transfer-id> [--user-root <dir>] --output json
+    hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive knowledge vector --help
@@ -299,31 +301,40 @@ fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             "knowledge transfer export requires exactly one of --preview or --apply".to_owned(),
         ));
     }
-    if apply_count == 1 {
-        let forwarded = arguments
-            .iter()
-            .filter(|argument| argument.as_str() != "--apply")
-            .cloned()
-            .collect::<Vec<_>>();
-        return run_export(&forwarded);
-    }
     let filtered = arguments
         .iter()
-        .filter(|argument| argument.as_str() != "--preview")
+        .filter(|argument| !["--preview", "--apply"].contains(&argument.as_str()))
         .cloned()
         .collect::<Vec<_>>();
     let options = parse_options(
         &filtered,
         &["--user-root", "--scope", "--bundle", "--replace-backup"],
     )?;
+    let user_root = resolve_transfer_root(&options)?;
+    let scope_text = optional(&options, "--scope").unwrap_or("all-portable");
+    if apply_count == 1 {
+        let mut forwarded = vec![
+            "--user-root".to_owned(),
+            user_root.to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            scope_text.to_owned(),
+            "--bundle".to_owned(),
+            required(&options, "--bundle")?.to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        if let Some(backup) = optional(&options, "--replace-backup") {
+            forwarded.extend(["--replace-backup".to_owned(), backup.to_owned()]);
+        }
+        return run_export(&forwarded);
+    }
     if optional(&options, "--replace-backup").is_some() {
         return Err(WikiError::InvalidInput(
             "transfer export preview does not replace an existing bundle".to_owned(),
         ));
     }
-    let user_root = PathBuf::from(required(&options, "--user-root")?);
     let bundle = PathBuf::from(required(&options, "--bundle")?);
-    let scope = parse_bundle_scope(required(&options, "--scope")?)?;
+    let scope = parse_bundle_scope(scope_text)?;
     let preview = preview_export_bundle(&user_root, scope, BundleLimits::default())?;
     let digest = preview.archive_sha256.clone();
     Ok(success(
@@ -335,6 +346,15 @@ fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         &digest,
         serde_json::to_value(preview).map_err(|error| WikiError::Io(error.to_string()))?,
     ))
+}
+
+fn resolve_transfer_root(options: &[(&str, &str)]) -> Result<PathBuf, WikiError> {
+    if let Some(root) = optional(options, "--user-root") {
+        return Ok(PathBuf::from(root));
+    }
+    let root = crate::user_install::resolve_user_root_path().map_err(WikiError::InvalidInput)?;
+    require_shared_wiki_enabled(&root)?;
+    Ok(root)
 }
 
 fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
@@ -369,7 +389,7 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             "--expected-sha256",
         ],
     )?;
-    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let user_root = resolve_transfer_root(&options)?;
     let bundle = PathBuf::from(required(&options, "--bundle")?);
     let preview_digest = optional(&options, "--preview-digest");
     let expected_archive = optional(&options, "--expected-sha256");

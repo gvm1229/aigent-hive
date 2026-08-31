@@ -184,7 +184,8 @@ pub(super) fn run(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         &arguments[1..],
         &["--user-root", "--id", "--answer", "--receipt-digest"],
     )?;
-    let user_root = Path::new(required(&options, "--user-root")?);
+    let resolved_root = super::resolve_transfer_root(&options)?;
+    let user_root = resolved_root.as_path();
     let id = required(&options, "--id")?;
     let root = open_user_root_for_setup(user_root).map_err(WikiError::Conflict)?;
     let (before, receipt) = read(&root, id)?;

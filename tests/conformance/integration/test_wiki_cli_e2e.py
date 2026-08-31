@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -625,6 +626,13 @@ This temporary page has no backlinks and can be deleted explicitly.
         )[1])
         self.assertEqual(status["receipt_digest"], deferred["receipt_digest"])
         self.assertFalse(status["question_required"])
+        implicit = subprocess.run(
+            [str(self.hive_binary), "knowledge", "transfer", "status", "--id", transfer["id"], "--output", "json"],
+            cwd=REPOSITORY_ROOT, capture_output=True, encoding="utf-8", check=False,
+            env={**os.environ, "USERPROFILE": str(destination), "HOME": str(destination)},
+        )
+        self.assertEqual(implicit.returncode, 0, implicit.stdout)
+        self.assertEqual(json.loads(implicit.stdout)["data"]["receipt_digest"], status["receipt_digest"])
 
         retry_preview = self.assert_success(self.invoke_knowledge(
             "transfer", "import", "--preview", "--bundle", str(bundle), user_root=destination,
