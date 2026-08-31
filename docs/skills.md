@@ -26,7 +26,8 @@
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
 | `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
-| `knowledge-import` | 사용자가 고른 저장소·폴더 지식 스캔 뒤 검토 완료 항목 반입 | 저장소 규칙·결정의 Wiki 반입 |
+| `knowledge-scan` | 사용자가 고른 저장소·폴더 분석과 검토된 지식 추출 | 저장소 규칙·결정의 Wiki 반입 |
+| `knowledge-transfer` | 기존 Markdown 지식의 컴퓨터 간 이전·FTS 복원 | 이전 컴퓨터의 지식을 새 컴퓨터에서 사용 |
 | `knowledge-maintain` | 신뢰 가능한 Hive 지식 검사·검색 색인 재생성·명시 정리 | Wiki link 검사와 색인 재구축 |
 | `knowledge-capture` | 대화 종료 전 나중 작업에 도움이 되는 사실·선호·방식 1건의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
 | `prompt-refine` | 실행 전 승인용 prompt 정리·개선 | Codex 실행용 prompt 개선 |
@@ -54,7 +55,7 @@
 | `source-project-setup` | `project-setup` |
 | `source-code-polish` | `code-polish` |
 | `source-ralph-loop` | `verified-workflow` |
-| `source-knowledge-import` | `knowledge-import` |
+| `source-knowledge-import` | `knowledge-scan` |
 | `source-knowledge-maintain` | `knowledge-maintain` |
 | `source-knowledge-capture` | `knowledge-capture` |
 | `source-prompt-refine` | `prompt-refine` |
@@ -77,7 +78,7 @@
 
 ## 유지할 분리
 
-- `knowledge-capture` / `knowledge-import` / `knowledge-promote`: 대화 종료 전 1건 기록·선택 저장소 스캔·전역 공유의 범위와 권한 차이
+- `knowledge-capture` / `knowledge-scan` / `knowledge-transfer` / `knowledge-promote`: 대화 기록·새 지식 추출·기존 지식 이전·전역 공유의 범위와 권한 차이
 - `run-checkpoint` / `run-resume` / `run-handoff`: 저장·복구·인계 상태 변경 차이
 - `project-refresh` / `project-transition`: 일반 갱신과 구조 이관의 복구 위험 차이
 
@@ -99,6 +100,8 @@
 task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증만 소유.
 
 ## `0.10.0` 이름 이관
+
+- `knowledge-import` → `knowledge-scan`; 기존 지식의 컴퓨터 간 이전은 `knowledge-transfer`
 
 - `ralph-loop`와 `iterative-execution` → `verified-workflow`
 - `package-review` → `judge-evidence`

@@ -20,7 +20,7 @@ PLUGIN_SKILLS = ROOT / "harness/plugins/aigent-hive/skills"
 TEMPLATE_SKILLS = ROOT / "harness/template/.agents/skills"
 
 CURRENT = {
-    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-import",
+    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
     "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run-handoff", "project-transition", "run-resume", "run-checkpoint",
