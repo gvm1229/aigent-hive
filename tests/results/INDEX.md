@@ -232,3 +232,13 @@
 | [failed](runs/20260831T134553-3a3fbd753eee.md) | 벡터 최초 설정 세 host 경로·CLI 계약 재시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T134606-b904606d7d3d.md) | 벡터 최초 설정 세 host 경로·CLI 계약 최종 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T134718-ccde5bd7c334.md) | 벡터 답변 보존형 재설치 회귀 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T135412-77a0811aca1a.md) | 벡터 최초 설정 Rust 전체 회귀 시험 | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T135507-03052ea80693.md) | 벡터 최초 설정 Rust 전체 회귀 재실행 | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T135610-17c117458aa4.md) | 벡터 최초 설정 Python 전체 conformance | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T135611-f4e78d695bbf.md) | Python conformance: documentation, security, contract, integration, release | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141029-3762dd9a77c6.md) | 벡터 최초 설정 Rust Clippy 전체 재실행 | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141127-59f1473efa14.md) | 벡터 최초 설정 Rust Clippy 경고 수정 검사 | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141149-fe92d4ec5476.md) | 벡터 최초 설정 직렬화 수정 회귀 시험 | edb7a12f37708dea22ee5d8e3dc82e614e2d0063 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141229-4424708a51a2.md) | 벡터 최초 설정 최종 Rust 전체 회귀 시험 | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141341-f5087ef5efa4.md) | 벡터 최초 설정 최종 Python 전체 conformance | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T141342-6fb487fac217.md) | Python conformance: documentation, security, contract, integration, release | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
