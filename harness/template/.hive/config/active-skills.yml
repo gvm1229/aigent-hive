@@ -65,17 +65,6 @@ skills:
   - memory-write
   - shell
   consent_digest: null
-- name: knowledge-import
-  source_type: built-in
-  content_digest: sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
 - name: knowledge-maintain
   source_type: built-in
   content_digest: sha256:64ed85e443785e97560031f6d64930836f3e349dd5b1b873e22376f76d6b0fd8
@@ -105,6 +94,28 @@ skills:
   capabilities:
   - filesystem-read
   - memory-read
+  - shell
+  consent_digest: null
+- name: knowledge-scan
+  source_type: built-in
+  content_digest: sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: knowledge-transfer
+  source_type: built-in
+  content_digest: sha256:346bb709356120175e7e0ce8e558879d5ab4bb40f7b29c7c6878462d1d90b14c
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
   - shell
   consent_digest: null
 - name: multi-goal
@@ -233,7 +244,7 @@ skills:
   consent_digest: null
 - name: verified-workflow
   source_type: built-in
-  content_digest: sha256:70f8fa54d04084174f2d014398916e2f4b2f2fb53e8fa057e8b178f92fd413fd
+  content_digest: sha256:fc19bed8a17b8b8652c37ff518528ada2aec511e163b15c99af90235e6728a82
   side_effect_class: project-write
   capabilities:
   - filesystem-read

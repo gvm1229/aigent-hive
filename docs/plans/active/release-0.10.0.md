@@ -23,6 +23,7 @@
 - 게시된 stable release 집합과 historical built-in Skill registry parity 증거 부재
 - accepted public test 뒤 product·package·installer 변경. `0.10.0-test.1` 뒤 승인된 한국어 core 범위 추가로 새 번호 시험판 필요
 - `VON10-*` 제품 변경 뒤 `test.6` 수용 재사용 금지. 다음 번호 공개 시험과 세 운영체제 수용 필요
+- `KTX10-*` 이전·FTS·벡터 재생성 변경 뒤 `test.6` 수용 재사용 금지. 실제 교차 운영체제 이전과 다음 번호 공개 시험 수용 필요
 - 유지보수자의 명시적 안정판 승인 부재 — 구현·시험은 승인되었으나 tag·publication은 금지
 
 ## 현재 실행 제외

@@ -46,7 +46,9 @@ const CUSTOM_SUBAGENT_CREATE: &[u8] =
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
-const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-import/SKILL.md");
+const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md");
+const KNOWLEDGE_TRANSFER: &[u8] =
+    include_bytes!("../../../harness/skills/knowledge-transfer/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
 const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
 const HUMANIZE_KOR: &[u8] = include_bytes!("../../../harness/skills/humanize-kor/SKILL.md");
@@ -275,8 +277,12 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
             ));
         }
     }
-    let required_lifecycle =
-        BTreeSet::from(["ralph-loop", "iterative-execution", "package-review"]);
+    let required_lifecycle = BTreeSet::from([
+        "ralph-loop",
+        "iterative-execution",
+        "package-review",
+        "knowledge-import",
+    ]);
     if lifecycle_names != required_lifecycle {
         return Err(ProjectionError::new(
             "hive.skill-name-ledger-invalid",
@@ -1183,11 +1189,17 @@ fn localized_skill_text(
             "검증형 작업 흐름",
             "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
         ),
-        "knowledge-import" => (
-            "Scan repository knowledge (knowledge-import)",
-            "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.",
+        "knowledge-scan" => (
+            "Scan repository knowledge",
+            "(knowledge-scan) Scan one repository or folder and prepare reviewed facts.",
             "저장소 지식 스캔",
-            "(knowledge-import) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 가져오기.",
+            "(knowledge-scan) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 기록합니다.",
+        ),
+        "knowledge-transfer" => (
+            "Transfer Hive knowledge",
+            "(knowledge-transfer) Move Hive knowledge between computers.",
+            "Hive 지식 이전",
+            "(knowledge-transfer) 기존 이식 가능 Hive 지식을 컴퓨터 사이에서 안전하게 옮깁니다.",
         ),
         "code-polish" => (
             "Clean AI slop",
@@ -1322,8 +1334,11 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "research-best-practices" => Some(include_bytes!(
             "../../../harness/skills/research-best-practices/agents/openai.yaml"
         )),
-        "knowledge-import" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-import/agents/openai.yaml"
+        "knowledge-scan" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-scan/agents/openai.yaml"
+        )),
+        "knowledge-transfer" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-transfer/agents/openai.yaml"
         )),
         "ship" => Some(include_bytes!(
             "../../../harness/skills/ship/agents/openai.yaml"
@@ -1338,7 +1353,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 27] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1363,7 +1378,8 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 27] {
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
-        ("knowledge-import", KNOWLEDGE_SCAN),
+        ("knowledge-scan", KNOWLEDGE_SCAN),
+        ("knowledge-transfer", KNOWLEDGE_TRANSFER),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
         ("humanize-kor", HUMANIZE_KOR),
@@ -1991,9 +2007,8 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "quick-answer" => Some(LogicalAction::AnswerSimpleQuestion),
         "prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-import" => {
-            Some(LogicalAction::IngestKnowledge)
-        }
+        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-scan"
+        | "knowledge-transfer" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
         | "humanize-kor"
@@ -2743,8 +2758,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 26);
-            let expected_file_count = if host == Host::Claude { 27 } else { 53 };
+            assert_eq!(first.active_skills.skills.len(), 27);
+            let expected_file_count = if host == Host::Claude { 28 } else { 55 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2752,7 +2767,7 @@ description: Inspect one local file without changing it.
                 "research-best-practices",
                 "judge-evidence",
                 "adversarial-judge",
-                "knowledge-import",
+                "knowledge-scan",
                 "verified-workflow",
                 "humanize-kor",
                 "prompt-refine",
@@ -2967,14 +2982,14 @@ description: Inspect one local file without changing it.
             "knowledge-recall".to_owned(),
             "knowledge-promote".to_owned(),
             "knowledge-maintain".to_owned(),
-            "knowledge-import".to_owned(),
+            "knowledge-scan".to_owned(),
         ];
         let labels = [
             ("knowledge-capture", "유용한 지식 남기기"),
             ("knowledge-recall", "지식 찾아보기"),
             ("knowledge-promote", "지식 공유하기"),
             ("knowledge-maintain", "지식 정비하기"),
-            ("knowledge-import", "저장소 지식 스캔"),
+            ("knowledge-scan", "저장소 지식 스캔"),
         ];
 
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
@@ -3126,9 +3141,9 @@ description: Inspect one local file without changing it.
                     .as_slice(),
             ),
             (
-                "knowledge-import",
+                "knowledge-scan",
                 KNOWLEDGE_SCAN,
-                include_bytes!("../../../harness/skills/knowledge-import/SKILL.md").as_slice(),
+                include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md").as_slice(),
             ),
             (
                 "verified-workflow",

@@ -12,6 +12,7 @@ current catalog.
 | [Overview 안내](overview/README.md) | 제품 설명 영역 MOC |
 | [제품 개요](overview/product.md) | 목적·지원 범위·원칙·기능 |
 | [스킬 모음](skills.md) | Source·product Skill 이름·기능·사용 예시 |
+| [컴퓨터 간 지식 이전](guides/knowledge-transfer.md) | 개발 중인 이전 명령·충돌 검토·선택형 벡터 재생성 |
 | [English README](../README.md) | 간결한 English 입구 |
 | [한국어 README](readme/README.ko.md) | 간결한 한국어 입구 |
 | [License](licensing.md) | Apache-2.0 적용 범위 |

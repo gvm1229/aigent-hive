@@ -418,7 +418,7 @@ class Qualification:
         destination = self.work / "imported-user"
         bundle = self.work / "canonical.hivekb"
         assert list((source / ".hive/index/vector").rglob("*.sqlite3"))
-        self.call("knowledge", "export", "--user-root", str(source), "--scope", "global", "--bundle", str(bundle))
+        exported = self.call("knowledge", "transfer", "export", "--apply", "--user-root", str(source), "--scope", "global", "--bundle", str(bundle))
         with zipfile.ZipFile(bundle) as archive:
             names = archive.namelist()
             validate_fixture_bundle_entries(names)
@@ -426,10 +426,16 @@ class Qualification:
         config = destination / ".hive/config/user-setup.yml"
         config.parent.mkdir(parents=True)
         shutil.copyfile(source / ".hive/config/user-setup.yml", config)
+        preference = destination / ".hive/config/user-feature-answers.yml"
+        preference.write_text('schema_version: 1\nvector_search: "yes"\nintroduced_in: "0.10.0"\n', encoding="utf-8", newline="\n")
+        preference_before = preference.read_bytes()
         dry_before = tree_snapshot(destination)
-        self.call("knowledge", "import", "--user-root", str(destination), "--bundle", str(bundle), "--dry-run")
+        inspected = self.call("knowledge", "transfer", "import", "--user-root", str(destination), "--bundle", str(bundle), "--preview")
         assert tree_snapshot(destination) == dry_before
-        self.call("knowledge", "import", "--user-root", str(destination), "--bundle", str(bundle), "--apply")
+        imported = self.call("knowledge", "transfer", "import", "--user-root", str(destination), "--bundle", str(bundle), "--apply",
+                             "--expected-sha256", exported["archive_sha256"], "--preview-digest", inspected["transfer_preview_digest"])
+        transfer = imported["transfer"]
+        assert transfer["complete"] and imported["vector_rebuild"]["state"] == "question-required"
         wiki = destination / ".hive/knowledge/Wiki"
         assert tree_snapshot(source / ".hive/knowledge/Wiki") == tree_snapshot(wiki)
         assert not (destination / ".hive/index/vector").exists()
@@ -445,8 +451,18 @@ class Qualification:
         python = str(Path(sys.executable).resolve())
         preview = self.call("knowledge", "vector", "preview", *scope, "--python", python)
         self.call("knowledge", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
-        rebuilt = self.call("knowledge", "vector", "rebuild", *scope, "--max-seconds", "10", "--workers", "2")
-        assert rebuilt["complete"] and rebuilt["embedded"] == 8
+        decision = self.call("knowledge", "transfer", "vector", "--user-root", str(destination), "--id", transfer["id"],
+                             "--receipt-digest", transfer["receipt_digest"], "--answer", "yes")
+        for _ in range(10):
+            if decision["vector_state"] == "complete":
+                break
+            decision = self.call("knowledge", "transfer", "vector", "--user-root", str(destination), "--id", transfer["id"],
+                                 "--receipt-digest", decision["receipt_digest"], "--answer", "yes")
+        assert decision["complete"] and decision["vector_state"] == "complete", decision
+        reused = self.call("knowledge", "transfer", "vector", "--user-root", str(destination), "--id", transfer["id"],
+                           "--receipt-digest", decision["receipt_digest"], "--answer", "yes")
+        assert reused["vector_state"] == "complete" and all(item.get("reused") for item in reused["vector"]["scopes"])
+        assert preference.read_bytes() == preference_before
         assert self.call(*query, "--mode", "semantic")["search"]["used"] == ["fts", "vector"]
         self.call("knowledge", "vector", "disable", *scope)
         assert self.call(*query) == fts

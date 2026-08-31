@@ -24,7 +24,8 @@ EXPECTED_SKILLS = frozenset(
         "humanize-kor",
         "custom-subagent-create",
         "verified-workflow",
-        "knowledge-import",
+        "knowledge-scan",
+        "knowledge-transfer",
         "knowledge-maintain",
         "knowledge-capture",
         "prompt-refine",
@@ -155,7 +156,7 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             "repeated failure fingerprints",
             "independent verifier",
         ):
-            self.assertIn(route, text)
+            self.assertIn(route.casefold(), text.casefold())
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

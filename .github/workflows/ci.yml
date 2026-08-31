@@ -225,6 +225,85 @@ jobs:
           toolchain: stable
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 Hive CLI 단위 시험' --path target/debug --command cargo test -p hive-cli --locked
 
+  transfer-produce:
+    name: Transfer producer (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.scope == 'product'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            binary: target/debug/hive.exe
+          - os: macos-latest
+            binary: target/debug/hive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - run: python scripts/test-artifacts.py run --purpose '교차 운영체제 이전 바이너리' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '운영체제 간 전달할 동일 묶음 생성' --path tests/work/transfer-producer --command python scripts/qualify-knowledge-transfer.py produce --hive ${{ matrix.binary }} --work tests/work/transfer-producer
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: transfer-${{ matrix.os }}
+          path: |
+            tests/work/transfer-producer/portable.hivekb
+            tests/work/transfer-producer/expected.json
+            tests/work/transfer-producer/receipt.json
+          if-no-files-found: error
+
+  transfer-consume:
+    name: Transfer ${{ matrix.producer }} to ${{ matrix.os }}
+    needs: transfer-produce
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            producer: windows-latest
+            binary: target/debug/hive
+          - os: ubuntu-latest
+            producer: windows-latest
+            binary: target/debug/hive
+          - os: windows-latest
+            producer: macos-latest
+            binary: target/debug/hive.exe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: transfer-${{ matrix.producer }}
+          path: tests/work/transfer-input
+      - run: python scripts/test-artifacts.py run --purpose '이전 수신 바이너리' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '다른 운영체제의 동일 묶음 복원' --path tests/work/transfer-consumer --command python scripts/qualify-knowledge-transfer.py consume --hive ${{ matrix.binary }} --work tests/work/transfer-consumer --input tests/work/transfer-input --require-cross-os
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: transfer-results-${{ matrix.producer }}-to-${{ matrix.os }}
+          path: |
+            tests/work/transfer-consumer/receipt.json
+            tests/results/runs/*.md
+
   protected-merge-gate:
     name: Protected merge gate
     if: always()
@@ -235,6 +314,7 @@ jobs:
       - conformance
       - copier
       - platform-smoke
+      - transfer-consume
     runs-on: ubuntu-latest
     env:
       SCOPE: ${{ needs.changes.outputs.scope }}
@@ -243,6 +323,7 @@ jobs:
       CONFORMANCE_RESULT: ${{ needs.conformance.result }}
       COPIER_RESULT: ${{ needs.copier.result }}
       PLATFORM_RESULT: ${{ needs.platform-smoke.result }}
+      TRANSFER_RESULT: ${{ needs.transfer-consume.result }}
     steps:
       - name: Require the risk-matched verification result
         shell: bash
@@ -256,6 +337,7 @@ jobs:
               test "$CONFORMANCE_RESULT" = success
               test "$COPIER_RESULT" = success
               test "$PLATFORM_RESULT" = success
+              test "$TRANSFER_RESULT" = success
               ;;
             *)
               exit 2

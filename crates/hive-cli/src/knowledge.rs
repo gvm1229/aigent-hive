@@ -1,4 +1,6 @@
 use crate::knowledge_scan::scan_directory;
+#[path = "knowledge_transfer.rs"]
+mod transfer;
 #[path = "vector.rs"]
 mod vector;
 use cap_fs_ext::{FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
@@ -7,7 +9,8 @@ use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::bundle_io::BundlePublishMode;
 use hive_wiki::bundle_store::{
-    export_bundle, import_bundle, BundleExportDisposition, BundleImportMode,
+    export_bundle, import_bundle, import_bundle_reviewed, preview_export_bundle,
+    BundleExportDisposition, BundleImportApproval, BundleImportMode, BundleImportResult,
 };
 use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
@@ -76,6 +79,10 @@ USAGE:
     hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
+    hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
+    hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer status --id <transfer-id> [--user-root <dir>] --output json
+    hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive knowledge vector --help
@@ -254,6 +261,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("ExportKnowledge", &error)),
             Some("import") => run_import(&arguments[1..])
                 .unwrap_or_else(|error| failure("ImportKnowledge", &error)),
+            Some("transfer") => run_transfer(&arguments[1..])
+                .unwrap_or_else(|error| failure("TransferKnowledge", &error)),
             Some(action) => failure(
                 "IngestKnowledge",
                 &WikiError::InvalidInput(format!("unknown knowledge action: {action}")),
@@ -265,6 +274,214 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    match arguments.first().map(String::as_str) {
+        Some("export") => run_transfer_export(&arguments[1..]),
+        Some("import") => run_transfer_import(&arguments[1..]),
+        Some("status" | "vector") => transfer::run(arguments),
+        _ => Err(WikiError::InvalidInput(
+            "knowledge transfer requires export or import".to_owned(),
+        )),
+    }
+}
+
+fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let preview_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--preview")
+        .count();
+    let apply_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--apply")
+        .count();
+    if preview_count + apply_count != 1 {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer export requires exactly one of --preview or --apply".to_owned(),
+        ));
+    }
+    let filtered = arguments
+        .iter()
+        .filter(|argument| !["--preview", "--apply"].contains(&argument.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let options = parse_options(
+        &filtered,
+        &["--user-root", "--scope", "--bundle", "--replace-backup"],
+    )?;
+    let user_root = resolve_transfer_root(&options)?;
+    let scope_text = optional(&options, "--scope").unwrap_or("all-portable");
+    if apply_count == 1 {
+        let mut forwarded = vec![
+            "--user-root".to_owned(),
+            user_root.to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            scope_text.to_owned(),
+            "--bundle".to_owned(),
+            required(&options, "--bundle")?.to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        if let Some(backup) = optional(&options, "--replace-backup") {
+            forwarded.extend(["--replace-backup".to_owned(), backup.to_owned()]);
+        }
+        return run_export(&forwarded);
+    }
+    if optional(&options, "--replace-backup").is_some() {
+        return Err(WikiError::InvalidInput(
+            "transfer export preview does not replace an existing bundle".to_owned(),
+        ));
+    }
+    let bundle = PathBuf::from(required(&options, "--bundle")?);
+    let scope = parse_bundle_scope(scope_text)?;
+    let preview = preview_export_bundle(&user_root, scope, BundleLimits::default())?;
+    let digest = preview.archive_sha256.clone();
+    Ok(success(
+        "ExportKnowledge",
+        "hive.knowledge-transfer-export-previewed",
+        "portable canonical knowledge export preview completed without bundle write",
+        Vec::new(),
+        &bundle.display().to_string(),
+        &digest,
+        serde_json::to_value(preview).map_err(|error| WikiError::Io(error.to_string()))?,
+    ))
+}
+
+fn resolve_transfer_root(options: &[(&str, &str)]) -> Result<PathBuf, WikiError> {
+    if let Some(root) = optional(options, "--user-root") {
+        let root = PathBuf::from(root);
+        if root
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(".hive"))
+        {
+            return Err(WikiError::InvalidInput(
+                "user-root must be the parent of .hive, not the .hive directory itself".to_owned(),
+            ));
+        }
+        ensure_consumer_target(&root)
+            .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+        return Ok(root);
+    }
+    let root = crate::user_install::resolve_user_root_path().map_err(WikiError::InvalidInput)?;
+    ensure_consumer_target(&root).map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+    require_shared_wiki_enabled(&root)?;
+    Ok(root)
+}
+
+fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let preview_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--preview")
+        .count();
+    let apply_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--apply")
+        .count();
+    let exclude_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--exclude-conflicts")
+        .count();
+    if preview_count + apply_count != 1 || exclude_count > 1 {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer import requires exactly one of --preview or --apply".to_owned(),
+        ));
+    }
+    let filtered = arguments
+        .iter()
+        .filter(|arg| !["--preview", "--apply", "--exclude-conflicts"].contains(&arg.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let options = parse_options(
+        &filtered,
+        &[
+            "--user-root",
+            "--bundle",
+            "--preview-digest",
+            "--expected-sha256",
+        ],
+    )?;
+    let user_root = resolve_transfer_root(&options)?;
+    let bundle = PathBuf::from(required(&options, "--bundle")?);
+    let preview_digest = optional(&options, "--preview-digest");
+    let expected_archive = optional(&options, "--expected-sha256");
+    if preview_count == 1 {
+        if preview_digest.is_some() || exclude_count != 0 {
+            return Err(WikiError::InvalidInput(
+                "transfer import preview does not accept --preview-digest".to_owned(),
+            ));
+        }
+        let mut result = run_import_mode(&user_root, &bundle, BundleImportMode::DryRun)?;
+        if let Some(expected) = expected_archive {
+            if result
+                .data
+                .as_ref()
+                .and_then(|data| data.get("archive_sha256"))
+                .and_then(Value::as_str)
+                != Some(expected)
+            {
+                return Err(WikiError::Conflict(
+                    "bundle SHA-256 differs from the sending computer".to_owned(),
+                ));
+            }
+        }
+        let digest = transfer_preview_digest(&result)?;
+        insert_transfer_preview_digest(&mut result, &digest)?;
+        return Ok(result);
+    }
+    let expected = preview_digest.ok_or_else(|| {
+        WikiError::InvalidInput("transfer import apply requires --preview-digest".to_owned())
+    })?;
+    let expected_archive = expected_archive.ok_or_else(|| {
+        WikiError::InvalidInput("transfer import apply requires --expected-sha256".to_owned())
+    })?;
+    if !valid_sha256_digest(expected) || !valid_sha256_digest(expected_archive) {
+        return Err(WikiError::InvalidInput(
+            "transfer import preview digest must be sha256".to_owned(),
+        ));
+    }
+    let imported = import_bundle_reviewed(
+        &user_root,
+        &bundle,
+        if exclude_count == 1 {
+            BundleImportMode::ApplyExcludingConflicts
+        } else {
+            BundleImportMode::Apply
+        },
+        BundleLimits::default(),
+        BundleImportApproval {
+            archive_sha256: expected_archive,
+            preview_digest: expected,
+        },
+    )?;
+    let mut applied = import_report(&bundle, imported)?;
+    transfer::finish_import(&user_root, &mut applied);
+    Ok(applied)
+}
+
+fn transfer_preview_digest(result: &KnowledgeResult) -> Result<String, WikiError> {
+    let data = result.data.as_ref().ok_or_else(|| {
+        WikiError::Verification("bundle import preview returned no result data".to_owned())
+    })?;
+    serde_json::to_vec(data)
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|error| WikiError::Io(format!("cannot digest transfer preview: {error}")))
+}
+
+fn insert_transfer_preview_digest(
+    result: &mut KnowledgeResult,
+    preview_digest: &str,
+) -> Result<(), WikiError> {
+    let data = result.data.as_mut().ok_or_else(|| {
+        WikiError::Verification("bundle import preview returned no result data".to_owned())
+    })?;
+    data.as_object_mut()
+        .ok_or_else(|| WikiError::Verification("bundle import result is not an object".to_owned()))?
+        .insert(
+            "transfer_preview_digest".to_owned(),
+            Value::String(preview_digest.to_owned()),
+        );
+    Ok(())
 }
 
 pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
@@ -1256,7 +1473,7 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(&filtered, &["--user-root", "--bundle"])?;
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let bundle = PathBuf::from(required(&options, "--bundle")?);
-    let imported = import_bundle(
+    run_import_mode(
         &user_root,
         &bundle,
         if apply == 1 {
@@ -1264,8 +1481,22 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         } else {
             BundleImportMode::DryRun
         },
-        BundleLimits::default(),
-    )?;
+    )
+}
+
+fn run_import_mode(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+) -> Result<KnowledgeResult, WikiError> {
+    let imported = import_bundle(user_root, bundle, mode, BundleLimits::default())?;
+    import_report(bundle, imported)
+}
+
+fn import_report(
+    bundle: &Path,
+    imported: BundleImportResult,
+) -> Result<KnowledgeResult, WikiError> {
     let digest = imported.manifest_sha256.clone();
     Ok(success(
         "ImportKnowledge",
@@ -4319,6 +4550,30 @@ mod tests {
     };
     use std::fs;
     use tempfile::TempDir;
+
+    #[test]
+    fn transfer_rejects_source_roots_before_receipt_or_knowledge_access() {
+        let root = tempfile::tempdir().expect("source fixture");
+        fs::write(root.path().join("hive-source.json"), b"{}").expect("source marker");
+        let target = root.path().to_str().expect("UTF-8 fixture");
+        assert!(resolve_transfer_root(&[("--user-root", target)]).is_err());
+        assert!(!root.path().join(".hive").exists());
+        assert_eq!(
+            fs::read(root.path().join("hive-source.json")).unwrap(),
+            b"{}"
+        );
+    }
+
+    #[test]
+    fn transfer_rejects_hive_directory_as_user_root() {
+        let root = tempfile::tempdir().expect("root fixture");
+        let hive = root.path().join(".hive");
+        fs::create_dir(&hive).expect("existing Hive directory");
+        let error = resolve_transfer_root(&[("--user-root", hive.to_str().unwrap())])
+            .expect_err("wrong root");
+        assert!(error.to_string().contains("parent of .hive"));
+        assert!(!hive.join(".hive").exists());
+    }
 
     fn temp_root() -> TempDir {
         TempDir::new_in(std::env::current_dir().expect("current directory"))

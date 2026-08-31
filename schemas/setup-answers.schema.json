@@ -486,6 +486,8 @@
         "knowledge-capture",
         "knowledge-recall",
         "knowledge-import",
+        "knowledge-scan",
+        "knowledge-transfer",
         "knowledge-promote",
         "knowledge-maintain",
         "run-checkpoint",

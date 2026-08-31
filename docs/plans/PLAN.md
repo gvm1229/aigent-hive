@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 301
-> 기준일: 2026-08-29
+> Revision: 303
+> 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 수용된 공개 시험: `0.10.0-test.6`
-> 현재 단계: 벡터 포함 공개 수용 완료, 안정판 제외. 별도 소스 산출물 정리는 다른 작업 소유
+> 현재 단계: 지식 이전 구현·교차 운영체제 검증, 안정판 제외
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -21,6 +21,7 @@
 - Source 전용 `draft-devlog`의 임시 token·비공개 초안·명시 발행·일반화된 기술 글 계약
 - 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 선택형 벡터 검색의 한 번 묻는 사용자 답변과 새 세션 설정 안내
+- 컴퓨터 간 전체 이식 가능한 지식 이전과 FTS 준비
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
@@ -43,10 +44,8 @@
 
 ## 현재 연속 실행 경계
 
-- 승인 순서: 한국어 결함 수정·비벡터 재검증 → `develop` 병합 → `feature/0.10.0-vector-search` 생성·벡터 구현
-- 병합 선행: 제품 기능 회귀 검사. `develop` 전용 공개 후보·설치 수용은 병합 뒤 별도 실행
-- 유지보수자 권한: `0.10.0` 구현·시험·commit·`feature/0.10.0-vector-search` push·CI 관찰·번호 공개 시험판
-- Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
+- 현재 승인: `KTX10-*` 구현·검증·`develop` 병합·번호 시험판. 저장소의 수정된 `verified-workflow` 사용
+- 검증형 실행 적용 주장: 실제 작업에 연결된 실행 생성·검증 근거 필수
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
 
@@ -66,18 +65,20 @@
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
 | Vector onboarding | 0 | 8 | 0% |
+| Knowledge transfer | 5 | 2 | 71.4% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
+| 연속 실행 지침 교정 | 3 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **118** | **11** | **91.5%** |
+| **합계** | **122** | **17** | **87.8%** |
 
 ## Required load order
 
@@ -96,11 +97,12 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/knowledge-relationship-graph-0.10.0.md`](active/knowledge-relationship-graph-0.10.0.md) | `SCP10-001`, `KRG10-*` | Markdown·Graphify 관계 검색 |
 | [`active/hybrid-vector-search-0.10.0.md`](active/hybrid-vector-search-0.10.0.md) | `KRG10-014`, `VEC10-*`, `VQR10-*` | Semantic vector 재검증·조건부 구현 |
 | [`active/vector-onboarding-0.10.0.md`](active/vector-onboarding-0.10.0.md) | `VON10-*` | 벡터 사용 답변·새 세션 설정 안내 |
+| [`active/knowledge-transfer-0.10.0.md`](active/knowledge-transfer-0.10.0.md) | `KTX10-*` | 컴퓨터 간 지식 이전·FTS·벡터 재생성 |
 | [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
-| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*` | 자연어 routing·실행 graph·격리 통합 수용 |
+| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*`, `VCF10-*` | 자연어 routing·실행 graph·격리 수용·종료 지침 교정 |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
 | [`active/korean-language-core-0.10.0.md`](active/korean-language-core-0.10.0.md) | `KOR10-*` | 자동 한국어 core·`humanize-kor`·upstream update |

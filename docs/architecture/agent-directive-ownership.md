@@ -31,7 +31,11 @@
 | `user-completion` | `crates/hive-cli/src/user_directives.rs` | Codex·Claude·Antigravity 사용자 marker |
 
 `harness/template/AGENTS.md.jinja`: route·identity·항상 필요한 안전 요약만 소유.
-`verified-workflow`: graph·retry·Judge 절차만 소유하고 project continuation 규칙 참조.
+`verified-workflow`: 실행 생성·검증·재시도·Judge 절차 소유. 소스는 `01-behavior`·`04-documentation-state`, 소비자는 `00-project-harness`의 연속 실행·종료 정책 참조.
+
+- 소스 종료 기록: 실제 실행 대상·식별자·지문·작업 기준 연결과 `run closure` 결과 확인
+- 소비자 종료 기록: 요청 전체와 실행 결과 대조, 명령 성공과 작업 완료 구분
+- 소스 루트의 소비자 상태 생성 금지 유지. 격리 수용 성공을 실제 작업 완료 근거로 대체 금지
 
 ## 중복 허용
 

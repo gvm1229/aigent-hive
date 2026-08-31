@@ -61,6 +61,7 @@ EXPECTED_ACTIONS = {
     "ScanKnowledge",
     "ExportKnowledge",
     "ImportKnowledge",
+    "TransferKnowledge",
     "PromoteKnowledge",
     "NotionKnowledge",
     "SyncNotionKnowledge",

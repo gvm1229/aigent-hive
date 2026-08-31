@@ -142,7 +142,7 @@ OMC_MERGE = frozenset(
 CURRENT_SOURCE_SKILLS = frozenset({"draft-devlog", "update-summary"})
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
-        "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-import",
+        "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
         "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
         "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
         "run-handoff", "project-transition", "run-resume", "run-checkpoint",
@@ -164,6 +164,7 @@ V09_RUNTIME_FILES = (
     "crates/hive-cli/Cargo.toml",
     "crates/hive-cli/src/knowledge.rs",
     "crates/hive-cli/src/knowledge_scan.rs",
+    "crates/hive-cli/src/knowledge_transfer.rs",
     "crates/hive-cli/src/loop_engineering.rs",
     "crates/hive-core/Cargo.toml",
     "crates/hive-core/src/loop_graph.rs",
@@ -193,6 +194,8 @@ V09_DIRECTIVE_FILES = (
     ".agents/directives/05-security-safety.md",
 )
 V09_SKILL_GLOBS = (
+    "knowledge-scan",
+    "knowledge-transfer",
     "code-polish",
     "research-best-practices",
     "knowledge-capture",
@@ -470,7 +473,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
         self.assertEqual(len(CURRENT_SOURCE_SKILLS), 2)
-        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 27)
+        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 28)
         self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
         catalog_text = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")

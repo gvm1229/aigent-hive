@@ -359,6 +359,15 @@ enum VectorFeatureAnswer {
     No,
 }
 
+/// Read the saved vector-search preference without changing setup or feature-answer state.
+pub(crate) fn vector_search_enabled(user_root: &Path) -> Result<bool, String> {
+    let root = super::user_install::open_user_root_for_setup(user_root)?;
+    let (_, answers) = load_feature_answers(&root).map_err(|_| {
+        "saved vector preference is invalid; inspect user feature answers".to_owned()
+    })?;
+    Ok(answers.vector_search == Some(VectorFeatureAnswer::Yes))
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UserFeatureAnswers {
@@ -1669,7 +1678,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "usage-guard",
@@ -1688,7 +1697,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "run-handoff",
@@ -1708,7 +1717,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "usage-guard",
             "product-update",
         ]),
@@ -2201,7 +2210,7 @@ fn resolve_skills(
                     | "knowledge-recall"
                     | "knowledge-promote"
                     | "knowledge-maintain"
-                    | "knowledge-import"
+                    | "knowledge-scan"
             )
         });
     }
@@ -4572,6 +4581,21 @@ usage_guard:
             .expect("Korean guidance");
         assert!(korean.contains("무응답·취소를 아니요로 기록 금지"));
         assert!(vector_setup_prompt(InterfaceLanguage::Ko).contains("현재 등록된 공유 모음"));
+    }
+
+    #[test]
+    fn transfer_preference_errors_do_not_echo_invalid_values() {
+        let root = tempfile::tempdir().expect("preference fixture");
+        let config = root.path().join(".hive/config");
+        fs::create_dir_all(&config).expect("config directory");
+        let bytes = b"schema_version: 1\nvector_search: sensitive-value-fixture\n";
+        fs::write(config.join("user-feature-answers.yml"), bytes).expect("invalid fixture");
+        let error = vector_search_enabled(root.path()).expect_err("invalid preference");
+        assert!(!error.contains("sensitive-value-fixture"));
+        assert_eq!(
+            fs::read(config.join("user-feature-answers.yml")).unwrap(),
+            bytes
+        );
     }
 
     #[test]

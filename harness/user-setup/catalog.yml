@@ -61,7 +61,8 @@ skill_dependencies:
   - { skill: code-polish, requires: [] }
   - { skill: humanize-kor, requires: [] }
   - { skill: verified-workflow, requires: [judge-evidence, run-handoff, run-checkpoint, run-resume, usage-guard] }
-  - { skill: knowledge-import, requires: [knowledge-promote] }
+  - { skill: knowledge-scan, requires: [knowledge-promote] }
+  - { skill: knowledge-transfer, requires: [] }
   - { skill: knowledge-maintain, requires: [knowledge-recall] }
   - { skill: knowledge-capture, requires: [knowledge-recall] }
   - { skill: prompt-refine, requires: [] }

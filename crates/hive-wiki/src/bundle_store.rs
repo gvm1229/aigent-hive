@@ -14,8 +14,8 @@ use crate::collection::{
     CollectionState, CollectionVisibility, COLLECTION_SCHEMA_VERSION, USER_ROOT_COLLECTION_ID,
 };
 use crate::portable::{
-    BundleEntryInput, BundleLimits, BundleRequest, BundleScope, BundleSourceIdentity,
-    BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
+    encode_bundle, BundleEntryInput, BundleLimits, BundleRequest, BundleScope,
+    BundleSourceIdentity, BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
 };
 use crate::rag::{
     build_rag_index, parse_claim_markdown, GenerationManifest, RagVisibility,
@@ -111,6 +111,28 @@ pub struct BundleExportResult {
     pub backup_path: Option<PathBuf>,
 }
 
+/// Read-only receipt for an exact prospective portable bundle.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleExportPreview {
+    /// Logical source identity committed into the prospective manifest.
+    pub source: BundleSourceIdentity,
+    /// Exact export scope.
+    pub scope: BundleScope,
+    /// Number of portable payload entries in the archive.
+    pub entry_count: usize,
+    /// Canonical entries excluded because they appeared to contain credentials.
+    pub credential_excluded_count: usize,
+    /// Entries excluded because they carried machine-bound absolute locators.
+    pub absolute_path_excluded_count: usize,
+    /// Entries excluded by the confidential boundary.
+    pub confidential_excluded_count: usize,
+    /// Digest of the exact archive that a subsequent export would publish.
+    pub archive_sha256: String,
+    /// Exact prospective archive byte length.
+    pub byte_length: u64,
+}
+
 /// Explicit import execution mode.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -119,6 +141,8 @@ pub enum BundleImportMode {
     DryRun,
     /// Atomically activate the validated canonical merge and rebuild the index.
     Apply,
+    /// Atomically apply only entries that did not conflict during the reviewed preview.
+    ApplyExcludingConflicts,
 }
 
 /// Import disposition matching the public JSON contract.
@@ -180,8 +204,14 @@ pub struct BundleImportResult {
     pub added_count: usize,
     /// Entries already present identically.
     pub unchanged_count: usize,
+    /// Canonical logical paths excluded because destination bytes or claim identity conflicted.
+    pub conflict_paths: Vec<String>,
+    /// Digest of the destination bindings and canonical bytes observed during planning.
+    pub target_state_digest: String,
     /// Imported collections still awaiting an explicit local attachment.
     pub detached_collection_ids: Vec<String>,
+    /// Exact logical collections present in the validated bundle.
+    pub collection_ids: Vec<String>,
     /// Final logical paths changed by a successful apply.
     pub changed_paths: Vec<String>,
     /// Whether canonical bytes changed.
@@ -272,6 +302,8 @@ struct ImportPlan {
     entry_count: usize,
     added_count: usize,
     unchanged_count: usize,
+    conflict_paths: Vec<String>,
+    target_state_digest: String,
     detached_collection_ids: Vec<String>,
 }
 
@@ -299,6 +331,69 @@ pub fn export_bundle(
     publish_mode: &BundlePublishMode,
     limits: BundleLimits,
 ) -> Result<BundleExportResult, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let receipt = encode_and_publish_bundle(&prepared.request, limits, destination, publish_mode)
+        .map_err(bundle_io_error)?;
+    let disposition = match receipt.outcome() {
+        BundlePublishOutcome::Created => BundleExportDisposition::Created,
+        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
+        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
+    };
+    Ok(BundleExportResult {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        disposition,
+        archive_sha256: receipt.archive_sha256().to_owned(),
+        byte_length: receipt.byte_length(),
+        backup_path: receipt.backup_path().map(Path::to_path_buf),
+    })
+}
+
+/// Build the exact portable archive in memory without writing a bundle file.
+///
+/// The returned digest and length describe the same deterministic bytes that `export_bundle`
+/// would publish while the canonical source remains unchanged.
+///
+/// # Errors
+/// Rejects unsafe source paths, invalid canonical data, or bundle resource limits.
+pub fn preview_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    limits: BundleLimits,
+) -> Result<BundleExportPreview, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let encoded = encode_bundle(&prepared.request, limits)
+        .map_err(|error| WikiError::Verification(error.to_string()))?;
+    Ok(BundleExportPreview {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        archive_sha256: encoded.plan().archive_sha256().to_owned(),
+        byte_length: u64::try_from(encoded.archive().len())
+            .map_err(|_| WikiError::Io("bundle preview length does not fit u64".to_owned()))?,
+    })
+}
+
+struct ExportPreparation {
+    request: BundleRequest,
+    source: BundleSourceIdentity,
+    scope: BundleScope,
+    entry_count: usize,
+    exclusions: ExportExclusions,
+}
+
+fn prepare_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    _limits: BundleLimits,
+) -> Result<ExportPreparation, WikiError> {
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
@@ -361,24 +456,12 @@ pub fn export_bundle(
         scope: scope.clone(),
         entries,
     };
-    let receipt = encode_and_publish_bundle(&request, limits, destination, publish_mode)
-        .map_err(bundle_io_error)?;
-    let disposition = match receipt.outcome() {
-        BundlePublishOutcome::Created => BundleExportDisposition::Created,
-        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
-        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
-    };
-    Ok(BundleExportResult {
+    Ok(ExportPreparation {
+        request,
         source,
         scope,
         entry_count: portable_entry_count,
-        credential_excluded_count: exclusions.credential,
-        absolute_path_excluded_count: exclusions.absolute_path,
-        confidential_excluded_count: exclusions.confidential,
-        disposition,
-        archive_sha256: receipt.archive_sha256().to_owned(),
-        byte_length: receipt.byte_length(),
-        backup_path: receipt.backup_path().map(Path::to_path_buf),
+        exclusions,
     })
 }
 
@@ -402,15 +485,62 @@ pub fn import_bundle(
     mode: BundleImportMode,
     limits: BundleLimits,
 ) -> Result<BundleImportResult, WikiError> {
+    import_bundle_checked(user_root, bundle, mode, limits, None)
+}
+
+/// Exact archive and dry-run digest approved for one transfer apply.
+pub struct BundleImportApproval<'a> {
+    /// SHA-256 of the archive obtained from the sending computer.
+    pub archive_sha256: &'a str,
+    /// SHA-256 of the serialized complete dry-run result.
+    pub preview_digest: &'a str,
+}
+
+/// Apply a reviewed import, rechecking approval while holding the canonical write lock.
+///
+/// # Errors
+/// Rejects changed archive or destination bytes before activation, as well as normal import errors.
+pub fn import_bundle_reviewed(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+    limits: BundleLimits,
+    approval: BundleImportApproval<'_>,
+) -> Result<BundleImportResult, WikiError> {
+    if mode == BundleImportMode::DryRun {
+        return Err(WikiError::InvalidInput(
+            "reviewed import requires an apply mode".to_owned(),
+        ));
+    }
+    // Reject stale caller input before the writer lock creates its infrastructure directory.
+    // The same approval is checked again under that lock before any canonical activation.
+    let preview = import_bundle_checked(user_root, bundle, BundleImportMode::DryRun, limits, None)?;
+    if approval.archive_sha256 != preview.archive_sha256
+        || approval.preview_digest != import_preview_digest(&preview)?
+    {
+        return Err(WikiError::Conflict(
+            "bundle or destination bytes changed after the transfer preview".to_owned(),
+        ));
+    }
+    import_bundle_checked(user_root, bundle, mode, limits, Some(approval))
+}
+
+fn import_bundle_checked(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+    limits: BundleLimits,
+    approval: Option<BundleImportApproval<'_>>,
+) -> Result<BundleImportResult, WikiError> {
     let validated = load_bundle(bundle, limits).map_err(bundle_io_error)?;
     validate_manifest_logical_digest(&validated)?;
     let incoming = validate_incoming(&validated)?;
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
-    let _lock = if mode == BundleImportMode::Apply {
-        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
-    } else {
+    let _lock = if mode == BundleImportMode::DryRun {
         None
+    } else {
+        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
     };
     reject_dirty(&root)?;
     let rebuild_index = wiki_indexing_enabled(&root)?;
@@ -420,51 +550,22 @@ pub fn import_bundle(
     let scope = validated.manifest().scope.clone();
     let archive_sha256 = validated.archive_sha256().to_owned();
     let manifest_sha256 = validated.manifest_sha256().to_owned();
-    let collection_tables = COLLECTION_TABLES.iter().map(ToString::to_string).collect();
+    let collection_tables: Vec<String> =
+        COLLECTION_TABLES.iter().map(ToString::to_string).collect();
+    let collection_ids: Vec<String> = incoming
+        .metadata
+        .collections
+        .iter()
+        .map(|record| record.collection_id.clone())
+        .collect();
 
-    if plan.added_count == 0 {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Noop,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: 0,
-            unchanged_count: plan.unchanged_count,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-    if mode == BundleImportMode::DryRun {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Planned,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: plan.added_count,
-            unchanged_count: plan.unchanged_count,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-
-    let changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
-    Ok(BundleImportResult {
-        mode,
-        disposition: BundleImportDisposition::Applied,
+    let mut result = BundleImportResult {
+        mode: BundleImportMode::DryRun,
+        disposition: if plan.added_count == 0 {
+            BundleImportDisposition::Noop
+        } else {
+            BundleImportDisposition::Planned
+        },
         archive_sha256,
         manifest_sha256,
         source,
@@ -472,13 +573,47 @@ pub fn import_bundle(
         entry_count: plan.entry_count,
         added_count: plan.added_count,
         unchanged_count: plan.unchanged_count,
-        detached_collection_ids: plan.detached_collection_ids,
-        changed_paths,
-        canonical_mutation: true,
-        index_rebuilt: rebuild_index,
+        conflict_paths: plan.conflict_paths.clone(),
+        target_state_digest: plan.target_state_digest.clone(),
+        detached_collection_ids: plan.detached_collection_ids.clone(),
+        collection_ids,
+        changed_paths: Vec::new(),
+        canonical_mutation: false,
+        index_rebuilt: false,
         rollback: BundleRollbackResult::none(),
         collection_tables,
-    })
+    };
+    if let Some(approval) = approval {
+        if approval.archive_sha256 != result.archive_sha256
+            || approval.preview_digest != import_preview_digest(&result)?
+        {
+            return Err(WikiError::Conflict(
+                "bundle or destination bytes changed after the transfer preview".to_owned(),
+            ));
+        }
+    }
+    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
+        return Err(WikiError::Conflict("bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel".to_owned()));
+    }
+    if mode != BundleImportMode::DryRun && plan.added_count > 0 {
+        result.changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
+        result.disposition = BundleImportDisposition::Applied;
+        result.canonical_mutation = true;
+        result.index_rebuilt = rebuild_index;
+    }
+    result.mode = mode;
+    Ok(result)
+}
+
+/// Digest a dry-run result in the same canonical JSON object order exposed by the CLI.
+///
+/// # Errors
+/// Returns an error if result serialization fails.
+pub fn import_preview_digest(result: &BundleImportResult) -> Result<String, WikiError> {
+    serde_json::to_value(result)
+        .and_then(|value| serde_json::to_vec(&value))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|error| WikiError::Io(error.to_string()))
 }
 
 fn source_identity(scope: &BundleScope, logical_digest: String) -> BundleSourceIdentity {
@@ -1248,6 +1383,11 @@ fn build_import_plan(
     let mut writes = Vec::new();
     let mut added_count = usize::from(registry_changed);
     let mut unchanged_count = usize::from(!registry_changed);
+    let mut conflict_paths = Vec::new();
+    let mut observed = BTreeMap::from([(
+        COLLECTION_REGISTRY_RELATIVE.to_owned(),
+        loaded.bytes.as_deref().map(sha256_digest),
+    )]);
     if registry_changed {
         writes.push(PlannedWrite {
             root_index: 0,
@@ -1277,9 +1417,18 @@ fn build_import_plan(
                     let expected =
                         format!("{CLAIMS_RELATIVE}/{}/{}", payload.collection_id, file_name);
                     if existing != &expected {
-                        return Err(WikiError::Conflict(format!(
-                            "claim ID `{claim_id}` already exists at `{existing}`"
-                        )));
+                        let bytes = read_bounded_optional(
+                            &roots[0].dir,
+                            Path::new(existing),
+                            MAX_CLAIM_BYTES,
+                            "conflicting claim",
+                        )?;
+                        observed.insert(
+                            payload.relative_path.clone(),
+                            bytes.as_deref().map(sha256_digest),
+                        );
+                        conflict_paths.push(existing.clone());
+                        continue;
                     }
                 }
                 let relative = PathBuf::from(CLAIMS_RELATIVE)
@@ -1301,6 +1450,10 @@ fn build_import_plan(
             payload_max_bytes(&payload.kind),
             "bundle import destination",
         )?;
+        observed.insert(
+            payload.relative_path.clone(),
+            existing.as_deref().map(sha256_digest),
+        );
         let desired = if matches!(payload.kind, IncomingKind::Suppression) {
             merge_suppression(existing.as_deref(), &payload.bytes)?
         } else {
@@ -1309,10 +1462,7 @@ fn build_import_plan(
         if existing.as_deref() == Some(desired.as_slice()) {
             unchanged_count += 1;
         } else if existing.is_some() && !matches!(payload.kind, IncomingKind::Suppression) {
-            return Err(WikiError::Conflict(format!(
-                "same logical bundle path has divergent canonical bytes: {}",
-                payload.relative_path
-            )));
+            conflict_paths.push(logical_locator);
         } else {
             added_count += 1;
             writes.push(PlannedWrite {
@@ -1335,8 +1485,10 @@ fn build_import_plan(
         ));
     }
     validate_planned_suppressions(&roots, &writes)?;
+    conflict_paths.sort();
+    conflict_paths.dedup();
     let entry_count = incoming.payloads.len() + 1;
-    if added_count + unchanged_count != entry_count {
+    if added_count + unchanged_count + conflict_paths.len() != entry_count {
         return Err(WikiError::Io(
             "bundle import accounting lost a payload entry".to_owned(),
         ));
@@ -1347,6 +1499,11 @@ fn build_import_plan(
         entry_count,
         added_count,
         unchanged_count,
+        conflict_paths,
+        target_state_digest: sha256_digest(
+            &serde_json::to_vec(&(root_path, &merged, &existing_claims, &observed))
+                .map_err(|error| WikiError::Io(error.to_string()))?,
+        ),
         detached_collection_ids: detached,
     })
 }
@@ -3346,6 +3503,153 @@ mod tests {
             fs::read(destination.path().join(SHARED_INDEX_RELATIVE)).unwrap(),
             index_before
         );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn reviewed_exclusion_binds_conflicting_bytes_and_preserves_nonconflicting_import() {
+        let output = tempfile::tempdir().unwrap();
+        let original = output.path().join("original.hivekb");
+        let (source, project, id) = project_bundle(&original);
+        let destination = initialized_root();
+        import_bundle(
+            destination.path(),
+            &original,
+            BundleImportMode::Apply,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let divergent = detached_wiki_path(destination.path(), &id);
+        fs::write(
+            &divergent,
+            wiki_bytes("project-page", "Destination version one."),
+        )
+        .unwrap();
+        fs::write(
+            project.path().join(WIKI_RELATIVE).join("new-page.md"),
+            wiki_bytes("new-page", "New portable knowledge."),
+        )
+        .unwrap();
+        let updated = output.path().join("updated.hivekb");
+        export_bundle(
+            source.path(),
+            BundleScope::Project {
+                id: PROJECT_ID.to_owned(),
+            },
+            &updated,
+            &BundlePublishMode::CreateOnly,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let preview = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(preview.conflict_paths.len(), 1);
+        assert!(preview.added_count > 0);
+        let expected_preview = import_preview_digest(&preview).unwrap();
+        let new_path = divergent.parent().unwrap().join("new-page.md");
+        assert!(matches!(
+            import_bundle(
+                destination.path(),
+                &updated,
+                BundleImportMode::Apply,
+                BundleLimits::default()
+            ),
+            Err(WikiError::Conflict(_))
+        ));
+        assert!(!new_path.exists());
+
+        let retained = wiki_bytes("project-page", "Destination version two.");
+        fs::write(&divergent, &retained).unwrap();
+        let rejected = import_bundle_reviewed(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+            BundleImportApproval {
+                archive_sha256: &preview.archive_sha256,
+                preview_digest: &expected_preview,
+            },
+        );
+        assert!(matches!(rejected, Err(WikiError::Conflict(_))));
+        assert!(!new_path.exists());
+        assert_eq!(fs::read(&divergent).unwrap(), retained);
+
+        let current = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_ne!(current.target_state_digest, preview.target_state_digest);
+        let digest = import_preview_digest(&current).unwrap();
+        let applied = import_bundle_reviewed(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+            BundleImportApproval {
+                archive_sha256: &current.archive_sha256,
+                preview_digest: &digest,
+            },
+        )
+        .unwrap();
+        assert_eq!(applied.conflict_paths, current.conflict_paths);
+        assert_eq!(fs::read(&divergent).unwrap(), retained);
+        assert_eq!(
+            fs::read(&new_path).unwrap(),
+            wiki_bytes("new-page", "New portable knowledge.")
+        );
+        let retry = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(retry.disposition, BundleImportDisposition::Noop);
+        assert!(!retry.canonical_mutation);
+        assert!(retry.changed_paths.is_empty());
+    }
+
+    #[test]
+    fn reviewed_import_rejects_wrong_archive_before_writes() {
+        let output = tempfile::tempdir().unwrap();
+        let bundle = output.path().join("source.hivekb");
+        let (_source, _project, _id) = project_bundle(&bundle);
+        let destination = initialized_root();
+        let preview = import_bundle(
+            destination.path(),
+            &bundle,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let registry = fs::read(destination.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap();
+        let digest = import_preview_digest(&preview).unwrap();
+        assert!(matches!(
+            import_bundle_reviewed(
+                destination.path(),
+                &bundle,
+                BundleImportMode::Apply,
+                BundleLimits::default(),
+                BundleImportApproval {
+                    archive_sha256: &format!("sha256:{}", "0".repeat(64)),
+                    preview_digest: &digest,
+                }
+            ),
+            Err(WikiError::Conflict(_))
+        ));
+        assert_eq!(
+            registry,
+            fs::read(destination.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap()
+        );
+        assert!(!destination.path().join(DETACHED_IMPORT_ROOT).exists());
     }
 
     #[test]

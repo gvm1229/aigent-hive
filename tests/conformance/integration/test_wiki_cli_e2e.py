@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -514,9 +515,25 @@ This temporary page has no backlinks and can be deleted explicitly.
         )
 
         bundle = self.work_root / "scanned-collection.hivekb"
+        export_preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "export",
+                "--preview",
+                "--scope",
+                f"collection:{collection_id}",
+                "--bundle",
+                str(bundle),
+            )[1]
+        )
+        self.assertFalse(bundle.exists())
+        self.assertRegex(export_preview["archive_sha256"], r"^sha256:[0-9a-f]{64}$")
+
         exported = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "export",
+                "--apply",
                 "--scope",
                 f"collection:{collection_id}",
                 "--bundle",
@@ -524,27 +541,54 @@ This temporary page has no backlinks and can be deleted explicitly.
             )[1]
         )
         self.assertTrue(bundle.is_file())
-        self.assertRegex(exported["archive_sha256"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(exported["archive_sha256"], export_preview["archive_sha256"])
 
         destination = self.work_root / "fresh-user-root"
         write_operational_user_setup(destination)
+        (destination / ".hive/config/user-feature-answers.yml").write_text(
+            "schema_version: 1\nvector_search: \"yes\"\nintroduced_in: \"0.10.0\"\n",
+            encoding="utf-8",
+        )
         before_dry_run = snapshot_tree(destination)
         dry_run = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "import",
+                "--preview",
                 "--bundle",
                 str(bundle),
-                "--dry-run",
                 user_root=destination,
             )[1]
         )
         Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(dry_run)
         self.assertEqual(dry_run["mode"], "dry-run")
+        self.assertRegex(dry_run["transfer_preview_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(snapshot_tree(destination), before_dry_run)
+
+        rejected_process, rejected = self.invoke_knowledge(
+            "transfer",
+            "import",
+            "--preview-digest",
+            "sha256:" + "0" * 64,
+            "--expected-sha256",
+            exported["archive_sha256"],
+            "--bundle",
+            str(bundle),
+            "--apply",
+            user_root=destination,
+        )
+        self.assertEqual(rejected_process.returncode, 3, rejected)
+        self.assertEqual(rejected["status"], "conflict", rejected)
         self.assertEqual(snapshot_tree(destination), before_dry_run)
 
         imported = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "import",
+                "--preview-digest",
+                dry_run["transfer_preview_digest"],
+                "--expected-sha256",
+                exported["archive_sha256"],
                 "--bundle",
                 str(bundle),
                 "--apply",
@@ -554,6 +598,64 @@ This temporary page has no backlinks and can be deleted explicitly.
         Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(imported)
         self.assertEqual(imported["mode"], "apply")
         self.assertIn(collection_id, imported["detached_collection_ids"])
+        self.assertEqual(imported["vector_rebuild"]["state"], "question-required")
+        self.assertEqual(imported["vector_rebuild"]["scope"], "imported portable collections only")
+
+        transfer = imported["transfer"]
+        self.assertTrue(transfer["complete"])
+        preference_path = destination / ".hive/config/user-feature-answers.yml"
+        preference_before = preference_path.read_bytes()
+        before_cancel = snapshot_tree(destination)
+        cancelled = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "cancel",
+            "--receipt-digest", transfer["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertEqual(cancelled["vector_state"], "unanswered")
+        self.assertEqual(snapshot_tree(destination), before_cancel)
+
+        deferred = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "no",
+            "--receipt-digest", transfer["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertTrue(deferred["complete"])
+        self.assertEqual(deferred["vector_state"], "deferred")
+        self.assertFalse(deferred["question_required"])
+        self.assertEqual(preference_path.read_bytes(), preference_before)
+        status = self.assert_success(self.invoke_knowledge(
+            "transfer", "status", "--id", transfer["id"], user_root=destination,
+        )[1])
+        self.assertEqual(status["receipt_digest"], deferred["receipt_digest"])
+        self.assertFalse(status["question_required"])
+        implicit = subprocess.run(
+            [str(self.hive_binary), "knowledge", "transfer", "status", "--id", transfer["id"], "--output", "json"],
+            cwd=REPOSITORY_ROOT, capture_output=True, encoding="utf-8", check=False,
+            env={**os.environ, "USERPROFILE": str(destination), "HOME": str(destination)},
+        )
+        self.assertEqual(implicit.returncode, 0, implicit.stdout)
+        self.assertEqual(json.loads(implicit.stdout)["data"]["receipt_digest"], status["receipt_digest"])
+
+        retry_preview = self.assert_success(self.invoke_knowledge(
+            "transfer", "import", "--preview", "--bundle", str(bundle), user_root=destination,
+        )[1])
+        retried = self.assert_success(self.invoke_knowledge(
+            "transfer", "import", "--apply", "--bundle", str(bundle),
+            "--expected-sha256", exported["archive_sha256"],
+            "--preview-digest", retry_preview["transfer_preview_digest"], user_root=destination,
+        )[1])
+        Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(retried)
+        self.assertFalse(retried["canonical_mutation"])
+        self.assertEqual(retried["transfer"]["vector_state"], "deferred")
+
+        pending = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "yes",
+            "--receipt-digest", deferred["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertTrue(pending["complete"])
+        self.assertEqual(pending["vector_state"], "pending")
+        self.assertFalse(pending["vector"]["installed"])
+        self.assertFalse(pending["vector"]["enabled_new_scope"])
+        self.assertFalse((destination / ".hive/index/vector/runtimes").exists())
+        self.assertEqual(preference_path.read_bytes(), preference_before)
 
         restored_project = self.work_root / "restored-consumer"
         restored_project.mkdir()
