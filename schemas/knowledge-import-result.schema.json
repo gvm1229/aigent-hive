@@ -18,6 +18,7 @@
     "conflict_paths",
     "target_state_digest",
     "detached_collection_ids",
+    "collection_ids",
     "changed_paths",
     "canonical_mutation",
     "index_rebuilt",
@@ -30,6 +31,19 @@
     "archive_sha256": { "$ref": "#/$defs/sha256" },
     "manifest_sha256": { "$ref": "#/$defs/sha256" },
     "target_state_digest": { "$ref": "#/$defs/sha256" },
+    "collection_ids": { "type": "array", "uniqueItems": true, "maxItems": 10000, "items": { "$ref": "#/$defs/collection_id" } },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "state"],
+      "properties": {
+        "complete": { "type": "boolean" },
+        "state": { "enum": ["complete", "fts-disabled", "fts-pending", "record-unavailable"] },
+        "id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "receipt_digest": { "$ref": "#/$defs/sha256" },
+        "vector_state": { "enum": ["unanswered", "deferred", "requested", "complete", "pending"] }
+      }
+    },
     "source": { "$ref": "#/$defs/source" },
     "scope": { "$ref": "#/$defs/scope" },
     "entry_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
@@ -67,7 +81,7 @@
       "additionalProperties": false,
       "required": ["state", "reason", "scope"],
       "properties": {
-        "state": { "const": "question-required" },
+        "state": { "enum": ["question-required", "deferred", "requested", "complete", "pending", "not-requested"] },
         "reason": { "type": "string", "minLength": 1, "maxLength": 240 },
         "scope": { "const": "imported portable collections only" }
       }
@@ -96,11 +110,8 @@
       "then": {
         "properties": {
           "added_count": { "const": 0 },
-          "changed_paths": { "maxItems": 0 },
           "canonical_mutation": { "const": false },
-          "index_rebuilt": { "const": false },
           "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
-          "vector_rebuild": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }

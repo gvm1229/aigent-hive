@@ -1,4 +1,6 @@
 use crate::knowledge_scan::scan_directory;
+#[path = "knowledge_transfer.rs"]
+mod transfer;
 #[path = "vector.rs"]
 mod vector;
 use cap_fs_ext::{FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
@@ -276,6 +278,7 @@ fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     match arguments.first().map(String::as_str) {
         Some("export") => run_transfer_export(&arguments[1..]),
         Some("import") => run_transfer_import(&arguments[1..]),
+        Some("status" | "vector") => transfer::run(arguments),
         _ => Err(WikiError::InvalidInput(
             "knowledge transfer requires export or import".to_owned(),
         )),
@@ -405,7 +408,6 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             "transfer import preview digest must be sha256".to_owned(),
         ));
     }
-    let vector_enabled = crate::user_setup::vector_search_enabled(&user_root);
     let imported = import_bundle_reviewed(
         &user_root,
         &bundle,
@@ -421,28 +423,7 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         },
     )?;
     let mut applied = import_report(&bundle, imported)?;
-    if applied
-        .data
-        .as_ref()
-        .and_then(|data| data.get("index_rebuilt"))
-        .and_then(Value::as_bool)
-        == Some(true)
-        && vector_enabled.as_ref().is_ok_and(|enabled| *enabled)
-    {
-        applied
-            .data
-            .as_mut()
-            .and_then(Value::as_object_mut)
-            .ok_or_else(|| WikiError::Verification("bundle import result is not an object".to_owned()))?
-            .insert(
-                "vector_rebuild".to_owned(),
-                json!({
-                    "state": "question-required",
-                    "reason": "FTS is ready; vector preference remains enabled until the user chooses rebuild now or defer",
-                    "scope": "imported portable collections only"
-                }),
-            );
-    }
+    transfer::finish_import(&user_root, &mut applied);
     Ok(applied)
 }
 

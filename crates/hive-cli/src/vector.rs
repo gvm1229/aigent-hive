@@ -35,6 +35,90 @@ const WORKER_LAUNCHER: &str = "import sys\n_hive_run_verified_file(sys.argv[1], 
 const LOCK: &str = include_str!("vector-runtime-lock.json");
 const MAX_WORKERS: usize = 16;
 
+/// Reuse only already-enabled partitions from this transfer. Never install or enable anything.
+pub(super) fn rebuild_transferred(user_root: &Path, ids: &[String]) -> Value {
+    let Ok(registry) = RagStore::open(user_root).and_then(|store| store.load_registry()) else {
+        return json!({"complete":false,"reason":"fts-or-registry-unavailable","scopes":[]});
+    };
+    let started = std::time::Instant::now();
+    let mut scopes = Vec::new();
+    let mut complete = true;
+    for id in ids {
+        let Some(record) = registry
+            .collections
+            .iter()
+            .find(|record| record.collection_id == *id)
+        else {
+            scopes.push(json!({"collection_id":id,"state":"unavailable"}));
+            complete = false;
+            continue;
+        };
+        if record.default_visibility == hive_wiki::collection::CollectionVisibility::Confidential {
+            scopes.push(json!({"collection_id":id,"state":"excluded-confidential"}));
+            continue;
+        }
+        if started.elapsed().as_secs() >= 45 {
+            scopes.push(json!({"collection_id":id,"state":"pending"}));
+            complete = false;
+            continue;
+        }
+        let mut enabled = false;
+        for visibility in ["shared", "project-private"] {
+            if visibility == "project-private"
+                && (record.collection_id == "user-root"
+                    || record.state != hive_wiki::collection::CollectionState::Attached)
+            {
+                continue;
+            }
+            let target_path = if visibility == "project-private" {
+                record.local_locator.as_deref().map_or(user_root, Path::new)
+            } else {
+                user_root
+            };
+            let root_text = user_root.to_string_lossy();
+            let target_text = target_path.to_string_lossy();
+            let options = [
+                ("--user-root", root_text.as_ref()),
+                ("--target", target_text.as_ref()),
+                ("--collection", id.as_str()),
+                ("--visibility", visibility),
+                ("--max-seconds", "10"),
+            ];
+            let Ok(target) = parse_target(&options, false) else {
+                complete = false;
+                continue;
+            };
+            let Some(control) = scope_control(&target)
+                .ok()
+                .and_then(|(control, _)| control)
+                .filter(|control| control.enabled)
+            else {
+                continue;
+            };
+            enabled = true;
+            if verify_runtime(&target.files, &control.runtime).is_ok()
+                && index::status(&target, &control)["index_ready"] == true
+            {
+                scopes.push(json!({"collection_id":id,"visibility":visibility,"state":"complete","reused":true}));
+                continue;
+            }
+            if let Ok(result) = index::rebuild(&target, &options) {
+                let done = result.get("complete").and_then(Value::as_bool) == Some(true);
+                complete &= done;
+                scopes.push(json!({"collection_id":id,"visibility":visibility,"state":if done {"complete"} else {"pending"}}));
+            } else {
+                complete = false;
+                scopes.push(json!({"collection_id":id,"visibility":visibility,"state":"failed-preserved-fts"}));
+            }
+        }
+        if !enabled {
+            complete = false;
+            scopes.push(json!({"collection_id":id,"state":"requires-existing-scope-approval-or-attachment"}));
+        }
+    }
+    json!({"complete":complete,"scopes":scopes,"installed":false,"enabled_new_scope":false})
+}
+
 #[cfg(test)]
 thread_local! {
     static TEST_DEFAULT_WORKERS: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };

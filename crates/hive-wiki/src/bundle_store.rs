@@ -210,6 +210,8 @@ pub struct BundleImportResult {
     pub target_state_digest: String,
     /// Imported collections still awaiting an explicit local attachment.
     pub detached_collection_ids: Vec<String>,
+    /// Exact logical collections present in the validated bundle.
+    pub collection_ids: Vec<String>,
     /// Final logical paths changed by a successful apply.
     pub changed_paths: Vec<String>,
     /// Whether canonical bytes changed.
@@ -355,6 +357,9 @@ pub fn export_bundle(
 ///
 /// The returned digest and length describe the same deterministic bytes that `export_bundle`
 /// would publish while the canonical source remains unchanged.
+///
+/// # Errors
+/// Rejects unsafe source paths, invalid canonical data, or bundle resource limits.
 pub fn preview_export_bundle(
     user_root: &Path,
     scope: BundleScope,
@@ -532,10 +537,10 @@ fn import_bundle_checked(
     let incoming = validate_incoming(&validated)?;
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
-    let _lock = if mode != BundleImportMode::DryRun {
-        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
-    } else {
+    let _lock = if mode == BundleImportMode::DryRun {
         None
+    } else {
+        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
     };
     reject_dirty(&root)?;
     let rebuild_index = wiki_indexing_enabled(&root)?;
@@ -547,93 +552,20 @@ fn import_bundle_checked(
     let manifest_sha256 = validated.manifest_sha256().to_owned();
     let collection_tables: Vec<String> =
         COLLECTION_TABLES.iter().map(ToString::to_string).collect();
+    let collection_ids: Vec<String> = incoming
+        .metadata
+        .collections
+        .iter()
+        .map(|record| record.collection_id.clone())
+        .collect();
 
-    if let Some(approval) = approval {
-        let preview = BundleImportResult {
-            mode: BundleImportMode::DryRun,
-            disposition: if plan.added_count == 0 {
-                BundleImportDisposition::Noop
-            } else {
-                BundleImportDisposition::Planned
-            },
-            archive_sha256: archive_sha256.clone(),
-            manifest_sha256: manifest_sha256.clone(),
-            source: source.clone(),
-            scope: scope.clone(),
-            entry_count: plan.entry_count,
-            added_count: plan.added_count,
-            unchanged_count: plan.unchanged_count,
-            conflict_paths: plan.conflict_paths.clone(),
-            target_state_digest: plan.target_state_digest.clone(),
-            detached_collection_ids: plan.detached_collection_ids.clone(),
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables: collection_tables.clone(),
-        };
-        if approval.archive_sha256 != archive_sha256
-            || approval.preview_digest != import_preview_digest(&preview)?
-        {
-            return Err(WikiError::Conflict(
-                "bundle or destination bytes changed after the transfer preview".to_owned(),
-            ));
-        }
-    }
-
-    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
-        return Err(WikiError::Conflict(
-            "bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel"
-                .to_owned(),
-        ));
-    }
-    if plan.added_count == 0 {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Noop,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: 0,
-            unchanged_count: plan.unchanged_count,
-            conflict_paths: plan.conflict_paths,
-            target_state_digest: plan.target_state_digest,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-    if mode == BundleImportMode::DryRun {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Planned,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: plan.added_count,
-            unchanged_count: plan.unchanged_count,
-            conflict_paths: plan.conflict_paths,
-            target_state_digest: plan.target_state_digest,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-
-    let changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
-    Ok(BundleImportResult {
-        mode,
-        disposition: BundleImportDisposition::Applied,
+    let mut result = BundleImportResult {
+        mode: BundleImportMode::DryRun,
+        disposition: if plan.added_count == 0 {
+            BundleImportDisposition::Noop
+        } else {
+            BundleImportDisposition::Planned
+        },
         archive_sha256,
         manifest_sha256,
         source,
@@ -641,15 +573,36 @@ fn import_bundle_checked(
         entry_count: plan.entry_count,
         added_count: plan.added_count,
         unchanged_count: plan.unchanged_count,
-        conflict_paths: plan.conflict_paths,
-        target_state_digest: plan.target_state_digest,
-        detached_collection_ids: plan.detached_collection_ids,
-        changed_paths,
-        canonical_mutation: true,
-        index_rebuilt: rebuild_index,
+        conflict_paths: plan.conflict_paths.clone(),
+        target_state_digest: plan.target_state_digest.clone(),
+        detached_collection_ids: plan.detached_collection_ids.clone(),
+        collection_ids,
+        changed_paths: Vec::new(),
+        canonical_mutation: false,
+        index_rebuilt: false,
         rollback: BundleRollbackResult::none(),
         collection_tables,
-    })
+    };
+    if let Some(approval) = approval {
+        if approval.archive_sha256 != result.archive_sha256
+            || approval.preview_digest != import_preview_digest(&result)?
+        {
+            return Err(WikiError::Conflict(
+                "bundle or destination bytes changed after the transfer preview".to_owned(),
+            ));
+        }
+    }
+    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
+        return Err(WikiError::Conflict("bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel".to_owned()));
+    }
+    if mode != BundleImportMode::DryRun && plan.added_count > 0 {
+        result.changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
+        result.disposition = BundleImportDisposition::Applied;
+        result.canonical_mutation = true;
+        result.index_rebuilt = rebuild_index;
+    }
+    result.mode = mode;
+    Ok(result)
 }
 
 /// Digest a dry-run result in the same canonical JSON object order exposed by the CLI.
@@ -3553,6 +3506,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn reviewed_exclusion_binds_conflicting_bytes_and_preserves_nonconflicting_import() {
         let output = tempfile::tempdir().unwrap();
         let original = output.path().join("original.hivekb");
