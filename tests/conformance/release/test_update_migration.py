@@ -201,7 +201,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(jobs["platform-smoke"]["strategy"]["matrix"]["os"], ["macos-latest", "windows-latest"])
         self.assertEqual(
             jobs["protected-merge-gate"]["needs"],
-            ["changes", "documentation", "rust", "conformance", "copier", "platform-smoke"],
+            ["changes", "documentation", "rust", "conformance", "copier", "platform-smoke", "transfer-consume"],
         )
         self.assertIn(
             'test "$DOCUMENTATION_RESULT" = success',
@@ -211,6 +211,8 @@ class Phase6StaticContracts(unittest.TestCase):
             'test "$PLATFORM_RESULT" = success',
             jobs["protected-merge-gate"]["steps"][0]["run"],
         )
+        self.assertIn('test "$TRANSFER_RESULT" = success', jobs["protected-merge-gate"]["steps"][0]["run"])
+        self.assertIn("--require-cross-os", str(jobs["transfer-consume"]["steps"]))
         self.assertEqual(
             yaml.safe_load(
                 (ROOT / ".github/workflows/release-publish.yml").read_text(
