@@ -30,7 +30,7 @@ class PublicStableDocsTest(unittest.TestCase):
             "docs/hive-install-guide.ko.html",
             "docs/overview/product.md",
             "docs/01-index.md",
-            "docs/releases/0.9.5.md",
+            "docs/releases/0.10.0.md",
         ):
             source = ROOT / relative
             destination = root / relative
@@ -58,7 +58,7 @@ class PublicStableDocsTest(unittest.TestCase):
         self.assertEqual(result["exit_code"], 1)
         self.assertIn("prerelease-exposure", {item["code"] for item in result["failures"]})
 
-        readme.write_text(readme.read_text(encoding="utf-8").replace("version=0.9.5", "version=0.9.4"), encoding="utf-8")
+        readme.write_text(readme.read_text(encoding="utf-8").replace("version=0.10.0", "version=0.9.5"), encoding="utf-8")
         result = self.run_check(root)
         self.assertIn("stable-marker", {item["code"] for item in result["failures"]})
 
@@ -76,7 +76,7 @@ class PublicStableDocsTest(unittest.TestCase):
         self.assertIn("stable-target", {item["code"] for item in result["failures"]})
 
         registry = root / "latest.tsv"
-        registry.write_text("aigent-hive\t0.9.5\n@aigent-hive/win32-x64\t0.9.5\n", encoding="utf-8")
+        registry.write_text("aigent-hive\t0.10.0\n@aigent-hive/win32-x64\t0.10.0\n", encoding="utf-8")
         result = self.run_check(root, "--channel", "test", "--registry-latest-file", "latest.tsv")
         self.assertEqual(result["exit_code"], 0)
         registry.write_text("aigent-hive\t0.9.4\n", encoding="utf-8")

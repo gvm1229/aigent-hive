@@ -13,7 +13,7 @@
 | --- | --- | --- |
 | `behavior` | `.agents/directives/01-behavior.md` | 언어·활성 version·continuation 중단 3조건·쉬운 설명 |
 | `architecture` | `.agents/directives/02-architecture.md` | Provider API·credential 금지 |
-| `git-release` | `.agents/directives/03-workflow.md` | 안정판 version별 명시 승인 |
+| `git-release` | `.agents/directives/03-workflow.md` | develop 우선 통합·안정판 version별 명시 승인 |
 | `documentation-state` | `.agents/directives/04-documentation-state.md` | 계획·fact route |
 | `security` | `.agents/directives/05-security-safety.md` | 사용자·외부 byte 보존 |
 | `session` | `.agents/directives/06-session-coordination.md` | 자동 편집 route |

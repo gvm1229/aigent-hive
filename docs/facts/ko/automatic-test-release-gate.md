@@ -9,7 +9,7 @@ summary: "완료된 승인 제품 milestone의 시험판 자동 게시·수용, 
 tags: [automation, product, release]
 aliases: ["번호 공개 시험 gate"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:9133a979df415b6df62b8669e3d0a1a6c069c9a441451948f16473bd5527878d"
+  - "repo:.agents/directives/03-workflow.md#sha256:629d32bb289108bbc782e295e4ffda6a4a4d5006fbf151212db0cc79457391f0"
   - "repo:.github/workflows/release.yml#sha256:2f3760d989da12d1b07bfe706b9e7f1cd1e3121d3a53b18843e7825b56d86cac"
   - "repo:docs/public-test-product.json#sha256:127030c1f2d45cce3fa84861eedcefdc6454fceaca888f51663cb19272d10721"
   - "repo:scripts/check-test-release-gate.py#sha256:669dd6cb700c9a169babf8ddf530c8ae4a7114a01096c6d1ae1d0cb63351c54d"

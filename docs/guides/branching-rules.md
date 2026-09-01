@@ -36,7 +36,10 @@ git push -u origin develop
 - 일반 변경은 `develop`에서 수행
 - 일반 검증 커밋은 `develop`에 직접 push
 - `develop`의 Pull Request·필수 상태 검사 강제 없음
-- 안정 릴리스는 `develop → main` Pull Request로 반영
+- 모든 변경 branch는 먼저 `develop`으로 병합
+- `main` 대상 Pull Request의 head는 항상 `develop`
+- 안정 릴리스는 검증된 `develop → main` Pull Request로만 반영
+- `release/` 문서·후보 branch도 `main` 직접 병합 금지, `develop` 통합 뒤 최종 PR 사용
 - `main` 직접 일반 커밋 금지
 - 다른 branch는 특정 작업에 대한 사용자 명시 승인이 있을 때만 예외적으로 생성
 
