@@ -74,7 +74,7 @@ CodexBar 미설치 상태에서도 setup, knowledge, update 같은 비-dispatch 
   dispatch closure를 실행하지 않는 CLI adapter: 확인
 
 Hostile qualification corpus는
-`tests/fixtures/phase5/usage/codexbar_fixture.py`이며 model, subagent 또는 provider
+`tests/fixtures/usage/codexbar_fixture.py`이며 model, subagent 또는 provider
 process 실행 금지. 허용된 child process는 위 두 fixed-argv CodexBar read뿐.
 
 ## 통합 경계

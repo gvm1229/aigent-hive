@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "policy": "stress-2026-08-29",
+  "approval": "Maintainer request dated 2026-08-29 accepts current stress performance; no stable release approval",
+  "semantic_improvement_points": 16.666666666666664,
+  "semantic_recall_at_10": 0.9666666666666667,
+  "holdout_semantic_recall_at_10": 0.9666666666666667,
+  "holdout_semantic_improvement_points": 50,
+  "hybrid_exact_recall_at_10": 1,
+  "exact_rank_comparisons": [
+    {
+      "query_id": "exact-01-adversarial-judge",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-02-agent-autonomous-continuation",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-03-agent-directive-ownership",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-04-artifact-boundaries",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-05-automated-user-handoff",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-06-automatic-dispatch-guard",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-07-automatic-user-projection-refresh",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-08-consumer-session-coordination",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-09-crate-ownership",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-10-dev-check-platform-path",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-11-adversarial-judge",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-12-automatic-user-projection-refresh",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-13-consumer-session-coordination",
+      "fts_rank": 4,
+      "hybrid_rank": 4
+    },
+    {
+      "query_id": "exact-14-global-knowledge-rag",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-15-graphify-0-10-adoption",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-16-historical-project-base-coverage",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-17-hive-preserving-uninstall",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-18-interactive-binary-update",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-19-knowledge-portability-scan",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-20-hybrid-vector-search-0-10",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-21-artifact-boundaries",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-22-automatic-dispatch-guard",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-23-developer-binary-lifecycle",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-24-global-knowledge-bundle-transfer",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-25-host-neutral-continuation",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-26-hybrid-vector-search-0-10",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-27-install-wide-knowledge-capture",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-28-judge-verification",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-29-knowledge-cross-project-access",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "query_id": "exact-30-global-user-contexts",
+      "fts_rank": 1,
+      "hybrid_rank": 1
+    }
+  ],
+  "warm_query_p95_ms": null,
+  "cold_query_p95_ms": 3067.394199955743,
+  "full_build_50000_seconds": 638.5971167000243,
+  "incremental_100_seconds": 51.98908729996765,
+  "vector_lookup_p95_ms": 98.8755,
+  "index_bytes": 442751701,
+  "scope_leaks": 0,
+  "network_calls": 0,
+  "provider_api_calls": 0,
+  "fts_fallback_failures": 0,
+  "resume_equivalent": true,
+  "numbered_citation_failures": 0,
+  "numbered_rank_regressions": 0,
+  "accepted_platforms": [
+    "windows-x64",
+    "macos-arm64",
+    "linux-musl-x64"
+  ],
+  "scope_notes": [
+    "Build/query offline paths only; consented package downloads excluded from network count.",
+    "Privacy evidence covers synthetic cases, not all attacks or real confidential data.",
+    "Build/SQL producer uses the same embedding contract as the later query-only numbered-phrase fix.",
+    "Original failed results remain untouched; policy acceptance is not a faster rerun.",
+    "Warm retained-model query not measured and not a release requirement for the one-shot profile."
+  ],
+  "sources": [
+    {
+      "path": "tests/work/scope-audit-20260828/numbered-vector-queries-original-isolated.json",
+      "sha256": "59a9b3189702611721f0314a7bd1838586e02392cbf42c0ccd3e04d1c372457a"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/numbered-vector-queries-holdout-isolated.json",
+      "sha256": "bf641cbbfa2cfd2e98edc1bc4d8a49f3897f0d01a821b7462f264385de8f41b0"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/fresh50k-measurement/summary.json",
+      "sha256": "d9b94bf18d1b57bee0806cb2f7fb8fd510418c3a0bd39eed515e718e78d6913e"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/incremental-next/incremental100-measurement/summary.json",
+      "sha256": "d31e047dcf500468594662727f1b49b71e70d5234c307b87e34676fea3efb6e6"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/query120-rank-recheck/measurement/summary.json",
+      "sha256": "da69712d55b7dd55fc15ec332236effce2994dedba1c0573c39f6ebb6fd9cdbb"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/engine-sql-warm/measurement/summary.json",
+      "sha256": "6e342438344e997bcdb364a5045e4279150fa66ff5ae40fb99bb1cd2a268735f"
+    },
+    {
+      "path": "tests/work/vector-privacy-export-znq7xf8j/receipt.json",
+      "sha256": "ca57f5e6b341df83a5561acc0aa98d56f55669e18643e989eb3e8df067714bc2"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/native-ci-33180339088/linux/vector-native-qcj6dala/receipt.json",
+      "sha256": "9e3e1338e17c5648815513662fa8af6aebe99ed9152cd6536c135d1080c5aeb3"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/native-ci-33180339088/macos/vector-native-yam8rf50/receipt.json",
+      "sha256": "60309a567c6d2fd63e7b0d78c71e2b1ec78f377bcfcba7fc0c9686e717caac7c"
+    },
+    {
+      "path": "tests/work/scope-audit-20260828/native-ci-33180339088/windows/vector-native-0x4wr0g9/receipt.json",
+      "sha256": "38f21a654921b1a520be99e2e60d736fcb202e776255f4dfd9c6d218dbbd7723"
+    }
+  ]
+}

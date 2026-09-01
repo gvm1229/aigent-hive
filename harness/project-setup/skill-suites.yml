@@ -1,18 +1,20 @@
 schema_version: 1
 project_skill_suites:
   - id: web-developer
-    skills: [project-setup, code-polish, ralph-loop, iterative-execution, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review]
+    skills: [project-setup, code-polish, humanize-kor, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-scan, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, judge-evidence, adversarial-judge]
   - id: game-developer
-    skills: [project-setup, code-polish, ralph-loop, iterative-execution, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, project-transition, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review]
+    skills: [project-setup, code-polish, humanize-kor, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-scan, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, project-transition, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, judge-evidence, adversarial-judge]
   - id: non-developer
-    skills: [quick-answer, project-setup, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, product-update, package-review]
+    skills: [quick-answer, project-setup, humanize-kor, custom-subagent-create, knowledge-scan, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, product-update, judge-evidence, adversarial-judge]
 mandatory_skills: []
 skill_dependencies:
   - { skill: quick-answer, requires: [] }
   - { skill: project-setup, requires: [] }
   - { skill: code-polish, requires: [] }
-  - { skill: ralph-loop, requires: [package-review, run-handoff, run-checkpoint, run-resume, usage-guard] }
-  - { skill: knowledge-import, requires: [knowledge-promote] }
+  - { skill: humanize-kor, requires: [] }
+  - { skill: verified-workflow, requires: [judge-evidence, run-handoff, run-checkpoint, run-resume, usage-guard] }
+  - { skill: knowledge-scan, requires: [knowledge-promote] }
+  - { skill: knowledge-transfer, requires: [knowledge-maintain] }
   - { skill: knowledge-maintain, requires: [knowledge-recall] }
   - { skill: knowledge-capture, requires: [knowledge-recall] }
   - { skill: prompt-refine, requires: [] }
@@ -28,8 +30,8 @@ skill_dependencies:
   - { skill: knowledge-promote, requires: [knowledge-recall, knowledge-capture] }
   - { skill: product-update, requires: [] }
   - { skill: project-refresh, requires: [product-update] }
-  - { skill: package-review, requires: [] }
-  - { skill: iterative-execution, requires: [package-review, run-checkpoint, run-resume, usage-guard] }
-  - { skill: team-execution, requires: [iterative-execution] }
-  - { skill: multi-goal, requires: [iterative-execution, team-execution] }
+  - { skill: judge-evidence, requires: [] }
+  - { skill: adversarial-judge, requires: [judge-evidence] }
+  - { skill: team-execution, requires: [verified-workflow] }
+  - { skill: multi-goal, requires: [verified-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }

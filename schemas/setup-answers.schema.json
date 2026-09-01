@@ -239,11 +239,13 @@
               "protect-hive-owned-state",
               "update-integrity-guard",
               "derived-state-invalidation",
-              "checkpoint-reminder"
+              "checkpoint-reminder",
+              "continue-active-run",
+              "validate-korean-output"
             ]
           },
           "event": {
-            "enum": ["PreToolUse", "PostToolUse", "PreCompact", "Stop"]
+            "enum": ["PreToolUse", "PostToolUse", "PreCompact", "Stop", "AfterAgent"]
           },
           "path": {
             "type": "string",
@@ -251,7 +253,7 @@
           },
           "command": {
             "type": "string",
-            "pattern": "^hive hook --capability (protect-hive-owned-state|update-integrity-guard|derived-state-invalidation|checkpoint-reminder) --event (PreToolUse|PostToolUse|PreCompact|Stop) --capabilities \\.hive/runtime/current-capability-resolution\\.json --output json$"
+            "pattern": "^hive hook --capability (protect-hive-owned-state|update-integrity-guard|derived-state-invalidation|checkpoint-reminder|continue-active-run|validate-korean-output) --event (PreToolUse|PostToolUse|PreCompact|Stop|AfterAgent) --capabilities \\.hive/runtime/current-capability-resolution\\.json --output json$"
           },
           "content_digest": {
             "type": "string",
@@ -358,6 +360,55 @@
                 }
               ]
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "continue-active-run" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "const": "Stop" },
+                "path": { "const": ".hive/hooks/continue-active-run" },
+                "command": {
+                  "const": "hive hook --capability continue-active-run --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "validate-korean-output" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "enum": ["Stop", "AfterAgent"] },
+                "path": { "const": ".hive/hooks/validate-korean-output" }
+              },
+              "oneOf": [
+                {
+                  "properties": {
+                    "event": { "const": "Stop" },
+                    "command": {
+                      "const": "hive hook --capability validate-korean-output --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "event": { "const": "AfterAgent" },
+                    "command": {
+                      "const": "hive hook --capability validate-korean-output --event AfterAgent --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                    }
+                  }
+                }
+              ]
+            }
           }
         ]
       }
@@ -426,21 +477,25 @@
         "project-setup",
         "project-setup",
         "code-polish",
+        "humanize-kor",
         "research-best-practices",
-        "ralph-loop",
+        "verified-workflow",
         "knowledge-maintain",
         "quick-answer",
         "prompt-refine",
         "knowledge-capture",
         "knowledge-recall",
         "knowledge-import",
+        "knowledge-scan",
+        "knowledge-transfer",
         "knowledge-promote",
         "knowledge-maintain",
         "run-checkpoint",
         "run-resume",
         "usage-guard",
         "run-handoff",
-        "package-review",
+        "judge-evidence",
+        "adversarial-judge",
         "product-update",
         "project-refresh",
         "project-transition"

@@ -9,13 +9,13 @@ summary: "Hive user-level capture and recall apply in every selected-host projec
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f3f69d5fcea2bd8fb6383b29ae97d490e79ff794345826c0f68c550fb5881db4"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
-  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:676c827ebe9ed1c4e51d73cf35289b8dfa9149f52287bcfad1a33d0b872b3be2"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
+  - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:9e86075240574d1e589329ae724c97fac32dab2e2d367b7d878bd84e69d4b483"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
-reviewed_revision: "git:527434f7364b6be38e7b6941bf48df207c58b32c"
+reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
 ---
 

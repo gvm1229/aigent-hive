@@ -2634,6 +2634,7 @@ mod tests {
                 required_criteria: vec![CRITERION.to_owned(), SECOND_CRITERION.to_owned()],
                 passed_criteria: Vec::new(),
                 failed_criteria: Vec::new(),
+                blocked_criteria: Vec::new(),
                 active_roles: vec!["exec-a".to_owned(), "exec-b".to_owned()],
                 next_action: Some("prepare node A".to_owned()),
                 latest_evidence: Vec::new(),
@@ -2648,6 +2649,7 @@ mod tests {
                 subagent_support: Some(binding.subagent_support),
                 resume_note: None,
                 criterion_evidence: BTreeMap::new(),
+                continuation: None,
             },
             b"# Run status\n".to_vec(),
         )

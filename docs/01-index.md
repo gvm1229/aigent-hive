@@ -12,6 +12,7 @@ current catalog.
 | [Overview 안내](overview/README.md) | 제품 설명 영역 MOC |
 | [제품 개요](overview/product.md) | 목적·지원 범위·원칙·기능 |
 | [스킬 모음](skills.md) | Source·product Skill 이름·기능·사용 예시 |
+| [컴퓨터 간 지식 이전](guides/knowledge-transfer.md) | 개발 중인 이전 명령·충돌 검토·선택형 벡터 재생성 |
 | [English README](../README.md) | 간결한 English 입구 |
 | [한국어 README](readme/README.ko.md) | 간결한 한국어 입구 |
 | [License](licensing.md) | Apache-2.0 적용 범위 |
@@ -23,6 +24,11 @@ current catalog.
 | --- | --- |
 | [Architecture 안내](architecture/README.md) | Architecture MOC |
 | [Source layout](architecture/source-layout.md) | Source·release·consumer tree와 crate |
+| [한국어 언어 core](architecture/korean-language-core.md) | 자동 한국어 검사·윤문·pack lifecycle |
+| [선택형 벡터 검색](architecture/vector-search.md) | 동의·권한·파생 색인·중단 재개 계약 |
+| [벡터 검색 시각 설명](hive-vector-search.ko.html) | 생성·검색 흐름·기술 구성·실측·사용 안내 |
+| [벡터 성능 수용 결정](research/vector-acceptance-2026-08-29.md) | 스트레스 기준 조정·안내·시각 문서 계획 |
+| [Agent 지침 ownership](architecture/agent-directive-ownership.md) | Source·소비자 directive 단일 정본·크기 기준 |
 | [Role lifecycle](architecture/role-lifecycle.md) | Persistent role·handoff |
 | [Run lifecycle](architecture/run-lifecycle.md) | Checkpoint·event·scheduler·receipt·cancel·resume |
 | [Skill consent](architecture/skill-consent.md) | Optional Skill approval |
@@ -55,6 +61,7 @@ current catalog.
 | [ADR-0017](decisions/ADR-0017-0.9-full-release.md) | `0.9.0` 정식 릴리스 |
 | [ADR-0018](decisions/ADR-0018-notion-wiki-backend.md) | Notion Wiki backend |
 | [ADR-0019](decisions/ADR-0019-hive-native-iterative-execution.md) | Hive-native 반복 실행 소유권 |
+| [ADR-0020](decisions/ADR-0020-0.10.0-product-scope.md) | `0.10.0` 최종 제품 범위 |
 
 ## Guides
 
@@ -63,6 +70,7 @@ current catalog.
 | [Guide 안내](guides/README.md) | Guide MOC |
 | [Development](guides/development.md) | Dependency·build·test |
 | [Test lanes](guides/test-lanes.md) | Python 대장·실행 lane·fixture 경계 |
+| [선택형 의미 검색](guides/vector-search.md) | 질문별 검색 선택과 승인형 설치·복구 |
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Installed usage guard](guides/installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |
@@ -97,6 +105,11 @@ current catalog.
 | [Plugin host surface](research/user-plugin-host-surfaces.md) | 세 host install surface |
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
+| [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.9.5` 대비 권장 `0.10.0` 범위 |
+| [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
+| [Vector·file memory 검토](research/vector-memory-0.10-feasibility-2026-08-22.md) | Anthropic file memory·Qdrant·SQLite hybrid search |
+| [Vector 재검증 결과](research/vector-requalification-0.10-2026-08-24.md) | 50,000개 고유 embedding·증분·재개 hard gate 판정 |
+| [한국어 언어 core 공개 시험 수용](research/korean-language-core-0.10-acceptance-2026-08-24.md) | 공개 npm 3개 운영체제·blind A/B·pack rollback 근거 |
 | [v0.9 capability inventory](research/v0.9-omx-omc-capability-inventory.md) | OMX·OMC·Hive `adopt|merge|exclude` 근거표 |
 | [Discord·Notion host integration](research/discord-notion-host-integrations.md) | Host plugin·MCP·outbound 알림 경계 |
 
@@ -118,57 +131,28 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [CURRENT](state/CURRENT.md) | Evidence-backed handoff·next action |
 | [Marketing deck record](state/artifacts/aigent-hive-marketing-deck.md) | External artifact locator·resume |
 
+## Archive
+
+| 문서 | 설명 |
+| --- | --- |
+| [Archive 안내](archive/README.md) | 완료·대체 계획과 과거 상태 |
+| [이전 명세](archive/MANIFEST.md) | 이전 경로·digest·대체 정본 |
+
 ## Plans
 
 | 문서 | 설명 |
 | --- | --- |
 | [Plan 안내](plans/README.md) | Plan structure |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
+| [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
-| [Phase 안내](plans/phases/README.md) | Phase MOC |
-| [Phase 0](plans/phases/00-source-bootstrap.md) | Source bootstrap |
-| [Phase 1](plans/phases/01-setup-renderer.md) | Setup renderer |
-| [Phase 2](plans/phases/02-knowledge-index.md) | Knowledge·index |
-| [Phase 3](plans/phases/03-skills-projection.md) | Skill·projection |
-| [Phase 4](plans/phases/04-role-run-interoperability.md) | Role·run |
-| [Phase 5](plans/phases/05-usage-judge.md) | Usage·judge |
-| [Phase 6](plans/phases/06-update-migration-release.md) | Update·migration·release |
-| [Phase 7](plans/phases/07-public-qualification.md) | Public qualification |
-| [Contract 안내](plans/contracts/README.md) | Product contract MOC |
-| [Product goal](plans/contracts/01-product-goals.md) | Goal·non-goal |
-| [Artifact source](plans/contracts/02-artifacts-source.md) | Artifact contract |
-| [Consumer harness](plans/contracts/04-consumer-harness.md) | Installed harness contract |
-| [Rust boundary](plans/contracts/05-rust-boundaries.md) | Crate responsibility |
-| [Native orchestration state](plans/contracts/06-native-orchestration-state.md) | Event·authority·receipt·cancel·scheduler |
-| [Native orchestration workflow](plans/contracts/07-native-orchestration-workflows.md) | Team·multi-goal·feasibility·migration |
-| [Stage 안내](plans/stages/README.md) | Workflow stage MOC |
-| [Stage 0](plans/stages/00-entry-routing.md) | Entry routing |
-| [Stage 1a](plans/stages/01a-setup-discovery-consent.md) | Discovery·consent |
-| [Stage 1b](plans/stages/01b-setup-rendering-contract.md) | Rendering contract |
-| [Stage 2](plans/stages/02-harness-ownership.md) | Harness ownership |
-| [Stage 3](plans/stages/03-simple-question-isolation.md) | Simple-question isolation |
-| [Stage 4](plans/stages/04-prompt-refine.md) | Prompt refinement |
-| [Stage 5](plans/stages/05-roles-orchestration.md) | Role·orchestration |
-| [Stage 6](plans/stages/06-durable-run-completion.md) | Durable run |
-| [Stage 7](plans/stages/07-usage-guard.md) | Usage guard |
-| [Stage 8](plans/stages/08-verification-judge.md) | Verification·judge |
-| [Stage 9](plans/stages/09-knowledge-memory.md) | Knowledge·memory |
-| [Stage 10](plans/stages/10-completion-resume.md) | Completion·resume |
-| [Stage 11](plans/stages/11-update-migration.md) | Update·migration |
-| [Plugin lifecycle](plans/active/plugin-project-lifecycle.md) | User plugin·project lifecycle |
-| [Native usage sensor](plans/active/native-usage-sensor.md) | Host-native sensor |
-| [User onboarding](plans/active/user-onboarding-shared-index.md) | Global setup·shared index |
-| [Source docs Wiki](plans/active/source-docs-wiki.md) | `docs/` graph·atomic fact contract |
-| [Windows install](plans/active/windows-shell-install.md) | PowerShell 5.1·CMD boundary |
-| [Documentation style](plans/active/documentation-style.md) | Human document style |
-| [Security review](plans/active/security-review.md) | Security finding gate |
-| [Docs Wiki migration](plans/active/docs-wiki-migration.md) | Knowledge preservation·path migration |
-| [`0.8.0` release](plans/active/release-0.8.0.md) | Test distribution execution |
-| [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
-| [v0.9 전역 knowledge RAG](plans/active/v0.9.0-global-knowledge-rag.md) | Cross-project retrieval·mandatory memory 계획 |
-| [v0.9 knowledge 이식·scan](plans/active/v0.9.0-knowledge-portability-scan.md) | Canonical bundle·directory scan·automatic query 계획 |
-| [Hive-native 반복 실행](plans/active/native-iterative-execution.md) | Scheduler·receipt·cancel·team·multi-goal 계획 |
-| [Prompt refine 자동 routing](plans/active/prompt-refine-auto-routing.md) | Material ambiguity·승인 전 정지 계획 |
-| [`0.9.0` 정식 릴리스](plans/active/release-0.9.0.md) | GitHub·npm publication·public acceptance 계획 |
-| [`0.9.5` 로컬 수용 loop](plans/active/v0.9.5-release-loop.graph.md) | 로컬 수용 기준의 기록 graph |
-| [`0.9.5` 안정판 출시 loop](plans/active/v0.9.5-stable-release-loop.graph.md) | 공개 시험·Windows 수용·보호 통합·안정판 검증 순서 |
+| [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
+| [문서 구조 정리](archive/plans/releases/0.10.0/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 완료 기록 |
+| [시험 구조 재편](archive/plans/releases/0.10.0/test-organization-0.10.0.md) | 목적별 시험·fixture 완료 기록 |
+| [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |
+| [작업 자동 분담 조사](archive/plans/releases/0.10.0/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 완료 기록 |
+| [`0.10.0` 관계 graph](plans/active/knowledge-relationship-graph-0.10.0.md) | Markdown 관계·Graphify code-only adapter |
+| [`0.10.0` vector search](plans/active/hybrid-vector-search-0.10.0.md) | 조건부 hybrid vector 구현 gate |
+| [`0.10.0` Skill 예약](plans/active/host-owned-skill-reservations-0.10.0.md) | Host-owned Skill 세션 예약 |
+| [`0.10.0` nested scan](plans/active/nested-project-knowledge-scan-0.10.0.md) | 상위 Git 저장소 아래 등록 project scan |
+| [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |

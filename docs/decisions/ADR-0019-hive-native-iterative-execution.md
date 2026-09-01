@@ -31,7 +31,8 @@
 
 ## Model-routed custom subagent 결정
 
-- 지원 host: OpenAI Codex·Claude Code 한정. Antigravity는 이 기능에서 `unsupported`
+- 현재 구현 profile host: OpenAI Codex·Claude Code 한정. Antigravity 공식 하위 agent 기능은
+  존재하지만 exact model·effort mapping과 Hive adapter가 없어 activation은 `unsupported`
 - Hive 소유: provider-neutral role 정본, task trigger·negative route, 양쪽 host model/effort,
   user/project scope, projection digest, runtime attestation acceptance
 - Host 소유: custom-agent discovery, native dispatch, model call·session·process, runtime metadata
@@ -52,7 +53,7 @@
 - Trust boundary: Agent는 verdict만 생성, 외부 signer가 Ed25519 private key 소유.
   Hive는 assignment·role·exact model/effort·definition digest 결합 서명과 quorum만 검증
 - Canonical plan:
-  [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
+  [`model-routed-custom-subagents.md`](../archive/plans/foundations/model-routed-custom-subagents.md)
 
 ## 선택지
 

@@ -11,6 +11,8 @@ Source 개발자와 agent를 위한 공통 문서 진입점.
 | 전체 문서 탐색 | [전체 색인](01-index.md) |
 | 현재 상태 확인 | [CURRENT](state/CURRENT.md) |
 | 다음 작업 확인 | [Active plan](plans/PLAN.md) |
+| 버전 미지정 후보 확인 | [Backlog](plans/backlog/README.md) |
+| 완료 기록 확인 | [Archive](archive/README.md) |
 | Source 구조 이해 | [Architecture 안내](architecture/README.md) |
 | 결정 근거 확인 | [Decision 안내](decisions/README.md) |
 | 개발·검증 실행 | [Development guide](guides/development.md) |
@@ -30,8 +32,9 @@ guides        사람이 실행하는 절차와 명령
 releases      제품 버전별 변경점·배포 범위·제약
 research      외부 자료·version·확인일 기반 조사
 facts         한 문서에 한 가지 reusable fact
-plans         아직 완료되지 않은 목표와 acceptance
+plans         현재 목표와 버전 미지정 후보
 state         현재 handoff와 artifact record
+archive       완료·대체 계획과 과거 상태
 readme        언어별 간결한 입구
 ```
 
@@ -52,6 +55,7 @@ Fact와 source 불일치 시 source·ADR 우선. 유효한 knowledge의 문서 �
 - Current truth: `overview/`, `architecture/`, `decisions/`, `guides/`, `releases/`,
   `facts/`, `state/`
 - Future work: `plans/`
+- Completed or superseded records: `archive/`
 - Dated external evidence: `research/`
 - Ordinary history: Git
 - Secret·legal erasure: 별도 승인된 exceptional history purge

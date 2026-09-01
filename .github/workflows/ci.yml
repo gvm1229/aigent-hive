@@ -27,12 +27,12 @@ jobs:
       - id: classify
         shell: bash
         run: |
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            base="${{ github.event.pull_request.base.sha }}"
-            git fetch --no-tags --depth=1 origin "$base"
-          else
-            base="$(git rev-parse HEAD^ 2>/dev/null || true)"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            echo "scope=product" >>"$GITHUB_OUTPUT"
+            exit 0
           fi
+          base="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --depth=1 origin "$base"
           if [[ -z "$base" ]]; then
             echo "scope=product" >>"$GITHUB_OUTPUT"
             exit 0
@@ -63,7 +63,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-conformance.txt
       - run: python -m pip install --disable-pip-version-check -r requirements-conformance.txt
-      - run: python scripts/test-lanes.py --lane documentation
+      - run: python scripts/test-artifacts.py run --purpose 'CI 문서 lane' --path target/debug --command python scripts/test-lanes.py --lane documentation
 
   rust:
     name: Rust (Linux full)
@@ -87,7 +87,7 @@ jobs:
           components: clippy,rustfmt
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-      - run: cargo test --workspace --all-targets --all-features --locked
+      - run: python scripts/test-artifacts.py run --purpose 'CI Rust 전체 단위 시험' --path target/debug --command cargo test --workspace --all-targets --all-features --locked
 
   conformance:
     name: Conformance (Linux · ${{ matrix.lane }})
@@ -131,7 +131,13 @@ jobs:
       - name: Select Linux CLI path
         run: echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
       - name: Run complete named conformance inventory
-        run: python scripts/test-lanes.py --lane ${{ matrix.lane }}
+        run: python scripts/test-artifacts.py run --purpose "CI conformance ${{ matrix.lane }} lane" --path target/debug --command python scripts/test-lanes.py --lane ${{ matrix.lane }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: test-results-${{ matrix.lane }}
+          path: tests/results/runs/*.md
+          if-no-files-found: warn
 
   copier:
     name: Contract and Copier conformance
@@ -153,20 +159,20 @@ jobs:
         run: |
           for host in codex claude antigravity; do
             copier copy --trust --defaults \
-              --data-file tests/fixtures/copier-default-data.yml \
+              --data-file tests/fixtures/setup/copier-default-data.yml \
               --data "primary_host=${host}" \
               . "tests/work/copier-default-${host}"
           done
       - name: Render hostile-string and typed-answer fixture
         run: >-
           copier copy --trust --defaults
-          --data-file tests/fixtures/copier-hostile-data.yml
+          --data-file tests/fixtures/setup/copier-hostile-data.yml
           . tests/work/copier-hostile
       - name: Reject fallback hooks without a supported host-native event
         run: |
           for detection in absent incompatible unknown; do
             if copier copy --trust --defaults \
-              --data-file tests/fixtures/copier-hostile-data.yml \
+              --data-file tests/fixtures/setup/copier-hostile-data.yml \
               --data "capability_resolution={\"host\":\"claude\",\"detection\":\"${detection}\"}" \
               . "tests/work/copier-invalid-hooks-${detection}" \
               >"tests/work/copier-invalid-hooks-${detection}.log" 2>&1; then
@@ -181,17 +187,18 @@ jobs:
           for host in codex claude antigravity; do
             python tests/validate_scaffold.py \
               "tests/work/copier-default-${host}" \
-              tests/fixtures/copier-default-data.yml
+              tests/fixtures/setup/copier-default-data.yml
           done
           python tests/validate_scaffold.py \
             tests/work/copier-hostile \
-            tests/fixtures/copier-hostile-data.yml
+            tests/fixtures/setup/copier-hostile-data.yml
       - name: Enforce human documentation style contract
         run: |
-          python -m unittest tests.conformance.test_human_documentation_style -v
-          python -m unittest tests.conformance.test_markdown_links -v
+          python -m unittest tests.conformance.documentation.test_human_documentation_style -v
+          python -m unittest tests.conformance.documentation.test_markdown_links -v
           python scripts/check-human-documentation-style.py --all --output json
           python scripts/check-markdown-links.py --output json
+          python scripts/check-public-stable-docs.py --output json
 
   platform-smoke:
     name: Platform smoke (${{ matrix.os }})
@@ -216,7 +223,87 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
         with:
           toolchain: stable
-      - run: cargo test -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '플랫폼 Hive CLI 단위 시험' --path target/debug --command cargo test -p hive-cli --locked
+
+  transfer-produce:
+    name: Transfer producer (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.scope == 'product'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            binary: target/debug/hive.exe
+          - os: macos-latest
+            binary: target/debug/hive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - run: python scripts/test-artifacts.py run --purpose '교차 운영체제 이전 바이너리' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '운영체제 간 여러 묶음 통합 자료 생성' --path tests/work/transfer-producer --command python scripts/qualify-knowledge-transfer.py produce --multi --hive ${{ matrix.binary }} --work tests/work/transfer-producer
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: transfer-${{ matrix.os }}
+          path: |
+            tests/work/transfer-producer/portable-a.hivekb
+            tests/work/transfer-producer/portable-b.hivekb
+            tests/work/transfer-producer/expected.json
+            tests/work/transfer-producer/receipt.json
+          if-no-files-found: error
+
+  transfer-consume:
+    name: Transfer ${{ matrix.producer }} to ${{ matrix.os }}
+    needs: transfer-produce
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            producer: windows-latest
+            binary: target/debug/hive
+          - os: ubuntu-latest
+            producer: windows-latest
+            binary: target/debug/hive
+          - os: windows-latest
+            producer: macos-latest
+            binary: target/debug/hive.exe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: transfer-${{ matrix.producer }}
+          path: tests/work/transfer-input
+      - run: python scripts/test-artifacts.py run --purpose '이전 수신 바이너리' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '다른 운영체제의 여러 묶음 통합 복원' --path tests/work/transfer-consumer --command python scripts/qualify-knowledge-transfer.py consume --multi --hive ${{ matrix.binary }} --work tests/work/transfer-consumer --input tests/work/transfer-input --require-cross-os
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: transfer-results-${{ matrix.producer }}-to-${{ matrix.os }}
+          path: |
+            tests/work/transfer-consumer/receipt.json
+            tests/results/runs/*.md
 
   protected-merge-gate:
     name: Protected merge gate
@@ -228,6 +315,7 @@ jobs:
       - conformance
       - copier
       - platform-smoke
+      - transfer-consume
     runs-on: ubuntu-latest
     env:
       SCOPE: ${{ needs.changes.outputs.scope }}
@@ -236,6 +324,7 @@ jobs:
       CONFORMANCE_RESULT: ${{ needs.conformance.result }}
       COPIER_RESULT: ${{ needs.copier.result }}
       PLATFORM_RESULT: ${{ needs.platform-smoke.result }}
+      TRANSFER_RESULT: ${{ needs.transfer-consume.result }}
     steps:
       - name: Require the risk-matched verification result
         shell: bash
@@ -249,6 +338,7 @@ jobs:
               test "$CONFORMANCE_RESULT" = success
               test "$COPIER_RESULT" = success
               test "$PLATFORM_RESULT" = success
+              test "$TRANSFER_RESULT" = success
               ;;
             *)
               exit 2

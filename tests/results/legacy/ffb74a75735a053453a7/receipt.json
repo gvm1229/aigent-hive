@@ -1,0 +1,87 @@
+{
+  "acceptance": "verified-workflow-disposable",
+  "finished_at": "2026-08-23T17:43:09.503944+00:00",
+  "hive_binary": "<repository>\\target\\debug\\hive.exe",
+  "limitations": [
+    "The host converts natural language into normalized routing facts; hive route does not ingest raw prompts.",
+    "Fresh-process canonical recovery is tested; the Codex desktop application itself is not restarted.",
+    "A host-owned Judge verdict receipt is verified, while authenticated quorum completion authority remains a separate protected-trust-root boundary."
+  ],
+  "provider_processes_started": 0,
+  "schema_version": 1,
+  "stable_release_attempted": false,
+  "started_at": "2026-08-23T17:43:09.078428+00:00",
+  "status": "passed",
+  "steps": [
+    {
+      "name": "natural-language-routing",
+      "normalized_signals": [
+        "dependency-graph",
+        "independent-verifier"
+      ],
+      "process_id": 11592,
+      "request_digest": "sha256:106272595bf1e7bc5eac28cf5c2c816f724a2a01718716e1d5de6d94e397db64",
+      "selected_skill": "verified-workflow",
+      "status": "passed"
+    },
+    {
+      "graph_digest": "sha256:0597baef2c88d1d3add59e27ab74540138e6760fa89a7d0f3bee7d8d4c52f587",
+      "initialize_process_id": 22348,
+      "name": "run-initialize-validate",
+      "run_id": "disposable-run",
+      "status": "passed",
+      "validate_process_id": 32684
+    },
+    {
+      "attempts": [
+        {
+          "attempt": 1,
+          "outcome": "failed",
+          "process_id": 40536,
+          "stderr_digest": "sha256:523e7fbcb48b50377b0afbdc371f60aa198c1a3b0f325c748ff4f7ff9a33d2b6"
+        },
+        {
+          "attempt": 2,
+          "outcome": "succeeded",
+          "process_id": 40184,
+          "stderr_digest": "sha256:140575f39041aa99b189d56c4cfd418ea0347d133b2607da3740c1d356d4d0c1"
+        }
+      ],
+      "name": "intentional-failure-bounded-retry",
+      "remaining_attempts_before_retry": 2,
+      "status": "passed",
+      "task_artifact_digest": "sha256:f760ecee8d16c1da2171e50cb1143db3102e4f71e0e307d28c85331dd0a07306"
+    },
+    {
+      "completion_authority": false,
+      "host": "codex",
+      "judge_instance_id": "e-judge-instance-1",
+      "model_id": "gpt-5.6-sol",
+      "name": "independent-judge",
+      "process_id": 12408,
+      "quorum_required": true,
+      "spawned": false,
+      "status": "passed",
+      "task_agent_id": "task-agent-elevated"
+    },
+    {
+      "graph_digest": "sha256:0597baef2c88d1d3add59e27ab74540138e6760fa89a7d0f3bee7d8d4c52f587",
+      "name": "compaction-restart-recovery",
+      "new_session_id": "<redacted>",
+      "old_session_id": "<redacted>",
+      "recovered_from": "canonical-markdown",
+      "recovery_process_id": 54268,
+      "status": "passed"
+    },
+    {
+      "cancel_state": "cancelled",
+      "name": "user-cancellation",
+      "process_id": 28932,
+      "ready_for_final": true,
+      "retry_permitted": false,
+      "spawned": false,
+      "status": "passed"
+    }
+  ],
+  "work_directory": "<repository>\\tests\\work\\verified-workflow-acceptance-bso8rk8t"
+}

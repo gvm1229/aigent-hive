@@ -148,6 +148,11 @@ jobs:
           [[ "$(jq -r .release_date <<<"$metadata")" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           test "$(jq -r .ref <<<"$metadata")" = "refs/heads/$EXPECTED_BRANCH"
           test "$(jq -r .sha <<<"$metadata")" = "$CANDIDATE_SHA"
+          python3 scripts/check-public-stable-docs.py \
+            --channel "$CHANNEL" \
+            --product-version "$PRODUCT_VERSION" \
+            --release-date "$(jq -r .release_date <<<"$metadata")" \
+            --output json
       - name: Verify required artifacts, checksums, and GitHub attestations
         env:
           GH_TOKEN: ${{ github.token }}
@@ -300,12 +305,29 @@ jobs:
         if: ${{ inputs.channel == 'stable' }}
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
         run: |
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
             --banner "docs/assets/branding/hive-readme-banner-ko.png" \
             --validate-only
+      - name: Verify stable Skill history before publication
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm view aigent-hive versions --json >"$RUNNER_TEMP/npm-stable-versions.json"
+          gh release list --limit 100 --json tagName,isPrerelease \
+            >"$RUNNER_TEMP/github-stable-releases.json"
+          python3 scripts/check-stable-skill-ledger.py \
+            --ledger harness/release/stable-skill-ledger.yml \
+            --historical harness/skills/historical-builtins.yml \
+            --target-version "$PRODUCT_VERSION" \
+            --npm-versions "$RUNNER_TEMP/npm-stable-versions.json" \
+            --github-releases "$RUNNER_TEMP/github-stable-releases.json" \
+            --output "$RUNNER_TEMP/stable-skill-ledger-receipt.json"
       - name: Refuse existing npm versions
         run: |
           packages=(
@@ -352,6 +374,10 @@ jobs:
             test -n "$latest"
             printf '%s\t%s\n' "$package" "$latest" >>"$RUNNER_TEMP/latest-before.tsv"
           done
+          python3 scripts/check-public-stable-docs.py \
+            --channel test \
+            --registry-latest-file "$RUNNER_TEMP/latest-before.tsv" \
+            --output json
       - name: Publish npm package family through trusted publishing
         env:
           NPM_TAG: ${{ steps.contract.outputs.npm_tag }}
@@ -394,6 +420,16 @@ jobs:
               sleep 5
             done
           done
+          : >"$RUNNER_TEMP/latest-after.tsv"
+          for package in "${packages[@]}"; do
+            printf '%s\t%s\n' "$package" "$(read_tag "$package" latest)" >>"$RUNNER_TEMP/latest-after.tsv"
+          done
+          python3 scripts/check-public-stable-docs.py \
+            --channel "$CHANNEL" \
+            --product-version "$PRODUCT_VERSION" \
+            --release-date "$(jq -r .release_date dist/release-candidate.json)" \
+            --registry-latest-file "$RUNNER_TEMP/latest-after.tsv" \
+            --output json
       - name: Verify stable tags remain unchanged for test publication
         if: ${{ inputs.channel == 'test' }}
         run: |
@@ -438,8 +474,10 @@ jobs:
         if: ${{ inputs.channel == 'stable' }}
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
         run: |
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
             --banner "docs/assets/branding/hive-readme-banner-ko.png"

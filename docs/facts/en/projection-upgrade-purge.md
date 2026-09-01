@@ -9,15 +9,15 @@ summary: "Hive removes retired Skills and replaces direct safety or ownership co
 tags: [consumer-harness, preservation, skills, upgrade]
 aliases: ["PUG93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:af09aadf2ddfabc082dfac9ae6c8233c2fe48f964db8996063848838f04f68c5"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:17b4e24061b7214faa292fa50e65e9b0d9902270bdbe86fdc06ae53b7970bf05"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acd4022de5697806003207634ac0b7cb874baeb802af491f28d39ec048daf830"
   - "repo:crates/hive-update/src/merge.rs#sha256:4dc96d4c159d55be6664fa565dbb0eb77c1df532330f8a539f028ce51a9fcaaa"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:acb330569b20bdfe3aa993ade2a07e0142e1fe5f981074b5bb506f647e8e97c6"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
-  - "repo:tests/conformance/test_phase3_static_contracts.py#sha256:649c12bd367917808f69ad28355a054481d30f06ca84f3a44b984cd339f176db"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:914cca3de8883e2b1be0dfbea92da3dd2c856cdca53ed24d3bd45d9ff75b6cd2"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5e5ce3f56aa6868e8e6195f48cc2c22936d642c70a0f466fe7081108f5ebb28e"
 links: [consumer-session-coordination, hive-preserving-uninstall]
-reviewed_revision: "git:65f5a7df6d1abed4f9e299992d85e6377464b1d5"
+reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active
 ---
 

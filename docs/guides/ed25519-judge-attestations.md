@@ -64,7 +64,7 @@ Unknown field, duplicate key ID, duplicate public key, invalid raw key와 invert
 validity interval은 거부 대상.
 
 Repository의
-[`tests/fixtures/phase5/judge/trust-root.toml`](../../tests/fixtures/phase5/judge/trust-root.toml)은
+[`tests/fixtures/judge/trust-root.toml`](../../tests/fixtures/judge/trust-root.toml)은
 public-only conformance 예심. 이 fixture에는 대응 private key가 없으며 production
 authority 사용 금지.
 

@@ -1,0 +1,327 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import runpy
+import subprocess
+import sys
+import tempfile
+import threading
+import unittest
+from unittest.mock import patch
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[3]
+NOTIFIER = ROOT / "scripts/publish-stable-discord-update.py"
+WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
+REGISTRAR_PATH = ROOT / "scripts/register-stable-summary-approval.py"
+REGISTRAR = runpy.run_path(str(REGISTRAR_PATH))
+
+
+class StableSummaryApprovalRegistration(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.summary = self.root / "docs/releases/0.10.0.subscriber.ko.md"
+        self.summary.parent.mkdir(parents=True)
+        self.summary.write_bytes("# Aigent Hive v0.10.0 업데이트 내역:\n\n- 승인 문구\n".encode())
+        self.digest = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval = self.summary.with_suffix(".sha256")
+        self.approval.write_text(f"{self.digest}  {self.summary.name}\n", encoding="utf-8")
+
+    def register(self, digest: str | None = None, version: str = "0.10.0") -> dict[str, str]:
+        return REGISTRAR["register_approval"](
+            version, self.digest if digest is None else digest, self.root
+        )
+
+    def test_registers_approved_digest_without_rewriting_or_sending(self) -> None:
+        before = (self.summary.read_bytes(), self.approval.read_bytes())
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as command:
+            self.assertEqual(self.register()["status"], "registered")
+        self.assertEqual(command.call_count, 1)
+        self.assertEqual(command.call_args.args[0], [
+            "gh", "secret", "set", "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST",
+            "--repo", "gvm1229/aigent-hive", "--env", "release-publication",
+        ])
+        self.assertEqual(command.call_args.kwargs["input"], self.digest)
+        self.assertEqual(before, (self.summary.read_bytes(), self.approval.read_bytes()))
+
+    def test_rewriting_both_files_cannot_replace_the_approved_digest(self) -> None:
+        self.summary.write_bytes(self.summary.read_bytes().replace("승인".encode(), "변경".encode()))
+        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
+        with patch("subprocess.run") as command:
+            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "externally approved"):
+                self.register()
+            command.assert_not_called()
+
+    def test_invalid_digest_or_version_never_contacts_github(self) -> None:
+        for digest, version in (("", "0.10.0"), ("invalid", "0.10.0"), (self.digest, "0.10.0-test.1")):
+            with self.subTest(digest=digest, version=version), patch("subprocess.run") as command:
+                with self.assertRaises(REGISTRAR["NotificationError"]):
+                    self.register(digest, version)
+                command.assert_not_called()
+
+    def test_title_must_match_version_even_if_digest_is_valid(self) -> None:
+        self.summary.write_bytes(self.summary.read_bytes().replace(b"0.10.0", b"0.9.5"))
+        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
+        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
+        with patch("subprocess.run") as command:
+            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "title does not match"):
+                self.register(changed)
+            command.assert_not_called()
+
+    def test_registration_failure_is_not_success_or_disclosure(self) -> None:
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1, stderr="private-detail")):
+            with self.assertRaises(REGISTRAR["NotificationError"]) as error:
+                self.register()
+        self.assertIn("registration failed", str(error.exception))
+        self.assertNotIn("private-detail", str(error.exception))
+
+    def test_timeout_and_missing_gh_preserve_retry_with_same_approval(self) -> None:
+        for error in (FileNotFoundError("private-detail"), subprocess.TimeoutExpired("gh", 30)):
+            with self.subTest(error=type(error).__name__), patch("subprocess.run", side_effect=error):
+                with self.assertRaisesRegex(REGISTRAR["NotificationError"], "retry the same approved digest"):
+                    self.register()
+
+    def test_cli_requires_explicit_digest(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(REGISTRAR_PATH), "--product-version", "0.10.0"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--approved-digest", result.stderr)
+
+
+class RecordingServer(ThreadingHTTPServer):
+    responses: list[int]
+    requests: list[tuple[str, bytes]]
+
+
+class RecordingHandler(BaseHTTPRequestHandler):
+    def do_POST(self) -> None:  # noqa: N802
+        body = self.rfile.read(int(self.headers["Content-Length"]))
+        self.server.requests.append((self.headers["Content-Type"], body))  # type: ignore[attr-defined]
+        status = self.server.responses.pop(0) if self.server.responses else 204  # type: ignore[attr-defined]
+        self.send_response(status)
+        self.end_headers()
+
+    def log_message(self, _format: str, *_args: object) -> None:
+        return
+
+
+class StableReleaseDiscordNotification(unittest.TestCase):
+    def setUp(self) -> None:
+        self.server = RecordingServer(("127.0.0.1", 0), RecordingHandler)
+        self.server.responses = []
+        self.server.requests = []
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.thread.join()
+        self.server.server_close()
+
+    def run_notifier(
+        self,
+        version: str = "0.9.5",
+        summary_text: str | None = None,
+        approval_text: str | None = None,
+        external_approval_digest: str | None = None,
+        validate_only: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            summary = root / "summary.md"
+            summary.write_text(
+                summary_text
+                or "# Aigent Hive v0.9.5 업데이트 내역:\n\n- 설치 확인 개선\n- 지식 보호 강화\n",
+                encoding="utf-8",
+            )
+            approval = root / "summary.md.sha256"
+            approval.write_text(
+                approval_text
+                or f"sha256:{hashlib.sha256(summary.read_bytes()).hexdigest()}  summary.md\n",
+                encoding="utf-8",
+            )
+            approved_digest = approval.read_text(encoding="utf-8").split("  ", 1)[0]
+            banner = root / "hive-readme-banner-ko.png"
+            banner.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
+            environment = os.environ | {
+                "AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL": (
+                    f"http://127.0.0.1:{self.server.server_port}/api/webhooks/test/token"
+                ),
+                "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST": (
+                    approved_digest if external_approval_digest is None else external_approval_digest
+                ),
+            }
+            command = [
+                sys.executable,
+                str(NOTIFIER),
+                "--product-version",
+                version,
+                "--summary",
+                str(summary),
+                "--summary-approval",
+                str(approval),
+                "--banner",
+                str(banner),
+                "--allow-insecure-test-webhook",
+            ]
+            if validate_only:
+                command.append("--validate-only")
+            return subprocess.run(
+                command,
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+
+    def test_sends_banner_before_the_korean_subscriber_summary(self) -> None:
+        result = self.run_notifier()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+        banner_type, banner = self.server.requests[0]
+        self.assertTrue(banner_type.startswith("multipart/form-data; boundary="))
+        self.assertIn(b'hive-readme-banner-ko.png', banner)
+        self.assertIn(b"\x89PNG\r\n\x1a\nfixture", banner)
+        message_type, message = self.server.requests[1]
+        self.assertEqual(message_type, "application/json")
+        self.assertEqual(
+            json.loads(message.decode("utf-8"))["content"],
+            "# Aigent Hive v0.9.5 업데이트 내역:\n\n- 설치 확인 개선\n- 지식 보호 강화",
+        )
+
+    def test_banner_failure_blocks_the_subscriber_summary(self) -> None:
+        self.server.responses = [500]
+        result = self.run_notifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("release banner request returned HTTP 500", result.stderr)
+        self.assertNotIn("http://", result.stderr)
+        self.assertNotIn("/api/webhooks/", result.stderr)
+        self.assertEqual(len(self.server.requests), 1)
+
+    def test_tampered_approved_summary_blocks_before_the_banner(self) -> None:
+        result = self.run_notifier(
+            summary_text="# Aigent Hive v0.9.5 업데이트 내역:\n\n- 승인 문구 변경\n",
+            approval_text="sha256:" + "0" * 64 + "  summary.md\n",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("approved digest", result.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_missing_or_changed_external_approval_blocks_before_the_banner(self) -> None:
+        for external in ("", "sha256:" + "0" * 64):
+            with self.subTest(external=external):
+                result = self.run_notifier(external_approval_digest=external)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("externally approved digest", result.stderr)
+                self.assertEqual(self.server.requests, [])
+
+    def test_approval_must_bind_the_selected_summary_filename(self) -> None:
+        result = self.run_notifier(
+            approval_text="sha256:" + "0" * 64 + "  another-summary.md\n",
+            validate_only=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("approval does not bind", result.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_nested_examples_reach_the_local_receiver_without_reformatting(self) -> None:
+        summary = (
+            "# Aigent Hive v0.10.0 업데이트 내역:\n\n"
+            "- **새 기능 추가**\n"
+            "  - 사용 예시와 선택 사항 안내\n"
+            "  - 원문·출처 보존\n\n"
+            "- **기존 기능 개선**\n"
+            "  - 운영체제별 사용 예시\n"
+        )
+        result = self.run_notifier("0.10.0", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+        self.assertEqual(json.loads(self.server.requests[1][1])["content"], summary.strip())
+
+    def test_malformed_lists_are_rejected_before_any_request(self) -> None:
+        for body in (
+            "  - parent missing\n",
+            "- main\n - wrong indent\n",
+            "- main\n    - deeper nesting\n",
+            "- main\n  - \n",
+            "- main\nparagraph outside list\n",
+        ):
+            with self.subTest(body=body):
+                result = self.run_notifier(summary_text="# Aigent Hive v0.9.5 업데이트 내역:\n\n" + body)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.server.requests, [])
+
+    def test_nested_lists_keep_the_discord_length_limit(self) -> None:
+        prefix = "# Aigent Hive v0.9.5 업데이트 내역:\n\n- main\n  - "
+        summary = prefix + "가" * (2_000 - len(prefix))
+        accepted = self.run_notifier(summary_text=summary, validate_only=True)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        rejected = self.run_notifier(summary_text=summary + "가", validate_only=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("Discord message limit", rejected.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_rejects_nonstable_versions_before_sending(self) -> None:
+        result = self.run_notifier("0.9.5-test.1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("allowed only for stable", result.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_validation_sends_no_webhook_request(self) -> None:
+        result = self.run_notifier(validate_only=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.server.requests, [])
+
+    def test_accepts_the_v094_update_summary_payload(self) -> None:
+        summary = (ROOT / "docs/releases/0.9.4.subscriber.ko.md").read_text(encoding="utf-8")
+        result = self.run_notifier("0.9.4", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+
+    def test_accepts_the_v093_subscriber_payload(self) -> None:
+        summary = (ROOT / "docs/releases/0.9.3.subscriber.ko.md").read_text(encoding="utf-8")
+        result = self.run_notifier("0.9.3", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+
+    def test_approved_v010_payload_is_bound_to_its_checked_in_digest(self) -> None:
+        summary = ROOT / "docs/releases/0.10.0.subscriber.ko.md"
+        approval = ROOT / "docs/releases/0.10.0.subscriber.ko.sha256"
+        expected = (
+            "sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
+            "  0.10.0.subscriber.ko.md\n"
+        )
+        self.assertEqual(approval.read_text(encoding="utf-8"), expected)
+        namespace = __import__("runpy").run_path(str(NOTIFIER))
+        self.assertEqual(
+            namespace["read_summary"](summary, "0.10.0", approval, expected.split("  ", 1)[0]),
+            summary.read_text(encoding="utf-8").strip(),
+        )
+
+    def test_publication_workflow_invokes_the_notifier_only_after_release_creation(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL", workflow)
+        self.assertIn("if: ${{ inputs.channel == 'stable' }}", workflow)
+        self.assertIn("--validate-only", workflow)
+        self.assertIn("--summary-approval", workflow)
+        self.assertIn("AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST", workflow)
+        self.assertIn("scripts/publish-stable-discord-update.py", workflow)
+        self.assertLess(workflow.index("--validate-only"), workflow.index("npm publish"))
+        self.assertLess(workflow.index("gh release create"), workflow.index("Send stable Discord"))
+        steps = yaml.safe_load(workflow)["jobs"]["publish"]["steps"]
+        release = next(step for step in steps if step.get("name") == "Create annotated channel tag and GitHub Release")
+        notifier = next(step for step in steps if step.get("name") == "Send stable Discord banner and subscriber update")
+        self.assertIn("gh release create", release["run"])
+        self.assertNotIn("publish-stable-discord-update.py", release["run"])
+        self.assertEqual(notifier["if"], "${{ inputs.channel == 'stable' }}")

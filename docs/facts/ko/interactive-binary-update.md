@@ -11,7 +11,7 @@ aliases: ["설치 소유자 갱신"]
 sources:
   - "repo:README.md#sha256:27679c3c338ef2f82b352800ccb882c2536bcc2c7dbfd18b93df52e3349554b0"
 links: [test-distribution, update-discovery, update-transaction]
-reviewed_revision: "git:01df1d580d987e7fb0f34978076cd000263fd99f"
+reviewed_revision: "git:1b755a995d91739d758830210d93cdc012e9e61b"
 status: active
 ---
 

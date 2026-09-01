@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "host": "windows-x64",
+  "corpus": {
+    "documents": 30,
+    "queries": 120,
+    "exact": 30,
+    "paraphrase": 40,
+    "cross_language": 20,
+    "relation": 30
+  },
+  "fts": {
+    "engine": "sqlite-fts5-unicode61-bm25",
+    "exact_recall_at_10": 1.0,
+    "paraphrase_recall_at_10": 0.775,
+    "cross_language_recall_at_10": 0.8,
+    "semantic_recall_at_10": 0.7833333333333333,
+    "warm_p95_ms": 0.0773
+  },
+  "dense": {
+    "runtime": "fastembed==0.8.0",
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "license": "Apache-2.0",
+    "dimension": 384,
+    "model_tree_digest": "sha256:b2df81f719a2b94e400fe77d70b418ab516968ece2e8cf0b631464014b2b38fe",
+    "exact_recall_at_10": 0.8333333333333334,
+    "paraphrase_recall_at_10": 0.9,
+    "cross_language_recall_at_10": 1.0,
+    "semantic_recall_at_10": 0.9333333333333333,
+    "improvement_percentage_points": 15.0,
+    "lookup_p95_ms_30_documents": 0.0043,
+    "full_build_50000": "failed-over-600-seconds",
+    "incremental_100": "not-run-after-full-build-gate-failure"
+  },
+  "engines": [
+    {
+      "engine": "qdrant-edge==0.8.0",
+      "license": "Apache-2.0",
+      "maturity": "beta",
+      "transitive_crates": 455,
+      "build_seconds_excluding_compile": 0.4649862,
+      "lookup_p95_ms": 4.5012,
+      "disk_bytes": 270564639
+    },
+    {
+      "engine": "sqlite-vec==0.1.9",
+      "license": "MIT",
+      "maturity": "pre-1.0",
+      "build_seconds": 1.1177023,
+      "lookup_p95_ms": 46.6101,
+      "disk_bytes": 78319616,
+      "self_recall_at_10": 1.0
+    },
+    {
+      "engine": "sqliteai-vector==1.0.0",
+      "license": "Elastic-2.0-modified",
+      "maturity": "stable",
+      "build_seconds": 0.7004167,
+      "lookup_p95_ms": 17.6761,
+      "disk_bytes": 122294272,
+      "self_recall_at_10": 1.0,
+      "rejection": "commercial-license-required-for-non-open-source-consumers"
+    }
+  ],
+  "decision": "defer",
+  "blocking_gate": "windows-x64-full-embedding-build-exceeded-600-seconds",
+  "hybrid_exact_recall_at_10": 1.0,
+  "product_dependencies_added": 0
+}

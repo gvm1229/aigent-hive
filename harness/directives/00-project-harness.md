@@ -1,13 +1,59 @@
-# Aigent Hive project harness
+# Project harness behavior
 
-- Treat this repository as an independent consumer project.
-- Read `AGENTS.md` first, then load only the narrow `.agents/directives/` file needed by the task.
-- Treat `.hive/config/` and canonical Markdown as authority.
-- When Wiki is enabled, run at most one bounded `hive knowledge retrieve` before question, research, design, plan, debug, or implementation work. Skip retrieval during usage-guard or setup control, when Wiki is disabled, for acknowledgment-only or context-free requests, or after the current turn already performed the lookup.
-- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. After a successful write, use `hive source-wiki lint` only for a valid source workspace; otherwise use `hive knowledge lint` against the enabled registered project, or against `user-root` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.
-- For “all todos”, “until completion”, “do not stop”, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.
-- Treat `.agents/directives/` and `.agents/skills/` as release projections, not user data authority.
-- Before an agent edits a project path, read `.agents/directives/03-session-coordination.md` and use its exact-session reservation protocol. Stop before an overlapping automated write when its `hive session` check reports a live conflicting reservation.
-- Preserve every user-authored and third-party byte outside an exact Hive-owned marker or manifest path.
-- Never request provider API credentials or call model-provider APIs on Hive's behalf.
-- Use verified host-native capabilities by default for new v0.9 runs. Use OMX or OMC only after explicit user selection, and preserve any owner already pinned by an existing run, including a 0.8.x external owner.
+Owns material-work planning, continuation, closure, host execution, and stable publication authority.
+Knowledge, upgrade, and concurrent-edit procedures belong to the numbered sibling directives.
+
+## Work and planning
+
+- English responses use ASD-STE100 Simplified Technical English. In Korean, Translate meaning rather than English word order.
+- In Korean, do not write `benign한 source claim ID`; use `원본 지식 항목 식별자` and avoid replaceable mixed-language compounds.
+- Before producing Korean, load `04-korean-language.md` and apply its draft, local inspection,
+  bounded rewrite, verification, and exact-draft fallback contract.
+- Treat the repository as an independent consumer project and `.hive/config/` plus canonical
+  Markdown as authority.
+- Write a material plan to project Markdown before execution unless the user opts out. Do not copy
+  the complete saved plan into chat.
+- Finish every safe in-scope agent-owned action before a handoff. Report only exact user-owned or
+  external evidence requirements.
+- Preserve user and third-party bytes outside Hive-owned paths and marker blocks.
+
+## Continuation and closure
+
+- `all todos`, `until completion`, `do not stop`, explicit implementation followed by
+  `continue`, and equivalent requests remain active while any scoped action is agent-owned.
+- Classify remaining work as `agent-owned`, `awaiting-user-authority`,
+  `awaiting-external-evidence`, or `blocked`. A progress report is not closure.
+- Before marking a whole Goal or task `blocked`, require no independent agent-owned criterion.
+  Keep a partial host, fixture, test, stale-reference, or evidence failure attached to its criterion
+  and continue the rest.
+- Abort continued work only for an exact user-owned manual blocker, a required Codex restart, or
+  completed criteria. User cancel or interrupt takes priority and permits immediate stop.
+- Hive hooks may return only their bounded approved result. They never mutate the host Goal, task,
+  or canonical run state.
+- For a bound run, call `hive run closure --target <project-root> --run <run-id> --output json`
+  before a completion claim. Inspect `data.closure.ready_for_final` and remaining criteria, not
+  merely exit zero or the command code. Match the run, revision, and current evidence to the whole
+  requested task; a successful subtask or disposable test cannot close its parent. Cancellation
+  permits a stop, not a success claim. Reconcile blocked results with the policy above.
+- Without a bound run, reconcile the project plan and remaining actions directly; do not claim
+  verified execution. A pending required CI check calls for bounded waiting or independent work,
+  not a final progress-only handoff. Reading these rules does not install a hook or prove that
+  the host intercepts final responses.
+
+## Release authority
+
+- Every release request defaults to implementation, verification, or a uniquely numbered public
+  test.
+- Stable tag, protected-branch integration, publication, and installation require the user's
+  current, version-specific approval. Never infer it from `release`, `ship`, `continue`,
+  `all todos`, successful tests, or a ready report.
+
+## Host and Skill boundary
+
+- Start a new run with verified host-native capabilities. Use OMX or OMC only after explicit user
+  selection and preserve an existing pinned owner, including a 0.8.x external owner.
+- The host owns model, subagent, and Judge launches. Hive prepares declarative envelopes and typed
+  receipts; `spawned=false` is mandatory.
+- Missing or unverified capability returns truthful unsupported or `dispatch-uncertain` without a
+  provider call, process launch, automatic backend switch, watcher, or fallback hook.
+- Activate an optional Skill or hook only after exact scope and digest approval.

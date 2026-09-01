@@ -9,18 +9,20 @@ summary: "Aigent Hive 안정판 GitHub Release 성공 뒤 보호된 출시 환�
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:b10bd374eea19774dcaab4c0bc8375f70aeeeb2a5c977ca531487619448b4c6c"
-  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
+  - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
+  - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:82db6eddc542a4e618f073469d5456d30173b3d16961e2cfb074988180e193d5"
+  - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:e1af8adfa30cd07e45496fb2491b7018e14b3ad9"
+reviewed_revision: "git:3a0d9e2e61d1867e0f38d8855ae8b064fa449f09"
 status: active
 ---
 
 # 안정판 Discord 구독자 알림
 
-안정판 전용 출시 흐름에서 `update-summary` 한국어 메시지·배너·보호된 환경 비밀 값 사전 검사. GitHub
-Release 성공 뒤 배너 먼저 전송. 이 요청 성공 뒤에만 한국어 구독자 요약 전송. 시험판 Discord 요청 없음.
-알림 도구의 webhook URL 출력 없음. 보호된 환경의 `0.9.3`·`0.9.4` 실제 전달 시험 성공,
-안정판·npm 게시 없음. 유지보수자 실제 Discord 화면에서 각 배너 아래 해당 한국어 요약 표시 수용.
+안정판 게시 전 한국어 안내·배너 검사. GitHub Release 성공 뒤 배너, 그 성공 뒤 요약 전송.
+시험판 전송·webhook URL 출력 없음. 원문·버전별 sidecar·외부 지문 대조, 주·하위 목록과 2,000자 제한 보존.
+문구 승인 뒤 `register-stable-summary-approval.py`에서 승인 지문·파일 검증 후 기존 `gh` 인증으로 자동 등록.
+출시마다 GitHub 수동 설정 불필요. 등록 중 안내문 재작성·출시·메시지 전송 없음.
+등록 실패는 동일 승인으로 재시도, 변경 문구의 자동 승인·발송 중 지문 갱신 금지.

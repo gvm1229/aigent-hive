@@ -504,6 +504,67 @@ fn authenticate_current_base(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), UpdateError> {
+    let current = authenticate_base_bytes(ledger, incoming);
+    if current.is_ok() || env!("CARGO_PKG_VERSION") != "0.10.0" {
+        return current;
+    }
+    // Numbered tests share the product version. Authenticate each complete published
+    // generation against the current projection plus its exact frozen deltas.
+    // Never authorize arbitrary ledger contents merely from their self-reported digest.
+    let mut prior = incoming.clone();
+    for (path, bytes) in &mut prior {
+        if let Some(frozen) = test4_projection_bytes(path) {
+            *bytes = frozen.to_vec();
+        }
+    }
+    if authenticate_base_bytes(ledger, &prior).is_ok() {
+        return Ok(());
+    }
+    // test.2 predates the Korean repair as well as the vector Skill routing.
+    for (path, bytes) in &mut prior {
+        if let Some(frozen) = test2_projection_bytes(path) {
+            *bytes = frozen.to_vec();
+        }
+    }
+    if authenticate_base_bytes(ledger, &prior).is_ok() {
+        return Ok(());
+    }
+    current
+}
+
+fn test4_projection_bytes(path: &str) -> Option<&'static [u8]> {
+    match path {
+        ".agents/skills/knowledge-recall/SKILL.md" | ".claude/skills/knowledge-recall/SKILL.md" => {
+            Some(include_bytes!(
+                "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-recall/SKILL.md"
+            ))
+        }
+        ".agents/skills/knowledge-maintain/SKILL.md"
+        | ".claude/skills/knowledge-maintain/SKILL.md" => Some(include_bytes!(
+            "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-maintain/SKILL.md"
+        )),
+        _ => None,
+    }
+}
+
+fn test2_projection_bytes(path: &str) -> Option<&'static [u8]> {
+    match path {
+        ".agents/directives/04-korean-language.md" => Some(include_bytes!(
+            "../../../harness/project-bases/0.10.0-test.2/directives/04-korean-language.md"
+        )),
+        ".agents/skills/humanize-kor/SKILL.md" | ".claude/skills/humanize-kor/SKILL.md" => {
+            Some(include_bytes!(
+                "../../../harness/project-bases/0.10.0-test.2/skills/humanize-kor/SKILL.md"
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn authenticate_base_bytes(
+    ledger: &BaseLedger,
+    incoming: &BTreeMap<String, Vec<u8>>,
+) -> Result<(), UpdateError> {
     if ledger.files.len() != incoming.len() {
         return Err(UpdateError::Verification(
             "current-version project base inventory differs from the authenticated binary"
@@ -3502,6 +3563,102 @@ mod tests {
             authenticate_current_base(&ledger, &incoming),
             Err(UpdateError::Verification(_))
         ));
+    }
+
+    #[test]
+    fn same_product_test2_requires_one_exact_generation_not_mixed_or_forged_bytes() {
+        let paths = [
+            ".agents/directives/04-korean-language.md",
+            ".agents/skills/humanize-kor/SKILL.md",
+        ];
+        let incoming = BTreeMap::from([
+            (paths[0].to_owned(), b"new directive".to_vec()),
+            (paths[1].to_owned(), b"new skill".to_vec()),
+        ]);
+        let mut ledger = BaseLedger {
+            schema_version: 1,
+            product_version: "0.10.0".to_owned(),
+            ledger_digest: digest('a'),
+            files: paths
+                .iter()
+                .map(|path| {
+                    let bytes = test2_projection_bytes(path).expect("frozen delta");
+                    BaseFile {
+                        path: (*path).to_owned(),
+                        kind: expected_base_kind(path).expect("kind").to_owned(),
+                        content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
+                        content_digest: sha256_digest(bytes),
+                    }
+                })
+                .collect(),
+        };
+        assert!(authenticate_current_base(&ledger, &incoming).is_ok());
+        ledger.files[0].content = "new directive".to_owned();
+        assert!(authenticate_current_base(&ledger, &incoming).is_err());
+        ledger.files[0].content = "forged directive".to_owned();
+        assert!(authenticate_current_base(&ledger, &incoming).is_err());
+    }
+
+    #[test]
+    fn same_product_vector_skill_upgrade_accepts_only_complete_test_generations() {
+        for root in [".agents/skills", ".claude/skills"] {
+            let incoming = BTreeMap::from([
+                (
+                    format!("{root}/knowledge-recall/SKILL.md"),
+                    b"new recall".to_vec(),
+                ),
+                (
+                    format!("{root}/knowledge-maintain/SKILL.md"),
+                    b"new maintain".to_vec(),
+                ),
+                (
+                    format!("{root}/humanize-kor/SKILL.md"),
+                    b"current Korean".to_vec(),
+                ),
+            ]);
+            for test2 in [false, true] {
+                let mut ledger = BaseLedger {
+                    schema_version: 1,
+                    product_version: "0.10.0".to_owned(),
+                    ledger_digest: digest('a'),
+                    files: incoming
+                        .iter()
+                        .map(|(path, current)| {
+                            let bytes = if test2 {
+                                test2_projection_bytes(path)
+                                    .or_else(|| test4_projection_bytes(path))
+                            } else {
+                                test4_projection_bytes(path)
+                            }
+                            .unwrap_or(current);
+                            BaseFile {
+                                path: path.clone(),
+                                kind: "skill".to_owned(),
+                                content_digest: sha256_digest(bytes),
+                                content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
+                            }
+                        })
+                        .collect(),
+                };
+                assert!(authenticate_current_base(&ledger, &incoming).is_ok());
+                let recall = ledger
+                    .files
+                    .iter_mut()
+                    .find(|file| file.path.contains("knowledge-recall/"))
+                    .unwrap();
+                recall.content = "new recall".to_owned();
+                recall.content_digest = sha256_digest(recall.content.as_bytes());
+                assert!(authenticate_current_base(&ledger, &incoming).is_err());
+                let recall = ledger
+                    .files
+                    .iter_mut()
+                    .find(|file| file.path.contains("knowledge-recall/"))
+                    .unwrap();
+                recall.content = "forged recall".to_owned();
+                recall.content_digest = sha256_digest(recall.content.as_bytes());
+                assert!(authenticate_current_base(&ledger, &incoming).is_err());
+            }
+        }
     }
 
     #[test]

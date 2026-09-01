@@ -9,12 +9,12 @@ summary: "0.9.5 직접 설치 갱신의 mode별 사용자 설치 action 검증�
 tags: [installation, migration, projection, update]
 aliases: ["갱신 뒤 투영 refresh"]
 sources:
-  - "repo:crates/hive-cli/src/update_activation.rs#sha256:a757180da3c34992858923db154f6d1f7b8de2d5c353b6bf81a48e32331c19eb"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
+  - "repo:crates/hive-cli/src/update_activation.rs#sha256:8d58b21e0a57a82908a5f6f59e489ec6e17d8e73191b17f9794f3dba16e9aef1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acd4022de5697806003207634ac0b7cb874baeb802af491f28d39ec048daf830"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:c95242b313d9abeaee81bd3c89d69af927725c44"
+reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active
 ---
 

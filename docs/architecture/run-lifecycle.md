@@ -191,9 +191,9 @@ host-owned dispatch data.
 - Team mailbox·barrier·shared-path lease와 multi-goal aggregation
 - Cancel·status·recover·usage guard의 selected pointer·scheduler lock 독립 접근
 
-정본 계획: [`../plans/active/native-iterative-execution.md`](../plans/active/native-iterative-execution.md).
-Protocol: [`../plans/contracts/06-native-orchestration-state.md`](../plans/contracts/06-native-orchestration-state.md),
-[`../plans/contracts/07-native-orchestration-workflows.md`](../plans/contracts/07-native-orchestration-workflows.md).
+정본 계획: [`../archive/plans/foundations/native-iterative-execution.md`](../archive/plans/foundations/native-iterative-execution.md).
+Protocol: [`../archive/plans/foundations/contracts/06-native-orchestration-state.md`](../archive/plans/foundations/contracts/06-native-orchestration-state.md),
+[`../archive/plans/foundations/contracts/07-native-orchestration-workflows.md`](../archive/plans/foundations/contracts/07-native-orchestration-workflows.md).
 
 ## Legacy external provenance
 

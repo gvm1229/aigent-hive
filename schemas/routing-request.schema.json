@@ -77,6 +77,24 @@
     "explicit_run_intent": { "type": "boolean" },
     "prompt_quality": {
       "enum": ["sufficient", "ambiguous", "missing-core-details"]
+    },
+    "workflow_signals": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "dependency-graph",
+          "intermediate-evidence",
+          "bounded-retry",
+          "independent-verifier",
+          "topology-steering",
+          "exact-recovery"
+        ]
+      }
+    },
+    "workflow_override": {
+      "type": ["string", "null"],
+      "enum": ["simple-continuation", "verified-workflow", "no-retry", null]
     }
   },
   "$defs": {

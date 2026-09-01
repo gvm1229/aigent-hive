@@ -1,0 +1,181 @@
+name: Public test acceptance
+
+on:
+  workflow_call:
+    inputs:
+      product_version:
+        required: true
+        type: string
+      package_version:
+        required: true
+        type: string
+      release_date:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      product_version:
+        description: Exact product version
+        required: true
+        type: string
+      package_version:
+        description: Exact numbered public test package version
+        required: true
+        type: string
+      release_date:
+        description: Exact package release date
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  korean-public-test:
+    name: Korean public test (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            runner: windows-latest
+            platform_package: win32-x64
+            executable: hive.exe
+          - label: macOS arm64
+            runner: macos-15
+            platform_package: darwin-arm64
+            executable: hive
+          - label: Linux musl x64
+            runner: ubuntu-24.04
+            platform_package: linux-x64
+            executable: hive
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
+      RELEASE_DATE: ${{ inputs.release_date }}
+      PLATFORM_PACKAGE: ${{ matrix.platform_package }}
+      EXECUTABLE: ${{ matrix.executable }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Bind numbered public test source and registry state
+        shell: bash
+        run: |
+          [[ "$PRODUCT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$PACKAGE_VERSION" =~ ^${PRODUCT_VERSION//./\.}-test\.[1-9][0-9]*$ ]]
+          [[ "$RELEASE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          tag_commit=$(git rev-list -n 1 "v$PACKAGE_VERSION")
+          test -n "$tag_commit"
+          product_drift=$(git diff --name-only "$tag_commit"..HEAD -- \
+            Cargo.toml Cargo.lock crates harness schemas \
+            scripts/install.sh scripts/install.ps1 scripts/install.cmd \
+            scripts/package-npm.mjs scripts/render-installers.py)
+          test -z "$product_drift"
+          test "$(npm view "aigent-hive@$PACKAGE_VERSION" version)" = "$PACKAGE_VERSION"
+          test "$(npm view aigent-hive 'dist-tags.test')" = "$PACKAGE_VERSION"
+          test "$(npm view aigent-hive 'dist-tags.latest')" = "0.9.5"
+      - name: Install the exact public npm package
+        shell: bash
+        run: |
+          install_root="$RUNNER_TEMP/public-hive"
+          npm install --prefix "$install_root" --ignore-scripts=false \
+            "aigent-hive@$PACKAGE_VERSION"
+          binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
+          test -f "$binary"
+          printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify public binary simple-explanation guidance
+        shell: bash
+        run: |
+          user_root="$RUNNER_TEMP/explanation-user"
+          host_bin="$RUNNER_TEMP/explanation-host-bin"
+          mkdir -p "$user_root"
+          mkdir -p "$host_bin"
+          host_executable=agy
+          if [ "$RUNNER_OS" = Windows ]; then
+            host_executable=agy.exe
+          fi
+          cat >"$host_bin/host.c" <<'EOF'
+          #include <stdio.h>
+          #include <string.h>
+          int main(int argc, char **argv) {
+            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "list") == 0) {
+              puts("No imported plugins."); return 0;
+            }
+            puts("1.1.7"); return 0;
+          }
+          EOF
+          clang "$host_bin/host.c" -o "$host_bin/$host_executable"
+          chmod +x "$host_bin/$host_executable"
+          export PATH="$host_bin:$PATH"
+          "$HIVE_BIN" install --scope user --host antigravity --dry-run \
+            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-preview.json"
+          python - "$HIVE_BIN" <<'PY'
+          import pathlib, sys
+          binary = pathlib.Path(sys.argv[1]).read_bytes()
+          for text in (
+              "so a five-year-old can follow it",
+              "Keep core technical terms and define them on first use",
+              "다섯 살 아이도 배경지식 없이 이해할 쉬운 말",
+              "증거 한계·안전 및 승인 경계 보존",
+          ):
+              if text.encode("utf-8") not in binary:
+                  raise SystemExit(f"public binary omitted explanation contract: {text}")
+          PY
+      - name: Qualify Korean core, preservation, update, and rollback
+        shell: bash
+        run: |
+          python scripts/qualify-korean-public-test.py \
+            --hive "$HIVE_BIN" \
+            --pack harness/language-packs/im-not-ai/2.3.2 \
+            --corpus tests/fixtures/korean/gold.json \
+            --work-root "$RUNNER_TEMP" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --release-date "$RELEASE_DATE" \
+            --receipt "$RUNNER_TEMP/korean-public-test-$PLATFORM_PACKAGE.json"
+      - name: Qualify vector onboarding using the exact public binary
+        shell: bash
+        run: |
+          python scripts/test-artifacts.py run --purpose "공개 vector onboarding $PLATFORM_PACKAGE" \
+            --command python -B scripts/qualify-vector-onboarding-public-test.py \
+            --hive "$HIVE_BIN" \
+            --work-root "$RUNNER_TEMP" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --release-date "$RELEASE_DATE" \
+            --receipt "$RUNNER_TEMP/vector-onboarding-public-test-$PLATFORM_PACKAGE.json"
+      - name: Select SQLite-capable Python for vector acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          probe='import sqlite3,sys; print(sys.version.split()[0], sqlite3.sqlite_version); c=sqlite3.connect(":memory:"); c.enable_load_extension(True); c.enable_load_extension(False); c.close()'
+          if python -I -S -c "$probe"; then
+            exit 0
+          fi
+          # CI toolchain setup only; Hive never installs Python on a consumer machine.
+          brew install python@3.13
+          vector_python="$(brew --prefix python@3.13)/bin/python3.13"
+          "$vector_python" -I -S -c "$probe"
+          printf 'VECTOR_PYTHON=%s\n' "$vector_python" >>"$GITHUB_ENV"
+      - name: Qualify optional vector using the exact public binary
+        shell: bash
+        run: 'python scripts/test-artifacts.py run --purpose "공개 vector qualification ${{ matrix.platform_package }}" --command "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install'
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: korean-public-test-${{ matrix.platform_package }}
+          path: |
+            ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
+            ${{ runner.temp }}/vector-onboarding-public-test-${{ matrix.platform_package }}.json
+            tests/work/vector-native-*/receipt.json
+            tests/results/runs/*.md
+          if-no-files-found: error

@@ -15,7 +15,10 @@
     "entry_count",
     "added_count",
     "unchanged_count",
+    "conflict_paths",
+    "target_state_digest",
     "detached_collection_ids",
+    "collection_ids",
     "changed_paths",
     "canonical_mutation",
     "index_rebuilt",
@@ -23,15 +26,35 @@
     "collection_tables"
   ],
   "properties": {
-    "mode": { "enum": ["dry-run", "apply"] },
+    "mode": { "enum": ["dry-run", "apply", "apply-excluding-conflicts"] },
     "disposition": { "enum": ["noop", "planned", "applied"] },
     "archive_sha256": { "$ref": "#/$defs/sha256" },
     "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "target_state_digest": { "$ref": "#/$defs/sha256" },
+    "collection_ids": { "type": "array", "uniqueItems": true, "maxItems": 10000, "items": { "$ref": "#/$defs/collection_id" } },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "state"],
+      "properties": {
+        "complete": { "type": "boolean" },
+        "state": { "enum": ["complete", "fts-disabled", "fts-pending", "record-unavailable"] },
+        "id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "receipt_digest": { "$ref": "#/$defs/sha256" },
+        "vector_state": { "enum": ["unanswered", "deferred", "requested", "complete", "pending"] }
+      }
+    },
     "source": { "$ref": "#/$defs/source" },
     "scope": { "$ref": "#/$defs/scope" },
     "entry_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
     "added_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
     "unchanged_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "conflict_paths": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/portable_path" }
+    },
     "detached_collection_ids": {
       "type": "array",
       "maxItems": 10000,
@@ -49,10 +72,24 @@
     },
     "canonical_mutation": { "type": "boolean" },
     "index_rebuilt": { "type": "boolean" },
+    "transfer_preview_digest": {
+      "description": "Exact dry-run result digest required by hive knowledge transfer import --apply.",
+      "$ref": "#/$defs/sha256"
+    },
+    "vector_rebuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason", "scope"],
+      "properties": {
+        "state": { "enum": ["question-required", "deferred", "requested", "complete", "pending", "not-requested"] },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "scope": { "const": "imported portable collections only" }
+      }
+    },
     "rollback": { "$ref": "#/$defs/rollback" },
     "collection_tables": { "$ref": "#/$defs/collection_tables" }
   },
-  "x-countInvariant": "added_count + unchanged_count = entry_count",
+  "x-countInvariant": "added_count + unchanged_count + conflict_paths.length = entry_count",
   "allOf": [
     {
       "if": { "properties": { "mode": { "const": "dry-run" } }, "required": ["mode"] },
@@ -62,6 +99,8 @@
           "changed_paths": { "maxItems": 0 },
           "canonical_mutation": { "const": false },
           "index_rebuilt": { "const": false },
+          "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
+          "vector_rebuild": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }
@@ -71,9 +110,8 @@
       "then": {
         "properties": {
           "added_count": { "const": 0 },
-          "changed_paths": { "maxItems": 0 },
           "canonical_mutation": { "const": false },
-          "index_rebuilt": { "const": false },
+          "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }
@@ -94,10 +132,11 @@
       "if": { "properties": { "disposition": { "const": "applied" } }, "required": ["disposition"] },
       "then": {
         "properties": {
-          "mode": { "const": "apply" },
+          "mode": { "enum": ["apply", "apply-excluding-conflicts"] },
           "added_count": { "minimum": 1 },
           "changed_paths": { "minItems": 1 },
           "canonical_mutation": { "const": true },
+          "transfer_preview_digest": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }

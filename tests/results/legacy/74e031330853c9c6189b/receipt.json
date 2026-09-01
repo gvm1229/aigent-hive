@@ -1,0 +1,1717 @@
+{
+  "schema_version": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "python": "3.12.0 (tags/v3.12.0:0fb18b0, Oct  2 2023, 13:03:39) [MSC v.1935 64 bit (AMD64)]",
+  "binary_sha256": "fcbc268ef2871772e72e7eea0d9fd13baacbc88884e5b12df6a8c73c121fcb94",
+  "purpose": "native functional acceptance, not scale or latency qualification",
+  "status": "passed",
+  "calls": [
+    {
+      "arguments": [
+        "knowledge",
+        "refresh",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RefreshKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-refreshed",
+        "message": "RAG index refreshed from canonical Markdown",
+        "changed_paths": [
+          ".hive/config/collections.yml",
+          ".hive/config/projects.yml",
+          ".hive/config/rag-trust.json",
+          ".hive/index/hive.sqlite3",
+          ".hive/index/rag-generation.json"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/collections.yml",
+            ".hive/config/projects.yml",
+            ".hive/config/rag-trust.json",
+            ".hive/index/hive.sqlite3",
+            ".hive/index/rag-generation.json"
+          ],
+          "generation": 1,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+        }
+      },
+      "elapsed_seconds": 0.6520818000135478
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [],
+          "insufficient_budget": false,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 0
+        }
+      },
+      "elapsed_seconds": 0.043681400013156235
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [],
+          "insufficient_budget": false,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 0,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "unavailable",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 0.05929120001383126
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "preview",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--python",
+        "<user>\\.pyenv\\pyenv-win\\versions\\3.12.0\\python.exe"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:026c6ddf8fc4587f67c7f2ad5d14b97befe7f771ec8942f674dcaeeea4cdcfe8"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "complete_pip_environment": false,
+          "consent_digest": "sha256:888bb7e751db9c68ed07d51131880944860e871fed64cb43bf5d544270cc3f1b",
+          "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+          "control_files": [
+            "runtime.json",
+            "runtime.lock",
+            "scope-<scope-id>.json",
+            "scope-<scope-id>.lock"
+          ],
+          "downloads": {
+            "execution_profile": "file-only-offline-embedding",
+            "model": {
+              "dimension": 384,
+              "files": [
+                {
+                  "filename": "model_optimized.onnx",
+                  "sha256": "634d0f66c29dc934c8fa72b8a4fe91dd4d420a22f1d82a241058d4316e659a99",
+                  "size": 235052644
+                },
+                {
+                  "filename": "tokenizer.json",
+                  "sha256": "fa685fc160bbdbab64058d4fc91b60e62d207e8dc60b9af5c002c5ab946ded00",
+                  "size": 17083009
+                },
+                {
+                  "filename": "config.json",
+                  "sha256": "c8ec081fdad2df991bf5abbf18418fec7a5cdaa421f60ffb060a30040b8c376f",
+                  "size": 673
+                },
+                {
+                  "filename": "special_tokens_map.json",
+                  "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+                  "size": 964
+                },
+                {
+                  "filename": "tokenizer_config.json",
+                  "sha256": "0666eebf692422757e1dddf3c9fb1ded73ba3dc726c5828671fc89e45bf3609f",
+                  "size": 1416
+                }
+              ],
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "license": "Apache-2.0",
+              "normalization": "l2",
+              "pooling": "title-context-window-mean",
+              "repository": "qdrant/paraphrase-multilingual-MiniLM-L12-v2-onnx-Q",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0",
+              "token_limit": "<redacted>"
+            },
+            "omitted_declared_dependencies": [
+              {
+                "distribution": "tokenizers",
+                "reason": "Dedicated file-only Tokenizer.from_file profile; not a complete pip environment. from_pretrained and provider SDK features are unsupported.",
+                "requirement": "huggingface-hub>=0.16.4,<2.0"
+              }
+            ],
+            "packages": {
+              "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786": {
+                "filename": "sqlite_vec-0.1.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl",
+                "name": "sqlite-vec",
+                "sha256": "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+                "size": 163388,
+                "url": "https://files.pythonhosted.org/packages/6f/ad/6afd073b0f817b3e03f9e37ad626ae341805891f23c74b5292818f49ac63/sqlite_vec-0.1.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl",
+                "version": "0.1.9"
+              },
+              "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488": {
+                "filename": "protobuf-7.36.0-cp310-abi3-win_amd64.whl",
+                "name": "protobuf",
+                "sha256": "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+                "size": 453731,
+                "url": "https://files.pythonhosted.org/packages/0e/4e/12cb93270967a2affff5b3f720694700d4d87712a67afd05c8cb3f6fa52c/protobuf-7.36.0-cp310-abi3-win_amd64.whl",
+                "version": "7.36.0"
+              },
+              "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c": {
+                "filename": "sqlite_vec-0.1.9-py3-none-macosx_11_0_arm64.whl",
+                "name": "sqlite-vec",
+                "sha256": "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+                "size": 165434,
+                "url": "https://files.pythonhosted.org/packages/a4/3d/3677e0cd2f92e5ebc43cd29fbf565b75582bff1ccfa0b8327c7508e1084f/sqlite_vec-0.1.9-py3-none-macosx_11_0_arm64.whl",
+                "version": "0.1.9"
+              },
+              "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4": {
+                "filename": "numpy-2.5.2-cp312-cp312-win_amd64.whl",
+                "name": "numpy",
+                "sha256": "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4",
+                "size": 12464674,
+                "url": "https://files.pythonhosted.org/packages/7f/b9/87fea2769fe1c47c1b5b01d8310772c9d1a85d485de7cf386ef7a3332b02/numpy-2.5.2-cp312-cp312-win_amd64.whl",
+                "version": "2.5.2"
+              },
+              "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e": {
+                "filename": "onnxruntime-1.29.0-cp313-cp313-win_amd64.whl",
+                "name": "onnxruntime",
+                "sha256": "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e",
+                "size": 14001310,
+                "url": "https://files.pythonhosted.org/packages/e1/3b/66b424c63fa92dfaa48d1719efaae66fc8c256b9426a832eda51d8dfe1e9/onnxruntime-1.29.0-cp313-cp313-win_amd64.whl",
+                "version": "1.29.0"
+              },
+              "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee": {
+                "filename": "numpy-2.5.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                "name": "numpy",
+                "sha256": "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee",
+                "size": 16709995,
+                "url": "https://files.pythonhosted.org/packages/7b/44/59a1eb68e773c4098d107ef34a0dbdeca501d72ffcfbff9a7707343921ce/numpy-2.5.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                "version": "2.5.2"
+              },
+              "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740": {
+                "filename": "numpy-2.5.2-cp313-cp313-macosx_14_0_arm64.whl",
+                "name": "numpy",
+                "sha256": "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740",
+                "size": 5343880,
+                "url": "https://files.pythonhosted.org/packages/3c/79/81e0bf24f4d020a2b1d5cd297a9f60c3f24eeb116f9bba5870443f7b6a4a/numpy-2.5.2-cp313-cp313-macosx_14_0_arm64.whl",
+                "version": "2.5.2"
+              },
+              "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb": {
+                "filename": "onnxruntime-1.29.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+                "name": "onnxruntime",
+                "sha256": "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb",
+                "size": 23136745,
+                "url": "https://files.pythonhosted.org/packages/96/eb/e6968f5e41aac3125f2ff5708855f09cb0b70d85ed3115b625b0b58305ba/onnxruntime-1.29.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+                "version": "1.29.0"
+              },
+              "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba": {
+                "filename": "onnxruntime-1.29.0-cp312-cp312-macosx_14_0_arm64.whl",
+                "name": "onnxruntime",
+                "sha256": "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba",
+                "size": 21430049,
+                "url": "https://files.pythonhosted.org/packages/d4/80/381c1e9efed9cc32d00aa7cab0547dc84116cec906c3ffe3613686d6963a/onnxruntime-1.29.0-cp312-cp312-macosx_14_0_arm64.whl",
+                "version": "1.29.0"
+              },
+              "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8": {
+                "filename": "numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                "name": "numpy",
+                "sha256": "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8",
+                "size": 16722264,
+                "url": "https://files.pythonhosted.org/packages/3a/5f/62d28cf019460c7f1394105b4d49d9911a9c444cb77ab0bd95a204c5a6de/numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                "version": "2.5.2"
+              },
+              "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32": {
+                "filename": "sqlite_vec-0.1.9-py3-none-win_amd64.whl",
+                "name": "sqlite-vec",
+                "sha256": "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+                "size": 292804,
+                "url": "https://files.pythonhosted.org/packages/42/89/81b2907cda14e566b9bf215e2ad82fc9b349edf07d2010756ffdb902f328/sqlite_vec-0.1.9-py3-none-win_amd64.whl",
+                "version": "0.1.9"
+              },
+              "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd": {
+                "filename": "onnxruntime-1.29.0-cp312-cp312-win_amd64.whl",
+                "name": "onnxruntime",
+                "sha256": "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd",
+                "size": 14001407,
+                "url": "https://files.pythonhosted.org/packages/b4/80/5b28f1f1111210fc4a336ddbc6950f468ebf9a6a265420568f4f43fa33ce/onnxruntime-1.29.0-cp312-cp312-win_amd64.whl",
+                "version": "1.29.0"
+              },
+              "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4": {
+                "filename": "tokenizers-0.23.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+                "name": "tokenizers",
+                "sha256": "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+                "size": 3346235,
+                "url": "https://files.pythonhosted.org/packages/0d/d5/1353e5f677ec27c2494fb6a6725e82d56c985f53e90ec511369e7e4f02c6/tokenizers-0.23.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+                "version": "0.23.1"
+              },
+              "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb": {
+                "filename": "numpy-2.5.2-cp312-cp312-macosx_14_0_arm64.whl",
+                "name": "numpy",
+                "sha256": "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb",
+                "size": 5350202,
+                "url": "https://files.pythonhosted.org/packages/f3/f4/29e78102a80601cf034d4e9767022cffeca2c3b4c926e1754572ca95593d/numpy-2.5.2-cp312-cp312-macosx_14_0_arm64.whl",
+                "version": "2.5.2"
+              },
+              "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b": {
+                "filename": "protobuf-7.36.0-cp310-abi3-manylinux2014_x86_64.whl",
+                "name": "protobuf",
+                "sha256": "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+                "size": 340439,
+                "url": "https://files.pythonhosted.org/packages/c7/f8/bd5804695ba400e423c33fd4d9f58c28d86633d5ba1945c36ff3967d98cb/protobuf-7.36.0-cp310-abi3-manylinux2014_x86_64.whl",
+                "version": "7.36.0"
+              },
+              "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4": {
+                "filename": "flatbuffers-25.12.19-py2.py3-none-any.whl",
+                "name": "flatbuffers",
+                "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "size": 26661,
+                "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+                "version": "25.12.19"
+              },
+              "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657": {
+                "filename": "numpy-2.5.2-cp313-cp313-win_amd64.whl",
+                "name": "numpy",
+                "sha256": "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657",
+                "size": 12460532,
+                "url": "https://files.pythonhosted.org/packages/15/20/f3489f86d81ea460b2bcdceaed094142ca6579f6be0ec527b781d39afe68/numpy-2.5.2-cp313-cp313-win_amd64.whl",
+                "version": "2.5.2"
+              },
+              "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37": {
+                "filename": "protobuf-7.36.0-cp310-abi3-macosx_10_9_universal2.whl",
+                "name": "protobuf",
+                "sha256": "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+                "size": 453256,
+                "url": "https://files.pythonhosted.org/packages/8f/ae/58e3ca96cb2e118cc546b677359b3c6659f79a140935c08dec94c7998585/protobuf-7.36.0-cp310-abi3-macosx_10_9_universal2.whl",
+                "version": "7.36.0"
+              },
+              "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f": {
+                "filename": "onnxruntime-1.29.0-cp313-cp313-macosx_14_0_arm64.whl",
+                "name": "onnxruntime",
+                "sha256": "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f",
+                "size": 21429708,
+                "url": "https://files.pythonhosted.org/packages/41/f8/d375facf60edaf41f5732f9f689c98a800fcc52df5cf6ddfb406703eb5a1/onnxruntime-1.29.0-cp313-cp313-macosx_14_0_arm64.whl",
+                "version": "1.29.0"
+              },
+              "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c": {
+                "filename": "packaging-26.3-py3-none-any.whl",
+                "name": "packaging",
+                "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "size": 129956,
+                "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+                "version": "26.3"
+              },
+              "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e": {
+                "filename": "tokenizers-0.23.1-cp310-abi3-macosx_11_0_arm64.whl",
+                "name": "tokenizers",
+                "sha256": "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e",
+                "size": 3054954,
+                "url": "https://files.pythonhosted.org/packages/e2/6a/068ed9f6e444c9d7e9d55ce134181325700f3d7f30410721bdc8f848d727/tokenizers-0.23.1-cp310-abi3-macosx_11_0_arm64.whl",
+                "version": "0.23.1"
+              },
+              "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19": {
+                "filename": "onnxruntime-1.29.0-cp313-cp313-manylinux_2_28_x86_64.whl",
+                "name": "onnxruntime",
+                "sha256": "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19",
+                "size": 23136817,
+                "url": "https://files.pythonhosted.org/packages/83/2c/d8eb945d2a372149df9705a8d5c8d7c6c46c987c5446dbcea9e1ea7f6556/onnxruntime-1.29.0-cp313-cp313-manylinux_2_28_x86_64.whl",
+                "version": "1.29.0"
+              },
+              "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7": {
+                "filename": "tokenizers-0.23.1-cp310-abi3-win_amd64.whl",
+                "name": "tokenizers",
+                "sha256": "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7",
+                "size": 2798223,
+                "url": "https://files.pythonhosted.org/packages/97/c9/2553f72aaf65a2797d4229e37fa7fbe38ffbf3e32912d31bdd78b3323e59/tokenizers-0.23.1-cp310-abi3-win_amd64.whl",
+                "version": "0.23.1"
+              }
+            },
+            "platforms": {
+              "linux-x64-cp312": [
+                "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+                "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb",
+                "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8",
+                "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+                "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+              ],
+              "linux-x64-cp313": [
+                "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+                "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee",
+                "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+                "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19"
+              ],
+              "macos-arm64-cp312": [
+                "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+                "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba",
+                "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e"
+              ],
+              "macos-arm64-cp313": [
+                "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+                "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+                "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e"
+              ],
+              "windows-x64-cp312": [
+                "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+                "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4",
+                "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+                "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7"
+              ],
+              "windows-x64-cp313": [
+                "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+                "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e",
+                "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+                "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657",
+                "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7"
+              ]
+            },
+            "schema_version": 1
+          },
+          "fts_unchanged": true,
+          "identity": {
+            "complete_pip_environment": false,
+            "download_bytes": 282306162,
+            "lock_digest": "sha256:568f3de4b7bd5f4c8b1fd3f4001e8efa17903abfff3efcd49c81556f0636141b",
+            "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "omitted_declared_dependencies": [
+              {
+                "distribution": "tokenizers",
+                "reason": "Dedicated file-only Tokenizer.from_file profile; not a complete pip environment. from_pretrained and provider SDK features are unsupported.",
+                "requirement": "huggingface-hub>=0.16.4,<2.0"
+              }
+            ],
+            "packages": [
+              {
+                "name": "protobuf",
+                "sha256": "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+                "version": "7.36.0"
+              },
+              {
+                "name": "numpy",
+                "sha256": "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4",
+                "version": "2.5.2"
+              },
+              {
+                "name": "sqlite-vec",
+                "sha256": "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+                "version": "0.1.9"
+              },
+              {
+                "name": "onnxruntime",
+                "sha256": "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd",
+                "version": "1.29.0"
+              },
+              {
+                "name": "flatbuffers",
+                "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+                "version": "25.12.19"
+              },
+              {
+                "name": "packaging",
+                "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+                "version": "26.3"
+              },
+              {
+                "name": "tokenizers",
+                "sha256": "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7",
+                "version": "0.23.1"
+              }
+            ],
+            "platform": "windows-x64-cp312",
+            "python_digest": "sha256:42ac541168e97dedb9aabd8be335539fc41c682e414b9e8d137b164fb68683b0",
+            "python_executable": "\\\\?\\<user>\\.pyenv\\pyenv-win\\versions\\3.12.0\\python.exe",
+            "python_version": "3.12.0"
+          },
+          "operation": "enable-vector",
+          "operation_directories": [
+            "runtimes/<attempt-id>",
+            "work/<attempt-id>"
+          ],
+          "provider_api": false,
+          "python": "\\\\?\\<user>\\.pyenv\\pyenv-win\\versions\\3.12.0\\python.exe",
+          "python_install": false,
+          "query_log": false,
+          "root": "\\\\?\\<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+          "schema_version": 1,
+          "scope_id": "a3e2323aa3e45af6dde91e3cfbaa468f6dee092b9382ff137d8e0acb5139eb2c",
+          "selector": {
+            "kind": "collection",
+            "partition": {
+              "collection_id": "user-root",
+              "visibility": "shared"
+            }
+          },
+          "writes_under": [
+            ".hive/index/vector",
+            ".hive/config/vector-state"
+          ]
+        }
+      },
+      "elapsed_seconds": 0.3893958999833558
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "enable",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--python",
+        "<user>\\.pyenv\\pyenv-win\\versions\\3.12.0\\python.exe",
+        "--consent-digest",
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "exit_code": 2,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "error",
+        "exit_code": 2,
+        "code": "hive.knowledge-invalid-input",
+        "message": "enable requires the exact current preview consent digest",
+        "changed_paths": [],
+        "evidence": [],
+        "next_action": null
+      },
+      "elapsed_seconds": 0.26532100001350045
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "enable",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--python",
+        "<user>\\.pyenv\\pyenv-win\\versions\\3.12.0\\python.exe",
+        "--consent-digest",
+        "sha256:888bb7e751db9c68ed07d51131880944860e871fed64cb43bf5d544270cc3f1b"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state",
+          ".hive/index/vector"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:831cf94403ae3051bd81f967b19599b42d5de85f7529ce91011fe609dea5c3c9"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/index/vector",
+            ".hive/config/vector-state"
+          ],
+          "enabled": true,
+          "fts_unchanged": true,
+          "index_ready": false,
+          "runtime": "b2de1455524d5f3fb57e1e061f9d58b5ef0c8cefd129f8bdb2114e1f943825e8",
+          "scope_id": "a3e2323aa3e45af6dde91e3cfbaa468f6dee092b9382ff137d8e0acb5139eb2c"
+        }
+      },
+      "elapsed_seconds": 24.892737800022587
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "rebuild",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--max-seconds",
+        "10",
+        "--workers",
+        "2"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state",
+          ".hive/index/vector"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:38e5eacabd500ffb11b2262ed08bed2470844538496af9de6ef17fb45a78d122"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/vector-state",
+            ".hive/index/vector"
+          ],
+          "chunks": 8,
+          "cleanup_pending": false,
+          "complete": true,
+          "database_digest": "sha256:cfa763022e4cfb37521299ea8bc5a1c5e788fc1b0fe815719852e2600784bc63",
+          "embedded": 8,
+          "fts_unchanged": true,
+          "manifest_digest": "sha256:641ecd08bb84e4cfc940aa1c969ee89158cde97dbf1b179043553c83c37f5245",
+          "phase": "ready",
+          "remaining": 0,
+          "requires_new_authorization": false,
+          "snapshot_id": "b3a3b737ae5d2b0476ec5ac0020f697e0341c2f56546c311d0e94381143e0f53",
+          "worker_seconds": 1.4059999999881256,
+          "workers": 2
+        }
+      },
+      "elapsed_seconds": 2.5669582999835256
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "status",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:1b07223ab3c65223d933ed87be36a05cd20a3e3d1ddbd883c2fd2a11155a56fc"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "canonical_current": true,
+          "checkpoint_available": false,
+          "enabled": true,
+          "fts_unchanged": true,
+          "index_ready": true,
+          "runtime_verified": true,
+          "snapshot_verified": true
+        }
+      },
+      "elapsed_seconds": 0.7433585000107996
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [
+            {
+              "chunk_id": "chunk-sha256:299a1fff89c05037a5791d9dfd05d6d2baac0309190a9123c291b9c412bd24c7",
+              "collection_id": "user-root",
+              "digest": "sha256:c3945fa6967090eae2988e52c27897d3db16c5b65532242b2fda735efa9e7f81",
+              "fusion_rank": 1,
+              "item_id": "document-91e422f37dad43d39076db6d91762f41bceed5c13781da241a02b4095ac3e926",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-3.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.75,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-003. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 3",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:c67d8141682f0dc3fd97af220f045d0eb20426405e0367810524da068429faec",
+              "collection_id": "user-root",
+              "digest": "sha256:38eca3b51d7f9e99dda383cd976e186fd0b9c7a097a3b35d207c79ae5f37d079",
+              "fusion_rank": 2,
+              "item_id": "document-57e34e497b762c88dc94391b05a198a04b79b2f6f672e1db6980cffbb7e38b24",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-7.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.7196558219821445,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-007. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 7",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:ca23ae35742dd7101926fc06f6eabb6ded62d969025f48901ca1d5ad438eea05",
+              "collection_id": "user-root",
+              "digest": "sha256:e517f438852c70a1934bf0ca8c851f62d1c761f71059a2afd4b86dd8c7471e5f",
+              "fusion_rank": 3,
+              "item_id": "document-aebe2a634d012a67a15e1e1c5e129d48eccc12a6234c95d6187a09d6c170b2a5",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-6.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.5848294637380336,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-006. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 6",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:0b70e925ddf2f93b322aea2cf873c350f5ffb39c8af5da9de1f2e61d951bdf9d",
+              "collection_id": "user-root",
+              "digest": "sha256:acb3294f8cfe1502dccd69a032942efb19d3d8439b3e7c1b947b99ab2461efe3",
+              "fusion_rank": 4,
+              "item_id": "document-575f8518a42e0467938fcef1cada1ab592984f335ae09ed8b4e38bd09108cc38",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-2.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4688406438010344,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-002. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 2",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:578902f42ca1f7de70666d8c04e12220268b2feed57d7efd7abbb87385f50e16",
+              "collection_id": "user-root",
+              "digest": "sha256:bf5af4a9cf063279a2a5e5ed7c7f9c94adb1807a8a43a062d815257d4c1b0140",
+              "fusion_rank": 5,
+              "item_id": "document-69151f729b418b071b9b894f80c456b60c7345ef97d451e00ed5f3249343d5a3",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-5.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4341575615271438,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-005. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 5",
+              "untrusted_content": true,
+              "visibility": "shared"
+            }
+          ],
+          "insufficient_budget": true,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 835,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "none",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts",
+              "vector"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 1.841250899975421
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "rebuild",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--max-seconds",
+        "10",
+        "--workers",
+        "2"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state",
+          ".hive/index/vector"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:7ae23c8380e3f9e0ca127e36e0ffc6d106c2f863a3aae27ae5a2cc71fd0d7ac6"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/vector-state",
+            ".hive/index/vector"
+          ],
+          "chunks": 8,
+          "cleanup_pending": false,
+          "complete": true,
+          "database_digest": "sha256:cfa763022e4cfb37521299ea8bc5a1c5e788fc1b0fe815719852e2600784bc63",
+          "embedded": 0,
+          "fts_unchanged": true,
+          "manifest_digest": "sha256:641ecd08bb84e4cfc940aa1c969ee89158cde97dbf1b179043553c83c37f5245",
+          "phase": "ready",
+          "remaining": 0,
+          "requires_new_authorization": false,
+          "snapshot_id": "b62fb6c48439bf30586d5a3720c23cd9a511c89becc1b775116367008e8308dd",
+          "worker_seconds": 0.15599999998812564,
+          "workers": 2
+        }
+      },
+      "elapsed_seconds": 1.2174242999753915
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "rollback",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state",
+          ".hive/index/vector"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:ef82163e90348b111533b590f4fb9eb0ed7dbb6a07ba16a4c1435343bb39f611"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/vector-state",
+            ".hive/index/vector"
+          ],
+          "cleanup_pending": false,
+          "enabled": true,
+          "fts_unchanged": true,
+          "rolled_back": true
+        }
+      },
+      "elapsed_seconds": 0.8666641000017989
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [
+            {
+              "chunk_id": "chunk-sha256:299a1fff89c05037a5791d9dfd05d6d2baac0309190a9123c291b9c412bd24c7",
+              "collection_id": "user-root",
+              "digest": "sha256:c3945fa6967090eae2988e52c27897d3db16c5b65532242b2fda735efa9e7f81",
+              "fusion_rank": 1,
+              "item_id": "document-91e422f37dad43d39076db6d91762f41bceed5c13781da241a02b4095ac3e926",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-3.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.75,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-003. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 3",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:c67d8141682f0dc3fd97af220f045d0eb20426405e0367810524da068429faec",
+              "collection_id": "user-root",
+              "digest": "sha256:38eca3b51d7f9e99dda383cd976e186fd0b9c7a097a3b35d207c79ae5f37d079",
+              "fusion_rank": 2,
+              "item_id": "document-57e34e497b762c88dc94391b05a198a04b79b2f6f672e1db6980cffbb7e38b24",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-7.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.7196558219821445,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-007. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 7",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:ca23ae35742dd7101926fc06f6eabb6ded62d969025f48901ca1d5ad438eea05",
+              "collection_id": "user-root",
+              "digest": "sha256:e517f438852c70a1934bf0ca8c851f62d1c761f71059a2afd4b86dd8c7471e5f",
+              "fusion_rank": 3,
+              "item_id": "document-aebe2a634d012a67a15e1e1c5e129d48eccc12a6234c95d6187a09d6c170b2a5",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-6.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.5848294637380336,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-006. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 6",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:0b70e925ddf2f93b322aea2cf873c350f5ffb39c8af5da9de1f2e61d951bdf9d",
+              "collection_id": "user-root",
+              "digest": "sha256:acb3294f8cfe1502dccd69a032942efb19d3d8439b3e7c1b947b99ab2461efe3",
+              "fusion_rank": 4,
+              "item_id": "document-575f8518a42e0467938fcef1cada1ab592984f335ae09ed8b4e38bd09108cc38",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-2.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4688406438010344,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-002. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 2",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:578902f42ca1f7de70666d8c04e12220268b2feed57d7efd7abbb87385f50e16",
+              "collection_id": "user-root",
+              "digest": "sha256:bf5af4a9cf063279a2a5e5ed7c7f9c94adb1807a8a43a062d815257d4c1b0140",
+              "fusion_rank": 5,
+              "item_id": "document-69151f729b418b071b9b894f80c456b60c7345ef97d451e00ed5f3249343d5a3",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-5.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4341575615271438,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-005. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 5",
+              "untrusted_content": true,
+              "visibility": "shared"
+            }
+          ],
+          "insufficient_budget": true,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 835,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "none",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts",
+              "vector"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 1.8351123000029474
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "rebuild",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared",
+        "--rebuild-mode",
+        "fresh",
+        "--max-seconds",
+        "10",
+        "--workers",
+        "2"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state",
+          ".hive/index/vector"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:c662a9691f35bc637d449be99aa8dc47eb2a8e0cabaa61fb7a0a80322d338ca5"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/vector-state",
+            ".hive/index/vector"
+          ],
+          "chunks": 8,
+          "cleanup_pending": false,
+          "complete": true,
+          "database_digest": "sha256:cfa763022e4cfb37521299ea8bc5a1c5e788fc1b0fe815719852e2600784bc63",
+          "embedded": 8,
+          "fts_unchanged": true,
+          "manifest_digest": "sha256:641ecd08bb84e4cfc940aa1c969ee89158cde97dbf1b179043553c83c37f5245",
+          "phase": "ready",
+          "remaining": 0,
+          "requires_new_authorization": false,
+          "snapshot_id": "c4ea769a9939fb57ae264b8c1c715e4c02f78b54fd984f8e7c5c7f58b545b9f9",
+          "worker_seconds": 1.3900000000139698,
+          "workers": 2
+        }
+      },
+      "elapsed_seconds": 2.6109146999951918
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [],
+          "insufficient_budget": false,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 0,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "unavailable",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 0.3167051999771502
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [
+            {
+              "chunk_id": "chunk-sha256:299a1fff89c05037a5791d9dfd05d6d2baac0309190a9123c291b9c412bd24c7",
+              "collection_id": "user-root",
+              "digest": "sha256:c3945fa6967090eae2988e52c27897d3db16c5b65532242b2fda735efa9e7f81",
+              "fusion_rank": 1,
+              "item_id": "document-91e422f37dad43d39076db6d91762f41bceed5c13781da241a02b4095ac3e926",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-3.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.75,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-003. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 3",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:c67d8141682f0dc3fd97af220f045d0eb20426405e0367810524da068429faec",
+              "collection_id": "user-root",
+              "digest": "sha256:38eca3b51d7f9e99dda383cd976e186fd0b9c7a097a3b35d207c79ae5f37d079",
+              "fusion_rank": 2,
+              "item_id": "document-57e34e497b762c88dc94391b05a198a04b79b2f6f672e1db6980cffbb7e38b24",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-7.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.7196558219821445,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-007. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 7",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:ca23ae35742dd7101926fc06f6eabb6ded62d969025f48901ca1d5ad438eea05",
+              "collection_id": "user-root",
+              "digest": "sha256:e517f438852c70a1934bf0ca8c851f62d1c761f71059a2afd4b86dd8c7471e5f",
+              "fusion_rank": 3,
+              "item_id": "document-aebe2a634d012a67a15e1e1c5e129d48eccc12a6234c95d6187a09d6c170b2a5",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-6.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.5848294637380336,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-006. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 6",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:0b70e925ddf2f93b322aea2cf873c350f5ffb39c8af5da9de1f2e61d951bdf9d",
+              "collection_id": "user-root",
+              "digest": "sha256:acb3294f8cfe1502dccd69a032942efb19d3d8439b3e7c1b947b99ab2461efe3",
+              "fusion_rank": 4,
+              "item_id": "document-575f8518a42e0467938fcef1cada1ab592984f335ae09ed8b4e38bd09108cc38",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-2.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4688406438010344,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-002. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 2",
+              "untrusted_content": true,
+              "visibility": "shared"
+            },
+            {
+              "chunk_id": "chunk-sha256:578902f42ca1f7de70666d8c04e12220268b2feed57d7efd7abbb87385f50e16",
+              "collection_id": "user-root",
+              "digest": "sha256:bf5af4a9cf063279a2a5e5ed7c7f9c94adb1807a8a43a062d815257d4c1b0140",
+              "fusion_rank": 5,
+              "item_id": "document-69151f729b418b071b9b894f80c456b60c7345ef97d451e00ed5f3249343d5a3",
+              "item_kind": "document",
+              "language": "und",
+              "locator": ".hive/knowledge/Wiki/vector-example-5.md#chunk=0",
+              "matched_field": "vector",
+              "matched_lanes": [
+                "vector"
+              ],
+              "score": 0.4341575615271438,
+              "sources": [
+                "raw:.hive/knowledge/Raw/source-id/0000000000000000000000000000000000000000000000000000000000000000.md#sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              ],
+              "text": "Reference DOC-005. A local search index can be rebuilt from original Markdown. Similar meanings can be found across languages. The original documents remain unchanged.",
+              "title": "Disposable semantic search example 5",
+              "untrusted_content": true,
+              "visibility": "shared"
+            }
+          ],
+          "insufficient_budget": true,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 835,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "none",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts",
+              "vector"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 1.8433793000003789
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "vector",
+        "disable",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--collection",
+        "user-root",
+        "--visibility",
+        "shared"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "VectorKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.vector-completed",
+        "message": "optional vector operation completed",
+        "changed_paths": [
+          ".hive/config/vector-state"
+        ],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": "vector",
+            "digest": "sha256:3d0dc0f899d1485548cad394762eab11518c88b61adf3cd5a786680d01752379"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "changed_paths": [
+            ".hive/config/vector-state"
+          ],
+          "derived_files_retained": true,
+          "enabled": false,
+          "fts_unchanged": true
+        }
+      },
+      "elapsed_seconds": 0.047360099997604266
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384",
+        "--mode",
+        "semantic"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [],
+          "insufficient_budget": false,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 0,
+          "search": {
+            "contract_digest": "sha256:31bc220410c0eb130178d585138bc7f0a8c7443f99bc6bcf64484f801fdd1978",
+            "engine": {
+              "name": "sqlite-vec",
+              "version": "0.1.9"
+            },
+            "fallback": "unavailable",
+            "fusion": {
+              "fts_weight": 0.25,
+              "method": "min-max-score",
+              "semantic_weight": 0.75
+            },
+            "model": {
+              "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0"
+            },
+            "requested": "semantic",
+            "used": [
+              "fts"
+            ]
+          }
+        }
+      },
+      "elapsed_seconds": 0.057891199976438656
+    },
+    {
+      "arguments": [
+        "knowledge",
+        "retrieve",
+        "--user-root",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--target",
+        "<repository>\\tests\\work\\vector-native-2ib1eray\\consumer",
+        "--scope",
+        "collection:user-root",
+        "--query",
+        "원본 문서를 바꾸지 않고 검색 색인을 다시 만들기",
+        "--top-k",
+        "5",
+        "--byte-budget",
+        "16384"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "action": "RetrieveKnowledge",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.knowledge-retrieved",
+        "message": "bounded knowledge retrieval completed",
+        "changed_paths": [],
+        "evidence": [
+          {
+            "kind": "report",
+            "locator": ".hive/index/hive.sqlite3",
+            "digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556"
+          }
+        ],
+        "next_action": null,
+        "data": {
+          "generation": 1,
+          "hits": [],
+          "insufficient_budget": false,
+          "manifest_digest": "sha256:502669e6ede9c50bcf22de2831dd277d45b7810ac41bc1c68fc5551d7889e556",
+          "returned_bytes": 0
+        }
+      },
+      "elapsed_seconds": 0.04295800000545569
+    }
+  ],
+  "source_commit": "c59c860aaa78eeb39e78f441e3c3850b5d46b112",
+  "protected_bytes_preserved": true,
+  "chunks": 8,
+  "runtime_id": "b2de1455524d5f3fb57e1e061f9d58b5ef0c8cefd129f8bdb2114e1f943825e8",
+  "proven": [
+    "missing fallback",
+    "exact consent",
+    "native embedding and sqlite-vec",
+    "semantic citations",
+    "unchanged reuse",
+    "rollback",
+    "corruption fallback",
+    "disable",
+    "FTS preservation"
+  ],
+  "not_proven": [
+    "50k performance",
+    "private/confidential isolation",
+    "parent cancellation",
+    "public package identity"
+  ]
+}

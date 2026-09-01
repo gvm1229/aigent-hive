@@ -111,6 +111,6 @@ Operational enforcement:
 
 ADR-0012의 Markdown 정본·user-root 단일 SQLite·visibility·opt-out 유지.
 v0.9 구현에서 query·capture·simple-question isolation·data portability·scan 확대.
-세부 실행 정본: [`v0.9.0-global-knowledge-rag.md`](../plans/active/v0.9.0-global-knowledge-rag.md).
+세부 실행 정본: [`v0.9.0-global-knowledge-rag.md`](../archive/plans/releases/0.9.0/v0.9.0-global-knowledge-rag.md).
 Bundle·scan 정본:
-[`v0.9.0-knowledge-portability-scan.md`](../plans/active/v0.9.0-knowledge-portability-scan.md).
+[`v0.9.0-knowledge-portability-scan.md`](../archive/plans/releases/0.9.0/v0.9.0-knowledge-portability-scan.md).

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/korean-language-pack.schema.json",
+  "title": "Pinned Korean language pack provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "pack_id", "pack_version", "transform_version", "upstream", "upstream_commit", "upstream_tree_digest", "upstream_file_count", "upstream_symlink_count", "license", "upstream_license_digest", "shipped_license_digest", "rules_digest", "source_inventory", "host_versions", "runtime_agents", "retired_agents", "raw_install_allowed", "floating_ref_allowed", "automatic_update_allowed"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "pack_id": {"const": "im-not-ai-korean-core"},
+    "pack_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "transform_version": {"type": "integer", "minimum": 1},
+    "upstream": {"const": "https://github.com/epoko77-ai/im-not-ai"},
+    "upstream_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "upstream_tree_digest": {"$ref": "#/$defs/digest"},
+    "upstream_file_count": {"type": "integer", "minimum": 1},
+    "upstream_symlink_count": {"const": 0},
+    "license": {"const": "MIT"},
+    "upstream_license_digest": {"$ref": "#/$defs/digest"},
+    "shipped_license_digest": {"$ref": "#/$defs/digest"},
+    "rules_digest": {"$ref": "#/$defs/digest"},
+    "source_inventory": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "digest", "class"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[^/\\\\][^\\r\\n]*$"},
+          "digest": {"$ref": "#/$defs/digest"},
+          "class": {"enum": ["rules-data", "engine-code", "host-surface"]}
+        }
+      }
+    },
+    "host_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claude_plugin", "codex_plugin", "gemini_extension"],
+      "properties": {
+        "claude_plugin": {"type": "string"},
+        "codex_plugin": {"type": "string"},
+        "gemini_extension": {"type": "string"}
+      }
+    },
+    "runtime_agents": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "retired_agents": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "raw_install_allowed": {"const": false},
+    "floating_ref_allowed": {"const": false},
+    "automatic_update_allowed": {"const": false}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

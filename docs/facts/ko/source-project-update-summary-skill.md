@@ -5,21 +5,23 @@ topic_slug: source-project-update-summary-skill
 language: ko
 counterpart: ../en/source-project-update-summary-skill.md
 title: "Source 프로젝트 전용 업데이트 요약 Skill"
-summary: "Aigent Hive source workspace의 비출하 프로젝트 전용 Skill `update-summary`: 개발자·기여자 전용 변경을 제외한 검증된 한국어 구독자 출시 개선 내역과 안정판 Discord 메시지 정본 작성."
+summary: "소스 전용 update-summary의 검증 기반 제품 홍보: 새 기능·개선 구분, 핵심 기술 이름과 사용 이점 강조, 개발자 전용 변경 제외"
 tags: [development, release-notes, skill]
 aliases: ["update-summary"]
 sources:
-  - "repo:.agents/skills/update-summary/SKILL.md#sha256:457244a4c97b85e196053ecf36f42c033c24579dc7697d2fe64940f86f71aedf"
-  - "repo:docs/plans/active/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
+  - "repo:.agents/skills/update-summary/SKILL.md#sha256:5ffdd987a1574950324f1c3368e9455f7d84ed251335d8f7a319989e341a2ee0"
+  - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
+  - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
+  - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
 links: [public-skill-identity, source-development, v0-9-full-release]
-reviewed_revision: "git:26b949e1cfa5bfe4470693c7a1282100a9cb908e"
+reviewed_revision: "git:3a0d9e2e61d1867e0f38d8855ae8b064fa449f09"
 status: active
 ---
 
 # Source 프로젝트 전용 업데이트 요약 Skill
 
-`update-summary`: 명시 유지보수자 요청 기반 source workspace 전용 Skill. 검증된 현재·직전
-안정판 근거로 한국어 구독자 업데이트 작성. 제품 Skill·`harness/`·release bundle·제품 catalog·consumer
-projection 제외. 설치 product·사용자 작업 방식·안전 경계·활용 가능한 기능 이해에 직접 영향을 주는 변경만 포함하며,
-출시 설명 형식·CI·검증 기록·저장소 계획·기여자 workflow는 설치 product 변경이 없는 한 제외.
-안정판의 정확한 한국어 메시지는 `docs/releases/<version>.subscriber.ko.md`에 저장.
+`update-summary`: 소스 전용, 제품 목록·배포·소비자 투영 제외. 검증된 새 기능·개선·수정·이름 변경과
+핵심 기술·이점·하위 예시·비용 강조. 미출시 내용은 초안, 문구 승인과 출시 권한 분리.
+필수 예시: 2026-09-01 승인 0.10.0 안내. 문구 승인 뒤 기존 `gh` 인증과
+`register-stable-summary-approval.py`로 외부 지문 자동 등록. 출시마다 GitHub 수동 설정 불필요.
+재시도는 동일 승인, 문구 변경은 새 승인 필요. 발송 전 원문·sidecar·외부 지문 대조, 값 자동 갱신 금지.

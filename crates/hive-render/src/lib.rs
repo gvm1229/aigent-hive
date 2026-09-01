@@ -2567,7 +2567,8 @@ fn resolve_effective_project_preferences(
                         | "knowledge-recall"
                         | "knowledge-promote"
                         | "knowledge-maintain"
-                        | "knowledge-import"
+                        | "knowledge-scan"
+                        | "knowledge-transfer"
                 );
                 Ok((!is_knowledge_skill).then_some(name))
             })
@@ -3071,6 +3072,10 @@ fn validate_hook_approvals(
             "checkpoint-reminder" if matches!(hook.event.as_str(), "PreCompact" | "Stop") => {
                 hook.event.as_str()
             }
+            "continue-active-run" => "Stop",
+            "validate-korean-output" if matches!(hook.event.as_str(), "Stop" | "AfterAgent") => {
+                hook.event.as_str()
+            }
             _ => {
                 return Err(RenderError::Input(format!(
                     "fallback hook capability/event is not approved: {}/{}",
@@ -3480,6 +3485,10 @@ fn insert_static_files(files: &mut BTreeMap<PathBuf, Vec<u8>>) {
             include_bytes!("../../../harness/directives/03-session-coordination.md"),
         ),
         (
+            ".agents/directives/04-korean-language.md",
+            include_bytes!("../../../harness/directives/04-korean-language.md"),
+        ),
+        (
             ".hive/knowledge/Raw/README.md",
             include_bytes!("../../../harness/template/.hive/knowledge/Raw/README.md"),
         ),
@@ -3596,132 +3605,78 @@ fn render_agents_marker(
     resolution: &CapabilityResolution,
     effective_preferences: Option<&EffectiveProjectPreferences>,
 ) -> String {
-    if let Some(preferences) = effective_preferences {
-        let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
-            .replace("{{ project_name }}", &answers.project_name)
-            .replace("{{ project_kind }}", &answers.project_kind)
-            .replace("{{ setup_mode }}", &answers.setup_mode)
-            .replace("{{ preference_provenance }}", preferences.provenance)
-            .replace("{{ interface_language }}", &preferences.interface_language)
-            .replace(
-                "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+    let (
+        preference_provenance,
+        interface_language,
+        wiki_state,
+        wiki_backend,
+        wiki_language,
+        persona_id,
+        usage_guard_enabled,
+    ) = effective_preferences.map_or(
+        (
+            "project-answers",
+            "configured",
+            "configured",
+            "configured",
+            "configured",
+            "configured",
+            true,
+        ),
+        |preferences| {
+            (
+                preferences.provenance,
+                preferences.interface_language.as_str(),
                 if preferences.wiki_enabled {
                     "enabled"
                 } else {
                     "disabled"
                 },
+                preferences.wiki_backend.as_str(),
+                preferences.wiki_language.as_str(),
+                preferences.persona_id.as_str(),
+                preferences.usage_guard_enabled,
             )
-            .replace("{{ wiki_backend }}", &preferences.wiki_backend)
-            .replace("{{ wiki_language }}", &preferences.wiki_language)
-            .replace("{{ persona_id }}", &preferences.persona_id)
-            .replace("{{ primary_host }}", &answers.primary_host)
-            .replace(
-                "{{ capability_resolution.resolved_owner }}",
-                &resolution.resolved_owner,
-            )
-            .replace(
-                "{{ capability_resolution.evidence_digest }}",
-                &resolution.evidence_digest,
-            );
-        if !preferences.usage_guard_enabled {
-            let mut disabled = marker
-                .lines()
-                .map(|line| {
-                    if line.starts_with("- Immediately before each new automatic dispatch") {
-                        "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
-                    } else {
-                        line
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            disabled.push('\n');
-            return disabled;
-        }
+        },
+    );
+    let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
+        .replace("{{ project_name }}", &answers.project_name)
+        .replace("{{ project_kind }}", &answers.project_kind)
+        .replace("{{ setup_mode }}", &answers.setup_mode)
+        .replace("{{ preference_provenance }}", preference_provenance)
+        .replace("{{ interface_language }}", interface_language)
+        .replace(
+            "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+            wiki_state,
+        )
+        .replace("{{ wiki_backend }}", wiki_backend)
+        .replace("{{ wiki_language }}", wiki_language)
+        .replace("{{ persona_id }}", persona_id)
+        .replace("{{ primary_host }}", &answers.primary_host)
+        .replace(
+            "{{ capability_resolution.resolved_owner }}",
+            &resolution.resolved_owner,
+        )
+        .replace(
+            "{{ capability_resolution.evidence_digest }}",
+            &resolution.evidence_digest,
+        );
+    if usage_guard_enabled {
         return marker;
     }
-    let selected_interface_language = effective_preferences
-        .map_or("configured interface language", |preferences| {
-            preferences.interface_language.as_str()
-        });
-    let preference_summary = effective_preferences.map_or_else(String::new, |preferences| {
-        format!(
-            "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (backend=`{}`, language=`{}`)\nPersona: `{}`\n",
-            answers.setup_mode,
-            preferences.provenance,
-            preferences.interface_language,
-            if preferences.wiki_enabled {
-                "enabled"
+    let mut disabled = marker
+        .lines()
+        .map(|line| {
+            if line.starts_with("- Immediately before automatic dispatch") {
+                "- Usage guard: disabled by installed preference. Do not invoke a sensor automatically; automatic resume still requires one authorized dispatch brief."
             } else {
-                "disabled"
-            },
-            preferences.wiki_backend,
-            preferences.wiki_language,
-            preferences.persona_id,
-        )
-    });
-    let marker = format!(
-        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\n{}Primary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Immediately before each new automatic dispatch, run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority; exit `3` blocks that automatic dispatch. Exit `0` is only a session-bound preflight and never authorizes dispatch. Automatic dispatch requires a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed current-session disable bypasses this preflight but does not authorize dispatch. Non-Codex automatic dispatch fails closed until a qualified local sensor exists. Never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Route explicit prompt authoring or improvement intent to `hive-prompt-refine` in `refine-only` mode unless the same request explicitly asks to execute the result.\n- If an ordinary work prompt materially lacks a goal, scope, constraints, acceptance criteria, or output contract, offer one concise optional refinement suggestion without rewriting the prompt, loading the Skill, or executing the suggestion. Do not interrupt sufficiently clear ordinary work or a simple question.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions or a user handoff, complete every safe, in-scope, automatable action that does not require new user authority, credentials, a protected external mutation, or a materially different product decision. Then give only the genuinely user-owned actions as a concise ordered guide with each exact location, command or operation, expected result or return evidence, and reason user authority is required. List failed or impossible work separately with its cause and recovery path.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Use the selected interface language `{}` for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. In Korean, keep English only for proper nouns, product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent; replace ordinary English nouns with Korean. In English, write the full passage in English except for exact Korean names, literals, quotations, or text the user explicitly asks to preserve.\n- The response-language rule applies to questions and explanations. It does not control an authored, refined, or copy-ready prompt. Unless the user explicitly requests another language for the current prompt, write that prompt in English. Keep the surrounding response in the selected interface language.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean forms, state labels followed by a copula, and possibility clauses. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Mechanical nounization examples (not exhaustive): `Status는 INDETERMINATE다.` → `Status: INDETERMINATE`; `문서를 읽음.` → `문서 확인`; `작업이 끝남.` → `작업 완료`; `연결이 닫힘.` → `연결 종료`; `설정 값을 가짐.` → `설정 값 보유`; `정책을 따름.` → `정책 준수`; `compile됨.` → `compile 완료`; `검증할 수 있음.` → `검증 가능`; `검증할 수 없음.` → `검증 불가`.\n- Do not use conversational imperative endings such as standalone `~줘` or attached `~해` in authored explanation. Exact user-prompt or UI-prompt samples require the path, line, reason, and exact line digest exception. Examples: `문서를 보여 줘.` → `문서 확인 요청`; `기능을 사용해.` → `기능 사용 요청`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Start every new v0.9 run with verified host-native capabilities. Use OMX or OMC only when the user explicitly selects that external compatibility layer before the run starts. Preserve the owner already pinned by an existing run, including a 0.8.x OMX/OMC owner, and never switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat optional Hive hooks as data-integrity guards only. They require a supported host-native hook surface plus exact capability, event, path, command, and digest consent, and they remain absent for an explicitly selected external owner.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
-        answers.project_name,
-        answers.project_kind,
-        preference_summary,
-        answers.primary_host,
-        resolution.resolved_owner,
-        resolution.evidence_digest,
-        selected_interface_language,
-    );
-    let marker = marker.replacen(
-        "- Load only the directives and knowledge required by the current request.\n",
-        "- Load only the directives and knowledge required by the current request.\n\
-- When Wiki is enabled, run at most one bounded `hive knowledge retrieve` before question, research, design, plan, debug, or implementation work. Skip retrieval during usage-guard or setup control, when Wiki is disabled, for acknowledgment-only or context-free requests, or after the current turn already performed the lookup.\n",
-        1,
-    );
-    let marker = marker.replacen(
-        "- For a simple question, do not load project memory, spawn agents, or edit files.",
-        "- For a simple question, do not spawn agents or edit files. Load canonical memory only through that bounded retrieval preflight when the question needs project or user context.",
-        1,
-    );
-    let marker = marker.replacen(
-        "- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
-        "- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n\\
-- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
-        1,
-    );
-    let marker = marker.replacen(
-        "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
-        "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
-- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. After a successful write, use `hive source-wiki lint` only for a valid source workspace; otherwise use `hive knowledge lint` against the enabled registered project, or against `user-root` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",
-        1,
-    );
-    let marker = marker.replacen(
-        "- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
-        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n\
-- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
-        1,
-    );
-    let marker = marker.replacen(
-        "- Apply the same rule to authored callouts and blockquotes.",
-        "- Never gain brevity by removing a qualifier needed to interpret a result. For every passed, failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact reason, relationship to the current host or platform, whether it actually ran, and what the result does and does not prove. Do not use a platform adjective such as \"Windows-only\" or \"Unix-only\" without stating whether the current platform ran or skipped that item and why.\n\
-- Apply the same rule to authored callouts and blockquotes.",
-        1,
-    );
-    if effective_preferences.is_some_and(|preferences| !preferences.usage_guard_enabled) {
-        let mut disabled = marker
-            .lines()
-            .map(|line| {
-                if line.starts_with("- Immediately before each new automatic dispatch") {
-                    "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
-                } else {
-                    line
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        disabled.push('\n');
-        disabled
-    } else {
-        marker
-    }
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    disabled.push('\n');
+    disabled
 }
 
 fn merge_shared_marker<T: TargetRead + ?Sized>(
@@ -4631,6 +4586,10 @@ fn authenticate_projected_directive_files(
                     Path::new(".agents/directives/03-session-coordination.md"),
                     include_bytes!("../../../harness/directives/03-session-coordination.md")
                         .as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/04-korean-language.md"),
+                    include_bytes!("../../../harness/directives/04-korean-language.md").as_slice(),
                 ),
             ]
         };
@@ -7065,6 +7024,8 @@ fn known_hook_descriptor_paths() -> impl Iterator<Item = PathBuf> {
         "update-integrity-guard",
         "derived-state-invalidation",
         "checkpoint-reminder",
+        "continue-active-run",
+        "validate-korean-output",
     ]
     .into_iter()
     .map(|capability| PathBuf::from(format!(".hive/hooks/{capability}")))
@@ -7672,7 +7633,7 @@ mod tests {
 
     fn fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase1")
+            .join("../../tests/fixtures/setup")
             .join(name)
     }
 
@@ -7722,7 +7683,7 @@ mod tests {
 
     fn phase3_fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase3")
+            .join("../../tests/fixtures/skills")
             .join(name)
     }
 
@@ -8273,8 +8234,10 @@ mod tests {
             "quick-answer",
             "project-setup",
             "code-polish",
-            "ralph-loop",
-            "knowledge-import",
+            "humanize-kor",
+            "verified-workflow",
+            "knowledge-scan",
+            "knowledge-transfer",
             "knowledge-maintain",
             "knowledge-capture",
             "prompt-refine",
@@ -8290,8 +8253,8 @@ mod tests {
             "knowledge-promote",
             "product-update",
             "project-refresh",
-            "package-review",
-            "iterative-execution",
+            "judge-evidence",
+            "adversarial-judge",
             "team-execution",
             "multi-goal",
             "custom-subagent-create",
@@ -8301,6 +8264,7 @@ mod tests {
             .map(|name| format!(".agents/skills/{name}/SKILL.md"))
             .collect::<Vec<_>>();
         expected.push(".agents/directives/03-session-coordination.md".to_owned());
+        expected.push(".agents/directives/04-korean-language.md".to_owned());
         expected.push(".prettierignore".to_owned());
         expected.extend(
             new_body_skills
@@ -9003,27 +8967,25 @@ mod tests {
             render_agents_marker(&answers, &resolution, Some(&effective)),
             expected
         );
-        assert!(expected.contains("reusable task fact"));
-        assert!(expected.contains("hive knowledge remember"));
-        assert!(expected.contains("originating request"));
-        assert!(expected.contains("raw transcript"));
-        assert!(expected.contains("selected interface language `en`"));
-        assert!(expected.contains(
-            "Unless the user explicitly requests another language for the current prompt, write that prompt in English"
-        ));
-        assert!(expected.contains("Explain in simple terms by default"));
-        assert!(expected.contains("do not force irrelevant examples or weaken technical precision"));
+        assert!(expected.contains("01-project-knowledge.md"));
+        assert!(expected.contains("agent-reviewed memory gate"));
+        assert!(expected.contains("Interface language: `en`"));
+        assert!(expected.contains("Prompt language is a separate current-request"));
+        assert!(expected.contains("00-project-harness.md"));
 
         global.interface_language = "ko".to_owned();
         let korean_effective = resolve_effective_project_preferences(&answers, Some(&global))
             .expect("Korean preferences should resolve")
             .expect("Korean preferences should produce an effective projection");
         let korean_marker = render_agents_marker(&answers, &resolution, Some(&korean_effective));
-        assert!(korean_marker.contains("selected interface language `ko`"));
-        assert!(korean_marker.contains(
-            "Unless the user explicitly requests another language for the current prompt, write that prompt in English"
-        ));
-        assert!(!korean_marker.contains("selected interface language `en`"));
+        assert!(korean_marker.contains("Interface language: `ko`"));
+        assert!(korean_marker.contains("Prompt language is a separate current-request"));
+        assert!(!korean_marker.contains("Interface language: `en`"));
+
+        let default_marker = render_agents_marker(&answers, &resolution, None);
+        assert!(default_marker.contains("Preference provenance: `project-answers`"));
+        assert!(default_marker.contains("Interface language: `configured`"));
+        assert!(default_marker.contains("00-project-harness.md"));
     }
 
     #[test]
@@ -9316,6 +9278,68 @@ mod tests {
         approval
     }
 
+    fn signed_continuation_hook() -> HookApproval {
+        let mut approval = HookApproval {
+            consent_version: 1,
+            capability: "continue-active-run".to_owned(),
+            event: "Stop".to_owned(),
+            path: ".hive/hooks/continue-active-run".to_owned(),
+            command: format!(
+                "hive hook --capability continue-active-run --event Stop \
+                 --capabilities {FRESH_CAPABILITY_RESOLUTION_PATH} --output json"
+            ),
+            content_digest: String::new(),
+            approved_at: "2026-07-23T00:00:00Z".to_owned(),
+            consent_digest: String::new(),
+        };
+        approval.content_digest = sha256_digest(
+            &hook_descriptor_bytes(&approval).expect("descriptor should canonicalize"),
+        );
+        approval.consent_digest =
+            calculate_consent_digest(&approval).expect("consent should canonicalize");
+        approval
+    }
+
+    #[test]
+    fn continuation_hook_requires_exact_stop_consent() {
+        let valid = signed_continuation_hook();
+        let resolution = supported_host_native_hook_resolution();
+        assert!(validate_hook_approvals(std::slice::from_ref(&valid), &resolution).is_ok());
+        let mut changed = valid;
+        changed.event = "PreCompact".to_owned();
+        changed.consent_digest =
+            calculate_consent_digest(&changed).expect("mutated consent should canonicalize");
+        assert!(validate_hook_approvals(&[changed], &resolution).is_err());
+    }
+
+    #[test]
+    fn continuation_hook_projects_only_from_exact_approved_consent() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary.path().canonicalize().expect("canonical target");
+        let (mut answers, _) = load_answers(&fixture("answers-base.yml")).expect("answers");
+        let hook = signed_continuation_hook();
+        answers.approved_fallback_hooks = vec![hook.clone()];
+        let answers_path = target.join("answers.yml");
+        fs::write(
+            &answers_path,
+            serde_yaml::to_string(&answers).expect("serialize answers"),
+        )
+        .expect("answers file");
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &answers_path,
+            capabilities: &fixture("capabilities-codex-host-native-hooks.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
+        })
+        .expect("approved continuation hook must project");
+        assert_eq!(
+            fs::read(target.join(".hive/hooks/continue-active-run")).expect("descriptor"),
+            hook_descriptor_bytes(&hook).expect("descriptor bytes"),
+        );
+    }
+
     #[test]
     fn every_skill_consent_field_and_order_constraint_is_bound() {
         let valid = signed_skill();
@@ -9473,13 +9497,14 @@ mod tests {
         let rendered = encode_role(&profile, body).expect("role should materialize");
         assert_eq!(
             rendered,
-            include_bytes!("../../../tests/fixtures/expected/reviewer-role.md")
+            include_bytes!("../../../tests/fixtures/setup/scaffold-expected/reviewer-role.md")
         );
     }
 
     #[test]
     fn role_parser_accepts_crlf_and_preserves_body_line_endings() {
-        let bytes = include_bytes!("../../../tests/fixtures/expected/reviewer-role.md");
+        let bytes =
+            include_bytes!("../../../tests/fixtures/setup/scaffold-expected/reviewer-role.md");
         let crlf = String::from_utf8(bytes.to_vec())
             .expect("fixture should be UTF-8")
             .replace('\n', "\r\n");
@@ -10239,7 +10264,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 25);
+        assert_eq!(deletions.len(), 27);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

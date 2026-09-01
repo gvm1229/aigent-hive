@@ -1,6 +1,6 @@
 # 제품·배포 결정
 
-기준일: 2026-08-12
+기준일: 2026-08-22
 
 | 영역 | 결정 |
 | --- | --- |
@@ -22,7 +22,7 @@
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | runtime 경계 | Hive-native plan·Ralph급 loop·team·multi-goal 구현 허용. Provider session engine·model runtime·direct process launcher 금지 |
 | Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
-| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발은 설치 product Skill·tracked repository directive와 명시 유지보수자 요청의 비출하 `update-summary` source-project Skill 1건 사용 |
+| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발은 설치 product Skill·tracked repository directive와 명시 유지보수자 요청의 비출하 `update-summary|draft-devlog` source-project Skill 사용 |
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |
@@ -50,8 +50,18 @@
 | update 확인 | Global setup explicit opt-in, 성공 확인 24시간 throttle, offline 실패는 성공 시각 미기록·다음 host session 재시도, 확인만으로 install 금지 |
 | binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 package owner·exact target·authenticated saved host scope의 post-update projection refresh를 함께 표시. 명시적 수락 뒤 authenticated install owner의 exact adapter 실행, target binary 재검증 뒤 새 executable로 saved scope만 `hive install --scope user --hosts <resolved-hosts> --apply --output json` 실행·validate. valid setup·authenticated host manifest 교집합 부재·invalid: default host 없이 binary-only 결과와 recovery command. `--check` 설치 금지 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
+| `0.10.0` host-owned Skill 세션 예약 | 구현 목표: 예약은 대상 경로 접근 아닌 `.hive/runtime` 충돌 조정 기록. Codex·Antigravity는 `.agents/skills/<safe-skill>/...`, Claude는 `.claude/skills/<safe-skill>/...`만 예약 허용. 다른 host 경로는 `hive.session-host-owned-namespace`, live·unverifiable reservation만 세션 해결 안내 |
+| `0.10.0` nested project scan | 등록 project root가 상위 Git repository의 하위 폴더여도 해당 root 안에서 knowledge scan 허용. Sibling read·write, 전역 Git 설정 mutation, symlink·junction·reparse point 탈출 금지 |
+| `0.10.0` 관계·검색 | Markdown 명시 관계는 Hive-native derived graph, code 관계는 승인형 Graphify `0.9.47` full-rebuild `--code-only`, 직접 사실은 기존 SQLite FTS. Metadata-first retrieval·scope별 물리 격리·drift gate·JSON/HTML export 포함. Semantic vector는 Qdrant Edge·SQLite engine·local embedding hard gate 통과 뒤 optional hybrid adapter, 실패 시 dependency `0건` |
+| `0.10.0` verified workflow | `ralph-loop`를 `verified-workflow`로 rename. Natural continuation은 dependency·중간 evidence·bounded retry·독립 verifier·steering·recovery reason code 2개 이상에서 자동 route, task length·bare continue만으로 선택 금지 |
+| `0.10.0` adversarial Judge | `adversarial-judge` explicit Skill이 clean-context package와 host-native Judge dispatch envelope 준비. Hive direct spawn 없음, diagnostic finding과 authenticated quorum PASS authority 분리 |
+| `0.10.0` Skill consolidation | `ralph-loop|iterative-execution` → `verified-workflow`, `package-review` → `judge-evidence`. Alias는 logical routing 호환만 제공하며 physical retired artifact는 successful upgrade에서 `0건` |
+| `0.10.0` retired Skill cleanup | 모든 지원 public predecessor의 exact historical bytes·release inventory로 direct jump 인증. Exact Hive artifact 자동 제거, safe local merge 또는 foreign conflict, conflict 상태의 새 release activation 금지 |
+| Historical Skill stable coverage | npm·GitHub non-prerelease의 append-only 합집합에 포함된 모든 stable snapshot 영구 보존. 현재 `0.8.0`, `0.9.0–0.9.5`; 새 stable publication 전 registry append·prior immutable·stable ledger parity 필수 |
+| Historical Skill lifecycle | Rename·deprecation·removal·replacement의 effective version과 stable compatibility epoch 기록. Exact no-change stable은 prior epoch 공유 가능, coverage entry 생략 금지 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
+| `0.9.x` release line | `0.9.5`가 마지막 `0.9.x` release. `0.9.6` 미출시. 이후 수정·기능은 `0.10.0` 범위에서 수용 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
@@ -80,6 +90,9 @@ Notion canonical backend·SQLite projection·Discord outbound 경계:
 
 Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 제거:
 [`ADR-0019`](ADR-0019-hive-native-iterative-execution.md).
+
+`0.10.0` 관계·검색·nested scan·Skill 예약의 최종 포함·제외 범위:
+[`ADR-0020`](ADR-0020-0.10.0-product-scope.md).
 
 ## 미확정 항목
 

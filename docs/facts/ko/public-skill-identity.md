@@ -5,24 +5,22 @@ topic_slug: public-skill-identity
 language: ko
 counterpart: ../en/public-skill-identity.md
 title: "Skill identity"
-summary: "Aigent Hive의 product-only 26개 Skill과 지식 Skill의 한국어 기능명 표시·설명 첫머리 정본 영문 ID 표기."
+summary: "28개 제품 Skill과 직접 이름 이관, 지식 스캔·이전 역할 분리"
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:2fc1d83be7b6cfcf11ff0da628199b8d2c79642d2e69c7613778f4af81c847c2"
-  - "repo:docs/plans/active/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:d5b65f1bed7b9d4adeaf168df3dc349de9c20b4b0fb84e09a14be95084012a71"
-  - "repo:harness/skills/catalog.yml#sha256:d23ab5c0d658f432c1f051352ce9f21b4646e85f3bd45df0105d5559f386481c"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:1e1231e9fd9dec40cb72167f734788f1521177027bd2d2bde44ca94d9ec2be74"
+  - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
+  - "repo:docs/skills.md#sha256:b1d168024659e23bc1fee30c46e2b628e607522b9b0da2f59229a277eff2a702"
+  - "repo:harness/skills/catalog.yml#sha256:5949525e029f37e08f5ef49302f698be45674b94959f4f5aa301d7138c4e1570"
 links: [global-onboarding, skill-routing]
-reviewed_revision: "git:8fcf8b4794bb7d3d92065ad3f49a03acb33c4c13"
+reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
 ---
 
 # Skill identity
 
-Aigent Hive product Skill 정본: 26개. 실행·설정 호환을 위해 기존 영문 ID 유지.
-지식 Skill 한국어 표시명: 기능명만 표시. `(knowledge-...)` 정본 ID: 설명 첫머리 한 번 표기.
-`knowledge-capture`: 대화 종료 전 후속 작업에 도움 되는 안전한 지식 하나 기록.
-`knowledge-recall`: 현재 작업의 관련 지식 조회. `knowledge-import`: 명시 대상 저장소 스캔.
-`knowledge-promote`: 전역 공유. `knowledge-maintain`: 신뢰성 검사·색인 재생성·명시 정리.
-다음 version 미정 반영. `v0.9.4` release·tag·package 변경 없음.
+Aigent Hive 제품 Skill 정본: 28개. 옛 ID의 직접 이관 별칭 유지.
+`knowledge-scan`: 새 지식 추출. `knowledge-transfer`: 기존 지식 이전.
+`humanize-kor`: 보존 검사를 거치는 명시적 한국어 윤문.
+지식 Skill 표시 이름은 한국어 기능, 설명 첫머리는 정본 ID. 과거 배포 대장 바이트 보존.

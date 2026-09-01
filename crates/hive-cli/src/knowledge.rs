@@ -1,11 +1,17 @@
 use crate::knowledge_scan::scan_directory;
+#[path = "knowledge_transfer.rs"]
+mod transfer;
+#[path = "vector.rs"]
+mod vector;
 use cap_fs_ext::{FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::bundle_io::BundlePublishMode;
 use hive_wiki::bundle_store::{
-    export_bundle, import_bundle, BundleExportDisposition, BundleImportMode,
+    apply_bundle_merge_review, export_bundle, import_bundle, import_bundle_reviewed,
+    preview_bundle_merge, preview_export_bundle, BundleExportDisposition, BundleImportApproval,
+    BundleImportMode, BundleImportResult, BundleMergeDecision,
 };
 use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
@@ -17,7 +23,7 @@ use hive_wiki::notion::{
     validate_write_receipt, NotionCapabilityReceipt, NotionPersistedOutcome, NotionSyncRequest,
     NotionWriteReceipt, NOTION_LEDGER_RELATIVE,
 };
-use hive_wiki::portable::{BundleLimits, BundleScope};
+use hive_wiki::portable::{encode_bundle, BundleLimits, BundleScope};
 use hive_wiki::rag::{
     plan_remember, AssertionStatus, CanonicalClaim, ClaimKind, ClaimProvenance, RagError,
     RagVisibility, RememberRequest, RememberSourceKind, RetrievalRequest, RetrievalScope,
@@ -32,9 +38,12 @@ use hive_wiki::store::{
     SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
-    delete_page, delete_page_shared, ingest, ingest_shared, lint, list_pages, promote,
-    promote_shared, query_filtered, read_page, rebuild_index, suppress, suppress_shared, LintIssue,
-    LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
+    activate_generation, build_graph as build_consumer_graph, delete_page, delete_page_shared,
+    ensure_graph_owned_path, export_generation, generation_relative_path, ingest, ingest_shared,
+    lint, list_pages, load_active_generation, normalize_graphify_code, promote, promote_shared,
+    query_filtered, query_generation, query_node_metadata, read_page, rebuild_index,
+    remove_active_generation, suppress, suppress_shared, LintIssue, LintSeverity,
+    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -45,6 +54,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tempfile::NamedTempFile;
 
 const KNOWLEDGE_USAGE: &str = "\
 Canonical Markdown knowledge and disposable SQLite index.
@@ -62,7 +72,7 @@ USAGE:
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
     hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) --output json
-    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
+    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
     hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
     hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
     hive knowledge collection attach|map --user-root <dir> --collection <id-or-alias> --target <dir> --authorization-id <id> --authorization-token <token> --output json
@@ -70,7 +80,15 @@ USAGE:
     hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
+    hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
+    hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer merge preview --bundle <path>.hivekb --bundle <path>.hivekb [--user-root <dir>] --output json
+    hive knowledge transfer merge review|apply --bundle <path>.hivekb --bundle <path>.hivekb --preview-digest <sha256:...> --review <review.json> [--review-digest <sha256:...>] [--user-root <dir>] --output json
+    hive knowledge transfer status --id <transfer-id> [--user-root <dir>] --output json
+    hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
+    hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
+    hive knowledge vector --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -88,6 +106,63 @@ const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
     ".hive/index/hive.sqlite3-shm",
     ".hive/index/.stale",
 ];
+
+const GRAPHIFY_VERSION: &str = "0.9.47";
+const GRAPHIFY_WHEEL_DIGEST: &str =
+    "sha256:2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab";
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/windows-x64.json");
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "musl"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/linux-musl-x64.json");
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/macos-arm64.json");
+#[cfg(not(any(
+    all(target_os = "windows", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "x86_64", target_env = "musl"),
+    all(target_os = "macos", target_arch = "aarch64")
+)))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] = b"";
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GraphifyCodeReceipt {
+    schema_version: u32,
+    package_version: String,
+    wheel_digest: String,
+    dependency_lock_digest: String,
+    executable_digest: String,
+    python_identity_digest: String,
+    consent_digest: String,
+    source_commit: String,
+    source_tree_digest: String,
+    graph_input_digest: String,
+    command: Vec<String>,
+    provider_api_calls: u32,
+    api_keys_read: u32,
+    query_logs: u32,
+    watcher: bool,
+    git_hooks: bool,
+    mcp_registration: bool,
+    network_requests: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct GraphifyConsent {
+    schema_version: u32,
+    scope: String,
+    package_version: String,
+    wheel_digest: String,
+    dependency_lock_digest: String,
+    command: Vec<String>,
+    consent_digest: String,
+}
+
+const PROJECT_GRAPHIFY_CONSENT_RELATIVE: &str = ".hive/config/graphify-code-consent.json";
+const SOURCE_GRAPHIFY_CONSENT_RELATIVE: &str = ".agents/work/graphify/graphify-code-consent.json";
 
 #[cfg(feature = "notion-preview")]
 type NotionSyncInputs<'a> = (
@@ -130,6 +205,9 @@ struct KnowledgeEvidence {
 }
 
 pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
+    if arguments.first().map(String::as_str) == Some("vector") {
+        return vector::run(&arguments[1..], false);
+    }
     if is_help(arguments) {
         print!("{KNOWLEDGE_USAGE}");
         #[cfg(feature = "notion-preview")]
@@ -145,6 +223,9 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
             }
             Some("query") => {
                 run_query(&arguments[1..]).unwrap_or_else(|error| failure("QueryKnowledge", &error))
+            }
+            Some("graph") => {
+                run_graph(&arguments[1..]).unwrap_or_else(|error| failure("QueryKnowledge", &error))
             }
             Some("list") => {
                 run_list(&arguments[1..]).unwrap_or_else(|error| failure("ListKnowledge", &error))
@@ -183,6 +264,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("ExportKnowledge", &error)),
             Some("import") => run_import(&arguments[1..])
                 .unwrap_or_else(|error| failure("ImportKnowledge", &error)),
+            Some("transfer") => run_transfer(&arguments[1..])
+                .unwrap_or_else(|error| failure("TransferKnowledge", &error)),
             Some(action) => failure(
                 "IngestKnowledge",
                 &WikiError::InvalidInput(format!("unknown knowledge action: {action}")),
@@ -194,6 +277,1010 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    match arguments.first().map(String::as_str) {
+        Some("export") => run_transfer_export(&arguments[1..]),
+        Some("import") => run_transfer_import(&arguments[1..]),
+        Some("merge") => run_transfer_merge(&arguments[1..]),
+        Some("status" | "vector") => transfer::run(arguments),
+        _ => Err(WikiError::InvalidInput(
+            "knowledge transfer requires export, import, or merge".to_owned(),
+        )),
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let action = arguments.first().map(String::as_str).ok_or_else(|| {
+        WikiError::InvalidInput(
+            "knowledge transfer merge requires preview, review, or apply".to_owned(),
+        )
+    })?;
+    if !matches!(action, "preview" | "review" | "apply") {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer merge requires preview, review, or apply".to_owned(),
+        ));
+    }
+    let mut bundles = Vec::new();
+    let mut root = None;
+    let mut expected_preview = None;
+    let mut review_path = None;
+    let mut approved_review_digest = None;
+    let mut output = false;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments.get(index + 1).ok_or_else(|| {
+            WikiError::InvalidInput(format!("missing value for merge option {option}"))
+        })?;
+        match option {
+            "--bundle" => bundles.push(PathBuf::from(value)),
+            "--user-root" if root.is_none() => root = Some(value.clone()),
+            "--preview-digest" if expected_preview.is_none() => {
+                expected_preview = Some(value.clone());
+            }
+            "--review" if review_path.is_none() => review_path = Some(PathBuf::from(value)),
+            "--review-digest" if approved_review_digest.is_none() => {
+                approved_review_digest = Some(value.clone());
+            }
+            "--output" if !output && value == "json" => output = true,
+            "--user-root" | "--preview-digest" | "--review" | "--review-digest" | "--output" => {
+                return Err(WikiError::InvalidInput(format!(
+                    "duplicate merge option: {option}"
+                )))
+            }
+            _ => {
+                return Err(WikiError::InvalidInput(format!(
+                    "unknown merge option: {option}"
+                )))
+            }
+        }
+        index += 2;
+    }
+    if !output || bundles.len() < 2 {
+        return Err(WikiError::InvalidInput(
+            "merge requires JSON output and at least two --bundle values".to_owned(),
+        ));
+    }
+    let root_options = root
+        .as_deref()
+        .map(|value| vec![("--user-root", value)])
+        .unwrap_or_default();
+    let user_root = resolve_transfer_root(&root_options)?;
+    let merge = preview_bundle_merge(&bundles, BundleLimits::default())?;
+    let merge_digest = merge.merge_digest();
+    let merge_data = json!({
+        "archive_sha256s": merge.archive_sha256s,
+        "input_entry_count": merge.input_entry_count,
+        "exact_duplicate_count": merge.exact_duplicate_count,
+        "conflict_paths": merge.conflict_paths,
+        "conflicts": merge.conflicts,
+        "semantic_candidates": merge.semantic_candidates,
+        "merge_digest": merge_digest,
+    });
+    let base_data = json!({"merge": merge_data.clone()});
+    let base_digest = sha256_digest(
+        &serde_json::to_vec(&base_data).map_err(|error| WikiError::Io(error.to_string()))?,
+    );
+    let (request, review_digest) = if action == "preview" {
+        if expected_preview.is_some() || review_path.is_some() || approved_review_digest.is_some() {
+            return Err(WikiError::InvalidInput(
+                "merge preview does not accept review or approval options".to_owned(),
+            ));
+        }
+        (merge.request().clone(), None)
+    } else if action == "apply" && merge.semantic_candidates.is_empty() {
+        if review_path.is_some() || approved_review_digest.is_some() {
+            return Err(WikiError::InvalidInput(
+                "merge apply without semantic candidates does not accept review options".to_owned(),
+            ));
+        }
+        (merge.request().clone(), None)
+    } else {
+        if expected_preview.as_deref() != Some(base_digest.as_str()) {
+            return Err(WikiError::Conflict(
+                "merge inputs or candidate set changed; preview again".to_owned(),
+            ));
+        }
+        let path = review_path.ok_or_else(|| {
+            WikiError::InvalidInput("merge review requires --review <review.json>".to_owned())
+        })?;
+        let bytes = fs::read(&path)
+            .map_err(|error| WikiError::Io(format!("cannot read merge review: {error}")))?;
+        let review: MergeReview = serde_json::from_slice(&bytes)
+            .map_err(|error| WikiError::InvalidInput(format!("invalid merge review: {error}")))?;
+        if review.schema_version != 1 || review.merge_preview_digest != base_digest {
+            return Err(WikiError::Conflict(
+                "merge review is not bound to the current preview".to_owned(),
+            ));
+        }
+        let digest = sha256_digest(&bytes);
+        if action == "apply" && approved_review_digest.as_deref() != Some(digest.as_str()) {
+            return Err(WikiError::Conflict(
+                "merge review changed; inspect review again".to_owned(),
+            ));
+        }
+        (
+            apply_bundle_merge_review(&merge, &review.decisions)?,
+            Some(digest),
+        )
+    };
+    let encoded = encode_bundle(&request, BundleLimits::default())
+        .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+    let mut temporary = tempfile::Builder::new()
+        .suffix(".hivekb")
+        .tempfile()
+        .map_err(|error| WikiError::Io(format!("cannot stage merged bundle: {error}")))?;
+    temporary
+        .write_all(encoded.archive())
+        .and_then(|()| temporary.as_file().sync_all())
+        .map_err(|error| WikiError::Io(format!("cannot stage merged bundle: {error}")))?;
+    let temporary_path = temporary.into_temp_path();
+    let bundle_path = temporary_path.as_ref();
+    let preview = run_import_mode(&user_root, bundle_path, BundleImportMode::DryRun)?;
+    let mut data = json!({
+        "merge": merge_data,
+        "merge_input_digest": base_digest,
+        "review_digest": review_digest,
+        "combined_archive_sha256": encoded.plan().archive_sha256(),
+        "import": preview.data,
+    });
+    let digest = sha256_digest(
+        &serde_json::to_vec(&data).map_err(|error| WikiError::Io(error.to_string()))?,
+    );
+    data["merge_preview_digest"] = json!(digest.clone());
+    if action == "preview" || action == "review" {
+        return Ok(success(
+            "TransferKnowledge",
+            if action == "preview" {
+                "hive.knowledge-transfer-merge-previewed"
+            } else {
+                "hive.knowledge-transfer-merge-review-required"
+            },
+            if action == "preview" {
+                "multi-bundle merge preview completed without canonical mutation"
+            } else {
+                "host review was validated without canonical mutation"
+            },
+            Vec::new(),
+            "knowledge-transfer-merge",
+            &digest,
+            data,
+        ));
+    }
+    let merge_data = data["merge"].clone();
+    if review_digest.is_none() && expected_preview.as_deref() != Some(digest.as_str()) {
+        return Err(WikiError::Conflict(
+            "merge inputs or destination bytes changed; preview again".to_owned(),
+        ));
+    }
+    let imported = import_bundle_reviewed(
+        &user_root,
+        bundle_path,
+        BundleImportMode::Apply,
+        BundleLimits::default(),
+        BundleImportApproval {
+            archive_sha256: encoded.plan().archive_sha256(),
+            preview_digest: transfer_preview_digest(&preview)?.as_str(),
+        },
+    )?;
+    let mut applied = import_report(bundle_path, imported)?;
+    transfer::finish_import(&user_root, &mut applied);
+    let applied_data = json!({"merge": merge_data, "import": applied.data});
+    Ok(success(
+        "TransferKnowledge",
+        "hive.knowledge-transfer-merge-applied",
+        "multi-bundle canonical merge and FTS preparation completed",
+        applied.changed_paths,
+        "knowledge-transfer-merge",
+        &digest,
+        applied_data,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MergeReview {
+    schema_version: u32,
+    merge_preview_digest: String,
+    decisions: Vec<BundleMergeDecision>,
+}
+
+fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let preview_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--preview")
+        .count();
+    let apply_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--apply")
+        .count();
+    if preview_count + apply_count != 1 {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer export requires exactly one of --preview or --apply".to_owned(),
+        ));
+    }
+    let filtered = arguments
+        .iter()
+        .filter(|argument| !["--preview", "--apply"].contains(&argument.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let options = parse_options(
+        &filtered,
+        &["--user-root", "--scope", "--bundle", "--replace-backup"],
+    )?;
+    let user_root = resolve_transfer_root(&options)?;
+    let scope_text = optional(&options, "--scope").unwrap_or("all-portable");
+    if apply_count == 1 {
+        let mut forwarded = vec![
+            "--user-root".to_owned(),
+            user_root.to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            scope_text.to_owned(),
+            "--bundle".to_owned(),
+            required(&options, "--bundle")?.to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        if let Some(backup) = optional(&options, "--replace-backup") {
+            forwarded.extend(["--replace-backup".to_owned(), backup.to_owned()]);
+        }
+        return run_export(&forwarded);
+    }
+    if optional(&options, "--replace-backup").is_some() {
+        return Err(WikiError::InvalidInput(
+            "transfer export preview does not replace an existing bundle".to_owned(),
+        ));
+    }
+    let bundle = PathBuf::from(required(&options, "--bundle")?);
+    let scope = parse_bundle_scope(scope_text)?;
+    let preview = preview_export_bundle(&user_root, scope, BundleLimits::default())?;
+    let digest = preview.archive_sha256.clone();
+    Ok(success(
+        "ExportKnowledge",
+        "hive.knowledge-transfer-export-previewed",
+        "portable canonical knowledge export preview completed without bundle write",
+        Vec::new(),
+        &bundle.display().to_string(),
+        &digest,
+        serde_json::to_value(preview).map_err(|error| WikiError::Io(error.to_string()))?,
+    ))
+}
+
+fn resolve_transfer_root(options: &[(&str, &str)]) -> Result<PathBuf, WikiError> {
+    if let Some(root) = optional(options, "--user-root") {
+        let root = PathBuf::from(root);
+        if root
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(".hive"))
+        {
+            return Err(WikiError::InvalidInput(
+                "user-root must be the parent of .hive, not the .hive directory itself".to_owned(),
+            ));
+        }
+        ensure_consumer_target(&root)
+            .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+        return Ok(root);
+    }
+    let root = crate::user_install::resolve_user_root_path().map_err(WikiError::InvalidInput)?;
+    ensure_consumer_target(&root).map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+    require_shared_wiki_enabled(&root)?;
+    Ok(root)
+}
+
+fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let preview_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--preview")
+        .count();
+    let apply_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--apply")
+        .count();
+    let exclude_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--exclude-conflicts")
+        .count();
+    if preview_count + apply_count != 1 || exclude_count > 1 {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer import requires exactly one of --preview or --apply".to_owned(),
+        ));
+    }
+    let filtered = arguments
+        .iter()
+        .filter(|arg| !["--preview", "--apply", "--exclude-conflicts"].contains(&arg.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let options = parse_options(
+        &filtered,
+        &[
+            "--user-root",
+            "--bundle",
+            "--preview-digest",
+            "--expected-sha256",
+        ],
+    )?;
+    let user_root = resolve_transfer_root(&options)?;
+    let bundle = PathBuf::from(required(&options, "--bundle")?);
+    let preview_digest = optional(&options, "--preview-digest");
+    let expected_archive = optional(&options, "--expected-sha256");
+    if preview_count == 1 {
+        if preview_digest.is_some() || exclude_count != 0 {
+            return Err(WikiError::InvalidInput(
+                "transfer import preview does not accept --preview-digest".to_owned(),
+            ));
+        }
+        let mut result = run_import_mode(&user_root, &bundle, BundleImportMode::DryRun)?;
+        if let Some(expected) = expected_archive {
+            if result
+                .data
+                .as_ref()
+                .and_then(|data| data.get("archive_sha256"))
+                .and_then(Value::as_str)
+                != Some(expected)
+            {
+                return Err(WikiError::Conflict(
+                    "bundle SHA-256 differs from the sending computer".to_owned(),
+                ));
+            }
+        }
+        let digest = transfer_preview_digest(&result)?;
+        insert_transfer_preview_digest(&mut result, &digest)?;
+        return Ok(result);
+    }
+    let expected = preview_digest.ok_or_else(|| {
+        WikiError::InvalidInput("transfer import apply requires --preview-digest".to_owned())
+    })?;
+    let expected_archive = expected_archive.ok_or_else(|| {
+        WikiError::InvalidInput("transfer import apply requires --expected-sha256".to_owned())
+    })?;
+    if !valid_sha256_digest(expected) || !valid_sha256_digest(expected_archive) {
+        return Err(WikiError::InvalidInput(
+            "transfer import preview digest must be sha256".to_owned(),
+        ));
+    }
+    let imported = import_bundle_reviewed(
+        &user_root,
+        &bundle,
+        if exclude_count == 1 {
+            BundleImportMode::ApplyExcludingConflicts
+        } else {
+            BundleImportMode::Apply
+        },
+        BundleLimits::default(),
+        BundleImportApproval {
+            archive_sha256: expected_archive,
+            preview_digest: expected,
+        },
+    )?;
+    let mut applied = import_report(&bundle, imported)?;
+    transfer::finish_import(&user_root, &mut applied);
+    Ok(applied)
+}
+
+fn transfer_preview_digest(result: &KnowledgeResult) -> Result<String, WikiError> {
+    let data = result.data.as_ref().ok_or_else(|| {
+        WikiError::Verification("bundle import preview returned no result data".to_owned())
+    })?;
+    serde_json::to_vec(data)
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|error| WikiError::Io(format!("cannot digest transfer preview: {error}")))
+}
+
+fn insert_transfer_preview_digest(
+    result: &mut KnowledgeResult,
+    preview_digest: &str,
+) -> Result<(), WikiError> {
+    let data = result.data.as_mut().ok_or_else(|| {
+        WikiError::Verification("bundle import preview returned no result data".to_owned())
+    })?;
+    data.as_object_mut()
+        .ok_or_else(|| WikiError::Verification("bundle import result is not an object".to_owned()))?
+        .insert(
+            "transfer_preview_digest".to_owned(),
+            Value::String(preview_digest.to_owned()),
+        );
+    Ok(())
+}
+
+pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
+    vector::run(arguments, true)
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let action = arguments.first().map(String::as_str).ok_or_else(|| {
+        WikiError::InvalidInput(
+            "knowledge graph requires preview, enable, status, rebuild, disable, query, or export"
+                .to_owned(),
+        )
+    })?;
+    if !matches!(
+        action,
+        "preview" | "enable" | "status" | "rebuild" | "disable" | "query" | "export"
+    ) {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph supports preview, enable, status, rebuild, disable, query, or export"
+                .to_owned(),
+        ));
+    }
+    let options = parse_options(
+        &arguments[1..],
+        &[
+            "--target",
+            "--scope",
+            "--node-id",
+            "--engine",
+            "--input",
+            "--receipt",
+            "--format",
+            "--text",
+            "--user-root",
+            "--consent-digest",
+        ],
+    )?;
+    let target = PathBuf::from(required(&options, "--target")?);
+    let scope = optional(&options, "--scope").unwrap_or("project");
+    if !matches!(scope, "project" | "source") {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph command supports only project or source scope".to_owned(),
+        ));
+    }
+    let engine = optional(&options, "--engine").unwrap_or("native-markdown");
+    if !matches!(engine, "native-markdown" | "graphify-code") {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph engine is unsupported".to_owned(),
+        ));
+    }
+    if action == "enable" {
+        if engine != "graphify-code" {
+            return Err(WikiError::InvalidInput(
+                "knowledge graph enable is only for graphify-code".to_owned(),
+            ));
+        }
+        let consent = graphify_consent(scope)?;
+        if required(&options, "--consent-digest")? != consent.consent_digest {
+            return Err(WikiError::Conflict(
+                "Graphify enable requires the exact preview consent digest".to_owned(),
+            ));
+        }
+        let changed = persist_graphify_consent(&target, scope, &consent)?;
+        let consent_relative = graphify_consent_relative(scope)?;
+        return Ok(success(
+            "UpdateHarness",
+            "hive.knowledge-graph-enabled",
+            "Graphify code-only consent enabled without package installation",
+            changed,
+            consent_relative,
+            &consent.consent_digest,
+            json!({
+                "scope": scope,
+                "engine": engine,
+                "consent_digest": consent.consent_digest.clone(),
+                "package_installed": false,
+                "automatic_install": false,
+                "writes": true
+            }),
+        ));
+    }
+    if engine == "graphify-code" && action == "preview" {
+        let graph = build_graph_for_scope(&target, scope)?;
+        let consent = graphify_consent(scope)?;
+        return Ok(success(
+            "QueryKnowledge",
+            "hive.knowledge-graph-preview",
+            "Graphify code-only full rebuild preview completed without writes",
+            Vec::new(),
+            "graphify-code-preview",
+            &graph.generation_digest,
+            json!({
+                "scope": scope,
+                "engine": engine,
+                "package_version": GRAPHIFY_VERSION,
+                "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "dependency_lock_digest": graphify_dependency_lock_digest()?,
+                "command": ["extract", "--force", "--code-only", "--no-cluster"],
+                "provider_api_calls": 0,
+                "api_keys_read": 0,
+                "query_logs": 0,
+                "watcher": false,
+                "git_hooks": false,
+                "mcp_registration": false,
+                "network_requests": 0,
+                "consent_digest": consent.consent_digest,
+                "automatic_install": false,
+                "writes": false,
+            }),
+        ));
+    }
+
+    let (graph, source_digest, receipt_digest, fallback, active) =
+        if engine == "graphify-code" && action == "rebuild" {
+            let input_path = PathBuf::from(required(&options, "--input")?);
+            let receipt_path = PathBuf::from(required(&options, "--receipt")?);
+            let input = read_bytes_bounded(&input_path, "Graphify graph input", 128 * 1024 * 1024)?;
+            let receipt_bytes = read_bytes_bounded(&receipt_path, "Graphify receipt", 1024 * 1024)?;
+            let receipt: GraphifyCodeReceipt =
+                serde_json::from_slice(&receipt_bytes).map_err(|error| {
+                    WikiError::InvalidInput(format!("invalid Graphify receipt: {error}"))
+                })?;
+            let consent = load_graphify_consent(&target, scope)?;
+            validate_graphify_receipt(&receipt, &input, &consent.consent_digest)?;
+            (
+                normalize_graphify_code(scope, &input).map_err(WikiError::Verification)?,
+                receipt.source_tree_digest,
+                Some(sha256_digest(&receipt_bytes)),
+                false,
+                true,
+            )
+        } else if engine == "graphify-code" {
+            match load_active_generation(&target, scope, engine) {
+                Ok((pointer, graph)) => (
+                    graph,
+                    pointer.source_digest,
+                    pointer.extractor_receipt_digest,
+                    false,
+                    true,
+                ),
+                Err(_) if matches!(action, "query" | "status" | "disable") => {
+                    let graph = build_graph_for_scope(&target, scope)?;
+                    let source_digest = graph.generation_digest.clone();
+                    (graph, source_digest, None, true, false)
+                }
+                Err(error) => return Err(WikiError::Verification(error)),
+            }
+        } else {
+            let graph = build_graph_for_scope(&target, scope)?;
+            let source_digest = graph.generation_digest.clone();
+            let active = load_active_generation(&target, scope, engine)
+                .is_ok_and(|(pointer, _)| pointer.source_digest == source_digest);
+            (graph, source_digest, None, false, active)
+        };
+    let locator = generation_relative_path(scope, &graph.generation_digest)
+        .map_err(WikiError::InvalidInput)?
+        .to_string_lossy()
+        .replace('\\', "/");
+    let mut changed_paths = if action == "rebuild" {
+        activate_generation(&target, &graph, &source_digest, receipt_digest.as_deref())
+            .map_err(WikiError::Io)?
+            .into_iter()
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+            .collect()
+    } else if action == "disable" {
+        remove_active_generation(&target, scope, engine)
+            .map_err(WikiError::Io)?
+            .into_iter()
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+            .collect()
+    } else if action == "export" {
+        vec![
+            export_generation(&target, &graph, required(&options, "--format")?)
+                .map_err(WikiError::Io)?
+                .to_string_lossy()
+                .replace('\\', "/"),
+        ]
+    } else {
+        Vec::new()
+    };
+    if action == "disable" && engine == "graphify-code" && remove_graphify_consent(&target, scope)?
+    {
+        changed_paths.push(graphify_consent_relative(scope)?.to_owned());
+        changed_paths.sort();
+    }
+    let data = if action == "query" {
+        let node_id = optional(&options, "--node-id");
+        let text = optional(&options, "--text");
+        if node_id.is_none() && text.is_none() {
+            return Err(WikiError::InvalidInput(
+                "knowledge graph query requires --node-id or --text".to_owned(),
+            ));
+        }
+        let mut graph_matches = node_id
+            .map(|id| query_generation(&graph, id, 50))
+            .unwrap_or_default();
+        let mut metadata = node_id
+            .map(|id| query_node_metadata(&graph, id, 10))
+            .unwrap_or_default();
+        let fts = if let Some(query) = text {
+            if scope == "source" {
+                let planned = relation_question_subject(query).unwrap_or(query);
+                let hits = hive_wiki::source::query(&target, "en", Some(planned), None, 10)?;
+                Some(json!({"count": hits.len(), "hits": hits, "language": "en"}))
+            } else {
+                let mut query_arguments = vec![
+                    "--target".to_owned(),
+                    target.to_string_lossy().into_owned(),
+                    "--text".to_owned(),
+                    query.to_owned(),
+                    "--limit".to_owned(),
+                    "10".to_owned(),
+                    "--output".to_owned(),
+                    "json".to_owned(),
+                ];
+                if let Some(user_root) = optional(&options, "--user-root") {
+                    query_arguments.extend(["--user-root".to_owned(), user_root.to_owned()]);
+                }
+                run_query(&query_arguments)?.data
+            }
+        } else {
+            None
+        };
+        if node_id.is_none() {
+            if let Some(value) = &fts {
+                for id in fts_hit_ids(value) {
+                    graph_matches.extend(query_generation(&graph, &id, 50));
+                    metadata.extend(query_node_metadata(&graph, &id, 10));
+                }
+                graph_matches.sort();
+                graph_matches.dedup();
+                graph_matches.truncate(50);
+                metadata.sort();
+                metadata.dedup();
+                metadata.truncate(10);
+            }
+        }
+        let mut matched_lanes = Vec::new();
+        if text.is_some() {
+            matched_lanes.push("fts");
+        }
+        if node_id.is_some() || !graph_matches.is_empty() {
+            matched_lanes.push(if graph.engine == "graphify-code" {
+                "code-graph"
+            } else {
+                "markdown-graph"
+            });
+        }
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "requested_engine": engine,
+            "fallback": fallback,
+            "generation_digest": graph.generation_digest,
+            "node_id": node_id,
+            "text": text,
+            "matched_lanes": matched_lanes,
+            "fts": fts,
+            "matches": graph_matches,
+            "metadata": metadata,
+            "read_command": node_id.map(|id| format!("hive knowledge read --target <dir> --page-id {id} --output json")),
+            "cost_receipt": {
+                "nodes_scanned": graph.nodes.len(),
+                "edges_scanned": graph.edges.len(),
+                "maximum_results": 50,
+                "metadata_limit": 10,
+                "body_bytes": 0
+            },
+            "writes": false,
+        })
+    } else {
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "requested_engine": engine,
+            "fallback": fallback,
+            "generation_digest": graph.generation_digest,
+            "node_count": graph.nodes.len(),
+            "edge_count": graph.edges.len(),
+            "generation_path": locator,
+            "active": active || action == "rebuild",
+            "writes": matches!(action, "rebuild" | "disable" | "export"),
+            "cost_receipt": {
+                "nodes": graph.nodes.len(),
+                "edges": graph.edges.len(),
+                "body_bytes": 0
+            },
+        })
+    };
+    Ok(success(
+        if action == "rebuild" {
+            "RebuildKnowledgeIndex"
+        } else if action == "disable" {
+            "DeleteKnowledge"
+        } else if action == "export" {
+            "ExportKnowledge"
+        } else {
+            "QueryKnowledge"
+        },
+        match action {
+            "rebuild" => "hive.knowledge-graph-rebuilt",
+            "disable" => "hive.knowledge-graph-disabled",
+            "status" => "hive.knowledge-graph-status",
+            "query" => "hive.knowledge-graph-query-complete",
+            "export" => "hive.knowledge-graph-exported",
+            _ => "hive.knowledge-graph-preview",
+        },
+        "knowledge graph operation completed",
+        changed_paths,
+        &locator,
+        &graph.generation_digest,
+        data,
+    ))
+}
+
+fn build_graph_for_scope(
+    target: &Path,
+    scope: &str,
+) -> Result<hive_wiki::GraphGeneration, WikiError> {
+    if scope == "source" {
+        hive_wiki::source::build_graph(target)
+    } else {
+        build_consumer_graph(target, scope)
+    }
+}
+
+fn fts_hit_ids(value: &Value) -> Vec<String> {
+    value
+        .get("hits")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|hit| {
+            hit.get("id")
+                .or_else(|| hit.get("pair_id"))
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+fn relation_question_subject(value: &str) -> Option<&str> {
+    value
+        .strip_prefix("How does ")
+        .and_then(|rest| rest.split_once(" relate to "))
+        .map(|(subject, _)| subject.trim())
+        .filter(|subject| !subject.is_empty())
+}
+
+pub(crate) fn run_source_graph(arguments: &[String]) -> ExitCode {
+    if arguments.iter().any(|argument| argument == "--scope") {
+        let result = failure(
+            "QueryKnowledge",
+            &WikiError::InvalidInput("source-wiki graph owns the source scope".to_owned()),
+        );
+        emit(&result);
+        return ExitCode::from(result.exit_code);
+    }
+    let mut scoped = arguments.to_vec();
+    scoped.extend(["--scope".to_owned(), "source".to_owned()]);
+    let result = run_graph(&scoped).unwrap_or_else(|error| failure("QueryKnowledge", &error));
+    emit(&result);
+    ExitCode::from(result.exit_code)
+}
+
+fn read_bytes_bounded(path: &Path, label: &str, maximum: u64) -> Result<Vec<u8>, WikiError> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| WikiError::Io(format!("cannot inspect {label}: {error}")))?;
+    if metadata.file_type().is_symlink()
+        || !metadata.is_file()
+        || metadata.len() == 0
+        || metadata.len() > maximum
+    {
+        return Err(WikiError::InvalidInput(format!(
+            "{label} must be a nonempty bounded regular file"
+        )));
+    }
+    fs::read(path).map_err(|error| WikiError::Io(format!("cannot read {label}: {error}")))
+}
+
+fn validate_graphify_receipt(
+    receipt: &GraphifyCodeReceipt,
+    input: &[u8],
+    consent_digest: &str,
+) -> Result<(), WikiError> {
+    let digest = |value: &str| {
+        value.strip_prefix("sha256:").is_some_and(|value| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+    };
+    if receipt.schema_version != 1
+        || receipt.package_version != GRAPHIFY_VERSION
+        || receipt.wheel_digest != GRAPHIFY_WHEEL_DIGEST
+        || !digest(&receipt.executable_digest)
+        || receipt.dependency_lock_digest != graphify_dependency_lock_digest()?
+        || !digest(&receipt.python_identity_digest)
+        || receipt.consent_digest != consent_digest
+        || !digest(&receipt.source_tree_digest)
+        || receipt.source_commit.len() != 40
+        || !receipt
+            .source_commit
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || receipt.graph_input_digest != sha256_digest(input)
+        || receipt.command != ["extract", "--force", "--code-only", "--no-cluster"]
+        || receipt.provider_api_calls != 0
+        || receipt.api_keys_read != 0
+        || receipt.query_logs != 0
+        || receipt.watcher
+        || receipt.git_hooks
+        || receipt.mcp_registration
+        || receipt.network_requests != 0
+    {
+        return Err(WikiError::Verification(
+            "Graphify receipt violates the approved code-only boundary".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn graphify_dependency_lock_digest() -> Result<String, WikiError> {
+    if GRAPHIFY_DEPENDENCY_LOCK.is_empty() {
+        return Err(WikiError::InvalidInput(
+            "Graphify code sidecar is unsupported on this platform".to_owned(),
+        ));
+    }
+    let value: Value = serde_json::from_slice(GRAPHIFY_DEPENDENCY_LOCK)
+        .map_err(|error| WikiError::Verification(format!("invalid Graphify lock: {error}")))?;
+    if value["schema_version"] != 1
+        || value["package"] != "graphifyy==0.9.47"
+        || value["python"] != "3.12"
+        || value["files"].as_array().map(Vec::len) != Some(30)
+    {
+        return Err(WikiError::Verification(
+            "Graphify dependency lock contract mismatch".to_owned(),
+        ));
+    }
+    let canonical = serde_json_canonicalizer::to_vec(&value)
+        .map_err(|error| WikiError::Verification(format!("canonicalize Graphify lock: {error}")))?;
+    Ok(sha256_digest(&canonical))
+}
+
+fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
+    let dependency_lock_digest = graphify_dependency_lock_digest()?;
+    let command = vec![
+        "extract".to_owned(),
+        "--force".to_owned(),
+        "--code-only".to_owned(),
+        "--no-cluster".to_owned(),
+    ];
+    let payload = json!({
+        "schema_version": 1,
+        "scope": scope,
+        "package_version": GRAPHIFY_VERSION,
+        "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+        "dependency_lock_digest": dependency_lock_digest,
+        "command": command,
+        "automatic_install": false,
+        "provider_api_calls": 0,
+        "api_keys_read": 0,
+        "query_logs": 0,
+        "watcher": false,
+        "git_hooks": false,
+        "mcp_registration": false,
+        "network_requests": 0
+    });
+    let consent_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| WikiError::Io(format!("canonicalize Graphify consent: {error}")))?,
+    );
+    Ok(GraphifyConsent {
+        schema_version: 1,
+        scope: scope.to_owned(),
+        package_version: GRAPHIFY_VERSION.to_owned(),
+        wheel_digest: GRAPHIFY_WHEEL_DIGEST.to_owned(),
+        dependency_lock_digest,
+        command,
+        consent_digest,
+    })
+}
+
+fn persist_graphify_consent(
+    target: &Path,
+    scope: &str,
+    consent: &GraphifyConsent,
+) -> Result<Vec<String>, WikiError> {
+    let relative = Path::new(graphify_consent_relative(scope)?);
+    ensure_graphify_consent_path(target, relative, scope)?;
+    let destination = target.join(relative);
+    let bytes = serde_json_canonicalizer::to_vec(consent)
+        .map_err(|error| WikiError::Io(format!("canonicalize Graphify consent: {error}")))?;
+    match fs::symlink_metadata(&destination) {
+        Ok(metadata) if !metadata.is_file() => {
+            return Err(WikiError::Conflict(
+                "Graphify consent destination is not a regular file".to_owned(),
+            ));
+        }
+        Ok(_) => {
+            let existing = fs::read(&destination)
+                .map_err(|error| WikiError::Io(format!("read Graphify consent: {error}")))?;
+            if existing == bytes {
+                return Ok(Vec::new());
+            }
+            return Err(WikiError::Conflict(
+                "Graphify consent already contains different bytes".to_owned(),
+            ));
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(WikiError::Io(format!("inspect Graphify consent: {error}")));
+        }
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| WikiError::Io("Graphify consent has no parent".to_owned()))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| WikiError::Io(format!("create Graphify consent parent: {error}")))?;
+    let mut temporary = NamedTempFile::new_in(parent)
+        .map_err(|error| WikiError::Io(format!("create Graphify consent staging: {error}")))?;
+    temporary
+        .write_all(&bytes)
+        .map_err(|error| WikiError::Io(format!("write Graphify consent staging: {error}")))?;
+    temporary
+        .persist(&destination)
+        .map_err(|error| WikiError::Io(format!("activate Graphify consent: {error}")))?;
+    Ok(vec![relative.to_string_lossy().into_owned()])
+}
+
+fn load_graphify_consent(target: &Path, scope: &str) -> Result<GraphifyConsent, WikiError> {
+    let bytes = read_bytes_bounded(
+        &target.join(graphify_consent_relative(scope)?),
+        "Graphify consent",
+        64 * 1024,
+    )?;
+    let consent: GraphifyConsent = serde_json::from_slice(&bytes)
+        .map_err(|error| WikiError::Verification(format!("invalid Graphify consent: {error}")))?;
+    let expected = graphify_consent(scope)?;
+    if consent.schema_version != 1
+        || consent.scope != expected.scope
+        || consent.package_version != expected.package_version
+        || consent.wheel_digest != expected.wheel_digest
+        || consent.dependency_lock_digest != expected.dependency_lock_digest
+        || consent.command != expected.command
+        || consent.consent_digest != expected.consent_digest
+    {
+        return Err(WikiError::Verification(
+            "Graphify consent binding mismatch".to_owned(),
+        ));
+    }
+    Ok(consent)
+}
+
+fn remove_graphify_consent(target: &Path, scope: &str) -> Result<bool, WikiError> {
+    let relative = Path::new(graphify_consent_relative(scope)?);
+    ensure_graphify_consent_path(target, relative, scope)?;
+    let destination = target.join(relative);
+    match fs::symlink_metadata(&destination) {
+        Ok(metadata) if metadata.is_file() => {
+            fs::remove_file(destination)
+                .map_err(|error| WikiError::Io(format!("remove Graphify consent: {error}")))?;
+            Ok(true)
+        }
+        Ok(_) => Err(WikiError::Conflict(
+            "Graphify consent destination is not a regular file".to_owned(),
+        )),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(WikiError::Io(format!("inspect Graphify consent: {error}"))),
+    }
+}
+
+fn graphify_consent_relative(scope: &str) -> Result<&'static str, WikiError> {
+    match scope {
+        "project" => Ok(PROJECT_GRAPHIFY_CONSENT_RELATIVE),
+        "source" => Ok(SOURCE_GRAPHIFY_CONSENT_RELATIVE),
+        _ => Err(WikiError::InvalidInput(
+            "Graphify consent scope is unsupported".to_owned(),
+        )),
+    }
+}
+
+fn ensure_graphify_consent_path(
+    target: &Path,
+    relative: &Path,
+    scope: &str,
+) -> Result<(), WikiError> {
+    if scope == "source" {
+        ensure_graph_owned_path(target, relative, scope).map_err(|error| {
+            WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+        })
+    } else {
+        ensure_no_symlink_ancestors(target, relative).map_err(|error| {
+            WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+        })
+    }
 }
 
 #[cfg(feature = "notion-preview")]
@@ -587,7 +1674,7 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(&filtered, &["--user-root", "--bundle"])?;
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let bundle = PathBuf::from(required(&options, "--bundle")?);
-    let imported = import_bundle(
+    run_import_mode(
         &user_root,
         &bundle,
         if apply == 1 {
@@ -595,8 +1682,22 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         } else {
             BundleImportMode::DryRun
         },
-        BundleLimits::default(),
-    )?;
+    )
+}
+
+fn run_import_mode(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+) -> Result<KnowledgeResult, WikiError> {
+    let imported = import_bundle(user_root, bundle, mode, BundleLimits::default())?;
+    import_report(bundle, imported)
+}
+
+fn import_report(
+    bundle: &Path,
+    imported: BundleImportResult,
+) -> Result<KnowledgeResult, WikiError> {
     let digest = imported.manifest_sha256.clone();
     Ok(success(
         "ImportKnowledge",
@@ -920,6 +2021,11 @@ struct ConfidentialAuthorizationRecord {
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 enum AuthorizationAction {
     ConfidentialRetrieval {
+        collection_id: String,
+        current_collection_id: String,
+        request_binding_digest: String,
+    },
+    ConfidentialVectorBuild {
         collection_id: String,
         current_collection_id: String,
         request_binding_digest: String,
@@ -1331,12 +2437,19 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "--query",
             "--top-k",
             "--byte-budget",
+            "--mode",
             "--authorization-id",
             "--authorization-token",
             "--capabilities",
             "--usage",
         ],
     )?;
+    let mode = optional(&options, "--mode").unwrap_or("fts");
+    if !["fts", "semantic"].contains(&mode) {
+        return Err(WikiError::InvalidInput(
+            "--mode must be fts or semantic".to_owned(),
+        ));
+    }
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let target = PathBuf::from(required(&options, "--target")?);
     let mut request = parse_retrieval_request(&options, RetrievalScope::Auto)?;
@@ -1386,8 +2499,16 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         request.confidential_collection_id = Some(consumption.collection_id);
         changed_paths.push(consumption.changed_path);
     }
-    let result = store.retrieve(&request)?;
-    let digest = result.manifest_digest.clone();
+    let result = if mode == "semantic" {
+        vector::retrieve(&user_root, &store, &request)?
+    } else {
+        serde_json::to_value(store.retrieve(&request)?)
+            .map_err(|error| WikiError::Io(error.to_string()))?
+    };
+    let digest = result["manifest_digest"]
+        .as_str()
+        .ok_or_else(|| WikiError::Verification("retrieval manifest is absent".to_owned()))?
+        .to_owned();
     Ok(success(
         "RetrieveKnowledge",
         "hive.knowledge-retrieved",
@@ -1395,7 +2516,7 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         changed_paths,
         SHARED_INDEX_RELATIVE,
         &digest,
-        serde_json::to_value(result).map_err(|error| WikiError::Io(error.to_string()))?,
+        result,
     ))
 }
 
@@ -3631,6 +4752,30 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    #[test]
+    fn transfer_rejects_source_roots_before_receipt_or_knowledge_access() {
+        let root = tempfile::tempdir().expect("source fixture");
+        fs::write(root.path().join("hive-source.json"), b"{}").expect("source marker");
+        let target = root.path().to_str().expect("UTF-8 fixture");
+        assert!(resolve_transfer_root(&[("--user-root", target)]).is_err());
+        assert!(!root.path().join(".hive").exists());
+        assert_eq!(
+            fs::read(root.path().join("hive-source.json")).unwrap(),
+            b"{}"
+        );
+    }
+
+    #[test]
+    fn transfer_rejects_hive_directory_as_user_root() {
+        let root = tempfile::tempdir().expect("root fixture");
+        let hive = root.path().join(".hive");
+        fs::create_dir(&hive).expect("existing Hive directory");
+        let error = resolve_transfer_root(&[("--user-root", hive.to_str().unwrap())])
+            .expect_err("wrong root");
+        assert!(error.to_string().contains("parent of .hive"));
+        assert!(!hive.join(".hive").exists());
+    }
+
     fn temp_root() -> TempDir {
         TempDir::new_in(std::env::current_dir().expect("current directory"))
             .expect("temporary root")
@@ -4141,6 +5286,344 @@ mod tests {
             .expect("store")
             .validate_current()
             .expect("RAG remains current");
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines, clippy::useless_vec)]
+    fn graph_preview_reads_canonical_pages_without_derived_write() {
+        let (user, project) = registered_roots(true);
+        let source = project.path().join("source.md");
+        let draft = project.path().join("draft.md");
+        fs::write(&source, "Graph preview source.").expect("source");
+        fs::write(
+            &draft,
+            wiki_draft("graph-preview", "concept", "Graph preview body."),
+        )
+        .expect("draft");
+        run_add(&add_arguments(
+            project.path(),
+            user.path(),
+            &source,
+            &draft,
+            true,
+        ))
+        .expect("add page");
+        let canonical_path = project.path().join(".hive/knowledge/Wiki/graph-preview.md");
+        let canonical_before = fs::read(&canonical_path).expect("canonical page");
+
+        let preview = run_graph(&vec![
+            "preview".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "project".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph preview");
+        assert_eq!(preview.code, "hive.knowledge-graph-preview");
+        let data = preview.data.expect("preview data");
+        assert_eq!(data["node_count"], 1);
+        assert_eq!(data["writes"], false);
+
+        let query = run_graph(&vec![
+            "query".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--node-id".to_owned(),
+            "graph-preview".to_owned(),
+            "--text".to_owned(),
+            "Graph preview".to_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph query");
+        let query_data = query.data.expect("query data");
+        let matches = query_data["matches"].as_array().expect("metadata matches");
+        assert_eq!(matches.len(), 2);
+        assert!(matches.iter().all(|edge| edge.get("body").is_none()));
+        assert_eq!(
+            query_data["matched_lanes"],
+            json!(["fts", "markdown-graph"])
+        );
+        assert_eq!(
+            query_data["fts"]["hits"]
+                .as_array()
+                .expect("FTS hits")
+                .len(),
+            1
+        );
+        assert_eq!(
+            query_data["metadata"]
+                .as_array()
+                .expect("node metadata")
+                .len(),
+            1
+        );
+
+        let status = run_graph(&vec![
+            "status".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph status");
+        assert_eq!(status.data.expect("status data")["active"], false);
+
+        let rebuilt = run_graph(&vec![
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph rebuild");
+        assert_eq!(rebuilt.action, "RebuildKnowledgeIndex");
+        let rebuilt_data = rebuilt.data.expect("rebuild data");
+        assert_eq!(rebuilt_data["writes"], true);
+        assert!(project
+            .path()
+            .join(rebuilt_data["generation_path"].as_str().expect("path"))
+            .is_file());
+
+        let status = run_graph(&vec![
+            "status".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("active graph status");
+        assert_eq!(status.data.expect("active status data")["active"], true);
+
+        for format in ["json", "html"] {
+            let exported = run_graph(&[
+                "export".to_owned(),
+                "--target".to_owned(),
+                project.path().to_string_lossy().into_owned(),
+                "--format".to_owned(),
+                format.to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("graph export");
+            assert_eq!(exported.action, "ExportKnowledge");
+            assert_eq!(exported.changed_paths.len(), 1);
+            assert!(project.path().join(&exported.changed_paths[0]).is_file());
+        }
+
+        let disabled = run_graph(&vec![
+            "disable".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph disable");
+        assert_eq!(disabled.action, "DeleteKnowledge");
+        assert_eq!(disabled.changed_paths.len(), 2);
+        assert_eq!(
+            fs::read(&canonical_path).expect("canonical page after graph disable"),
+            canonical_before
+        );
+        let after = run_query(&[
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--text".to_owned(),
+            "Graph preview".to_owned(),
+            "--limit".to_owned(),
+            "10".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("FTS after graph disable");
+        assert_eq!(
+            after.data.expect("FTS data")["hits"]
+                .as_array()
+                .expect("FTS hits")
+                .len(),
+            1
+        );
+
+        let Err(error) = run_graph(&vec![
+            "preview".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "confidential".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]) else {
+            panic!("collection scope requires its separate authorization path");
+        };
+        assert!(error.to_string().contains("only project or source scope"));
+    }
+
+    #[cfg(any(
+        all(target_os = "windows", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "x86_64", target_env = "musl"),
+        all(target_os = "macos", target_arch = "aarch64")
+    ))]
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn graphify_code_rebuild_requires_exact_receipt_and_falls_back_to_native() {
+        let (user, project) = registered_roots(true);
+        let source = project.path().join("source.md");
+        let draft = project.path().join("draft.md");
+        fs::write(&source, "Graphify fallback source.").expect("source");
+        fs::write(
+            &draft,
+            wiki_draft("graphify-fallback", "concept", "Graphify fallback body."),
+        )
+        .expect("draft");
+        run_add(&add_arguments(
+            project.path(),
+            user.path(),
+            &source,
+            &draft,
+            true,
+        ))
+        .expect("add page");
+        let input = br#"{"nodes":[{"id":"main","source_file":"src/main.rs","source_location":"L1"},{"id":"store","source_file":"src/store.rs","source_location":"L2"}],"edges":[{"source":"main","target":"store","relation":"calls","confidence":"EXTRACTED"}],"hyperedges":[],"input_tokens":0,"output_tokens":0}"#;
+        let input_path = project.path().join("graphify-input.json");
+        fs::write(&input_path, input).expect("Graphify input");
+        let consent = graphify_consent("project").expect("Graphify consent");
+        let receipt_path = project.path().join("graphify-receipt.json");
+        fs::write(
+            &receipt_path,
+            serde_json::to_vec(&json!({
+                "schema_version": 1,
+                "package_version": GRAPHIFY_VERSION,
+                "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "dependency_lock_digest": graphify_dependency_lock_digest().expect("lock digest"),
+                "executable_digest": format!("sha256:{}", "a1".repeat(32)),
+                "python_identity_digest": format!("sha256:{}", "b2".repeat(32)),
+                "consent_digest": consent.consent_digest.clone(),
+                "source_commit": "0".repeat(40),
+                "source_tree_digest": format!("sha256:{}", "c3".repeat(32)),
+                "graph_input_digest": sha256_digest(input),
+                "command": ["extract", "--force", "--code-only", "--no-cluster"],
+                "provider_api_calls": 0,
+                "api_keys_read": 0,
+                "query_logs": 0,
+                "watcher": false,
+                "git_hooks": false,
+                "mcp_registration": false,
+                "network_requests": 0
+            }))
+            .expect("receipt JSON"),
+        )
+        .expect("receipt");
+        let target = project.path().to_string_lossy().into_owned();
+        let enabled = run_graph(&[
+            "enable".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--consent-digest".to_owned(),
+            consent.consent_digest.clone(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify enable");
+        assert_eq!(enabled.code, "hive.knowledge-graph-enabled");
+        assert_eq!(enabled.changed_paths, [PROJECT_GRAPHIFY_CONSENT_RELATIVE]);
+        let rebuilt = run_graph(&[
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--input".to_owned(),
+            input_path.to_string_lossy().into_owned(),
+            "--receipt".to_owned(),
+            receipt_path.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify rebuild");
+        assert_eq!(rebuilt.changed_paths.len(), 2);
+        assert_eq!(rebuilt.data.expect("data")["engine"], "graphify-code");
+
+        let queried = run_graph(&[
+            "query".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--node-id".to_owned(),
+            "main".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify query");
+        let data = queried.data.expect("query data");
+        assert_eq!(data["matches"].as_array().expect("matches").len(), 1);
+        assert_eq!(data["fallback"], false);
+
+        run_graph(&[
+            "disable".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify disable");
+        let fallback = run_graph(&[
+            "query".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--node-id".to_owned(),
+            "graphify-fallback".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("native fallback");
+        assert_eq!(fallback.data.expect("fallback data")["fallback"], true);
+
+        run_graph(&[
+            "enable".to_owned(),
+            "--target".to_owned(),
+            target,
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--consent-digest".to_owned(),
+            consent.consent_digest,
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify re-enable");
+
+        let mut tampered = fs::read(&receipt_path).expect("receipt bytes");
+        tampered.extend_from_slice(b" ");
+        fs::write(&receipt_path, tampered).expect("tamper receipt bytes");
+        fs::write(&input_path, b"{}\n").expect("tamper input");
+        let Err(error) = run_graph(&[
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--input".to_owned(),
+            input_path.to_string_lossy().into_owned(),
+            "--receipt".to_owned(),
+            receipt_path.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]) else {
+            panic!("tampered input must fail");
+        };
+        assert!(matches!(error, WikiError::Verification(_)));
     }
 
     #[test]

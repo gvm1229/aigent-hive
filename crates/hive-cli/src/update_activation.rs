@@ -1373,7 +1373,7 @@ mod tests {
         assert_eq!(installer.calls.borrow().as_slice(), [target]);
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("-> 0.9.5-test.2"));
+            .contains(&format!("-> {}", package(2))));
     }
 
     #[test]

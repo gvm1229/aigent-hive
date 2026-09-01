@@ -10,6 +10,7 @@ use sha2::{Digest, Sha256};
 pub mod custom_agent;
 pub mod judge;
 pub mod judge_auth;
+pub mod korean;
 pub mod loop_graph;
 pub mod native_workflow;
 pub mod orchestration;

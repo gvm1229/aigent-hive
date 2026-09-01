@@ -9,9 +9,9 @@ summary: "공유 지식 명령은 정규화 전 연결된 소비자 대상을 �
 tags: [index, security, symlink]
 aliases: ["공유 지식 대상 보호", "과거 stale 표지"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f3f69d5fcea2bd8fb6383b29ae97d490e79ff794345826c0f68c550fb5881db4"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:676c827ebe9ed1c4e51d73cf35289b8dfa9149f52287bcfad1a33d0b872b3be2"
 links: [knowledge-storage, shared-index]
-reviewed_revision: "git:3336f2fb375dce95a0608530f816c251dcb574ed"
+reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
 ---
 

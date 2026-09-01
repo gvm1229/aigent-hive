@@ -73,6 +73,28 @@
         null
       ]
     },
-    "refine_suggestion": { "type": "boolean" }
+    "refine_suggestion": { "type": "boolean" },
+    "workflow_route": {
+      "type": ["string", "null"],
+      "enum": ["simple", "verified-workflow", "required-but-unsupported", null]
+    },
+    "workflow_reason_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "dependency-graph",
+          "intermediate-evidence",
+          "bounded-retry",
+          "independent-verifier",
+          "topology-steering",
+          "exact-recovery"
+        ]
+      }
+    },
+    "workflow_override": {
+      "type": ["string", "null"],
+      "enum": ["simple-continuation", "verified-workflow", "no-retry", null]
+    }
   }
 }

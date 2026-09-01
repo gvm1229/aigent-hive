@@ -29,6 +29,10 @@ ALLOWLIST_PATH = Path(__file__).with_name("human-documentation-style-allowlist.j
 FINDING_REASON = "unapproved-korean-narrative-ending"
 ALLOWLIST_KEYS = {"path", "line", "reason", "text_sha256"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
+ARCHIVE_NAVIGATION = {
+    "docs/archive/README.md",
+    "docs/archive/MANIFEST.md",
+}
 
 # A boundary can be an ordinary sentence mark, a quote, a Markdown table cell, or a
 # label-like colon. It intentionally also admits whitespace so an authored sentence
@@ -70,6 +74,7 @@ NOMINALIZATION_NOUN_COLLISION_SUFFIXES = (
     "다짐",
     "도움",
     "마음",
+    "묶음",
     "베트남",
     "여름",
     "얼음",
@@ -98,10 +103,18 @@ def is_candidate(name: str) -> bool:
 def inventory(root: Path) -> list[Path]:
     paths: list[Path] = []
     for directory, names, files in os.walk(root, followlinks=False):
+        relative_directory = Path(directory).relative_to(root).as_posix()
+        if relative_directory in {".agents/work", ".omx", "target", "tests/work"}:
+            names[:] = []
+            continue
         names[:] = sorted(name for name in names if name != ".git")
         for name in sorted(files):
             if is_candidate(name):
-                paths.append(Path(directory) / name)
+                path = Path(directory) / name
+                relative = path.relative_to(root).as_posix()
+                if relative.startswith("docs/archive/") and relative not in ARCHIVE_NAVIGATION:
+                    continue
+                paths.append(path)
     return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
 
 
@@ -170,6 +183,9 @@ def _is_terminal_token(token: str, line: str, start: int) -> bool:
 
 
 def _is_narrative_token(token: str, line: str, start: int) -> bool:
+    # Distributive postposition before a following phrase, not a sentence ending.
+    if token.endswith("마다") and not _is_terminal_token(token, line, start):
+        return False
     if token == "보다":
         return True
     if _is_mechanical_nominalization(token, line, start):
@@ -250,6 +266,8 @@ def language(text: str) -> str:
 
 def owner(relative: str) -> str:
     if relative.startswith((".agents/work/", ".omx/", "tests/work/", "target/")):
+        return "runtime-generated"
+    if relative.startswith(("tests/results/runs/", "tests/results/legacy/", "tests/results/cleanup/")):
         return "runtime-generated"
     if relative.startswith("tests/fixtures/"):
         return "test-fixture"

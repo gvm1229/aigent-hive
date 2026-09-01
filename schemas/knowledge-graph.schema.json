@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-graph.schema.json",
+  "title": "Aigent Hive derived knowledge graph generation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scope", "engine", "generation_digest", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scope": { "enum": ["source", "project", "user-root", "shared", "private", "confidential"] },
+    "engine": { "enum": ["native-markdown", "graphify-code"] },
+    "generation_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nodes": {
+      "type": "array", "maxItems": 50000, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array", "maxItems": 250000, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "locator", "content_digest", "visibility", "lifecycle"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "locator": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "content_digest": { "$ref": "#/$defs/digest" },
+        "visibility": { "enum": ["source", "project", "user-root", "shared", "private", "confidential"] },
+        "lifecycle": { "enum": ["active", "contradicted", "superseded", "expired", "revoked"] }
+      }
+    },
+    "edge": {
+      "type": "object", "additionalProperties": false,
+      "required": ["from", "to", "relation", "evidence", "source_digest"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "to": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "relation": { "enum": ["sources", "source_links", "links", "related_concepts", "duplicate_of", "contradictions", "topics", "tags", "replacement"] },
+        "evidence": { "enum": ["EXTRACTED", "INFERRED", "AMBIGUOUS"] },
+        "source_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

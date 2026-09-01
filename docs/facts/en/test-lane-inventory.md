@@ -5,22 +5,26 @@ topic_slug: test-lane-inventory
 language: en
 counterpart: ../ko/test-lane-inventory.md
 title: "Test Lane Inventory"
-summary: "One executable manifest assigns every Python conformance module to one named release lane."
+summary: "Purpose-based test packages preserve every stability regression under one executable lane inventory."
 tags: [release, test, verification]
 aliases: ["conformance lanes", "test inventory"]
 sources:
-  - "repo:scripts/test-lanes.py#sha256:a5733a0e84b484c06f89b7a5f55d09053de3153a38e444bbf0188ff4c319fa4d"
-  - "repo:tests/conformance/lanes.toml#sha256:349696c999a586da7393729fafd99480216b36e8f12ac41719e7d7f926fc0f45"
-  - "repo:tests/conformance/test_connected_setup_lifecycle.py#sha256:3209668a474ee06f54bb75cc383d34e64ad3c5fee15f2662b5a4163fff7e510e"
-  - "repo:tests/conformance/test_phase4_contracts.py#sha256:931a18a69a2f065109133c25ad954e8214f4635ee2685f412343354a8f34e396"
+  - "repo:docs/guides/test-lanes.md#sha256:f411a47fa291833172ecf56219e0446b806b84c49206ceed926279bf27d17141"
+  - "repo:scripts/test-lanes.py#sha256:5bc7694c5e1f399880069d16edbde37b85c741dadc5d6252892ebd5142cea8b1"
+  - "repo:scripts/test_artifacts.py#sha256:d5aa3c82a7d7aaf76eee072ac675ed8d04990aed61451e329bfdf798f9e88785"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:42a2bacfb28c1ee12a73765d027cfb74b7ad786b659d12dbffc098337e09d62c"
+  - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:f74ae9ecf4d442e4171b4f0b28bb4d2a7ad75167858d8cba436e9710021e12ab"
+  - "repo:tests/conformance/lanes.toml#sha256:93e76445bea9525d2073fb9a097f30f3ce77e3d25e7940bc75d2df99282e24ea"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:3b4d6d23c679eec9e23f334dc60a2678b657345e"
+reviewed_revision: "git:571467bb776b86bed509a06cdb6744434b067993"
 status: active
 ---
 
 # Test Lane Inventory
 
-`tests/conformance/lanes.toml` assigns every `test_*.py` module once to documentation, security,
-contract, integration, or release. `scripts/test-lanes.py` rejects omissions and duplicates,
-runs selected lanes, and records elapsed time. Consumer fixtures use ignored `tests/work/` roots;
-Phase 4 no longer creates `tests/hive-phase4-*` beside tracked tests.
+Python tests and fixtures use purpose-based packages instead of phase directories.
+`tests/conformance/lanes.toml` assigns every recursive `test_*.py` module once to documentation,
+security, contract, integration, or release. The runner rejects omissions and duplicates, selects
+lanes from changed paths, and can write module timing JSON. Test commands record durable Markdown
+evidence before their generated output can become eligible for cleanup. Stability and historical
+upgrade tests remain; no test or fixture was deleted during the reorganization.

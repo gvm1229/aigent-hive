@@ -8,6 +8,10 @@
 named developer branch 유지 없음.
 기본 정책에서 다른 purpose, feature, snapshot branch 생성 금지.
 
+명시 승인 예외 branch: 작업 성격 접두사 사용. `feature/`, `fix/`, `release/`, `docs/`,
+`test/`, `refactor/`, `build/`, `chore/` 중 가장 좁은 분류 선택. agent·model·assistant·사람
+이름 접두사 사용 금지.
+
 `staging`: 정식 릴리스 계획에서 별도 사전 운영 환경이 필요하고 사용자가 승인한 경우만
 생성. 생성 시 Pull Request·필수 상태 검사·삭제 차단·force-push 차단의 엄격한
 ruleset 적용.

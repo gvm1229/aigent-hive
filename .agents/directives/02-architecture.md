@@ -1,76 +1,73 @@
 # 02. Architecture Directive
 
-This directive protects Aigent Hive's product boundaries.
+Owns runtime, orchestration, artifact, Skill, and canonical-data boundaries. Filesystem mutation
+and credential handling procedures belong to `05-security-safety.md`.
 
-## Artifact Classes
+## Artifact boundary
 
-Maintain three distinct artifact classes:
+Keep three classes separate:
 
-1. **Hive source workspace** — this repository's Rust source, templates, schemas, tests, directives, and documentation.
-2. **Release bundle** — reproducible binaries plus versioned template/projection data and verification metadata.
-3. **Installed harness** — files generated inside an independent consumer project.
+1. Hive source workspace: this repository's source, tests, directives, and documentation
+2. Release bundle: reproducible binaries and versioned projections
+3. Installed harness: generated files in an independent consumer project
 
-Never import installed consumer state back into source, copy source-development directives into a consumer harness, or store user data in a plugin cache or release directory.
+Never import installed consumer state into source, ship source-development directives, or store
+user data in a release or plugin cache. `harness/` is the only canonical consumer template and
+Skill source; host-specific files remain thin projections.
 
-## Runtime Boundary
+## Runtime and orchestration
 
-- Hive runs locally on top of an already authenticated subscription host.
-- Hive must not call Anthropic, OpenAI, Google, or other model APIs.
-- Hive must not request, read, store, or forward provider API keys.
-- The active host owns model calls and model/subagent processes and consumes Hive-produced declarative execution envelopes.
-- Hive owns setup, deterministic projection, Markdown data contracts, SQLite indexing, validation, migration, update safety, iterative execution judgment, logical scheduling, leases, receipts, cancellation, team coordination, and multi-goal state.
-- Hive orchestration must remain a local deterministic control plane, not a provider client, model runtime, process launcher, or opaque session daemon.
+- Hive runs on an authenticated subscription host. It must not call a model-provider API, request
+  provider credentials, or launch a model/subagent process.
+- The active vector plan permits a separately consented, non-generative local embedding indexer.
+  This narrow indexing exception does not authorize prompts, text generation, or agent execution.
+- The host owns model calls and processes. Hive owns deterministic setup, canonical state,
+  projection, indexing, validation, migration, scheduling, leases, receipts, cancellation,
+  recovery, Judge contracts, and rollback.
+- Implement Hive-native iterative planning, bounded retry, logical scheduling, team coordination,
+  and multi-goal execution through provider-neutral state machines, Skills, and declarative
+  execution envelopes.
+- Keep a new orchestration capability default-off until the host proves envelope consumption,
+  typed receipts, cancellation, and safe reclaim. Unsupported or unverified capability returns a
+  truthful result; uncertain launch remains `dispatch-uncertain`.
+- Never claim exactly-once dispatch without a qualified receipt and idempotency contract.
+- Bind mutation to exact target, event head, control epoch, request digest, and authenticated
+  single-action authority. Ambient session pointers are selectors, never authority.
+- Keep status, cancellation, recovery, and usage control addressable by exact ID without scheduler
+  locks. Emergency cancellation uses its separately authenticated bounded recovery path.
+- Optional host hooks require supported exact events, capability preview, scoped authority, exact
+  revision, one-time binding, and explicit approval. A hook never derives authority from transcript,
+  current directory, or ambient pointer.
 
-## Orchestration Boundary
+## External-owner compatibility
 
-- Implement Hive-native iterative planning, bounded retry, logical scheduling, team coordination, and multi-goal execution as provider-neutral state machines and Skills.
-- Keep new orchestration capability default-off until the relevant host proves envelope consumption, typed receipts, cancellation, and safe reclaim behavior. An unsupported capability produces a truthful unsupported or `dispatch-uncertain` result, never an automatic backend switch.
-- Do not select, invoke, install, or configure OMX/OMC for a new workflow. Preserve legacy `.omx/.omc` bytes and pinned owner metadata as foreign read-only provenance.
-- Migrate a legacy external-owner run only through an explicit validated command that creates a new Hive-native run identity and leaves the original owner and bytes unchanged.
-- Treat ambient or selected session pointers as selectors only, never mutation authority. Bind every state mutation to the exact target, expected event head, control epoch, request digest, and authenticated single-action authority.
-- Keep status, cancellation, recovery, and usage-guard control reachable by exact ID without scheduler locks or selected-session pointers. Normal cancellation commits through the canonical event head; corrupt-head emergency cancellation uses a separately authenticated bounded recovery path.
-- An optional host lifecycle hook requires a supported exact event, capability preview, scoped authority, exact run revision, one-time action binding, and explicit user approval. Never infer authority from a pointer, transcript, current directory, or hook session selection.
-- Never claim exactly-once dispatch without a qualified host receipt and idempotency contract. When launch status cannot be proven, stop at `dispatch-uncertain` and require proof-gated recovery.
+- Do not select, invoke, install, or configure OMX/OMC for a new workflow.
+- Preserve legacy `.omx/.omc` bytes and pinned owner metadata as foreign read-only provenance.
+- Migrate legacy work only through an explicit validated action that creates a new Hive-native run
+  identity and leaves the old owner and bytes unchanged.
+- Never switch an existing run owner or silently substitute another runtime.
 
-## Skill Routing Boundary
+## Skill boundary
 
-- Classify knowledge routes before tool selection. A root containing `hive-source.json` owns the
-  tracked Source Wiki route, including `hive source-wiki query --target <source-root>`, and must
-  never be supplied as the target of consumer `hive knowledge retrieve`. Consumer retrieval
-  requires a separate, attached consumer project. Do not convert a source-root refusal into a
-  skipped or successful knowledge preflight.
-- Use Skill descriptions and compact routing directives for semantic task-to-Skill selection; do not build a duplicate prompt-classifier hook.
-- Let host-native discovery and narrow Hive Skill descriptions route work into Hive-owned iterative, team, multi-goal, planning, verification, setup, knowledge, migration, and update workflows.
-- Do not route new work to OMX/OMC Skills. A legacy external artifact may be inspected only through an explicit migration or recovery contract that preserves foreign bytes.
-- Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
-- Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
-- Keep every reusable product workflow canonical under `harness/skills/<consumer-name>/` and use the installed product namespace in source development. The explicit maintainer-authorized source-project-only exception is `.agents/skills/update-summary/`; it is nonshipping and must not enter a product catalog, release bundle, or consumer projection. Source-root, usage-gate, and mutation boundaries otherwise belong in repository directives, not a second source Skill inventory.
-- Apply every approved Hive-owned Skill rename to the complete installed-product inventory in one
-  reviewed migration. The source workspace has no active product Skill IDs; the nonshipping
-  `update-summary` source-project Skill is an explicit maintainer exception. Repository directives own its
-  additional constraints. Record each replaced product ID and its scope in the transitive rename
-  ledger, and update routing metadata, references, and conformance tests together. Historical
-  release bases remain immutable.
-- A consumer Skill reused in source must not require project `.hive/` state, mutate an installed project harness, weaken source-root refusal, or bypass the installed product usage guard. Adapt the provider-neutral workflow or core primitive instead of copying project state assumptions.
-- Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
+- Use narrow descriptions and host-native discovery; do not add a duplicate prompt-classifier hook.
+- Keep Hive execution Skills declarative. They may validate state and prepare envelopes, but never
+  call a provider or launch a process.
+- Keep reusable product Skills under `harness/skills/<name>/`. The explicit source-project-only
+  exceptions are `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/`; both are
+  nonshipping and do not create a general source Skill inventory.
+- Reuse a consumer workflow in source only after scope, consent, safety, and conformance review.
+  Never copy installed project state or weaken source-root, usage, or mutation boundaries.
+- Apply a Skill rename through the complete current inventory and transitive rename ledger in one
+  reviewed migration. Historical release bases remain immutable.
+- Load the smallest relevant approved Skill set. Simple questions load no unrelated Skill.
 
-## Canonical Data
+## Canonical data
 
-- Knowledge, role identity, run state, plans, status, and evidence manifests are canonical Markdown.
-- Setup answers, typed configuration, approval ledgers, and suppression fingerprints are canonical tracked YAML/TOML.
-- Raw source objects may retain their original non-Markdown format when small, non-confidential, and Git-suitable.
-- SQLite is a derived local index and may be deleted at any time.
-- No durable fact may exist only in SQLite.
-- A clean checkout containing the canonical tracked Markdown/YAML/TOML and source objects must be sufficient to rebuild the index without a model call or network request.
-- Source Wiki facts are canonical tracked Markdown under `docs/facts/en/` and
-  `docs/facts/ko/`. Keep one primary fact per exact bilingual pair and connect it to the
-  human-readable `docs/` graph.
-- Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/` for source knowledge.
-  Keep the source Wiki SQLite projection ignored under `.agents/work/source-wiki/`.
-
-## Source Layout
-
-- Root `.agents/` governs Hive development and is never a shipping source.
-- `harness/` is the only canonical source for consumer templates, portable skills, and host projections.
-- Host-specific files must be thin projections from provider-neutral contracts.
-- Do not create empty crates or adapters that imply unsupported functionality.
+- Markdown owns knowledge, roles, plans, run status, and evidence.
+- Tracked typed YAML/TOML owns setup, approval, and suppression authority.
+- SQLite is disposable and rebuildable without model or network access; no fact may exist only in
+  SQLite.
+  This invariant applies to canonical FTS. An optional derived vector index may use the approved
+  local embedding indexer; its absence must not affect FTS or canonical knowledge.
+- Source facts live as exact bilingual pairs under `docs/facts/en/` and `docs/facts/ko/`.
+- Never use OMX Wiki or consumer `.hive/knowledge/` as source knowledge.

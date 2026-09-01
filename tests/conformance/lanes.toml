@@ -6,12 +6,14 @@ owner = "documentation"
 contract = "human documentation, local verification command, and developer-install guidance"
 release_gate = true
 modules = [
-  "tests.conformance.test_dev_check",
-  "tests.conformance.test_dev_install_script",
-  "tests.conformance.test_docs_wiki",
-  "tests.conformance.test_human_documentation_style",
-  "tests.conformance.test_markdown_links",
-  "tests.conformance.test_test_lanes",
+  "tests.conformance.documentation.test_dev_check",
+  "tests.conformance.documentation.test_dev_install_script",
+  "tests.conformance.documentation.test_docs_wiki",
+  "tests.conformance.documentation.test_human_documentation_style",
+  "tests.conformance.documentation.test_markdown_links",
+  "tests.conformance.documentation.test_public_stable_docs",
+  "tests.conformance.documentation.test_test_lanes",
+  "tests.conformance.documentation.test_test_artifacts",
 ]
 
 [lanes.security]
@@ -19,9 +21,9 @@ owner = "platform-safety"
 contract = "installed usage guard and hostile ownership boundaries"
 release_gate = true
 modules = [
-  "tests.conformance.test_phase1_ownership_hostile",
-  "tests.conformance.test_phase1_security",
-  "tests.conformance.test_usage_guard",
+  "tests.conformance.security.test_ownership_hostile",
+  "tests.conformance.security.test_setup_security",
+  "tests.conformance.security.test_usage_guard",
 ]
 
 [lanes.contract]
@@ -29,26 +31,34 @@ owner = "harness-core"
 contract = "CLI capabilities, setup schema, Skills, projections, roles, scheduling, and result contracts"
 release_gate = true
 modules = [
-  "tests.conformance.test_phase1_capabilities",
-  "tests.conformance.test_phase1_exit_contract",
-  "tests.conformance.test_phase1_fixtures",
-  "tests.conformance.test_phase1_regressions",
-  "tests.conformance.test_phase1_roles_parity",
-  "tests.conformance.test_phase1_setup",
-  "tests.conformance.test_phase1_stage2_gates",
-  "tests.conformance.test_phase3_projections",
-  "tests.conformance.test_phase3_prompt_refine",
-  "tests.conformance.test_phase3_routing",
-  "tests.conformance.test_phase3_static_contracts",
-  "tests.conformance.test_phase4_contracts",
-  "tests.conformance.test_phase5_judge",
-  "tests.conformance.test_phase7_usage_control",
-  "tests.conformance.test_v09_action_result_actions",
-  "tests.conformance.test_v09_hive_skills",
-  "tests.conformance.test_v09_host_native_contract",
-  "tests.conformance.test_v09_knowledge_schemas",
-  "tests.conformance.test_native_orchestration_feasibility",
-  "tests.conformance.test_v09_skill_inventory",
+  "tests.conformance.contracts.test_capabilities",
+  "tests.conformance.contracts.test_cli_exit_contract",
+  "tests.conformance.contracts.test_setup_fixtures",
+  "tests.conformance.contracts.test_setup_regressions",
+  "tests.conformance.contracts.test_role_projection_parity",
+  "tests.conformance.contracts.test_setup",
+  "tests.conformance.contracts.test_setup_ownership_gates",
+  "tests.conformance.contracts.test_skill_projections",
+  "tests.conformance.contracts.test_prompt_refinement",
+  "tests.conformance.contracts.test_skill_routing",
+  "tests.conformance.contracts.test_static_contracts",
+  "tests.conformance.contracts.test_run_role_contracts",
+  "tests.conformance.contracts.test_source_draft_devlog",
+  "tests.conformance.contracts.test_judge_contracts",
+  "tests.conformance.contracts.test_korean_language_core",
+  "tests.conformance.contracts.test_usage_control",
+  "tests.conformance.contracts.test_vector_feasibility",
+  "tests.conformance.contracts.test_vector_requalification",
+  "tests.conformance.contracts.test_vector_runtime",
+  "tests.conformance.contracts.test_vector_parent",
+  "tests.conformance.contracts.test_vector_onboarding",
+  "tests.conformance.contracts.test_action_result_contracts",
+  "tests.conformance.contracts.test_hive_skills",
+  "tests.conformance.contracts.test_host_capabilities",
+  "tests.conformance.contracts.test_knowledge_schemas",
+  "tests.conformance.contracts.test_knowledge_graph_contracts",
+  "tests.conformance.contracts.test_native_orchestration_feasibility",
+  "tests.conformance.contracts.test_skill_inventory",
 ]
 
 [lanes.integration]
@@ -56,13 +66,14 @@ owner = "consumer-lifecycle"
 contract = "clean user lifecycle, setup preservation, knowledge, project lifecycle, and source Wiki behavior"
 release_gate = true
 modules = [
-  "tests.conformance.test_connected_setup_lifecycle",
-  "tests.conformance.test_phase2_wiki",
-  "tests.conformance.test_project_lifecycle",
-  "tests.conformance.test_root_knowledge_promotion",
-  "tests.conformance.test_shared_knowledge_index",
-  "tests.conformance.test_source_wiki",
-  "tests.conformance.test_v09_wiki_cli_e2e",
+  "tests.conformance.integration.test_connected_setup_lifecycle",
+  "tests.conformance.integration.test_wiki_lifecycle",
+  "tests.conformance.integration.test_project_lifecycle",
+  "tests.conformance.integration.test_root_knowledge_promotion",
+  "tests.conformance.integration.test_shared_knowledge_index",
+  "tests.conformance.integration.test_source_wiki",
+  "tests.conformance.integration.test_vector_cli",
+  "tests.conformance.integration.test_wiki_cli_e2e",
 ]
 
 [lanes.release]
@@ -70,12 +81,16 @@ owner = "release-engineering"
 contract = "package layout, signed update behavior, and public update discovery"
 release_gate = true
 modules = [
-  "tests.conformance.test_historical_project_bases",
-  "tests.conformance.test_project_base_coverage",
-  "tests.conformance.test_npm_packaging",
-  "tests.conformance.test_phase6_update",
-  "tests.conformance.test_release_notes",
-  "tests.conformance.test_release_qualification_order",
-  "tests.conformance.test_stable_release_discord_notification",
-  "tests.conformance.test_update_discovery",
+  "tests.conformance.release.test_historical_project_bases",
+  "tests.conformance.release.test_project_base_coverage",
+  "tests.conformance.release.test_npm_packaging",
+  "tests.conformance.release.test_update_migration",
+  "tests.conformance.release.test_release_notes",
+  "tests.conformance.release.test_public_test_acceptance",
+  "tests.conformance.release.test_vector_runtime_acceptance",
+  "tests.conformance.release.test_release_qualification_order",
+  "tests.conformance.release.test_stable_release_discord_notification",
+  "tests.conformance.release.test_test_release_gate",
+  "tests.conformance.release.test_stable_skill_ledger",
+  "tests.conformance.release.test_update_discovery",
 ]

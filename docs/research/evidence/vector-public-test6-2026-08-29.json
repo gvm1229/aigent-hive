@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "product_version": "0.10.0",
+  "package_version": "0.10.0-test.6",
+  "release_date": "2026-08-29",
+  "source_commit": "d331dc879cf51eab078c5e189b2fe7b8d729e541",
+  "ci_run": 33190877319,
+  "candidate_run": 33191658413,
+  "publication_run": 33193036233,
+  "public_acceptance_run": 33193323751,
+  "publication_status": "passed",
+  "public_acceptance_status": "passed",
+  "registry": {
+    "latest": "0.9.5",
+    "test": "0.10.0-test.6",
+    "package_sha1": "b18bbea1ecccae933f57018e25d3fd9bd6b3b978",
+    "package_integrity": "sha512-V5/HWmXUa2B+0mZQcJLPcJehmhi8jI5atZPCOxEftVgoFNqPx7up22aG+512NmzkC7rmYWMyp/3i+8R8LfEMng=="
+  },
+  "github_release": {
+    "tag": "v0.10.0-test.6",
+    "draft": false,
+    "prerelease": true,
+    "target_commit": "d331dc879cf51eab078c5e189b2fe7b8d729e541"
+  },
+  "identity_binding": "The public-test workflow verifies exact npm version, test/latest tags, public Git tag product tree and exact installed platform binary before calling the standalone vector runner. Its public-package-identity limitation is covered by this outer workflow, not by rewriting the raw receipt.",
+  "local_windows": {
+    "rust_passed": 893,
+    "rust_manual_ignored": 4,
+    "python_total": 789,
+    "python_passed": 748,
+    "python_platform_skipped": 41,
+    "python_missing": 0,
+    "python_failed": 0
+  },
+  "scope_limits": [
+    "Stress performance and private/confidential isolation use separate preserved Windows evidence; this public matrix is functional acceptance, not a new 50k measurement.",
+    "Portability verifies identical canonical bytes in a fresh local root on each OS, not transfer of one bundle between physical computers.",
+    "Unix native-model parent cancellation and atomic Windows spawn-to-Job assignment are not established by these public receipts.",
+    "Stable release is not authorized; no stable publication or main integration."
+  ],
+  "platforms": [
+    {
+      "source_worktree_dirty": false,
+      "portability": {
+        "imported_wiki_byte_equal": true,
+        "vector_artifacts_imported": 0,
+        "fresh_embedded": 8,
+        "scope": "fresh local root, not another physical computer"
+      },
+      "shared_vectors": {
+        "collections": 3,
+        "chunks": 24,
+        "incremental_embedded": 1,
+        "canonical_and_fts_preserved": true
+      },
+      "source_vectors": {
+        "chunks": 81,
+        "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+        "canonical_and_fts_preserved": true,
+        "initial_resume_observed": true,
+        "fresh_repetitions": [
+          {
+            "complete": true,
+            "resume_observed": true
+          },
+          {
+            "complete": true,
+            "resume_observed": true
+          }
+        ],
+        "limit": "observed bounded resume only; not forced process death or proof that the earlier macOS failure cannot recur"
+      },
+      "platform": "macOS-15.7.7-arm64-arm-64bit-Mach-O",
+      "source_commit": "d331dc879cf51eab078c5e189b2fe7b8d729e541",
+      "receipt_sha256": "ca3de4d386b8f0164be47b290f46859153196ca9311eae8cca1740906b866617",
+      "receipt": "tests/work/scope-audit-20260828/test6-public-acceptance/korean-public-test-darwin-arm64/aigent-hive/aigent-hive/tests/work/vector-native-2gxp5_0r/receipt.json",
+      "proven": [
+        "missing fallback",
+        "exact consent",
+        "native embedding and sqlite-vec",
+        "semantic citations",
+        "unchanged reuse",
+        "rollback",
+        "corruption fallback",
+        "disable",
+        "FTS preservation",
+        "bundle excludes vector artifacts",
+        "fresh-root import and vector rebuild",
+        "shared vector windows",
+        "source vector lifecycle"
+      ],
+      "machine": "arm64",
+      "status": "passed",
+      "binary_sha256": "74cb912089cd280ba729b52275f1e0bed29f4a9f45a241b6974b98df16a7be23",
+      "inner_runner_limits": [
+        "50k performance",
+        "private/confidential isolation",
+        "parent cancellation",
+        "public package identity"
+      ],
+      "protected_bytes_preserved": true,
+      "assigned_windows_child_cancelled": false
+    },
+    {
+      "source_worktree_dirty": false,
+      "portability": {
+        "imported_wiki_byte_equal": true,
+        "vector_artifacts_imported": 0,
+        "fresh_embedded": 8,
+        "scope": "fresh local root, not another physical computer"
+      },
+      "shared_vectors": {
+        "collections": 3,
+        "chunks": 24,
+        "incremental_embedded": 1,
+        "canonical_and_fts_preserved": true
+      },
+      "source_vectors": {
+        "chunks": 81,
+        "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+        "canonical_and_fts_preserved": true,
+        "initial_resume_observed": true,
+        "fresh_repetitions": [
+          {
+            "complete": true,
+            "resume_observed": true
+          },
+          {
+            "complete": true,
+            "resume_observed": true
+          }
+        ],
+        "limit": "observed bounded resume only; not forced process death or proof that the earlier macOS failure cannot recur"
+      },
+      "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+      "source_commit": "d331dc879cf51eab078c5e189b2fe7b8d729e541",
+      "receipt_sha256": "3c8ff5fe2a677ee8f3f68efaf9d4a853ce6ff9d33ae3dac14f2c3fa391169deb",
+      "receipt": "tests/work/scope-audit-20260828/test6-public-acceptance/korean-public-test-linux-x64/aigent-hive/aigent-hive/tests/work/vector-native-kt0dwt10/receipt.json",
+      "proven": [
+        "missing fallback",
+        "exact consent",
+        "native embedding and sqlite-vec",
+        "semantic citations",
+        "unchanged reuse",
+        "rollback",
+        "corruption fallback",
+        "disable",
+        "FTS preservation",
+        "bundle excludes vector artifacts",
+        "fresh-root import and vector rebuild",
+        "shared vector windows",
+        "source vector lifecycle"
+      ],
+      "machine": "x86_64",
+      "status": "passed",
+      "binary_sha256": "331da5c12f59b65f41a9038d39729fd93791d92a46fbd933eb641bd61e2e7248",
+      "inner_runner_limits": [
+        "50k performance",
+        "private/confidential isolation",
+        "parent cancellation",
+        "public package identity"
+      ],
+      "protected_bytes_preserved": true,
+      "assigned_windows_child_cancelled": false
+    },
+    {
+      "source_worktree_dirty": false,
+      "portability": {
+        "imported_wiki_byte_equal": true,
+        "vector_artifacts_imported": 0,
+        "fresh_embedded": 8,
+        "scope": "fresh local root, not another physical computer"
+      },
+      "shared_vectors": {
+        "collections": 3,
+        "chunks": 24,
+        "incremental_embedded": 1,
+        "canonical_and_fts_preserved": true
+      },
+      "source_vectors": {
+        "chunks": 81,
+        "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+        "canonical_and_fts_preserved": true,
+        "initial_resume_observed": true,
+        "fresh_repetitions": [
+          {
+            "complete": true,
+            "resume_observed": true
+          },
+          {
+            "complete": true,
+            "resume_observed": true
+          }
+        ],
+        "limit": "observed bounded resume only; not forced process death or proof that the earlier macOS failure cannot recur"
+      },
+      "platform": "Windows-2025Server-10.0.26100-SP0",
+      "source_commit": "d331dc879cf51eab078c5e189b2fe7b8d729e541",
+      "receipt_sha256": "37b280c965965e0aaff4741718423d910b932fc1ca086ef95bf9e1779d6b1a67",
+      "receipt": "tests/work/scope-audit-20260828/test6-public-acceptance/korean-public-test-win32-x64/aigent-hive/aigent-hive/tests/work/vector-native-q9pushul/receipt.json",
+      "proven": [
+        "missing fallback",
+        "exact consent",
+        "native embedding and sqlite-vec",
+        "semantic citations",
+        "unchanged reuse",
+        "rollback",
+        "corruption fallback",
+        "disable",
+        "FTS preservation",
+        "bundle excludes vector artifacts",
+        "fresh-root import and vector rebuild",
+        "shared vector windows",
+        "source vector lifecycle",
+        "assigned Windows native worker cancellation and trusted recovery"
+      ],
+      "machine": "AMD64",
+      "status": "passed",
+      "binary_sha256": "6dcb7004e0c9eab9903be06724ffd3c8f2ac589a1b2731aac1cbe12addacb363",
+      "inner_runner_limits": [
+        "50k performance",
+        "private/confidential isolation",
+        "public package identity",
+        "Unix native-model parent cancellation",
+        "atomic process creation and Job assignment"
+      ],
+      "protected_bytes_preserved": true,
+      "assigned_windows_child_cancelled": true
+    }
+  ]
+}

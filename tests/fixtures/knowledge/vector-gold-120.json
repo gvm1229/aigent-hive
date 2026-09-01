@@ -1,0 +1,1117 @@
+{
+  "schema_version": 1,
+  "documents": [
+    {
+      "id": "adversarial-judge",
+      "text": "adversarial-judge\nAdversarial Judge Skill\n# Adversarial Judge Skill\n\n`adversarial-judge` prepares a clean-context request and provider-neutral dispatch envelope. The\nactive host launches the separate Judge. Read-only `hive judge receipt` binds the host launch and\nresult to the exact package, assignment, slot, Judge identity, model, effort, and verdict digest.\nFindings remain diagnostic until the existing authenticated quorum authorizes acceptance. Hive\nnever calls a provider or spawns a process."
+    },
+    {
+      "id": "agent-autonomous-continuation",
+      "text": "agent-autonomous-continuation\nAgent Autonomous Continuation\n# Agent Autonomous Continuation\n\nSource and consumer agents must continue while an independent in-scope action remains. A partial\nhost, fixture, or external-evidence failure stays with its criterion and cannot block a whole Goal\nor task. Stable tag, protected-branch integration, publication, and installation require explicit\nauthorization of the named stable version in the current request."
+    },
+    {
+      "id": "agent-directive-ownership",
+      "text": "agent-directive-ownership\nAgent Directive Ownership\n# Agent Directive Ownership\n\nThe source `AGENTS.md` and consumer `AGENTS.md` projection are small routers. Detailed rule\nfamilies have one canonical directive owner, while generated entrypoints keep only approved\nsummaries. A static gate verifies byte budgets, route targets, current projection parity, and\nnon-allowlisted normalized rule duplicates. Historical project and user bases remain immutable.\nStable publication still requires explicit approval for the named version."
+    },
+    {
+      "id": "artifact-boundaries",
+      "text": "artifact-boundaries\nArtifact Boundaries\n# Artifact Boundaries\n\nHive keeps the source workspace, reproducible release bundle, and installed consumer\nharness physically and logically separate. Source-development directives never ship\nas consumer instructions."
+    },
+    {
+      "id": "automated-user-handoff",
+      "text": "automated-user-handoff\nAutomated Work Before User Handoff\n# Automated Work Before User Handoff\n\nSource agents and installed consumer harnesses finish every safe, authorized,\nin-scope automatable action before presenting pending work. The handoff contains\nonly user-owned steps, each with the exact location or command, expected result\nor evidence, and the reason user authority is required. Failures and impossible\nactions are separated with their cause and recovery path. Acceptance requires\nmatching source and consumer projections plus regression tests. Origin: the\nmaintainer requested actionable guidance instead of a bare pending-task list."
+    },
+    {
+      "id": "automatic-dispatch-guard",
+      "text": "automatic-dispatch-guard\nAutomatic Dispatch Guard\n# Automatic Dispatch Guard\n\n`hive usage enforce` is a session-bound preflight immediately before a new automatic\ndispatch. Exit success does not authorize dispatch; a separate durable-run resume must\nissue and consume one exact authorization for one brief."
+    },
+    {
+      "id": "automatic-user-projection-refresh",
+      "text": "automatic-user-projection-refresh\nAutomatic User Projection Refresh\n# Automatic User Projection Refresh\n\nThe direct update refresher requires `InstallHiveUser` for `--apply` and `ValidateHiveUser` for\n`--validate`. Public `test.14 → test.15` on M2 macOS recorded the version transition and every\nuser setup, installation, validation, update-check, update, and final validation result."
+    },
+    {
+      "id": "consumer-session-coordination",
+      "text": "consumer-session-coordination\nConsumer Session Coordination\n# Consumer Session Coordination\n\n`hive session begin|check|update|close|recover` keeps ephemeral, Git-ignored path reservations\nunder `.hive/runtime/active-sessions/`. Parent, child, and identical paths conflict across live Hive\nsessions; direct user or external-editor writes remain outside Hive control. Project upgrades preview\nand apply only a directly conflicting Hive-owned directive clause, preserving user-authored, foreign,\nand non-conflicting local bytes.\n\n`0.10.0`: Codex·Antigravity `.agents/skills/<safe-skill>/...`, Claude\n`.claude/skills/<safe-skill>/...` reservation. A host mismatch returns\n`hive.session-host-owned-namespace`; recovery advice is only for live or unverifiable reservations."
+    },
+    {
+      "id": "crate-ownership",
+      "text": "crate-ownership\nRust Crate Ownership\n# Rust Crate Ownership\n\n`hive-core` owns invariants and the planned provider-neutral orchestration reducer\nand logical scheduler. `hive-render` owns deterministic projection, `hive-wiki`\nMarkdown and SQLite knowledge, `hive-projection` Skill routing, `hive-update`\nverification and migration, and `hive-cli` command adapters."
+    },
+    {
+      "id": "dev-check-platform-path",
+      "text": "dev-check-platform-path\nDev-check Platform PATH\n# Dev-check Platform PATH\n\nThe pre-push runner derives each resolved tool directory with string-based OS path\noperations before extending `PATH`. This keeps Windows-mode verification runnable on\nnon-Windows hosts where constructing a `WindowsPath` is unsupported. Acceptance requires\nthe `test_dev_check` suite, including the mocked Windows default mode, to pass. The rule\nwas recorded while qualifying publication of the user-requested Hive-native orchestration plan."
+    },
+    {
+      "id": "developer-binary-lifecycle",
+      "text": "developer-binary-lifecycle\nDeveloper Binary Lifecycle\n# Developer Binary Lifecycle\n\n`scripts/dev-install.sh --sandbox` builds a source-local `product-dev` binary. `--global`\nbacks up and atomically replaces the existing active Hive executable; `--rollback` restores that\nexecutable only while the active developer digest still matches. These paths do not initialize,\ndelete, migrate, or otherwise change canonical user preferences, knowledge, index, directives,\nSkills, or project `.hive` data. A local binary prints `local developer build`, never the public\n`developer test build` identity. Only a local `-dev` binary may use an internally reproducible\nprior user manifest plus matching live managed bytes as its projection-refresh base. Public stable\nand test releases keep the signed historical-base requirement and fail closed when it is missing."
+    },
+    {
+      "id": "docs-wiki-architecture",
+      "text": "docs-wiki-architecture\nDocs Wiki Architecture\n# Docs Wiki Architecture\n\n`docs/` is one Wiki graph with a home, complete index, topic maps, human-readable\narchitecture and guides, and bilingual atomic facts under `docs/facts/`.\nThe former standalone source Wiki layout and name are absent from tracked source;\nthe current CLI, Skills, tests, and index use `docs/facts/`.\nAutomatic source-workspace lookup uses `hive source-wiki query` after detecting\n`hive-source.json`; consumer `hive knowledge retrieve` is limited to an attached external project.\nCurrent execution loads `PLAN.md`, `CURRENT.md`, and only the owning active fragment.\nVersion-unbound candidates stay in `docs/plans/backlog/`; completed or superseded records stay in\n`docs/archive/` and are excluded from automatic task context and current-document checks."
+    },
+    {
+      "id": "git-worktree-lifecycle",
+      "text": "git-worktree-lifecycle\nTemporary Git Worktree Lifecycle\n# Temporary Git Worktree Lifecycle\n\nOrdinary work uses one primary worktree. Create another only for a workload that needs parallel\nindependent changes and cannot safely run in sequence. Record its ownership and removal boundary.\nRemove it immediately after its commits are reachable, verification passes, and no uncommitted or\nunpushed required work remains. Force removal and primary-worktree removal are prohibited."
+    },
+    {
+      "id": "global-knowledge-bundle-transfer",
+      "text": "global-knowledge-bundle-transfer\nGlobal Knowledge Bundle Transfer\n# Global Knowledge Bundle Transfer\n\n`--user-root` is the user home directory, not `.hive`. Use the macOS/Linux or Windows\nshell example that matches the host. Verify SHA-256 and a conflict-free `--dry-run` before\n`--apply`. Bundles contain portable Markdown only: no SQLite index, runtime state,\nproject-private knowledge, credentials, or absolute paths."
+    },
+    {
+      "id": "global-knowledge-rag",
+      "text": "global-knowledge-rag\nGlobal Knowledge RAG\n# Global Knowledge RAG\n\nCanonical remember, retrieval, and idempotency work. `0.9.0-test.16` ships the generated English\nand Korean guidance, Copier projection, plugin metadata, and catalog description requiring scope\nclassification, exactly one safe `remember` call, and a Markdown/index receipt; disabled Wiki\nguidance rejects writes. Windows user installation and static installed guidance passed. Fresh\nWindows Codex write-and-recall acceptance and replacement stable qualification remain release gates."
+    },
+    {
+      "id": "global-onboarding",
+      "text": "global-onboarding\nGlobal Onboarding\n# Global Onboarding\n\n- The usage guard is recommended; expedited setup uses 20% remaining, and custom setup asks.\n- CodexBar stays hidden until a post-initialization native failure is confirmed.\n- Setup, update, and uninstall converge to the current Skill closure, remove retired empty shells,\n  and preserve knowledge, preferences, and foreign bytes."
+    },
+    {
+      "id": "global-user-contexts",
+      "text": "global-user-contexts\nGlobal User Contexts\n# Global User Contexts\n\nGlobal setup stores any combination of web development, game development, and general knowledge\nwork, plus an optional short description. They describe the user, never a project workflow,\nimplementation choice, delivery priority, or Skill selection.\n\nAll built-in Skills are the default; users may instead toggle individual Skills. A saved legacy\nsingle profile migrates to its matching context; a legacy custom profile retains its description.\nKorean setup keeps `Skill`, `Wiki`, and host names as product terms: never translate `Skill` as `기술`."
+    },
+    {
+      "id": "graphify-0-10-adoption",
+      "text": "graphify-0-10-adoption\nGraphify 0.10 Adoption Decision\n# Graphify 0.10 Adoption Decision\n\nGraphify `0.9.47` passed repeated full code-graph builds and small Windows query performance.\nIncremental updates diverged from full regeneration, and the upstream global graph lacks Hive\ncollection isolation. The full knowledge-graph scope remains excluded. The approved `0.10.0`\nscope uses Hive-native Markdown relationships plus an optional full-rebuild Graphify code-only\nadapter. The adapter now requires exact consent, platform wheel lock, code-only receipt, grounded\nlocators, atomic generation activation, and native fallback. Cross-platform public acceptance\nremains pending."
+    },
+    {
+      "id": "historical-project-base-coverage",
+      "text": "historical-project-base-coverage\nHistorical Project Base Coverage\n# Historical Project Base Coverage\n\nThe `0.9.2` historical marker now renders its stored Markdown backend, and an upgrade records\ncurrent local overrides in one apply. A read-only PortareFolium copy passed scan, dry-run, apply,\nvalidate, local-marker preservation, foreign-byte preservation, and tampered-ledger no-mutation.\nPublic-artifact acceptance remains pending `0.9.5-test.4`."
+    },
+    {
+      "id": "hive-preserving-uninstall",
+      "text": "hive-preserving-uninstall\nHive Preserving Uninstall\n# Hive Preserving Uninstall\n\n- Remove Hive activation, projections, package state, indexes, backups, transactions, and runtime.\n- Preserve knowledge, saved preferences, and foreign bytes.\n- The `test.19` Mac audit found 44 retired empty `agents/` leaves and an empty transaction directory.\n- Install, update, and uninstall now prune authenticated Hive-owned empty ancestors leaf-to-root.\n- The exact 44-leaf fixture and the `0.9.1` Windows preserving reinstall both converged to zero\n  retired empty `agents/` leaves and zero empty transaction directories.\n- Keep `.hive/dev-install` as separate developer rollback state."
+    },
+    {
+      "id": "host-external-integrations",
+      "text": "host-external-integrations\nDiscord v0.9 and Notion v0.10 Host Integrations\n# Discord v0.9 and Notion v0.10 Host Integrations\n\nDiscord outbound notifications support a bounded, ordered field list in the selected language.\nTest and real alerts share a renderer, with a test notice before the real content. The real\ncontent uses blank-line-separated Markdown sections with emoji and bold titles:\nusage, task details, and a direct instruction for asking Hive to continue the task. It contains no\nunderlined text. A real halt reports safe project, run-title/checklist progress, host, and\nremaining usage without a raw prompt, session ID, absolute path, or credential. Global setup\nrecords only the webhook environment-variable name and resumable non-secret answers. Notion\nremains internal to v0.10; v0.9 excludes its OAuth tokens, webhook URLs, raw prompts, and\nabsolute paths."
+    },
+    {
+      "id": "host-neutral-continuation",
+      "text": "host-neutral-continuation\nHost-Neutral Continuation Gate\n# Host-Neutral Continuation Gate\n\nHive keeps run and closure decisions in provider-neutral Markdown. Read-only `hive run closure`\nreports matching plan and status criteria with a closure digest. A `blocked` or `usage-limited`\ncheckpoint must list every still-unpassed criterion as `blocked_criteria`; a partial list is\nrejected without a write. The host owns task execution. Hooks may provide one bounded nudge and\nmust not mutate host goals, tasks, or canonical run state."
+    },
+    {
+      "id": "hybrid-vector-search-0-10",
+      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nRequalification kept the 15-point semantic Recall@10 gain, 100% hybrid exact recall, and fast query\nembedding. Digest reuse built 50,000 repeated rows from 30 embeddings in 5.75 seconds. A 1,000-row\nprobe projected about 2,711 seconds for 50,000 unique chunks, above the 600-second gate. Resumable\nand incremental research paths passed, but the optional adapter stays deferred. FTS and graphs stay\nactive. No vector product dependency exists."
+    },
+    {
+      "id": "install-wide-knowledge-capture",
+      "text": "install-wide-knowledge-capture\nInstall-wide knowledge capture\n# Install-wide knowledge capture\n\n- Global Wiki user guidance reviews every turn in every selected-host folder after installation.\n- Project setup, a Hive harness, a marker, and an attached collection are not user-root capture\n  prerequisites.\n- Unregistered-target retrieval searches user-root and shared knowledge while excluding private\n  and confidential knowledge.\n- Capture is foreground, agent-reviewed, normalized, and bounded; no raw-prompt recorder.\n- `0.9.1` Windows acceptance: an ordinary PortareFolium career statement created a user-root claim\n  and receipt; a separate fresh Codex session recalled it automatically."
+    },
+    {
+      "id": "installed-usage-guard",
+      "text": "installed-usage-guard\nInstalled Guard Target Boundary\n# Installed Guard Target Boundary\n\n- Installed product: sole usage-guard implementation\n- Configured Hive project: `max(global, project)` and project-local session state\n- Aigent Hive source: global threshold·user-root runtime·source `.hive/` files `0건`\n- Non-Hive folder: enforcement·threshold mutation·session override·halt·runtime `0건`; setup-free Skills available\n- Session control: explicit configured target only; unrelated malformed graph `CURRENT.md` preserved and non-authoritative\n- Source task: one start preflight; Python watcher·repeated tool gate·removed source-guard CI `0건`"
+    },
+    {
+      "id": "interactive-binary-update",
+      "text": "interactive-binary-update\nInteractive Binary Update\n# Interactive Binary Update\n\nBare `hive update` requires an interactive terminal and uses the selected interface language.\nIt resolves npm `latest`, authenticates the running npm package manifest or direct receipt,\npreviews the exact owner adapter, installs only after explicit acceptance, and revalidates the\nactivated owner and version. A `0.9.0-test.N` owner remains valid for a later exact stable\n`0.9.0` update without losing ownership evidence. Decline, EOF, and noninteractive calls make no\ninstallation change."
+    },
+    {
+      "id": "judge-verification",
+      "text": "judge-verification\nJudge Verification Boundary\n# Judge Verification Boundary\n\nHive packages bounded evidence and verifies externally signed assignments, verdicts,\nand critical human approvals; it never owns private keys or signs artifacts. A loop\nJudge verifier must bind a v2 quorum request digest, an external protected trust root,\nand its exact run, revision, node, attempt, and evidence ID. Hive re-evaluates the\nEd25519 quorum and accepts the evidence only for an authenticated PASS with the same\nsubject. A bare authentication flag, an unsigned request, changed request bytes, or a\ntarget-contained trust root cannot authorize completion."
+    },
+    {
+      "id": "knowledge-cross-project-access",
+      "text": "knowledge-cross-project-access\nExplicit Cross-Project Knowledge Access\n# Explicit Cross-Project Knowledge Access\n\nAutomatic retrieval in Project A uses only A, `user-root`, and verified shared knowledge. It\ndoes not include Project B private knowledge.\n\nWhen the user explicitly names Project B or a unique collection alias, Hive resolves that\nreference fail-closed and queries B directly. The result excludes A, `user-root`, and unrelated\nshared collections. Confidential content retains its exact-query authorization requirement.\n\nReviewed safe-general decisions, conventions, and workflows with explicit applicability are\npromoted automatically during scan apply and rescan maintenance. The transaction records source\nprovenance and promotion status; stale source evidence invalidates its derived shared claim.\nRetrieval never causes promotion."
+    },
+    {
+      "id": "knowledge-portability-scan",
+      "text": "knowledge-portability-scan\nKnowledge Portability and Directory Scan\n# Knowledge Portability and Directory Scan\n\nMarkdown mode v0.9 supports deterministic `.hivekb` bundles, normalized\n`collection_id` rows, evidence-qualified scans, root promotion, and bounded automatic\nqueries. SQLite is not portable source material; Notion-mode export is outside this claim.\n\nQualification: 25 deliberately long Wiki pages × 2,000 retrieval-sized chunks =\n50,000 chunks, plus a registry of 100 portable collections. On 2026-08-13, release-build\nlocal-SSD p95 results passed: fresh/warm retrieval `169.7758 ms`/`0.1343 ms` against\n`500 ms`/`100 ms`; bundle export/import-rebuild `1042.8145 ms`/`3267.0567 ms` against\n`5 s`/`15 s`. A chunk is not a whole document; results are qualification evidence, not a\nhardware-independent guarantee."
+    },
+    {
+      "id": "knowledge-preservation",
+      "text": "knowledge-preservation\nKnowledge Preservation During Simplification\n# Knowledge Preservation During Simplification\n\nBefore shortening a README, guide, overview, or Wiki page, every disappearing durable\nclaim needs a tracked replacement locator. Deletion is reserved for deprecated,\nincorrect, or superseded knowledge."
+    }
+  ],
+  "queries": [
+    {
+      "id": "exact-01-adversarial-judge",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "adversarial-judge",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "exact-02-agent-autonomous-continuation",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "agent-autonomous-continuation",
+      "expected": [
+        "agent-autonomous-continuation"
+      ]
+    },
+    {
+      "id": "exact-03-agent-directive-ownership",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "agent-directive-ownership",
+      "expected": [
+        "agent-directive-ownership"
+      ]
+    },
+    {
+      "id": "exact-04-artifact-boundaries",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "artifact-boundaries",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "exact-05-automated-user-handoff",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "automated-user-handoff",
+      "expected": [
+        "automated-user-handoff"
+      ]
+    },
+    {
+      "id": "exact-06-automatic-dispatch-guard",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "automatic-dispatch-guard",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "exact-07-automatic-user-projection-refresh",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "automatic-user-projection-refresh",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "exact-08-consumer-session-coordination",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "consumer-session-coordination",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "exact-09-crate-ownership",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "crate-ownership",
+      "expected": [
+        "crate-ownership"
+      ]
+    },
+    {
+      "id": "exact-10-dev-check-platform-path",
+      "kind": "exact",
+      "subtype": "id",
+      "query": "dev-check-platform-path",
+      "expected": [
+        "dev-check-platform-path"
+      ]
+    },
+    {
+      "id": "exact-11-adversarial-judge",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "adversarial judge 0.10.0",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "exact-12-automatic-user-projection-refresh",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "user projection refresh 0.9.5",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "exact-13-consumer-session-coordination",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.10.0",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "exact-14-global-knowledge-rag",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.9.0-test.16",
+      "expected": [
+        "global-knowledge-rag"
+      ]
+    },
+    {
+      "id": "exact-15-graphify-0-10-adoption",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.9.47",
+      "expected": [
+        "graphify-0-10-adoption"
+      ]
+    },
+    {
+      "id": "exact-16-historical-project-base-coverage",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.9.2",
+      "expected": [
+        "historical-project-base-coverage"
+      ]
+    },
+    {
+      "id": "exact-17-hive-preserving-uninstall",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "44-leaf 0.9.1",
+      "expected": [
+        "hive-preserving-uninstall"
+      ]
+    },
+    {
+      "id": "exact-18-interactive-binary-update",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.9.0-test.N",
+      "expected": [
+        "interactive-binary-update"
+      ]
+    },
+    {
+      "id": "exact-19-knowledge-portability-scan",
+      "kind": "exact",
+      "subtype": "date-number",
+      "query": "2026-08-13 50,000 100",
+      "expected": [
+        "knowledge-portability-scan"
+      ]
+    },
+    {
+      "id": "exact-20-hybrid-vector-search-0-10",
+      "kind": "exact",
+      "subtype": "number",
+      "query": "0.10.0",
+      "expected": [
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "exact-21-artifact-boundaries",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Source-development directives never ship",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "exact-22-automatic-dispatch-guard",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Exit success does not authorize dispatch",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "exact-23-developer-binary-lifecycle",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never the public",
+      "expected": [
+        "developer-binary-lifecycle"
+      ]
+    },
+    {
+      "id": "exact-24-global-knowledge-bundle-transfer",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "no SQLite index",
+      "expected": [
+        "global-knowledge-bundle-transfer"
+      ]
+    },
+    {
+      "id": "exact-25-host-neutral-continuation",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "must not mutate host goals",
+      "expected": [
+        "host-neutral-continuation"
+      ]
+    },
+    {
+      "id": "exact-26-hybrid-vector-search-0-10",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "No vector product dependency exists",
+      "expected": [
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "exact-27-install-wide-knowledge-capture",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "no raw-prompt recorder",
+      "expected": [
+        "install-wide-knowledge-capture"
+      ]
+    },
+    {
+      "id": "exact-28-judge-verification",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never owns private keys",
+      "expected": [
+        "judge-verification"
+      ]
+    },
+    {
+      "id": "exact-29-knowledge-cross-project-access",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Retrieval never causes promotion",
+      "expected": [
+        "knowledge-cross-project-access"
+      ]
+    },
+    {
+      "id": "exact-30-global-user-contexts",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never translate Skill",
+      "expected": [
+        "global-user-contexts"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-adversarial-judge",
+      "kind": "paraphrase",
+      "query": "Who challenges an implementation in a separate clean context before acceptance?",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-agent-autonomous-continuation",
+      "kind": "paraphrase",
+      "query": "When may work stop while machine-owned steps still remain?",
+      "expected": [
+        "agent-autonomous-continuation"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-agent-directive-ownership",
+      "kind": "paraphrase",
+      "query": "Where is each behavioral rule defined exactly once?",
+      "expected": [
+        "agent-directive-ownership"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-artifact-boundaries",
+      "kind": "paraphrase",
+      "query": "How are the checkout, distributable bundle, and installed files kept apart?",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-automated-user-handoff",
+      "kind": "paraphrase",
+      "query": "Which safe steps must finish before asking the maintainer to take over?",
+      "expected": [
+        "automated-user-handoff"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-automatic-dispatch-guard",
+      "kind": "paraphrase",
+      "query": "What prevents unattended task launch when quota evidence is weak?",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-automatic-user-projection-refresh",
+      "kind": "paraphrase",
+      "query": "How do personal host instructions receive a new product projection?",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-consumer-session-coordination",
+      "kind": "paraphrase",
+      "query": "How are concurrent editors stopped from claiming the same generated paths?",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-crate-ownership",
+      "kind": "paraphrase",
+      "query": "Which Rust component is responsible for each product subsystem?",
+      "expected": [
+        "crate-ownership"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-dev-check-platform-path",
+      "kind": "paraphrase",
+      "query": "How does the developer check find platform tools without changing the caller environment?",
+      "expected": [
+        "dev-check-platform-path"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-developer-binary-lifecycle",
+      "kind": "paraphrase",
+      "query": "How is a locally built executable distinguished from a published package?",
+      "expected": [
+        "developer-binary-lifecycle"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-docs-wiki-architecture",
+      "kind": "paraphrase",
+      "query": "How does project documentation become a searchable bilingual source corpus?",
+      "expected": [
+        "docs-wiki-architecture"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-git-worktree-lifecycle",
+      "kind": "paraphrase",
+      "query": "When must an isolated checkout be removed after its branch work finishes?",
+      "expected": [
+        "git-worktree-lifecycle"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-global-knowledge-bundle-transfer",
+      "kind": "paraphrase",
+      "query": "How can portable user knowledge move between machines without copying indexes?",
+      "expected": [
+        "global-knowledge-bundle-transfer"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-global-knowledge-rag",
+      "kind": "paraphrase",
+      "query": "Where are reusable personal facts searched across otherwise unrelated projects?",
+      "expected": [
+        "global-knowledge-rag"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-global-onboarding",
+      "kind": "paraphrase",
+      "query": "What establishes a user's shared Hive environment before project setup?",
+      "expected": [
+        "global-onboarding"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-global-user-contexts",
+      "kind": "paraphrase",
+      "query": "How are personal preferences available outside a registered repository?",
+      "expected": [
+        "global-user-contexts"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-graphify-0-10-adoption",
+      "kind": "paraphrase",
+      "query": "Which limited code relationship role is accepted for the external graph extractor?",
+      "expected": [
+        "graphify-0-10-adoption"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-historical-project-base-coverage",
+      "kind": "paraphrase",
+      "query": "How does a direct upgrade authenticate every previously shipped project template?",
+      "expected": [
+        "historical-project-base-coverage"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-hive-preserving-uninstall",
+      "kind": "paraphrase",
+      "query": "What remains on disk when the executable integration is removed?",
+      "expected": [
+        "hive-preserving-uninstall"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-host-external-integrations",
+      "kind": "paraphrase",
+      "query": "How are chat and workspace services connected without making them core runtime dependencies?",
+      "expected": [
+        "host-external-integrations"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-host-neutral-continuation",
+      "kind": "paraphrase",
+      "query": "What keeps unfinished work moving across different agent hosts without an endless hook?",
+      "expected": [
+        "host-neutral-continuation"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-hybrid-vector-search-0-10",
+      "kind": "paraphrase",
+      "query": "When may semantic nearest-neighbor retrieval join keyword and relationship search?",
+      "expected": [
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-install-wide-knowledge-capture",
+      "kind": "paraphrase",
+      "query": "Where can a reusable user decision be remembered even outside configured projects?",
+      "expected": [
+        "install-wide-knowledge-capture"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-installed-usage-guard",
+      "kind": "paraphrase",
+      "query": "Which installed mechanism decides whether autonomous work may consume more quota?",
+      "expected": [
+        "installed-usage-guard"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-interactive-binary-update",
+      "kind": "paraphrase",
+      "query": "How does a person approve and recover an executable replacement from the terminal?",
+      "expected": [
+        "interactive-binary-update"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-judge-verification",
+      "kind": "paraphrase",
+      "query": "What evidence is required before independent reviewers can authorize completion?",
+      "expected": [
+        "judge-verification"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-knowledge-cross-project-access",
+      "kind": "paraphrase",
+      "query": "How can one repository intentionally retrieve another repository's allowed facts?",
+      "expected": [
+        "knowledge-cross-project-access"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-knowledge-portability-scan",
+      "kind": "paraphrase",
+      "query": "How are useful Markdown claims discovered without letting a directory scan escape its root?",
+      "expected": [
+        "knowledge-portability-scan"
+      ]
+    },
+    {
+      "id": "paraphrase-primary-knowledge-preservation",
+      "kind": "paraphrase",
+      "query": "What must happen to valid information before a guide is shortened or removed?",
+      "expected": [
+        "knowledge-preservation"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-adversarial-judge",
+      "kind": "paraphrase",
+      "query": "Which review step looks for counterexamples but cannot approve its own findings?",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-agent-autonomous-continuation",
+      "kind": "paraphrase",
+      "query": "Why is a failed test normally a reason to keep working instead of returning control?",
+      "expected": [
+        "agent-autonomous-continuation"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-agent-directive-ownership",
+      "kind": "paraphrase",
+      "query": "How does Hive avoid copying the same instruction into several agent files?",
+      "expected": [
+        "agent-directive-ownership"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-artifact-boundaries",
+      "kind": "paraphrase",
+      "query": "Which separation prevents development-only rules from reaching customer projects?",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-automated-user-handoff",
+      "kind": "paraphrase",
+      "query": "What work should the agent complete before listing actions that require human authority?",
+      "expected": [
+        "automated-user-handoff"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-automatic-dispatch-guard",
+      "kind": "paraphrase",
+      "query": "Which check fails closed before background execution when usage is unknown?",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-automatic-user-projection-refresh",
+      "kind": "paraphrase",
+      "query": "What replaces stale personal Skill files after an upgrade?",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-consumer-session-coordination",
+      "kind": "paraphrase",
+      "query": "Which lease-like record protects generated files from simultaneous sessions?",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-crate-ownership",
+      "kind": "paraphrase",
+      "query": "Where should a change go when it belongs to rendering rather than update recovery?",
+      "expected": [
+        "crate-ownership"
+      ]
+    },
+    {
+      "id": "paraphrase-alternate-dev-check-platform-path",
+      "kind": "paraphrase",
+      "query": "What keeps a development command from permanently rewriting PATH?",
+      "expected": [
+        "dev-check-platform-path"
+      ]
+    },
+    {
+      "id": "cross-language-adversarial-judge",
+      "kind": "cross-language",
+      "query": "Clean-context host-native Judge 요청을 준비하고 기존 authenticated quorum 검증을 재사용하는 0.10.0 명시 단계",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "cross-language-agent-autonomous-continuation",
+      "kind": "cross-language",
+      "query": "독립 Agent 소유 작업 잔존 상태: 전체 Goal·task 차단 금지와 안정판 명시 승인",
+      "expected": [
+        "agent-autonomous-continuation"
+      ]
+    },
+    {
+      "id": "cross-language-agent-directive-ownership",
+      "kind": "cross-language",
+      "query": "Source·소비자 작업 규칙군의 단일 정본 연결과 크기·경로·투영·중복 예산 검사",
+      "expected": [
+        "agent-directive-ownership"
+      ]
+    },
+    {
+      "id": "cross-language-artifact-boundaries",
+      "kind": "cross-language",
+      "query": "Source workspace, release bundle, installed harness의 분리.",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "cross-language-automated-user-handoff",
+      "kind": "cross-language",
+      "query": "안전하게 자동화할 수 있는 작업을 먼저 끝내고 사용자 권한이 필요한 단계만 간결하게 인계.",
+      "expected": [
+        "automated-user-handoff"
+      ]
+    },
+    {
+      "id": "cross-language-automatic-dispatch-guard",
+      "kind": "cross-language",
+      "query": "Unsafe automatic dispatch 차단용 preflight와 별도 authorization.",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "cross-language-automatic-user-projection-refresh",
+      "kind": "cross-language",
+      "query": "0.9.5 직접 설치 갱신의 mode별 사용자 설치 action 검증과 공개 갱신 버전 전이 기록",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "cross-language-consumer-session-coordination",
+      "kind": "cross-language",
+      "query": "직접 사용자 편집 통제 주장 없이 작은 경로 점유로 소비자 프로젝트의 겹치는 자동 편집을 조정하고 `0.10.0`에서 host-owned 프로젝트 Skill 예약을 추가하는 Hive 원칙",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "cross-language-crate-ownership",
+      "kind": "cross-language",
+      "query": "Workspace crate별 provider-neutral 구현 경계.",
+      "expected": [
+        "crate-ownership"
+      ]
+    },
+    {
+      "id": "cross-language-dev-check-platform-path",
+      "kind": "cross-language",
+      "query": "호스트 전용 pathlib 클래스 생성 없는 사전 푸시 도구 PATH 구성.",
+      "expected": [
+        "dev-check-platform-path"
+      ]
+    },
+    {
+      "id": "cross-language-developer-binary-lifecycle",
+      "kind": "cross-language",
+      "query": "Source local dev binary의 active executable 임시 교체와 internally reproducible user projection 안전 갱신, public release 인증 경계 유지.",
+      "expected": [
+        "developer-binary-lifecycle"
+      ]
+    },
+    {
+      "id": "cross-language-docs-wiki-architecture",
+      "kind": "cross-language",
+      "query": "현재 문서·미래 backlog·동결 기록의 수명주기 분리.",
+      "expected": [
+        "docs-wiki-architecture"
+      ]
+    },
+    {
+      "id": "cross-language-git-worktree-lifecycle",
+      "kind": "cross-language",
+      "query": "일반 작업은 단일 기준 작업 폴더 우선, 임시 작업 폴더는 검증 뒤 즉시 정리",
+      "expected": [
+        "git-worktree-lifecycle"
+      ]
+    },
+    {
+      "id": "cross-language-global-knowledge-bundle-transfer",
+      "kind": "cross-language",
+      "query": "전역 .hivekb 이전은 현재 셸의 홈 경로, SHA-256 확인, dry-run, 명시 apply 순서 사용.",
+      "expected": [
+        "global-knowledge-bundle-transfer"
+      ]
+    },
+    {
+      "id": "cross-language-global-knowledge-rag",
+      "kind": "cross-language",
+      "query": "v0.9.0-test.16의 매 턴 자동 기록 배포·Windows 설치 완료. Codex 새 세션 수용과 정식 출시 검증 대기.",
+      "expected": [
+        "global-knowledge-rag"
+      ]
+    },
+    {
+      "id": "cross-language-global-onboarding",
+      "kind": "cross-language",
+      "query": "전역 설정: 사용량 보호 활성화 권장, native 실패 전 CodexBar 비노출, 보존형 재설치.",
+      "expected": [
+        "global-onboarding"
+      ]
+    },
+    {
+      "id": "cross-language-global-user-contexts",
+      "kind": "cross-language",
+      "query": "Global setup의 복수 사용자 맥락: 배경 정보 전용, 한국어 product term 보존.",
+      "expected": [
+        "global-user-contexts"
+      ]
+    },
+    {
+      "id": "cross-language-graphify-0-10-adoption",
+      "kind": "cross-language",
+      "query": "0.10.0의 Hive-native Markdown 관계 graph·선택형 Graphify full-rebuild code-only adapter 승인과 전면 Graphify 지식 graph 제외.",
+      "expected": [
+        "graphify-0-10-adoption"
+      ]
+    },
+    {
+      "id": "cross-language-historical-project-base-coverage",
+      "kind": "cross-language",
+      "query": "선언된 프로젝트 갱신 source range와 exact full 기준본·matrix 수용의 대응",
+      "expected": [
+        "historical-project-base-coverage"
+      ]
+    },
+    {
+      "id": "cross-language-hive-preserving-uninstall",
+      "kind": "cross-language",
+      "query": "보존형 제거: Hive-owned transient·retired projection 완전 정리, knowledge·preference·foreign byte 보존.",
+      "expected": [
+        "hive-preserving-uninstall"
+      ]
+    },
+    {
+      "id": "relation-adversarial-judge",
+      "kind": "relation",
+      "query": "How does Adversarial Judge Skill relate to judge-verification?",
+      "expected": [
+        "adversarial-judge"
+      ]
+    },
+    {
+      "id": "relation-agent-autonomous-continuation",
+      "kind": "relation",
+      "query": "How does Agent Autonomous Continuation relate to automated-user-handoff?",
+      "expected": [
+        "agent-autonomous-continuation"
+      ]
+    },
+    {
+      "id": "relation-agent-directive-ownership",
+      "kind": "relation",
+      "query": "How does Agent Directive Ownership relate to agent-autonomous-continuation?",
+      "expected": [
+        "agent-directive-ownership"
+      ]
+    },
+    {
+      "id": "relation-artifact-boundaries",
+      "kind": "relation",
+      "query": "How does Artifact Boundaries relate to crate-ownership?",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "relation-automated-user-handoff",
+      "kind": "relation",
+      "query": "How does Automated Work Before User Handoff relate to language-consistency?",
+      "expected": [
+        "automated-user-handoff"
+      ]
+    },
+    {
+      "id": "relation-automatic-dispatch-guard",
+      "kind": "relation",
+      "query": "How does Automatic Dispatch Guard relate to run-recovery?",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "relation-automatic-user-projection-refresh",
+      "kind": "relation",
+      "query": "How does Automatic User Projection Refresh relate to interactive-binary-update?",
+      "expected": [
+        "automatic-user-projection-refresh"
+      ]
+    },
+    {
+      "id": "relation-consumer-session-coordination",
+      "kind": "relation",
+      "query": "How does Consumer Session Coordination relate to knowledge-preservation?",
+      "expected": [
+        "consumer-session-coordination"
+      ]
+    },
+    {
+      "id": "relation-crate-ownership",
+      "kind": "relation",
+      "query": "How does Rust Crate Ownership relate to artifact-boundaries?",
+      "expected": [
+        "crate-ownership"
+      ]
+    },
+    {
+      "id": "relation-dev-check-platform-path",
+      "kind": "relation",
+      "query": "How does Dev-check Platform PATH relate to release-verification?",
+      "expected": [
+        "dev-check-platform-path"
+      ]
+    },
+    {
+      "id": "relation-developer-binary-lifecycle",
+      "kind": "relation",
+      "query": "How does Developer Binary Lifecycle relate to interactive-binary-update?",
+      "expected": [
+        "developer-binary-lifecycle"
+      ]
+    },
+    {
+      "id": "relation-docs-wiki-architecture",
+      "kind": "relation",
+      "query": "How does Docs Wiki Architecture relate to knowledge-preservation?",
+      "expected": [
+        "docs-wiki-architecture"
+      ]
+    },
+    {
+      "id": "relation-git-worktree-lifecycle",
+      "kind": "relation",
+      "query": "How does Temporary Git Worktree Lifecycle relate to source-development?",
+      "expected": [
+        "git-worktree-lifecycle"
+      ]
+    },
+    {
+      "id": "relation-global-knowledge-bundle-transfer",
+      "kind": "relation",
+      "query": "How does Global Knowledge Bundle Transfer relate to knowledge-portability-scan?",
+      "expected": [
+        "global-knowledge-bundle-transfer"
+      ]
+    },
+    {
+      "id": "relation-global-knowledge-rag",
+      "kind": "relation",
+      "query": "How does Global Knowledge RAG relate to knowledge-portability-scan?",
+      "expected": [
+        "global-knowledge-rag"
+      ]
+    },
+    {
+      "id": "relation-global-onboarding",
+      "kind": "relation",
+      "query": "How does Global Onboarding relate to project-onboarding?",
+      "expected": [
+        "global-onboarding"
+      ]
+    },
+    {
+      "id": "relation-global-user-contexts",
+      "kind": "relation",
+      "query": "How does Global User Contexts relate to global-onboarding?",
+      "expected": [
+        "global-user-contexts"
+      ]
+    },
+    {
+      "id": "relation-graphify-0-10-adoption",
+      "kind": "relation",
+      "query": "How does Graphify 0.10 Adoption Decision relate to global-knowledge-rag?",
+      "expected": [
+        "graphify-0-10-adoption"
+      ]
+    },
+    {
+      "id": "relation-historical-project-base-coverage",
+      "kind": "relation",
+      "query": "How does Historical Project Base Coverage relate to projection-upgrade-purge?",
+      "expected": [
+        "historical-project-base-coverage"
+      ]
+    },
+    {
+      "id": "relation-hive-preserving-uninstall",
+      "kind": "relation",
+      "query": "How does Hive Preserving Uninstall relate to global-onboarding?",
+      "expected": [
+        "hive-preserving-uninstall"
+      ]
+    },
+    {
+      "id": "relation-host-external-integrations",
+      "kind": "relation",
+      "query": "How does Discord v0.9 and Notion v0.10 Host Integrations relate to knowledge-storage?",
+      "expected": [
+        "host-external-integrations"
+      ]
+    },
+    {
+      "id": "relation-host-neutral-continuation",
+      "kind": "relation",
+      "query": "How does Host-Neutral Continuation Gate relate to agent-autonomous-continuation?",
+      "expected": [
+        "host-neutral-continuation"
+      ]
+    },
+    {
+      "id": "relation-hybrid-vector-search-0-10",
+      "kind": "relation",
+      "query": "How does Hybrid Vector Search Gate for 0.10.0 relate to global-knowledge-rag?",
+      "expected": [
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "relation-install-wide-knowledge-capture",
+      "kind": "relation",
+      "query": "How does Install-wide knowledge capture relate to global-knowledge-rag?",
+      "expected": [
+        "install-wide-knowledge-capture"
+      ]
+    },
+    {
+      "id": "relation-installed-usage-guard",
+      "kind": "relation",
+      "query": "How does Installed Guard Target Boundary relate to automatic-dispatch-guard?",
+      "expected": [
+        "installed-usage-guard"
+      ]
+    },
+    {
+      "id": "relation-interactive-binary-update",
+      "kind": "relation",
+      "query": "How does Interactive Binary Update relate to test-distribution?",
+      "expected": [
+        "interactive-binary-update"
+      ]
+    },
+    {
+      "id": "relation-judge-verification",
+      "kind": "relation",
+      "query": "How does Judge Verification Boundary relate to model-routed-custom-subagents?",
+      "expected": [
+        "judge-verification"
+      ]
+    },
+    {
+      "id": "relation-knowledge-cross-project-access",
+      "kind": "relation",
+      "query": "How does Explicit Cross-Project Knowledge Access relate to global-knowledge-rag?",
+      "expected": [
+        "knowledge-cross-project-access"
+      ]
+    },
+    {
+      "id": "relation-knowledge-portability-scan",
+      "kind": "relation",
+      "query": "How does Knowledge Portability and Directory Scan relate to global-knowledge-rag?",
+      "expected": [
+        "knowledge-portability-scan"
+      ]
+    },
+    {
+      "id": "relation-knowledge-preservation",
+      "kind": "relation",
+      "query": "How does Knowledge Preservation During Simplification relate to docs-wiki-architecture?",
+      "expected": [
+        "knowledge-preservation"
+      ]
+    }
+  ]
+}

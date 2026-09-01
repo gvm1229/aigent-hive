@@ -1,14 +1,14 @@
 # 스킬 모음
 
 설치 제품용 Skill의 이름·기능·사용 예시 정본. Aigent Hive source 개발도 같은 제품 Skill 사용.
-명시 유지보수자 요청의 비출하 source-project `update-summary`는 이 제품 목록과 분리.
-이름 이관 구현: [`SIL-008–015`](plans/active/skill-identity-localization.md). 호출 형식:
+명시 유지보수자 요청의 비출하 source-project `update-summary|draft-devlog`는 이 제품 목록과 분리.
+이름 이관 구현: [`SIL-008–015`](archive/plans/foundations/skill-identity-localization.md). 호출 형식:
 `$aigent-hive:<Skill 이름>`.
 
 ## 이름 원칙
 
 - Active Skill: 설치 제품의 단일 목록만 유지
-- Source 전용 Skill: 비출하 `update-summary` 1건. 경로: `.agents/skills/update-summary/`; 제품 catalog·release bundle·consumer projection 제외
+- Source 전용 Skill: 비출하 `update-summary|draft-devlog` 2건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외
 - 제품 이름: 사용자가 인식할 기능 중심
 - 모든 Hive Skill: 선택 언어·host와 무관하게 설명 첫머리에 `(정본 영문 ID)` 표기
 - 폐기 ID: scope가 지정된 one-to-one·merge·split 이관 입력으로만 허용
@@ -21,12 +21,13 @@
 | `quick-answer` | 별도 조사 없는 독립 질문 응답 | `rehash` 명령 의미 설명 |
 | `project-setup` | 저장소 근거를 활용한 안내형·자동 프로젝트 설정 | 저장소 최소 질문 설정 |
 | `code-polish` | 동작·회귀 시험을 보존하는 생성 코드 정리 | 변경 파일의 중복 wrapper 정리 |
-| `ralph-loop` | 증거·재시도·완료 조건 기반 반복 실행 graph 설계 | 검증 가능한 Ralph loop 구성 |
-| `iterative-execution` | Host-native receipt와 독립 종료 검증을 적용한 제한된 기준 반복 실행 | 여러 구현 시도 뒤 기준별 Judge 검증 |
+| `humanize-kor` | 의미·수치·인용·링크를 보존하는 기존 한국어 text 윤문 | 번역투가 있는 한국어 문서의 보수적 윤문 |
+| `verified-workflow` | 의존성·증거·재시도·독립 검증을 적용한 제한된 실행 graph | 복잡한 작업의 검증형 workflow 실행 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
 | `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
-| `knowledge-import` | 사용자가 고른 저장소·폴더 지식 스캔 뒤 검토 완료 항목 반입 | 저장소 규칙·결정의 Wiki 반입 |
+| `knowledge-scan` | 사용자가 고른 저장소·폴더 분석과 검토된 지식 추출 | 저장소 규칙·결정의 Wiki 반입 |
+| `knowledge-transfer` | 기존 Markdown 지식의 컴퓨터 간 이전·FTS 복원 | 이전 컴퓨터의 지식을 새 컴퓨터에서 사용 |
 | `knowledge-maintain` | 신뢰 가능한 Hive 지식 검사·검색 색인 재생성·명시 정리 | Wiki link 검사와 색인 재구축 |
 | `knowledge-capture` | 대화 종료 전 나중 작업에 도움이 되는 사실·선호·방식 1건의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
 | `prompt-refine` | 실행 전 승인용 prompt 정리·개선 | Codex 실행용 prompt 개선 |
@@ -43,7 +44,8 @@
 | `knowledge-promote` | 다른 작업에도 도움 되는 검토된 사실·선호·방식의 전역 공유 | Deployment rule의 전역 knowledge 승격 |
 | `product-update` | 설치된 Aigent Hive 자체 갱신 | Aigent Hive 최신 stable update |
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
-| `package-review` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
+| `judge-evidence` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
+| `adversarial-judge` | 제한된 clean-context 독립 Judge 요청 준비 | 명시적 반례·권한·복구 결손 검토 |
 
 ## Source Skill 폐기 경로
 
@@ -52,8 +54,8 @@
 | `source-answer` | `quick-answer` |
 | `source-project-setup` | `project-setup` |
 | `source-code-polish` | `code-polish` |
-| `source-ralph-loop` | `ralph-loop` |
-| `source-knowledge-import` | `knowledge-import` |
+| `source-ralph-loop` | `verified-workflow` |
+| `source-knowledge-import` | `knowledge-scan` |
 | `source-knowledge-maintain` | `knowledge-maintain` |
 | `source-knowledge-capture` | `knowledge-capture` |
 | `source-prompt-refine` | `prompt-refine` |
@@ -76,7 +78,7 @@
 
 ## 유지할 분리
 
-- `knowledge-capture` / `knowledge-import` / `knowledge-promote`: 대화 종료 전 1건 기록·선택 저장소 스캔·전역 공유의 범위와 권한 차이
+- `knowledge-capture` / `knowledge-scan` / `knowledge-transfer` / `knowledge-promote`: 대화 기록·새 지식 추출·기존 지식 이전·전역 공유의 범위와 권한 차이
 - `run-checkpoint` / `run-resume` / `run-handoff`: 저장·복구·인계 상태 변경 차이
 - `project-refresh` / `project-transition`: 일반 갱신과 구조 이관의 복구 위험 차이
 
@@ -94,6 +96,14 @@
 
 ## `hive-loop-engineering` 계보
 
-`hive-loop-engineering` → current `engineer-run` → product `ralph-loop`. 기능 삭제 없음.
-Host가 실제 task를 실행하고 Skill은 반복 graph·증거·재시도·완료
-조건만 소유하는 기존 경계 유지.
+`hive-loop-engineering` → current `engineer-run` → product `verified-workflow`. Host가 실제
+task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증만 소유.
+
+## `0.10.0` 이름 이관
+
+- `knowledge-import` → `knowledge-scan`; 기존 지식의 컴퓨터 간 이전은 `knowledge-transfer`
+
+- `ralph-loop`와 `iterative-execution` → `verified-workflow`
+- `package-review` → `judge-evidence`
+- Retired 이름: routing compatibility만 제공
+- Successful upgrade: authenticated retired Skill artifact·projection `0건`

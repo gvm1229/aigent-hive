@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "pack_id": "im-not-ai-korean-core",
+  "pack_version": "2.3.2",
+  "transform_version": 1,
+  "upstream": "https://github.com/epoko77-ai/im-not-ai",
+  "upstream_commit": "0ac1e84f92334f9696e69184478f91c1c6f1dc5e",
+  "upstream_tree_digest": "sha256:b0439983c5ada2df033de532b14d4dbf065cf0c09e16221182cdc6bd866b4002",
+  "upstream_file_count": 111,
+  "upstream_symlink_count": 0,
+  "license": "MIT",
+  "upstream_license_digest": "sha256:22603fadb9248cb2eae6bc6030c35091f0bd45550d2b5a20a0656e0a6ddf4767",
+  "shipped_license_digest": "sha256:4cc7e8c439fe42f09d98457599c129ea6df9e5d0e622750d75952b441a38343f",
+  "rules_digest": "sha256:7095ebe9598fec25e9e863f405aa8b7738c6d8a3bcb3208e1a3d97a6cde17023",
+  "source_inventory": [
+    {"path": "plugin.json", "digest": "sha256:e50159ef473076be65099eaaf7485c9e59b85d9149a45945d966921682ce9873", "class": "host-surface"},
+    {"path": "skills/humanize-korean/SKILL.md", "digest": "sha256:4b7a8d8574a76f44053fc918559c4cfd579dd7e6d19241de1b3f4319f1946ec9", "class": "host-surface"},
+    {"path": "skills/humanize-korean/references/quick-rules.md", "digest": "sha256:18ee37c44a31974762c621aacb2420ee17934516bbcf9e8a41f15f0f5fe23dc2", "class": "rules-data"},
+    {"path": "skills/humanize-korean/references/metrics_v2.py", "digest": "sha256:01de2040d2e185b33ff9f3b81e9b107bb13d2ce44d514554134dd74a2e596d75", "class": "engine-code"},
+    {"path": "scripts/sanitize_text.py", "digest": "sha256:39c6906697bb0b0c7e549a77d257cd6543d8a8eda7aab7bb5dc4d2762992f0b6", "class": "engine-code"},
+    {"path": "scripts/verify_gates.py", "digest": "sha256:e906a7a8ae26cf29e7ac1236d360b9ff9573530bf188c89ab2949b67f89146e5", "class": "engine-code"},
+    {"path": "docs/en/integration.md", "digest": "sha256:a7c561a885f0ed126e007e0c8bedfb4a845af743f184c069e57d731c0cf8fb4b", "class": "rules-data"}
+  ],
+  "host_versions": {
+    "claude_plugin": "2.3.2",
+    "codex_plugin": "2.3.2",
+    "gemini_extension": "1.5.0"
+  },
+  "runtime_agents": ["humanize-diagnostician", "humanize-monolith", "humanize-finalizer"],
+  "retired_agents": ["ai-tell-detector", "korean-style-rewriter", "content-fidelity-auditor", "naturalness-reviewer", "humanize-web-architect"],
+  "raw_install_allowed": false,
+  "floating_ref_allowed": false,
+  "automatic_update_allowed": false
+}

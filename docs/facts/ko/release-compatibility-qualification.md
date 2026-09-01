@@ -9,10 +9,10 @@ summary: "게시된 0.9.5의 전체 이력 native runtime 검증과 호환성 �
 tags: [compatibility, migration, release, testing]
 aliases: ["호환성 matrix gate"]
 sources:
-  - "repo:.github/workflows/release-runtime.yml#sha256:06e8657e24d89fd2b28d87208fc15eb76d4b60357c1dd9d3c9c7c315b563d350"
-  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:e00beda4bab8467a5fa667fdc1f2799403d216398e29597f67f937bf94d46e95"
+  - "repo:.github/workflows/release-runtime.yml#sha256:398fa5b776385221e2e98762895c46ff92d1a5b17b8cd8f414347b40e9c5303f"
+  - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
-reviewed_revision: "git:a49b4c9520a9099f41da1a70ea543eaf445e1053"
+reviewed_revision: "git:a520f8e5113c7fc02711eb5e5d8021605f7ee551"
 status: active
 ---
 
@@ -21,4 +21,6 @@ status: active
 - `0.9.5`: npm `latest`·GitHub Release `v0.9.5` 게시
 - M2 MacBook Air 공개 설치: 격리 user setup·Codex install·validate·stable update check 성공
 - native runtime: prior patch tag 기반 release-version 검사로 `fetch-depth: 0` 필요
-- 남은 별도 증거: Windows x64 public stable installer 수용, 보정 뒤 native runtime 다섯 대상 재실행
+- Windows x64 공개 npm binary identity 확인
+- Windows 격리 Codex `0.148.0` setup·install·validate·stable update current 성공
+- 보정 뒤 native runtime run `32118217691`: 다섯 대상 성공

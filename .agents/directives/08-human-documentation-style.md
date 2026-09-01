@@ -9,17 +9,11 @@ document.
 
 ## Korean style
 
-- Keep each passage in one base language. In Korean prose, keep English only for proper nouns,
-  product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and
-  terms without a clear Korean equivalent. Replace ordinary English nouns and mixed
-  Korean-English compounds when a clear Korean expression exists. Do not add an English
-  parenthetical after an unambiguous Korean term. Translate meaning rather than English word
-  order. Retain an English literal only when it is required for an action or distinction.
-- In an English passage, use ASD-STE100 Simplified Technical English throughout except for exact
-  Korean names, literals, quotations, or text the user explicitly asks to preserve. Use short
-  direct sentences, concrete verbs, one main instruction, condition, result, or warning per
-  sentence, and an approved dictionary word when known. Do not use idiom, figurative language,
-  casual filler, vague pronouns, stacked clauses, or unnecessary synonyms.
+- Use one base language per passage. Preserve English proper names, commands, identifiers, paths,
+  schema keys, exact UI text, and terms without a clear Korean equivalent. Apply the mixed-language
+  rules below to ordinary prose.
+- English uses ASD-STE100 Simplified Technical English: short direct sentences, concrete verbs,
+  one point each, clear pronouns, no idioms or filler. Preserve exact quotations and requested text.
 - Prefer short headings, bullets, tables, and checklists over long prose.
 - Prefer noun phrases or concise verb-noun endings such as `추가`, `정리`, `검증`, `확인`,
   `보강`, `제거`, and `적용`.
@@ -30,17 +24,14 @@ document.
 - Do not mechanically replace a prohibited ending with `~함`, `~됐음`, `~했음`, or `~않음`
   when a shorter semantic noun phrase is available. Rewrite the whole sentence or clause.
 - Remove filler that does not help the reader act, remember, or verify.
-- Keep code identifiers, schema keys, paths, commands, product names, and exact UI labels in
-  their original form when clearer.
-- Do not force awkward Korean transliterations for technical identifiers.
 
 ## Korean mixed-language prohibitions
 
 - Do not use English to make an ordinary Korean sentence look technical, concise, or expert.
-- Do not join an English adjective, noun, verb, or state label directly to Korean grammar.
+- Avoid mixed Korean-English compounds and English words joined directly to Korean grammar.
 - Do not add an English parenthetical after a clear Korean term unless the reader must use that
   exact literal in an action, command, search, selection, or distinction.
-- Do not translate English word order. Rewrite the meaning as natural Korean.
+- Translate meaning rather than English word order.
 
 | Avoid | Use |
 | --- | --- |
@@ -112,11 +103,9 @@ literal exception.
 
 ## Reader-first explanation
 
-- State the decision, result, or prerequisite concept first.
-- Use a numbered or arrow flow when runtime order, ownership, or state transition matters.
-- Separate verified facts from assumptions and distinguish the cause from plausible non-causes
-  when confusion is likely.
-- Include the minimum example needed to understand, reproduce, or verify the behavior.
+- Apply [01-behavior.md#explanation-policy](01-behavior.md#explanation-policy) to every explanatory
+  passage, including guides, teaching notes, reports, and externally addressed writing. Document
+  formatting never substitutes for explaining the terms and causal connections in plain language.
 - Prefer current truth over chronological investigation notes.
 - For teaching notes and handoffs, prefer clarity over maximum brevity.
 

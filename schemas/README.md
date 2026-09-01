@@ -9,6 +9,8 @@
 | `run-checkpoint-request.schema.json` | optimistic durable run checkpoint 입력 |
 | `dispatch-brief.schema.json` | host-owned 실행 전 prepare-only dispatch data |
 | `role-handoff-request.schema.json` | optimistic persistent role handoff 입력 |
+| `adversarial-judge-host-receipt.schema.json` | Host 소유 Judge launch·result receipt |
+| `graphify-code-receipt.schema.json` | Graphify `0.9.47` code-only full extraction receipt |
 | `judge-package-request.schema.json` | clean-context judge package 생성 요청 |
 | `judge-quorum-request.schema.json` | package와 독립 verdict quorum 집계 요청 |
 | `judge-package.schema.json` | 독립 judge 입력 envelope |

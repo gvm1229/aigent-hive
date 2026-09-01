@@ -143,6 +143,7 @@ def validate_contract_examples() -> None:
         "required_criteria": ["C1"],
         "passed_criteria": [],
         "failed_criteria": [],
+        "blocked_criteria": [],
         "active_roles": ["reviewer"],
         "next_action": "verify C1",
         "latest_evidence": [],
@@ -590,7 +591,7 @@ def validate_role_materialization(role_seeds: list[object]) -> None:
 
         if role_id == "reviewer":
             expected_path = (
-                REPOSITORY_ROOT / "tests/fixtures/expected/reviewer-role.md"
+                REPOSITORY_ROOT / "tests/fixtures/setup/scaffold-expected/reviewer-role.md"
             )
             if first_render != expected_path.read_text(encoding="utf-8"):
                 raise AssertionError("reviewer role materialization changed")

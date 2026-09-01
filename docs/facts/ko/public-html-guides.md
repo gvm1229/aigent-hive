@@ -9,10 +9,10 @@ summary: "Hive 기능·설치·브랜드 기준을 담은 한국어 HTML 2개와
 tags: [branding, documentation, onboarding]
 aliases: ["Hive 간단 설치 안내", "Hive 핵심 기능 안내"]
 sources:
+  - "repo:docs/archive/plans/foundations/public-html-guides.md#sha256:983c430ae31f6a9913554a5e646b1eb8f989b52e5d71cd994f1529fdf756918c"
   - "repo:docs/guides/public-html-design-principles.md#sha256:fad1cc025bcc709cb98ffa0a066146fcc7d2d9c775b30eed1e74df1d0a348ea8"
   - "repo:docs/hive-core-features.ko.html#sha256:e66b9bd31b7c87829a0c5d4c016e28b9b7511c7b16f88045dbeba8f39e8f5c67"
   - "repo:docs/hive-install-guide.ko.html#sha256:3da9a7a7d82c41a1c40a9a20922f6b4b7b3bf579abcdec0f5bf64506f7569758"
-  - "repo:docs/plans/active/public-html-guides.md#sha256:983c430ae31f6a9913554a5e646b1eb8f989b52e5d71cd994f1529fdf756918c"
 links: [global-onboarding, product-purpose]
 reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"
 status: active
@@ -22,5 +22,5 @@ status: active
 
 독립 한국어 페이지 2개: Hive 핵심 기능과 간단한 stable 설치 경로.
 정본 logo, 960 px 구조, 벌집 금색 `#F5A623`; 각 HTML의 PNG 원본 byte 1회 내장, network·file-relative resource 0건.
-핵심 기능 지식 흐름: `(knowledge-capture)` 기록, `(knowledge-recall)` 조회, `(knowledge-import)` 저장소 스캔, `(knowledge-promote)` 공유, `(knowledge-maintain)` 정비.
+공개 안정판 안내의 지식 흐름: `(knowledge-capture)` 기록, `(knowledge-recall)` 조회, `(knowledge-import)` 저장소 스캔, `(knowledge-promote)` 공유, `(knowledge-maintain)` 정비.
 설치 3단계: 단일·CSV·반복 `--host`, 전체 preflight와 부분 실패 JSON.

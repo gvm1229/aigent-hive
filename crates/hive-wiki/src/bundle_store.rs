@@ -14,8 +14,8 @@ use crate::collection::{
     CollectionState, CollectionVisibility, COLLECTION_SCHEMA_VERSION, USER_ROOT_COLLECTION_ID,
 };
 use crate::portable::{
-    BundleEntryInput, BundleLimits, BundleRequest, BundleScope, BundleSourceIdentity,
-    BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
+    encode_bundle, BundleEntryInput, BundleLimits, BundleRequest, BundleScope,
+    BundleSourceIdentity, BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
 };
 use crate::rag::{
     build_rag_index, parse_claim_markdown, GenerationManifest, RagVisibility,
@@ -46,6 +46,7 @@ pub const DETACHED_IMPORT_ROOT: &str = ".hive/knowledge/Imported";
 const PORTABLE_SCHEMA_VERSION: u32 = 1;
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
+const MERGE_RELATIVE: &str = ".hive/knowledge/Merge";
 const SUPPRESSION_RELATIVE: &str = ".hive/knowledge/suppression.yml";
 const MAX_REGISTRY_BYTES: usize = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: usize = 1024 * 1024;
@@ -53,6 +54,7 @@ const MAX_METADATA_BYTES: usize = 1024 * 1024;
 const MAX_CLAIM_BYTES: usize = 128 * 1024;
 const MAX_WIKI_BYTES: usize = 2 * 1024 * 1024;
 const MAX_SUPPRESSION_BYTES: usize = 1024 * 1024;
+const MAX_MERGE_PROVENANCE_BYTES: usize = 3 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 128 * 1024;
 const MAX_DIRTY_BYTES: usize = 1024 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
@@ -111,6 +113,28 @@ pub struct BundleExportResult {
     pub backup_path: Option<PathBuf>,
 }
 
+/// Read-only receipt for an exact prospective portable bundle.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleExportPreview {
+    /// Logical source identity committed into the prospective manifest.
+    pub source: BundleSourceIdentity,
+    /// Exact export scope.
+    pub scope: BundleScope,
+    /// Number of portable payload entries in the archive.
+    pub entry_count: usize,
+    /// Canonical entries excluded because they appeared to contain credentials.
+    pub credential_excluded_count: usize,
+    /// Entries excluded because they carried machine-bound absolute locators.
+    pub absolute_path_excluded_count: usize,
+    /// Entries excluded by the confidential boundary.
+    pub confidential_excluded_count: usize,
+    /// Digest of the exact archive that a subsequent export would publish.
+    pub archive_sha256: String,
+    /// Exact prospective archive byte length.
+    pub byte_length: u64,
+}
+
 /// Explicit import execution mode.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -119,6 +143,8 @@ pub enum BundleImportMode {
     DryRun,
     /// Atomically activate the validated canonical merge and rebuild the index.
     Apply,
+    /// Atomically apply only entries that did not conflict during the reviewed preview.
+    ApplyExcludingConflicts,
 }
 
 /// Import disposition matching the public JSON contract.
@@ -180,8 +206,14 @@ pub struct BundleImportResult {
     pub added_count: usize,
     /// Entries already present identically.
     pub unchanged_count: usize,
+    /// Canonical logical paths excluded because destination bytes or claim identity conflicted.
+    pub conflict_paths: Vec<String>,
+    /// Digest of the destination bindings and canonical bytes observed during planning.
+    pub target_state_digest: String,
     /// Imported collections still awaiting an explicit local attachment.
     pub detached_collection_ids: Vec<String>,
+    /// Exact logical collections present in the validated bundle.
+    pub collection_ids: Vec<String>,
     /// Final logical paths changed by a successful apply.
     pub changed_paths: Vec<String>,
     /// Whether canonical bytes changed.
@@ -192,6 +224,420 @@ pub struct BundleImportResult {
     pub rollback: BundleRollbackResult,
     /// Stable normalized table inventory.
     pub collection_tables: Vec<String>,
+}
+
+/// One semantically identical-looking Wiki-page group that needs host review before collapse.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleMergeCandidate {
+    /// Stable content-derived candidate identifier.
+    pub candidate_id: String,
+    /// Canonical portable paths participating in the candidate.
+    pub paths: Vec<String>,
+}
+
+/// One selectable canonical variant for a same-path conflict.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleMergeVariant {
+    /// Exact canonical payload digest.
+    pub sha256: String,
+}
+
+/// A canonical path with two or more divergent validated payload variants.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleMergeConflict {
+    /// Portable path requiring an explicit reviewed selection.
+    pub path: String,
+    /// Available exact payload variants in digest order.
+    pub variants: Vec<BundleMergeVariant>,
+}
+
+/// Host-reviewed disposition for one semantic merge candidate.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "action", rename_all = "kebab-case")]
+pub enum BundleMergeDecision {
+    /// Retain every candidate page as separate active knowledge.
+    Separate {
+        /// Candidate identifier from [`BundleMergeCandidate`].
+        candidate_id: String,
+    },
+    /// Collapse byte-equivalent meaning into one active page and preserve other originals.
+    Equivalent {
+        /// Candidate identifier from [`BundleMergeCandidate`].
+        candidate_id: String,
+        /// One canonical portable Wiki path retained as active knowledge.
+        primary_path: String,
+    },
+    /// Select one same-path canonical Wiki variant after a user-resolved conflict.
+    Choose {
+        /// Portable path from [`BundleMergeConflict`].
+        path: String,
+        /// SHA-256 of the selected canonical variant.
+        selected_sha256: String,
+    },
+}
+
+/// Read-only preparation result for a deterministic multi-bundle merge.
+///
+/// Exact duplicate payloads are represented only once in [`Self::request`]. Divergent paths,
+/// claim identities, and collection truth remain conflicts; semantic candidates are deliberately
+/// not collapsed until an active host supplies a reviewed decision.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BundleMergePreview {
+    /// Exact input archive digests in canonical order.
+    pub archive_sha256s: Vec<String>,
+    /// Number of validated portable entries before exact de-duplication.
+    pub input_entry_count: usize,
+    /// Number of payload entries already represented byte-for-byte by another input.
+    pub exact_duplicate_count: usize,
+    /// Canonical entries that cannot be selected automatically.
+    pub conflict_paths: Vec<String>,
+    /// Selectable same-path payload variants. Other conflict types remain blocked.
+    pub conflicts: Vec<BundleMergeConflict>,
+    /// Same-fact candidates requiring host review.
+    pub semantic_candidates: Vec<BundleMergeCandidate>,
+    request: BundleRequest,
+    conflicting_entries: BTreeMap<String, Vec<BundleEntryInput>>,
+}
+
+impl BundleMergePreview {
+    /// Deterministic portable request containing one copy of every non-conflicting payload.
+    #[must_use]
+    pub fn request(&self) -> &BundleRequest {
+        &self.request
+    }
+
+    /// Digest binding all input archives and the resulting canonical request.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the fixed serializable merge preview cannot serialize.
+    #[must_use]
+    pub fn merge_digest(&self) -> String {
+        let entries = self
+            .request
+            .entries
+            .iter()
+            .map(|entry| (&entry.relative_path, sha256_digest(&entry.bytes)))
+            .collect::<Vec<_>>();
+        sha256_digest(
+            &serde_json::to_vec(&(
+                "knowledge-transfer-merge-v1",
+                &self.archive_sha256s,
+                entries,
+                &self.conflict_paths,
+                &self.conflicts,
+                &self.semantic_candidates,
+            ))
+            .expect("merge preview values serialize"),
+        )
+    }
+}
+
+/// Apply reviewed semantic decisions to a prepared merge request without filesystem effects.
+///
+/// Every candidate needs exactly one decision. An `equivalent` decision is accepted only for
+/// exactly equal kind, summary, and body text; metadata is merged and each removed original is
+/// carried as portable merge provenance outside the active Wiki search surface.
+///
+/// # Errors
+///
+/// Returns an error for incomplete, stale, malformed, or unsupported review decisions.
+///
+/// # Panics
+///
+/// Panics only when an already validated primary candidate disappears from its private request.
+#[allow(clippy::too_many_lines)]
+pub fn apply_bundle_merge_review(
+    preview: &BundleMergePreview,
+    decisions: &[BundleMergeDecision],
+) -> Result<BundleRequest, WikiError> {
+    let semantic_decisions = decisions
+        .iter()
+        .filter_map(|decision| match decision {
+            BundleMergeDecision::Separate { candidate_id }
+            | BundleMergeDecision::Equivalent { candidate_id, .. } => {
+                Some((candidate_id, decision))
+            }
+            BundleMergeDecision::Choose { .. } => None,
+        })
+        .collect::<BTreeMap<_, _>>();
+    let conflict_decisions = decisions
+        .iter()
+        .filter_map(|decision| match decision {
+            BundleMergeDecision::Choose { path, .. } => Some((path, decision)),
+            BundleMergeDecision::Separate { .. } | BundleMergeDecision::Equivalent { .. } => None,
+        })
+        .collect::<BTreeMap<_, _>>();
+    if semantic_decisions.len() + conflict_decisions.len() != decisions.len()
+        || semantic_decisions.len() != preview.semantic_candidates.len()
+        || conflict_decisions.len() != preview.conflicts.len()
+        || preview
+            .semantic_candidates
+            .iter()
+            .any(|candidate| !semantic_decisions.contains_key(&candidate.candidate_id))
+        || preview
+            .conflicts
+            .iter()
+            .any(|conflict| !conflict_decisions.contains_key(&conflict.path))
+    {
+        return Err(WikiError::InvalidInput(
+            "merge review must contain one decision for every candidate and selectable conflict"
+                .to_owned(),
+        ));
+    }
+    if preview.conflict_paths.iter().any(|path| {
+        !preview
+            .conflicts
+            .iter()
+            .any(|conflict| &conflict.path == path)
+    }) {
+        return Err(WikiError::Conflict(
+            "merge has a non-selectable collection or claim conflict".to_owned(),
+        ));
+    }
+    let mut entries = preview
+        .request
+        .entries
+        .iter()
+        .cloned()
+        .map(|entry| (entry.relative_path.clone(), entry))
+        .collect::<BTreeMap<_, _>>();
+    for conflict in &preview.conflicts {
+        let Some(BundleMergeDecision::Choose {
+            selected_sha256, ..
+        }) = conflict_decisions.get(&conflict.path)
+        else {
+            unreachable!("validated conflict decision shape");
+        };
+        let variants = preview
+            .conflicting_entries
+            .get(&conflict.path)
+            .ok_or_else(|| {
+                WikiError::Verification("merge conflict variants are unavailable".to_owned())
+            })?;
+        let selected = variants
+            .iter()
+            .find(|variant| sha256_digest(&variant.bytes) == *selected_sha256)
+            .ok_or_else(|| {
+                WikiError::InvalidInput("selected merge variant is unavailable".to_owned())
+            })?
+            .clone();
+        if selected.classification != PortableEntryClassification::CanonicalMarkdown {
+            return Err(WikiError::Conflict(
+                "only canonical Wiki conflicts are selectable in a merge review".to_owned(),
+            ));
+        }
+        let (collection_id, leaf, Some(file_name)) = parse_portable_payload_path(&conflict.path)?
+        else {
+            return Err(WikiError::Verification(
+                "merge conflict path is malformed".to_owned(),
+            ));
+        };
+        if leaf != "Wiki" {
+            return Err(WikiError::Conflict(
+                "only portable Wiki conflicts are selectable in a merge review".to_owned(),
+            ));
+        }
+        entries.insert(conflict.path.clone(), selected.clone());
+        for variant in variants {
+            if variant.bytes == selected.bytes {
+                continue;
+            }
+            let original_markdown = String::from_utf8(variant.bytes.clone()).map_err(|error| {
+                WikiError::Verification(format!("conflicting Wiki page is not UTF-8: {error}"))
+            })?;
+            parse_page_bytes(
+                original_markdown.as_bytes(),
+                &format!("{WIKI_RELATIVE}/{file_name}"),
+            )?;
+            let record = MergeProvenance {
+                schema_version: 1,
+                primary_path: conflict.path.clone(),
+                original_path: conflict.path.clone(),
+                original_sha256: sha256_digest(&variant.bytes),
+                original_markdown,
+            };
+            let bytes = serde_json::to_vec(&record).map_err(|error| {
+                WikiError::Io(format!("cannot serialize merge provenance: {error}"))
+            })?;
+            insert_merge_provenance(&mut entries, &collection_id, bytes);
+        }
+    }
+    for candidate in &preview.semantic_candidates {
+        let Some(BundleMergeDecision::Equivalent { primary_path, .. }) =
+            semantic_decisions.get(&candidate.candidate_id)
+        else {
+            continue;
+        };
+        if !candidate.paths.contains(primary_path) {
+            return Err(WikiError::InvalidInput(
+                "merge review primary path is outside its candidate".to_owned(),
+            ));
+        }
+        let primary = entries.get(primary_path).ok_or_else(|| {
+            WikiError::Verification("merge review primary page is unavailable".to_owned())
+        })?;
+        let (_, _, Some(primary_file)) = parse_portable_payload_path(primary_path)? else {
+            return Err(WikiError::Verification(
+                "merge review primary path is malformed".to_owned(),
+            ));
+        };
+        let mut primary_page =
+            parse_page_bytes(&primary.bytes, &format!("{WIKI_RELATIVE}/{primary_file}"))?;
+        let mut provenance = Vec::new();
+        for path in &candidate.paths {
+            if path == primary_path {
+                continue;
+            }
+            let other = entries.get(path).ok_or_else(|| {
+                WikiError::Verification("merge review candidate page is unavailable".to_owned())
+            })?;
+            let (_, _, Some(other_file)) = parse_portable_payload_path(path)? else {
+                return Err(WikiError::Verification(
+                    "merge review candidate path is malformed".to_owned(),
+                ));
+            };
+            let other_page =
+                parse_page_bytes(&other.bytes, &format!("{WIKI_RELATIVE}/{other_file}"))?;
+            if primary_page.frontmatter.kind != other_page.frontmatter.kind
+                || primary_page.frontmatter.summary.trim() != other_page.frontmatter.summary.trim()
+                || primary_page.body.trim() != other_page.body.trim()
+            {
+                return Err(WikiError::Conflict(
+                    "equivalent merge review changed semantic candidate bytes; keep separate"
+                        .to_owned(),
+                ));
+            }
+            merge_page_metadata(&mut primary_page.frontmatter, &other_page.frontmatter);
+            let (collection_id, _, _) = parse_portable_payload_path(path)?;
+            let record = MergeProvenance {
+                schema_version: 1,
+                primary_path: primary_path.clone(),
+                original_path: path.clone(),
+                original_sha256: sha256_digest(&other.bytes),
+                original_markdown: String::from_utf8(other.bytes.clone()).map_err(|error| {
+                    WikiError::Verification(format!("merged Wiki page is not UTF-8: {error}"))
+                })?,
+            };
+            let bytes = serde_json::to_vec(&record).map_err(|error| {
+                WikiError::Io(format!("cannot serialize merge provenance: {error}"))
+            })?;
+            provenance.push((collection_id, bytes));
+        }
+        let primary_bytes = render_merge_page(&primary_page)?;
+        entries
+            .get_mut(primary_path)
+            .expect("validated primary remains present")
+            .bytes = primary_bytes;
+        for path in &candidate.paths {
+            if path != primary_path {
+                entries.remove(path);
+            }
+        }
+        for (collection_id, bytes) in provenance {
+            let fingerprint = sha256_digest(&bytes);
+            let file_name = format!(
+                "merge-{}.json",
+                fingerprint
+                    .strip_prefix("sha256:")
+                    .expect("digest prefix is stable")
+            );
+            let relative_path = portable_merge_path(&collection_id, &file_name);
+            entries.insert(
+                relative_path.clone(),
+                BundleEntryInput {
+                    relative_path,
+                    bytes,
+                    classification: PortableEntryClassification::Provenance,
+                },
+            );
+        }
+    }
+    let entries = entries.into_values().collect::<Vec<_>>();
+    let mut source = preview.request.source.clone();
+    source.logical_digest = bundle_logical_digest_inputs(&entries)?;
+    Ok(BundleRequest {
+        source,
+        scope: preview.request.scope.clone(),
+        entries,
+    })
+}
+
+fn merge_page_metadata(primary: &mut crate::WikiFrontmatter, other: &crate::WikiFrontmatter) {
+    primary.tags.extend(other.tags.iter().cloned());
+    primary.aliases.extend(other.aliases.iter().cloned());
+    primary.aliases.push(other.id.clone());
+    primary.sources.extend(other.sources.iter().cloned());
+    primary
+        .source_links
+        .extend(other.source_links.iter().cloned());
+    primary.links.extend(other.links.iter().cloned());
+    primary
+        .related_concepts
+        .extend(other.related_concepts.iter().cloned());
+    primary.topics.extend(other.topics.iter().cloned());
+    primary
+        .contradictions
+        .extend(other.contradictions.iter().cloned());
+    primary.tags.sort();
+    primary.tags.dedup();
+    primary.aliases.sort();
+    primary.aliases.dedup();
+    primary.sources.sort();
+    primary.sources.dedup();
+    primary.source_links.sort();
+    primary.source_links.dedup();
+    primary.links.sort();
+    primary.links.dedup();
+    primary.related_concepts.sort();
+    primary.related_concepts.dedup();
+    primary.topics.sort();
+    primary.topics.dedup();
+    primary.contradictions.sort_by(|left, right| {
+        (&left.source_a, &left.source_b, &left.summary).cmp(&(
+            &right.source_a,
+            &right.source_b,
+            &right.summary,
+        ))
+    });
+    primary.contradictions.dedup();
+}
+
+fn render_merge_page(page: &crate::WikiPage) -> Result<Vec<u8>, WikiError> {
+    let yaml = serde_yaml::to_string(&page.frontmatter)
+        .map_err(|error| WikiError::Io(format!("cannot serialize merged Wiki page: {error}")))?;
+    Ok(format!(
+        "---\n{}---\n\n{}\n",
+        yaml.trim_start_matches("---\n"),
+        page.body.trim()
+    )
+    .into_bytes())
+}
+
+fn insert_merge_provenance(
+    entries: &mut BTreeMap<String, BundleEntryInput>,
+    collection_id: &str,
+    bytes: Vec<u8>,
+) {
+    let fingerprint = sha256_digest(&bytes);
+    let file_name = format!(
+        "merge-{}.json",
+        fingerprint
+            .strip_prefix("sha256:")
+            .expect("digest prefix is stable")
+    );
+    let relative_path = portable_merge_path(collection_id, &file_name);
+    entries.insert(
+        relative_path.clone(),
+        BundleEntryInput {
+            relative_path,
+            bytes,
+            classification: PortableEntryClassification::Provenance,
+        },
+    );
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -237,7 +683,18 @@ struct LoadedGenerationManifest {
 enum IncomingKind {
     Wiki { file_name: String },
     Claim { file_name: String, claim_id: String },
+    Merge { file_name: String },
     Suppression,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct MergeProvenance {
+    schema_version: u32,
+    primary_path: String,
+    original_path: String,
+    original_sha256: String,
+    original_markdown: String,
 }
 
 #[derive(Clone)]
@@ -272,6 +729,8 @@ struct ImportPlan {
     entry_count: usize,
     added_count: usize,
     unchanged_count: usize,
+    conflict_paths: Vec<String>,
+    target_state_digest: String,
     detached_collection_ids: Vec<String>,
 }
 
@@ -299,6 +758,69 @@ pub fn export_bundle(
     publish_mode: &BundlePublishMode,
     limits: BundleLimits,
 ) -> Result<BundleExportResult, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let receipt = encode_and_publish_bundle(&prepared.request, limits, destination, publish_mode)
+        .map_err(bundle_io_error)?;
+    let disposition = match receipt.outcome() {
+        BundlePublishOutcome::Created => BundleExportDisposition::Created,
+        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
+        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
+    };
+    Ok(BundleExportResult {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        disposition,
+        archive_sha256: receipt.archive_sha256().to_owned(),
+        byte_length: receipt.byte_length(),
+        backup_path: receipt.backup_path().map(Path::to_path_buf),
+    })
+}
+
+/// Build the exact portable archive in memory without writing a bundle file.
+///
+/// The returned digest and length describe the same deterministic bytes that `export_bundle`
+/// would publish while the canonical source remains unchanged.
+///
+/// # Errors
+/// Rejects unsafe source paths, invalid canonical data, or bundle resource limits.
+pub fn preview_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    limits: BundleLimits,
+) -> Result<BundleExportPreview, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let encoded = encode_bundle(&prepared.request, limits)
+        .map_err(|error| WikiError::Verification(error.to_string()))?;
+    Ok(BundleExportPreview {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        archive_sha256: encoded.plan().archive_sha256().to_owned(),
+        byte_length: u64::try_from(encoded.archive().len())
+            .map_err(|_| WikiError::Io("bundle preview length does not fit u64".to_owned()))?,
+    })
+}
+
+struct ExportPreparation {
+    request: BundleRequest,
+    source: BundleSourceIdentity,
+    scope: BundleScope,
+    entry_count: usize,
+    exclusions: ExportExclusions,
+}
+
+fn prepare_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    _limits: BundleLimits,
+) -> Result<ExportPreparation, WikiError> {
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
@@ -339,6 +861,7 @@ pub fn export_bundle(
             };
             collect_export_wiki(source, collection, &scope, &mut entries, &mut exclusions)?;
             collect_export_suppression(source, collection, &mut entries, &mut exclusions)?;
+            collect_export_merge(source, collection, &mut entries, &mut exclusions)?;
         } else {
             let dormant_relative = Path::new(DETACHED_IMPORT_ROOT).join(&collection.collection_id);
             if let Some(source) =
@@ -346,6 +869,7 @@ pub fn export_bundle(
             {
                 collect_export_wiki(&source, collection, &scope, &mut entries, &mut exclusions)?;
                 collect_export_suppression(&source, collection, &mut entries, &mut exclusions)?;
+                collect_export_merge(&source, collection, &mut entries, &mut exclusions)?;
             }
         }
     }
@@ -361,24 +885,12 @@ pub fn export_bundle(
         scope: scope.clone(),
         entries,
     };
-    let receipt = encode_and_publish_bundle(&request, limits, destination, publish_mode)
-        .map_err(bundle_io_error)?;
-    let disposition = match receipt.outcome() {
-        BundlePublishOutcome::Created => BundleExportDisposition::Created,
-        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
-        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
-    };
-    Ok(BundleExportResult {
+    Ok(ExportPreparation {
+        request,
         source,
         scope,
         entry_count: portable_entry_count,
-        credential_excluded_count: exclusions.credential,
-        absolute_path_excluded_count: exclusions.absolute_path,
-        confidential_excluded_count: exclusions.confidential,
-        disposition,
-        archive_sha256: receipt.archive_sha256().to_owned(),
-        byte_length: receipt.byte_length(),
-        backup_path: receipt.backup_path().map(Path::to_path_buf),
+        exclusions,
     })
 }
 
@@ -402,15 +914,62 @@ pub fn import_bundle(
     mode: BundleImportMode,
     limits: BundleLimits,
 ) -> Result<BundleImportResult, WikiError> {
+    import_bundle_checked(user_root, bundle, mode, limits, None)
+}
+
+/// Exact archive and dry-run digest approved for one transfer apply.
+pub struct BundleImportApproval<'a> {
+    /// SHA-256 of the archive obtained from the sending computer.
+    pub archive_sha256: &'a str,
+    /// SHA-256 of the serialized complete dry-run result.
+    pub preview_digest: &'a str,
+}
+
+/// Apply a reviewed import, rechecking approval while holding the canonical write lock.
+///
+/// # Errors
+/// Rejects changed archive or destination bytes before activation, as well as normal import errors.
+pub fn import_bundle_reviewed(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+    limits: BundleLimits,
+    approval: BundleImportApproval<'_>,
+) -> Result<BundleImportResult, WikiError> {
+    if mode == BundleImportMode::DryRun {
+        return Err(WikiError::InvalidInput(
+            "reviewed import requires an apply mode".to_owned(),
+        ));
+    }
+    // Reject stale caller input before the writer lock creates its infrastructure directory.
+    // The same approval is checked again under that lock before any canonical activation.
+    let preview = import_bundle_checked(user_root, bundle, BundleImportMode::DryRun, limits, None)?;
+    if approval.archive_sha256 != preview.archive_sha256
+        || approval.preview_digest != import_preview_digest(&preview)?
+    {
+        return Err(WikiError::Conflict(
+            "bundle or destination bytes changed after the transfer preview".to_owned(),
+        ));
+    }
+    import_bundle_checked(user_root, bundle, mode, limits, Some(approval))
+}
+
+fn import_bundle_checked(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+    limits: BundleLimits,
+    approval: Option<BundleImportApproval<'_>>,
+) -> Result<BundleImportResult, WikiError> {
     let validated = load_bundle(bundle, limits).map_err(bundle_io_error)?;
     validate_manifest_logical_digest(&validated)?;
     let incoming = validate_incoming(&validated)?;
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
-    let _lock = if mode == BundleImportMode::Apply {
-        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
-    } else {
+    let _lock = if mode == BundleImportMode::DryRun {
         None
+    } else {
+        Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
     };
     reject_dirty(&root)?;
     let rebuild_index = wiki_indexing_enabled(&root)?;
@@ -420,51 +979,22 @@ pub fn import_bundle(
     let scope = validated.manifest().scope.clone();
     let archive_sha256 = validated.archive_sha256().to_owned();
     let manifest_sha256 = validated.manifest_sha256().to_owned();
-    let collection_tables = COLLECTION_TABLES.iter().map(ToString::to_string).collect();
+    let collection_tables: Vec<String> =
+        COLLECTION_TABLES.iter().map(ToString::to_string).collect();
+    let collection_ids: Vec<String> = incoming
+        .metadata
+        .collections
+        .iter()
+        .map(|record| record.collection_id.clone())
+        .collect();
 
-    if plan.added_count == 0 {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Noop,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: 0,
-            unchanged_count: plan.unchanged_count,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-    if mode == BundleImportMode::DryRun {
-        return Ok(BundleImportResult {
-            mode,
-            disposition: BundleImportDisposition::Planned,
-            archive_sha256,
-            manifest_sha256,
-            source,
-            scope,
-            entry_count: plan.entry_count,
-            added_count: plan.added_count,
-            unchanged_count: plan.unchanged_count,
-            detached_collection_ids: plan.detached_collection_ids,
-            changed_paths: Vec::new(),
-            canonical_mutation: false,
-            index_rebuilt: false,
-            rollback: BundleRollbackResult::none(),
-            collection_tables,
-        });
-    }
-
-    let changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
-    Ok(BundleImportResult {
-        mode,
-        disposition: BundleImportDisposition::Applied,
+    let mut result = BundleImportResult {
+        mode: BundleImportMode::DryRun,
+        disposition: if plan.added_count == 0 {
+            BundleImportDisposition::Noop
+        } else {
+            BundleImportDisposition::Planned
+        },
         archive_sha256,
         manifest_sha256,
         source,
@@ -472,13 +1002,323 @@ pub fn import_bundle(
         entry_count: plan.entry_count,
         added_count: plan.added_count,
         unchanged_count: plan.unchanged_count,
-        detached_collection_ids: plan.detached_collection_ids,
-        changed_paths,
-        canonical_mutation: true,
-        index_rebuilt: rebuild_index,
+        conflict_paths: plan.conflict_paths.clone(),
+        target_state_digest: plan.target_state_digest.clone(),
+        detached_collection_ids: plan.detached_collection_ids.clone(),
+        collection_ids,
+        changed_paths: Vec::new(),
+        canonical_mutation: false,
+        index_rebuilt: false,
         rollback: BundleRollbackResult::none(),
         collection_tables,
+    };
+    if let Some(approval) = approval {
+        if approval.archive_sha256 != result.archive_sha256
+            || approval.preview_digest != import_preview_digest(&result)?
+        {
+            return Err(WikiError::Conflict(
+                "bundle or destination bytes changed after the transfer preview".to_owned(),
+            ));
+        }
+    }
+    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
+        return Err(WikiError::Conflict("bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel".to_owned()));
+    }
+    if mode != BundleImportMode::DryRun && plan.added_count > 0 {
+        result.changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
+        result.disposition = BundleImportDisposition::Applied;
+        result.canonical_mutation = true;
+        result.index_rebuilt = rebuild_index;
+    }
+    result.mode = mode;
+    Ok(result)
+}
+
+/// Digest a dry-run result in the same canonical JSON object order exposed by the CLI.
+///
+/// # Errors
+/// Returns an error if result serialization fails.
+pub fn import_preview_digest(result: &BundleImportResult) -> Result<String, WikiError> {
+    serde_json::to_value(result)
+        .and_then(|value| serde_json::to_vec(&value))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|error| WikiError::Io(error.to_string()))
+}
+
+/// Validate and deterministically combine several portable bundles without writing canonical data.
+///
+/// The result intentionally retains semantic candidates. A caller must obtain a reviewed host
+/// decision before treating two differently named pages as one knowledge item.
+///
+/// # Errors
+///
+/// Returns an error for fewer than two inputs, unsafe or malformed bundles, an unsupported mixed
+/// scope, or a resource limit violation. Content conflicts are returned in the preview so callers
+/// can present every conflict together.
+#[allow(clippy::too_many_lines)]
+pub fn preview_bundle_merge(
+    bundles: &[PathBuf],
+    limits: BundleLimits,
+) -> Result<BundleMergePreview, WikiError> {
+    if bundles.len() < 2 {
+        return Err(WikiError::InvalidInput(
+            "multi-bundle merge requires at least two bundle paths".to_owned(),
+        ));
+    }
+    let mut loaded = Vec::with_capacity(bundles.len());
+    for bundle in bundles {
+        let plan = load_bundle(bundle, limits).map_err(bundle_io_error)?;
+        validate_manifest_logical_digest(&plan)?;
+        let incoming = validate_incoming(&plan)?;
+        loaded.push((plan, incoming));
+    }
+    loaded.sort_by(|left, right| left.0.archive_sha256().cmp(right.0.archive_sha256()));
+    if loaded
+        .windows(2)
+        .any(|pair| pair[0].0.archive_sha256() == pair[1].0.archive_sha256())
+    {
+        loaded.dedup_by(|left, right| left.0.archive_sha256() == right.0.archive_sha256());
+    }
+
+    let archive_sha256s = loaded
+        .iter()
+        .map(|(plan, _)| plan.archive_sha256().to_owned())
+        .collect::<Vec<_>>();
+    let mut input_entry_count = 0_usize;
+    let mut exact_duplicate_count = bundles.len().saturating_sub(loaded.len());
+    let mut conflicts = Vec::new();
+    let mut collections = BTreeMap::<String, PortableCollectionRecord>::new();
+    let mut entries = BTreeMap::<String, BundleEntryInput>::new();
+    let mut conflicting_entries = BTreeMap::<String, Vec<BundleEntryInput>>::new();
+    let mut claim_paths = BTreeMap::<String, String>::new();
+
+    for (_, incoming) in &loaded {
+        for collection in &incoming.metadata.collections {
+            match collections.get_mut(&collection.collection_id) {
+                Some(existing) if same_collection_identity(existing, collection) => {
+                    existing.aliases.extend(collection.aliases.iter().cloned());
+                    existing.aliases.sort_by(|left, right| {
+                        folded_alias(left)
+                            .cmp(&folded_alias(right))
+                            .then_with(|| left.cmp(right))
+                    });
+                    existing
+                        .aliases
+                        .dedup_by(|left, right| folded_alias(left) == folded_alias(right));
+                    exact_duplicate_count += 1;
+                }
+                Some(_) => conflicts.push(format!("collections/{}", collection.collection_id)),
+                None => {
+                    collections.insert(collection.collection_id.clone(), collection.clone());
+                }
+            }
+        }
+        for payload in &incoming.payloads {
+            input_entry_count += 1;
+            let classification = match payload.kind {
+                IncomingKind::Wiki { .. } => PortableEntryClassification::CanonicalMarkdown,
+                IncomingKind::Claim { .. } | IncomingKind::Merge { .. } => {
+                    PortableEntryClassification::Provenance
+                }
+                IncomingKind::Suppression => PortableEntryClassification::Suppression,
+            };
+            if let IncomingKind::Claim { claim_id, .. } = &payload.kind {
+                if let Some(existing) = claim_paths.get(claim_id) {
+                    if existing != &payload.relative_path {
+                        conflicts.push(existing.clone());
+                        conflicts.push(payload.relative_path.clone());
+                        continue;
+                    }
+                } else {
+                    claim_paths.insert(claim_id.clone(), payload.relative_path.clone());
+                }
+            }
+            if let Some(variants) = conflicting_entries.get_mut(&payload.relative_path) {
+                if !variants
+                    .iter()
+                    .any(|variant| variant.bytes == payload.bytes)
+                {
+                    variants.push(BundleEntryInput {
+                        relative_path: payload.relative_path.clone(),
+                        bytes: payload.bytes.clone(),
+                        classification,
+                    });
+                }
+                continue;
+            }
+            match entries.get_mut(&payload.relative_path) {
+                Some(existing) if existing.bytes == payload.bytes => exact_duplicate_count += 1,
+                Some(existing)
+                    if classification == PortableEntryClassification::Suppression
+                        && existing.classification == PortableEntryClassification::Suppression =>
+                {
+                    existing.bytes = merge_suppression(Some(&existing.bytes), &payload.bytes)?;
+                }
+                Some(existing) => {
+                    let path = payload.relative_path.clone();
+                    let removed = existing.clone();
+                    entries.remove(&path);
+                    let variants = conflicting_entries.entry(path.clone()).or_default();
+                    if !variants
+                        .iter()
+                        .any(|variant| variant.bytes == removed.bytes)
+                    {
+                        variants.push(removed);
+                    }
+                    if !variants
+                        .iter()
+                        .any(|variant| variant.bytes == payload.bytes)
+                    {
+                        variants.push(BundleEntryInput {
+                            relative_path: path.clone(),
+                            bytes: payload.bytes.clone(),
+                            classification,
+                        });
+                    }
+                    conflicts.push(path);
+                }
+                None => {
+                    entries.insert(
+                        payload.relative_path.clone(),
+                        BundleEntryInput {
+                            relative_path: payload.relative_path.clone(),
+                            bytes: payload.bytes.clone(),
+                            classification,
+                        },
+                    );
+                }
+            }
+        }
+    }
+
+    let registry = validate_portable_registry(PortableCollectionRegistry {
+        schema_version: PORTABLE_SCHEMA_VERSION,
+        collections: collections.into_values().collect(),
+    })?;
+    let scope = merge_scope(&registry)?;
+    entries.insert(
+        PORTABLE_REGISTRY_PATH.to_owned(),
+        BundleEntryInput {
+            relative_path: PORTABLE_REGISTRY_PATH.to_owned(),
+            bytes: canonical_portable_registry_bytes(&registry)?,
+            classification: PortableEntryClassification::PortableMetadata,
+        },
+    );
+    let request_entries = entries.into_values().collect::<Vec<_>>();
+    let logical_digest = bundle_logical_digest_inputs(&request_entries)?;
+    let request = BundleRequest {
+        source: BundleSourceIdentity {
+            kind: BundleSourceKind::UserRoot,
+            id: USER_ROOT_COLLECTION_ID.to_owned(),
+            logical_digest,
+        },
+        scope,
+        entries: request_entries,
+    };
+    conflicts.sort();
+    conflicts.dedup();
+    for variants in conflicting_entries.values_mut() {
+        variants.sort_by_key(|left| sha256_digest(&left.bytes));
+    }
+    let conflicts_detail = conflicting_entries
+        .iter()
+        .map(|(path, variants)| BundleMergeConflict {
+            path: path.clone(),
+            variants: variants
+                .iter()
+                .map(|variant| BundleMergeVariant {
+                    sha256: sha256_digest(&variant.bytes),
+                })
+                .collect(),
+        })
+        .collect::<Vec<_>>();
+    let semantic_candidates = semantic_merge_candidates(&request.entries)?;
+    Ok(BundleMergePreview {
+        archive_sha256s,
+        input_entry_count,
+        exact_duplicate_count,
+        conflict_paths: conflicts,
+        conflicts: conflicts_detail,
+        semantic_candidates,
+        request,
+        conflicting_entries,
     })
+}
+
+fn same_collection_identity(
+    left: &PortableCollectionRecord,
+    right: &PortableCollectionRecord,
+) -> bool {
+    left.collection_id == right.collection_id
+        && left.kind == right.kind
+        && left.source_project_id == right.source_project_id
+        && left.default_visibility == right.default_visibility
+}
+
+fn merge_scope(registry: &PortableCollectionRegistry) -> Result<BundleScope, WikiError> {
+    if registry.collections.len() == 1 {
+        let only = &registry.collections[0];
+        return Ok(if only.collection_id == USER_ROOT_COLLECTION_ID {
+            BundleScope::Global
+        } else {
+            BundleScope::Collection {
+                id: only.collection_id.clone(),
+            }
+        });
+    }
+    if registry
+        .collections
+        .iter()
+        .any(|collection| collection.collection_id == USER_ROOT_COLLECTION_ID)
+    {
+        return Ok(BundleScope::AllPortable);
+    }
+    Err(WikiError::Conflict(
+        "multiple portable collections require a user-root collection identity".to_owned(),
+    ))
+}
+
+fn semantic_merge_candidates(
+    entries: &[BundleEntryInput],
+) -> Result<Vec<BundleMergeCandidate>, WikiError> {
+    let mut groups = BTreeMap::<String, Vec<String>>::new();
+    for entry in entries {
+        let Ok((_, leaf, Some(file_name))) = parse_portable_payload_path(&entry.relative_path)
+        else {
+            continue;
+        };
+        if leaf != "Wiki" {
+            continue;
+        }
+        let page = parse_page_bytes(&entry.bytes, &format!("{WIKI_RELATIVE}/{file_name}"))?;
+        let key = sha256_digest(
+            format!(
+                "{}\0{}\0{}",
+                page.frontmatter.kind,
+                page.frontmatter.summary.trim().to_lowercase(),
+                page.body.trim().to_lowercase()
+            )
+            .as_bytes(),
+        );
+        groups
+            .entry(key)
+            .or_default()
+            .push(entry.relative_path.clone());
+    }
+    let mut candidates = groups
+        .into_iter()
+        .filter_map(|(candidate_id, mut paths)| {
+            (paths.len() > 1).then(|| {
+                paths.sort();
+                BundleMergeCandidate {
+                    candidate_id,
+                    paths,
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(|left, right| left.candidate_id.cmp(&right.candidate_id));
+    Ok(candidates)
 }
 
 fn source_identity(scope: &BundleScope, logical_digest: String) -> BundleSourceIdentity {
@@ -830,6 +1670,55 @@ fn collect_export_suppression(
     Ok(())
 }
 
+fn collect_export_merge(
+    source: &Dir,
+    collection: &CollectionRecord,
+    entries: &mut Vec<BundleEntryInput>,
+    exclusions: &mut ExportExclusions,
+) -> Result<(), WikiError> {
+    let Some(directory) = open_optional_dir(source, Path::new(MERGE_RELATIVE), "merge provenance")?
+    else {
+        return Ok(());
+    };
+    for name in directory_names(&directory, "merge provenance")? {
+        let metadata = directory
+            .symlink_metadata(&name)
+            .map_err(|error| WikiError::Io(format!("cannot inspect merge provenance: {error}")))?;
+        if !metadata.is_file() {
+            return Err(WikiError::Verification(
+                "merge provenance contains a non-regular file".to_owned(),
+            ));
+        }
+        let file_name = utf8_name(&name, "merge provenance filename")?;
+        if Path::new(&file_name)
+            .extension()
+            .and_then(|extension| extension.to_str())
+            != Some("json")
+        {
+            return Err(WikiError::Verification(
+                "merge provenance filename must end with .json".to_owned(),
+            ));
+        }
+        let bytes = read_named_file(
+            &directory,
+            &name,
+            MAX_MERGE_PROVENANCE_BYTES,
+            "merge provenance",
+        )?;
+        validate_merge_provenance(&bytes)?;
+        push_export_entry(
+            entries,
+            exclusions,
+            BundleEntryInput {
+                relative_path: portable_merge_path(&collection.collection_id, &file_name),
+                bytes,
+                classification: PortableEntryClassification::Provenance,
+            },
+        )?;
+    }
+    Ok(())
+}
+
 fn push_export_entry(
     entries: &mut Vec<BundleEntryInput>,
     exclusions: &mut ExportExclusions,
@@ -1067,6 +1956,25 @@ fn validate_incoming(plan: &ValidatedBundlePlan) -> Result<ValidatedIncoming, Wi
                     claim_id: claim.claim_id,
                 }
             }
+            "Merge" => {
+                if entry.classification() != PortableEntryClassification::Provenance {
+                    return Err(classification_error(entry.relative_path()));
+                }
+                let file_name = file_name.ok_or_else(|| {
+                    WikiError::Verification("portable merge entry lacks a filename".to_owned())
+                })?;
+                if Path::new(&file_name)
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    != Some("json")
+                {
+                    return Err(WikiError::Verification(
+                        "portable merge entry must end with .json".to_owned(),
+                    ));
+                }
+                validate_merge_provenance(entry.bytes())?;
+                IncomingKind::Merge { file_name }
+            }
             "suppression.yml" => {
                 if entry.classification() != PortableEntryClassification::Suppression
                     || file_name.is_some()
@@ -1248,6 +2156,11 @@ fn build_import_plan(
     let mut writes = Vec::new();
     let mut added_count = usize::from(registry_changed);
     let mut unchanged_count = usize::from(!registry_changed);
+    let mut conflict_paths = Vec::new();
+    let mut observed = BTreeMap::from([(
+        COLLECTION_REGISTRY_RELATIVE.to_owned(),
+        loaded.bytes.as_deref().map(sha256_digest),
+    )]);
     if registry_changed {
         writes.push(PlannedWrite {
             root_index: 0,
@@ -1277,15 +2190,27 @@ fn build_import_plan(
                     let expected =
                         format!("{CLAIMS_RELATIVE}/{}/{}", payload.collection_id, file_name);
                     if existing != &expected {
-                        return Err(WikiError::Conflict(format!(
-                            "claim ID `{claim_id}` already exists at `{existing}`"
-                        )));
+                        let bytes = read_bounded_optional(
+                            &roots[0].dir,
+                            Path::new(existing),
+                            MAX_CLAIM_BYTES,
+                            "conflicting claim",
+                        )?;
+                        observed.insert(
+                            payload.relative_path.clone(),
+                            bytes.as_deref().map(sha256_digest),
+                        );
+                        conflict_paths.push(existing.clone());
+                        continue;
                     }
                 }
                 let relative = PathBuf::from(CLAIMS_RELATIVE)
                     .join(&payload.collection_id)
                     .join(file_name);
                 (0, relative.clone(), path_locator(&relative)?)
+            }
+            IncomingKind::Merge { file_name } => {
+                payload_destination(collection, &root_indices, MERGE_RELATIVE, file_name)?
             }
             IncomingKind::Suppression => payload_destination(
                 collection,
@@ -1301,6 +2226,10 @@ fn build_import_plan(
             payload_max_bytes(&payload.kind),
             "bundle import destination",
         )?;
+        observed.insert(
+            payload.relative_path.clone(),
+            existing.as_deref().map(sha256_digest),
+        );
         let desired = if matches!(payload.kind, IncomingKind::Suppression) {
             merge_suppression(existing.as_deref(), &payload.bytes)?
         } else {
@@ -1309,10 +2238,7 @@ fn build_import_plan(
         if existing.as_deref() == Some(desired.as_slice()) {
             unchanged_count += 1;
         } else if existing.is_some() && !matches!(payload.kind, IncomingKind::Suppression) {
-            return Err(WikiError::Conflict(format!(
-                "same logical bundle path has divergent canonical bytes: {}",
-                payload.relative_path
-            )));
+            conflict_paths.push(logical_locator);
         } else {
             added_count += 1;
             writes.push(PlannedWrite {
@@ -1335,8 +2261,10 @@ fn build_import_plan(
         ));
     }
     validate_planned_suppressions(&roots, &writes)?;
+    conflict_paths.sort();
+    conflict_paths.dedup();
     let entry_count = incoming.payloads.len() + 1;
-    if added_count + unchanged_count != entry_count {
+    if added_count + unchanged_count + conflict_paths.len() != entry_count {
         return Err(WikiError::Io(
             "bundle import accounting lost a payload entry".to_owned(),
         ));
@@ -1347,6 +2275,11 @@ fn build_import_plan(
         entry_count,
         added_count,
         unchanged_count,
+        conflict_paths,
+        target_state_digest: sha256_digest(
+            &serde_json::to_vec(&(root_path, &merged, &existing_claims, &observed))
+                .map_err(|error| WikiError::Io(error.to_string()))?,
+        ),
         detached_collection_ids: detached,
     })
 }
@@ -2131,11 +3064,15 @@ fn parse_portable_payload_path(
     let components = relative.split('/').collect::<Vec<_>>();
     if components.len() == 6
         && components[..3] == [".hive", "portable", "collections"]
-        && matches!(components[4], "Wiki" | "Claims")
+        && matches!(components[4], "Wiki" | "Claims" | "Merge")
         && Path::new(components[5])
             .extension()
             .and_then(|extension| extension.to_str())
-            == Some("md")
+            == Some(if components[4] == "Merge" {
+                "json"
+            } else {
+                "md"
+            })
     {
         return Ok((
             components[3].to_owned(),
@@ -2162,6 +3099,10 @@ fn portable_claim_path(collection_id: &str, file_name: &str) -> String {
     format!(".hive/portable/collections/{collection_id}/Claims/{file_name}")
 }
 
+fn portable_merge_path(collection_id: &str, file_name: &str) -> String {
+    format!(".hive/portable/collections/{collection_id}/Merge/{file_name}")
+}
+
 fn portable_suppression_path(collection_id: &str) -> String {
     format!(".hive/portable/collections/{collection_id}/suppression.yml")
 }
@@ -2169,6 +3110,47 @@ fn portable_suppression_path(collection_id: &str) -> String {
 fn claim_has_absolute_locator(claim: &crate::rag::CanonicalClaim) -> bool {
     is_absolute_like(&claim.provenance.locator)
         || claim.sources.iter().any(|source| is_absolute_like(source))
+}
+
+fn validate_merge_provenance(bytes: &[u8]) -> Result<(), WikiError> {
+    let provenance: MergeProvenance = serde_json::from_slice(bytes)
+        .map_err(|error| WikiError::Verification(format!("invalid merge provenance: {error}")))?;
+    if provenance.schema_version != 1
+        || !is_sha256(&provenance.original_sha256)
+        || provenance.primary_path.is_empty()
+        || provenance.original_path.is_empty()
+        || provenance.original_markdown.is_empty()
+        || sha256_digest(provenance.original_markdown.as_bytes()) != provenance.original_sha256
+    {
+        return Err(WikiError::Verification(
+            "merge provenance identity is invalid".to_owned(),
+        ));
+    }
+    let (_, primary_leaf, Some(primary_file)) =
+        parse_portable_payload_path(&provenance.primary_path)?
+    else {
+        return Err(WikiError::Verification(
+            "merge provenance primary path is invalid".to_owned(),
+        ));
+    };
+    let (_, original_leaf, Some(original_file)) =
+        parse_portable_payload_path(&provenance.original_path)?
+    else {
+        return Err(WikiError::Verification(
+            "merge provenance original path is invalid".to_owned(),
+        ));
+    };
+    if primary_leaf != "Wiki" || original_leaf != "Wiki" {
+        return Err(WikiError::Verification(
+            "merge provenance must refer to portable Wiki paths".to_owned(),
+        ));
+    }
+    parse_page_bytes(
+        provenance.original_markdown.as_bytes(),
+        &format!("{WIKI_RELATIVE}/{original_file}"),
+    )?;
+    let _ = primary_file;
+    Ok(())
 }
 
 fn is_absolute_like(value: &str) -> bool {
@@ -2347,6 +3329,7 @@ fn payload_max_bytes(kind: &IncomingKind) -> usize {
     match kind {
         IncomingKind::Wiki { .. } => MAX_WIKI_BYTES,
         IncomingKind::Claim { .. } => MAX_CLAIM_BYTES,
+        IncomingKind::Merge { .. } => MAX_MERGE_PROVENANCE_BYTES,
         IncomingKind::Suppression => MAX_SUPPRESSION_BYTES,
     }
 }
@@ -2850,6 +3833,167 @@ mod tests {
         (source, project, id)
     }
 
+    fn global_bundle(bundle_path: &Path, pages: &[(&str, &str)]) -> TempDir {
+        let source = initialized_root();
+        for (id, body) in pages {
+            write_wiki(source.path(), id, body);
+        }
+        RagStore::open(source.path())
+            .expect("open global source store")
+            .rebuild()
+            .expect("rebuild global source");
+        export_bundle(
+            source.path(),
+            BundleScope::AllPortable,
+            bundle_path,
+            &BundlePublishMode::CreateOnly,
+            BundleLimits::default(),
+        )
+        .expect("export global bundle");
+        source
+    }
+
+    #[test]
+    fn multi_bundle_preview_unions_unique_pages_and_deduplicates_exact_payloads() {
+        let directory = tempfile::tempdir().expect("bundle directory");
+        let first = directory.path().join("first.hivekb");
+        let second = directory.path().join("second.hivekb");
+        let _source_a = global_bundle(&first, &[("backup", "Backup instructions.")]);
+        let _source_b = global_bundle(&second, &[("restore", "Restore instructions.")]);
+
+        let preview = preview_bundle_merge(
+            &[second.clone(), first.clone(), first.clone()],
+            BundleLimits::default(),
+        )
+        .expect("preview merge");
+        assert_eq!(preview.archive_sha256s.len(), 2);
+        assert!(preview.exact_duplicate_count > 0);
+        assert!(preview.conflict_paths.is_empty());
+        let encoded =
+            encode_bundle(preview.request(), BundleLimits::default()).expect("encode merge");
+        assert!(encoded
+            .plan()
+            .entries()
+            .iter()
+            .any(|entry| entry.relative_path().ends_with("Wiki/backup.md")));
+        assert!(encoded
+            .plan()
+            .entries()
+            .iter()
+            .any(|entry| entry.relative_path().ends_with("Wiki/restore.md")));
+    }
+
+    #[test]
+    fn multi_bundle_preview_reports_divergent_same_path_without_selecting_it() {
+        let directory = tempfile::tempdir().expect("bundle directory");
+        let first = directory.path().join("first.hivekb");
+        let second = directory.path().join("second.hivekb");
+        let third = directory.path().join("third.hivekb");
+        let _source_a = global_bundle(&first, &[("backup", "Keep backups for thirty days.")]);
+        let _source_b = global_bundle(&second, &[("backup", "Keep backups for ninety days.")]);
+        let _source_c = global_bundle(&third, &[("backup", "Keep backups for one hundred days.")]);
+
+        let preview = preview_bundle_merge(&[first, second, third], BundleLimits::default())
+            .expect("preview conflicting merge");
+        assert!(preview
+            .conflict_paths
+            .iter()
+            .any(|path| path.ends_with("Wiki/backup.md")));
+        assert_eq!(preview.conflicts.len(), 1);
+        let conflict = &preview.conflicts[0];
+        assert_eq!(conflict.variants.len(), 3);
+        let request = apply_bundle_merge_review(
+            &preview,
+            &[BundleMergeDecision::Choose {
+                path: conflict.path.clone(),
+                selected_sha256: conflict.variants[0].sha256.clone(),
+            }],
+        )
+        .expect("reviewed conflict selection");
+        assert!(request
+            .entries
+            .iter()
+            .any(|entry| entry.relative_path.ends_with("Wiki/backup.md")));
+        assert!(request
+            .entries
+            .iter()
+            .any(|entry| entry.relative_path.contains("/Merge/")));
+    }
+
+    #[test]
+    fn reviewed_equivalent_pages_keep_one_active_page_and_portable_original() {
+        let directory = tempfile::tempdir().expect("bundle directory");
+        let first = directory.path().join("first.hivekb");
+        let second = directory.path().join("second.hivekb");
+        let source_a = initialized_root();
+        let source_b = initialized_root();
+        let first_page = String::from_utf8(wiki_bytes("first", "Same portable instruction."))
+            .expect("UTF-8 page")
+            .replace("first summary", "shared summary");
+        let second_page = String::from_utf8(wiki_bytes("second", "Same portable instruction."))
+            .expect("UTF-8 page")
+            .replace("second summary", "shared summary");
+        fs::write(
+            source_a.path().join(WIKI_RELATIVE).join("first.md"),
+            first_page,
+        )
+        .expect("write first page");
+        fs::write(
+            source_b.path().join(WIKI_RELATIVE).join("second.md"),
+            second_page,
+        )
+        .expect("write second page");
+        RagStore::open(source_a.path()).unwrap().rebuild().unwrap();
+        RagStore::open(source_b.path()).unwrap().rebuild().unwrap();
+        for (source, bundle) in [(&source_a, &first), (&source_b, &second)] {
+            export_bundle(
+                source.path(),
+                BundleScope::AllPortable,
+                bundle,
+                &BundlePublishMode::CreateOnly,
+                BundleLimits::default(),
+            )
+            .expect("export semantic candidate");
+        }
+        let preview = preview_bundle_merge(&[first, second], BundleLimits::default())
+            .expect("semantic merge preview");
+        assert_eq!(preview.semantic_candidates.len(), 1);
+        let candidate = &preview.semantic_candidates[0];
+        let request = apply_bundle_merge_review(
+            &preview,
+            &[BundleMergeDecision::Equivalent {
+                candidate_id: candidate.candidate_id.clone(),
+                primary_path: candidate.paths[0].clone(),
+            }],
+        )
+        .expect("reviewed merge request");
+        assert_eq!(
+            request
+                .entries
+                .iter()
+                .filter(|entry| entry.relative_path.contains("/Wiki/"))
+                .count(),
+            1
+        );
+        assert!(request
+            .entries
+            .iter()
+            .any(|entry| entry.relative_path.contains("/Merge/")));
+        let encoded =
+            encode_bundle(&request, BundleLimits::default()).expect("encode reviewed merge");
+        let destination = initialized_root();
+        let combined = directory.path().join("combined.hivekb");
+        fs::write(&combined, encoded.archive()).expect("write combined archive");
+        import_bundle(
+            destination.path(),
+            &combined,
+            BundleImportMode::Apply,
+            BundleLimits::default(),
+        )
+        .expect("import reviewed merge");
+        assert!(destination.path().join(MERGE_RELATIVE).is_dir());
+    }
+
     fn detached_wiki_path(root: &Path, collection_id: &str) -> PathBuf {
         root.join(DETACHED_IMPORT_ROOT)
             .join(collection_id)
@@ -3346,6 +4490,153 @@ mod tests {
             fs::read(destination.path().join(SHARED_INDEX_RELATIVE)).unwrap(),
             index_before
         );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn reviewed_exclusion_binds_conflicting_bytes_and_preserves_nonconflicting_import() {
+        let output = tempfile::tempdir().unwrap();
+        let original = output.path().join("original.hivekb");
+        let (source, project, id) = project_bundle(&original);
+        let destination = initialized_root();
+        import_bundle(
+            destination.path(),
+            &original,
+            BundleImportMode::Apply,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let divergent = detached_wiki_path(destination.path(), &id);
+        fs::write(
+            &divergent,
+            wiki_bytes("project-page", "Destination version one."),
+        )
+        .unwrap();
+        fs::write(
+            project.path().join(WIKI_RELATIVE).join("new-page.md"),
+            wiki_bytes("new-page", "New portable knowledge."),
+        )
+        .unwrap();
+        let updated = output.path().join("updated.hivekb");
+        export_bundle(
+            source.path(),
+            BundleScope::Project {
+                id: PROJECT_ID.to_owned(),
+            },
+            &updated,
+            &BundlePublishMode::CreateOnly,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let preview = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(preview.conflict_paths.len(), 1);
+        assert!(preview.added_count > 0);
+        let expected_preview = import_preview_digest(&preview).unwrap();
+        let new_path = divergent.parent().unwrap().join("new-page.md");
+        assert!(matches!(
+            import_bundle(
+                destination.path(),
+                &updated,
+                BundleImportMode::Apply,
+                BundleLimits::default()
+            ),
+            Err(WikiError::Conflict(_))
+        ));
+        assert!(!new_path.exists());
+
+        let retained = wiki_bytes("project-page", "Destination version two.");
+        fs::write(&divergent, &retained).unwrap();
+        let rejected = import_bundle_reviewed(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+            BundleImportApproval {
+                archive_sha256: &preview.archive_sha256,
+                preview_digest: &expected_preview,
+            },
+        );
+        assert!(matches!(rejected, Err(WikiError::Conflict(_))));
+        assert!(!new_path.exists());
+        assert_eq!(fs::read(&divergent).unwrap(), retained);
+
+        let current = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_ne!(current.target_state_digest, preview.target_state_digest);
+        let digest = import_preview_digest(&current).unwrap();
+        let applied = import_bundle_reviewed(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+            BundleImportApproval {
+                archive_sha256: &current.archive_sha256,
+                preview_digest: &digest,
+            },
+        )
+        .unwrap();
+        assert_eq!(applied.conflict_paths, current.conflict_paths);
+        assert_eq!(fs::read(&divergent).unwrap(), retained);
+        assert_eq!(
+            fs::read(&new_path).unwrap(),
+            wiki_bytes("new-page", "New portable knowledge.")
+        );
+        let retry = import_bundle(
+            destination.path(),
+            &updated,
+            BundleImportMode::ApplyExcludingConflicts,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(retry.disposition, BundleImportDisposition::Noop);
+        assert!(!retry.canonical_mutation);
+        assert!(retry.changed_paths.is_empty());
+    }
+
+    #[test]
+    fn reviewed_import_rejects_wrong_archive_before_writes() {
+        let output = tempfile::tempdir().unwrap();
+        let bundle = output.path().join("source.hivekb");
+        let (_source, _project, _id) = project_bundle(&bundle);
+        let destination = initialized_root();
+        let preview = import_bundle(
+            destination.path(),
+            &bundle,
+            BundleImportMode::DryRun,
+            BundleLimits::default(),
+        )
+        .unwrap();
+        let registry = fs::read(destination.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap();
+        let digest = import_preview_digest(&preview).unwrap();
+        assert!(matches!(
+            import_bundle_reviewed(
+                destination.path(),
+                &bundle,
+                BundleImportMode::Apply,
+                BundleLimits::default(),
+                BundleImportApproval {
+                    archive_sha256: &format!("sha256:{}", "0".repeat(64)),
+                    preview_digest: &digest,
+                }
+            ),
+            Err(WikiError::Conflict(_))
+        ));
+        assert_eq!(
+            registry,
+            fs::read(destination.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap()
+        );
+        assert!(!destination.path().join(DETACHED_IMPORT_ROOT).exists());
     }
 
     #[test]

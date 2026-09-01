@@ -24,6 +24,8 @@ const PACKAGE_REQUEST_SCHEMA: &str =
     include_str!("../../../schemas/judge-package-request.schema.json");
 const QUORUM_REQUEST_SCHEMA: &str =
     include_str!("../../../schemas/judge-quorum-request.schema.json");
+const HOST_RECEIPT_SCHEMA: &str =
+    include_str!("../../../schemas/adversarial-judge-host-receipt.schema.json");
 const MAX_REFERENCED_FILE_BYTES: usize = 1024 * 1024;
 const MAX_TOTAL_REFERENCED_BYTES: usize = 4 * 1024 * 1024;
 const MAX_QUORUM_DOCUMENT_BYTES: usize = 256 * 1024;
@@ -42,6 +44,13 @@ Aggregate independent final judge verdicts without mutation.
 USAGE:
     hive judge quorum --target <dir> --request <request.json> \
         --trust-root <external-protected.toml> --output json
+";
+const RECEIPT_USAGE: &str = "\
+Validate one host-owned adversarial Judge launch and result without mutation.
+
+USAGE:
+    hive judge receipt --target <dir> --request <receipt.json> \
+        --package <package.json> --assignment <assignment.json> --output json
 ";
 
 #[derive(Debug, Deserialize)]
@@ -79,6 +88,51 @@ struct JudgeArguments {
     trust_root: Option<PathBuf>,
 }
 
+struct ReceiptArguments {
+    target: PathBuf,
+    request: PathBuf,
+    package: PathBuf,
+    assignment: PathBuf,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HostJudgeReceipt {
+    schema_version: u32,
+    host: String,
+    package_digest: String,
+    assignment_digest: String,
+    slot_id: String,
+    requester_id: String,
+    task_agent_id: String,
+    judge_instance_id: String,
+    launch: HostJudgeLaunch,
+    result: HostJudgeResult,
+    completion_authority: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HostJudgeLaunch {
+    owner: String,
+    host_task_id_digest: String,
+    model_id: String,
+    reasoning_effort: String,
+    clean_context: bool,
+    occurred_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HostJudgeResult {
+    status: String,
+    host_task_id_digest: String,
+    verdict_locator: Option<String>,
+    verdict_digest: Option<String>,
+    findings: Vec<serde_json::Value>,
+    occurred_at: String,
+}
+
 struct QuorumSummary {
     result: &'static str,
     status: &'static str,
@@ -103,20 +157,144 @@ pub(crate) fn run_judge(arguments: &[String]) -> ExitCode {
         print!("{QUORUM_USAGE}");
         return ExitCode::SUCCESS;
     }
+    if arguments == ["receipt", "--help"] {
+        print!("{RECEIPT_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let result = match arguments.first().map(String::as_str) {
         Some("package") => {
             parse_arguments(&arguments[1..], false).and_then(|parsed| package(&parsed))
         }
         Some("quorum") => parse_arguments(&arguments[1..], true).and_then(|parsed| quorum(&parsed)),
+        Some("receipt") => parse_receipt_arguments(&arguments[1..])
+            .and_then(|parsed| validate_host_receipt(&parsed)),
         Some(other) => Err(AdapterError::Input(format!(
             "unknown judge action: {other}"
         ))),
         None => Err(AdapterError::Input(
-            "judge requires package or quorum".to_owned(),
+            "judge requires package, receipt, or quorum".to_owned(),
         )),
     }
     .unwrap_or_else(|error| failure_result(&error));
     emit_action_result(&result)
+}
+
+fn parse_receipt_arguments(arguments: &[String]) -> Result<ReceiptArguments, AdapterError> {
+    let options = parse_options(
+        arguments,
+        &["--target", "--request", "--package", "--assignment"],
+    )?;
+    Ok(ReceiptArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        request: PathBuf::from(required(&options, "--request")?),
+        package: PathBuf::from(required(&options, "--package")?),
+        assignment: PathBuf::from(required(&options, "--assignment")?),
+    })
+}
+
+#[allow(clippy::too_many_lines)]
+fn validate_host_receipt(arguments: &ReceiptArguments) -> Result<ActionResult, AdapterError> {
+    let target = PinnedTarget::open(&arguments.target)?;
+    let receipt_path = validate_target_relative(&arguments.request)?;
+    let package_path = validate_target_relative(&arguments.package)?;
+    let assignment_path = validate_target_relative(&arguments.assignment)?;
+    let receipt_bytes = target.read_required(receipt_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    let receipt = parse_json_bytes::<HostJudgeReceipt>(
+        &receipt_bytes,
+        HOST_RECEIPT_SCHEMA,
+        "adversarial Judge host receipt",
+    )?;
+    if receipt.schema_version != 1
+        || receipt.launch.owner != "host"
+        || !receipt.launch.clean_context
+        || receipt.completion_authority
+    {
+        return Err(AdapterError::Verification(
+            "adversarial Judge host receipt violates the launch boundary".to_owned(),
+        ));
+    }
+    let package_bytes = target.read_required(package_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    let package = JudgePackage::parse_json(&package_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    let assignment_bytes = target.read_required(assignment_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    let assignment = JudgeAssignment::parse_json(&assignment_bytes, &package)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    let slot = assignment
+        .slots
+        .iter()
+        .find(|slot| slot.slot_id == receipt.slot_id)
+        .ok_or_else(|| {
+            AdapterError::Verification("Judge receipt slot is not assigned".to_owned())
+        })?;
+    if receipt.package_digest != package.package_digest
+        || receipt.assignment_digest != assignment.assignment_digest
+        || receipt.requester_id != assignment.requester_id
+        || receipt.task_agent_id != assignment.task_agent_id
+        || receipt.judge_instance_id != slot.judge_instance_id
+        || receipt.judge_instance_id == receipt.requester_id
+        || receipt.judge_instance_id == receipt.task_agent_id
+        || receipt.launch.host_task_id_digest != receipt.result.host_task_id_digest
+    {
+        return Err(AdapterError::Verification(
+            "adversarial Judge host receipt binding drifted".to_owned(),
+        ));
+    }
+    if receipt.result.status != "completed" {
+        return Err(AdapterError::Verification(format!(
+            "adversarial Judge host result is {}",
+            receipt.result.status
+        )));
+    }
+    let verdict_locator = receipt.result.verdict_locator.as_deref().ok_or_else(|| {
+        AdapterError::Verification("completed Judge receipt has no verdict locator".to_owned())
+    })?;
+    let verdict_digest = receipt.result.verdict_digest.as_deref().ok_or_else(|| {
+        AdapterError::Verification("completed Judge receipt has no verdict digest".to_owned())
+    })?;
+    let verdict_path = validate_target_relative(Path::new(verdict_locator))?;
+    let verdict_bytes = target.read_required(verdict_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    if sha256_digest(&verdict_bytes) != verdict_digest {
+        return Err(AdapterError::Verification(
+            "Judge receipt verdict digest mismatch".to_owned(),
+        ));
+    }
+    let verdict = JudgeVerdict::parse_json(&verdict_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    verdict
+        .validate_for_assignment(&package, &assignment)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    if verdict.slot_id != receipt.slot_id || verdict.judge_instance_id != receipt.judge_instance_id
+    {
+        return Err(AdapterError::Verification(
+            "Judge receipt verdict identity mismatch".to_owned(),
+        ));
+    }
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "VerifyWork",
+        status: "success",
+        exit_code: 0,
+        code: "hive.judge-host-receipt-verified",
+        message: "host-owned adversarial Judge receipt is verified".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: receipt_path.to_string_lossy().into_owned(),
+            digest: sha256_digest(&receipt_bytes),
+        }],
+        next_action: Some("submit the verified verdict to authenticated quorum".to_owned()),
+        data: Some(json!({
+            "host": receipt.host,
+            "model_id": receipt.launch.model_id,
+            "reasoning_effort": receipt.launch.reasoning_effort,
+            "launch_occurred_at": receipt.launch.occurred_at,
+            "result_occurred_at": receipt.result.occurred_at,
+            "finding_count": receipt.result.findings.len(),
+            "completion_authority": false,
+            "quorum_required": true,
+            "spawned": false
+        })),
+    })
 }
 
 fn parse_arguments(

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/adversarial-judge-envelope.schema.json",
+  "title": "Aigent Hive adversarial Judge dispatch envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "package",
+    "requester_id",
+    "task_agent_id",
+    "exclusions",
+    "dispatch",
+    "spawned"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "package": { "type": "object" },
+    "requester_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "task_agent_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "exclusions": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "task-agent-reasoning",
+          "preferred-outcome",
+          "prior-judge-results",
+          "transcript",
+          "self-approval"
+        ]
+      },
+      "allOf": [
+        { "contains": { "const": "task-agent-reasoning" } },
+        { "contains": { "const": "preferred-outcome" } },
+        { "contains": { "const": "prior-judge-results" } },
+        { "contains": { "const": "transcript" } }
+      ]
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["launch_owner", "host", "assignment_required", "receipt_required"],
+      "properties": {
+        "launch_owner": { "const": "host-owned" },
+        "host": { "enum": ["codex", "claude", "antigravity"] },
+        "assignment_required": { "const": true },
+        "receipt_required": { "const": true }
+      }
+    },
+    "spawned": { "const": false }
+  }
+}

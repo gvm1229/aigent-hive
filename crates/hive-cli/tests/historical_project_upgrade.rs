@@ -48,8 +48,8 @@ fn require_success(output: &std::process::Output, action: &str) {
 
 fn seed_historical_project(target: &Path, version: &str) {
     let repository = root();
-    let answers = repository.join("tests/fixtures/phase1/answers-base.yml");
-    let capabilities = repository.join("tests/fixtures/phase1/capabilities-codex-omx.json");
+    let answers = repository.join("tests/fixtures/setup/answers-base.yml");
+    let capabilities = repository.join("tests/fixtures/setup/capabilities-codex-omx.json");
     let user_root = target.parent().expect("consumer parent").join("user-root");
     let user_config = user_root.join(".hive/config");
     fs::create_dir_all(&user_config).expect("user root");

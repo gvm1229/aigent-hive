@@ -30,14 +30,15 @@ const RUN_CHECKPOINT: &[u8] = include_bytes!("../../../harness/skills/run-checkp
 const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/run-resume/SKILL.md");
 const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/usage-guard/SKILL.md");
 const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/run-handoff/SKILL.md");
-const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/package-review/SKILL.md");
+const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/judge-evidence/SKILL.md");
+const ADVERSARIAL_JUDGE: &[u8] =
+    include_bytes!("../../../harness/skills/adversarial-judge/SKILL.md");
 const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-update/SKILL.md");
 const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
 const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
-const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/ralph-loop/SKILL.md");
-const ITERATIVE_EXECUTION: &[u8] =
-    include_bytes!("../../../harness/skills/iterative-execution/SKILL.md");
+const VERIFIED_WORKFLOW: &[u8] =
+    include_bytes!("../../../harness/skills/verified-workflow/SKILL.md");
 const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
 const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
 const CUSTOM_SUBAGENT_CREATE: &[u8] =
@@ -45,9 +46,12 @@ const CUSTOM_SUBAGENT_CREATE: &[u8] =
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
-const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-import/SKILL.md");
+const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md");
+const KNOWLEDGE_TRANSFER: &[u8] =
+    include_bytes!("../../../harness/skills/knowledge-transfer/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
 const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
+const HUMANIZE_KOR: &[u8] = include_bytes!("../../../harness/skills/humanize-kor/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -189,6 +193,19 @@ pub struct SkillCatalog {
 struct RetiredSkillNameLedger {
     schema_version: u32,
     retired_names: BTreeMap<String, String>,
+    lifecycle: Vec<SkillLifecycleEvent>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SkillLifecycleEvent {
+    retired_name: String,
+    introduced_in: String,
+    renamed_in: String,
+    deprecated_in: String,
+    removed_in: String,
+    replacement: String,
+    transition_kind: String,
 }
 
 /// Returns the canonical retired-ID ledger used by selection migration and
@@ -237,7 +254,52 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
             ));
         }
     }
+    let mut lifecycle_names = BTreeSet::new();
+    for event in &ledger.lifecycle {
+        validate_skill_name(&event.retired_name)?;
+        validate_skill_name(&event.replacement)?;
+        if !lifecycle_names.insert(event.retired_name.as_str())
+            || ledger.retired_names.get(&event.retired_name) != Some(&event.replacement)
+            || !current.contains(event.replacement.as_str())
+            || !matches!(event.transition_kind.as_str(), "rename" | "merge")
+            || [
+                &event.introduced_in,
+                &event.renamed_in,
+                &event.deprecated_in,
+                &event.removed_in,
+            ]
+            .iter()
+            .any(|version| !valid_skill_version(version))
+        {
+            return Err(ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill lifecycle is invalid: {}", event.retired_name),
+            ));
+        }
+    }
+    let required_lifecycle = BTreeSet::from([
+        "ralph-loop",
+        "iterative-execution",
+        "package-review",
+        "knowledge-import",
+    ]);
+    if lifecycle_names != required_lifecycle {
+        return Err(ProjectionError::new(
+            "hive.skill-name-ledger-invalid",
+            "retired Skill lifecycle does not cover every 0.10.0 transition",
+        ));
+    }
     Ok(ledger.retired_names)
+}
+
+fn valid_skill_version(value: &str) -> bool {
+    let parts = value.split('.').collect::<Vec<_>>();
+    parts.len() == 3
+        && parts.iter().all(|part| {
+            !part.is_empty()
+                && part.bytes().all(|byte| byte.is_ascii_digit())
+                && (*part == "0" || !part.starts_with('0'))
+        })
 }
 
 /// Parses and semantically validates the catalog embedded at build time.
@@ -442,8 +504,9 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 9] = [
-        "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0",
+    const SUPPORTED: [&str; 14] = [
+        "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
+        "0.9.2", "0.9.3", "0.9.4", "0.9.5",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -1090,11 +1153,17 @@ fn localized_skill_text(
             "역할 인계",
             "역할 배정과 인계 기록을 정본 Markdown에 안전하게 갱신합니다.",
         ),
-        "package-review" => (
-            "Verify package",
+        "judge-evidence" => (
+            "Judge evidence",
             "Verify a work package and its signed attestations.",
-            "패키지 검증",
+            "Judge 증거 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
+        ),
+        "adversarial-judge" => (
+            "Adversarial Judge",
+            "Prepare an explicit clean-context request for an independent host-owned Judge.",
+            "반대 검토 Judge",
+            "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
         ),
         "product-update" => (
             "Update Hive",
@@ -1114,17 +1183,23 @@ fn localized_skill_text(
             "프로젝트 이전",
             "지원되는 Hive 프로젝트 형식을 백업과 검증을 거쳐 이전합니다.",
         ),
-        "ralph-loop" => (
-            "Engineer run",
-            "Prepare a Hive work run with planning, verification, and handoff.",
-            "작업 실행 설계",
-            "계획·검증·인계를 연결한 Hive 작업 실행을 준비합니다.",
+        "verified-workflow" => (
+            "Verified workflow",
+            "Run a bounded evidence-gated workflow with independent verification.",
+            "검증형 작업 흐름",
+            "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
         ),
-        "knowledge-import" => (
-            "Scan repository knowledge (knowledge-import)",
-            "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.",
+        "knowledge-scan" => (
+            "Scan repository knowledge",
+            "(knowledge-scan) Scan one repository or folder and prepare reviewed facts.",
             "저장소 지식 스캔",
-            "(knowledge-import) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 가져오기.",
+            "(knowledge-scan) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 기록합니다.",
+        ),
+        "knowledge-transfer" => (
+            "Transfer Hive knowledge",
+            "(knowledge-transfer) Move Hive knowledge between computers.",
+            "Hive 지식 이전",
+            "(knowledge-transfer) 기존 이식 가능 Hive 지식을 컴퓨터 사이에서 안전하게 옮깁니다.",
         ),
         "code-polish" => (
             "Clean AI slop",
@@ -1150,12 +1225,6 @@ fn localized_skill_text(
             "지침 수정",
             "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
         ),
-        "iterative-execution" => (
-            "Run iterative work",
-            "Execute a bounded criterion loop with terminal independent verification.",
-            "반복 작업 실행",
-            "종료 전 독립 검증이 필요한 제한된 기준 반복을 실행합니다.",
-        ),
         "team-execution" => (
             "Coordinate a Hive team",
             "Coordinate bounded signed lanes with barriers and terminal verification.",
@@ -1173,6 +1242,12 @@ fn localized_skill_text(
             "Recommend and create one consented Hive custom agent.",
             "사용자 정의 에이전트 생성",
             "동의한 사용자 정의 에이전트 profile을 추천·생성합니다.",
+        ),
+        "humanize-kor" => (
+            "Humanize Korean",
+            "Rewrite selected Korean text with deterministic preservation gates.",
+            "한국어 윤문",
+            "선택한 한국어 text를 결정적 보존 gate와 함께 윤문합니다.",
         ),
         _ => return None,
     };
@@ -1226,8 +1301,11 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "run-handoff" => Some(include_bytes!(
             "../../../harness/skills/run-handoff/agents/openai.yaml"
         )),
-        "package-review" => Some(include_bytes!(
-            "../../../harness/skills/package-review/agents/openai.yaml"
+        "judge-evidence" => Some(include_bytes!(
+            "../../../harness/skills/judge-evidence/agents/openai.yaml"
+        )),
+        "adversarial-judge" => Some(include_bytes!(
+            "../../../harness/skills/adversarial-judge/agents/openai.yaml"
         )),
         "product-update" => Some(include_bytes!(
             "../../../harness/skills/product-update/agents/openai.yaml"
@@ -1238,11 +1316,8 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "project-refresh" => Some(include_bytes!(
             "../../../harness/skills/project-refresh/agents/openai.yaml"
         )),
-        "ralph-loop" => Some(include_bytes!(
-            "../../../harness/skills/ralph-loop/agents/openai.yaml"
-        )),
-        "iterative-execution" => Some(include_bytes!(
-            "../../../harness/skills/iterative-execution/agents/openai.yaml"
+        "verified-workflow" => Some(include_bytes!(
+            "../../../harness/skills/verified-workflow/agents/openai.yaml"
         )),
         "team-execution" => Some(include_bytes!(
             "../../../harness/skills/team-execution/agents/openai.yaml"
@@ -1259,8 +1334,11 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "research-best-practices" => Some(include_bytes!(
             "../../../harness/skills/research-best-practices/agents/openai.yaml"
         )),
-        "knowledge-import" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-import/agents/openai.yaml"
+        "knowledge-scan" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-scan/agents/openai.yaml"
+        )),
+        "knowledge-transfer" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-transfer/agents/openai.yaml"
         )),
         "ship" => Some(include_bytes!(
             "../../../harness/skills/ship/agents/openai.yaml"
@@ -1268,11 +1346,14 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "amend-directive" => Some(include_bytes!(
             "../../../harness/skills/amend-directive/agents/openai.yaml"
         )),
+        "humanize-kor" => Some(include_bytes!(
+            "../../../harness/skills/humanize-kor/agents/openai.yaml"
+        )),
         _ => None,
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1286,20 +1367,22 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
         ("run-resume", RUN_RESUME),
         ("usage-guard", USAGE_GUARD),
         ("run-handoff", ROLE_HANDOFF),
-        ("package-review", JUDGE_PACKAGE),
+        ("judge-evidence", JUDGE_PACKAGE),
+        ("adversarial-judge", ADVERSARIAL_JUDGE),
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
-        ("ralph-loop", LOOP_ENGINEERING),
-        ("iterative-execution", ITERATIVE_EXECUTION),
+        ("verified-workflow", VERIFIED_WORKFLOW),
         ("team-execution", TEAM_EXECUTION),
         ("multi-goal", MULTI_GOAL),
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
-        ("knowledge-import", KNOWLEDGE_SCAN),
+        ("knowledge-scan", KNOWLEDGE_SCAN),
+        ("knowledge-transfer", KNOWLEDGE_TRANSFER),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
+        ("humanize-kor", HUMANIZE_KOR),
     ]
 }
 
@@ -1357,6 +1440,36 @@ pub enum PromptQuality {
     MissingCoreDetails,
 }
 
+/// Normalized structural reason that requires a verified workflow rather than ordinary continuation.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowSignal {
+    DependencyGraph,
+    IntermediateEvidence,
+    BoundedRetry,
+    IndependentVerifier,
+    TopologySteering,
+    ExactRecovery,
+}
+
+/// Explicit user preference for ordinary or verified continuation.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowOverride {
+    SimpleContinuation,
+    VerifiedWorkflow,
+    NoRetry,
+}
+
+/// Outcome of the optional verified-workflow routing gate.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowRoute {
+    Simple,
+    VerifiedWorkflow,
+    RequiredButUnsupported,
+}
+
 /// Already-normalized facts supplied by a host. This is not raw prompt text.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -1377,6 +1490,10 @@ pub struct RoutingRequest {
     pub explicit_run_intent: bool,
     #[serde(default)]
     pub prompt_quality: PromptQuality,
+    #[serde(default)]
+    pub workflow_signals: Vec<WorkflowSignal>,
+    #[serde(default)]
+    pub workflow_override: Option<WorkflowOverride>,
 }
 
 /// Digest-bound proof that a Hive Skill is present in the active projection.
@@ -1428,6 +1545,12 @@ pub struct RoutingDecision {
     pub next_action: Option<LogicalAction>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub refine_suggestion: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow_route: Option<WorkflowRoute>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workflow_reason_codes: Vec<WorkflowSignal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow_override: Option<WorkflowOverride>,
 }
 
 /// Resolves normalized routing facts without inspecting or classifying a prompt.
@@ -1446,7 +1569,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     let fallback_action = request.explicit_action.unwrap_or(LogicalAction::RunWork);
 
     // Explicit direct/plain intent is the highest-precedence no-workflow lane.
-    let resolved = if request.plain_quick_answer {
+    let mut resolved = if request.plain_quick_answer {
         decision(
             Route::Direct,
             LogicalAction::AnswerSimpleQuestion,
@@ -1466,6 +1589,10 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
             Route::HiveSkill,
         );
     }
+    if request.workflow_override == Some(WorkflowOverride::SimpleContinuation) {
+        resolved.workflow_route = Some(WorkflowRoute::Simple);
+    }
+    resolved.workflow_override = request.workflow_override;
     Ok(resolved)
 }
 
@@ -1556,6 +1683,10 @@ fn resolve_non_plain_route(
         }
     }
 
+    if let Some(workflow) = resolve_verified_workflow_route(request)? {
+        return Ok(workflow);
+    }
+
     if let Some(skill) = request.hive_candidate.as_deref() {
         validate_skill_name(skill)?;
         let action = action_for_skill(skill).unwrap_or(fallback_action);
@@ -1583,6 +1714,60 @@ fn resolve_non_plain_route(
         refinement_mode(fallback_action, request),
         None,
     ))
+}
+
+fn resolve_verified_workflow_route(
+    request: &RoutingRequest,
+) -> Result<Option<RoutingDecision>, ProjectionError> {
+    if request.explicit_action != Some(LogicalAction::RunWork) && request.explicit_action.is_some()
+    {
+        return Ok(None);
+    }
+    if request.simple_question
+        || request.workflow_override == Some(WorkflowOverride::SimpleContinuation)
+    {
+        return Ok(None);
+    }
+    let explicit = request.workflow_override == Some(WorkflowOverride::VerifiedWorkflow);
+    let signals = normalized_workflow_signals(&request.workflow_signals)?;
+    if !explicit && signals.len() < 2 {
+        return Ok(None);
+    }
+    let mut result = resolve_hive_skill(
+        request,
+        "verified-workflow",
+        LogicalAction::RunWork,
+        Route::HiveSkill,
+    )?;
+    result.workflow_reason_codes = signals;
+    result.workflow_route = Some(if result.route == Route::HiveSkill {
+        WorkflowRoute::VerifiedWorkflow
+    } else {
+        WorkflowRoute::RequiredButUnsupported
+    });
+    Ok(Some(result))
+}
+
+fn normalized_workflow_signals(
+    signals: &[WorkflowSignal],
+) -> Result<Vec<WorkflowSignal>, ProjectionError> {
+    let mut values = signals.to_vec();
+    values.sort_by_key(|value| match value {
+        WorkflowSignal::DependencyGraph => 0,
+        WorkflowSignal::IntermediateEvidence => 1,
+        WorkflowSignal::BoundedRetry => 2,
+        WorkflowSignal::IndependentVerifier => 3,
+        WorkflowSignal::TopologySteering => 4,
+        WorkflowSignal::ExactRecovery => 5,
+    });
+    values.dedup();
+    if values.len() != signals.len() {
+        return Err(ProjectionError::new(
+            "hive.routing-invalid",
+            "workflow signals must be unique",
+        ));
+    }
+    Ok(values)
 }
 
 fn resolve_simple_question_route(
@@ -1804,6 +1989,9 @@ fn decision(
         load_skill_bodies,
         next_action,
         refine_suggestion: false,
+        workflow_route: None,
+        workflow_reason_codes: Vec::new(),
+        workflow_override: None,
     }
 }
 
@@ -1819,13 +2007,13 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "quick-answer" => Some(LogicalAction::AnswerSimpleQuestion),
         "prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-import" => {
-            Some(LogicalAction::IngestKnowledge)
-        }
+        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-scan"
+        | "knowledge-transfer" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
+        | "humanize-kor"
         | "research-best-practices"
-        | "ralph-loop"
+        | "verified-workflow"
         | "run-checkpoint"
         | "run-handoff"
         | "usage-guard"
@@ -2304,6 +2492,8 @@ mod tests {
             refine_mode: None,
             explicit_run_intent: false,
             prompt_quality: PromptQuality::Sufficient,
+            workflow_signals: Vec::new(),
+            workflow_override: None,
         }
     }
 
@@ -2322,6 +2512,88 @@ mod tests {
         assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
         assert_eq!(resolved.load_skill_bodies, ["prompt-refine"]);
         assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
+    }
+
+    #[test]
+    fn complex_work_automatically_selects_verified_workflow() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::HiveSkill);
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("verified-workflow")
+        );
+        assert_eq!(
+            resolved.workflow_route,
+            Some(WorkflowRoute::VerifiedWorkflow)
+        );
+        assert_eq!(
+            resolved.workflow_reason_codes,
+            [
+                WorkflowSignal::DependencyGraph,
+                WorkflowSignal::IndependentVerifier
+            ]
+        );
+    }
+
+    #[test]
+    fn simple_continuation_override_prevents_verified_workflow_routing() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+        request.workflow_override = Some(WorkflowOverride::SimpleContinuation);
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::HostNative);
+        assert_eq!(resolved.workflow_route, Some(WorkflowRoute::Simple));
+        assert!(resolved.load_skill_bodies.is_empty());
+    }
+
+    #[test]
+    fn no_retry_override_is_preserved_for_verified_workflow() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+        request.workflow_override = Some(WorkflowOverride::NoRetry);
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("verified-workflow")
+        );
+        assert_eq!(resolved.workflow_override, Some(WorkflowOverride::NoRetry));
+    }
+
+    #[test]
+    fn complex_work_without_active_verified_workflow_is_blocked() {
+        let mut request = routing_request();
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::Blocked);
+        assert_eq!(
+            resolved.workflow_route,
+            Some(WorkflowRoute::RequiredButUnsupported)
+        );
     }
 
     #[test]
@@ -2486,16 +2758,18 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 25);
-            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
+            assert_eq!(first.active_skills.skills.len(), 27);
+            let expected_file_count = if host == Host::Claude { 28 } else { 55 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
                 "project-setup",
                 "research-best-practices",
-                "package-review",
-                "knowledge-import",
-                "ralph-loop",
+                "judge-evidence",
+                "adversarial-judge",
+                "knowledge-scan",
+                "verified-workflow",
+                "humanize-kor",
                 "prompt-refine",
                 "run-checkpoint",
                 "run-resume",
@@ -2708,14 +2982,14 @@ description: Inspect one local file without changing it.
             "knowledge-recall".to_owned(),
             "knowledge-promote".to_owned(),
             "knowledge-maintain".to_owned(),
-            "knowledge-import".to_owned(),
+            "knowledge-scan".to_owned(),
         ];
         let labels = [
             ("knowledge-capture", "유용한 지식 남기기"),
             ("knowledge-recall", "지식 찾아보기"),
             ("knowledge-promote", "지식 공유하기"),
             ("knowledge-maintain", "지식 정비하기"),
-            ("knowledge-import", "저장소 지식 스캔"),
+            ("knowledge-scan", "저장소 지식 스캔"),
         ];
 
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
@@ -2807,6 +3081,11 @@ description: Inspect one local file without changing it.
             ("0.7.0", 15),
             ("0.8.0", 16),
             ("0.9.0", 21),
+            ("0.9.1", 21),
+            ("0.9.2", 21),
+            ("0.9.3", 25),
+            ("0.9.4", 25),
+            ("0.9.5", 25),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");
@@ -2862,14 +3141,19 @@ description: Inspect one local file without changing it.
                     .as_slice(),
             ),
             (
-                "knowledge-import",
+                "knowledge-scan",
                 KNOWLEDGE_SCAN,
-                include_bytes!("../../../harness/skills/knowledge-import/SKILL.md").as_slice(),
+                include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md").as_slice(),
             ),
             (
-                "ralph-loop",
-                LOOP_ENGINEERING,
-                include_bytes!("../../../harness/skills/ralph-loop/SKILL.md").as_slice(),
+                "verified-workflow",
+                VERIFIED_WORKFLOW,
+                include_bytes!("../../../harness/skills/verified-workflow/SKILL.md").as_slice(),
+            ),
+            (
+                "humanize-kor",
+                HUMANIZE_KOR,
+                include_bytes!("../../../harness/skills/humanize-kor/SKILL.md").as_slice(),
             ),
         ];
         assert_projected_builtin_sources(expected);
@@ -2879,9 +3163,9 @@ description: Inspect one local file without changing it.
     fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "package-review",
+                "judge-evidence",
                 JUDGE_PACKAGE,
-                include_bytes!("../../../harness/skills/package-review/SKILL.md").as_slice(),
+                include_bytes!("../../../harness/skills/judge-evidence/SKILL.md").as_slice(),
             ),
             (
                 "run-checkpoint",
@@ -3073,7 +3357,7 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn simple_question_gate_precedes_automatic_data_candidates() {
-        for skill in ["run-resume", "package-review"] {
+        for skill in ["run-resume", "judge-evidence"] {
             let mut request = routing_request();
             request.explicit_action = None;
             request.simple_question = true;
@@ -3120,7 +3404,7 @@ description: Inspect one local file without changing it.
             (Host::Codex, ExternalProvider::Omx),
             (Host::Claude, ExternalProvider::Omc),
         ] {
-            for skill in ["knowledge-recall", "package-review"] {
+            for skill in ["knowledge-recall", "judge-evidence"] {
                 let mut request = routing_request();
                 request.host = host;
                 request.external_candidate = Some(ExternalCandidate {

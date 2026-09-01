@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import re
@@ -24,6 +25,19 @@ EXPLICIT_ID = re.compile(r"""(?i)\b(?:id|name)\s*=\s*["']([^"']+)["']""")
 FENCE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
 EXTERNAL = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 LINE_ANCHOR = re.compile(r"(?i)^L\d+(?:-L\d+)?$")
+ARCHIVE_NAVIGATION = {
+    "docs/archive/README.md",
+    "docs/archive/MANIFEST.md",
+}
+# Preserve this exact upstream typo without changing the pinned third-party snapshot.
+# Any source byte, path, or destination change restores ordinary link validation.
+PRESERVED_UPSTREAM_LINKS = {
+    (
+        "vendor/process-wrap-9.1.0/CHANGELOG.md",
+        "04fea1ee8b6498c0aee58f75ff2d5036bb4a6549f6122ea75199ed3f6172104c",
+        "doc.rust-lang.org/std/os/unix/process/trait.CommandExt.html#tymethod.process_group",
+    ): "upstream URL omits https; pinned source bytes preserved",
+}
 
 
 @dataclass(frozen=True)
@@ -48,7 +62,15 @@ def inventory(root: Path) -> list[Path]:
         for entry in completed.stdout.split(b"\0")
         if entry and entry.decode("utf-8").endswith(MARKDOWN_SUFFIXES)
     )
-    return sorted(path for path in candidates if path.is_file())
+    return sorted(
+        path
+        for path in candidates
+        if path.is_file()
+        and (
+            not path.relative_to(root).as_posix().startswith("docs/archive/")
+            or path.relative_to(root).as_posix() in ARCHIVE_NAVIGATION
+        )
+    )
 
 
 def visible_lines(text: str) -> list[tuple[int, str]]:
@@ -152,10 +174,21 @@ def scan(root: Path) -> dict[str, object]:
     documents = inventory(root)
     anchor_cache: dict[Path, set[str]] = {}
     failures: list[Failure] = []
+    preserved_upstream_links: list[dict[str, object]] = []
     checked_links = 0
     for source in documents:
         text = source.read_text(encoding="utf-8")
+        source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
         for line_number, target in destinations(text):
+            preserved = PRESERVED_UPSTREAM_LINKS.get((
+                source.relative_to(root).as_posix(), source_digest, target,
+            ))
+            if preserved:
+                preserved_upstream_links.append({
+                    "source": source.relative_to(root).as_posix(), "line": line_number,
+                    "target": target, "source_sha256": source_digest, "reason": preserved,
+                })
+                continue
             if (
                 not target
                 or target.startswith("//")
@@ -202,6 +235,7 @@ def scan(root: Path) -> dict[str, object]:
         "checked_links": checked_links,
         "failure_count": len(failures),
         "failures": [asdict(failure) for failure in failures],
+        "preserved_upstream_links": preserved_upstream_links,
     }
 
 

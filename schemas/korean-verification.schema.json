@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/korean-verification.schema.json",
+  "title": "Deterministic Korean rewrite verification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "accepted", "fallback_required", "change_rate", "touch_rate", "max_change_rate", "max_touch_rate", "protected_spans_preserved", "modality_preserved", "original_digest", "candidate_digest", "failures"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"enum": ["response", "release-note", "documentation", "technical", "verbatim"]},
+    "accepted": {"type": "boolean"},
+    "fallback_required": {"type": "boolean"},
+    "change_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "touch_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_change_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_touch_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "protected_spans_preserved": {"type": "boolean"},
+    "modality_preserved": {"type": "boolean"},
+    "original_digest": {"$ref": "#/$defs/digest"},
+    "candidate_digest": {"$ref": "#/$defs/digest"},
+    "failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

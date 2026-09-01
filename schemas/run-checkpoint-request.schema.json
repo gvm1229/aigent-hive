@@ -11,6 +11,7 @@
     "state",
     "passed_criteria",
     "failed_criteria",
+    "blocked_criteria",
     "active_roles",
     "next_action",
     "latest_evidence",
@@ -46,6 +47,9 @@
       "$ref": "#/$defs/criteria"
     },
     "failed_criteria": {
+      "$ref": "#/$defs/criteria"
+    },
+    "blocked_criteria": {
       "$ref": "#/$defs/criteria"
     },
     "active_roles": {
@@ -100,12 +104,26 @@
         }
       }
     },
+    "continuation": {
+      "$ref": "#/$defs/continuation"
+    },
     "updated_at": {
       "type": "string",
       "format": "date-time"
     }
   },
   "$defs": {
+    "continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_binding_digest", "max_retry_attempts", "attempts_used", "cancel_requested"],
+      "properties": {
+        "session_binding_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "max_retry_attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "attempts_used": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "cancel_requested": { "type": "boolean" }
+      }
+    },
     "criteria": {
       "type": "array",
       "maxItems": 512,

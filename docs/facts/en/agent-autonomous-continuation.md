@@ -5,30 +5,26 @@ topic_slug: agent-autonomous-continuation
 language: en
 counterpart: ../ko/agent-autonomous-continuation.md
 title: "Agent Autonomous Continuation"
-summary: "A task with agent-owned work remains active; a progress report is never task closure."
+summary: "Independent agent-owned work prevents a whole-goal block; stable release remains explicit-only."
 tags: [agent, completion, regression]
 aliases: ["No mid-task halt"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:42bbd59e702cdce48ac6396d4c5a2f3a9b7574cd99272e22f3279c00b041cba4"
-  - "repo:.agents/directives/04-documentation-state.md#sha256:44913afc655f527245720594f16a92c87061abfc28280f1a2834ad328b336be5"
-  - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
-  - "repo:crates/hive-render/src/lib.rs#sha256:644c0b46c68ceaeb9cb798f2c076f301ed12be889121cd4c086f23ecd50e69ae"
-  - "repo:docs/plans/active/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"
-  - "repo:harness/directives/00-project-harness.md#sha256:fb6cb8107a38aa3fe70040d4e730e53190a66ed6047a8e40f55acf811425d87d"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
-  - "repo:tests/conformance/test_phase3_static_contracts.py#sha256:649c12bd367917808f69ad28355a054481d30f06ca84f3a44b984cd339f176db"
-  - "repo:tests/fixtures/agent-autonomous-continuation.json#sha256:168eb72b79508187e841e5caf25d88f15a86a43b10f0327d7c1ce5a8226aa934"
+  - "repo:.agents/directives/01-behavior.md#sha256:4b22be47789033b39654596bb345fd56017e54bf4cd8ef12ad1cac7ae9c8e4d4"
+  - "repo:AGENTS.md#sha256:d1a4541174db15faf38f3c90432fbea8cb4b4da6448bfccce2a7e069982031b6"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acd4022de5697806003207634ac0b7cb874baeb802af491f28d39ec048daf830"
+  - "repo:crates/hive-render/src/lib.rs#sha256:58d45eb16a719523947a4ad6b50bc225a757aa2ca800ec95dbf957b74325803d"
+  - "repo:harness/directives/00-project-harness.md#sha256:b01acbf296d63e415b06c237561494b73ce632174925f9ad5fd4e2dfb6f6a9e4"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5e5ce3f56aa6868e8e6195f48cc2c22936d642c70a0f466fe7081108f5ebb28e"
 links: [automated-user-handoff, source-development]
-reviewed_revision: "git:0fd5ea87fa377dc584dcfa6ad93ae9ee74eb4e97"
+reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active
 ---
 
 # Agent Autonomous Continuation
 
-Source and consumer agents must continue while an in-scope inspection, fix, verification, commit,
-permitted push, CI observation, or authorized publication remains. This applies to rendered
-project guidance and global user guidance in English and Korean. Final closure requires no
-agent-owned action; user authority, external evidence, and blocked states carry exact owners and
-recovery evidence.
+Source and consumer agents must continue while an independent in-scope action remains. A partial
+host, fixture, or external-evidence failure stays with its criterion and cannot block a whole Goal
+or task. Stable tag, protected-branch integration, publication, and installation require explicit
+authorization of the named stable version in the current request.

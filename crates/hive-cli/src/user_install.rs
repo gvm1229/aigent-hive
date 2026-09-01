@@ -22,6 +22,8 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+include!(concat!(env!("OUT_DIR"), "/historical_user_plugins.rs"));
+
 const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
 const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
 const MAX_USER_FILE_BYTES: u64 = 16 * 1024 * 1024;
@@ -733,7 +735,12 @@ fn execute_uninstall(
         ),
         data: Some(json!({
             "removed_hosts": removed_hosts,
-            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+            "preserved": [
+                ".hive/knowledge",
+                ".hive/config/user-setup.yml",
+                ".hive/config/user-feature-answers.yml",
+                ".hive/config/user-preferences.json"
+            ],
         })),
     })
 }
@@ -1828,7 +1835,12 @@ fn preserving_reinstall_dry_run(
             "host": arguments.host.as_str(),
             "scope": "user",
             "recovery": "preserving-reinstall",
-            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+            "preserved": [
+                ".hive/knowledge",
+                ".hive/config/user-setup.yml",
+                ".hive/config/user-feature-answers.yml",
+                ".hive/config/user-preferences.json"
+            ],
         })),
     }
 }
@@ -2566,6 +2578,7 @@ fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bo
     true
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_user_guidance(
     host: UserHost,
     setup: Option<&crate::user_setup::UserSetupConfig>,
@@ -2631,26 +2644,43 @@ fn render_user_guidance(
             }
         },
     );
-    let body = body.replacen(
-        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n",
-        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n\\
-- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n",
-        1,
-    );
-    let body = body.replacen(
-        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n",
-        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n\\
-- `all todos`, `until completion`, `do not stop` 또는 같은 완료 요청: 범위 안 Agent 소유 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업이 남은 동안 계속 진행. 해당 작업이 남았다는 진행 보고로 task 종료 금지. 최종 응답 전 남은 항목을 `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, `blocked`로 분류. `agent-owned` 작업 `0건`일 때만 완료 표기.\n",
-        1,
-    );
+    let body = match setup.map(|config| config.interface_language) {
+        Some(crate::user_setup::InterfaceLanguage::En) => {
+            let anchor = "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n";
+            body.replacen(
+                anchor,
+                &format!(
+                    "{anchor}{}",
+                    crate::user_directives::work_completion_block(
+                        crate::user_directives::UserDirectiveLanguage::En,
+                    )
+                ),
+                1,
+            )
+        }
+        Some(crate::user_setup::InterfaceLanguage::Ko) => {
+            let anchor = "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n";
+            body.replacen(
+                anchor,
+                &format!(
+                    "{anchor}{}",
+                    crate::user_directives::work_completion_block(
+                        crate::user_directives::UserDirectiveLanguage::Ko,
+                    )
+                ),
+                1,
+            )
+        }
+        None => body,
+    };
     let explanation_style = setup.map_or(
-        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision. / 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n",
+        "- Explain every user-facing explanation and explanatory text so a five-year-old can follow it without technical background. Give the purpose, then how and why it works, one step at a time. Keep core technical terms and define them on first use. Use helpful analogies, examples, steps, or comparisons without baby talk or forced analogies. Preserve meaning, numbers, commands, conditions, exceptions, uncertainty, evidence limits, and safety or approval boundaries. / 모든 사용자 설명과 설명형 글은 다섯 살 아이도 배경지식 없이 이해할 쉬운 말로 작성. 목적 뒤 작동 이유와 과정을 한 단계씩 설명하고, 핵심 기술 용어는 첫 등장에 풀이. 필요한 비유·예시·단계·비교 사용, 아기 말투·억지 비유 금지. 의미·수치·명령·조건·예외·불확실성·증거 한계·안전 및 승인 경계 보존.\n",
         |config| match config.interface_language {
             crate::user_setup::InterfaceLanguage::En => {
-                "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n"
+                "- Explain every user-facing explanation and explanatory text so a five-year-old can follow it without technical background. Give the purpose, then how and why it works, one step at a time. Keep core technical terms and define them on first use. Use helpful analogies, examples, steps, or comparisons without baby talk or forced analogies. Preserve meaning, numbers, commands, conditions, exceptions, uncertainty, evidence limits, and safety or approval boundaries.\n"
             }
             crate::user_setup::InterfaceLanguage::Ko => {
-                "- 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n"
+                "- 모든 사용자 설명과 설명형 글은 다섯 살 아이도 배경지식 없이 이해할 쉬운 말로 작성. 목적 뒤 작동 이유와 과정을 한 단계씩 설명하고, 핵심 기술 용어는 첫 등장에 풀이. 필요한 비유·예시·단계·비교 사용, 아기 말투·억지 비유 금지. 의미·수치·명령·조건·예외·불확실성·증거 한계·안전 및 승인 경계 보존.\n"
             }
         },
     );
@@ -2953,6 +2983,9 @@ fn authenticated_user_inventory(
         return Some(historical);
     }
     if let Some(historical) = pre_scope_routing_test_inventory(host, request) {
+        return Some(historical);
+    }
+    if let Some(historical) = historical_09x_user_inventory(host, request) {
         return Some(historical);
     }
     if request.product_version == "0.8.0" {
@@ -3465,6 +3498,10 @@ fn historical_080_managed_files(host: UserHost) -> BTreeMap<PathBuf, PlannedFile
 }
 
 fn historical_080_skill_paths(host: UserHost, name: &str) -> Vec<String> {
+    retired_skill_artifact_paths(host, name)
+}
+
+fn retired_skill_artifact_paths(host: UserHost, name: &str) -> Vec<String> {
     match host {
         UserHost::Codex => vec![
             format!(".hive/marketplaces/codex/plugins/aigent-hive/skills/{name}/SKILL.md"),
@@ -3482,6 +3519,168 @@ fn historical_080_skill_paths(host: UserHost, name: &str) -> Vec<String> {
             format!(".gemini/config/skills/{name}/agents/openai.yaml"),
         ],
     }
+}
+
+fn historical_user_artifact_digest(
+    version: &str,
+    host: UserHost,
+    path: &str,
+) -> Option<&'static str> {
+    let relative = match host {
+        UserHost::Codex => path.strip_prefix(".hive/marketplaces/codex/plugins/aigent-hive/")?,
+        UserHost::Claude => path.strip_prefix(".hive/marketplaces/claude/plugins/aigent-hive/")?,
+        UserHost::Antigravity => path
+            .strip_prefix(&format!("{ANTIGRAVITY_SOURCE_RELATIVE}/"))
+            .or_else(|| path.strip_prefix(".gemini/config/"))?,
+    };
+    HISTORICAL_USER_PLUGIN_RELEASES
+        .iter()
+        .find(|(candidate, _)| *candidate == version)?
+        .1
+        .iter()
+        .find_map(|(candidate, digest)| (*candidate == relative).then_some(*digest))
+}
+
+fn historical_09x_user_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    let files = HISTORICAL_USER_PLUGIN_RELEASES
+        .iter()
+        .find(|(version, _)| *version == request.product_version)?
+        .1;
+    let expected_range = match host {
+        UserHost::Codex => ">=0.145.0 <1.0.0",
+        UserHost::Claude => ">=2.1.0 <3.0.0",
+        UserHost::Antigravity => ">=1.1.7 <1.2.0",
+    };
+    if request.installed_host_version_range != expected_range
+        || portable(request.installed_guidance_path) != historical_guidance_path(host)
+        || request.installed_entries.is_empty()
+        || request.source_release_digest
+            != source_release_digest_from_entries(request.installed_entries)
+        || !request
+            .installed_entries
+            .windows(2)
+            .all(|pair| pair[0].path < pair[1].path)
+    {
+        return None;
+    }
+
+    for entry in request.installed_entries {
+        match entry.ownership.as_str() {
+            "immutable-plugin-package" | "host-skill-projection" => {
+                let expected =
+                    historical_user_artifact_digest(request.product_version, host, &entry.path)?;
+                let relative = historical_user_artifact_relative(host, &entry.path)?;
+                let executable = relative.starts_with("bin/");
+                if entry.digest != expected
+                    || entry.executable != executable
+                    || entry.unix_mode != installed_unix_mode(executable)
+                {
+                    return None;
+                }
+            }
+            "host-adapter-metadata" => {
+                let (path, digest) = match host {
+                    UserHost::Codex => (
+                        ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
+                        USER_070_CODEX_MARKETPLACE_DIGEST,
+                    ),
+                    UserHost::Claude => (
+                        ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                        USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                    ),
+                    UserHost::Antigravity => return None,
+                };
+                if entry.path != path
+                    || entry.digest != digest
+                    || entry.executable
+                    || entry.unix_mode != installed_unix_mode(false)
+                {
+                    return None;
+                }
+            }
+            "shared-marker" => {
+                if entry.path != historical_guidance_path(host) || entry.executable {
+                    return None;
+                }
+            }
+            "canonical-data-protected" => {
+                if !historical_canonical_user_path(&entry.path) || entry.executable {
+                    return None;
+                }
+            }
+            _ => return None,
+        }
+    }
+
+    if !files.iter().all(|(relative, digest)| {
+        if !historical_user_artifact_required(host, relative) {
+            return true;
+        }
+        request.installed_entries.iter().any(|entry| {
+            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
+                && entry.digest == *digest
+        })
+    }) {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest: request.source_release_digest.to_owned(),
+        guidance_path: portable(request.installed_guidance_path),
+        entries: request.installed_entries.to_vec(),
+    })
+}
+
+fn historical_user_artifact_required(host: UserHost, relative: &str) -> bool {
+    if relative.starts_with("skills/") {
+        return true;
+    }
+    match host {
+        UserHost::Codex | UserHost::Claude => matches!(
+            relative,
+            ".codex-plugin/plugin.json"
+                | ".claude-plugin/plugin.json"
+                | "bin/hive-claude-usage-capture"
+        ),
+        UserHost::Antigravity => relative == "plugin.json",
+    }
+}
+
+fn historical_user_artifact_relative(host: UserHost, path: &str) -> Option<&str> {
+    match host {
+        UserHost::Codex => path.strip_prefix(".hive/marketplaces/codex/plugins/aigent-hive/"),
+        UserHost::Claude => path.strip_prefix(".hive/marketplaces/claude/plugins/aigent-hive/"),
+        UserHost::Antigravity => path
+            .strip_prefix(&format!("{ANTIGRAVITY_SOURCE_RELATIVE}/"))
+            .or_else(|| path.strip_prefix(".gemini/config/")),
+    }
+}
+
+fn historical_guidance_path(host: UserHost) -> String {
+    match host {
+        UserHost::Codex => ".codex/AGENTS.md",
+        UserHost::Claude => ".claude/CLAUDE.md",
+        UserHost::Antigravity => ".gemini/GEMINI.md",
+    }
+    .to_owned()
+}
+
+fn historical_canonical_user_path(path: &str) -> bool {
+    matches!(
+        path,
+        ".hive/guides/discord-usage-notifications.html"
+            | ".hive/knowledge/Raw/README.md"
+            | ".hive/knowledge/Schema/schema.md"
+            | ".hive/knowledge/Wiki/index.md"
+            | ".hive/knowledge/Wiki/log.md"
+            | ".hive/knowledge/suppression.yml"
+    )
 }
 
 fn historical_080_required_paths(host: UserHost) -> Vec<String> {
@@ -8567,6 +8766,11 @@ mod tests {
             );
         fs::write(&setup, all_skills_setup).expect("all-Skill operational setup");
         let saved_setup = fs::read(&setup).expect("saved setup");
+        let feature_answers = temporary
+            .path()
+            .join(".hive/config/user-feature-answers.yml");
+        let saved_feature_answers = b"schema_version: 1\nvector_search: \"no\"\nintroduced_in: \"0.10.0\"\nanswered_at_unix: 1\n";
+        fs::write(&feature_answers, saved_feature_answers).expect("feature answers");
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
         let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
         execute(UserOperation::Install, &install, &runner).expect("install");
@@ -8584,6 +8788,10 @@ mod tests {
 
         assert_eq!(removed.code, "hive.user-uninstall-complete");
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert_eq!(
+            fs::read(&feature_answers).expect("saved feature answers retained"),
+            saved_feature_answers
+        );
         assert!(knowledge.is_file());
         assert!(!temporary.path().join(".hive/install/codex.json").exists());
         assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
@@ -8597,6 +8805,10 @@ mod tests {
         assert_eq!(
             fs::read(&setup).expect("saved setup unchanged"),
             saved_setup
+        );
+        assert_eq!(
+            fs::read(&feature_answers).expect("saved feature answers unchanged"),
+            saved_feature_answers
         );
         assert!(temporary.path().join(".hive/install/codex.json").is_file());
         assert!(temporary
@@ -9075,8 +9287,9 @@ mod tests {
         assert!(english.contains(
             "A message written in another language does not by itself change this preference"
         ));
-        assert!(english.contains("Explain in simple terms by default"));
-        assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
+        assert!(english.contains("so a five-year-old can follow it"));
+        assert!(english.contains("evidence limits, and safety or approval boundaries"));
+        assert!(english.contains("without baby talk or forced analogies"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(english.contains("Before every final response, review the current user statement"));
         assert!(english
@@ -9102,8 +9315,9 @@ mod tests {
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
-        assert!(korean.contains("기본 설명은 쉬운 말로 작성"));
-        assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
+        assert!(korean.contains("다섯 살 아이도 배경지식 없이 이해할 쉬운 말"));
+        assert!(korean.contains("증거 한계·안전 및 승인 경계 보존"));
+        assert!(korean.contains("아기 말투·억지 비유 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
         assert!(korean.contains("설치 직후 선택 호스트의 모든 폴더에 적용"));
@@ -9654,6 +9868,308 @@ mod tests {
             )
             .is_none());
         }
+    }
+
+    #[test]
+    fn retired_skill_inventory_covers_every_host_projection_surface() {
+        for (host, expected_count) in [
+            (UserHost::Codex, 2),
+            (UserHost::Claude, 1),
+            (UserHost::Antigravity, 4),
+        ] {
+            let paths = retired_skill_artifact_paths(host, "ralph-loop");
+            assert_eq!(paths.len(), expected_count);
+            assert!(paths
+                .iter()
+                .all(|path| path.contains("/skills/ralph-loop/")));
+            assert!(paths.iter().all(|path| !path.contains("..")));
+        }
+    }
+
+    #[test]
+    fn historical_stable_plugin_bases_compile_as_exact_digest_tables() {
+        assert_eq!(
+            HISTORICAL_USER_PLUGIN_RELEASES
+                .iter()
+                .map(|(version, files)| (*version, files.len()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("0.9.0", 50),
+                ("0.9.1", 51),
+                ("0.9.2", 51),
+                ("0.9.3", 59),
+                ("0.9.4", 59),
+                ("0.9.5", 59),
+            ]
+        );
+        assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
+            files
+                .iter()
+                .all(|(path, digest)| !path.contains("..") && valid_sha256(digest))
+        }));
+    }
+
+    #[test]
+    fn historical_stable_artifact_matcher_maps_every_host_root() {
+        let expected = "sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764";
+        for (host, path) in [
+            (
+                UserHost::Codex,
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Claude,
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Antigravity,
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Antigravity,
+                ".gemini/config/skills/ralph-loop/SKILL.md",
+            ),
+        ] {
+            assert_eq!(
+                historical_user_artifact_digest("0.9.5", host, path),
+                Some(expected)
+            );
+        }
+        assert!(historical_user_artifact_digest(
+            "0.9.5",
+            UserHost::Codex,
+            ".hive/foreign/SKILL.md"
+        )
+        .is_none());
+        assert!(historical_user_artifact_digest(
+            "0.9.6",
+            UserHost::Codex,
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/ralph-loop/SKILL.md"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn every_09_stable_user_inventory_authenticates_for_every_host() {
+        for &(version, files) in HISTORICAL_USER_PLUGIN_RELEASES {
+            for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+                let prefix = match host {
+                    UserHost::Codex => ".hive/marketplaces/codex/plugins/aigent-hive/",
+                    UserHost::Claude => ".hive/marketplaces/claude/plugins/aigent-hive/",
+                    UserHost::Antigravity => ".hive/marketplaces/antigravity/plugins/aigent-hive/",
+                };
+                let mut entries = files
+                    .iter()
+                    .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+                    .map(|(relative, digest)| {
+                        let executable = relative.starts_with("bin/");
+                        UserOwnershipEntry {
+                            path: format!("{prefix}{relative}"),
+                            digest: (*digest).to_owned(),
+                            executable,
+                            unix_mode: installed_unix_mode(executable),
+                            ownership: "immutable-plugin-package".to_owned(),
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if host != UserHost::Antigravity {
+                    let (path, digest) = match host {
+                        UserHost::Codex => (
+                            ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
+                            USER_070_CODEX_MARKETPLACE_DIGEST,
+                        ),
+                        UserHost::Claude => (
+                            ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                            USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                        ),
+                        UserHost::Antigravity => unreachable!(),
+                    };
+                    entries.push(UserOwnershipEntry {
+                        path: path.to_owned(),
+                        digest: digest.to_owned(),
+                        executable: false,
+                        unix_mode: installed_unix_mode(false),
+                        ownership: "host-adapter-metadata".to_owned(),
+                    });
+                }
+                let guidance = historical_guidance_path(host);
+                entries.push(UserOwnershipEntry {
+                    path: guidance.clone(),
+                    digest: sha256_digest(b"historical guidance"),
+                    executable: false,
+                    unix_mode: installed_unix_mode(false),
+                    ownership: "shared-marker".to_owned(),
+                });
+                entries.push(UserOwnershipEntry {
+                    path: ".hive/knowledge/Raw/README.md".to_owned(),
+                    digest: sha256_digest(b"historical knowledge"),
+                    executable: false,
+                    unix_mode: installed_unix_mode(false),
+                    ownership: "canonical-data-protected".to_owned(),
+                });
+                entries.sort_by(|left, right| left.path.cmp(&right.path));
+                let source_release_digest = source_release_digest_from_entries(&entries);
+                let request = InventoryAuthentication {
+                    product_version: version,
+                    installed_host_version_range: match host {
+                        UserHost::Codex => ">=0.145.0 <1.0.0",
+                        UserHost::Claude => ">=2.1.0 <3.0.0",
+                        UserHost::Antigravity => ">=1.1.7 <1.2.0",
+                    },
+                    source_release_digest: &source_release_digest,
+                    installed_entries: &entries,
+                    installed_guidance_path: Path::new(&guidance),
+                    current_guidance_path: Path::new(&guidance),
+                    current_source_release_digest:
+                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    current_entries: &[],
+                    authenticated_prior: None,
+                };
+                let authenticated = authenticated_user_inventory(host, &request)
+                    .expect("stable user inventory must authenticate");
+                assert_user_entries_equal(&authenticated.entries, &entries);
+
+                let mut tampered = entries.clone();
+                let managed = tampered
+                    .iter_mut()
+                    .find(|entry| is_managed_ownership(&entry.ownership))
+                    .expect("managed entry");
+                managed.digest = format!("sha256:{}", "f".repeat(64));
+                let tampered_digest = source_release_digest_from_entries(&tampered);
+                let tampered_request = InventoryAuthentication {
+                    source_release_digest: &tampered_digest,
+                    installed_entries: &tampered,
+                    ..request
+                };
+                assert!(authenticated_user_inventory(host, &tampered_request).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn every_09_stable_plans_a_direct_jump_and_retired_skill_cleanup() {
+        for &(version, _) in HISTORICAL_USER_PLUGIN_RELEASES {
+            for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+                let temporary = tempdir().expect("tempdir");
+                seed_historical_09x_user_install(temporary.path(), version, host);
+                let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
+                    .expect("direct stable upgrade plan");
+                for retired in ["ralph-loop", "package-review"] {
+                    let existing = retired_skill_artifact_paths(host, retired)
+                        .iter()
+                        .filter(|path| temporary.path().join(path).is_file())
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    assert!(!existing.is_empty());
+                    assert!(existing
+                        .iter()
+                        .all(|path| plan.retired_files.contains_key(Path::new(path))));
+                }
+                if matches!(version, "0.9.3" | "0.9.4" | "0.9.5") {
+                    let existing = retired_skill_artifact_paths(host, "iterative-execution")
+                        .iter()
+                        .filter(|path| temporary.path().join(path).is_file())
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    assert!(!existing.is_empty());
+                    assert!(existing
+                        .iter()
+                        .all(|path| plan.retired_files.contains_key(Path::new(path))));
+                }
+            }
+        }
+    }
+
+    fn seed_historical_09x_user_install(root: &Path, version: &str, host: UserHost) {
+        let files = HISTORICAL_USER_PLUGIN_RELEASES
+            .iter()
+            .find(|(candidate, _)| *candidate == version)
+            .expect("historical release")
+            .1;
+        let prefix = match host {
+            UserHost::Codex => ".hive/marketplaces/codex/plugins/aigent-hive/",
+            UserHost::Claude => ".hive/marketplaces/claude/plugins/aigent-hive/",
+            UserHost::Antigravity => ".hive/marketplaces/antigravity/plugins/aigent-hive/",
+        };
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../harness/user-bases/{version}/plugins/aigent-hive"
+        ));
+        let mut entries = Vec::new();
+        for (relative, digest) in files
+            .iter()
+            .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+        {
+            let path = format!("{prefix}{relative}");
+            let target = root.join(&path);
+            fs::create_dir_all(target.parent().expect("historical plugin parent"))
+                .expect("historical plugin parent");
+            fs::write(
+                &target,
+                fs::read(base.join(relative)).expect("historical plugin byte"),
+            )
+            .expect("historical plugin write");
+            let executable = relative.starts_with("bin/");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(
+                    &target,
+                    fs::Permissions::from_mode(if executable { 0o755 } else { 0o644 }),
+                )
+                .expect("historical plugin mode");
+            }
+            entries.push(UserOwnershipEntry {
+                path,
+                digest: (*digest).to_owned(),
+                executable,
+                unix_mode: installed_unix_mode(executable),
+                ownership: "immutable-plugin-package".to_owned(),
+            });
+        }
+        let guidance_path = historical_guidance_path(host);
+        let guidance = b"historical foreign guidance\n";
+        let guidance_target = root.join(&guidance_path);
+        fs::create_dir_all(guidance_target.parent().expect("guidance parent"))
+            .expect("guidance parent");
+        fs::write(guidance_target, guidance).expect("guidance write");
+        entries.push(UserOwnershipEntry {
+            path: guidance_path.clone(),
+            digest: sha256_digest(guidance),
+            executable: false,
+            unix_mode: installed_unix_mode(false),
+            ownership: "shared-marker".to_owned(),
+        });
+        entries.sort_by(|left, right| left.path.cmp(&right.path));
+        let source_release_digest = source_release_digest_from_entries(&entries);
+        let mut manifest = UserOwnershipManifest {
+            schema_version: 1,
+            product_version: version.to_owned(),
+            host,
+            host_version_range: match host {
+                UserHost::Codex => ">=0.145.0 <1.0.0",
+                UserHost::Claude => ">=2.1.0 <3.0.0",
+                UserHost::Antigravity => ">=1.1.7 <1.2.0",
+            }
+            .to_owned(),
+            source_release_digest,
+            plan_digest: String::new(),
+            last_backup: None,
+            guidance_path,
+            entries,
+        };
+        manifest.plan_digest = inventory_digest(
+            host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        let manifest_path = root.join(format!(".hive/install/{}.json", host.as_str()));
+        fs::create_dir_all(manifest_path.parent().expect("manifest parent"))
+            .expect("manifest parent");
+        fs::write(manifest_path, json_line(&manifest).expect("manifest JSON"))
+            .expect("manifest write");
     }
 
     #[test]

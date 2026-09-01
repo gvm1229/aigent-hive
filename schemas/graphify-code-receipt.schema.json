@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/graphify-code-receipt.schema.json",
+  "title": "Aigent Hive Graphify code-only extraction receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "package_version", "wheel_digest", "dependency_lock_digest", "executable_digest", "python_identity_digest", "consent_digest", "source_commit", "source_tree_digest", "graph_input_digest", "command", "provider_api_calls", "api_keys_read", "query_logs", "watcher", "git_hooks", "mcp_registration", "network_requests"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "package_version": { "const": "0.9.47" },
+    "wheel_digest": { "const": "sha256:2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab" },
+    "dependency_lock_digest": { "$ref": "#/$defs/digest" },
+    "executable_digest": { "$ref": "#/$defs/digest" },
+    "python_identity_digest": { "$ref": "#/$defs/digest" },
+    "consent_digest": { "$ref": "#/$defs/digest" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "source_tree_digest": { "$ref": "#/$defs/digest" },
+    "graph_input_digest": { "$ref": "#/$defs/digest" },
+    "command": { "const": ["extract", "--force", "--code-only", "--no-cluster"] },
+    "provider_api_calls": { "const": 0 },
+    "api_keys_read": { "const": 0 },
+    "query_logs": { "const": 0 },
+    "watcher": { "const": false },
+    "git_hooks": { "const": false },
+    "mcp_registration": { "const": false },
+    "network_requests": { "const": 0 }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

@@ -1,0 +1,907 @@
+"""v0.9 public Wiki CLI lifecycle and portability E2E conformance."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import time
+from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
+
+from tests.conformance.support.harness import (
+    ACTION_RESULT_SCHEMA,
+    Phase1CliTestCase,
+    REPOSITORY_ROOT,
+    snapshot_tree,
+    write_operational_user_setup,
+)
+
+
+PHASE2_FIXTURES = REPOSITORY_ROOT / "tests/fixtures/knowledge"
+SCAN_RESULT_SCHEMA = json.loads(
+    (REPOSITORY_ROOT / "schemas/knowledge-scan-result.schema.json").read_text(
+        encoding="utf-8"
+    )
+)
+RETRIEVAL_RESULT_SCHEMA = json.loads(
+    (REPOSITORY_ROOT / "schemas/knowledge-retrieval-result.schema.json").read_text(
+        encoding="utf-8"
+    )
+)
+IMPORT_RESULT_SCHEMA = json.loads(
+    (REPOSITORY_ROOT / "schemas/knowledge-import-result.schema.json").read_text(
+        encoding="utf-8"
+    )
+)
+
+
+class V09WikiCliE2E(Phase1CliTestCase):
+    """Exercise public commands through the compiled binary and disposable roots."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.project = self.work_root / "consumer"
+        self.project.mkdir()
+        process, result = self.invoke_setup(
+            self.project,
+            capabilities="capabilities-codex-host-native.json",
+        )
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["status"], "success", result)
+
+    def invoke_knowledge(
+        self,
+        *arguments: str,
+        user_root: Path | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        root = user_root or self.setup_user_root
+        command = [str(self.hive_binary), "knowledge", *arguments]
+        if "--user-root" not in command:
+            command.extend(["--user-root", str(root)])
+        command.extend(["--output", "json"])
+        process = subprocess.run(
+            command,
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        try:
+            result = json.loads(process.stdout)
+        except json.JSONDecodeError as error:
+            self.fail(
+                f"stdout must be one JSON object: {error}\n"
+                f"command={command!r}\nstdout={process.stdout!r}\n"
+                f"stderr={process.stderr!r}"
+            )
+        Draft202012Validator(
+            ACTION_RESULT_SCHEMA,
+            format_checker=FormatChecker(),
+        ).validate(result)
+        self.assertEqual(process.returncode, result["exit_code"], process.stderr)
+        return process, result
+
+    def assert_success(self, result: dict[str, object]) -> dict[str, object]:
+        self.assertEqual(result["status"], "success", result)
+        data = result.get("data")
+        self.assertIsInstance(data, dict, result)
+        return data
+
+    def add_fixture_page(self, name: str, *, quick: bool = False) -> None:
+        arguments = [
+            "add",
+            "--target",
+            str(self.project),
+            "--source",
+            str(PHASE2_FIXTURES / f"raw/{name}.md"),
+            "--wiki",
+            str(PHASE2_FIXTURES / f"wiki/{name}.md"),
+        ]
+        if quick:
+            arguments.append("--quick")
+        data = self.assert_success(self.invoke_knowledge(*arguments)[1])
+        self.assertEqual(data["quick"], quick)
+
+    def add_orphan_page(self) -> None:
+        source = self.work_root / "orphan-source.md"
+        source.write_text("A temporary page used by the delete smoke test.\n", encoding="utf-8")
+        draft = self.work_root / "orphan-draft.md"
+        draft.write_text(
+            """---
+schema_version: 1
+id: orphan
+kind: workflow
+summary: Temporary deletion workflow
+tags: [cleanup, smoke]
+aliases: [temporary-orphan]
+sources: [raw:self]
+links: []
+contradictions: []
+status: active
+created_at: 2026-08-01T00:00:00Z
+updated_at: 2026-08-01T00:00:00Z
+---
+
+# Orphan
+
+This temporary page has no backlinks and can be deleted explicitly.
+""",
+            encoding="utf-8",
+        )
+        data = self.assert_success(
+            self.invoke_knowledge(
+                "add",
+                "--target",
+                str(self.project),
+                "--source",
+                str(source),
+                "--wiki",
+                str(draft),
+                "--quick",
+            )[1]
+        )
+        self.assertTrue(data["quick"])
+
+    def test_multi_bundle_transfer_merges_exact_overlap_once_and_rebuilds_fts_once(self) -> None:
+        """A later export from another computer may contain an earlier bundle's exact page."""
+        self.add_fixture_page("alpha", quick=True)
+        first = self.work_root / "computer-a.hivekb"
+        first_export = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(first)
+            )[1]
+        )
+        self.add_fixture_page("beta")
+        second = self.work_root / "computer-b.hivekb"
+        second_export = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(second)
+            )[1]
+        )
+        self.assertNotEqual(first_export["archive_sha256"], second_export["archive_sha256"])
+
+        destination = self.work_root / "computer-c"
+        write_operational_user_setup(destination)
+        before = snapshot_tree(destination)
+        preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "preview",
+                "--bundle",
+                str(second),
+                "--bundle",
+                str(first),
+                user_root=destination,
+            )[1]
+        )
+        self.assertEqual(snapshot_tree(destination), before)
+        self.assertGreater(preview["merge"]["exact_duplicate_count"], 0)
+        self.assertEqual(preview["merge"]["conflict_paths"], [])
+        self.assertEqual(preview["merge"]["semantic_candidates"], [])
+        self.assertRegex(preview["merge_preview_digest"], r"^sha256:[0-9a-f]{64}$")
+
+        applied = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "apply",
+                "--bundle",
+                str(first),
+                "--bundle",
+                str(second),
+                "--preview-digest",
+                preview["merge_preview_digest"],
+                user_root=destination,
+            )[1]
+        )
+        self.assertTrue(applied["import"]["canonical_mutation"])
+        self.assertTrue(applied["import"]["index_rebuilt"])
+        self.assertEqual(applied["merge"]["exact_duplicate_count"], preview["merge"]["exact_duplicate_count"])
+
+    def test_multi_bundle_transfer_applies_reviewed_equivalent_page_with_original_provenance(self) -> None:
+        """A host-reviewed equivalent page leaves one active page and a portable original."""
+        self.add_fixture_page("alpha", quick=True)
+        first = self.work_root / "semantic-a.hivekb"
+        self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(first)
+            )[1]
+        )
+        raw = self.work_root / "semantic-source.md"
+        raw.write_text("Equivalent source material.\n", encoding="utf-8")
+        draft = self.work_root / "equivalent.md"
+        draft.write_text(
+            """---
+schema_version: 1
+id: equivalent-alpha
+kind: concept
+summary: Deterministic local knowledge search
+tags: [index, knowledge]
+aliases: [equivalent-search]
+sources: [raw:self]
+links: [beta]
+contradictions: []
+status: active
+created_at: 2026-07-24T00:00:00Z
+updated_at: 2026-07-24T00:00:00Z
+---
+
+# Alpha
+
+The local index is rebuilt from canonical Markdown. See [[beta]].
+""",
+            encoding="utf-8",
+        )
+        self.assert_success(
+            self.invoke_knowledge(
+                "add", "--target", str(self.project), "--source", str(raw), "--wiki", str(draft), "--quick"
+            )[1]
+        )
+        second = self.work_root / "semantic-b.hivekb"
+        self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(second)
+            )[1]
+        )
+        destination = self.work_root / "semantic-c"
+        write_operational_user_setup(destination)
+        preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "merge", "preview", "--bundle", str(first), "--bundle", str(second), user_root=destination
+            )[1]
+        )
+        candidates = preview["merge"]["semantic_candidates"]
+        self.assertEqual(len(candidates), 1)
+        candidate = candidates[0]
+        review_path = self.work_root / "merge-review.json"
+        review_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "merge_preview_digest": preview["merge_input_digest"],
+                    "decisions": [
+                        {
+                            "action": "equivalent",
+                            "candidate_id": candidate["candidate_id"],
+                            "primary_path": candidate["paths"][0],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        reviewed = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "review",
+                "--bundle",
+                str(first),
+                "--bundle",
+                str(second),
+                "--preview-digest",
+                preview["merge_input_digest"],
+                "--review",
+                str(review_path),
+                user_root=destination,
+            )[1]
+        )
+        applied = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "apply",
+                "--bundle",
+                str(second),
+                "--bundle",
+                str(first),
+                "--preview-digest",
+                preview["merge_input_digest"],
+                "--review",
+                str(review_path),
+                "--review-digest",
+                reviewed["review_digest"],
+                user_root=destination,
+            )[1]
+        )
+        self.assertTrue(applied["import"]["canonical_mutation"])
+        self.assertTrue(any("/Merge/" in path for path in applied["import"]["changed_paths"]))
+
+    def test_public_wiki_page_verbs_follow_one_canonical_lifecycle(self) -> None:
+        """Smoke add/query/lint/list/read/delete/refresh without bypassing the CLI."""
+        self.add_fixture_page("alpha", quick=True)
+        self.add_fixture_page("beta")
+        self.add_orphan_page()
+
+        query = self.assert_success(
+            self.invoke_knowledge(
+                "query",
+                "--target",
+                str(self.project),
+                "--text",
+                "serial canonical writer",
+                "--tag",
+                "knowledge",
+                "--category",
+                "synthesis",
+                "--limit",
+                "5",
+            )[1]
+        )
+        self.assertEqual([hit["id"] for hit in query["hits"]], ["beta"])
+
+        read = self.assert_success(
+            self.invoke_knowledge(
+                "read",
+                "--target",
+                str(self.project),
+                "--page-id",
+                "alpha",
+            )[1]
+        )
+        self.assertEqual(read["outgoing_links"], ["beta"])
+        self.assertEqual(read["backlinks"], ["beta"])
+        self.assertEqual(read["nonreciprocal_links"], [])
+
+        lint = self.assert_success(
+            self.invoke_knowledge("lint", "--target", str(self.project))[1]
+        )
+        self.assertEqual(lint["error_count"], 0)
+
+        refreshed = self.assert_success(self.invoke_knowledge("refresh")[1])
+        self.assertGreaterEqual(refreshed["generation"], 1)
+
+        deleted = self.assert_success(
+            self.invoke_knowledge(
+                "delete",
+                "--target",
+                str(self.project),
+                "--page-id",
+                "orphan",
+                "--reason",
+                "obsolete",
+                "--timestamp",
+                "2026-08-01T00:01:00Z",
+            )[1]
+        )
+        self.assertEqual(deleted["page_id"], "orphan")
+        self.assertFalse((self.project / ".hive/knowledge/Wiki/orphan.md").exists())
+
+        listed = self.assert_success(
+            self.invoke_knowledge(
+                "list",
+                "--target",
+                str(self.project),
+                "--category",
+                "concept",
+            )[1]
+        )
+        self.assertEqual([page["id"] for page in listed["pages"]], ["alpha"])
+
+    def git(self, target: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *arguments],
+            cwd=target,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def build_hostile_scan_target(self) -> tuple[Path, bool]:
+        target = self.work_root / "hostile-scan"
+        target.mkdir()
+        self.git(target, "init", "-q")
+        (target / "docs").mkdir()
+        (target / "vendor").mkdir()
+        (target / ".hive").mkdir()
+        (target / ".gitignore").write_text(
+            "ignored-note.md\n.ignored/\n", encoding="utf-8"
+        )
+        (target / "README.md").write_text(
+            "The fixture documents cobalt retrieval anchors for bounded recall.\n",
+            encoding="utf-8",
+        )
+        (target / "docs/decision.md").write_text(
+            "# Decision\n\nOnly agent-reviewed claims may be applied.\n",
+            encoding="utf-8",
+        )
+        (target / "vendor/lib.rs").write_text("foreign vendor bytes\n", encoding="utf-8")
+        (target / ".hive/private.md").write_text("runtime state\n", encoding="utf-8")
+        (target / ".env").write_text(
+            "API_TOKEN=synthetic-hostile-secret\n", encoding="utf-8"
+        )
+        (target / "binary.md").write_bytes(b"\xff\x00hostile")
+        (target / "cache.sqlite3").write_bytes(b"SQLite format 3\x00")
+        (target / "notes.md").write_text("Optional untracked project notes.\n", encoding="utf-8")
+        (target / "ignored-note.md").write_text(
+            "ignored content must not enter inventory\n", encoding="utf-8"
+        )
+        self.git(
+            target,
+            "add",
+            "--",
+            ".gitignore",
+            "README.md",
+            "docs/decision.md",
+            "vendor/lib.rs",
+            "binary.md",
+            "cache.sqlite3",
+        )
+        self.git(target, "add", "-f", "--", ".env", ".hive/private.md")
+
+        outside = self.work_root / "outside.md"
+        outside.write_text("external content must never be followed\n", encoding="utf-8")
+        link = target / "external-link.md"
+        try:
+            link.symlink_to(outside)
+        except OSError:
+            linked = False
+        else:
+            self.git(target, "add", "--", "external-link.md")
+            linked = True
+        return target, linked
+
+    def test_nested_git_project_scan_stays_within_registered_target(self) -> None:
+        """A nested project must not require an independent Git repository."""
+        parent = self.work_root / "parent-vault"
+        target = parent / "registered-project"
+        sibling = parent / "foreign-sibling"
+        target.mkdir(parents=True)
+        sibling.mkdir()
+        self.git(parent, "init", "-q")
+        (target / "Knowledge").mkdir()
+        (target / "README.md").write_text(
+            "Nested project knowledge is safe to scan.\n", encoding="utf-8"
+        )
+        (target / "Knowledge/note.md").write_text(
+            "Only the registered target belongs in this inventory.\n", encoding="utf-8"
+        )
+        sentinel = sibling / "FOREIGN-SENTINEL.md"
+        sentinel.write_text("foreign sibling bytes\n", encoding="utf-8")
+        self.git(parent, "add", "--", "registered-project", "foreign-sibling")
+        before = self.git(parent, "status", "--porcelain=v1", "-z").stdout
+
+        inventory = self.assert_success(
+            self.invoke_knowledge("scan", "--target", str(target), "--inventory")[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(inventory)
+        entries = {
+            entry["relative_path"]
+            for entry in inventory["scan"]["inventory"]["entries"]
+        }
+        self.assertIn("README.md", entries)
+        self.assertIn("Knowledge/note.md", entries)
+        self.assertFalse(any("foreign-sibling" in path or path.startswith("../") for path in entries))
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "foreign sibling bytes\n")
+        self.assertEqual(
+            self.git(parent, "status", "--porcelain=v1", "-z").stdout,
+            before,
+        )
+
+    def test_hostile_scan_apply_and_cross_machine_bounded_retrieve(self) -> None:
+        """Cover scan/export/import and both automatic and explicit retrieval bounds."""
+        target, linked = self.build_hostile_scan_target()
+
+        inventory = self.assert_success(
+            self.invoke_knowledge("scan", "--target", str(target), "--inventory")[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(inventory)
+        entries = {
+            entry["relative_path"]: entry
+            for entry in inventory["scan"]["inventory"]["entries"]
+        }
+        self.assertNotIn("notes.md", entries)
+        self.assertNotIn("ignored-note.md", entries)
+        self.assertEqual(entries["README.md"]["decision"], "included")
+        self.assertEqual(entries["vendor/lib.rs"]["reason"], "generated-vendor-runtime-path")
+        self.assertEqual(entries[".hive/private.md"]["reason"], "generated-vendor-runtime-path")
+        self.assertEqual(entries[".env"]["reason"], "secret-candidate-path")
+        self.assertEqual(entries["binary.md"]["reason"], "binary-or-non-utf8")
+        self.assertEqual(entries["cache.sqlite3"]["reason"], "unsupported-file-type")
+        if linked:
+            self.assertEqual(entries["external-link.md"]["reason"], "symlink")
+        encoded_inventory = json.dumps(inventory, sort_keys=True)
+        self.assertNotIn("synthetic-hostile-secret", encoded_inventory)
+        self.assertNotIn("ignored content must not enter inventory", encoded_inventory)
+
+        before_apply_status = self.git(
+            target, "status", "--porcelain=v1", "-z", "--untracked-files=all"
+        ).stdout
+        included = self.assert_success(
+            self.invoke_knowledge(
+                "scan",
+                "--target",
+                str(target),
+                "--inventory",
+                "--include-untracked",
+            )[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(included)
+        included_inventory = included["scan"]["inventory"]
+        included_entries = {
+            entry["relative_path"]: entry for entry in included_inventory["entries"]
+        }
+        self.assertEqual(included_entries["notes.md"]["decision"], "included")
+        self.assertNotIn("ignored-note.md", included_entries)
+
+        review = self.work_root / "reviewed-claims.json"
+        review.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "inventory_digest": included_inventory["inventory_digest"],
+                    "claims": [
+                        {
+                            "schema_version": 1,
+                            "claim_id": "cobalt-retrieval-anchor",
+                            "kind": "decision",
+                            "statement": "Use cobalt retrieval anchors for bounded recall in every compatible knowledge collection.",
+                            "version": None,
+                            "revision": None,
+                            "applicability": "Any compatible knowledge collection using bounded retrieval.",
+                            "evidence": [
+                                {
+                                    "locator": "README.md",
+                                    "content_digest": included_entries["README.md"][
+                                        "content_digest"
+                                    ],
+                                    "kind": "document",
+                                }
+                            ],
+                            "agent_reviewed": True,
+                            "global_promotion_candidate": True,
+                        }
+                    ],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        candidates = self.assert_success(
+            self.invoke_knowledge(
+                "scan",
+                "--target",
+                str(target),
+                "--candidates",
+                str(review),
+                "--include-untracked",
+            )[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(candidates)
+        self.assertFalse(candidates["canonical_mutation"])
+
+        applied = self.assert_success(
+            self.invoke_knowledge(
+                "scan",
+                "--target",
+                str(target),
+                "--apply",
+                str(review),
+                "--include-untracked",
+            )[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(applied)
+        collection_id = applied["collection"]["collection_id"]
+        self.assertRegex(collection_id, r"^collection-[0-9a-f]{64}$")
+        self.assertEqual(applied["collection"]["kind"], "directory")
+        self.assertFalse(applied["target_mutated"])
+        self.assertEqual(
+            self.git(target, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout,
+            before_apply_status,
+        )
+
+        self.assert_success(self.invoke_knowledge("refresh")[1])
+        automatic = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(target),
+                "--query",
+                "cobalt retrieval anchors",
+            )[1]
+        )
+        Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(automatic)
+        self.assertLessEqual(len(automatic["hits"]), 5)
+        self.assertLessEqual(automatic["returned_bytes"], 16 * 1024)
+        self.assertEqual(automatic["hits"][0]["collection_id"], collection_id)
+
+        bounded = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(target),
+                "--query",
+                "cobalt retrieval anchors",
+                "--scope",
+                f"collection:{collection_id}",
+                "--top-k",
+                "1",
+                "--byte-budget",
+                "256",
+            )[1]
+        )
+        Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(bounded)
+        self.assertEqual(len(bounded["hits"]), 1)
+        self.assertLessEqual(bounded["returned_bytes"], 256)
+        self.assertEqual(bounded["hits"][0]["item_kind"], "claim")
+        self.assertTrue(bounded["hits"][0]["untrusted_content"])
+
+        automatic_promotion = applied["automatic_promotion"]
+        self.assertEqual(len(automatic_promotion["source_claims"]), 1)
+        self.assertEqual(len(automatic_promotion["promoted_claims"]), 1)
+        self.assertEqual(
+            automatic_promotion["promoted_claims"][0]["collection_id"], "user-root"
+        )
+        self.assertEqual(
+            automatic_promotion["source_claims"][0]["scan_metadata"]["promotion_status"],
+            "promoted",
+        )
+
+        unrelated = self.work_root / "fresh-unrelated-project"
+        unrelated.mkdir()
+        setup_process, setup_result = self.invoke_setup(
+            unrelated,
+            capabilities="capabilities-codex-host-native.json",
+        )
+        self.assertEqual(setup_process.returncode, 0, setup_result)
+        promoted_recall = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(unrelated),
+                "--query",
+                "cobalt retrieval anchors",
+            )[1]
+        )
+        Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(promoted_recall)
+        self.assertTrue(
+            any(hit["collection_id"] == "user-root" for hit in promoted_recall["hits"])
+        )
+
+        portable_source = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(target),
+                "--query",
+                "cobalt retrieval anchors",
+                "--scope",
+                f"collection:{collection_id}",
+                "--top-k",
+                "1",
+                "--byte-budget",
+                "256",
+            )[1]
+        )
+
+        bundle = self.work_root / "scanned-collection.hivekb"
+        export_preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "export",
+                "--preview",
+                "--scope",
+                f"collection:{collection_id}",
+                "--bundle",
+                str(bundle),
+            )[1]
+        )
+        self.assertFalse(bundle.exists())
+        self.assertRegex(export_preview["archive_sha256"], r"^sha256:[0-9a-f]{64}$")
+
+        exported = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "export",
+                "--apply",
+                "--scope",
+                f"collection:{collection_id}",
+                "--bundle",
+                str(bundle),
+            )[1]
+        )
+        self.assertTrue(bundle.is_file())
+        self.assertEqual(exported["archive_sha256"], export_preview["archive_sha256"])
+
+        destination = self.work_root / "fresh-user-root"
+        write_operational_user_setup(destination)
+        (destination / ".hive/config/user-feature-answers.yml").write_text(
+            "schema_version: 1\nvector_search: \"yes\"\nintroduced_in: \"0.10.0\"\n",
+            encoding="utf-8",
+        )
+        before_dry_run = snapshot_tree(destination)
+        dry_run = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "import",
+                "--preview",
+                "--bundle",
+                str(bundle),
+                user_root=destination,
+            )[1]
+        )
+        Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(dry_run)
+        self.assertEqual(dry_run["mode"], "dry-run")
+        self.assertRegex(dry_run["transfer_preview_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(snapshot_tree(destination), before_dry_run)
+
+        rejected_process, rejected = self.invoke_knowledge(
+            "transfer",
+            "import",
+            "--preview-digest",
+            "sha256:" + "0" * 64,
+            "--expected-sha256",
+            exported["archive_sha256"],
+            "--bundle",
+            str(bundle),
+            "--apply",
+            user_root=destination,
+        )
+        self.assertEqual(rejected_process.returncode, 3, rejected)
+        self.assertEqual(rejected["status"], "conflict", rejected)
+        self.assertEqual(snapshot_tree(destination), before_dry_run)
+
+        imported = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "import",
+                "--preview-digest",
+                dry_run["transfer_preview_digest"],
+                "--expected-sha256",
+                exported["archive_sha256"],
+                "--bundle",
+                str(bundle),
+                "--apply",
+                user_root=destination,
+            )[1]
+        )
+        Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(imported)
+        self.assertEqual(imported["mode"], "apply")
+        self.assertIn(collection_id, imported["detached_collection_ids"])
+        self.assertEqual(imported["vector_rebuild"]["state"], "question-required")
+        self.assertEqual(imported["vector_rebuild"]["scope"], "imported portable collections only")
+
+        transfer = imported["transfer"]
+        self.assertTrue(transfer["complete"])
+        preference_path = destination / ".hive/config/user-feature-answers.yml"
+        preference_before = preference_path.read_bytes()
+        before_cancel = snapshot_tree(destination)
+        cancelled = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "cancel",
+            "--receipt-digest", transfer["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertEqual(cancelled["vector_state"], "unanswered")
+        self.assertEqual(snapshot_tree(destination), before_cancel)
+
+        deferred = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "no",
+            "--receipt-digest", transfer["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertTrue(deferred["complete"])
+        self.assertEqual(deferred["vector_state"], "deferred")
+        self.assertFalse(deferred["question_required"])
+        self.assertEqual(preference_path.read_bytes(), preference_before)
+        status = self.assert_success(self.invoke_knowledge(
+            "transfer", "status", "--id", transfer["id"], user_root=destination,
+        )[1])
+        self.assertEqual(status["receipt_digest"], deferred["receipt_digest"])
+        self.assertFalse(status["question_required"])
+        implicit = subprocess.run(
+            [str(self.hive_binary), "knowledge", "transfer", "status", "--id", transfer["id"], "--output", "json"],
+            cwd=REPOSITORY_ROOT, capture_output=True, encoding="utf-8", check=False,
+            env={**os.environ, "USERPROFILE": str(destination), "HOME": str(destination)},
+        )
+        self.assertEqual(implicit.returncode, 0, implicit.stdout)
+        self.assertEqual(json.loads(implicit.stdout)["data"]["receipt_digest"], status["receipt_digest"])
+
+        retry_preview = self.assert_success(self.invoke_knowledge(
+            "transfer", "import", "--preview", "--bundle", str(bundle), user_root=destination,
+        )[1])
+        retried = self.assert_success(self.invoke_knowledge(
+            "transfer", "import", "--apply", "--bundle", str(bundle),
+            "--expected-sha256", exported["archive_sha256"],
+            "--preview-digest", retry_preview["transfer_preview_digest"], user_root=destination,
+        )[1])
+        Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(retried)
+        self.assertFalse(retried["canonical_mutation"])
+        self.assertEqual(retried["transfer"]["vector_state"], "deferred")
+
+        pending = self.assert_success(self.invoke_knowledge(
+            "transfer", "vector", "--id", transfer["id"], "--answer", "yes",
+            "--receipt-digest", deferred["receipt_digest"], user_root=destination,
+        )[1])
+        self.assertTrue(pending["complete"])
+        self.assertEqual(pending["vector_state"], "pending")
+        self.assertFalse(pending["vector"]["installed"])
+        self.assertFalse(pending["vector"]["enabled_new_scope"])
+        self.assertFalse((destination / ".hive/index/vector/runtimes").exists())
+        self.assertEqual(preference_path.read_bytes(), preference_before)
+
+        restored_project = self.work_root / "restored-consumer"
+        restored_project.mkdir()
+        authorization = self.assert_success(
+            self.invoke_knowledge(
+                "authorize-collection",
+                "--operation",
+                "attach",
+                "--collection",
+                collection_id,
+                "--target",
+                str(restored_project),
+                "--expires-at",
+                str(int(time.time()) + 30),
+                "--nonce",
+                "cross-machine-attach-0001",
+                "--confirm-current-action",
+                user_root=destination,
+            )[1]
+        )
+        attached = self.assert_success(
+            self.invoke_knowledge(
+                "collection",
+                "attach",
+                "--collection",
+                collection_id,
+                "--target",
+                str(restored_project),
+                "--authorization-id",
+                authorization["authorization_id"],
+                "--authorization-token",
+                authorization["authorization_token"],
+                user_root=destination,
+            )[1]
+        )
+        self.assertEqual(attached["collection"]["collection_id"], collection_id)
+        self.assertEqual(attached["collection"]["state"], "attached")
+
+        attached_auto = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(restored_project),
+                "--query",
+                "cobalt retrieval anchors",
+                user_root=destination,
+            )[1]
+        )
+        Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(attached_auto)
+        self.assertEqual(attached_auto["hits"][0]["collection_id"], collection_id)
+        self.assertLessEqual(attached_auto["returned_bytes"], 16 * 1024)
+
+        recalled = self.assert_success(
+            self.invoke_knowledge(
+                "retrieve",
+                "--target",
+                str(restored_project),
+                "--query",
+                "cobalt retrieval anchors",
+                "--scope",
+                f"collection:{collection_id}",
+                "--top-k",
+                "1",
+                "--byte-budget",
+                "256",
+                user_root=destination,
+            )[1]
+        )
+        Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(recalled)
+        self.assertEqual(
+            [hit["digest"] for hit in recalled["hits"]],
+            [hit["digest"] for hit in portable_source["hits"]],
+        )
+        self.assertEqual(
+            [hit["locator"] for hit in recalled["hits"]],
+            [hit["locator"] for hit in portable_source["hits"]],
+        )
+
+
+if __name__ == "__main__":
+    import unittest
+
+    unittest.main()

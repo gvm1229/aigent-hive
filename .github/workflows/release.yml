@@ -27,9 +27,51 @@ permissions:
   contents: read
 
 jobs:
+  public-stable-docs:
+    name: Public stable documentation contract
+    runs-on: ubuntu-24.04
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      CHANNEL: ${{ inputs.channel }}
+      PACKAGE_RELEASE_DATE: ${{ inputs.release_date }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Enforce stable-only end-user documentation
+        run: |
+          python3 scripts/check-public-stable-docs.py \
+            --channel "$CHANNEL" \
+            --product-version "$PRODUCT_VERSION" \
+            --release-date "$PACKAGE_RELEASE_DATE" \
+            --output json
+
+  test-release-gate:
+    name: Automatic numbered-test product gate
+    runs-on: ubuntu-24.04
+    needs: public-stable-docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Require new completed product bytes for a test candidate
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          PRODUCT_VERSION: ${{ inputs.product_version }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          if [ "$CHANNEL" = stable ]; then
+            exit 0
+          fi
+          python3 scripts/check-test-release-gate.py \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --output json
+
   unix:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
+    needs: test-release-gate
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -115,6 +157,19 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Qualify exact and grounded source graph questions
+        run: |
+          extra=()
+          case "$TARGET" in
+            aarch64-apple-darwin|x86_64-unknown-linux-musl)
+              extra+=(--require-graphify-preview)
+              ;;
+          esac
+          python3 scripts/qualify-source-graph.py \
+            --hive "target/$TARGET/release/hive" \
+            --target . \
+            --output "source-graph-$TARGET.json" \
+            "${extra[@]}"
       - name: Apply and verify explicit macOS ad-hoc signature
         if: runner.os == 'macOS'
         run: |
@@ -204,11 +259,13 @@ jobs:
             aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.tar.gz.sha256
             aigent-hive-${{ matrix.platform_package }}-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.attestation.jsonl
+            source-graph-${{ matrix.target }}.json
           if-no-files-found: error
 
   windows:
     name: Windows x86_64
     runs-on: windows-2025
+    needs: test-release-gate
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -270,6 +327,14 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Qualify exact and grounded source graph questions
+        shell: pwsh
+        run: >-
+          python scripts/qualify-source-graph.py
+          --hive "target/$env:TARGET/release/hive.exe"
+          --target .
+          --output "source-graph-$env:TARGET.json"
+          --require-graphify-preview
       - name: Verify architecture and package native archive
         shell: pwsh
         run: |
@@ -341,6 +406,7 @@ jobs:
             aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.zip.sha256
             aigent-hive-win32-x64-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.attestation.jsonl
+            source-graph-x86_64-pc-windows-msvc.json
           if-no-files-found: error
 
   npm-umbrella:

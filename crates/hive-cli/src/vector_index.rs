@@ -1,0 +1,746 @@
+//! Bounded generation construction. Only verified immutable copies enter scope control.
+use super::{
+    auth, contract_digest, invalid, io_error, optional, scope_control, value_digest,
+    verify_runtime, worker, ScopeControl, Selector, Target,
+};
+use hive_wiki::rag::{RetrievalRequest, RetrievalScope};
+use hive_wiki::store::RagStore;
+use hive_wiki::vector::{DatabaseKind, VectorFiles};
+use hive_wiki::{source, WikiError};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+
+#[path = "vector_batch.rs"]
+mod batch;
+
+pub(super) fn rebuild_many(
+    targets: &[Target],
+    options: &[(&str, &str)],
+) -> Result<Value, WikiError> {
+    batch::rebuild_many(targets, options)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Snapshot {
+    pub(super) id: String,
+    pub(super) database_digest: String,
+    pub(super) manifest_digest: String,
+    pub(super) contract_digest: String,
+    pub(super) runtime_id: String,
+    pub(super) chunks: usize,
+}
+
+struct Corpus {
+    manifest_digest: String,
+    authority_digest: Option<String>,
+    chunks: Vec<Value>,
+    request: Option<RetrievalRequest>,
+}
+
+fn collection_request(target: &Target) -> Result<RetrievalRequest, WikiError> {
+    let Selector::Collection { partition } = &target.selector else {
+        return Err(invalid("collection request requires a consumer scope"));
+    };
+    Ok(RetrievalRequest {
+        scope: RetrievalScope::Collection(partition.collection_id.clone()),
+        current_collection_id: target.current_collection_id.clone(),
+        query: "vector build".to_owned(),
+        query_expansions: Vec::new(),
+        top_k: 100,
+        byte_budget: 1024 * 1024,
+        confidential_collection_id: auth::confidential(target)
+            .then(|| partition.collection_id.clone()),
+    })
+}
+
+fn collection_corpus(value: hive_wiki::rag::SemanticCorpus, request: RetrievalRequest) -> Corpus {
+    Corpus { manifest_digest: value.partition_digest, authority_digest: Some(value.authority_digest), request: Some(request),
+        chunks: value.chunks.into_iter().map(|hit| json!({"chunk_id":hit.chunk_id,"digest":hit.digest,"title":hit.title,"text":hit.text})).collect() }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RetiredSnapshot {
+    checkpoint: bool,
+    snapshot: Snapshot,
+}
+
+fn record_retired(before: &ScopeControl, after: &mut ScopeControl) {
+    for (checkpoint, snapshot) in before.checkpoint.iter().map(|item| (true, item)).chain(
+        before
+            .active
+            .iter()
+            .chain(before.previous.iter())
+            .map(|item| (false, item)),
+    ) {
+        let live = if checkpoint {
+            after.checkpoint.iter().any(|item| item.id == snapshot.id)
+        } else {
+            after
+                .active
+                .iter()
+                .chain(after.previous.iter())
+                .any(|item| item.id == snapshot.id)
+        };
+        if !live
+            && !after
+                .retired
+                .iter()
+                .any(|item| item.checkpoint == checkpoint && item.snapshot.id == snapshot.id)
+        {
+            after.retired.push(RetiredSnapshot {
+                checkpoint,
+                snapshot: snapshot.clone(),
+            });
+        }
+    }
+}
+
+fn clean_retired(target: &Target, control: &ScopeControl) -> bool {
+    let Ok(expected) = value_digest(control) else {
+        return true;
+    };
+    if !target
+        .files
+        .read_control::<ScopeControl>(Some(&target.scope_id))
+        .is_ok_and(|(_, actual)| actual.as_deref() == Some(&expected))
+    {
+        return true;
+    }
+    let mut after = control.clone();
+    after.retired.retain(|item| {
+        let snapshot = &item.snapshot;
+        if control
+            .active
+            .iter()
+            .chain(control.previous.iter())
+            .chain(control.checkpoint.iter())
+            .any(|live| live.id == snapshot.id)
+        {
+            return true;
+        }
+        let kind = if item.checkpoint {
+            DatabaseKind::Checkpoint(&snapshot.id)
+        } else {
+            DatabaseKind::Generation(&snapshot.id)
+        };
+        target
+            .files
+            .retire_database(&target.scope_id, kind, &snapshot.database_digest)
+            .is_err()
+    });
+    if after.retired.len() != control.retired.len()
+        && target
+            .files
+            .write_control(Some(&target.scope_id), Some(&expected), &after)
+            .is_err()
+    {
+        return true;
+    }
+    !after.retired.is_empty()
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BuildResult {
+    schema_version: u32,
+    complete: bool,
+    phase: String,
+    embedded: usize,
+    remaining: usize,
+    chunks: usize,
+    elapsed_seconds: f64,
+    database_digest: String,
+}
+
+fn corpus(
+    target: &Target,
+    authorization: Option<(&[(&str, &str)], &str)>,
+) -> Result<Corpus, WikiError> {
+    match &target.selector {
+        Selector::Source { language } => {
+            let corpus = source::semantic_corpus(target.files.root_path(), language)?;
+            Ok(Corpus { manifest_digest: corpus.manifest_digest, authority_digest: None, request: None,
+                chunks: corpus.pages.into_iter().map(|page| json!({"chunk_id":page.hit.path,"digest":page.hit.content_digest,"title":page.hit.title,"text":page.body})).collect() })
+        }
+        Selector::Collection { partition } => {
+            let request = collection_request(target)?;
+            let store = RagStore::open(target.files.root_path())?;
+            let corpus = if auth::confidential(target) {
+                let (options, operation) = authorization.ok_or_else(|| {
+                    invalid("confidential corpus requires current build authorization")
+                })?;
+                store.authorized_semantic_corpus(&request, partition.visibility, |manifest| {
+                    auth::consume_locked(target, options, operation, manifest)
+                })?
+            } else {
+                store.semantic_corpus(&request, partition.visibility)?
+            };
+            Ok(collection_corpus(corpus, request))
+        }
+    }
+}
+
+fn compatible(snapshot: &Snapshot, control: &ScopeControl) -> bool {
+    snapshot.runtime_id == control.runtime.id
+        && snapshot.contract_digest == control.runtime.contract_digest
+}
+
+fn restore_staging(target: &Target, control: &ScopeControl) -> Result<Option<String>, WikiError> {
+    let checkpoint = control
+        .checkpoint
+        .as_ref()
+        .filter(|snapshot| compatible(snapshot, control))
+        .map(|snapshot| (snapshot, DatabaseKind::Checkpoint(snapshot.id.as_str())));
+    let active = {
+        control
+            .active
+            .as_ref()
+            .filter(|snapshot| compatible(snapshot, control))
+            .map(|snapshot| (snapshot, DatabaseKind::Generation(snapshot.id.as_str())))
+    };
+    for (snapshot, kind) in checkpoint.into_iter().chain(active) {
+        // The immutable copy must match authority outside SQLite before any bytes are reused.
+        if target
+            .files
+            .database_digest(&target.scope_id, kind)
+            .ok()
+            .as_deref()
+            != Some(&snapshot.database_digest)
+        {
+            continue;
+        }
+        if target
+            .files
+            .database_digest(&target.scope_id, DatabaseKind::Staging)
+            .ok()
+            .as_deref()
+            == Some(&snapshot.database_digest)
+        {
+            return Ok(Some(snapshot.database_digest.clone()));
+        }
+        clear_or_quarantine_staging(target, control)?;
+        target.files.copy_database(
+            &target.scope_id,
+            kind,
+            DatabaseKind::Staging,
+            &snapshot.database_digest,
+        )?;
+        return Ok(Some(snapshot.database_digest.clone()));
+    }
+    clear_or_quarantine_staging(target, control)?;
+    Ok(None)
+}
+
+fn clear_or_quarantine_staging(target: &Target, control: &ScopeControl) -> Result<(), WikiError> {
+    for (snapshot, kind) in control
+        .checkpoint
+        .iter()
+        .map(|item| (item, DatabaseKind::Checkpoint(item.id.as_str())))
+        .chain(
+            control
+                .active
+                .iter()
+                .chain(control.previous.iter())
+                .map(|item| (item, DatabaseKind::Generation(item.id.as_str()))),
+        )
+    {
+        if target
+            .files
+            .discard_staging_copy(&target.scope_id, kind, &snapshot.database_digest)
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+    // Corrupt or unrecognized working bytes remain recoverable. Never infer deletion
+    // authority from an untrusted file's own embedded checksum or SQLite metadata.
+    target
+        .files
+        .quarantine_staging(&target.scope_id)
+        .map(|_| ())
+}
+
+fn publish(
+    target: &Target,
+    corpus: &Corpus,
+    before: &ScopeControl,
+    expected: &str,
+    after: &ScopeControl,
+) -> Result<(), WikiError> {
+    let after_digest = value_digest(after)?;
+    let install = || {
+        target
+            .files
+            .write_control(Some(&target.scope_id), Some(expected), after)
+    };
+    let rollback = || {
+        target
+            .files
+            .write_control(Some(&target.scope_id), Some(&after_digest), before)
+    };
+    match &target.selector {
+        Selector::Source { .. } => source::with_semantic_snapshot(
+            target.files.root_path(),
+            &corpus.manifest_digest,
+            install,
+            rollback,
+        ),
+        Selector::Collection { partition } => RagStore::open(target.files.root_path())?
+            .with_semantic_snapshot(
+                corpus
+                    .request
+                    .as_ref()
+                    .ok_or_else(|| invalid("vector request authority is absent"))?,
+                partition.visibility,
+                &corpus.manifest_digest,
+                corpus
+                    .authority_digest
+                    .as_deref()
+                    .ok_or_else(|| invalid("vector operation authority is absent"))?,
+                install,
+                rollback,
+            ),
+    }
+}
+
+pub(super) fn execution_options(
+    options: &[(&str, &str)],
+    seconds: usize,
+    workers: usize,
+) -> Vec<(String, String)> {
+    let mut result = options
+        .iter()
+        .filter(|(key, _)| !["--max-seconds", "--workers"].contains(key))
+        .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+        .collect::<Vec<_>>();
+    result.push(("--max-seconds".to_owned(), seconds.to_string()));
+    result.push(("--workers".to_owned(), workers.to_string()));
+    result
+}
+
+pub(super) fn execution_budget(options: &[(&str, &str)]) -> Result<(usize, usize), WikiError> {
+    let seconds = super::super::parse_bounded_usize(
+        optional(options, "--max-seconds"),
+        30,
+        1,
+        60,
+        "--max-seconds",
+    )?;
+    let workers = super::super::parse_bounded_usize(
+        optional(options, "--workers"),
+        super::default_workers(),
+        1,
+        super::MAX_WORKERS,
+        "--workers",
+    )?;
+    Ok((seconds, workers))
+}
+
+pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
+    auth::validate_fields(target, options)?;
+    let (seconds, workers) = execution_budget(options)?;
+    let _lease = target.files.writer(Some(&target.scope_id))?;
+    let (control, digest) = scope_control(target)?;
+    let before = control
+        .filter(|value| value.enabled)
+        .ok_or_else(|| invalid("vector scope is disabled; preview and enable first"))?;
+    verify_runtime(&target.files, &before.runtime)?;
+    // Bind the exact frozen execution budget, not a second CPU-capacity observation.
+    let execution = execution_options(options, seconds, workers);
+    let execution = execution
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect::<Vec<_>>();
+    let corpus = corpus(target, Some((&execution, "rebuild")))?;
+    let expected = match optional(options, "--rebuild-mode").unwrap_or("resume") {
+        "resume" => restore_staging(target, &before)?,
+        "fresh" => {
+            clear_or_quarantine_staging(target, &before)?;
+            None
+        }
+        _ => return Err(invalid("--rebuild-mode must be resume or fresh")),
+    };
+    let database = target.files.prepare_staging(&target.scope_id)?;
+    let request = json!({"schema_version":1,"action":"build","runtime":target.files.runtime_path(&before.runtime.id)?,
+        "database":database,"chunks":corpus.chunks,"contract_digest":before.runtime.contract_digest,
+        "manifest_digest":corpus.manifest_digest,"workers":workers,"max_seconds":seconds,"expected_database_digest":expected});
+    let result = match worker(
+        &target.files,
+        &before.runtime,
+        request,
+        u64::try_from(seconds).map_err(io_error)? + 35,
+    ) {
+        Ok(value) => value,
+        Err(error) => {
+            target.files.quarantine_staging(&target.scope_id)?;
+            return Err(error);
+        }
+    };
+    let result = validate_build_result(target, corpus.chunks.len(), result)?;
+    let pending = retain_build(target, &before, &corpus, result)?;
+    publish(
+        target,
+        &corpus,
+        &before,
+        digest
+            .as_deref()
+            .ok_or_else(|| invalid("scope control digest is absent"))?,
+        &pending.after,
+    )?;
+    Ok(finish_build(target, &pending, workers))
+}
+
+struct PendingBuild {
+    snapshot: Snapshot,
+    after: ScopeControl,
+    result: BuildResult,
+}
+
+fn retain_build(
+    target: &Target,
+    before: &ScopeControl,
+    corpus: &Corpus,
+    result: BuildResult,
+) -> Result<PendingBuild, WikiError> {
+    let snapshot = Snapshot {
+        id: VectorFiles::fresh_snapshot_id(),
+        database_digest: result.database_digest.clone(),
+        manifest_digest: corpus.manifest_digest.clone(),
+        contract_digest: before.runtime.contract_digest.clone(),
+        runtime_id: before.runtime.id.clone(),
+        chunks: result.chunks,
+    };
+    let kind = if result.complete {
+        DatabaseKind::Generation(&snapshot.id)
+    } else {
+        DatabaseKind::Checkpoint(&snapshot.id)
+    };
+    target.files.copy_database(
+        &target.scope_id,
+        DatabaseKind::Staging,
+        kind,
+        &snapshot.database_digest,
+    )?;
+    let mut after = before.clone();
+    after.revision = before
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| invalid("vector control revision is exhausted"))?;
+    if result.complete {
+        after.previous = after.active.take();
+        after.active = Some(snapshot.clone());
+        after.checkpoint = None;
+    } else {
+        after.checkpoint = Some(snapshot.clone());
+    }
+    record_retired(before, &mut after);
+    Ok(PendingBuild {
+        snapshot,
+        after,
+        result,
+    })
+}
+
+fn finish_build(target: &Target, pending: &PendingBuild, workers: usize) -> Value {
+    let PendingBuild {
+        snapshot,
+        after,
+        result,
+    } = pending;
+    let kind = if result.complete {
+        DatabaseKind::Generation(&snapshot.id)
+    } else {
+        DatabaseKind::Checkpoint(&snapshot.id)
+    };
+    let cleanup_pending = clean_retired(target, after);
+    // If removal fails, the published active/checkpoint receipt remains the durable retry
+    // authority. The next rebuild either reuses these exact bytes or retains their corruption.
+    let staging_cleanup_pending = target
+        .files
+        .discard_staging_copy(&target.scope_id, kind, &snapshot.database_digest)
+        .is_err();
+    json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
+        "cleanup_pending":cleanup_pending || staging_cleanup_pending,
+        "workers":workers,
+        "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
+        "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
+        "requires_new_authorization":auth::confidential(target) && !result.complete,
+        "fts_unchanged":true,"changed_paths":changed_paths(target,true)})
+}
+
+pub(super) fn status(target: &Target, control: &ScopeControl) -> Value {
+    if auth::confidential(target) {
+        return json!({"index_ready":null,"requires_current_action":true});
+    }
+    let Some(active) = control
+        .active
+        .as_ref()
+        .filter(|snapshot| compatible(snapshot, control))
+    else {
+        return json!({"index_ready":false,"checkpoint_available":control.checkpoint.is_some()});
+    };
+    let verified = target
+        .files
+        .database_digest(&target.scope_id, DatabaseKind::Generation(&active.id))
+        .is_ok_and(|digest| digest == active.database_digest);
+    let current =
+        corpus(target, None).is_ok_and(|corpus| corpus.manifest_digest == active.manifest_digest);
+    json!({"index_ready":verified && current,"snapshot_verified":verified,"canonical_current":current,
+        "checkpoint_available":control.checkpoint.is_some()})
+}
+
+fn validate_build_result(
+    target: &Target,
+    chunks: usize,
+    value: Value,
+) -> Result<BuildResult, WikiError> {
+    let result = (|| {
+        let result: BuildResult = serde_json::from_value(value).map_err(io_error)?;
+        if result.schema_version != 1
+            || result.chunks != chunks
+            || !result.elapsed_seconds.is_finite()
+            || result.complete != (result.phase == "ready")
+            || ![
+                "ready",
+                "embedding",
+                "restoring",
+                "finalizing",
+                "compacting",
+            ]
+            .contains(&result.phase.as_str())
+            || target
+                .files
+                .database_digest(&target.scope_id, DatabaseKind::Staging)?
+                != result.database_digest
+        {
+            return Err(invalid(
+                "vector worker output differs from its closed database",
+            ));
+        }
+        Ok(result)
+    })();
+    if result.is_err() {
+        target.files.quarantine_staging(&target.scope_id)?;
+    }
+    result
+}
+
+pub(super) fn rollback(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
+    auth::validate_fields(target, options)?;
+    let _lease = target.files.writer(Some(&target.scope_id))?;
+    let (control, digest) = scope_control(target)?;
+    let before = control.ok_or_else(|| invalid("vector scope has no rollback state"))?;
+    verify_runtime(&target.files, &before.runtime)?;
+    let corpus = corpus(target, Some((options, "rollback")))?;
+    let previous = before
+        .previous
+        .as_ref()
+        .filter(|snapshot| compatible(snapshot, &before))
+        .ok_or_else(|| invalid("no compatible prior vector generation"))?;
+    if previous.manifest_digest != corpus.manifest_digest
+        || previous.contract_digest != contract_digest()?
+        || target
+            .files
+            .database_digest(&target.scope_id, DatabaseKind::Generation(&previous.id))?
+            != previous.database_digest
+    {
+        return Err(invalid(
+            "prior vector generation is stale or corrupt; FTS remains available",
+        ));
+    }
+    let mut after = before.clone();
+    after.revision = before
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| invalid("vector control revision is exhausted"))?;
+    after.active = after.previous.take();
+    after.previous.clone_from(&before.active);
+    after.checkpoint = None;
+    record_retired(&before, &mut after);
+    publish(
+        target,
+        &corpus,
+        &before,
+        digest
+            .as_deref()
+            .ok_or_else(|| invalid("scope control digest is absent"))?,
+        &after,
+    )?;
+    let cleanup_pending = clean_retired(target, &after);
+    Ok(
+        json!({"rolled_back":true,"enabled":after.enabled,"fts_unchanged":true,"cleanup_pending":cleanup_pending,"changed_paths":changed_paths(target,true)}),
+    )
+}
+
+fn changed_paths(target: &Target, data: bool) -> Vec<&std::path::Path> {
+    let mut paths = vec![target.files.control_relative()];
+    if data {
+        paths.push(target.files.data_relative());
+    }
+    if auth::confidential(target) {
+        paths.push(std::path::Path::new(
+            super::super::KNOWLEDGE_AUTHORIZATION_RELATIVE,
+        ));
+    }
+    paths
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::knowledge::vector::InstalledRuntime;
+    use hive_core::sha256_digest;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+    };
+
+    #[test]
+    #[allow(clippy::too_many_lines)] // Keep the interruption, cleanup, and authenticated retry in one lifecycle.
+    fn killed_mutable_cache_restores_only_an_externally_authenticated_copy() {
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&base).expect("work directory");
+        let base = base.canonicalize().expect("canonical work directory");
+        let root = tempfile::tempdir_in(base).expect("root");
+        let files = VectorFiles::open(root.path(), false).expect("files");
+        let selector = Selector::Collection {
+            partition: hive_wiki::rag::SemanticPartition {
+                collection_id: "user-root".to_owned(),
+                visibility: hive_wiki::rag::RagVisibility::Shared,
+            },
+        };
+        let scope_id = files.scope_id(&selector).expect("scope");
+        let target = Target {
+            files,
+            selector,
+            scope_id,
+            current_collection_id: None,
+        };
+        let stage = target
+            .files
+            .prepare_staging(&target.scope_id)
+            .expect("stage");
+        fs::write(&stage, b"verified checkpoint").expect("checkpoint bytes");
+        let digest = sha256_digest(b"verified checkpoint");
+        let id = VectorFiles::fresh_snapshot_id();
+        target
+            .files
+            .copy_database(
+                &target.scope_id,
+                DatabaseKind::Staging,
+                DatabaseKind::Checkpoint(&id),
+                &digest,
+            )
+            .expect("copy");
+        let contract = contract_digest().expect("contract");
+        let runtime_id = "a".repeat(64);
+        let snapshot = Snapshot {
+            id,
+            database_digest: digest.clone(),
+            manifest_digest: sha256_digest(b"manifest"),
+            contract_digest: contract.clone(),
+            runtime_id: runtime_id.clone(),
+            chunks: 1,
+        };
+        let control = ScopeControl {
+            schema_version: 1,
+            revision: 1,
+            selector: target.selector.clone(),
+            enabled: true,
+            consent_digest: sha256_digest(b"consent"),
+            runtime: InstalledRuntime {
+                id: runtime_id,
+                python: PathBuf::new(),
+                identity: json!({}),
+                contract_digest: contract,
+                receipt_digest: sha256_digest(b"receipt"),
+                consent_digest: sha256_digest(b"consent"),
+            },
+            checkpoint: Some(snapshot.clone()),
+            active: None,
+            previous: None,
+            retired: Vec::new(),
+        };
+        fs::write(&stage, b"killed worker bytes").expect("interruption");
+        fs::write(
+            format!("{}-journal", stage.display()),
+            b"incomplete transaction",
+        )
+        .expect("journal");
+        assert_eq!(
+            restore_staging(&target, &control).expect("recovery"),
+            Some(digest.clone())
+        );
+        assert_eq!(fs::read(&stage).expect("restored"), b"verified checkpoint");
+        assert_eq!(
+            target
+                .files
+                .database_digest(&target.scope_id, DatabaseKind::Staging)
+                .expect("closed"),
+            digest
+        );
+        let checkpoint = target
+            .files
+            .database_path(&target.scope_id, DatabaseKind::Checkpoint(&snapshot.id))
+            .expect("path");
+        let retained_before = fs::read_dir(stage.parent().unwrap()).unwrap().count();
+        clear_or_quarantine_staging(&target, &control).expect("discard redundant stage");
+        assert!(!stage.exists());
+        assert_eq!(
+            fs::read_dir(stage.parent().unwrap()).unwrap().count(),
+            retained_before - 1
+        );
+        assert_eq!(
+            restore_staging(&target, &control).expect("restore without mutable cache"),
+            Some(digest)
+        );
+        fs::write(checkpoint, b"forged cache with matching internal checksums")
+            .expect("corruption");
+        assert_eq!(
+            restore_staging(&target, &control).expect("fresh recovery"),
+            None
+        );
+        assert!(!stage.exists());
+        assert_retirement_retry(&target, &control, &snapshot);
+    }
+
+    fn assert_retirement_retry(target: &Target, control: &ScopeControl, snapshot: &Snapshot) {
+        let mut after = control.clone();
+        after.checkpoint = None;
+        record_retired(control, &mut after);
+        assert_eq!(after.retired.len(), 1);
+        target
+            .files
+            .write_control(Some(&target.scope_id), None, &after)
+            .expect("control");
+        assert!(clean_retired(target, &after));
+        assert_eq!(
+            target
+                .files
+                .read_control::<ScopeControl>(Some(&target.scope_id))
+                .expect("retained queue")
+                .0
+                .expect("control")
+                .retired
+                .len(),
+            1
+        );
+        let path = target
+            .files
+            .database_path(&target.scope_id, DatabaseKind::Checkpoint(&snapshot.id))
+            .expect("checkpoint path");
+        fs::write(&path, b"verified checkpoint").expect("restored owned copy");
+        assert!(!clean_retired(target, &after));
+        assert!(!path.exists());
+        assert!(target
+            .files
+            .read_control::<ScopeControl>(Some(&target.scope_id))
+            .expect("cleared queue")
+            .0
+            .expect("control")
+            .retired
+            .is_empty());
+    }
+}

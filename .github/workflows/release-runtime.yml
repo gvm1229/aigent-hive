@@ -4,12 +4,110 @@ on:
   schedule:
     - cron: "23 2 * * 1"
   workflow_dispatch:
+    inputs:
+      vector_only:
+        description: Run only the explicitly consented disposable native vector acceptance
+        required: false
+        type: boolean
+        default: false
+      public_test_product_version:
+        description: Optional exact product version for public-test acceptance
+        required: false
+        type: string
+      public_test_package_version:
+        description: Optional exact numbered npm test version
+        required: false
+        type: string
+      public_test_release_date:
+        description: Optional exact public-test release date
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
+  public-test-korean:
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.vector_only && inputs.public_test_package_version != '' }}
+    uses: ./.github/workflows/public-test-acceptance.yml
+    with:
+      product_version: ${{ inputs.public_test_product_version }}
+      package_version: ${{ inputs.public_test_package_version }}
+      release_date: ${{ inputs.public_test_release_date }}
+    permissions:
+      contents: read
+
+  vector:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.vector_only }}
+    name: Optional vector (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            executable: hive.exe
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            executable: hive
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            executable: hive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: vector-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Select SQLite-capable Python for vector acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          probe='import sqlite3,sys; print(sys.version.split()[0], sqlite3.sqlite_version); c=sqlite3.connect(":memory:"); c.enable_load_extension(True); c.enable_load_extension(False); c.close()'
+          if python -I -S -c "$probe"; then
+            exit 0
+          fi
+          # CI toolchain setup only; Hive never installs Python on a consumer machine.
+          brew install python@3.13
+          vector_python="$(brew --prefix python@3.13)/bin/python3.13"
+          "$vector_python" -I -S -c "$probe"
+          printf 'VECTOR_PYTHON=%s\n' "$vector_python" >>"$GITHUB_ENV"
+      - name: Install musl linker on the glibc qualification host
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends musl-tools
+      - name: Build and qualify the exact native source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          "${VECTOR_PYTHON:-python}" -B -m unittest tests.conformance.contracts.test_vector_parent
+          cargo build --release --locked --target '${{ matrix.target }}' --bin hive
+          python scripts/test-artifacts.py run --purpose 'native vector qualification ${{ matrix.target }}' --command "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py \
+            --hive 'target/${{ matrix.target }}/release/${{ matrix.executable }}' --authorize-install
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: vector-native-${{ matrix.target }}
+          path: |
+            tests/work/vector-native-*/receipt.json
+            tests/results/runs/*.md
+          if-no-files-found: warn
+
   macos:
+    if: ${{ !inputs.vector_only && (github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '') }}
     name: macOS ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
@@ -93,7 +191,7 @@ jobs:
           fake_bin="$RUNNER_TEMP/fake-bin"
           mkdir "$user_root"
           mkdir "$fake_bin"
-          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          cp tests/fixtures/native-orchestration/agy-stub.py "$fake_bin/agy"
           chmod +x "$fake_bin/agy"
           export PATH="$fake_bin:$PATH"
           export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
@@ -125,6 +223,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
 
   linux:
+    if: ${{ !inputs.vector_only && (github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '') }}
     name: Linux ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
@@ -213,7 +312,7 @@ jobs:
           fake_bin="$RUNNER_TEMP/fake-bin"
           mkdir "$user_root"
           mkdir "$fake_bin"
-          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          cp tests/fixtures/native-orchestration/agy-stub.py "$fake_bin/agy"
           chmod +x "$fake_bin/agy"
           export PATH="$fake_bin:$PATH"
           export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
@@ -246,6 +345,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
 
   windows:
+    if: ${{ !inputs.vector_only && (github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '') }}
     name: Windows x86_64
     runs-on: windows-2025
     env:
@@ -369,7 +469,7 @@ jobs:
           $fakeBin = "$env:RUNNER_TEMP\fake-bin"
           New-Item -ItemType Directory -Path $userRoot | Out-Null
           New-Item -ItemType Directory -Path $fakeBin | Out-Null
-          Copy-Item tests/fixtures/agy-stub.py "$fakeBin\agy.py"
+          Copy-Item tests/fixtures/native-orchestration/agy-stub.py "$fakeBin\agy.py"
           '@python "%~dp0agy.py" %*' |
             Set-Content "$fakeBin\agy.cmd" -Encoding ascii
           $env:PATH = "$fakeBin;$env:PATH"

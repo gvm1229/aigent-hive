@@ -9,7 +9,7 @@ summary: "Exact npm 0.8.0 is the latest install channel while GitHub Release and
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
-  - "repo:docs/releases/0.8.0.md#sha256:1d5100af5c1f8b2d9e19d2a730acdcff9d1fa276c0cfdb364ec9b33164b78205"
+  - "repo:docs/releases/0.8.0.md#sha256:03050a137584973b969873f82056ede4ce53d3669f8fb647d22a07697acf52b0"
 links: [global-onboarding, version-policy, windows-powershell-module-isolation]
 reviewed_revision: "git:e37de7ff99fb235f673a4d3273deb54d6284999e"
 status: active

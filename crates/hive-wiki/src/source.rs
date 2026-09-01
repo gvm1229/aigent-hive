@@ -3,6 +3,7 @@
 use super::{
     fts_expression, reject_likely_credentials, sqlite_error, LintIssue, LintSeverity, WikiError,
 };
+use crate::graph::{finalize_generation, GraphEdge, GraphEvidence, GraphGeneration, GraphNode};
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
@@ -27,6 +28,7 @@ const INDEX_RELATIVE: &str = ".agents/work/source-wiki/index.sqlite3";
 const LOCK_RELATIVE: &str = ".agents/work/source-wiki/.index.lock";
 const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const INDEX_MAX_BYTES: usize = 64 * 1024 * 1024;
+const INDEX_SCHEMA_VERSION: &str = "2";
 const FACT_BODY_MAX_BYTES: usize = 800;
 const LOCK_MARKER_V1: &[u8] = b"schema_version=1\n";
 const LOCK_MARKER_V2: &[u8] = b"schema_version=2\n";
@@ -82,6 +84,139 @@ pub struct SourceQueryHit {
     pub aliases: Vec<String>,
     /// Sorted content-addressed repository sources.
     pub sources: Vec<String>,
+}
+
+/// One validated source page for a language-isolated semantic index.
+#[derive(Debug, Clone, Serialize)]
+pub struct SourceSemanticPage {
+    pub hit: SourceQueryHit,
+    pub body: String,
+}
+
+/// Source-native corpus; never opens or initializes a consumer knowledge store.
+#[derive(Debug, Clone, Serialize)]
+pub struct SourceSemanticCorpus {
+    pub manifest_digest: String,
+    pub pages: Vec<SourceSemanticPage>,
+}
+
+/// Read a complete language partition with the same canonical and index checks as source queries.
+///
+/// # Errors
+/// Rejects invalid source identity, language, canonical facts, or stale derived state.
+pub fn semantic_corpus(root: &Path, language: &str) -> Result<SourceSemanticCorpus, WikiError> {
+    let root = SourceRoot::open(root)?;
+    validate_language(language)?;
+    let pages = scan_valid_pages(&root)?;
+    let expected = logical_digest(&pages)?;
+    let _loaded = load_current_index(&root, &pages, &expected)?;
+    let selected = pages
+        .values()
+        .filter(|page| page.frontmatter.language == language)
+        .map(|page| SourceSemanticPage {
+            hit: source_page_hit(page),
+            body: page.body.clone(),
+        })
+        .collect();
+    Ok(SourceSemanticCorpus {
+        manifest_digest: expected,
+        pages: selected,
+    })
+}
+
+fn source_page_hit(page: &SourcePage) -> SourceQueryHit {
+    let meta = &page.frontmatter;
+    SourceQueryHit {
+        language: meta.language.clone(),
+        pair_id: meta.pair_id.clone(),
+        topic_slug: meta.topic_slug.clone(),
+        counterpart: meta.counterpart.clone(),
+        title: meta.title.clone(),
+        summary: meta.summary.clone(),
+        path: page.relative_path.clone(),
+        content_digest: page.content_digest.clone(),
+        reviewed_revision: meta.reviewed_revision.clone(),
+        tags: meta.tags.clone(),
+        aliases: meta.aliases.clone(),
+        sources: meta.sources.clone(),
+    }
+}
+
+/// Revalidate untrusted nearest-neighbor references against current source facts.
+///
+/// # Errors
+/// Rejects stale generations, unknown/wrong-language citations, duplicates, and malformed scores.
+pub fn semantic_matches(
+    root: &Path,
+    language: &str,
+    expected: &str,
+    matches: &[crate::rag::SemanticMatch],
+) -> Result<Vec<SourceQueryHit>, WikiError> {
+    if matches.len() > 100 {
+        return Err(WikiError::InvalidInput(
+            "too many source semantic matches".to_owned(),
+        ));
+    }
+    let corpus = semantic_corpus(root, language)?;
+    if corpus.manifest_digest != expected {
+        return Err(WikiError::Verification(
+            "source vector generation is stale".to_owned(),
+        ));
+    }
+    let by_id = corpus
+        .pages
+        .into_iter()
+        .map(|page| (page.hit.path.clone(), page.hit))
+        .collect::<BTreeMap<_, _>>();
+    let mut seen = BTreeSet::new();
+    matches
+        .iter()
+        .map(|item| {
+            if !item.score.is_finite() || !seen.insert(&item.chunk_id) {
+                return Err(WikiError::Verification(
+                    "invalid source semantic candidate".to_owned(),
+                ));
+            }
+            let hit = by_id.get(&item.chunk_id).ok_or_else(|| {
+                WikiError::Verification("source semantic citation is absent".to_owned())
+            })?;
+            if hit.content_digest != item.digest {
+                return Err(WikiError::Verification(
+                    "source semantic citation changed".to_owned(),
+                ));
+            }
+            Ok(hit.clone())
+        })
+        .collect()
+}
+
+/// Check the canonical source generation while holding its existing index read lease.
+///
+/// # Errors
+/// Rejects stale source generations and propagates the derived publication failure.
+pub fn with_semantic_snapshot<T>(
+    root: &Path,
+    expected: &str,
+    publish: impl FnOnce() -> Result<T, WikiError>,
+    rollback: impl FnOnce() -> Result<(), WikiError>,
+) -> Result<T, WikiError> {
+    let root = SourceRoot::open(root)?;
+    let pages = scan_valid_pages(&root)?;
+    if logical_digest(&pages)? != expected {
+        return Err(WikiError::Verification(
+            "source vector publication is stale".to_owned(),
+        ));
+    }
+    let _loaded = load_current_index(&root, &pages, expected)?;
+    let result = publish()?;
+    let current = scan_valid_pages(&root).and_then(|pages| logical_digest(&pages));
+    if !current.is_ok_and(|digest| digest == expected) {
+        rollback()?;
+        return Err(WikiError::Verification(
+            "source facts changed during vector publication".to_owned(),
+        ));
+    }
+    Ok(result)
 }
 
 #[derive(Debug, Deserialize)]
@@ -240,6 +375,14 @@ impl SourceRoot {
     }
 }
 
+/// Validate source identity without rebuilding or reading the derived index.
+///
+/// # Errors
+/// Returns an error when the source identity or required canonical directories are invalid.
+pub fn validate_root(root: &Path) -> Result<(), WikiError> {
+    SourceRoot::open(root).map(|_| ())
+}
+
 /// Lint source identity, bilingual page pairs, links, citations, and index freshness.
 ///
 /// # Errors
@@ -304,7 +447,7 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
                PRIMARY KEY(language, topic_slug)
              );
              CREATE VIRTUAL TABLE pages_fts USING fts5(
-               language UNINDEXED, topic_slug UNINDEXED, title, summary, body, aliases, tags
+               language UNINDEXED, topic_slug, pair_id, title, summary, body, aliases, tags
              );
              CREATE TABLE tags(
                language TEXT NOT NULL,
@@ -330,7 +473,7 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
     transaction
         .execute(
             "INSERT INTO meta(key, value) VALUES
-             ('schema_version', '1'), ('logical_digest', ?1), ('page_count', ?2)",
+             ('schema_version', '2'), ('logical_digest', ?1), ('page_count', ?2)",
             params![logical_digest, pages.len().to_string()],
         )
         .map_err(sqlite_error)?;
@@ -355,10 +498,11 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
             .map_err(sqlite_error)?;
         transaction
             .execute(
-                "INSERT INTO pages_fts VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO pages_fts VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     meta.language,
                     meta.topic_slug,
+                    meta.pair_id,
                     meta.title,
                     meta.summary,
                     page.body,
@@ -431,6 +575,21 @@ pub fn query(
     tag: Option<&str>,
     limit: usize,
 ) -> Result<Vec<SourceQueryHit>, WikiError> {
+    query_with_scores(root, language, text, tag, limit)
+        .map(|rows| rows.into_iter().map(|(hit, _)| hit).collect())
+}
+
+/// Return query-local lexical scores without changing the ordinary citation-only query contract.
+///
+/// # Errors
+/// Rejects the same invalid requests and stale or unsafe source state as [`query`].
+pub fn query_with_scores(
+    root: &Path,
+    language: &str,
+    text: Option<&str>,
+    tag: Option<&str>,
+    limit: usize,
+) -> Result<Vec<(SourceQueryHit, f64)>, WikiError> {
     let root = SourceRoot::open(root)?;
     validate_language(language)?;
     if text.is_none() && tag.is_none() {
@@ -454,7 +613,7 @@ pub fn query(
         let mut statement = connection
             .prepare(
                 "SELECT p.language, p.pair_id, p.topic_slug, p.counterpart, p.title, p.summary,
-                        p.path, p.content_hash, p.reviewed_revision
+                        p.path, p.content_hash, p.reviewed_revision, -bm25(pages_fts)
                  FROM pages_fts f
                  JOIN pages p ON p.language = f.language AND p.topic_slug = f.topic_slug
                  WHERE pages_fts MATCH ?1
@@ -477,7 +636,7 @@ pub fn query(
         let mut statement = connection
             .prepare(
                 "SELECT p.language, p.pair_id, p.topic_slug, p.counterpart, p.title, p.summary,
-                        p.path, p.content_hash, p.reviewed_revision
+                        p.path, p.content_hash, p.reviewed_revision, 1.0
                  FROM pages p
                  JOIN tags t ON t.language = p.language AND t.topic_slug = p.topic_slug
                  WHERE p.language = ?1 AND t.tag = ?2
@@ -491,6 +650,68 @@ pub fn query(
         )?
     };
     Ok(rows)
+}
+
+/// Build a disposable source graph from the English half of each validated bilingual fact pair.
+///
+/// # Errors
+///
+/// Returns an error when source identity, canonical facts, pairing, links, or graph
+/// canonicalization fails.
+pub fn build_graph(root: &Path) -> Result<GraphGeneration, WikiError> {
+    let root = SourceRoot::open(root)?;
+    let pages = scan_valid_pages(&root)?;
+    let english = pages
+        .values()
+        .filter(|page| page.frontmatter.language == "en")
+        .collect::<Vec<_>>();
+    let mut nodes = english
+        .iter()
+        .map(|page| GraphNode {
+            id: page.frontmatter.pair_id.clone(),
+            locator: page.relative_path.clone(),
+            content_digest: page.content_digest.clone(),
+            visibility: "source".to_owned(),
+            lifecycle: page.frontmatter.status.clone(),
+        })
+        .collect::<Vec<_>>();
+    let mut edges = Vec::new();
+    for page in english {
+        let from = page.frontmatter.pair_id.clone();
+        let source_digest = page.content_digest.clone();
+        for target in &page.frontmatter.links {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "links".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+        for target in &page.frontmatter.sources {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "sources".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+        for target in &page.frontmatter.tags {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "tags".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+    }
+    nodes.sort();
+    nodes.dedup();
+    edges.sort();
+    edges.dedup();
+    finalize_generation("source", "native-markdown", nodes, edges).map_err(WikiError::InvalidInput)
 }
 
 struct LintScan {
@@ -1101,6 +1322,13 @@ fn load_current_index(
 }
 
 fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Result<(), WikiError> {
+    let schema_version: String = connection
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'schema_version'",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(sqlite_error)?;
     let actual: String = connection
         .query_row(
             "SELECT value FROM meta WHERE key = 'logical_digest'",
@@ -1117,7 +1345,8 @@ fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Res
     let integrity: String = connection
         .query_row("PRAGMA quick_check", [], |row| row.get(0))
         .map_err(sqlite_error)?;
-    if actual != digest
+    if schema_version != INDEX_SCHEMA_VERSION
+        || actual != digest
         || usize::try_from(count).ok() != Some(page_count)
         || usize::try_from(fts_count).ok() != Some(page_count)
         || integrity != "ok"
@@ -1132,13 +1361,13 @@ fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Res
 fn collect_hits(
     connection: &Connection,
     rows: Result<rusqlite::Rows<'_>, rusqlite::Error>,
-) -> Result<Vec<SourceQueryHit>, WikiError> {
+) -> Result<Vec<(SourceQueryHit, f64)>, WikiError> {
     let mut rows = rows.map_err(sqlite_error)?;
     let mut hits = Vec::new();
     while let Some(row) = rows.next().map_err(sqlite_error)? {
         let language: String = row.get(0).map_err(sqlite_error)?;
         let topic_slug: String = row.get(2).map_err(sqlite_error)?;
-        hits.push(SourceQueryHit {
+        hits.push((SourceQueryHit {
             language: language.clone(),
             pair_id: row.get(1).map_err(sqlite_error)?,
             topic_slug: topic_slug.clone(),
@@ -1166,7 +1395,7 @@ fn collect_hits(
                 &language,
                 &topic_slug,
             )?,
-        });
+        }, row.get(9).map_err(sqlite_error)?));
     }
     Ok(hits)
 }
@@ -1807,6 +2036,80 @@ mod tests {
     }
 
     #[test]
+    fn semantic_source_citations_are_language_isolated_and_revalidated() {
+        let temp = fixture();
+        write_pair(temp.path(), "architecture", &[]);
+        rebuild_index(temp.path()).expect("index");
+        let corpus = semantic_corpus(temp.path(), "ko").expect("Korean corpus");
+        assert_eq!(corpus.pages.len(), 1);
+        assert!(corpus.pages[0].body.contains("한국어"));
+        let hit = &corpus.pages[0].hit;
+        let candidate = crate::rag::SemanticMatch {
+            chunk_id: hit.path.clone(),
+            digest: hit.content_digest.clone(),
+            score: 0.8,
+        };
+        assert_eq!(
+            semantic_matches(
+                temp.path(),
+                "ko",
+                &corpus.manifest_digest,
+                std::slice::from_ref(&candidate)
+            )
+            .expect("citation"),
+            vec![hit.clone()]
+        );
+        assert!(semantic_matches(
+            temp.path(),
+            "en",
+            &corpus.manifest_digest,
+            std::slice::from_ref(&candidate)
+        )
+        .is_err());
+        assert!(semantic_matches(
+            temp.path(),
+            "ko",
+            &corpus.manifest_digest,
+            &[candidate.clone(), candidate]
+        )
+        .is_err());
+        assert!(with_semantic_snapshot(
+            temp.path(),
+            &sha256_digest(b"stale"),
+            || Ok(()),
+            || Ok(())
+        )
+        .is_err());
+        assert!(
+            with_semantic_snapshot(temp.path(), &corpus.manifest_digest, || Ok(()), || Ok(()))
+                .is_ok()
+        );
+        let fact = temp.path().join("docs/facts/ko/architecture.md");
+        let text = fs::read_to_string(&fact).expect("fact");
+        let mut rolled_back = false;
+        assert!(with_semantic_snapshot(
+            temp.path(),
+            &corpus.manifest_digest,
+            || {
+                fs::write(
+                    &fact,
+                    text.replace("한국어 소스 지식.", "수정한 한국어 소스 지식."),
+                )
+                .expect("canonical edit during publication");
+                Ok(())
+            },
+            || {
+                rolled_back = true;
+                Ok(())
+            }
+        )
+        .is_err());
+        assert!(rolled_back);
+        assert!(semantic_corpus(temp.path(), "ko").is_err());
+        assert!(!temp.path().join(".hive").exists());
+    }
+
+    #[test]
     fn happy_pair_index_and_query_are_deterministic() {
         let temp = fixture();
         write_pair(temp.path(), "architecture", &[]);
@@ -1822,6 +2125,13 @@ mod tests {
         let linted = lint(temp.path()).expect("lint");
         assert!(linted.issues.is_empty());
         let hits = query(temp.path(), "en", Some("boundaries"), None, 10).expect("query");
+        let scored = query_with_scores(temp.path(), "en", Some("boundaries"), None, 10)
+            .expect("scored query");
+        assert!(scored.iter().all(|(_, score)| score.is_finite()));
+        assert_eq!(
+            scored.into_iter().map(|(hit, _)| hit).collect::<Vec<_>>(),
+            hits
+        );
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].topic_slug, "architecture");
         assert_eq!(hits[0].pair_id, "architecture");

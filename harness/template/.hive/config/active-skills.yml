@@ -1,5 +1,14 @@
 schema_version: 1
 skills:
+- name: adversarial-judge
+  source_type: built-in
+  content_digest: sha256:9b8641f4c858698cb8959ed311cc2bcefb7764e1465b6109ec4343c2dc27f215
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - run-state
+  - subagents
+  consent_digest: null
 - name: amend-directive
   source_type: built-in
   content_digest: sha256:349eaa90b1a84d5cb35d5b04e38320778df8594f34a3539f4b510770c1122095
@@ -29,16 +38,22 @@ skills:
   - shell
   - subagents
   consent_digest: null
-- name: iterative-execution
+- name: humanize-kor
   source_type: built-in
-  content_digest: sha256:7b681e57822b6bad23e645641b6ca8c513c79fcc53e18611f9b89446c2299188
+  content_digest: sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
-  - run-state
   - shell
-  - subagents
+  consent_digest: null
+- name: judge-evidence
+  source_type: built-in
+  content_digest: sha256:aea2f4e5e325b847df263a3aa001023eb419763ec175ec8cd3bb0a1b1a6c3873
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - run-state
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
@@ -50,20 +65,9 @@ skills:
   - memory-write
   - shell
   consent_digest: null
-- name: knowledge-import
-  source_type: built-in
-  content_digest: sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
 - name: knowledge-maintain
   source_type: built-in
-  content_digest: sha256:20ddf238d4b695ed2372b674eae0d7872b1af7b495e7ae2881396a642442fbf4
+  content_digest: sha256:64ed85e443785e97560031f6d64930836f3e349dd5b1b873e22376f76d6b0fd8
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -85,11 +89,33 @@ skills:
   consent_digest: null
 - name: knowledge-recall
   source_type: built-in
-  content_digest: sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923
+  content_digest: sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - memory-read
+  - shell
+  consent_digest: null
+- name: knowledge-scan
+  source_type: built-in
+  content_digest: sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: knowledge-transfer
+  source_type: built-in
+  content_digest: sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
   - shell
   consent_digest: null
 - name: multi-goal
@@ -102,14 +128,6 @@ skills:
   - run-state
   - shell
   - subagents
-  consent_digest: null
-- name: package-review
-  source_type: built-in
-  content_digest: sha256:1dfb661480cee016739db3bc2801b0bec7f0895e82a902e7d8c13101c112b3fe
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  - run-state
   consent_digest: null
 - name: product-update
   source_type: built-in
@@ -131,7 +149,7 @@ skills:
   consent_digest: null
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:5a4e0367ff8d52dd58221f15e16aa16a1ddee89fcc6cfef3fabe0c47f0e1babb
+  content_digest: sha256:f17a658f423c8df0f5ca2b1960c3ea53fec57cb2859459bfe77a049510e9adf2
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -158,16 +176,6 @@ skills:
   content_digest: sha256:1634215b51e454807b4c12271d38d02f55443150f7d3ee233a65f8a7dbec3999
   side_effect_class: none
   capabilities: []
-  consent_digest: null
-- name: ralph-loop
-  source_type: built-in
-  content_digest: sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  - shell
   consent_digest: null
 - name: research-best-practices
   source_type: built-in
@@ -233,4 +241,15 @@ skills:
   - filesystem-write
   - run-state
   - shell
+  consent_digest: null
+- name: verified-workflow
+  source_type: built-in
+  content_digest: sha256:fc19bed8a17b8b8652c37ff518528ada2aec511e163b15c99af90235e6728a82
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
   consent_digest: null

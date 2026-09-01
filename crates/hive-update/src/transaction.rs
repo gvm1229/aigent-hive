@@ -2134,24 +2134,24 @@ mod tests {
 
     fn phase1_fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase1")
+            .join("../../tests/fixtures/setup")
             .join(name)
     }
 
     fn historical_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.7.0")
+            .join("../../tests/fixtures/release/versions/valid-0.7.0")
     }
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases")
+            .join("../../tests/fixtures/release/versions")
             .join(format!("valid-{}", env!("CARGO_PKG_VERSION")))
     }
 
     fn published_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.9.0")
+            .join("../../tests/fixtures/release/versions/valid-0.9.0")
     }
 
     fn legacy_builtin_names(version: &str) -> &'static [&'static str] {
@@ -2324,13 +2324,14 @@ mod tests {
                 .expect("historical directory");
             fs::write(path, &file.content).expect("historical projection");
         }
-        if !historical
-            .files
-            .iter()
-            .any(|file| file.path == ".agents/directives/03-session-coordination.md")
-        {
-            fs::remove_file(target.join(".agents/directives/03-session-coordination.md"))
-                .expect("remove post-historical directive projection");
+        for directive in [
+            ".agents/directives/03-session-coordination.md",
+            ".agents/directives/04-korean-language.md",
+        ] {
+            if !historical.files.iter().any(|file| file.path == directive) {
+                fs::remove_file(target.join(directive))
+                    .expect("remove post-historical directive projection");
+            }
         }
         let files = historical
             .files
@@ -2379,10 +2380,10 @@ mod tests {
                 .expect("create historical Skill projection directory");
         }
         let historical_setup = include_bytes!(
-            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
+            "../../../tests/fixtures/release/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
         );
         let historical_query = include_bytes!(
-            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
+            "../../../tests/fixtures/release/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
         );
         let historical_capture = include_bytes!(
             "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
@@ -2447,7 +2448,7 @@ mod tests {
         }
         if version == "0.5.0" {
             let historical = include_bytes!(
-                "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
+                "../../../tests/fixtures/release/migrations/0.5.0-hive-run-resume.SKILL.md"
             );
             fs::write(skill_root.join("hive-run-resume/SKILL.md"), historical)
                 .expect("historical resume projection");
@@ -2685,7 +2686,10 @@ mod tests {
         let fixture = release_fixture();
         let marker = fs::read_to_string(fixture.join("TEST-ONLY.md")).expect("test-only marker");
         let marker_lowered = marker.to_ascii_lowercase();
-        assert!(marker.contains("Test-only `0.9.5` release bundle fixture"));
+        assert!(marker.contains(&format!(
+            "Test-only `{}` release bundle fixture",
+            env!("CARGO_PKG_VERSION")
+        )));
         assert!(marker.contains("Local updater and version-parity tests only"));
         assert!(marker_lowered.contains("public release artifact"));
         let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))

@@ -9,14 +9,14 @@ summary: "Qualified host-native usage sensors take priority over the optional Co
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:0d4ace682bb4bc6cd31a5a3fa4675e1b0a1f2bdb93f55d9456177be7e629cd9d"
+  - "repo:crates/hive-cli/src/main.rs#sha256:024500782daa35d5ab3a6df26a443bf0e4c0653a2a2c19caaa2f1b2a7836cdb6"
   - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acd4022de5697806003207634ac0b7cb874baeb802af491f28d39ec048daf830"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:914cca3de8883e2b1be0dfbea92da3dd2c856cdca53ed24d3bd45d9ff75b6cd2"
 links: [automatic-dispatch-guard, supported-hosts]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:f91816a46d44d57929cb0b580ca32ff4caa95053"
 status: active
 ---
 

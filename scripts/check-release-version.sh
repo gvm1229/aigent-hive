@@ -69,7 +69,7 @@ for package in lock["package"]:
             f"Cargo.lock package {package['name']} differs from {requested}"
         )
 
-fixture = root / f"tests/fixtures/phase6/releases/valid-{requested}"
+fixture = root / f"tests/fixtures/release/versions/valid-{requested}"
 manifest = json.loads(
     (fixture / "bundle-manifest.json").read_text(encoding="utf-8")
 )
@@ -83,18 +83,8 @@ if manifest["source"]["tag"] != f"v{requested}":
 if migration["target_version"] != requested:
     raise SystemExit("migration table target version differs")
 
-readme = (root / "README.md").read_text(encoding="utf-8")
-readme_match = re.search(
-    r"(?m)^\[!\[Version\]\("
-    r"https://img\.shields\.io/badge/version-([0-9]+\.[0-9]+\.[0-9]+)-"
-    r"[^)]+\)\]\([^)]+\)$",
-    readme,
-)
-if readme_match is None or readme_match.group(1) != requested:
-    raise SystemExit("README product version differs")
-
 current = (root / "docs/state/CURRENT.md").read_text(encoding="utf-8")
-match = re.search(r"(?m)^- product version: `([^`]+)`$", current)
+match = re.search(r"(?m)^- 제품 버전: `([^`]+)`$", current)
 if match is None or match.group(1) != requested:
     raise SystemExit("CURRENT.md product version differs")
 

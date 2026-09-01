@@ -1,0 +1,32 @@
+# 번호 시험판 자동 게시 gate `0.10.0`
+
+> Checklist owner: `TRG10-*`
+> 목표: 사용자 재승인 없이, 완료된 실제 제품 변경에만 번호 시험판 자동 게시
+
+## Checklist
+
+- [x] [TRG10-001] 마지막 수용 시험판의 제품 원본·제품 tree 지문 대장
+- [x] [TRG10-002] 배포 제품 경로 변경·동일 지문·빈 변경 차단 검사기
+- [x] [TRG10-003] 완료된 비출시 구현 plan ID와 제품 변경 연결
+- [x] [TRG10-004] Release candidate workflow의 시험판 선행 gate, 안정판 경로 불변
+- [x] [TRG10-005] 문서·source-only Skill·지침·시험·CI만 바뀐 반례와 제품 변경 정례
+- [x] [TRG10-006] 지침·문서·Source Wiki·CI 정합화
+
+## 기본 동작
+
+- 조건 충족: 다음 번호 후보·게시·공개 수용 자동 진행, 사용자 승인 질문 없음
+- 제품 변경 없음·동일 제품 지문: 후보 생성 금지, 기존 수용 근거 유지
+- 계획과 연결되지 않은 제품 변경: Agent 범위 오류로 차단·수정, 시험판 승인 질문으로 우회 금지
+- 한 구현 작업의 중간 commit: 후보 생성 금지, 완료·전체 gate 통과 뒤 한 번만 자동 게시
+- 제품 작업 종료: 에이전트가 `docs/test-release-intent.json`에 다음 번호·완료 plan ID·제품 지문 자동 기록
+- 안정판: 기존 version별 명시 승인 유지
+
+## 완료 근거
+
+- 마지막 수용 제품: `0.10.0-test.11`, 소스 `86f05fd0`, 제품 tree 지문 `37d7a0e1…cbd6e01`
+- 검사기 반례·정례 6개와 release ordering 10개 통과
+- 현재 동일 제품에서 `0.10.0-test.12` 거부 확인
+- 후보 workflow: test의 자동 의도·제품 gate 선행, stable 경로는 기존 승인 계약 유지
+- 사용자 workflow 입력 없음: 저장소의 자동 시험 의도 자료에서 plan ID·제품 지문 로드
+- 원격 음성 시험 `33532802743`: `test.12` 의도 부재로 제품 build 전 거부, 모든 build·package job skip
+- 최종 CI `33532787793`: 전체 risk-matched gate 성공

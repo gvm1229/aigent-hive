@@ -9,20 +9,22 @@ summary: "After a successful stable GitHub Release, Aigent Hive sends its Korean
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:b10bd374eea19774dcaab4c0bc8375f70aeeeb2a5c977ca531487619448b4c6c"
-  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
+  - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
+  - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:82db6eddc542a4e618f073469d5456d30173b3d16961e2cfb074988180e193d5"
+  - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:e1af8adfa30cd07e45496fb2491b7018e14b3ad9"
+reviewed_revision: "git:3a0d9e2e61d1867e0f38d8855ae8b064fa449f09"
 status: active
 ---
 
 # Stable Release Discord Subscriber Notification
 
-The stable-only release workflow validates the Korean `update-summary` payload, the banner, and
-the protected environment secret before publication. After the GitHub Release succeeds, it sends
-the banner first. It sends the Korean subscriber summary only after that request succeeds. Test
-releases send no Discord request. The notifier never prints the webhook URL. Protected-environment
-delivery tests for `0.9.3` and `0.9.4` succeeded without a stable release or npm publication. The
-maintainer accepted the Discord display. Each Korean summary appeared below its banner.
+The stable-only workflow validates Korean copy and banner before publication. After GitHub
+Release success, it sends the banner, then the summary. Test releases send nothing; webhook URLs
+are never printed. Delivery checks the versioned file, sidecar, and external approval digest,
+preserving main/child bullets and the 2,000-character limit. After explicit wording approval,
+`register-stable-summary-approval.py` checks the supplied digest and files before registering it
+with existing `gh` access. No manual GitHub setup per release, rewriting, or sending during
+registration. Retry the same approval on failure; changed wording needs new approval.

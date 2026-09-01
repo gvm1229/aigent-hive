@@ -53,8 +53,8 @@ aigent-hive/
 ## Source `.agents`와 출하물
 
 루트 `.agents/`: Hive 자체 개발 directive와 ignored runtime state 전용. 명시 유지보수자 요청의
-비출하 source-project Skill `update-summary` 1건만 `.agents/skills/`에 유지. 제품 Skill·consumer
-projection은 `0건`.
+비출하 source-project Skill `update-summary|draft-devlog` 2건만 `.agents/skills/`에 유지. 제품
+Skill·consumer projection은 `0건`.
 
 Source 개발의 pre-task gate: 설치된 `hive usage enforce` 1회. Source 전용 Python
 guard·watcher·threshold state 없음. Product Skill은 `harness/skills/<name>/` 정본을 설치 product namespace로 사용. current product ID와
@@ -87,7 +87,7 @@ Hive-native event·scheduler·receipt·cancel·team·multi-goal control과 host 
 orchestration control과 독립이며 knowledge migration `0건`. 결정:
 [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
 [`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
-[`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
+[`source-docs-wiki.md`](../archive/plans/foundations/source-docs-wiki.md).
 세부 계약:
 
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)

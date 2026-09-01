@@ -7,15 +7,16 @@ retired_names:
   best-practice-research: research-best-practices
   clean-ai-slop: code-polish
   configure: user-setup
-  engineer-run: ralph-loop
+  engineer-run: verified-workflow
   handoff-role: run-handoff
-  hive-judge-package: package-review
+  hive-judge-package: judge-evidence
   hive-knowledge-capture: knowledge-capture
   hive-knowledge-maintenance: knowledge-maintain
   hive-knowledge-promote: knowledge-promote
   hive-knowledge-query: knowledge-recall
-  hive-knowledge-scan: knowledge-import
-  hive-loop-engineering: ralph-loop
+  hive-knowledge-scan: knowledge-scan
+  knowledge-import: knowledge-scan
+  hive-loop-engineering: verified-workflow
   hive-migrate: project-transition
   hive-project-upgrade: project-refresh
   hive-prompt-refine: prompt-refine
@@ -26,7 +27,8 @@ retired_names:
   hive-update: product-update
   hive-usage-guard: usage-guard
   hive-wiki: knowledge-maintain
-  import-repository-knowledge: knowledge-import
+  import-repository-knowledge: knowledge-scan
+  iterative-execution: verified-workflow
   maintain-knowledge: knowledge-maintain
   manage-usage: usage-guard
   manage-wiki: knowledge-maintain
@@ -34,6 +36,7 @@ retired_names:
   record-knowledge: knowledge-capture
   refine-prompt: prompt-refine
   research-practices: research-best-practices
+  ralph-loop: verified-workflow
   resume-work: run-resume
   save-progress: run-checkpoint
   search-knowledge: knowledge-recall
@@ -43,4 +46,10 @@ retired_names:
   share-knowledge: knowledge-promote
   update-hive: product-update
   upgrade-project: project-refresh
-  verify-package: package-review
+  package-review: judge-evidence
+  verify-package: judge-evidence
+lifecycle:
+  - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: rename }
+  - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: merge }
+  - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge-evidence, transition_kind: rename }
+  - { retired_name: knowledge-import, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: knowledge-scan, transition_kind: rename }

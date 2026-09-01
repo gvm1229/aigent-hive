@@ -1,0 +1,10 @@
+{
+  "binary_sha256": "c0510318d44bae50bedf380da113856e6ac1316fade255e3592e381d52264b74",
+  "platform": "win32",
+  "scope": "fresh synthetic fixture only",
+  "status": "failed",
+  "checks": [
+    "confidential build without current approval refused"
+  ],
+  "error_type": "RuntimeError"
+}

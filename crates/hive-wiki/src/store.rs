@@ -113,6 +113,69 @@ pub struct ExternalIndexSnapshot {
     pub sqlite_bytes: Vec<u8>,
 }
 
+/// One exact shared partition prepared for a bounded vector publication window.
+pub struct SharedSemanticPublication<'a> {
+    /// Explicit collection request; confidential authorization is forbidden here.
+    pub request: &'a RetrievalRequest,
+    /// Previously authenticated partition input.
+    pub partition_digest: &'a str,
+    /// Previously authenticated collection authority.
+    pub authority_digest: &'a str,
+}
+
+/// One query's authenticated immutable connection, never a cross-request cache.
+/// The originating store and complete request are private and fixed until consumption.
+pub struct SemanticQueryFrame<'a> {
+    store: &'a RagStore,
+    request: RetrievalRequest,
+    prepared: crate::rag::PreparedRagIndex,
+    manifest: GenerationManifest,
+    registry: CollectionRegistry,
+    plan: crate::rag::SemanticSearchPlan,
+}
+
+impl SemanticQueryFrame<'_> {
+    /// Authorized partition metadata, without exposing the resident connection or text.
+    #[must_use]
+    pub fn plan(&self) -> &crate::rag::SemanticSearchPlan {
+        &self.plan
+    }
+
+    /// Consume this frame once after new disk, authority, and canonical validation.
+    ///
+    /// # Errors
+    /// Rejects any changed snapshot or invalid candidate; callers must use fresh FTS fallback.
+    pub fn finish(
+        self,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, WikiError> {
+        self.finish_with_policy(matches).map(|fusion| fusion.result)
+    }
+
+    /// Consume this frame with the same fresh checks and explain the chosen ranking policy.
+    ///
+    /// # Errors
+    /// Rejects changed snapshots, invalid candidates and stale returned citations.
+    pub fn finish_with_policy(
+        self,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<crate::rag::SemanticFusionResult, WikiError> {
+        self.store
+            .with_retrieval_snapshot(|bytes, manifest, registry| {
+                if manifest != &self.manifest
+                    || registry != &self.registry
+                    || sha256_digest(bytes) != self.manifest.sqlite_digest
+                {
+                    return Err(RagError::RepairRequired(
+                        "semantic query snapshot changed before final retrieval".to_owned(),
+                    ));
+                }
+                self.store
+                    .fuse_prepared_semantic(&self.prepared, registry, &self.request, matches)
+            })
+    }
+}
+
 /// Collection registration plus rebuilt-index evidence.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -623,6 +686,24 @@ impl RagStore {
     /// root, unsafe canonical entry, malformed Markdown, or duplicate stable ID.
     pub fn load_canonical_snapshot(&self, generation: u64) -> Result<RagSnapshot, WikiError> {
         self.load_canonical_snapshot_excluding(generation, &BTreeSet::new())
+    }
+
+    fn load_canonical_collection_snapshot(
+        &self,
+        generation: u64,
+        collection: &str,
+    ) -> Result<RagSnapshot, WikiError> {
+        let registry = self.load_registry()?;
+        let claims =
+            self.load_claims_for_collection(&registry, &BTreeSet::new(), Some(collection))?;
+        let documents = self.load_documents_for_collection(&registry, Some(collection))?;
+        Ok(RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation,
+            registry,
+            documents,
+            claims,
+        })
     }
 
     fn load_canonical_snapshot_excluding(
@@ -1253,6 +1334,627 @@ impl RagStore {
     /// Returns an error when derived state is missing, dirty, stale, corrupt, or the
     /// request violates scope, visibility, query, top-k, or byte-budget constraints.
     pub fn retrieve(&self, request: &RetrievalRequest) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            retrieve_serialized(bytes, manifest, registry, request)
+        })
+    }
+
+    /// Export one explicitly authorized, current canonical partition.
+    ///
+    /// # Errors
+    /// Rejects stale indexes, invalid scope, canonical drift, or oversized input.
+    pub fn semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+    ) -> Result<crate::rag::SemanticCorpus, WikiError> {
+        self.authorized_semantic_corpus(request, visibility, |_| Ok(()))
+    }
+
+    /// Consume caller-owned approval under the canonical lock only after partition freshness.
+    /// The callback must not reacquire this store's knowledge lock.
+    ///
+    /// # Errors
+    /// Rejects invalid snapshots, stale canonical content, and failed authorization.
+    pub fn authorized_semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+        authorize: impl FnOnce(&str) -> Result<(), WikiError>,
+    ) -> Result<crate::rag::SemanticCorpus, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            let collection = crate::rag::semantic_target_collection(registry, request)?;
+            crate::rag::validate_retrieval_request(request)?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let states = prepared.semantic_partition_states(request)?;
+            let digest = match states.into_iter().find(|state| {
+                state.partition.collection_id == collection
+                    && state.partition.visibility == visibility
+            }) {
+                Some(state) => state.digest,
+                None => crate::rag::semantic_corpus_digest(registry, &collection, visibility, &[])?,
+            };
+            let authority_digest = semantic_authority_digest(registry, request).map_err(|_| {
+                RagError::RepairRequired("semantic authority is unavailable".to_owned())
+            })?;
+            Ok((|| {
+                self.require_current_partition(
+                    manifest.generation,
+                    &collection,
+                    visibility,
+                    &digest,
+                )?;
+                authorize(&manifest.logical_digest)?;
+                let chunks = prepared
+                    .semantic_corpus(request, visibility)
+                    .map_err(rag_error)?;
+                Ok(crate::rag::SemanticCorpus {
+                    generation: manifest.generation,
+                    manifest_digest: manifest.logical_digest.clone(),
+                    partition_digest: digest,
+                    authority_digest,
+                    chunks,
+                })
+            })())
+        })?
+    }
+
+    /// Export a bounded explicit shared-only window with one authenticated `SQLite` load.
+    /// Each request retains its own authority, canonical check, and corpus boundary.
+    ///
+    /// # Errors
+    /// Rejects duplicate, implicit, confidential, stale, or oversized inputs.
+    pub fn shared_semantic_corpora(
+        &self,
+        requests: &[RetrievalRequest],
+    ) -> Result<Vec<crate::rag::SemanticCorpus>, WikiError> {
+        self.shared_semantic_corpora_bounded(requests, 1)
+    }
+
+    /// Export a shared-only window with at most four concurrent canonical checks.
+    /// `SQLite` and corpus assembly stay on the caller. One worker preserves serial
+    /// error order; parallel mode validates corpus budgets before canonical files.
+    /// No corpus is returned until every canonical check succeeds.
+    ///
+    /// # Errors
+    /// Rejects invalid budgets, implicit authority, stale inputs, or reader failure.
+    pub fn shared_semantic_corpora_bounded(
+        &self,
+        requests: &[RetrievalRequest],
+        workers: usize,
+    ) -> Result<Vec<crate::rag::SemanticCorpus>, WikiError> {
+        if !(1..=16).contains(&workers) {
+            return Err(WikiError::InvalidInput(
+                "invalid shared reader budget".to_owned(),
+            ));
+        }
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            let collections = shared_batch_collections(registry, requests.iter())?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            Ok((|| {
+                let mut result = Vec::new();
+                let mut chunk_count = 0;
+                let mut byte_count = 0;
+                for (request, collection) in requests.iter().zip(&collections) {
+                    let states = prepared
+                        .semantic_partition_states(request)
+                        .map_err(rag_error)?;
+                    let digest = match states.into_iter().find(|state| {
+                        state.partition.collection_id == *collection
+                            && state.partition.visibility == RagVisibility::Shared
+                    }) {
+                        Some(state) => state.digest,
+                        None => crate::rag::semantic_corpus_digest(
+                            registry,
+                            collection,
+                            RagVisibility::Shared,
+                            &[],
+                        )
+                        .map_err(rag_error)?,
+                    };
+                    let authority_digest = semantic_authority_digest(registry, request)?;
+                    if workers == 1 {
+                        self.require_current_partition(
+                            manifest.generation,
+                            collection,
+                            RagVisibility::Shared,
+                            &digest,
+                        )?;
+                    }
+                    let chunks = prepared
+                        .semantic_corpus(request, RagVisibility::Shared)
+                        .map_err(rag_error)?;
+                    add_shared_corpus_budget(&chunks, &mut chunk_count, &mut byte_count)
+                        .map_err(rag_error)?;
+                    result.push(crate::rag::SemanticCorpus {
+                        generation: manifest.generation,
+                        manifest_digest: manifest.logical_digest.clone(),
+                        partition_digest: digest,
+                        authority_digest,
+                        chunks,
+                    });
+                }
+                if workers > 1 {
+                    check_shared_partitions(result.len(), workers, |index| {
+                        self.require_current_partition(
+                            manifest.generation,
+                            &collections[index],
+                            RagVisibility::Shared,
+                            &result[index].partition_digest,
+                        )
+                    })?;
+                }
+                Ok(result)
+            })())
+        })?
+    }
+
+    /// Publish one shared-only window against a newly read, authenticated RAG snapshot.
+    /// Caller holds sorted scope leases; callbacks must not acquire the knowledge lock.
+    /// A successful callback must have a matching compare-and-swap rollback callback.
+    /// A failed publication callback must leave its own control unchanged.
+    ///
+    /// # Errors
+    /// Rejects changed inputs/authority and rolls back every published control on failure.
+    /// Rollback failure is reported after attempting all earlier rollback callbacks.
+    pub fn with_shared_semantic_snapshots(
+        &self,
+        items: &[SharedSemanticPublication<'_>],
+        publish: impl FnMut(usize) -> Result<(), WikiError>,
+        rollback: impl FnMut(usize) -> Result<(), WikiError>,
+    ) -> Result<(), WikiError> {
+        self.with_shared_semantic_snapshots_bounded(items, 1, publish, rollback)
+    }
+
+    /// Publish with at most four concurrent canonical readers under the same store lock.
+    /// `SQLite` and publication callbacks stay on the calling thread. All readers join
+    /// before publication or rollback; one worker retains the serial path.
+    ///
+    /// # Errors
+    /// Rejects invalid worker budgets or changed inputs, and rolls back on any reader failure.
+    pub fn with_shared_semantic_snapshots_bounded(
+        &self,
+        items: &[SharedSemanticPublication<'_>],
+        workers: usize,
+        mut publish: impl FnMut(usize) -> Result<(), WikiError>,
+        mut rollback: impl FnMut(usize) -> Result<(), WikiError>,
+    ) -> Result<(), WikiError> {
+        if !(1..=16).contains(&workers) {
+            return Err(WikiError::InvalidInput(
+                "invalid shared reader budget".to_owned(),
+            ));
+        }
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            let collections =
+                shared_batch_collections(registry, items.iter().map(|item| item.request))?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let mut chunk_count = 0;
+            let mut byte_count = 0;
+            for (item, collection) in items.iter().zip(&collections) {
+                let chunks = prepared.semantic_corpus(item.request, RagVisibility::Shared)?;
+                add_shared_corpus_budget(&chunks, &mut chunk_count, &mut byte_count)?;
+                if crate::rag::semantic_corpus_digest(
+                    registry,
+                    collection,
+                    RagVisibility::Shared,
+                    &chunks,
+                )? != item.partition_digest
+                {
+                    return Err(RagError::RepairRequired(
+                        "shared partition changed before publication".to_owned(),
+                    ));
+                }
+            }
+            Ok((|| {
+                let check_partitions = || {
+                    check_shared_partitions(items.len(), workers, |index| {
+                        let item = &items[index];
+                        self.require_semantic_authority(item.request, item.authority_digest)?;
+                        self.require_current_partition(
+                            manifest.generation,
+                            &collections[index],
+                            RagVisibility::Shared,
+                            item.partition_digest,
+                        )
+                    })
+                };
+                check_partitions()?;
+                let mut published = 0;
+                let result = (|| {
+                    for index in 0..items.len() {
+                        publish(index)?;
+                        published += 1;
+                    }
+                    check_partitions()?;
+                    // The in-memory snapshot cannot authenticate external mutation during
+                    // the publication callbacks. Re-read current trust, registry and bytes.
+                    let dirty = read_bounded_optional(
+                        &self.root,
+                        Path::new(RAG_DIRTY_RELATIVE),
+                        MAX_DIRTY_BYTES,
+                        "RAG dirty journal",
+                    )?;
+                    let current_manifest = self.load_manifest_required()?;
+                    let current_registry = self.load_registry()?;
+                    let current = read_bounded_required(
+                        &self.root,
+                        Path::new(SHARED_INDEX_RELATIVE),
+                        MAX_SERIALIZED_INDEX_BYTES,
+                        "RAG SQLite index",
+                    )?;
+                    if dirty.is_some()
+                        || &current_manifest != manifest
+                        || &current_registry != registry
+                        || sha256_digest(&current) != manifest.sqlite_digest
+                    {
+                        return Err(WikiError::Verification(
+                            "RAG state changed during shared vector publication".to_owned(),
+                        ));
+                    }
+                    Ok(())
+                })();
+                if let Err(error) = result {
+                    let mut recovery_error = None;
+                    for index in (0..published).rev() {
+                        if let Err(failure) = rollback(index) {
+                            recovery_error.get_or_insert(failure);
+                        }
+                    }
+                    return Err(recovery_error.unwrap_or(error));
+                }
+                Ok(())
+            })())
+        })?
+    }
+
+    fn require_current_partition(
+        &self,
+        generation: u64,
+        collection: &str,
+        visibility: RagVisibility,
+        expected: &str,
+    ) -> Result<(), WikiError> {
+        let current = self
+            .load_canonical_collection_snapshot(generation, collection)
+            .and_then(|snapshot| {
+                crate::rag::canonical_partition_digest(&snapshot, collection, visibility)
+                    .map_err(rag_error)
+            });
+        if !current.is_ok_and(|digest| digest == expected) {
+            return Err(WikiError::Verification(
+                "canonical semantic partition is unavailable or changed".to_owned(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Revalidate returned canonical citations against the same authorized RAG generation.
+    ///
+    /// # Errors
+    /// Rejects stale generations, invalid identities, and changed returned canonical items.
+    pub fn semantic_matches(
+        &self,
+        request: &RetrievalRequest,
+        expected_manifest_digest: &str,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            if manifest.logical_digest != expected_manifest_digest {
+                return Err(RagError::RepairRequired(
+                    "semantic generation is stale".to_owned(),
+                ));
+            }
+            let result = crate::rag::semantic_matches_serialized(
+                bytes, manifest, registry, request, matches,
+            )?;
+            self.validate_semantic_hits(registry, &result.hits)
+                .map_err(|_| {
+                    RagError::RepairRequired(
+                        "canonical semantic citations changed or are unavailable".to_owned(),
+                    )
+                })?;
+            Ok(result)
+        })
+    }
+
+    /// Enumerate only authorized vector partition identities.
+    ///
+    /// # Errors
+    /// Rejects stale or invalid index authority.
+    pub fn semantic_partitions(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<Vec<crate::rag::SemanticPartition>, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            crate::rag::semantic_partitions_serialized(bytes, manifest, registry, request)
+        })
+    }
+
+    /// Capture authorized partition input digests without exporting any text.
+    ///
+    /// # Errors
+    /// Rejects stale or invalid index authority.
+    pub fn semantic_search_plan(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<crate::rag::SemanticSearchPlan, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            Ok(crate::rag::SemanticSearchPlan {
+                manifest_digest: manifest.logical_digest.clone(),
+                partitions: crate::rag::semantic_partition_states_serialized(
+                    bytes, manifest, registry, request,
+                )?,
+            })
+        })
+    }
+
+    /// Begin a single-use semantic query; release the canonical lock before model execution.
+    ///
+    /// # Errors
+    /// Rejects invalid requests and stale or corrupt index authority.
+    pub fn begin_semantic_query(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<SemanticQueryFrame<'_>, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            crate::rag::validate_retrieval_request(request)?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let plan = crate::rag::SemanticSearchPlan {
+                manifest_digest: manifest.logical_digest.clone(),
+                partitions: prepared.semantic_partition_states(request)?,
+            };
+            Ok(SemanticQueryFrame {
+                store: self,
+                request: request.clone(),
+                prepared,
+                manifest: manifest.clone(),
+                registry: registry.clone(),
+                plan,
+            })
+        })
+    }
+
+    /// FTS fallback with actual canonical verification of only the returned citations.
+    ///
+    /// # Errors
+    /// Rejects stale returned items without scanning unrelated canonical collections.
+    pub fn checked_retrieve(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            let result = retrieve_serialized(bytes, manifest, registry, request)?;
+            self.validate_semantic_hits(registry, &result.hits)
+                .map_err(|_| {
+                    RagError::RepairRequired(
+                        "canonical retrieval citations changed or are unavailable".to_owned(),
+                    )
+                })?;
+            Ok(result)
+        })
+    }
+
+    /// Fuse candidates in one current generation and verify every returned canonical item.
+    ///
+    /// # Errors
+    /// Rejects generation races, invalid candidates, or stale canonical citations.
+    pub fn hybrid_retrieve(
+        &self,
+        request: &RetrievalRequest,
+        expected: &str,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            if manifest.logical_digest != expected {
+                return Err(RagError::RepairRequired(
+                    "retrieval generation changed during semantic search".to_owned(),
+                ));
+            }
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            self.fuse_prepared_semantic(&prepared, registry, request, matches)
+                .map(|fusion| fusion.result)
+        })
+    }
+
+    fn fuse_prepared_semantic(
+        &self,
+        prepared: &crate::rag::PreparedRagIndex,
+        registry: &CollectionRegistry,
+        request: &RetrievalRequest,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<crate::rag::SemanticFusionResult, RagError> {
+        let mut expanded = request.clone();
+        expanded.top_k = 100;
+        expanded.byte_budget = 1024 * 1024;
+        let lexical = prepared.retrieve(&expanded)?;
+        let semantic = prepared.semantic_matches(&expanded, matches)?;
+        let result = crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
+        self.validate_semantic_hits(registry, &result.result.hits)
+            .map_err(|_| {
+                RagError::RepairRequired(
+                    "canonical hybrid citations changed or are unavailable".to_owned(),
+                )
+            })?;
+        Ok(result)
+    }
+
+    /// Publish only while this partition remains current; other collections do not invalidate it.
+    ///
+    /// # Errors
+    /// Rejects input or authority drift and rolls back an intervening canonical edit.
+    pub fn with_semantic_snapshot<T>(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+        expected: &str,
+        expected_authority: &str,
+        publish: impl FnOnce() -> Result<T, WikiError>,
+        rollback: impl FnOnce() -> Result<(), WikiError>,
+    ) -> Result<T, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            let collection = crate::rag::semantic_target_collection(registry, request)?;
+            let chunks = crate::rag::semantic_corpus_serialized(
+                bytes, manifest, registry, request, visibility,
+            )?;
+            if crate::rag::semantic_corpus_digest(registry, &collection, visibility, &chunks)?
+                != expected
+            {
+                return Err(RagError::RepairRequired(
+                    "semantic partition changed before publication".to_owned(),
+                ));
+            }
+            Ok((|| {
+                self.require_semantic_authority(request, expected_authority)?;
+                self.require_current_partition(
+                    manifest.generation,
+                    &collection,
+                    visibility,
+                    expected,
+                )?;
+                let result = publish()?;
+                if self
+                    .require_current_partition(
+                        manifest.generation,
+                        &collection,
+                        visibility,
+                        expected,
+                    )
+                    .is_err()
+                    || self
+                        .require_semantic_authority(request, expected_authority)
+                        .is_err()
+                {
+                    rollback()?;
+                    return Err(WikiError::Verification(
+                        "canonical partition changed during vector publication".to_owned(),
+                    ));
+                }
+                Ok(result)
+            })())
+        })?
+    }
+
+    fn require_semantic_authority(
+        &self,
+        request: &RetrievalRequest,
+        expected: &str,
+    ) -> Result<(), WikiError> {
+        if self
+            .load_registry()
+            .and_then(|registry| semantic_authority_digest(&registry, request))
+            .is_ok_and(|digest| digest == expected)
+        {
+            return Ok(());
+        }
+        Err(WikiError::Verification(
+            "semantic authority changed during operation".to_owned(),
+        ))
+    }
+
+    fn validate_semantic_hits(
+        &self,
+        registry: &CollectionRegistry,
+        hits: &[crate::rag::RetrievalHit],
+    ) -> Result<(), WikiError> {
+        let by_id = registry.by_id();
+        let mut checked = BTreeSet::new();
+        for hit in hits {
+            if !checked.insert((&hit.collection_id, &hit.item_kind, &hit.item_id)) {
+                continue;
+            }
+            let collection = by_id.get(hit.collection_id.as_str()).ok_or_else(|| {
+                WikiError::Verification("canonical collection is absent".to_owned())
+            })?;
+            let locator = hit.locator.split('#').next().unwrap_or("");
+            if hit.item_kind == "claim" {
+                let expected = claim_locator(&hit.collection_id, &hit.item_id);
+                if locator != expected {
+                    return Err(WikiError::Verification(
+                        "claim citation path changed".to_owned(),
+                    ));
+                }
+                let bytes = read_bounded_required(
+                    &self.root,
+                    Path::new(&expected),
+                    MAX_CLAIM_BYTES,
+                    "canonical claim",
+                )?;
+                crate::reject_likely_credentials(&bytes)?;
+                let claim = parse_claim_markdown(
+                    &expected,
+                    std::str::from_utf8(&bytes)
+                        .map_err(|_| WikiError::Verification("claim is not UTF-8".to_owned()))?,
+                )
+                .map_err(rag_error)?;
+                if claim.claim_id != hit.item_id
+                    || claim.collection_id != hit.collection_id
+                    || claim.digest != hit.digest
+                    || claim.visibility != hit.visibility
+                {
+                    return Err(WikiError::Verification(
+                        "canonical claim changed".to_owned(),
+                    ));
+                }
+            } else if hit.item_kind == "document" {
+                let relative = Path::new(locator)
+                    .strip_prefix(WIKI_RELATIVE)
+                    .map_err(|_| {
+                        WikiError::Verification("document citation is outside Wiki".to_owned())
+                    })?;
+                let components = relative.components().collect::<Vec<_>>();
+                if components.len() != 1
+                    || !matches!(components[0], Component::Normal(_))
+                    || relative.extension() != Some(OsStr::new("md"))
+                {
+                    return Err(WikiError::Verification(
+                        "document citation is not one canonical page".to_owned(),
+                    ));
+                }
+                let source = if collection.collection_id == USER_ROOT_COLLECTION_ID {
+                    self.root
+                        .try_clone()
+                        .map_err(|error| WikiError::Io(error.to_string()))?
+                } else {
+                    pin_absolute_directory(
+                        Path::new(collection.local_locator.as_deref().ok_or_else(|| {
+                            WikiError::Verification("collection root unavailable".to_owned())
+                        })?),
+                        "collection root",
+                    )?
+                };
+                let (parent, name) =
+                    crate::capability_parent(&source, Path::new(WIKI_RELATIVE), false)?
+                        .ok_or_else(|| WikiError::Verification("Wiki is absent".to_owned()))?;
+                let wiki = parent
+                    .open_dir_nofollow(&name)
+                    .map_err(|error| WikiError::Io(error.to_string()))?;
+                let document = load_wiki_document_file(&wiki, collection, relative.as_os_str())?;
+                if document.document_id != hit.item_id
+                    || document.digest != hit.digest
+                    || document.visibility != hit.visibility
+                {
+                    return Err(WikiError::Verification(
+                        "canonical document changed".to_owned(),
+                    ));
+                }
+            } else {
+                return Err(WikiError::Verification(
+                    "unknown canonical item kind".to_owned(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn with_retrieval_snapshot<T>(
+        &self,
+        operation: impl FnOnce(&[u8], &GenerationManifest, &CollectionRegistry) -> Result<T, RagError>,
+    ) -> Result<T, WikiError> {
         self.preflight_initialized_snapshot()?;
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         if read_bounded_optional(
@@ -1275,7 +1977,7 @@ impl RagStore {
             MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
-        retrieve_serialized(&sqlite_bytes, &manifest, &registry, request).map_err(rag_error)
+        operation(&sqlite_bytes, &manifest, &registry).map_err(rag_error)
     }
 
     /// Load one external-canonical ledger and its complete disposable projection.
@@ -1830,6 +2532,16 @@ impl RagStore {
         registry: &CollectionRegistry,
         transient_claim_paths: &BTreeSet<PathBuf>,
     ) -> Result<Vec<CanonicalClaim>, WikiError> {
+        self.load_claims_for_collection(registry, transient_claim_paths, None)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn load_claims_for_collection(
+        &self,
+        registry: &CollectionRegistry,
+        transient_claim_paths: &BTreeSet<PathBuf>,
+        selected: Option<&str>,
+    ) -> Result<Vec<CanonicalClaim>, WikiError> {
         let Some((parent, name)) =
             crate::capability_parent(&self.root, Path::new(CLAIMS_RELATIVE), false)?
         else {
@@ -1852,6 +2564,9 @@ impl RagStore {
         let mut collection_names = directory_names(&claims_root, "Claims directory")?;
         let mut claims = Vec::new();
         for collection_name in collection_names.drain(..) {
+            if selected.is_some_and(|id| collection_name != OsStr::new(id)) {
+                continue;
+            }
             let collection_id = collection_name.to_str().ok_or_else(|| {
                 WikiError::Verification("claim collection directory is not UTF-8".to_owned())
             })?;
@@ -1938,11 +2653,20 @@ impl RagStore {
         &self,
         registry: &CollectionRegistry,
     ) -> Result<Vec<CanonicalDocument>, WikiError> {
+        self.load_documents_for_collection(registry, None)
+    }
+
+    fn load_documents_for_collection(
+        &self,
+        registry: &CollectionRegistry,
+        selected: Option<&str>,
+    ) -> Result<Vec<CanonicalDocument>, WikiError> {
         let mut documents = Vec::new();
         for collection in registry
             .collections
             .iter()
             .filter(|collection| collection.state == CollectionState::Attached)
+            .filter(|collection| selected.is_none_or(|id| collection.collection_id == id))
         {
             let locator = collection.local_locator.as_deref().ok_or_else(|| {
                 WikiError::Verification("attached collection locator disappeared".to_owned())
@@ -2514,54 +3238,63 @@ fn load_wiki_documents(
         {
             continue;
         }
-        let bytes = read_named_file(&wiki, &file_name, MAX_WIKI_BYTES, "Wiki page")?;
-        crate::reject_likely_credentials(&bytes).map_err(|error| {
-            WikiError::Verification(format!(
-                "canonical Wiki page contains likely sensitive material: {error}"
-            ))
-        })?;
-        let locator = format!("{WIKI_RELATIVE}/{}", path.to_string_lossy());
-        let page = parse_page_bytes(&bytes, &locator)?;
-        let stem = path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .unwrap_or("");
-        if page.frontmatter.id != stem {
-            return Err(WikiError::Verification(format!(
-                "Wiki filename must match page ID: {locator}"
-            )));
-        }
-        let id_material = format!(
-            "document-id-v1\0{}\0{}",
-            collection.collection_id, page.frontmatter.id
-        );
-        let document_id = format!(
-            "document-{}",
-            raw_sha256(&sha256_digest(id_material.as_bytes()))
-        );
-        let kind = page.frontmatter.kind.clone();
-        let mut document = CanonicalDocument {
-            document_id,
-            collection_id: collection.collection_id.clone(),
-            locator,
-            title: page.frontmatter.summary,
-            category: crate::canonical_category(&kind).to_owned(),
-            kind,
-            body: page.body.trim().to_owned(),
-            digest: String::new(),
-            visibility: collection.default_visibility.into(),
-            language: RagLanguage::Und,
-            revision: 1,
-            tags: page.frontmatter.tags,
-            aliases: page.frontmatter.aliases,
-            links: page.frontmatter.links,
-            sources: page.frontmatter.sources,
-            replacement: None,
-        };
-        document.digest = document_digest(&document);
-        documents.push(document);
+        documents.push(load_wiki_document_file(&wiki, collection, &file_name)?);
     }
     Ok(documents)
+}
+
+fn load_wiki_document_file(
+    wiki: &Dir,
+    collection: &CollectionRecord,
+    file_name: &OsStr,
+) -> Result<CanonicalDocument, WikiError> {
+    let path = Path::new(file_name);
+    let bytes = read_named_file(wiki, file_name, MAX_WIKI_BYTES, "Wiki page")?;
+    crate::reject_likely_credentials(&bytes).map_err(|error| {
+        WikiError::Verification(format!(
+            "canonical Wiki page contains likely sensitive material: {error}"
+        ))
+    })?;
+    let locator = format!("{WIKI_RELATIVE}/{}", path.to_string_lossy());
+    let page = parse_page_bytes(&bytes, &locator)?;
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    if page.frontmatter.id != stem {
+        return Err(WikiError::Verification(format!(
+            "Wiki filename must match page ID: {locator}"
+        )));
+    }
+    let id_material = format!(
+        "document-id-v1\0{}\0{}",
+        collection.collection_id, page.frontmatter.id
+    );
+    let document_id = format!(
+        "document-{}",
+        raw_sha256(&sha256_digest(id_material.as_bytes()))
+    );
+    let kind = page.frontmatter.kind.clone();
+    let mut document = CanonicalDocument {
+        document_id,
+        collection_id: collection.collection_id.clone(),
+        locator,
+        title: page.frontmatter.summary,
+        category: crate::canonical_category(&kind).to_owned(),
+        kind,
+        body: page.body.trim().to_owned(),
+        digest: String::new(),
+        visibility: collection.default_visibility.into(),
+        language: RagLanguage::Und,
+        revision: 1,
+        tags: page.frontmatter.tags,
+        aliases: page.frontmatter.aliases,
+        links: page.frontmatter.links,
+        sources: page.frontmatter.sources,
+        replacement: None,
+    };
+    document.digest = document_digest(&document);
+    Ok(document)
 }
 
 fn plan_reviewed_claim_upserts(
@@ -3420,8 +4153,32 @@ fn read_named_file(
             "{label} is not a bounded regular file"
         )));
     }
+    read_bounded_with_size_hint(file, metadata.len(), max_bytes, label)
+}
+
+fn read_bounded_with_size_hint(
+    reader: impl Read,
+    known_length: u64,
+    max_bytes: usize,
+    label: &str,
+) -> Result<Vec<u8>, WikiError> {
+    let invalid_bound =
+        || WikiError::Verification(format!("invalid bounded read size for {label}"));
+    let limit = max_bytes.checked_add(1).ok_or_else(invalid_bound)?;
+    let capacity = usize::try_from(known_length)
+        .ok()
+        .filter(|&length| length <= max_bytes)
+        .and_then(|length| length.checked_add(1))
+        .ok_or_else(invalid_bound)?;
+    let limit = u64::try_from(limit).map_err(|_| invalid_bound())?;
     let mut bytes = Vec::new();
-    file.take(u64::try_from(max_bytes + 1).expect("byte bound fits u64"))
+    // The opened length is only a capacity hint. Keep the independent read limit
+    // and EOF check so concurrent growth or shrink cannot authenticate a prefix.
+    bytes
+        .try_reserve_exact(capacity)
+        .map_err(|_| WikiError::Io(format!("cannot reserve bounded {label} read buffer")))?;
+    reader
+        .take(limit)
         .read_to_end(&mut bytes)
         .map_err(|error| WikiError::Io(format!("cannot read {label}: {error}")))?;
     if bytes.len() > max_bytes {
@@ -3660,6 +4417,129 @@ fn path_to_locator(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+fn add_shared_corpus_budget(
+    chunks: &[crate::rag::RetrievalHit],
+    count: &mut usize,
+    bytes: &mut usize,
+) -> Result<(), RagError> {
+    *count += chunks.len();
+    *bytes += chunks
+        .iter()
+        .map(|row| row.text.len() + row.title.len())
+        .sum::<usize>();
+    if *count > 50_000 || *bytes > 256 * 1024 * 1024 {
+        return Err(RagError::InvalidInput(
+            "shared vector window exceeds build limits".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn check_shared_partitions(
+    count: usize,
+    workers: usize,
+    check: impl Fn(usize) -> Result<(), WikiError> + Sync,
+) -> Result<(), WikiError> {
+    if workers == 1 {
+        for index in 0..count {
+            check(index)?;
+        }
+        return Ok(());
+    }
+    let width = workers.min(4);
+    #[cfg(test)]
+    let failure = FAIL_SHARED_CHECK.with(std::cell::Cell::take);
+    for start in (0..count).step_by(width) {
+        let results = std::thread::scope(|scope| {
+            let mut handles = Vec::new();
+            for index in start..(start + width).min(count) {
+                #[cfg(test)]
+                if failure == Some((index, false)) {
+                    handles.push(Err(std::io::Error::other("injected reader spawn failure")));
+                    continue;
+                }
+                let check = &check;
+                handles.push(std::thread::Builder::new().spawn_scoped(scope, move || {
+                    #[cfg(test)]
+                    assert_ne!(failure, Some((index, true)), "injected reader panic");
+                    check(index)
+                }));
+            }
+            // Collect first, then propagate in input order. Early `?` here would leave
+            // an unjoined panic to unwind the scope past the publication rollback.
+            handles
+                .into_iter()
+                .map(|handle| match handle {
+                    Ok(handle) => handle.join().unwrap_or_else(|_| {
+                        Err(WikiError::Verification("shared reader failed".to_owned()))
+                    }),
+                    Err(_) => Err(WikiError::Io("shared reader could not start".to_owned())),
+                })
+                .collect::<Vec<_>>()
+        });
+        for result in results {
+            result?;
+        }
+    }
+    Ok(())
+}
+
+fn shared_batch_collections<'a>(
+    registry: &CollectionRegistry,
+    requests: impl Iterator<Item = &'a RetrievalRequest>,
+) -> Result<Vec<String>, RagError> {
+    let mut collections = Vec::new();
+    let mut seen = BTreeSet::new();
+    for request in requests {
+        crate::rag::validate_retrieval_request(request)?;
+        if request.confidential_collection_id.is_some()
+            || !matches!(request.scope, RetrievalScope::Collection(_))
+            || collections.len() == 16
+        {
+            return Err(RagError::InvalidInput(
+                "shared vector window requires 1..16 explicit non-confidential collections"
+                    .to_owned(),
+            ));
+        }
+        let collection = crate::rag::semantic_target_collection(registry, request)?;
+        if !seen.insert(collection.clone()) {
+            return Err(RagError::InvalidInput(
+                "duplicate shared vector collection".to_owned(),
+            ));
+        }
+        collections.push(collection);
+    }
+    if collections.is_empty() {
+        return Err(RagError::InvalidInput(
+            "shared vector window is empty".to_owned(),
+        ));
+    }
+    Ok(collections)
+}
+
+fn semantic_authority_digest(
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<String, WikiError> {
+    let target = crate::rag::semantic_target_collection(registry, request).map_err(rag_error)?;
+    let by_id = registry.by_id();
+    let selected = by_id
+        .get(target.as_str())
+        .ok_or_else(|| WikiError::Verification("semantic collection is absent".to_owned()))?;
+    let current = request
+        .current_collection_id
+        .as_deref()
+        .map(|id| {
+            by_id
+                .get(id)
+                .ok_or_else(|| WikiError::Verification("current collection is absent".to_owned()))
+        })
+        .transpose()?;
+    serde_json::to_vec(&("hive-vector-authority-v1", selected, current))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| WikiError::Verification("semantic authority is invalid".to_owned()))
+}
+
 fn rag_error(error: RagError) -> WikiError {
     match error {
         RagError::InvalidInput(message) => WikiError::InvalidInput(message),
@@ -3673,6 +4553,7 @@ fn rag_error(error: RagError) -> WikiError {
 #[cfg(test)]
 thread_local! {
     static FAIL_AFTER_CANONICAL_WRITES: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static FAIL_SHARED_CHECK: std::cell::Cell<Option<(usize, bool)>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(test)]
@@ -3714,6 +4595,103 @@ mod tests {
 
     fn raw_digest(value: &str) -> String {
         raw_sha256(&digest(value)).to_owned()
+    }
+
+    struct CountedBoundedReader {
+        data: std::io::Cursor<Vec<u8>>,
+        calls: usize,
+        max_chunk: usize,
+        fail_after: Option<usize>,
+    }
+
+    impl CountedBoundedReader {
+        fn new(data: Vec<u8>) -> Self {
+            Self {
+                data: std::io::Cursor::new(data),
+                calls: 0,
+                max_chunk: usize::MAX,
+                fail_after: None,
+            }
+        }
+    }
+
+    impl Read for CountedBoundedReader {
+        fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+            self.calls += 1;
+            if self.fail_after.is_some_and(|limit| self.calls > limit) {
+                return Err(io::Error::other("bounded-reader-sentinel"));
+            }
+            let count = bytes.len().min(self.max_chunk);
+            self.data.read(&mut bytes[..count])
+        }
+    }
+
+    #[test]
+    fn bounded_read_hint_keeps_bytes_and_reduces_representative_small_reads() {
+        let data = vec![b'x'; 1000];
+        let mut baseline = CountedBoundedReader::new(data.clone());
+        let mut original = Vec::new();
+        (&mut baseline)
+            .take(4097)
+            .read_to_end(&mut original)
+            .expect("old read");
+        let mut candidate = CountedBoundedReader::new(data.clone());
+        let actual =
+            read_bounded_with_size_hint(&mut candidate, 1000, 4096, "test").expect("bounded read");
+        assert_eq!(actual, data);
+        assert_eq!(actual, original);
+        assert!(candidate.calls <= 2);
+        assert!(baseline.calls > candidate.calls);
+        println!(
+            "representative Read calls: baseline={}, hinted={}",
+            baseline.calls, candidate.calls
+        );
+    }
+
+    #[test]
+    fn bounded_read_hint_is_not_a_length_contract_and_preserves_eof_and_growth_limit() {
+        for (size, hint, limit) in [
+            (0, 10, 100),
+            (3, 100, 100),
+            (100, 1, 100),
+            (100, 100, 100),
+            (101, 1, 100),
+            (1000, 100, 100),
+        ] {
+            let data = vec![b'z'; size];
+            let mut reader = CountedBoundedReader::new(data.clone());
+            reader.max_chunk = 7;
+            let result = read_bounded_with_size_hint(&mut reader, hint, limit, "test");
+            if size <= limit {
+                assert_eq!(result.expect("read to actual EOF"), data);
+            } else {
+                assert!(matches!(result, Err(WikiError::Verification(_))));
+                assert_eq!(reader.data.position(), u64::try_from(limit + 1).unwrap());
+            }
+        }
+    }
+
+    #[test]
+    fn bounded_read_hint_rejects_invalid_sizes_and_keeps_io_errors() {
+        let mut reader = CountedBoundedReader::new(vec![b'a'; 10]);
+        assert!(read_bounded_with_size_hint(&mut reader, 11, 10, "test").is_err());
+        assert!(read_bounded_with_size_hint(&mut reader, 0, usize::MAX, "test").is_err());
+        assert_eq!(reader.calls, 0);
+        // A byte Vec cannot reserve more than isize::MAX: capacity failure, not a large allocation.
+        let length = u64::try_from(usize::MAX - 1).unwrap();
+        assert!(matches!(
+            read_bounded_with_size_hint(&mut reader, length, usize::MAX - 1, "test"),
+            Err(WikiError::Io(_))
+        ));
+        assert_eq!(reader.calls, 0);
+        for fail_after in [0, 1] {
+            let mut reader = CountedBoundedReader::new(vec![b'b'; 10]);
+            reader.max_chunk = 3;
+            reader.fail_after = Some(fail_after);
+            let error =
+                read_bounded_with_size_hint(&mut reader, 10, 100, "test").expect_err("I/O failure");
+            assert!(error.to_string().contains("bounded-reader-sentinel"));
+        }
     }
 
     fn store() -> (TempDir, RagStore) {
@@ -4053,6 +5031,910 @@ mod tests {
             })
             .expect("lock released after rollback");
         assert_eq!(recovered.registry.projects.len(), 2);
+    }
+
+    #[test]
+    #[ignore = "scale qualification: constructs more than 50,000 confidential chunks"]
+    fn confidential_oversized_corpus_does_not_disclose_limits_before_authorization() {
+        let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
+        let temporary = tempfile::tempdir_in(work).expect("root");
+        let store = RagStore::open(temporary.path()).expect("store");
+        store.ensure_registry().expect("registry");
+        let wiki = temporary.path().join(WIKI_RELATIVE);
+        std::fs::create_dir_all(&wiki).expect("Wiki");
+        let paragraph = format!("{}\n\n", "x".repeat(601));
+        let body = paragraph.repeat(800);
+        for index in 0..64 {
+            let id = format!("confidential-{index}");
+            let bytes = wiki_bytes(&id, &body);
+            std::fs::write(wiki.join(format!("{id}.md")), bytes).expect("page");
+        }
+        // Visibility is collection authority for Wiki pages.
+        let mut registry = store.load_registry().expect("registry");
+        registry.collections[0].default_visibility = CollectionVisibility::Confidential;
+        std::fs::write(
+            temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+            registry_bytes(&registry).expect("registry bytes"),
+        )
+        .expect("visibility");
+        store.rebuild().expect("large index");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+        };
+        let mut called = false;
+        let denied = store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| {
+                called = true;
+                Err(WikiError::Conflict("not authorized".to_owned()))
+            })
+            .expect_err("denied");
+        assert!(called);
+        assert_eq!(
+            denied.to_string(),
+            WikiError::Conflict("not authorized".to_owned()).to_string()
+        );
+        let mut approved = false;
+        let oversized = store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| {
+                approved = true;
+                Ok(())
+            })
+            .expect_err("oversized approved corpus");
+        assert!(approved);
+        assert!(oversized
+            .to_string()
+            .contains("semantic corpus exceeds build limits"));
+    }
+
+    #[test]
+    fn confidential_corpus_callback_must_authorize_before_export() {
+        let (temporary, store) = store();
+        let mut plan = remember_plan(USER_ROOT_COLLECTION_ID, "confidential-vector", 2);
+        plan.new_claim.as_mut().expect("claim").visibility = RagVisibility::Confidential;
+        let claim = plan.new_claim.as_mut().expect("claim");
+        claim.digest = claim_digest(claim);
+        store.apply_remember_plan(&plan).expect("claim");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 100,
+            byte_budget: 4096,
+            confidential_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+        };
+        assert!(store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| Err(
+                WikiError::Conflict("not authorized".to_owned())
+            ))
+            .is_err());
+        let mut called = 0;
+        let corpus = store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |digest| {
+                assert!(digest.starts_with("sha256:"));
+                called += 1;
+                Ok(())
+            })
+            .expect("authorized corpus");
+        assert_eq!(called, 1);
+        assert_eq!(corpus.chunks.len(), 1);
+        assert_eq!(corpus.chunks[0].visibility, RagVisibility::Confidential);
+        std::fs::write(
+            temporary
+                .path()
+                .join(&plan.new_claim.as_ref().expect("claim").locator),
+            b"external unindexed change",
+        )
+        .expect("external change");
+        let mut consumed = false;
+        assert!(store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| {
+                consumed = true;
+                Ok(())
+            })
+            .is_err());
+        assert!(!consumed);
+    }
+
+    #[test]
+    fn semantic_publication_rereads_sqlite_after_prepared_corpus() {
+        let (temporary, store) = store();
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: None,
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let corpus = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("corpus");
+        std::fs::write(
+            temporary.path().join(SHARED_INDEX_RELATIVE),
+            b"changed after corpus",
+        )
+        .expect("external cache corruption");
+        let mut invalid = request.clone();
+        invalid.top_k = 0;
+        let mut authorized = false;
+        let error = store
+            .authorized_semantic_corpus(&invalid, RagVisibility::Shared, |_| {
+                authorized = true;
+                Ok(())
+            })
+            .expect_err("invalid request precedes corrupt SQLite");
+        assert!(matches!(error, WikiError::InvalidInput(_)));
+        assert!(!authorized);
+        let mut published = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::Shared,
+                &corpus.partition_digest,
+                &corpus.authority_digest,
+                || {
+                    published = true;
+                    Ok(())
+                },
+                || Ok(())
+            )
+            .is_err());
+        assert!(!published);
+    }
+
+    fn shared_vector_window() -> (TempDir, RagStore, Vec<RetrievalRequest>, PathBuf) {
+        let (temporary, store) = store();
+        let mut ids = vec![USER_ROOT_COLLECTION_ID.to_owned()];
+        for name in ["shared-a", "shared-b"] {
+            let root = temporary.path().join(name);
+            std::fs::create_dir(&root).expect("attached root");
+            let mut record = registration(&root, name);
+            record.aliases = vec![name.to_owned()];
+            record.default_visibility = CollectionVisibility::Shared;
+            ids.push(
+                store
+                    .register_collection(record)
+                    .expect("register")
+                    .collection
+                    .collection_id,
+            );
+        }
+        let mut canonical = PathBuf::new();
+        for id in &ids {
+            let generation = store.load_manifest_required().expect("manifest").generation + 1;
+            let mut plan = remember_plan(id, id, generation);
+            let claim = plan.new_claim.as_mut().expect("claim");
+            claim.visibility = RagVisibility::Shared;
+            claim.digest = claim_digest(claim);
+            canonical = temporary.path().join(&claim.locator);
+            store.apply_remember_plan(&plan).expect("shared claim");
+        }
+        let requests = ids
+            .into_iter()
+            .map(|id| RetrievalRequest {
+                scope: RetrievalScope::Collection(id),
+                current_collection_id: None,
+                query: "vector build".to_owned(),
+                query_expansions: Vec::new(),
+                top_k: 5,
+                byte_budget: 4096,
+                confidential_collection_id: None,
+            })
+            .collect();
+        (temporary, store, requests, canonical)
+    }
+
+    #[test]
+    fn shared_semantic_window_matches_single_scopes_and_rejects_implicit_authority() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let corpora = store.shared_semantic_corpora(&requests).expect("window");
+        for (request, corpus) in requests.iter().zip(&corpora) {
+            assert_eq!(corpus.chunks.len(), 1);
+            assert_eq!(
+                *corpus,
+                store
+                    .semantic_corpus(request, RagVisibility::Shared)
+                    .expect("single")
+            );
+        }
+        assert!(store.shared_semantic_corpora(&[]).is_err());
+        assert!(store
+            .shared_semantic_corpora(&[requests[0].clone(), requests[0].clone()])
+            .is_err());
+        let mut invalid = requests[0].clone();
+        invalid.confidential_collection_id = Some(USER_ROOT_COLLECTION_ID.to_owned());
+        assert!(store.shared_semantic_corpora(&[invalid]).is_err());
+        let mut invalid = requests[0].clone();
+        invalid.scope = RetrievalScope::Auto;
+        assert!(store.shared_semantic_corpora(&[invalid]).is_err());
+        assert!(store
+            .shared_semantic_corpora(&vec![requests[0].clone(); 17])
+            .is_err());
+        let items = requests
+            .iter()
+            .zip(&corpora)
+            .map(|(request, corpus)| SharedSemanticPublication {
+                request,
+                partition_digest: &corpus.partition_digest,
+                authority_digest: &corpus.authority_digest,
+            })
+            .collect::<Vec<_>>();
+        let mut published = Vec::new();
+        store
+            .with_shared_semantic_snapshots(
+                &items,
+                |index| {
+                    published.push(index);
+                    Ok(())
+                },
+                |_| panic!("no rollback"),
+            )
+            .expect("publish");
+        assert_eq!(published, [0, 1, 2]);
+    }
+
+    #[test]
+    fn shared_parallel_export_preserves_corpora_and_checks_reader_budgets() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let expected = store.shared_semantic_corpora(&requests).expect("serial");
+        for workers in [1, 2, 4, 16] {
+            assert_eq!(
+                store
+                    .shared_semantic_corpora_bounded(&requests, workers)
+                    .expect("parallel"),
+                expected
+            );
+        }
+        for workers in [0, 17, usize::MAX] {
+            assert!(matches!(
+                store.shared_semantic_corpora_bounded(&requests, workers),
+                Err(WikiError::InvalidInput(_))
+            ));
+        }
+        assert!(store.shared_semantic_corpora_bounded(&[], 4).is_err());
+        let mut invalid = requests[0].clone();
+        invalid.confidential_collection_id = Some(USER_ROOT_COLLECTION_ID.to_owned());
+        assert!(store
+            .shared_semantic_corpora_bounded(&[invalid], 4)
+            .is_err());
+    }
+
+    #[test]
+    fn shared_parallel_export_never_returns_stale_or_unauthorized_corpora() {
+        for changed in ["canonical", "registry"] {
+            let (temporary, store, requests, canonical) = shared_vector_window();
+            if changed == "canonical" {
+                std::fs::write(canonical, b"invalid canonical page").expect("tamper");
+            } else {
+                let mut registry = store.load_registry().expect("registry");
+                registry.collections[0].default_visibility = CollectionVisibility::Confidential;
+                std::fs::write(
+                    temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+                    registry_bytes(&registry).expect("bytes"),
+                )
+                .expect("change visibility without index authentication");
+            }
+            for workers in [1, 4] {
+                assert!(store
+                    .shared_semantic_corpora_bounded(&requests, workers)
+                    .is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn shared_parallel_export_propagates_joined_reader_failures_without_corpus() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        for panic in [false, true] {
+            super::FAIL_SHARED_CHECK.with(|failure| failure.set(Some((1, panic))));
+            assert!(store.shared_semantic_corpora_bounded(&requests, 4).is_err());
+            assert!(store.shared_semantic_corpora_bounded(&requests, 4).is_ok());
+        }
+    }
+
+    #[test]
+    fn shared_semantic_window_budget_counts_previous_corpora() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let corpus = store
+            .semantic_corpus(&requests[0], RagVisibility::Shared)
+            .expect("corpus");
+        let mut count = 49_999;
+        let mut bytes = 0;
+        add_shared_corpus_budget(&corpus.chunks, &mut count, &mut bytes)
+            .expect("last permitted row");
+        assert!(add_shared_corpus_budget(&corpus.chunks, &mut count, &mut bytes).is_err());
+        let mut count = 0;
+        let mut bytes = 256 * 1024 * 1024;
+        assert!(add_shared_corpus_budget(&corpus.chunks, &mut count, &mut bytes).is_err());
+    }
+
+    #[test]
+    fn shared_parallel_readers_are_bounded_joined_and_preserve_error_order() {
+        use std::sync::atomic::AtomicUsize;
+        let active = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let finished = AtomicUsize::new(0);
+        let barrier = std::sync::Barrier::new(4);
+        check_shared_partitions(8, 16, |_| {
+            let current = active.fetch_add(1, AtomicOrdering::SeqCst) + 1;
+            peak.fetch_max(current, AtomicOrdering::SeqCst);
+            barrier.wait();
+            active.fetch_sub(1, AtomicOrdering::SeqCst);
+            finished.fetch_add(1, AtomicOrdering::SeqCst);
+            Ok(())
+        })
+        .expect("bounded readers");
+        assert_eq!(peak.load(AtomicOrdering::SeqCst), 4);
+        assert_eq!(finished.load(AtomicOrdering::SeqCst), 8);
+        assert_eq!(active.load(AtomicOrdering::SeqCst), 0);
+        for workers in [1, 2, 4, 16] {
+            let error = check_shared_partitions(3, workers, |index| {
+                if index == 1 {
+                    Err(WikiError::Conflict("first failure".to_owned()))
+                } else if index == 2 {
+                    Err(WikiError::Verification("later failure".to_owned()))
+                } else {
+                    Ok(())
+                }
+            })
+            .expect_err("input-order failure");
+            assert!(error.to_string().contains("first failure"));
+        }
+    }
+
+    #[test]
+    fn shared_parallel_reader_panics_and_spawn_failures_join_before_returning() {
+        for panic in [false, true] {
+            let finished = std::sync::atomic::AtomicUsize::new(0);
+            FAIL_SHARED_CHECK.with(|failure| failure.set(Some((0, panic))));
+            assert!(check_shared_partitions(4, 4, |_| {
+                finished.fetch_add(1, AtomicOrdering::SeqCst);
+                Ok(())
+            })
+            .is_err());
+            assert_eq!(finished.load(AtomicOrdering::SeqCst), 3);
+        }
+    }
+
+    #[test]
+    fn shared_parallel_postpublication_reader_failure_rolls_back_in_reverse_order() {
+        for panic in [false, true] {
+            let (_temporary, store, requests, _) = shared_vector_window();
+            let corpora = store.shared_semantic_corpora(&requests).expect("window");
+            let items = requests
+                .iter()
+                .zip(&corpora)
+                .map(|(request, corpus)| SharedSemanticPublication {
+                    request,
+                    partition_digest: &corpus.partition_digest,
+                    authority_digest: &corpus.authority_digest,
+                })
+                .collect::<Vec<_>>();
+            let events = std::cell::RefCell::new(Vec::new());
+            assert!(store
+                .with_shared_semantic_snapshots_bounded(
+                    &items,
+                    4,
+                    |index| {
+                        events.borrow_mut().push(index);
+                        if index == 2 {
+                            FAIL_SHARED_CHECK.with(|failure| failure.set(Some((1, panic))));
+                        }
+                        Ok(())
+                    },
+                    |index| {
+                        events.borrow_mut().push(10 + index);
+                        Ok(())
+                    }
+                )
+                .is_err());
+            assert_eq!(*events.borrow(), [0, 1, 2, 12, 11, 10]);
+            store
+                .with_shared_semantic_snapshots_bounded(
+                    &items,
+                    4,
+                    |_| Ok(()),
+                    |_| panic!("no rollback"),
+                )
+                .expect("lock and normal reads recovered");
+            for workers in [0, 17] {
+                assert!(store
+                    .with_shared_semantic_snapshots_bounded(
+                        &items,
+                        workers,
+                        |_| panic!("no publication"),
+                        |_| panic!("no rollback")
+                    )
+                    .is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn semantic_query_frame_is_bound_to_its_original_request_and_matches_fresh_retrieval() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let mut request = requests[2].clone();
+        let corpus = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("corpus");
+        let matches = corpus
+            .chunks
+            .iter()
+            .map(|hit| crate::rag::SemanticMatch {
+                chunk_id: hit.chunk_id.clone(),
+                digest: hit.digest.clone(),
+                score: 0.9,
+            })
+            .collect::<Vec<_>>();
+        let frame = store.begin_semantic_query(&request).expect("frame");
+        let plan = store.semantic_search_plan(&request).expect("legacy plan");
+        assert_eq!(frame.plan(), &plan);
+        let expected = store
+            .hybrid_retrieve(&request, &plan.manifest_digest, &matches)
+            .expect("fresh retrieval");
+        request.scope = RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned());
+        request.query = "different query".to_owned();
+        request.top_k = 1;
+        assert_eq!(
+            frame.finish(&matches).expect("same bound request"),
+            expected
+        );
+    }
+
+    #[test]
+    fn semantic_query_frame_rechecks_current_bytes_authority_and_returned_canonical_data() {
+        for changed in [
+            "canonical",
+            "registry",
+            "sqlite",
+            "dirty",
+            "trust",
+            "manifest",
+        ] {
+            let (temporary, store, requests, canonical) = shared_vector_window();
+            let corpus = store
+                .semantic_corpus(&requests[2], RagVisibility::Shared)
+                .expect("corpus");
+            let matches = corpus
+                .chunks
+                .iter()
+                .map(|hit| crate::rag::SemanticMatch {
+                    chunk_id: hit.chunk_id.clone(),
+                    digest: hit.digest.clone(),
+                    score: 0.9,
+                })
+                .collect::<Vec<_>>();
+            let frame = store.begin_semantic_query(&requests[2]).expect("frame");
+            if changed == "registry" {
+                let mut registry = store.load_registry().expect("registry");
+                registry.collections[0]
+                    .aliases
+                    .push("new-unsynchronized-alias".to_owned());
+                std::fs::write(
+                    temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+                    registry_bytes(&registry).expect("registry bytes"),
+                )
+                .expect("change registry");
+            } else {
+                let path = match changed {
+                    "canonical" => canonical,
+                    "sqlite" => temporary.path().join(SHARED_INDEX_RELATIVE),
+                    "dirty" => temporary.path().join(RAG_DIRTY_RELATIVE),
+                    "manifest" => temporary.path().join(RAG_MANIFEST_RELATIVE),
+                    _ => temporary.path().join(RAG_TRUST_RELATIVE),
+                };
+                std::fs::write(path, b"external change").expect("mutation");
+            }
+            assert!(frame.finish(&matches).is_err(), "{changed}");
+        }
+    }
+
+    #[test]
+    fn semantic_query_frame_rejects_a_new_generation_and_does_not_hold_the_writer_lock() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let frame = store.begin_semantic_query(&requests[0]).expect("frame");
+        let generation = store.load_manifest_required().expect("manifest").generation + 1;
+        let plan = remember_plan(USER_ROOT_COLLECTION_ID, "frame-new-entry", generation);
+        store
+            .apply_remember_plan(&plan)
+            .expect("writer is not blocked during model execution");
+        assert!(frame.finish(&[]).is_err());
+        assert!(store.checked_retrieve(&requests[0]).is_ok());
+    }
+
+    #[test]
+    fn shared_semantic_window_rolls_back_every_control_on_external_publication_drift() {
+        for (workers, changed) in [1, 4].into_iter().flat_map(|workers| {
+            ["canonical", "registry", "sqlite", "dirty", "trust"]
+                .into_iter()
+                .map(move |changed| (workers, changed))
+        }) {
+            let (temporary, store, requests, canonical) = shared_vector_window();
+            let corpora = store.shared_semantic_corpora(&requests).expect("window");
+            let items = requests
+                .iter()
+                .zip(&corpora)
+                .map(|(request, corpus)| SharedSemanticPublication {
+                    request,
+                    partition_digest: &corpus.partition_digest,
+                    authority_digest: &corpus.authority_digest,
+                })
+                .collect::<Vec<_>>();
+            let path = match changed {
+                "canonical" => canonical,
+                "registry" => temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+                "sqlite" => temporary.path().join(SHARED_INDEX_RELATIVE),
+                "dirty" => temporary.path().join(RAG_DIRTY_RELATIVE),
+                _ => temporary.path().join(RAG_TRUST_RELATIVE),
+            };
+            let events = std::cell::RefCell::new(Vec::new());
+            assert!(
+                store
+                    .with_shared_semantic_snapshots_bounded(
+                        &items,
+                        workers,
+                        |index| {
+                            events.borrow_mut().push(format!("publish-{index}"));
+                            if index == 2 {
+                                std::fs::write(&path, b"external change").expect("mutate");
+                            }
+                            Ok(())
+                        },
+                        |index| {
+                            events.borrow_mut().push(format!("rollback-{index}"));
+                            Ok(())
+                        }
+                    )
+                    .is_err(),
+                "{changed}"
+            );
+            assert_eq!(
+                *events.borrow(),
+                [
+                    "publish-0",
+                    "publish-1",
+                    "publish-2",
+                    "rollback-2",
+                    "rollback-1",
+                    "rollback-0"
+                ],
+                "{changed}"
+            );
+        }
+    }
+
+    #[test]
+    fn shared_semantic_window_rejects_drift_before_any_publication() {
+        let (_temporary, store, requests, canonical) = shared_vector_window();
+        let corpora = store.shared_semantic_corpora(&requests).expect("window");
+        std::fs::write(canonical, b"changed input").expect("mutate");
+        let items = requests
+            .iter()
+            .zip(&corpora)
+            .map(|(request, corpus)| SharedSemanticPublication {
+                request,
+                partition_digest: &corpus.partition_digest,
+                authority_digest: &corpus.authority_digest,
+            })
+            .collect::<Vec<_>>();
+        assert!(store
+            .with_shared_semantic_snapshots(
+                &items,
+                |_| panic!("no publication"),
+                |_| panic!("no rollback")
+            )
+            .is_err());
+        assert!(store.shared_semantic_corpora(&requests).is_err());
+    }
+
+    #[test]
+    fn shared_semantic_window_rolls_back_partial_success_and_attempts_all_recovery() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let corpora = store.shared_semantic_corpora(&requests).expect("window");
+        let items = requests
+            .iter()
+            .zip(&corpora)
+            .map(|(request, corpus)| SharedSemanticPublication {
+                request,
+                partition_digest: &corpus.partition_digest,
+                authority_digest: &corpus.authority_digest,
+            })
+            .collect::<Vec<_>>();
+        let mut rolled_back = Vec::new();
+        let error = store
+            .with_shared_semantic_snapshots(
+                &items,
+                |index| {
+                    if index == 2 {
+                        Err(WikiError::Conflict("publication".to_owned()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                |index| {
+                    rolled_back.push(index);
+                    if index == 1 {
+                        Err(WikiError::Conflict("recovery".to_owned()))
+                    } else {
+                        Ok(())
+                    }
+                },
+            )
+            .expect_err("partial failure");
+        assert_eq!(rolled_back, [1, 0]);
+        assert!(error.to_string().contains("recovery"));
+    }
+
+    #[test]
+    fn semantic_publication_rechecks_canonical_bytes_not_only_the_index() {
+        let (temporary, store) = store();
+        let initial = store.load_manifest_required().expect("manifest");
+        let plan = remember_plan(USER_ROOT_COLLECTION_ID, "concise", initial.generation + 1);
+        store.apply_remember_plan(&plan).expect("remember");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: None,
+            query: "concise".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let retrieved = store.retrieve(&request).expect("retrieval");
+        let matches = retrieved
+            .hits
+            .iter()
+            .map(|hit| crate::rag::SemanticMatch {
+                chunk_id: hit.chunk_id.clone(),
+                digest: hit.digest.clone(),
+                score: 0.5,
+            })
+            .collect::<Vec<_>>();
+        let corpus = store
+            .semantic_corpus(&request, RagVisibility::ProjectPrivate)
+            .expect("corpus");
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::ProjectPrivate,
+                &corpus.partition_digest,
+                &corpus.authority_digest,
+                || Ok(()),
+                || Ok(())
+            )
+            .is_ok());
+        let path = temporary
+            .path()
+            .join(&plan.new_claim.as_ref().expect("claim").locator);
+        std::fs::write(path, b"not canonical Markdown").expect("external edit");
+        let mut published = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::ProjectPrivate,
+                &corpus.partition_digest,
+                &corpus.authority_digest,
+                || {
+                    published = true;
+                    Ok(())
+                },
+                || Ok(())
+            )
+            .is_err());
+        assert!(!published);
+        assert!(store
+            .semantic_matches(&request, &retrieved.manifest_digest, &matches)
+            .is_err());
+        assert!(store.checked_retrieve(&request).is_err());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)] // One transaction exercises authority drift before and after publication.
+    fn semantic_publication_preserves_target_and_current_collection_authority() {
+        let (temporary, store) = store();
+        let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
+        let project = tempfile::tempdir_in(&work).expect("project");
+        let registered = store
+            .register_collection(registration(
+                &project.path().canonicalize().expect("root"),
+                "current",
+            ))
+            .expect("register");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: Some(registered.collection.collection_id.clone()),
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let before = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("corpus");
+        let registry_path = temporary.path().join(COLLECTION_REGISTRY_RELATIVE);
+        let original = std::fs::read(&registry_path).expect("registry bytes");
+        let mut registry = store.load_registry().expect("registry");
+        registry
+            .collections
+            .iter_mut()
+            .find(|item| item.collection_id == registered.collection.collection_id)
+            .expect("current")
+            .aliases
+            .push("changed-current-authority".to_owned());
+        let changed = registry_bytes(&registry.canonicalized().expect("canonical registry"))
+            .expect("changed registry");
+        std::fs::write(&registry_path, &changed).expect("edit registry");
+        store.rebuild().expect("refresh index");
+        let after = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("new corpus");
+        assert_eq!(before.partition_digest, after.partition_digest);
+        assert_ne!(before.authority_digest, after.authority_digest);
+        let mut published = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::Shared,
+                &before.partition_digest,
+                &before.authority_digest,
+                || {
+                    published = true;
+                    Ok(())
+                },
+                || Ok(())
+            )
+            .is_err());
+        assert!(!published);
+        std::fs::write(&registry_path, &original).expect("restore authority");
+        store.rebuild().expect("restore index");
+        let mut rolled_back = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::Shared,
+                &before.partition_digest,
+                &before.authority_digest,
+                || {
+                    std::fs::write(&registry_path, &changed).expect("concurrent registry edit");
+                    Ok(())
+                },
+                || {
+                    rolled_back = true;
+                    Ok(())
+                }
+            )
+            .is_err());
+        assert!(rolled_back);
+        std::fs::write(&registry_path, &original).expect("restore authority");
+        registry = store.load_registry().expect("registry");
+        registry
+            .collections
+            .iter_mut()
+            .find(|item| item.collection_id == USER_ROOT_COLLECTION_ID)
+            .expect("target")
+            .aliases
+            .push("changed-target-authority".to_owned());
+        std::fs::write(
+            &registry_path,
+            registry_bytes(&registry.canonicalized().expect("canonical target"))
+                .expect("target bytes"),
+        )
+        .expect("target edit");
+        store.rebuild().expect("target index");
+        let after = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("changed target");
+        assert_ne!(before.partition_digest, after.partition_digest);
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::Shared,
+                &before.partition_digest,
+                &before.authority_digest,
+                || Ok(()),
+                || Ok(())
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn semantic_partition_freshness_and_citations_ignore_unrelated_collections() {
+        let (_user, store) = store();
+        let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
+        let first = tempfile::tempdir_in(&work).expect("first");
+        let other = tempfile::tempdir_in(&work).expect("other");
+        for root in [first.path(), other.path()] {
+            std::fs::create_dir_all(root.join(WIKI_RELATIVE)).expect("Wiki");
+        }
+        let first_file = first.path().join(WIKI_RELATIVE).join("first.md");
+        let other_file = other.path().join(WIKI_RELATIVE).join("other.md");
+        std::fs::write(&first_file, wiki_bytes("first", "alpha source")).expect("first page");
+        std::fs::write(&other_file, wiki_bytes("other", "beta source")).expect("other page");
+        let registered = store
+            .register_collection(registration(
+                &first.path().canonicalize().expect("first root"),
+                "first",
+            ))
+            .expect("first registration");
+        store
+            .register_collection(registration(
+                &other.path().canonicalize().expect("other root"),
+                "other",
+            ))
+            .expect("other registration");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(registered.collection.collection_id.clone()),
+            current_collection_id: None,
+            query: "alpha".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let before = store
+            .semantic_corpus(&request, RagVisibility::ProjectPrivate)
+            .expect("first corpus");
+        let plan = store.semantic_search_plan(&request).expect("query plan");
+        assert_eq!(plan.partitions.len(), 1);
+        assert_eq!(plan.partitions[0].digest, before.partition_digest);
+        std::fs::write(
+            &other_file,
+            b"invalid unrelated private page PRIVATE-SENTINEL",
+        )
+        .expect("unrelated corruption");
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("bounded canonical read")
+                .hits
+                .len(),
+            1
+        );
+        assert_eq!(
+            store
+                .semantic_corpus(&request, RagVisibility::ProjectPrivate)
+                .expect("independent build")
+                .partition_digest,
+            before.partition_digest
+        );
+        std::fs::write(&other_file, wiki_bytes("other", "changed beta source"))
+            .expect("other edit");
+        store.rebuild().expect("new global generation");
+        let after = store
+            .semantic_corpus(&request, RagVisibility::ProjectPrivate)
+            .expect("unchanged first corpus");
+        assert_ne!(before.manifest_digest, after.manifest_digest);
+        assert_eq!(before.partition_digest, after.partition_digest);
+        store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::ProjectPrivate,
+                &before.partition_digest,
+                &before.authority_digest,
+                || Ok(()),
+                || Ok(()),
+            )
+            .expect("same partition may publish");
+        std::fs::write(&first_file, b"changed selected page").expect("selected corruption");
+        assert!(store.checked_retrieve(&request).is_err());
+        assert!(store
+            .semantic_corpus(&request, RagVisibility::ProjectPrivate)
+            .is_err());
     }
 
     #[test]

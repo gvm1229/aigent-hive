@@ -57,7 +57,7 @@ Configure a consumer project without copying Hive source-development instruction
    - Do not ask, render, register, or execute a hook when the host-native hook surface is `unsupported` or `unverified`, or when an explicit external compatibility owner is active.
    - Show each exact capability, event, `.hive/hooks/<capability>` path, `hive hook --capability <capability> --event <event> --capabilities .hive/runtime/current-capability-resolution.json --output json` command, and content digest.
    - Require explicit approval per hook capability. Declining every hook is fully supported and must create no hook approval artifact or command.
-   - Limit hooks to `protect-hive-owned-state`, `update-integrity-guard`, `derived-state-invalidation`, and `checkpoint-reminder`.
+   - Limit hooks to `protect-hive-owned-state`, `update-integrity-guard`, `derived-state-invalidation`, `checkpoint-reminder`, `continue-active-run`, and `validate-korean-output`.
    - Require the host adapter to refresh `.hive/runtime/current-capability-resolution.json` immediately before each non-Stop invocation. Setup never creates or tracks this ephemeral file; missing, stale, malformed, unsupported, or unverified host-native evidence leaves the hook inert before hook input is read.
    - Hook adapters pass a versioned JSON object on stdin. It contains `schema_version` and `event`, plus only the typed fields needed by the approved capability: `tool`/`operation`/`path`, `action` with dry-run/backup/staging gates, canonical `path`, or `status_path`/`checkpoint_present`.
    - Hooks never classify prompt-submission events, rewrite prompts, activate Skills, ingest memory, spawn subagents, orchestrate work, or decide continuation.

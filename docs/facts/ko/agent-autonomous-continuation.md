@@ -5,28 +5,26 @@ topic_slug: agent-autonomous-continuation
 language: ko
 counterpart: ../en/agent-autonomous-continuation.md
 title: "Agent 자율 실행 지속"
-summary: "Agent 소유 작업 잔존 상태: 진행 보고 종료 금지"
+summary: "독립 Agent 소유 작업 잔존 상태: 전체 Goal·task 차단 금지와 안정판 명시 승인"
 tags: [agent, completion, regression]
 aliases: ["중간 종료 방지"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:42bbd59e702cdce48ac6396d4c5a2f3a9b7574cd99272e22f3279c00b041cba4"
-  - "repo:.agents/directives/04-documentation-state.md#sha256:44913afc655f527245720594f16a92c87061abfc28280f1a2834ad328b336be5"
-  - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
-  - "repo:crates/hive-render/src/lib.rs#sha256:644c0b46c68ceaeb9cb798f2c076f301ed12be889121cd4c086f23ecd50e69ae"
-  - "repo:docs/plans/active/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"
-  - "repo:harness/directives/00-project-harness.md#sha256:fb6cb8107a38aa3fe70040d4e730e53190a66ed6047a8e40f55acf811425d87d"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
-  - "repo:tests/conformance/test_phase3_static_contracts.py#sha256:649c12bd367917808f69ad28355a054481d30f06ca84f3a44b984cd339f176db"
-  - "repo:tests/fixtures/agent-autonomous-continuation.json#sha256:168eb72b79508187e841e5caf25d88f15a86a43b10f0327d7c1ce5a8226aa934"
+  - "repo:.agents/directives/01-behavior.md#sha256:4b22be47789033b39654596bb345fd56017e54bf4cd8ef12ad1cac7ae9c8e4d4"
+  - "repo:AGENTS.md#sha256:d1a4541174db15faf38f3c90432fbea8cb4b4da6448bfccce2a7e069982031b6"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acd4022de5697806003207634ac0b7cb874baeb802af491f28d39ec048daf830"
+  - "repo:crates/hive-render/src/lib.rs#sha256:58d45eb16a719523947a4ad6b50bc225a757aa2ca800ec95dbf957b74325803d"
+  - "repo:harness/directives/00-project-harness.md#sha256:b01acbf296d63e415b06c237561494b73ce632174925f9ad5fd4e2dfb6f6a9e4"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5e5ce3f56aa6868e8e6195f48cc2c22936d642c70a0f466fe7081108f5ebb28e"
 links: [automated-user-handoff, source-development]
-reviewed_revision: "git:0fd5ea87fa377dc584dcfa6ad93ae9ee74eb4e97"
+reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active
 ---
 
 # Agent 자율 실행 지속
 
-source·소비자 Agent 공통 범위: 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업.
-소비자 프로젝트 생성 지침과 영어·한국어 전역 설정에도 같은 계속 실행 계약 적용.
-최종 종료 조건: Agent 소유 작업 `0건`. 사용자 권한·외부 증거·차단 상태: 정확한 owner·증거·복구 경로 기록.
+- source·소비자 Agent 공통 지속 범위: 독립 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업
+- 일부 host·fixture·외부 증거 결손: 해당 criterion 기록과 독립 작업 지속
+- 전체 Goal·task `blocked`: 독립 Agent 소유 criterion `0건` closure 뒤 가능
+- 안정판 tag·protected branch 통합·게시·설치: 현재 요청 안 버전명 포함 명시 승인 전 금지

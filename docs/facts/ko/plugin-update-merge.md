@@ -9,7 +9,7 @@ summary: "Signed historical base 기반 local-priority three-way projection upda
 tags: [merge, plugin, update]
 aliases: ["Projection upgrade merge"]
 sources:
-  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:9091a6094f11be32f27108944ec98adbd0dc425afb6faa26ba8cf616f18d8896"
+  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:a78f7c3acbe764bc04916912e9fbb15bd9c5b90275db7f376add543439f1e90a"
 links: [project-onboarding, update-transaction]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
 status: active

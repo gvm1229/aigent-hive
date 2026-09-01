@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": "knowledge-recall",
+  "plain_answer": false,
+  "simple_question": true,
+  "project_context_required": true,
+  "external_candidate": {
+    "name": "analyze",
+    "provided_by": "omx",
+    "compatible": true,
+    "explicit_selection": true
+  },
+  "hive_candidate": "knowledge-recall",
+  "active_hive_skills": [
+    {
+      "name": "knowledge-recall",
+      "source_type": "built-in",
+      "content_digest": "sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267",
+      "side_effect_class": "read-only",
+      "capabilities": ["filesystem-read", "memory-read", "shell"],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

@@ -3,6 +3,8 @@
 pub mod bundle_io;
 pub mod bundle_store;
 pub mod collection;
+pub mod graph;
+pub mod graphify;
 pub mod notion;
 pub mod portable;
 pub mod rag;
@@ -10,6 +12,7 @@ pub mod scan;
 pub mod shared;
 pub mod source;
 pub mod store;
+pub mod vector;
 
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
@@ -32,6 +35,14 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
+pub use graph::{
+    activate_generation, build_native_generation, build_native_generation_incremental,
+    ensure_graph_owned_path, export_generation, generation_relative_path, load_active_generation,
+    persist_generation, query_generation, query_node_metadata, remove_active_generation,
+    remove_generation, ActiveGraphPointer, GraphGeneration,
+};
+pub use graphify::normalize_graphify_code;
+
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
 const STALE_RELATIVE: &str = ".hive/index/.stale";
 const LOCK_RELATIVE: &str = ".hive/index/.knowledge.lock";
@@ -43,8 +54,22 @@ const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_RAW_BYTES: usize = 5 * 1024 * 1024;
 const MAX_WIKI_PAGE_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_CANONICAL_CONTROL_BYTES: u64 = 1024 * 1024;
-const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
+// The common publisher must accept every bounded artifact supported by the RAG builder.
+const MAX_DERIVED_INDEX_BYTES: u64 = 256 * 1024 * 1024;
 static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Build a disposable native graph from canonical Markdown pages in one scope.
+///
+/// # Errors
+///
+/// Returns an error when the target is not a consumer workspace, canonical pages are invalid,
+/// or graph generation fails.
+pub fn build_graph(target: &Path, scope: &str) -> Result<GraphGeneration, WikiError> {
+    ensure_consumer_target(target).map_err(|error| WikiError::Verification(error.to_string()))?;
+    let pages = scan_pages(target)?;
+    build_native_generation(scope, &pages.into_values().collect::<Vec<_>>())
+        .map_err(WikiError::InvalidInput)
+}
 
 /// Stable failure classes for CLI exit mapping.
 #[derive(Debug)]
@@ -143,9 +168,24 @@ pub struct WikiFrontmatter {
     /// Immutable Raw source locators.
     #[serde(default)]
     pub sources: Vec<String>,
+    /// Explicit source-to-source relationship locators.
+    #[serde(default)]
+    pub source_links: Vec<String>,
     /// Explicit page IDs referenced by this page.
     #[serde(default)]
     pub links: Vec<String>,
+    /// Explicit related canonical page IDs.
+    #[serde(default)]
+    pub related_concepts: Vec<String>,
+    /// Optional duplicate canonical page ID.
+    #[serde(default)]
+    pub duplicate_of: Option<String>,
+    /// Explicit semantic topics distinct from broad tags.
+    #[serde(default)]
+    pub topics: Vec<String>,
+    /// Optional replacement canonical page ID.
+    #[serde(default)]
+    pub replacement: Option<String>,
     /// Source-paired contradictions.
     #[serde(default)]
     pub contradictions: Vec<Contradiction>,
@@ -815,7 +855,12 @@ fn build_promotion_plan(
         tags,
         aliases: Vec::new(),
         sources: vec![raw_locator],
+        source_links: Vec::new(),
         links: Vec::new(),
+        related_concepts: Vec::new(),
+        duplicate_of: None,
+        topics: Vec::new(),
+        replacement: None,
         contradictions: Vec::new(),
         status: "active".to_owned(),
         created_at: source_page.frontmatter.created_at.clone(),
@@ -2487,7 +2532,7 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     }
     if !matches!(
         value.status.as_str(),
-        "active" | "contradicted" | "open-question"
+        "active" | "contradicted" | "open-question" | "superseded" | "expired" | "revoked"
     ) {
         return Err(WikiError::InvalidInput(format!(
             "deprecated or unsupported Wiki status: {}",
@@ -2500,7 +2545,10 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     validate_sorted_unique("tags", &value.tags)?;
     validate_sorted_unique("aliases", &value.aliases)?;
     validate_sorted_unique("sources", &value.sources)?;
+    validate_sorted_unique("source_links", &value.source_links)?;
     validate_sorted_unique("links", &value.links)?;
+    validate_sorted_unique("related_concepts", &value.related_concepts)?;
+    validate_sorted_unique("topics", &value.topics)?;
     for tag in &value.tags {
         if tag.starts_with('#') || !is_slug(tag) {
             return Err(WikiError::InvalidInput(format!(
@@ -2511,10 +2559,35 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     for link in &value.links {
         validate_id(link)?;
     }
+    for related in &value.related_concepts {
+        validate_id(related)?;
+    }
+    for topic in &value.topics {
+        if !is_slug(topic) {
+            return Err(WikiError::InvalidInput(format!(
+                "topic must be a lowercase slug: {topic}"
+            )));
+        }
+    }
+    for duplicate in value.duplicate_of.iter().chain(value.replacement.iter()) {
+        validate_id(duplicate)?;
+        if duplicate == &value.id {
+            return Err(WikiError::InvalidInput(
+                "Wiki relation cannot target itself".to_owned(),
+            ));
+        }
+    }
     for source in &value.sources {
         if source != "raw:self" && parse_raw_locator(source).is_none() {
             return Err(WikiError::InvalidInput(format!(
                 "source locator must identify an immutable Raw revision: {source}"
+            )));
+        }
+    }
+    for source in &value.source_links {
+        if source != "raw:self" && parse_raw_locator(source).is_none() {
+            return Err(WikiError::InvalidInput(format!(
+                "source link must identify an immutable Raw revision: {source}"
             )));
         }
     }
@@ -3956,7 +4029,18 @@ impl CapabilityFileSnapshot {
             .parent()
             .unwrap_or_else(|| Path::new(""))
             .join(&temporary_name);
-        let installed = capability_file_state_bounded(root, &temporary_relative, self.maximum)?;
+        let installed = match capability_file_state_bounded(root, &temporary_relative, self.maximum)
+        {
+            Ok(state) => state,
+            Err(error) => {
+                parent.remove_file(&temporary_name).map_err(|cleanup| {
+                    WikiError::Io(format!(
+                        "{error}; cannot remove owned temporary file: {cleanup}"
+                    ))
+                })?;
+                return Err(error);
+            }
+        };
         if !matches!(self.current, CapabilityFileState::Missing) {
             if let Err(error) = self.claim_current(root) {
                 let _ = parent.remove_file(&temporary_name);
@@ -4528,7 +4612,7 @@ impl CapabilityKnowledgeLock {
                     }
                     return Ok(Self { index, name });
                 }
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                Err(error) if retryable_lock_contention(error.kind()) => {
                     if started.elapsed() >= LOCK_TIMEOUT {
                         return Err(WikiError::Conflict(
                             "timed out waiting for canonical knowledge integration lock".to_owned(),
@@ -4578,7 +4662,7 @@ impl KnowledgeLock {
                         remove_parent_on_drop,
                     });
                 }
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                Err(error) if retryable_lock_contention(error.kind()) => {
                     if started.elapsed() >= LOCK_TIMEOUT {
                         return Err(WikiError::Conflict(
                             "timed out waiting for canonical knowledge integration lock".to_owned(),
@@ -4596,6 +4680,11 @@ impl KnowledgeLock {
     }
 }
 
+fn retryable_lock_contention(kind: io::ErrorKind) -> bool {
+    kind == io::ErrorKind::AlreadyExists
+        || (cfg!(windows) && kind == io::ErrorKind::PermissionDenied)
+}
+
 impl Drop for KnowledgeLock {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
@@ -4610,6 +4699,16 @@ impl Drop for KnowledgeLock {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lock_contention_is_bounded_to_existing_and_windows_sharing_errors() {
+        assert!(retryable_lock_contention(io::ErrorKind::AlreadyExists));
+        assert_eq!(
+            retryable_lock_contention(io::ErrorKind::PermissionDenied),
+            cfg!(windows)
+        );
+        assert!(!retryable_lock_contention(io::ErrorKind::NotFound));
+    }
 
     fn write_seed(root: &Path) {
         fs::create_dir_all(root.join(WIKI_RELATIVE)).unwrap();
@@ -4783,6 +4882,35 @@ mod tests {
             reject_likely_credentials(b"claim_key: ghp_abcdefghijklmnopqrstuvwxyz012345\n")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn common_index_publication_limit_matches_the_rag_contract() {
+        assert_eq!(
+            MAX_DERIVED_INDEX_BYTES,
+            u64::try_from(crate::rag::MAX_SERIALIZED_INDEX_BYTES).unwrap()
+        );
+    }
+
+    #[test]
+    fn rejected_staged_index_removes_only_its_own_temporary_file() {
+        let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&work).unwrap();
+        let temporary = tempfile::tempdir_in(work).unwrap();
+        let directory = temporary.path().join(".hive/index");
+        fs::create_dir_all(&directory).unwrap();
+        let index = temporary.path().join(INDEX_RELATIVE);
+        fs::write(&index, b"prior").unwrap();
+        let unrelated = directory.join("user-note.txt");
+        fs::write(&unrelated, b"preserve").unwrap();
+        let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
+        let mut snapshot =
+            CapabilityFileSnapshot::capture(&root, Path::new(INDEX_RELATIVE)).unwrap();
+        snapshot.maximum = 16;
+        assert!(snapshot.install_staged(&root, &[0_u8; 17]).is_err());
+        assert_eq!(fs::read(&index).unwrap(), b"prior");
+        assert_eq!(fs::read(&unrelated).unwrap(), b"preserve");
+        assert_eq!(fs::read_dir(directory).unwrap().count(), 2);
     }
 
     #[test]

@@ -29,7 +29,41 @@
       "minimum": 0,
       "maximum": 1048576
     },
-    "insufficient_budget": { "type": "boolean" }
+    "insufficient_budget": { "type": "boolean" },
+    "search": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "used", "fallback", "model", "engine", "fusion", "contract_digest"],
+      "properties": {
+        "requested": { "const": "semantic" },
+        "contract_digest": { "$ref": "#/$defs/sha256" },
+        "used": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["fts", "vector"] } },
+        "fallback": { "enum": ["none", "partial", "unavailable"] },
+        "model": {
+          "type": "object", "additionalProperties": false, "required": ["id", "revision"],
+          "properties": { "id": { "type": "string" }, "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" } }
+        },
+        "engine": {
+          "type": "object", "additionalProperties": false, "required": ["name", "version"],
+          "properties": { "name": { "const": "sqlite-vec" }, "version": { "type": "string" } }
+        },
+        "fusion": {
+          "type": "object", "additionalProperties": false,
+          "required": ["method", "semantic_weight", "fts_weight"],
+          "properties": {
+            "method": { "const": "min-max-score" },
+            "semantic_weight": { "const": 0.75 },
+            "fts_weight": { "const": 0.25 },
+            "ranking_policy": { "const": "literal-fts-order-v1" },
+            "fts_order_preserved": { "type": "boolean" }
+          },
+          "dependentRequired": {
+            "ranking_policy": ["fts_order_preserved"],
+            "fts_order_preserved": ["ranking_policy"]
+          }
+        }
+      }
+    }
   },
   "x-returnedBytesEquals": "sum UTF-8 byte lengths of hits[*].text",
   "$defs": {
@@ -196,7 +230,9 @@
         "assertion_status": { "$ref": "#/$defs/assertion_status" },
         "scan_metadata": { "$ref": "#/$defs/scan_metadata" },
         "score": { "type": "number" },
-        "matched_field": { "enum": ["alias", "tag", "title", "text"] },
+        "matched_field": { "enum": ["alias", "tag", "title", "text", "vector", "hybrid"] },
+        "matched_lanes": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["fts", "vector"] } },
+        "fusion_rank": { "type": "integer", "minimum": 1, "maximum": 100 },
         "sources": {
           "type": "array",
           "maxItems": 256,

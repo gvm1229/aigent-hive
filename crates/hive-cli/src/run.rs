@@ -16,8 +16,8 @@ use cap_std::fs::{Dir, OpenOptions};
 use hive_core::role::RoleDocument;
 use hive_core::run::{
     prepare_dispatch_brief, validate_transition, verify_owner_continuity, CapabilityResolution,
-    DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity, RunPlan, RunState,
-    RunStatus, RunStatusDocument, SupportLevel,
+    ContinuationState, DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity,
+    ResolvedOwner, RunPlan, RunState, RunStatus, RunStatusDocument, SupportLevel,
 };
 use hive_core::usage_guard::{UsageSnapshot, UsageWindow, DEFAULT_QUOTA_POOL};
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
@@ -51,6 +51,18 @@ Read and validate one durable run without mutation or spawning.
 
 USAGE:
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+";
+const CLOSURE_USAGE: &str = "\
+Calculate whether one durable Hive run may finish without spawning or mutation.
+
+USAGE:
+    hive run closure --target <dir> --run <run-id> --output json
+";
+const CONTINUATION_USAGE: &str = "\
+Evaluate one host-owned continuation request without spawning or mutation.
+
+USAGE:
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
 ";
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -1226,6 +1238,7 @@ struct CheckpointRequest {
     state: RunState,
     passed_criteria: Vec<String>,
     failed_criteria: Vec<String>,
+    blocked_criteria: Vec<String>,
     active_roles: Vec<String>,
     next_action: Option<String>,
     #[serde(default)]
@@ -1233,6 +1246,8 @@ struct CheckpointRequest {
     blocker: Option<String>,
     resume_note: Option<String>,
     criterion_evidence: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    continuation: Option<ContinuationState>,
     updated_at: String,
 }
 
@@ -1251,6 +1266,28 @@ struct ResumeArguments {
     session_id: Option<String>,
     role_id: Option<String>,
     threshold: Option<u8>,
+}
+
+struct ClosureArguments {
+    target: PathBuf,
+    run_id: String,
+}
+
+pub(crate) struct ContinuationArguments {
+    pub(crate) target: PathBuf,
+    pub(crate) run_id: String,
+    pub(crate) session_id: String,
+    pub(crate) claim_nudge: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ContinuationNudgeRecord {
+    schema_version: u32,
+    run_id: String,
+    run_revision: u64,
+    closure_digest: String,
+    session_id_digest: String,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1277,6 +1314,14 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
         print!("{RESUME_USAGE}");
         return ExitCode::SUCCESS;
     }
+    if arguments == ["closure", "--help"] {
+        print!("{CLOSURE_USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    if arguments == ["continuation", "--help"] {
+        print!("{CONTINUATION_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let (action, result) = match arguments.first().map(String::as_str) {
         Some("checkpoint") => (
             "CheckpointRun",
@@ -1285,6 +1330,14 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
         Some("resume") => (
             "ResumeWork",
             parse_resume_arguments(&arguments[1..]).and_then(|parsed| resume(&parsed)),
+        ),
+        Some("closure") => (
+            "CheckRunClosure",
+            parse_closure_arguments(&arguments[1..]).and_then(|parsed| closure(&parsed)),
+        ),
+        Some("continuation") => (
+            "CheckRunContinuation",
+            parse_continuation_arguments(&arguments[1..]).and_then(|parsed| continuation(&parsed)),
         ),
         Some(other) => (
             "RunWork",
@@ -1297,6 +1350,330 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
     };
     let result = result.unwrap_or_else(|error| failure_result(action, &error));
     emit_action_result(&result)
+}
+
+fn parse_continuation_arguments(
+    arguments: &[String],
+) -> Result<ContinuationArguments, AdapterError> {
+    let options = parse_options(
+        arguments,
+        &["--target", "--run", "--session-id", "--claim-nudge"],
+    )?;
+    let claim_nudge = match optional(&options, "--claim-nudge") {
+        None | Some("false") => false,
+        Some("true") => true,
+        Some(value) => {
+            return Err(AdapterError::Input(format!(
+                "--claim-nudge must be true or false, got {value}"
+            )));
+        }
+    };
+    Ok(ContinuationArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        run_id: required(&options, "--run")?.to_owned(),
+        session_id: required(&options, "--session-id")?.to_owned(),
+        claim_nudge,
+    })
+}
+
+pub(crate) fn continuation(
+    arguments: &ContinuationArguments,
+) -> Result<ActionResult, AdapterError> {
+    let closure_result = closure(&ClosureArguments {
+        target: arguments.target.clone(),
+        run_id: arguments.run_id.clone(),
+    })?;
+    let data = closure_result
+        .data
+        .as_ref()
+        .ok_or_else(|| AdapterError::Internal("closure result is missing data".to_owned()))?;
+    let closure = data
+        .get("closure")
+        .cloned()
+        .ok_or_else(|| AdapterError::Internal("closure result is missing closure".to_owned()))?;
+    let envelope = data.get("continuation").cloned().ok_or_else(|| {
+        AdapterError::Internal("closure result is missing continuation envelope".to_owned())
+    })?;
+    let session_digest = sha256_digest(arguments.session_id.as_bytes());
+    let expected_digest = envelope
+        .pointer("/session_binding/session_id_digest")
+        .and_then(Value::as_str);
+    let ready_for_final = closure
+        .get("ready_for_final")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| AdapterError::Internal("closure ready_for_final is missing".to_owned()))?;
+    let agent_owned = closure
+        .get("agent_owned")
+        .and_then(Value::as_array)
+        .ok_or_else(|| AdapterError::Internal("closure agent_owned is missing".to_owned()))?;
+    let retry_permitted = envelope
+        .pointer("/retry_budget/retry_permitted")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            AdapterError::Internal("continuation retry permission is missing".to_owned())
+        })?;
+    let (mut decision, mut reason) = if expected_digest != Some(session_digest.as_str()) {
+        ("allow", "session-binding-mismatch")
+    } else if ready_for_final || agent_owned.is_empty() {
+        ("allow", "closure-ready")
+    } else if !retry_permitted {
+        ("allow", "retry-not-permitted")
+    } else {
+        ("nudge", "host-owned-continuation")
+    };
+    let mut nudge_claimed = false;
+    if decision == "nudge" && arguments.claim_nudge {
+        let closure_digest = closure
+            .get("closure_digest")
+            .and_then(Value::as_str)
+            .ok_or_else(|| AdapterError::Internal("closure digest is missing".to_owned()))?;
+        let run_revision = closure
+            .get("run_revision")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| AdapterError::Internal("closure revision is missing".to_owned()))?;
+        nudge_claimed = claim_continuation_nudge(
+            &arguments.target,
+            &arguments.run_id,
+            run_revision,
+            closure_digest,
+            &session_digest,
+        )?;
+        if !nudge_claimed {
+            decision = "allow";
+            reason = "revision-already-nudged";
+        }
+    }
+    let adapter = continuation_adapter(envelope.get("outer_owner"));
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "CheckRunContinuation",
+        status: "success",
+        exit_code: 0,
+        code: "hive.run-continuation-evaluated",
+        message: "host-owned continuation decision evaluated".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: closure_result.evidence,
+        next_action: closure_result.next_action,
+        data: Some(json!({
+            "decision": decision,
+            "reason": reason,
+            "session_id_digest": session_digest,
+            "closure": closure,
+            "continuation": envelope,
+            "adapter": adapter,
+            "nudge_claimed": nudge_claimed,
+            "spawned": false,
+        })),
+    })
+}
+
+fn claim_continuation_nudge(
+    target_path: &Path,
+    run_id: &str,
+    run_revision: u64,
+    closure_digest: &str,
+    session_id_digest: &str,
+) -> Result<bool, AdapterError> {
+    let target = PinnedTarget::open(target_path)?;
+    let path = Path::new(".hive/runtime/continuation-nudges").join(format!("{run_id}.json"));
+    let snapshot = target.snapshot_bounded(&path, MAX_RUNTIME_RECORD_BYTES)?;
+    if let Some(bytes) = snapshot.bytes() {
+        let prior: ContinuationNudgeRecord = serde_json::from_slice(bytes).map_err(|_| {
+            AdapterError::Safety("continuation nudge record is malformed".to_owned())
+        })?;
+        if prior.schema_version != 1
+            || prior.run_id != run_id
+            || !is_sha256_digest(&prior.closure_digest)
+        {
+            return Err(AdapterError::Safety(
+                "continuation nudge record is invalid".to_owned(),
+            ));
+        }
+        if prior.run_revision >= run_revision {
+            return Ok(false);
+        }
+    }
+    let record = ContinuationNudgeRecord {
+        schema_version: 1,
+        run_id: run_id.to_owned(),
+        run_revision,
+        closure_digest: closure_digest.to_owned(),
+        session_id_digest: session_id_digest.to_owned(),
+    };
+    let bytes = serde_json_canonicalizer::to_vec(&record).map_err(|error| {
+        AdapterError::Internal(format!("canonicalize continuation nudge: {error}"))
+    })?;
+    target.publish_runtime(&path, &snapshot, &bytes)
+}
+
+fn continuation_adapter(owner: Option<&Value>) -> Value {
+    let Some(owner) = owner else {
+        return json!({ "support": "unsupported", "reason": "owner-binding-missing" });
+    };
+    let Ok(binding) = serde_json::from_value::<OwnerBinding>(owner.clone()) else {
+        return json!({ "support": "unsupported", "reason": "owner-binding-invalid" });
+    };
+    if binding.resolved_owner != ResolvedOwner::HostNative {
+        return json!({ "support": "unsupported", "reason": "external-owner" });
+    }
+    let task_kind = match binding.host {
+        Host::Codex => "goal",
+        Host::Claude | Host::Antigravity => "task",
+    };
+    json!({
+        "support": "requires-host-capability",
+        "host": binding.host,
+        "task_kind": task_kind,
+        "stop_event": "Stop",
+        "mutation": false,
+    })
+}
+
+fn parse_closure_arguments(arguments: &[String]) -> Result<ClosureArguments, AdapterError> {
+    let options = parse_options(arguments, &["--target", "--run"])?;
+    Ok(ClosureArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        run_id: required(&options, "--run")?.to_owned(),
+    })
+}
+
+fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
+    let target = PinnedTarget::open(&arguments.target)?;
+    let plan_path = run_path(&arguments.run_id, "PLAN.md")?;
+    let status_path = run_path(&arguments.run_id, "STATUS.md")?;
+    let plan_bytes = target.read_required(&plan_path, MAX_EXPLICIT_FILE_BYTES)?;
+    let status_bytes = target.read_required(&status_path, MAX_EXPLICIT_FILE_BYTES)?;
+    let plan = RunPlan::parse_markdown(&plan_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    let status = RunStatusDocument::parse_markdown(&status_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    if status.status().run_id != arguments.run_id {
+        return Err(AdapterError::Verification(
+            "STATUS.md run_id does not match requested run".to_owned(),
+        ));
+    }
+    if as_set(plan.criteria()) != as_set(&status.status().required_criteria) {
+        return Err(AdapterError::Verification(
+            "PLAN.md criteria differ from STATUS.md".to_owned(),
+        ));
+    }
+    let outer_owner = status.owner_binding().ok();
+    let passed = as_set(&status.status().passed_criteria);
+    let pending = plan
+        .criteria()
+        .iter()
+        .filter(|criterion| !passed.contains(criterion.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let (agent_owned, blocked) = match status.status().state {
+        RunState::Planned | RunState::Executing | RunState::Verifying | RunState::ResumeReady => {
+            (pending, Vec::new())
+        }
+        RunState::Blocked | RunState::UsageLimited => {
+            (Vec::new(), status.status().blocked_criteria.clone())
+        }
+        RunState::Succeeded | RunState::Cancelled => (Vec::new(), Vec::new()),
+    };
+    let ready_for_final = agent_owned.is_empty() && blocked.is_empty();
+    let global_block_permitted = agent_owned.is_empty() && !blocked.is_empty();
+    let mut payload = json!({
+        "schema_version": 1,
+        "run_id": arguments.run_id,
+        "run_revision": status.status().revision,
+        "run_state": status.status().state,
+        "ready_for_final": ready_for_final,
+        "agent_owned": agent_owned,
+        "awaiting_user_authority": [],
+        "awaiting_external_evidence": [],
+        "blocked": blocked,
+        "excluded": [],
+        "global_block_permitted": global_block_permitted,
+    });
+    let closure_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| AdapterError::Internal(format!("canonicalize closure: {error}")))?,
+    );
+    payload
+        .as_object_mut()
+        .expect("closure payload is an object")
+        .insert("closure_digest".to_owned(), Value::String(closure_digest));
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "CheckRunClosure",
+        status: "success",
+        exit_code: 0,
+        code: "hive.run-closure-ready",
+        message: if ready_for_final {
+            "run closure permits final response".to_owned()
+        } else {
+            "run closure retains non-terminal work or blocker".to_owned()
+        },
+        changed_paths: Vec::new(),
+        evidence: vec![
+            Evidence {
+                kind: "file",
+                locator: plan_path.display().to_string(),
+                digest: plan.digest(),
+            },
+            Evidence {
+                kind: "run-status",
+                locator: status_path.display().to_string(),
+                digest: sha256_digest(&status_bytes),
+            },
+        ],
+        next_action: status.status().next_action.clone(),
+        data: Some(json!({
+            "closure": payload,
+            "continuation": continuation_envelope(&arguments.run_id, &status, outer_owner.as_ref()),
+        })),
+    })
+}
+
+fn continuation_envelope(
+    run_id: &str,
+    status: &RunStatusDocument,
+    outer_owner: Option<&OwnerBinding>,
+) -> Value {
+    let continuation = status.status().continuation.as_ref();
+    let retry_permitted = continuation.is_some_and(|value| {
+        !value.cancel_requested
+            && value.attempts_used < value.max_retry_attempts
+            && !matches!(
+                status.status().state,
+                RunState::Cancelled | RunState::Succeeded
+            )
+    });
+    json!({
+        "schema_version": 1,
+        "run_id": run_id,
+        "run_revision": status.status().revision,
+        "outer_owner": outer_owner,
+        "session_binding": {
+            "binding_state": if continuation.is_some() { "recorded" } else { "awaiting-host-attestation" },
+            "host": outer_owner.map(|binding| binding.host),
+            "session_id_digest": continuation.map(|value| &value.session_binding_digest),
+        },
+        "next_action": status.status().next_action,
+        "retry_budget": {
+            "state": if continuation.is_some() { "configured" } else { "not-configured" },
+            "maximum_attempts": continuation.map(|value| value.max_retry_attempts),
+            "attempts_used": continuation.map(|value| value.attempts_used),
+            "remaining_attempts": continuation.map(|value| value.max_retry_attempts - value.attempts_used),
+            "retry_permitted": retry_permitted,
+        },
+        "cancel": {
+            "state": if status.status().state == RunState::Cancelled {
+                "cancelled"
+            } else if continuation.is_some_and(|value| value.cancel_requested) {
+                "cancel-requested"
+            } else {
+                "not-cancelled"
+            },
+            "user_interrupt_permitted": true,
+        },
+        "task_launch": "host-owned",
+        "spawned": false,
+    })
 }
 
 fn parse_checkpoint_arguments(arguments: &[String]) -> Result<CheckpointArguments, AdapterError> {
@@ -1641,6 +2018,7 @@ fn checkpoint_document(
             required_criteria: criteria.to_vec(),
             passed_criteria: request.passed_criteria.clone(),
             failed_criteria: request.failed_criteria.clone(),
+            blocked_criteria: request.blocked_criteria.clone(),
             active_roles: request.active_roles.clone(),
             next_action: request.next_action.clone(),
             latest_evidence: request.latest_evidence.clone(),
@@ -1655,6 +2033,7 @@ fn checkpoint_document(
             subagent_support: Some(binding.subagent_support),
             resume_note: request.resume_note.clone(),
             criterion_evidence: request.criterion_evidence.clone(),
+            continuation: request.continuation.clone(),
         },
         body,
     )
@@ -2774,9 +3153,10 @@ fn as_set(values: &[String]) -> BTreeSet<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        checkpoint, parse_resume_arguments, publish_parent_file, publish_parent_file_with_hook,
-        publish_parent_file_with_hooks, read_explicit_file_with_metadata_and_hooks, resume,
-        run_run, CheckpointArguments, DispatchIntent, FileSnapshot, ResumeArguments,
+        checkpoint, continuation_adapter, parse_resume_arguments, publish_parent_file,
+        publish_parent_file_with_hook, publish_parent_file_with_hooks,
+        read_explicit_file_with_metadata_and_hooks, resume, run_run, CheckpointArguments,
+        DispatchIntent, FileSnapshot, ResumeArguments,
     };
     #[cfg(unix)]
     use super::{read_explicit_file, PinnedTarget};
@@ -2790,9 +3170,46 @@ mod tests {
     use tempfile::TempDir;
 
     const CAPABILITY: &[u8] =
-        include_bytes!("../../../tests/fixtures/phase1/capabilities-codex-omx.json");
+        include_bytes!("../../../tests/fixtures/setup/capabilities-codex-omx.json");
     const ABSENT_CAPABILITY: &[u8] =
-        include_bytes!("../../../tests/fixtures/phase1/capabilities-absent.json");
+        include_bytes!("../../../tests/fixtures/setup/capabilities-absent.json");
+
+    #[test]
+    fn continuation_adapter_maps_three_host_native_owners_without_mutation() {
+        for (host, task_kind) in [
+            ("codex", "goal"),
+            ("claude", "task"),
+            ("antigravity", "task"),
+        ] {
+            let owner = json!({
+                "host": host,
+                "host_version": "fixture",
+                "surface": "cli",
+                "external_runtime": null,
+                "resolved_owner": "host-native",
+                "resolution_evidence_digest": format!("sha256:{}", "0".repeat(64)),
+                "subagent_support": "supported",
+            });
+            let adapter = continuation_adapter(Some(&owner));
+            assert_eq!(adapter["support"], "requires-host-capability");
+            assert_eq!(adapter["task_kind"], task_kind);
+            assert_eq!(adapter["stop_event"], "Stop");
+            assert_eq!(adapter["mutation"], false);
+        }
+        let external = json!({
+            "host": "codex",
+            "host_version": "fixture",
+            "surface": "cli",
+            "external_runtime": "omx",
+            "resolved_owner": "omx",
+            "resolution_evidence_digest": format!("sha256:{}", "0".repeat(64)),
+            "subagent_support": "supported",
+        });
+        assert_eq!(
+            continuation_adapter(Some(&external))["reason"],
+            "external-owner"
+        );
+    }
 
     fn canonical(path: &Path) -> PathBuf {
         path.canonicalize().expect("canonical path")
@@ -2880,6 +3297,7 @@ mod tests {
             "state": "executing",
             "passed_criteria": passed,
             "failed_criteria": [],
+            "blocked_criteria": [],
             "active_roles": ["reviewer"],
             "next_action": "continue",
             "latest_evidence": latest_evidence,
@@ -2913,6 +3331,7 @@ mod tests {
             "state": state,
             "passed_criteria": [],
             "failed_criteria": [],
+            "blocked_criteria": ["build", "tests"],
             "active_roles": ["reviewer"],
             "next_action": "continue",
             "latest_evidence": [],

@@ -14,4 +14,4 @@
 - Product decision: [Decision 안내](../decisions/README.md)
 - 개발 환경·명령: [Development guide](../guides/development.md)
 - 현재 qualification: [CURRENT](../state/CURRENT.md)
-- Release 계획: [`0.8.0` 시험 배포](../plans/active/release-0.8.0.md)
+- Release 계획: [`0.8.0` 시험 배포](../archive/plans/releases/0.8.0/release-0.8.0.md)

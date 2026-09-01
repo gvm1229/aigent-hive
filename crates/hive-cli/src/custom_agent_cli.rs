@@ -478,7 +478,7 @@ fn options(
         ));
     }
     let mut result = BTreeMap::new();
-    for pair in arguments.chunks_exact(2) {
+    for pair in arguments.as_chunks::<2>().0 {
         if !allowed.contains(&pair[0].as_str())
             || result.insert(pair[0].clone(), pair[1].clone()).is_some()
         {

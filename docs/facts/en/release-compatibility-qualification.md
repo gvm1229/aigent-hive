@@ -9,16 +9,16 @@ summary: "The published 0.9.5 release keeps compatibility qualification reproduc
 tags: [compatibility, migration, release, testing]
 aliases: ["Compatibility matrix gate"]
 sources:
-  - "repo:.github/workflows/release-runtime.yml#sha256:06e8657e24d89fd2b28d87208fc15eb76d4b60357c1dd9d3c9c7c315b563d350"
-  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:e00beda4bab8467a5fa667fdc1f2799403d216398e29597f67f937bf94d46e95"
+  - "repo:.github/workflows/release-runtime.yml#sha256:398fa5b776385221e2e98762895c46ff92d1a5b17b8cd8f414347b40e9c5303f"
+  - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
-reviewed_revision: "git:a49b4c9520a9099f41da1a70ea543eaf445e1053"
+reviewed_revision: "git:a520f8e5113c7fc02711eb5e5d8021605f7ee551"
 status: active
 ---
 
 # Release Compatibility Qualification
 
-`0.9.5` is published as npm `latest` and GitHub Release `v0.9.5`. macOS arm64 public installation
-passed isolated user setup, Codex install, validation, and stable update check. Native runtime uses
-`fetch-depth: 0` because release-version parity reads the prior patch tag. Windows x64 public stable
-installation and the repaired five-target native runtime run remain separate closure evidence.
+`0.9.5` is npm `latest` and GitHub Release `v0.9.5`. The macOS arm64 public installation passed.
+The Windows x64 public npm binary identity was verified. Isolated Codex `0.148.0` setup, install,
+validation, and stable update check passed. Full-history native runtime run
+`32118217691` passed all five targets.

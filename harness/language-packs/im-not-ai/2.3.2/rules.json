@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "pack_id": "im-not-ai-korean-core",
+  "pack_version": "2.3.2",
+  "transform_version": 1,
+  "profiles": {
+    "response": {"max_change_rate": 0.30, "max_touch_rate": 0.50, "rewrite": true},
+    "release-note": {"max_change_rate": 0.25, "max_touch_rate": 0.40, "rewrite": true},
+    "documentation": {"max_change_rate": 0.25, "max_touch_rate": 0.40, "rewrite": true},
+    "technical": {"max_change_rate": 0.20, "max_touch_rate": 0.30, "rewrite": true},
+    "verbatim": {"max_change_rate": 0.00, "max_touch_rate": 0.00, "rewrite": false}
+  },
+  "rules": [
+    {"id": "A-2", "category": "translationese", "severity": "S2", "kind": "paragraph-frequency", "terms": ["를 통해", "을 통해"], "threshold": 3},
+    {"id": "A-8", "category": "double-passive", "severity": "S1", "kind": "absolute", "terms": ["되어진", "보여진", "쓰여진", "잊혀진"], "threshold": 1},
+    {"id": "C-8", "category": "antithesis", "severity": "S2", "kind": "document-frequency", "terms": ["아니라"], "threshold": 2},
+    {"id": "D-2", "category": "inflation", "severity": "S1", "kind": "absolute", "terms": ["시사하는 바가 크다", "중요한 의미를 지닌다", "주목할 만하다"], "threshold": 1},
+    {"id": "E-2", "category": "rhythm", "severity": "S2", "kind": "ending-monotony", "terms": [], "threshold": 4},
+    {"id": "F-4", "category": "connective", "severity": "S2", "kind": "document-frequency", "terms": ["그러나", "따라서", "또한", "한편", "나아가", "특히"], "threshold": 5},
+    {"id": "H-1", "category": "nominalization", "severity": "S2", "kind": "suffix-density", "terms": ["성", "적", "화", "도", "력", "감", "원"], "threshold": 12},
+    {"id": "I-4", "category": "conclusion-deontic", "severity": "S2", "kind": "ending-scope", "terms": ["해야 한다", "필요하다"], "threshold": 2},
+    {"id": "R-1", "category": "repetition", "severity": "S2", "kind": "sentence-opening", "terms": [], "threshold": 3}
+  ],
+  "protected_spans": ["code", "command", "path", "url", "number", "date", "unit", "version", "proper-name", "quotation", "markdown-link"],
+  "prohibited_intents": ["watermark-evasion", "detector-optimization", "source-removal", "false-human-authorship"],
+  "allowed_hygiene": ["zero-width-removal", "bidi-control-removal", "unicode-nfc"]
+}

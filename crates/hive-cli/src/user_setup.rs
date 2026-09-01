@@ -9,6 +9,8 @@ use hive_projection::{
 };
 use hive_render::GlobalProjectPreferences;
 use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition};
+use hive_wiki::collection::{CollectionState, CollectionVisibility, USER_ROOT_COLLECTION_ID};
+use hive_wiki::store::RagStore;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, BTreeSet};
@@ -17,9 +19,11 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
 const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
+const USER_FEATURE_ANSWERS_RELATIVE: &str = ".hive/config/user-feature-answers.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";
 const LEGACY_USER_SETUP_REVIEW_RELATIVE: &str = ".hive/config/user-setup-review.yml";
 const LEGACY_USER_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
@@ -29,14 +33,16 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+const FEATURE_QUESTION_CLAIM_SECONDS: u64 = 15 * 60;
 const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 /// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
 /// as a new-setup default: every new setup answer selects its own threshold.
 const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
-const HISTORICAL_SKILL_RELEASES: [&str; 9] = [
-    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0",
+const HISTORICAL_SKILL_RELEASES: [&str; 14] = [
+    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
+    "0.9.2", "0.9.3", "0.9.4", "0.9.5",
 ];
 
 const USER_SETUP_USAGE: &str = "\
@@ -45,6 +51,8 @@ Configure or validate Aigent Hive user preferences.
 USAGE:
     hive setup --scope user --describe --output json
     hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
+    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
     hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
@@ -348,6 +356,36 @@ pub(crate) struct UserSetupConfig {
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum VectorFeatureAnswer {
+    Yes,
+    No,
+}
+
+/// Read the saved vector-search preference without changing setup or feature-answer state.
+pub(crate) fn vector_search_enabled(user_root: &Path) -> Result<bool, String> {
+    let root = super::user_install::open_user_root_for_setup(user_root)?;
+    let (_, answers) = load_feature_answers(&root).map_err(|_| {
+        "saved vector preference is invalid; inspect user feature answers".to_owned()
+    })?;
+    Ok(answers.vector_search == Some(VectorFeatureAnswer::Yes))
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserFeatureAnswers {
+    schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    vector_search: Option<VectorFeatureAnswer>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    introduced_in: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    answered_at_unix: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    question_claimed_at_unix: Option<u64>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UserSetupProgress {
@@ -492,10 +530,326 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments.first().map(String::as_str) == Some("--progress") {
         return run_progress(&arguments[1..]);
     }
+    if arguments.first().map(String::as_str) == Some("feature") {
+        return run_feature(&arguments[1..]);
+    }
     let result = parse(arguments)
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+#[derive(Clone, Copy, Debug)]
+enum FeatureAction {
+    Status,
+    Claim,
+    Answer(VectorFeatureAnswer),
+    Prompt,
+}
+
+#[derive(Debug)]
+struct FeatureArguments {
+    action: FeatureAction,
+    user_root: PathBuf,
+    root_cap: Dir,
+}
+
+fn run_feature(arguments: &[String]) -> ExitCode {
+    let result = parse_feature(arguments)
+        .and_then(|arguments| execute_feature(&arguments))
+        .unwrap_or_else(|error| failure(&error));
+    emit_action_result(&result)
+}
+
+fn parse_feature(arguments: &[String]) -> Result<FeatureArguments, SetupError> {
+    let action = arguments.first().ok_or_else(|| {
+        SetupError::Input("setup feature requires status, claim, answer, or prompt".to_owned())
+    })?;
+    let mut id = None;
+    let mut answer = None;
+    let mut output = None;
+    let mut user_root = None;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments
+            .get(index + 1)
+            .filter(|value| !value.starts_with("--"))
+            .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
+        let slot = match option {
+            "--id" => &mut id,
+            "--answer" => &mut answer,
+            "--output" => &mut output,
+            "--user-root" => &mut user_root,
+            _ => {
+                return Err(SetupError::Input(format!(
+                    "unknown setup feature option: {option}"
+                )))
+            }
+        };
+        if slot.replace(value.clone()).is_some() {
+            return Err(SetupError::Input(format!("duplicate option: {option}")));
+        }
+        index += 2;
+    }
+    if id.as_deref() != Some("vector-search") || output.as_deref() != Some("json") {
+        return Err(SetupError::Input(
+            "setup feature requires --id vector-search and --output json".to_owned(),
+        ));
+    }
+    let action = match action.as_str() {
+        "status" if answer.is_none() => FeatureAction::Status,
+        "claim" if answer.is_none() => FeatureAction::Claim,
+        "prompt" if answer.is_none() => FeatureAction::Prompt,
+        "answer" => match answer.as_deref() {
+            Some("yes") => FeatureAction::Answer(VectorFeatureAnswer::Yes),
+            Some("no") => FeatureAction::Answer(VectorFeatureAnswer::No),
+            _ => {
+                return Err(SetupError::Input(
+                    "vector-search answer requires yes or no".to_owned(),
+                ))
+            }
+        },
+        _ => {
+            return Err(SetupError::Input(
+                "invalid setup feature action or answer".to_owned(),
+            ))
+        }
+    };
+    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let root_cap =
+        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    Ok(FeatureArguments {
+        action,
+        user_root,
+        root_cap,
+    })
+}
+
+fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswers), SetupError> {
+    let existing = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_FEATURE_ANSWERS_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    let answers = match existing.as_deref() {
+        Some(bytes) => serde_yaml::from_slice(bytes).map_err(|error| {
+            SetupError::Verification(format!("invalid user feature answers: {error}"))
+        })?,
+        None => UserFeatureAnswers {
+            schema_version: 1,
+            vector_search: None,
+            introduced_in: None,
+            answered_at_unix: None,
+            question_claimed_at_unix: None,
+        },
+    };
+    if answers.schema_version != 1 {
+        return Err(SetupError::Verification(
+            "unsupported user feature answers schema".to_owned(),
+        ));
+    }
+    Ok((existing, answers))
+}
+
+fn feature_now_unix() -> Result<u64, SetupError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .map_err(|_| SetupError::Internal("system time is before the Unix epoch".to_owned()))
+}
+
+fn feature_claim_is_active(claimed_at: Option<u64>, now: u64) -> bool {
+    claimed_at.is_some_and(|claimed_at| {
+        claimed_at <= now && now.saturating_sub(claimed_at) < FEATURE_QUESTION_CLAIM_SECONDS
+    })
+}
+
+fn save_feature_answers(
+    root: &Dir,
+    existing: Option<&[u8]>,
+    answers: &UserFeatureAnswers,
+) -> Result<(), SetupError> {
+    let mut desired = "schema_version: ".to_owned();
+    desired.push_str(&answers.schema_version.to_string());
+    desired.push('\n');
+    if let Some(answer) = answers.vector_search {
+        let answer = match answer {
+            VectorFeatureAnswer::Yes => "yes",
+            VectorFeatureAnswer::No => "no",
+        };
+        desired.push_str("vector_search: \"");
+        desired.push_str(answer);
+        desired.push_str("\"\n");
+    }
+    if let Some(introduced_in) = &answers.introduced_in {
+        desired.push_str("introduced_in: \"");
+        desired.push_str(introduced_in);
+        desired.push_str("\"\n");
+    }
+    if let Some(answered_at_unix) = answers.answered_at_unix {
+        desired.push_str("answered_at_unix: ");
+        desired.push_str(&answered_at_unix.to_string());
+        desired.push('\n');
+    }
+    if let Some(question_claimed_at_unix) = answers.question_claimed_at_unix {
+        desired.push_str("question_claimed_at_unix: ");
+        desired.push_str(&question_claimed_at_unix.to_string());
+        desired.push('\n');
+    }
+    super::user_install::replace_user_setup_file(
+        root,
+        Path::new(USER_FEATURE_ANSWERS_RELATIVE),
+        existing,
+        Some(desired.as_bytes()),
+    )
+    .map_err(SetupError::Conflict)
+}
+
+fn approved_vector_scope(user_root: &Path) -> Vec<String> {
+    let mut collection_ids = vec![USER_ROOT_COLLECTION_ID.to_owned()];
+    let Ok(store) = RagStore::open(user_root) else {
+        return collection_ids;
+    };
+    let Ok(registry) = store.load_registry() else {
+        return collection_ids;
+    };
+    collection_ids.extend(
+        registry
+            .collections
+            .into_iter()
+            .filter(|collection| {
+                collection.state == CollectionState::Attached
+                    && collection.default_visibility == CollectionVisibility::Shared
+                    && collection.collection_id != USER_ROOT_COLLECTION_ID
+            })
+            .map(|collection| collection.collection_id),
+    );
+    collection_ids.sort();
+    collection_ids.dedup();
+    collection_ids
+}
+
+fn vector_setup_request_digest(collection_ids: &[String]) -> Result<String, SetupError> {
+    let bytes = serde_json::to_vec(&json!({
+        "schema_version": 1,
+        "feature": "vector-search",
+        "collections": collection_ids,
+        "excluded": ["project-private", "confidential", "newly-discovered"],
+    }))
+    .map_err(|error| {
+        SetupError::Internal(format!("cannot serialize vector setup request: {error}"))
+    })?;
+    Ok(sha256_digest(&bytes))
+}
+
+fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupError> {
+    let (existing, mut answers) = load_feature_answers(&arguments.root_cap)?;
+    let language = load_operational_config(&arguments.root_cap)?
+        .map_or(InterfaceLanguage::En, |config| config.interface_language);
+    let now = feature_now_unix()?;
+    let mut changed_paths = Vec::new();
+    let mut prompt = None;
+    let mut scope_collection_ids = Vec::new();
+    let mut setup_request_digest = None;
+    let mut question_required = false;
+    let (code, message) = match arguments.action {
+        FeatureAction::Status => (
+            "hive.user-feature-status",
+            "vector-search feature status inspected".to_owned(),
+        ),
+        FeatureAction::Claim if answers.vector_search.is_some() => (
+            "hive.user-feature-already-answered",
+            "vector-search onboarding question was already answered".to_owned(),
+        ),
+        FeatureAction::Claim if feature_claim_is_active(answers.question_claimed_at_unix, now) => (
+            "hive.user-feature-question-already-claimed",
+            "another session currently owns the vector-search onboarding question".to_owned(),
+        ),
+        FeatureAction::Claim => {
+            answers.question_claimed_at_unix = Some(now);
+            save_feature_answers(&arguments.root_cap, existing.as_deref(), &answers)?;
+            changed_paths.push(USER_FEATURE_ANSWERS_RELATIVE.to_owned());
+            question_required = true;
+            (
+                "hive.user-feature-question-claimed",
+                "vector-search onboarding question claimed for this session".to_owned(),
+            )
+        }
+        FeatureAction::Answer(answer) => {
+            answers.vector_search = Some(answer);
+            answers
+                .introduced_in
+                .get_or_insert_with(|| env!("CARGO_PKG_VERSION").to_owned());
+            answers.answered_at_unix = Some(now);
+            answers.question_claimed_at_unix = None;
+            save_feature_answers(&arguments.root_cap, existing.as_deref(), &answers)?;
+            changed_paths.push(USER_FEATURE_ANSWERS_RELATIVE.to_owned());
+            (
+                "hive.user-feature-answer-saved",
+                "vector-search feature answer saved".to_owned(),
+            )
+        }
+        FeatureAction::Prompt => {
+            if answers.vector_search != Some(VectorFeatureAnswer::Yes) {
+                return Err(SetupError::Conflict(
+                    "vector-search setup prompt requires a saved yes answer".to_owned(),
+                ));
+            }
+            scope_collection_ids = approved_vector_scope(&arguments.user_root);
+            let digest = vector_setup_request_digest(&scope_collection_ids)?;
+            prompt = Some(vector_setup_prompt(
+                language,
+                &scope_collection_ids,
+                &digest,
+            ));
+            setup_request_digest = Some(digest);
+            (
+                "hive.user-feature-prompt-ready",
+                "vector-search setup prompt prepared".to_owned(),
+            )
+        }
+    };
+    let answer = answers.vector_search.map(|value| match value {
+        VectorFeatureAnswer::Yes => "yes",
+        VectorFeatureAnswer::No => "no",
+    });
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "ManageHiveUserFeature",
+        status: "success",
+        exit_code: 0,
+        code,
+        message,
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "id":"vector-search",
+            "answer":answer,
+            "answered_at_unix":answers.answered_at_unix,
+            "question_required":question_required,
+            "question_pending":answer.is_none(),
+            "question_claim_active":feature_claim_is_active(answers.question_claimed_at_unix, now),
+            "prompt":prompt,
+            "scope_collection_ids":scope_collection_ids,
+            "setup_request_digest":setup_request_digest,
+            "actual_runtime_or_index_state":"separate; inspect with hive knowledge vector status",
+        })),
+    })
+}
+
+fn vector_setup_prompt(
+    language: InterfaceLanguage,
+    collection_ids: &[String],
+    setup_request_digest: &str,
+) -> String {
+    let scope = collection_ids.join(", ");
+    match language {
+        InterfaceLanguage::En => format!("Set up Aigent Hive semantic search only for this fixed approved collection list: [{scope}]. Setup request digest: {setup_request_digest}. Do not inspect or include project-private, confidential, or newly discovered collections. First run the Hive vector preview, show its exact downloads, storage paths, Python requirement, and consent digest. If a supported existing Python is unavailable, explain the manual prerequisite and stop without changing my answer. If the preview is valid and still matches this request digest, use its exact consent digest to enable vector search, refresh existing knowledge, rebuild only the approved collections with resumable time limits, then verify semantic search, canonical citations, and FTS fallback. Do not install Python, use provider APIs or credentials, create a background service, or change canonical Markdown."),
+        InterfaceLanguage::Ko => format!("다음 고정 승인 모음에만 Aigent Hive 의미 검색을 설정해줘: [{scope}]. 설정 요청 지문: {setup_request_digest}. 프로젝트 비공개·기밀·새로 발견한 모음은 읽거나 포함하지 마. 먼저 Hive 벡터 미리보기를 실행해 정확한 다운로드, 저장 경로, Python 조건, 동의 지문을 보여줘. 지원되는 기존 Python이 없으면 수동 준비 방법을 설명하고 내 답변은 바꾸지 말고 멈춰줘. 미리보기가 유효하고 이 설정 요청 지문과 일치하면 정확한 동의 지문으로 벡터 검색을 활성화하고, 기존 지식을 갱신한 뒤 승인된 모음만 시간 제한을 두고 재개 가능하게 생성해줘. 마지막으로 의미 검색, 정본 인용, FTS 대체 경로를 확인해줘. Python 자동 설치, 제공자 API·자격 증명 사용, 상시 서비스 생성, 정본 Markdown 변경은 하지 마."),
+    }
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
@@ -1443,13 +1797,13 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "project-setup",
             "code-polish",
             "research-best-practices",
-            "ralph-loop",
+            "verified-workflow",
             "prompt-refine",
             "knowledge-maintain",
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "usage-guard",
@@ -1462,13 +1816,13 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "project-setup",
             "code-polish",
             "research-best-practices",
-            "ralph-loop",
+            "verified-workflow",
             "prompt-refine",
             "knowledge-maintain",
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "run-handoff",
@@ -1488,7 +1842,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "usage-guard",
             "product-update",
         ]),
@@ -1981,7 +2335,7 @@ fn resolve_skills(
                     | "knowledge-recall"
                     | "knowledge-promote"
                     | "knowledge-maintain"
-                    | "knowledge-import"
+                    | "knowledge-scan"
             )
         });
     }
@@ -2704,14 +3058,17 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
             )
         }
     };
+    let directive_language = match config.interface_language {
+        InterfaceLanguage::En => crate::user_directives::UserDirectiveLanguage::En,
+        InterfaceLanguage::Ko => crate::user_directives::UserDirectiveLanguage::Ko,
+    };
     rendered.push_str(match config.interface_language {
-        InterfaceLanguage::En => {
-            "- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
-        }
-        InterfaceLanguage::Ko => {
-            "- `all todos`, `until completion`, `do not stop` 또는 같은 완료 요청: 범위 안 Agent 소유 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업이 남은 동안 계속 진행. 해당 작업이 남았다는 진행 보고로 task 종료 금지. 최종 응답 전 남은 항목을 `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, `blocked`로 분류. `agent-owned` 작업 `0건`일 때만 완료 표기.\n- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
-        }
+        InterfaceLanguage::En => "- Before the first ordinary Hive task after this instruction is installed, run `hive setup feature claim --id vector-search --user-root <user-root> --output json`. When `question_required` is true, ask once whether the user wants semantic search. Explain that exact search remains available, initial setup can take time, and Windows measured runtime needs about 376MB. When another session holds an unanswered claim, do not ask a duplicate question. For yes, save `--answer yes`, then run `hive setup feature prompt --id vector-search --user-root <user-root> --output json` and provide its `prompt` field for a new session. Preserve its fixed collection list and `setup_request_digest`; a changed scope requires a new preview. For no, save `--answer no` and do not ask again unless vector setup is explicitly requested. Never treat no answer or cancellation as no.\n",
+        InterfaceLanguage::Ko => "- 이 지침 설치 뒤 첫 일반 Hive 작업 전 `hive setup feature claim --id vector-search --user-root <user-root> --output json` 실행. `question_required`가 true이면 의미 검색 사용 의사를 한 번 질문. 기존 정확 검색은 유지되고 처음 준비에는 시간이 걸릴 수 있으며 Windows 실측 실행 환경은 약 376MB라고 설명. 다른 세션이 아직 답하지 않은 질문을 맡고 있으면 중복 질문 금지. 예면 `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json` 뒤 `hive setup feature prompt --id vector-search --user-root <user-root> --output json`의 `prompt` 항목을 새 세션 안내문으로 제공. 고정 모음 목록과 `setup_request_digest` 보존, 대상이 달라지면 새 미리보기 필요. 아니요면 `--answer no`로 저장하고 사용자가 벡터 설정을 명시 요청하기 전 재질문 금지. 무응답·취소를 아니요로 기록 금지.\n",
     });
+    rendered.push_str(crate::user_directives::work_completion_block(
+        directive_language,
+    ));
     rendered.into_bytes()
 }
 
@@ -4303,7 +4660,7 @@ usage_guard:
             "Unless the user explicitly requests another language for the current prompt, write the prompt in English"
         ));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
-        assert!(english.contains("A progress report naming such work must not end the task"));
+        assert!(english.contains("a progress report is not closure"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
         config.interface_language = InterfaceLanguage::Ko;
@@ -4315,7 +4672,7 @@ usage_guard:
         assert!(korean
             .contains("현재 프롬프트 언어를 사용자가 명시하지 않은 경우 프롬프트는 영어로 작성"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
-        assert!(korean.contains("`agent-owned` 작업 `0건`일 때만 완료 표기"));
+        assert!(korean.contains("진행 보고를 closure로 사용 금지"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
     }
 
@@ -4332,6 +4689,155 @@ usage_guard:
         assert!(rendered.contains("- Daily update check: `enabled`"));
         assert!(rendered.contains("hive update --check --user-root <user-root> --output json"));
         assert!(rendered.contains("must never install"));
+    }
+
+    #[test]
+    fn vector_onboarding_guidance_is_localized_and_one_time() {
+        let mut config = valid_config();
+        let english = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+            .expect("English guidance");
+        assert!(english.contains("hive setup feature claim --id vector-search"));
+        assert!(english.contains("Never treat no answer or cancellation as no"));
+        assert!(vector_setup_prompt(
+            InterfaceLanguage::En,
+            &[USER_ROOT_COLLECTION_ID.to_owned()],
+            "sha256:request",
+        )
+        .contains("fixed approved collection list"));
+
+        config.interface_language = InterfaceLanguage::Ko;
+        let korean = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+            .expect("Korean guidance");
+        assert!(korean.contains("무응답·취소를 아니요로 기록 금지"));
+        assert!(vector_setup_prompt(
+            InterfaceLanguage::Ko,
+            &[USER_ROOT_COLLECTION_ID.to_owned()],
+            "sha256:request",
+        )
+        .contains("고정 승인 모음"));
+    }
+
+    fn feature_arguments(root: &Path, action: FeatureAction) -> FeatureArguments {
+        FeatureArguments {
+            action,
+            user_root: root.to_path_buf(),
+            root_cap: super::super::user_install::open_user_root_for_setup(root)
+                .expect("feature root"),
+        }
+    }
+
+    #[test]
+    fn vector_feature_claim_answer_and_prompt_preserve_the_one_time_contract() {
+        let root = tempfile::tempdir().expect("feature fixture");
+        let first_claim = execute_feature(&feature_arguments(root.path(), FeatureAction::Claim))
+            .expect("first claim");
+        assert_eq!(first_claim.code, "hive.user-feature-question-claimed");
+        assert_eq!(first_claim.changed_paths, [USER_FEATURE_ANSWERS_RELATIVE]);
+        let first_data = first_claim.data.expect("claim data");
+        assert_eq!(first_data["question_required"], true);
+        assert_eq!(first_data["question_pending"], true);
+
+        let concurrent_claim =
+            execute_feature(&feature_arguments(root.path(), FeatureAction::Claim))
+                .expect("concurrent claim result");
+        assert_eq!(
+            concurrent_claim.code,
+            "hive.user-feature-question-already-claimed"
+        );
+        assert_eq!(
+            concurrent_claim.data.expect("concurrent data")["question_required"],
+            false
+        );
+
+        let answer = execute_feature(&feature_arguments(
+            root.path(),
+            FeatureAction::Answer(VectorFeatureAnswer::Yes),
+        ))
+        .expect("yes answer");
+        assert_eq!(answer.code, "hive.user-feature-answer-saved");
+        let answer_data = answer.data.expect("answer data");
+        assert_eq!(answer_data["answer"], "yes");
+        assert!(answer_data["answered_at_unix"].as_u64().is_some());
+        assert_eq!(answer_data["question_claim_active"], false);
+
+        let prompt = execute_feature(&feature_arguments(root.path(), FeatureAction::Prompt))
+            .expect("prompt");
+        let prompt_data = prompt.data.expect("prompt data");
+        assert_eq!(prompt_data["scope_collection_ids"], json!(["user-root"]));
+        let digest = prompt_data["setup_request_digest"]
+            .as_str()
+            .expect("request digest");
+        assert!(digest.starts_with("sha256:"));
+        assert!(prompt_data["prompt"]
+            .as_str()
+            .expect("prompt text")
+            .contains(digest));
+
+        let no = execute_feature(&feature_arguments(
+            root.path(),
+            FeatureAction::Answer(VectorFeatureAnswer::No),
+        ))
+        .expect("explicit answer update");
+        assert_eq!(no.data.expect("no data")["answer"], "no");
+        let (_, saved) = load_feature_answers(
+            &super::super::user_install::open_user_root_for_setup(root.path())
+                .expect("saved feature root"),
+        )
+        .expect("saved answer");
+        assert_eq!(saved.vector_search, Some(VectorFeatureAnswer::No));
+        assert_eq!(
+            saved.introduced_in.as_deref(),
+            Some(env!("CARGO_PKG_VERSION"))
+        );
+        assert!(saved.answered_at_unix.is_some());
+        assert_eq!(saved.question_claimed_at_unix, None);
+    }
+
+    #[test]
+    fn vector_feature_claim_expires_without_identifying_a_host_session() {
+        assert!(feature_claim_is_active(
+            Some(100),
+            100 + FEATURE_QUESTION_CLAIM_SECONDS - 1
+        ));
+        assert!(!feature_claim_is_active(
+            Some(100),
+            100 + FEATURE_QUESTION_CLAIM_SECONDS
+        ));
+        assert!(!feature_claim_is_active(Some(101), 100));
+    }
+
+    #[test]
+    fn vector_feature_concurrent_claim_compare_and_swap_keeps_one_question_owner() {
+        let root = tempfile::tempdir().expect("concurrent claim fixture");
+        let capability = super::super::user_install::open_user_root_for_setup(root.path())
+            .expect("feature root");
+        let (before, original) = load_feature_answers(&capability).expect("initial answers");
+        let mut first = original.clone();
+        let mut second = original;
+        first.question_claimed_at_unix = Some(100);
+        second.question_claimed_at_unix = Some(101);
+
+        save_feature_answers(&capability, before.as_deref(), &first).expect("first claim write");
+        let error = save_feature_answers(&capability, before.as_deref(), &second)
+            .expect_err("second stale claim must not overwrite first claim");
+        assert_eq!(error.status(), "conflict");
+        let (_, saved) = load_feature_answers(&capability).expect("saved claim");
+        assert_eq!(saved.question_claimed_at_unix, Some(100));
+    }
+
+    #[test]
+    fn transfer_preference_errors_do_not_echo_invalid_values() {
+        let root = tempfile::tempdir().expect("preference fixture");
+        let config = root.path().join(".hive/config");
+        fs::create_dir_all(&config).expect("config directory");
+        let bytes = b"schema_version: 1\nvector_search: sensitive-value-fixture\n";
+        fs::write(config.join("user-feature-answers.yml"), bytes).expect("invalid fixture");
+        let error = vector_search_enabled(root.path()).expect_err("invalid preference");
+        assert!(!error.contains("sensitive-value-fixture"));
+        assert_eq!(
+            fs::read(config.join("user-feature-answers.yml")).unwrap(),
+            bytes
+        );
     }
 
     #[test]

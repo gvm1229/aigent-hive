@@ -6,6 +6,7 @@
 | --- | --- |
 | [Development](development.md) | Source dependency·build·test |
 | [Test lanes](test-lanes.md) | Python test 대장·lane·fixture 경계 |
+| [선택형 의미 검색](vector-search.md) | FTS·벡터 선택, 동의·생성·조회·복구 |
 | [Branching](branching-rules.md) | `develop`·`main` integration |
 | [Commit](commit-rules.md) | Task별 독립 commit |
 | [Installed usage guard](installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |

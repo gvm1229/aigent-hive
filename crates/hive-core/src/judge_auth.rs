@@ -469,7 +469,7 @@ fn decode_prefixed_hex<const N: usize>(value: &str) -> Result<[u8; N], JudgeAuth
         return Err(JudgeAuthError::InvalidEncoding);
     }
     let mut decoded = [0_u8; N];
-    for (index, pair) in encoded.as_bytes().chunks_exact(2).enumerate() {
+    for (index, pair) in encoded.as_bytes().as_chunks::<2>().0.iter().enumerate() {
         decoded[index] = hex_nibble(pair[0])? << 4 | hex_nibble(pair[1])?;
     }
     Ok(decoded)
@@ -767,40 +767,37 @@ mod tests {
     #[test]
     fn authenticated_critical_fixture_requires_all_distinct_signatures() {
         let package = JudgePackage::parse_json(include_bytes!(
-            "../../../tests/fixtures/phase5/judge/package-critical.json"
+            "../../../tests/fixtures/judge/package-critical.json"
         ))
         .expect("package");
         let assignment = JudgeAssignment::parse_json(
-            include_bytes!("../../../tests/fixtures/phase5/judge/assignment-critical.json"),
+            include_bytes!("../../../tests/fixtures/judge/assignment-critical.json"),
             &package,
         )
         .expect("assignment");
         let assignment_attestation = JudgeAttestation::parse_json(include_bytes!(
-            "../../../tests/fixtures/phase5/judge/assignment-critical-attestation.json"
+            "../../../tests/fixtures/judge/assignment-critical-attestation.json"
         ))
         .expect("assignment attestation");
         let verdicts = [
-            include_bytes!("../../../tests/fixtures/phase5/judge/verdict-critical-pass-a.json")
-                .as_slice(),
-            include_bytes!("../../../tests/fixtures/phase5/judge/verdict-critical-pass-b.json")
-                .as_slice(),
-            include_bytes!("../../../tests/fixtures/phase5/judge/verdict-critical-pass-c.json")
-                .as_slice(),
+            include_bytes!("../../../tests/fixtures/judge/verdict-critical-pass-a.json").as_slice(),
+            include_bytes!("../../../tests/fixtures/judge/verdict-critical-pass-b.json").as_slice(),
+            include_bytes!("../../../tests/fixtures/judge/verdict-critical-pass-c.json").as_slice(),
         ]
         .into_iter()
         .map(|bytes| JudgeVerdict::parse_json(bytes).expect("verdict"))
         .collect::<Vec<_>>();
         let attestations = [
             include_bytes!(
-                "../../../tests/fixtures/phase5/judge/verdict-critical-pass-a-attestation.json"
+                "../../../tests/fixtures/judge/verdict-critical-pass-a-attestation.json"
             )
             .as_slice(),
             include_bytes!(
-                "../../../tests/fixtures/phase5/judge/verdict-critical-pass-b-attestation.json"
+                "../../../tests/fixtures/judge/verdict-critical-pass-b-attestation.json"
             )
             .as_slice(),
             include_bytes!(
-                "../../../tests/fixtures/phase5/judge/verdict-critical-pass-c-attestation.json"
+                "../../../tests/fixtures/judge/verdict-critical-pass-c-attestation.json"
             )
             .as_slice(),
         ]
@@ -808,11 +805,11 @@ mod tests {
         .map(|bytes| Some(JudgeAttestation::parse_json(bytes).expect("attestation")))
         .collect::<Vec<_>>();
         let approval = HumanApproval::parse_json(include_bytes!(
-            "../../../tests/fixtures/phase5/judge/approval-critical.json"
+            "../../../tests/fixtures/judge/approval-critical.json"
         ))
         .expect("approval");
         let approval_attestation = JudgeAttestation::parse_json(include_bytes!(
-            "../../../tests/fixtures/phase5/judge/approval-critical-attestation.json"
+            "../../../tests/fixtures/judge/approval-critical-attestation.json"
         ))
         .expect("approval attestation");
         let root = critical_fixture_root();

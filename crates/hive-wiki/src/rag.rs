@@ -644,6 +644,620 @@ pub struct RetrievalResult {
     pub insufficient_budget: bool,
 }
 
+/// Untrusted nearest-neighbor identity; canonical text and authority are resolved locally.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticMatch {
+    pub chunk_id: String,
+    pub digest: String,
+    pub score: f64,
+}
+
+/// Complete, bounded authorized build input from one verified RAG generation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticCorpus {
+    pub generation: u64,
+    pub manifest_digest: String,
+    pub partition_digest: String,
+    pub authority_digest: String,
+    pub chunks: Vec<RetrievalHit>,
+}
+
+/// One physically isolated, authorized semantic search partition.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticPartition {
+    pub collection_id: String,
+    pub visibility: RagVisibility,
+}
+
+/// Content fingerprint for one authorized partition, independent of other collections.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticPartitionState {
+    pub partition: SemanticPartition,
+    pub digest: String,
+}
+
+/// Optimistic query frame. It contains no canonical text or unauthorized scope metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticSearchPlan {
+    pub manifest_digest: String,
+    pub partitions: Vec<SemanticPartitionState>,
+}
+
+fn semantic_row_digest(
+    id: &str,
+    digest: &str,
+    title: &str,
+    text: &str,
+) -> Result<String, RagError> {
+    serde_json::to_vec(&(id, digest, title, text))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint semantic input".to_owned()))
+}
+
+fn finish_partition_digest(
+    registry: &CollectionRegistry,
+    id: &str,
+    visibility: RagVisibility,
+    rows: &[String],
+) -> Result<String, RagError> {
+    let by_id = registry.by_id();
+    let collection = by_id
+        .get(id)
+        .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+    serde_json::to_vec(&("hive-vector-partition-v1", collection, visibility, rows))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint semantic partition".to_owned()))
+}
+
+fn has_partition_digest_cache(connection: &Connection) -> Result<bool, RagError> {
+    connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='semantic_partition_digests_v1')",
+        [], |row| row.get(0),
+    ).map_err(sqlite_error)
+}
+
+fn partition_authority_digest(registry: &CollectionRegistry, id: &str) -> Result<String, RagError> {
+    let record = registry
+        .collections
+        .iter()
+        .find(|record| record.collection_id == id)
+        .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+    serde_json::to_vec(record)
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint collection authority".to_owned()))
+}
+
+fn rebuild_partition_digest_cache(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+) -> Result<(), RagError> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS semantic_partition_digests_v1(
+            collection_id TEXT NOT NULL, visibility TEXT NOT NULL, digest TEXT NOT NULL, authority_digest TEXT NOT NULL,
+            PRIMARY KEY(collection_id,visibility));
+         DELETE FROM semantic_partition_digests_v1;",
+        )
+        .map_err(sqlite_error)?;
+    let mut statement = connection
+        .prepare(
+            "SELECT collection_id,visibility,chunk_id,digest,title,text FROM chunks
+         ORDER BY collection_id,visibility,chunk_id",
+        )
+        .map_err(sqlite_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(sqlite_error)?;
+    let mut groups: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+    for row in rows {
+        let (collection, visibility, id, digest, title, text) = row.map_err(sqlite_error)?;
+        groups
+            .entry((collection, visibility))
+            .or_default()
+            .push(semantic_row_digest(&id, &digest, &title, &text)?);
+    }
+    for ((collection, visibility), rows) in groups {
+        let digest = finish_partition_digest(
+            registry,
+            &collection,
+            RagVisibility::parse(&visibility)?,
+            &rows,
+        )?;
+        connection
+            .execute(
+                "INSERT INTO semantic_partition_digests_v1 VALUES (?1,?2,?3,?4)",
+                params![
+                    collection,
+                    visibility,
+                    digest,
+                    partition_authority_digest(registry, &collection)?
+                ],
+            )
+            .map_err(sqlite_error)?;
+    }
+    Ok(())
+}
+
+pub(crate) fn semantic_corpus_digest(
+    registry: &CollectionRegistry,
+    id: &str,
+    visibility: RagVisibility,
+    hits: &[RetrievalHit],
+) -> Result<String, RagError> {
+    let mut hits = hits.iter().collect::<Vec<_>>();
+    hits.sort_by(|left, right| left.chunk_id.cmp(&right.chunk_id));
+    let rows = hits
+        .iter()
+        .map(|hit| semantic_row_digest(&hit.chunk_id, &hit.digest, &hit.title, &hit.text))
+        .collect::<Result<Vec<_>, _>>()?;
+    finish_partition_digest(registry, id, visibility, &rows)
+}
+
+pub(crate) fn canonical_partition_digest(
+    snapshot: &RagSnapshot,
+    id: &str,
+    visibility: RagVisibility,
+) -> Result<String, RagError> {
+    let collection_ids = snapshot
+        .registry
+        .collections
+        .iter()
+        .map(|item| item.collection_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let mut chunks = Vec::new();
+    for document in snapshot
+        .documents
+        .iter()
+        .filter(|item| item.collection_id == id && item.visibility == visibility)
+    {
+        validate_document(document, &collection_ids)?;
+        chunks.extend(document_chunks(document));
+    }
+    for claim in snapshot.claims.iter().filter(|item| {
+        item.collection_id == id
+            && item.visibility == visibility
+            && item.status != AssertionStatus::Superseded
+    }) {
+        validate_claim(claim)?;
+        chunks.extend(claim_chunks(claim));
+    }
+    chunks.sort_by(|left, right| left.chunk_id.cmp(&right.chunk_id));
+    let rows = chunks
+        .iter()
+        .map(|chunk| semantic_row_digest(&chunk.chunk_id, &chunk.digest, &chunk.title, &chunk.text))
+        .collect::<Result<Vec<_>, _>>()?;
+    finish_partition_digest(&snapshot.registry, id, visibility, &rows)
+}
+
+/// Enumerate only partitions visible to the current request, without exposing other scopes.
+///
+/// # Errors
+/// Rejects stale indexes, invalid scope, and unverified collection authority.
+pub fn semantic_partitions_serialized(
+    bytes: &[u8],
+    manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartition>, RagError> {
+    validate_retrieval_request(request)?;
+    validate_serialized_index(bytes, manifest)?;
+    let connection = deserialize_connection(bytes)?;
+    let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
+    semantic_partitions_from_connection(&connection, &registry, request)
+}
+
+fn semantic_partitions_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartition>, RagError> {
+    let scope = resolve_scope(registry, request)?;
+    let by_id = registry.by_id();
+    let mut statement = connection.prepare(
+        "SELECT DISTINCT collection_id,visibility FROM chunks ORDER BY collection_id,visibility"
+    ).map_err(sqlite_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(sqlite_error)?;
+    let mut partitions = Vec::new();
+    for row in rows {
+        let (id, visibility) = row.map_err(sqlite_error)?;
+        let visibility = RagVisibility::parse(&visibility)?;
+        let collection = by_id
+            .get(id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if partition_is_visible(&id, visibility, collection, &scope, request) {
+            partitions.push(SemanticPartition {
+                collection_id: id,
+                visibility,
+            });
+        }
+    }
+    Ok(partitions)
+}
+
+/// Read authorized input fingerprints without depending on another collection's generation.
+///
+/// # Errors
+/// Rejects invalid requests, index corruption, and unauthorized or malformed scope metadata.
+pub fn semantic_partition_states_serialized(
+    bytes: &[u8],
+    manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartitionState>, RagError> {
+    validate_retrieval_request(request)?;
+    PreparedRagIndex::from_serialized(bytes, manifest, registry)?.semantic_partition_states(request)
+}
+
+fn semantic_partition_states_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartitionState>, RagError> {
+    let partitions = semantic_partitions_from_connection(connection, registry, request)?;
+    // The complete SQLite bytes were authenticated above. Scope authority still comes
+    // from the existing chunks/registry resolver, never from this optional derived cache.
+    if has_partition_digest_cache(connection)? {
+        let mut cached = Vec::new();
+        let mut same_authority = true;
+        for partition in &partitions {
+            let (digest, authority): (String, String) = connection.query_row(
+                "SELECT digest,authority_digest FROM semantic_partition_digests_v1 WHERE collection_id=?1 AND visibility=?2",
+                params![partition.collection_id, partition.visibility.as_str()], |row| Ok((row.get(0)?,row.get(1)?)),
+            ).map_err(sqlite_error)?;
+            validate_sha256("cached semantic partition digest", &digest)?;
+            validate_sha256("cached semantic authority digest", &authority)?;
+            same_authority &=
+                authority == partition_authority_digest(registry, &partition.collection_id)?;
+            cached.push(SemanticPartitionState {
+                partition: partition.clone(),
+                digest,
+            });
+        }
+        if same_authority {
+            return Ok(cached);
+        }
+        // Registry projection verification does not bind every location field. Recompute
+        // with the current full record after relocation; never return stale authority.
+    }
+    let mut statement=connection.prepare("SELECT chunk_id,digest,title,text FROM chunks WHERE collection_id=?1 AND visibility=?2 ORDER BY chunk_id").map_err(sqlite_error)?;
+    let mut result = Vec::new();
+    for partition in partitions {
+        let rows = statement
+            .query_map(
+                params![partition.collection_id, partition.visibility.as_str()],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
+                    ))
+                },
+            )
+            .map_err(sqlite_error)?;
+        let mut digests = Vec::new();
+        for row in rows {
+            let (id, digest, title, text) = row.map_err(sqlite_error)?;
+            digests.push(semantic_row_digest(&id, &digest, &title, &text)?);
+        }
+        let digest = finish_partition_digest(
+            registry,
+            &partition.collection_id,
+            partition.visibility,
+            &digests,
+        )?;
+        result.push(SemanticPartitionState { partition, digest });
+    }
+    Ok(result)
+}
+
+/// Fixed semantic share selected on the unchanged original fixture and independent holdout.
+pub const SEMANTIC_FUSION_WEIGHT: f64 = 0.75;
+
+/// Ordering can preserve literal FTS results without changing the weighted scores.
+pub const SEMANTIC_RANKING_POLICY: &str = "literal-fts-order-v1";
+
+/// One fusion result and the ordering policy actually used for this query.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SemanticFusionResult {
+    /// Ranked, budgeted results with their original canonical citations.
+    pub result: RetrievalResult,
+    /// True only when literal lookup evidence selected FTS order preservation.
+    pub fts_order_preserved: bool,
+}
+
+/// Recognize explicit lookup evidence only in authorized, validated lexical candidates.
+/// A literal occurrence is not proof that its surrounding statement is true.
+#[must_use]
+pub fn literal_query_matches(query: &str, exact_lookup: bool, fields: &[&str]) -> bool {
+    let original = query.trim();
+    let quoted = original
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .or_else(|| {
+            original
+                .strip_prefix('\'')
+                .and_then(|s| s.strip_suffix('\''))
+        });
+    let query = folded_alias(quoted.unwrap_or(original));
+    let tokens = search_tokens(&query);
+    if tokens.is_empty() {
+        return false;
+    }
+    if exact_lookup {
+        return true;
+    }
+    let scalar = !query.chars().any(char::is_whitespace)
+        && (query.chars().all(char::is_numeric)
+            || query.chars().any(|c| c == '_' || structured_separator(c)));
+    let numbered_phrase = quoted.is_none()
+        && query.split_whitespace().count() > 1
+        && query.split_whitespace().any(numbered_literal_token);
+    if scalar || numbered_phrase {
+        let query = if numbered_phrase {
+            query.split_whitespace().collect::<Vec<_>>().join(" ")
+        } else {
+            query
+        };
+        return fields.iter().any(|field| {
+            let field = folded_alias(field);
+            let field = if numbered_phrase {
+                field.split_whitespace().collect::<Vec<_>>().join(" ")
+            } else {
+                field
+            };
+            field.match_indices(&query).any(|(start, _)| {
+                !literal_continues(field[..start].chars().rev(), true)
+                    && !literal_continues(field[start + query.len()..].chars(), false)
+            })
+        });
+    }
+    (quoted.is_some() || tokens.len() >= 3)
+        && fields.iter().any(|field| {
+            search_tokens(field)
+                .windows(tokens.len())
+                .any(|part| part == tokens.as_slice())
+        })
+}
+
+fn numbered_literal_token(token: &str) -> bool {
+    token.chars().all(char::is_numeric)
+        || (token.chars().any(char::is_numeric)
+            && token.chars().any(|c| c == '_' || structured_separator(c))
+            && token
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || structured_separator(c)))
+}
+
+fn structured_separator(c: char) -> bool {
+    matches!(
+        c,
+        '.' | '-' | '+' | '/' | '\\' | ':' | '@' | '#' | '%' | '−'
+    )
+}
+
+fn literal_continues(mut neighbor: impl Iterator<Item = char>, before: bool) -> bool {
+    let word = |c: char| c.is_alphanumeric() || c == '_';
+    neighbor.next().is_some_and(|c| {
+        word(c)
+            || (structured_separator(c)
+                && (c != '.'
+                    || before
+                    || neighbor
+                        .next()
+                        .is_some_and(|next| word(next) || structured_separator(next))))
+    })
+}
+
+/// Normalize one authorized candidate lane within its current query, never across queries.
+///
+/// # Errors
+/// Rejects nonfinite scores or an overflowing score range.
+pub fn normalize_fusion_scores(scores: &[f64]) -> Result<Vec<f64>, RagError> {
+    if scores.iter().any(|score| !score.is_finite()) {
+        return Err(RagError::InvalidInput("invalid fusion score".to_owned()));
+    }
+    if scores.is_empty() {
+        return Ok(Vec::new());
+    }
+    let minimum = scores.iter().copied().fold(f64::INFINITY, f64::min);
+    let maximum = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let range = maximum - minimum;
+    if !range.is_finite() {
+        return Err(RagError::InvalidInput(
+            "fusion score range overflows".to_owned(),
+        ));
+    }
+    Ok(scores
+        .iter()
+        .map(|score| {
+            if range > 0.0 {
+                (score - minimum) / range
+            } else {
+                1.0
+            }
+        })
+        .collect())
+}
+
+/// Fuse already revalidated candidates with query-local normalized lexical and semantic scores.
+///
+/// # Errors
+/// Rejects mixed generations, duplicate identities, and contradictory canonical citations.
+pub fn fuse_semantic_results(
+    request: &RetrievalRequest,
+    lexical: RetrievalResult,
+    semantic: &RetrievalResult,
+) -> Result<RetrievalResult, RagError> {
+    fuse_semantic_results_with_policy(request, lexical, semantic).map(|fusion| fusion.result)
+}
+
+/// Fuse revalidated candidates and report whether literal FTS order was preserved.
+///
+/// # Errors
+/// Rejects invalid requests, duplicate identities and contradictory citations before routing.
+pub fn fuse_semantic_results_with_policy(
+    request: &RetrievalRequest,
+    lexical: RetrievalResult,
+    semantic: &RetrievalResult,
+) -> Result<SemanticFusionResult, RagError> {
+    validate_retrieval_request(request)?;
+    if lexical.generation != semantic.generation
+        || lexical.manifest_digest != semantic.manifest_digest
+    {
+        return Err(RagError::RepairRequired(
+            "search generations changed during fusion".to_owned(),
+        ));
+    }
+    let mut candidates: BTreeMap<String, (RetrievalHit, f64, u8)> = BTreeMap::new();
+    for (mask, hits) in [(1_u8, &lexical.hits), (2_u8, &semantic.hits)] {
+        let scores =
+            normalize_fusion_scores(&hits.iter().map(|hit| hit.score).collect::<Vec<_>>())?;
+        let weight = if mask == 2 {
+            SEMANTIC_FUSION_WEIGHT
+        } else {
+            1.0 - SEMANTIC_FUSION_WEIGHT
+        };
+        let mut seen = BTreeSet::new();
+        for (score, hit) in scores.into_iter().zip(hits) {
+            if !seen.insert(&hit.chunk_id) || !hit.score.is_finite() {
+                return Err(RagError::InvalidInput(
+                    "invalid fusion candidate".to_owned(),
+                ));
+            }
+            let entry = candidates
+                .entry(hit.chunk_id.clone())
+                .or_insert_with(|| (hit.clone(), 0.0, 0));
+            let mut identity = hit.clone();
+            identity.score = entry.0.score;
+            identity.matched_field.clone_from(&entry.0.matched_field);
+            identity.text.clone_from(&entry.0.text);
+            if identity != entry.0
+                || !hit.untrusted_content
+                || !(entry.0.text.starts_with(&hit.text) || hit.text.starts_with(&entry.0.text))
+            {
+                return Err(RagError::RepairRequired(
+                    "fusion citation changed".to_owned(),
+                ));
+            }
+            // Prefer the complete canonical text over a budget-truncated copy of the same item.
+            if hit.text.len() > entry.0.text.len() {
+                entry.0.text.clone_from(&hit.text);
+            }
+            entry.1 += weight * score;
+            entry.2 |= mask;
+        }
+    }
+    let (ordered, fts_order_preserved) =
+        order_fusion_candidates(&request.query, &lexical.hits, candidates);
+    let mut result = RetrievalResult {
+        generation: lexical.generation,
+        manifest_digest: lexical.manifest_digest,
+        hits: Vec::new(),
+        returned_bytes: 0,
+        insufficient_budget: false,
+    };
+    for (mut hit, score, mask) in ordered {
+        if result.hits.len() == request.top_k {
+            result.insufficient_budget = true;
+            break;
+        }
+        let (text, truncated) = truncate_utf8(
+            &hit.text,
+            request.byte_budget.saturating_sub(result.returned_bytes),
+        );
+        if text.is_empty() {
+            result.insufficient_budget = true;
+            break;
+        }
+        result.returned_bytes += text.len();
+        hit.text = text;
+        hit.score = score;
+        if mask == 3 {
+            "hybrid".clone_into(&mut hit.matched_field);
+        }
+        result.hits.push(hit);
+        if truncated {
+            result.insufficient_budget = true;
+            break;
+        }
+    }
+    result.insufficient_budget |= lexical.insufficient_budget || semantic.insufficient_budget;
+    Ok(SemanticFusionResult {
+        result,
+        fts_order_preserved,
+    })
+}
+
+type FusionCandidate = (RetrievalHit, f64, u8);
+
+fn order_fusion_candidates(
+    query: &str,
+    lexical: &[RetrievalHit],
+    candidates: BTreeMap<String, FusionCandidate>,
+) -> (Vec<FusionCandidate>, bool) {
+    let fts_order_preserved = lexical.iter().any(|hit| {
+        let complete = &candidates[&hit.chunk_id].0;
+        literal_query_matches(
+            query,
+            hit.matched_field == "alias" || folded_alias(&hit.item_id) == folded_alias(query),
+            &[&hit.item_id, &hit.title, &complete.text],
+        )
+    });
+    let lexical_order = if fts_order_preserved {
+        lexical
+            .iter()
+            .enumerate()
+            .map(|(index, hit)| (hit.chunk_id.clone(), index))
+            .collect::<BTreeMap<_, _>>()
+    } else {
+        BTreeMap::new()
+    };
+    let mut ordered = candidates.into_values().collect::<Vec<_>>();
+    if fts_order_preserved {
+        for (hit, _, _) in &mut ordered {
+            if let Some(&index) = lexical_order.get(&hit.chunk_id) {
+                // A longer semantic copy must not consume another protected FTS hit's budget.
+                hit.text.clone_from(&lexical[index].text);
+            }
+        }
+    }
+    ordered.sort_by(|left, right| {
+        match (
+            lexical_order.get(&left.0.chunk_id),
+            lexical_order.get(&right.0.chunk_id),
+        ) {
+            (Some(a), Some(b)) => return a.cmp(b),
+            (Some(_), None) => return Ordering::Less,
+            (None, Some(_)) => return Ordering::Greater,
+            (None, None) => {}
+        }
+        right
+            .1
+            .total_cmp(&left.1)
+            .then_with(|| left.0.chunk_id.cmp(&right.0.chunk_id))
+    });
+    (ordered, fts_order_preserved)
+}
+
 /// Explicit request for an idempotent remember operation.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -1054,6 +1668,7 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
             )
             .map_err(sqlite_error)?;
     }
+    rebuild_partition_digest_cache(&transaction, &canonical.registry)?;
     transaction.commit().map_err(sqlite_error)?;
     verify_projection(&connection, &manifest, &canonical.registry, chunks.len())?;
     let sqlite_bytes = connection
@@ -1197,6 +1812,7 @@ pub fn build_incremental_remote_rag_index(
             ],
         )
         .map_err(sqlite_error)?;
+    rebuild_partition_digest_cache(&transaction, &canonical.registry)?;
     transaction.commit().map_err(sqlite_error)?;
     let chunk_count = canonical
         .documents
@@ -1267,6 +1883,52 @@ impl PreparedRagIndex {
         validate_retrieval_request(request)?;
         retrieve_from_connection(&self.connection, &self.manifest, &self.registry, request)
     }
+
+    /// Read authorized partition metadata from this already authenticated generation.
+    ///
+    /// # Errors
+    /// Rejects invalid requests, unauthorized scope metadata, and malformed cached digests.
+    pub fn semantic_partition_states(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<Vec<SemanticPartitionState>, RagError> {
+        validate_retrieval_request(request)?;
+        semantic_partition_states_from_connection(&self.connection, &self.registry, request)
+    }
+
+    /// Extract one bounded corpus with this request's explicit scope authority.
+    ///
+    /// # Errors
+    /// Rejects invalid or unauthorized requests and oversized corpora. The store must
+    /// check live canonical freshness and consume build approval before calling this method.
+    pub fn semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+    ) -> Result<Vec<RetrievalHit>, RagError> {
+        validate_retrieval_request(request)?;
+        semantic_corpus_from_connection(&self.connection, &self.registry, request, visibility)
+    }
+
+    /// Rehydrate candidates in this same authenticated generation with fresh request authority.
+    ///
+    /// # Errors
+    /// Rejects invalid, duplicate, stale, or unauthorized candidates and enforces query budgets.
+    /// The store caller remains responsible for final live canonical validation.
+    pub fn semantic_matches(
+        &self,
+        request: &RetrievalRequest,
+        matches: &[SemanticMatch],
+    ) -> Result<RetrievalResult, RagError> {
+        validate_semantic_candidates(request, matches)?;
+        semantic_matches_from_connection(
+            &self.connection,
+            &self.manifest,
+            &self.registry,
+            request,
+            matches,
+        )
+    }
 }
 
 /// Retrieve ranked chunks from serialized disposable index bytes.
@@ -1290,6 +1952,223 @@ pub fn retrieve_serialized(
     let connection = deserialize_connection(sqlite_bytes)?;
     let canonical_registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
     retrieve_from_connection(&connection, expected_manifest, &canonical_registry, request)
+}
+
+const SEMANTIC_COLUMNS: &str = "c.chunk_id, c.item_kind, c.item_id, c.collection_id,
+    c.title, c.text, c.locator, c.digest, c.visibility, c.language, c.tags, c.aliases,
+    c.claim_kind, c.assertion_status, c.scan_metadata_json, c.replacement, 0.0";
+
+/// Export one explicitly selected visibility partition for an approved local index build.
+///
+/// # Errors
+/// Rejects invalid snapshots, implicit collection selection, absent confidential authority,
+/// and corpora above the bounded build limit. No query or source bytes are persisted here.
+pub fn semantic_corpus_serialized(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    visibility: RagVisibility,
+) -> Result<Vec<RetrievalHit>, RagError> {
+    validate_retrieval_request(request)?;
+    PreparedRagIndex::from_serialized(sqlite_bytes, expected_manifest, registry)?
+        .semantic_corpus(request, visibility)
+}
+
+fn semantic_corpus_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    visibility: RagVisibility,
+) -> Result<Vec<RetrievalHit>, RagError> {
+    let scope = resolve_scope(registry, request)?;
+    let target = scope
+        .target_collection_id
+        .as_deref()
+        .filter(|_| scope.explicit_target)
+        .ok_or_else(|| {
+            RagError::InvalidInput("semantic build requires an explicit collection".to_owned())
+        })?;
+    if visibility == RagVisibility::Confidential
+        && request.confidential_collection_id.as_deref() != Some(target)
+    {
+        return Err(RagError::InvalidInput(
+            "confidential build requires current action authority".to_owned(),
+        ));
+    }
+    let mut statement = connection.prepare(&format!(
+        "SELECT {SEMANTIC_COLUMNS} FROM chunks c WHERE c.collection_id=?1 AND c.visibility=?2 ORDER BY c.chunk_id LIMIT 50001"
+    )).map_err(sqlite_error)?;
+    let rows = statement
+        .query_map(params![target, visibility.as_str()], candidate_from_row)
+        .map_err(sqlite_error)?;
+    let by_id = registry.by_id();
+    let mut hits = Vec::new();
+    let mut bytes = 0_usize;
+    for row in rows {
+        let candidate = row.map_err(sqlite_error)?;
+        let collection = by_id
+            .get(candidate.collection_id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if !is_visible(&candidate, collection, &scope, request) {
+            return Err(RagError::InvalidInput(
+                "semantic corpus exceeds authorized scope".to_owned(),
+            ));
+        }
+        bytes = bytes.saturating_add(candidate.text.len());
+        if hits.len() >= 50_000 || bytes > 256 * 1024 * 1024 {
+            return Err(RagError::InvalidInput(
+                "semantic corpus exceeds build limits".to_owned(),
+            ));
+        }
+        hits.push(semantic_hit(connection, candidate, 0.0)?);
+    }
+    Ok(hits)
+}
+
+/// Rehydrate untrusted vector matches from the current authorized canonical projection.
+///
+/// # Errors
+/// Rejects stale snapshots, malformed or duplicate matches, and stale returned identities.
+/// Unauthorized identities are dropped before their text, sources, or metadata are returned.
+pub fn semantic_matches_serialized(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<RetrievalResult, RagError> {
+    validate_semantic_candidates(request, matches)?;
+    let prepared = PreparedRagIndex::from_serialized(sqlite_bytes, expected_manifest, registry)?;
+    semantic_matches_from_connection(
+        &prepared.connection,
+        &prepared.manifest,
+        &prepared.registry,
+        request,
+        matches,
+    )
+}
+
+fn validate_semantic_candidates(
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<(), RagError> {
+    validate_retrieval_request(request)?;
+    if matches.len() > 1000 {
+        return Err(RagError::InvalidInput(
+            "too many semantic matches".to_owned(),
+        ));
+    }
+    let mut seen = BTreeSet::new();
+    for item in matches {
+        validate_bounded_text("semantic chunk_id", &item.chunk_id, 256)?;
+        validate_sha256("semantic digest", &item.digest)?;
+        if !item.score.is_finite() || !seen.insert(&item.chunk_id) {
+            return Err(RagError::InvalidInput(
+                "invalid semantic score or duplicate identity".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn semantic_matches_from_connection(
+    connection: &Connection,
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<RetrievalResult, RagError> {
+    let scope = resolve_scope(registry, request)?;
+    let by_id = registry.by_id();
+    let mut statement = connection
+        .prepare(&format!(
+            "SELECT {SEMANTIC_COLUMNS} FROM chunks c WHERE c.chunk_id=?1"
+        ))
+        .map_err(sqlite_error)?;
+    let mut candidates = Vec::new();
+    for item in matches {
+        let mut rows = statement
+            .query_map([&item.chunk_id], candidate_from_row)
+            .map_err(sqlite_error)?;
+        let Some(candidate) = rows.next().transpose().map_err(sqlite_error)? else {
+            return Err(RagError::RepairRequired(
+                "semantic chunk no longer exists".to_owned(),
+            ));
+        };
+        let collection = by_id
+            .get(candidate.collection_id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if !is_visible(&candidate, collection, &scope, request) {
+            continue;
+        }
+        if candidate.digest != item.digest {
+            return Err(RagError::RepairRequired(
+                "semantic match is stale".to_owned(),
+            ));
+        }
+        candidates.push((candidate, item.score));
+    }
+    let mut hits = Vec::new();
+    let mut returned_bytes = 0_usize;
+    let mut insufficient_budget = false;
+    for (candidate, score) in candidates {
+        if hits.len() == request.top_k || returned_bytes == request.byte_budget {
+            insufficient_budget = true;
+            break;
+        }
+        let mut hit = semantic_hit(connection, candidate, score)?;
+        let (text, truncated) = truncate_utf8(
+            &hit.text,
+            request.byte_budget.saturating_sub(returned_bytes),
+        );
+        if text.is_empty() {
+            insufficient_budget = true;
+            break;
+        }
+        returned_bytes += text.len();
+        hit.text = text;
+        hits.push(hit);
+        if truncated {
+            insufficient_budget = true;
+            break;
+        }
+    }
+    Ok(RetrievalResult {
+        generation: expected_manifest.generation,
+        manifest_digest: expected_manifest.logical_digest.clone(),
+        hits,
+        returned_bytes,
+        insufficient_budget,
+    })
+}
+
+fn semantic_hit(
+    connection: &Connection,
+    candidate: Candidate,
+    score: f64,
+) -> Result<RetrievalHit, RagError> {
+    let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
+    Ok(RetrievalHit {
+        chunk_id: candidate.chunk_id,
+        collection_id: candidate.collection_id,
+        item_id: candidate.item_id,
+        item_kind: candidate.item_kind,
+        locator: candidate.locator,
+        title: candidate.title,
+        text: candidate.text,
+        digest: candidate.digest,
+        visibility: candidate.visibility,
+        language: candidate.language,
+        claim_kind: candidate.claim_kind,
+        assertion_status: candidate.assertion_status,
+        scan_metadata: candidate.scan_metadata,
+        score,
+        matched_field: "vector".to_owned(),
+        sources,
+        replacement: candidate.replacement,
+        untrusted_content: true,
+    })
 }
 
 /// Recover the exact document records retained in a verified disposable index.
@@ -2273,6 +3152,8 @@ fn initialize_schema(connection: &Connection) -> Result<(), RagError> {
              );
              CREATE INDEX chunks_integrity
                  ON chunks(item_kind, item_id, collection_id, visibility, claim_kind, assertion_status);
+             CREATE INDEX chunks_partition
+                 ON chunks(collection_id, visibility, chunk_id);
              CREATE INDEX chunks_invalid_kind
                  ON chunks(item_kind) WHERE item_kind NOT IN ('document', 'claim');
              CREATE VIRTUAL TABLE chunks_fts USING fts5(
@@ -3097,6 +3978,21 @@ fn deserialize_connection(sqlite_bytes: &[u8]) -> Result<Connection, RagError> {
     Ok(connection)
 }
 
+pub(crate) fn semantic_target_collection(
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<String, RagError> {
+    let scope = resolve_scope(registry, request)?;
+    if !scope.explicit_target {
+        return Err(RagError::InvalidInput(
+            "semantic build requires an explicit collection".to_owned(),
+        ));
+    }
+    scope
+        .target_collection_id
+        .ok_or_else(|| RagError::InvalidInput("semantic collection is absent".to_owned()))
+}
+
 fn resolve_scope(
     registry: &CollectionRegistry,
     request: &RetrievalRequest,
@@ -3166,23 +4062,39 @@ fn is_visible(
     scope: &ResolvedScope,
     request: &RetrievalRequest,
 ) -> bool {
-    if !scope.explicit_target && candidate.collection_id == USER_ROOT_COLLECTION_ID {
-        return candidate.visibility != RagVisibility::Confidential
+    partition_is_visible(
+        &candidate.collection_id,
+        candidate.visibility,
+        collection,
+        scope,
+        request,
+    )
+}
+
+fn partition_is_visible(
+    collection_id: &str,
+    visibility: RagVisibility,
+    collection: &CollectionRecord,
+    scope: &ResolvedScope,
+    request: &RetrievalRequest,
+) -> bool {
+    if !scope.explicit_target && collection_id == USER_ROOT_COLLECTION_ID {
+        return visibility != RagVisibility::Confidential
             || request.confidential_collection_id.as_deref() == Some(USER_ROOT_COLLECTION_ID);
     }
-    if !scope.explicit_target && candidate.visibility == RagVisibility::Shared {
+    if !scope.explicit_target && visibility == RagVisibility::Shared {
         return true;
     }
     let Some(target) = &scope.target_collection_id else {
         return false;
     };
-    if candidate.collection_id != *target {
+    if collection_id != target {
         return false;
     }
     if collection.state == CollectionState::Detached && !scope.explicit_target {
         return false;
     }
-    match candidate.visibility {
+    match visibility {
         RagVisibility::Shared | RagVisibility::ProjectPrivate => true,
         RagVisibility::Confidential => {
             request.confidential_collection_id.as_deref() == Some(target.as_str())
@@ -3643,7 +4555,7 @@ fn validate_provenance(provenance: &ClaimProvenance) -> Result<(), RagError> {
     validate_sha256("provenance digest", &provenance.digest)
 }
 
-fn validate_retrieval_request(request: &RetrievalRequest) -> Result<(), RagError> {
+pub(crate) fn validate_retrieval_request(request: &RetrievalRequest) -> Result<(), RagError> {
     validate_bounded_text("query", &request.query, MAX_QUERY_BYTES)?;
     if request.query_expansions.len() > MAX_EXPANSIONS {
         return Err(RagError::InvalidInput(format!(
@@ -3821,6 +4733,222 @@ mod tests {
 
     fn digest(value: &str) -> String {
         sha256_digest(value.as_bytes())
+    }
+
+    fn literal_fusion_fixture() -> (RetrievalRequest, RetrievalResult, RetrievalResult) {
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "never write secrets".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 3,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let hit = |name: &str, text: &str, score| RetrievalHit {
+            chunk_id: name.to_owned(),
+            collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+            item_id: name.to_owned(),
+            item_kind: "document".to_owned(),
+            locator: format!("{name}.md"),
+            title: name.to_owned(),
+            text: text.to_owned(),
+            digest: digest(name),
+            visibility: RagVisibility::Shared,
+            language: RagLanguage::En,
+            claim_kind: None,
+            assertion_status: None,
+            scan_metadata: None,
+            score,
+            matched_field: "text".to_owned(),
+            sources: vec!["reviewed-test".to_owned()],
+            replacement: None,
+            untrusted_content: true,
+        };
+        let first = hit("first", "Preserve the original leading result.", 10.0);
+        let second = hit("second", "The claim says: never write secrets.", 1.0);
+        let extra = hit("extra", "Related private storage guidance.", 1.0);
+        let lexical = RetrievalResult {
+            generation: 1,
+            manifest_digest: digest("generation"),
+            returned_bytes: first.text.len() + second.text.len(),
+            insufficient_budget: false,
+            hits: vec![first.clone(), second],
+        };
+        let mut low = first;
+        low.score = 0.0;
+        let semantic = RetrievalResult {
+            generation: 1,
+            manifest_digest: lexical.manifest_digest.clone(),
+            returned_bytes: extra.text.len() + low.text.len(),
+            insufficient_budget: false,
+            hits: vec![extra, low],
+        };
+        (request, lexical, semantic)
+    }
+
+    #[test]
+    fn literal_lookup_boundaries_do_not_promote_generic_concepts_or_identifier_prefixes() {
+        for (query, text, expected) in [
+            ("2.4.8-beta.3", "Version 2.4.8-beta.3.", true),
+            ("2.4.8-beta.3", "Version 2.4.8-beta.30", false),
+            ("2.4.8", "Version 2.4.8-beta.3", false),
+            ("42", "value 420", false),
+            ("42", "-42", false),
+            ("42", "+42", false),
+            ("42", "−42", false),
+            ("42", ".42", false),
+            ("42", "42/100", false),
+            ("42", "42%", false),
+            ("-42", "value -42.", true),
+            ("path/to", "path/to/deeper", false),
+            ("path/to", "/path/to", false),
+            ("path/to", "(path/to)", true),
+            ("42", "value 42.", true),
+            ("semantic search", "semantic search", false),
+            ("memory", "memory", false),
+            ("\"semantic search\"", "semantic search", true),
+            (
+                "never write secrets",
+                "We do not agree: never write secrets.",
+                true,
+            ),
+            ("never write secrets", "never write secretstuff", false),
+            ("원문을 그대로 보존", "원문을 그대로\n보존", true),
+            ("", "anything", false),
+        ] {
+            assert_eq!(
+                literal_query_matches(query, false, &[text]),
+                expected,
+                "{query} / {text}"
+            );
+        }
+        assert!(literal_query_matches(
+            "shortcut",
+            true,
+            &["no literal in this body"]
+        ));
+    }
+
+    #[test]
+    fn numbered_phrase_lookup_preserves_full_values_and_normalized_spacing() {
+        for (query, text, expected) in [
+            ("자료 00500", "자료 00500. 설명", true),
+            ("자료  00500", "자료\n00500. 설명", true),
+            ("00500 자료", "00500 자료.", true),
+            ("항목 00500 설명", "항목 00500 설명.", true),
+            ("release v2.4", "Release v2.4.", true),
+            ("자료 doc-00500", "자료 doc-00500.", true),
+            ("자료 00500", "자료 005000.", false),
+            ("자료 00500", "자료 +00500.", false),
+            ("자료 00500", "자료 -00500.", false),
+            ("자료 00500", "자료 00500%", false),
+            ("자료 00500", "자료 00500/10", false),
+            ("자료 00500", "자료 00500.1", false),
+            ("항목 00500 설명", "항목 -00500 설명", false),
+            ("release v2.4", "release v2.40", false),
+            ("자료 3개", "자료 3개", false),
+            ("자료 b12", "자료 b12", false),
+            ("semantic search", "semantic search", false),
+            // The unchanged phrase rule sees three search tokens here.
+            ("release alpha-beta", "release alpha-beta", true),
+        ] {
+            assert_eq!(
+                literal_query_matches(query, false, &[text]),
+                expected,
+                "{query} / {text}"
+            );
+        }
+        assert!(!numbered_literal_token("alpha-beta"));
+        assert!(!numbered_literal_token("3개"));
+        assert!(!numbered_literal_token("b12"));
+    }
+
+    #[test]
+    fn numbered_phrase_fusion_keeps_the_fts_hit_ahead_of_semantic_distractors() {
+        let (mut request, mut lexical, mut semantic) = literal_fusion_fixture();
+        request.query = "자료 00500".to_owned();
+        lexical.hits[0].text = "자료 00500. Exact numbered record.".to_owned();
+        semantic.hits[1].text = lexical.hits[0].text.clone();
+        lexical.returned_bytes = lexical.hits.iter().map(|hit| hit.text.len()).sum();
+        semantic.returned_bytes = semantic.hits.iter().map(|hit| hit.text.len()).sum();
+        let expected = lexical
+            .hits
+            .iter()
+            .map(|hit| hit.chunk_id.clone())
+            .collect::<Vec<_>>();
+        let fused =
+            fuse_semantic_results_with_policy(&request, lexical, &semantic).expect("fusion");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(
+            fused
+                .result
+                .hits
+                .iter()
+                .take(expected.len())
+                .map(|hit| hit.chunk_id.clone())
+                .collect::<Vec<_>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn literal_fusion_preserves_all_fts_order_not_only_the_literal_hit() {
+        let (request, lexical, semantic) = literal_fusion_fixture();
+        let fused = fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+            .expect("fusion");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(
+            fused
+                .result
+                .hits
+                .iter()
+                .map(|hit| hit.chunk_id.as_str())
+                .collect::<Vec<_>>(),
+            ["first", "second", "extra"]
+        );
+        assert!(fused.result.hits[0].score < fused.result.hits[2].score);
+        assert!(fused.result.hits.iter().all(|hit| hit.untrusted_content));
+        assert_eq!(fused.result.hits[0].sources, lexical.hits[0].sources);
+        assert_eq!(fused.result.hits[1].text, lexical.hits[1].text);
+        let mut broad = request;
+        broad.query = "related guidance".to_owned();
+        let regular =
+            fuse_semantic_results_with_policy(&broad, lexical, &semantic).expect("weighted");
+        assert!(!regular.fts_order_preserved);
+        assert_eq!(regular.result.hits[0].chunk_id, "extra");
+    }
+
+    #[test]
+    fn literal_fusion_keeps_fts_budget_and_rejects_invalid_candidates_before_protection() {
+        let (mut request, mut lexical, mut semantic) = literal_fusion_fixture();
+        request.query = "shortcut".to_owned();
+        lexical.hits[0].matched_field = "alias".to_owned();
+        semantic.hits[1]
+            .text
+            .push_str(" A longer semantic copy must not displace the next FTS result.");
+        request.byte_budget = lexical.returned_bytes;
+        let fused = fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+            .expect("bounded");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(fused.result.hits.len(), 2);
+        assert_eq!(fused.result.returned_bytes, lexical.returned_bytes);
+        assert_eq!(fused.result.hits[0].text, lexical.hits[0].text);
+        assert_eq!(fused.result.hits[1].chunk_id, "second");
+        request.top_k = 1;
+        assert_eq!(
+            fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+                .expect("one")
+                .result
+                .hits[0]
+                .chunk_id,
+            "first"
+        );
+        let mut duplicate = semantic.clone();
+        duplicate.hits.push(duplicate.hits[0].clone());
+        assert!(fuse_semantic_results_with_policy(&request, lexical.clone(), &duplicate).is_err());
+        semantic.hits[1].digest = digest("different canonical item");
+        assert!(fuse_semantic_results_with_policy(&request, lexical, &semantic).is_err());
     }
 
     fn raw_test_digest(value: &str) -> String {
@@ -4050,6 +5178,398 @@ mod tests {
         secret.normalized_fact = "Safe fact".to_owned();
         secret.provenance.summary = "raw\nmultiline\noutput".to_owned();
         assert!(plan_remember(&[], &secret, 1).is_err());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn semantic_partition_export_and_rehydration_preserve_authority() {
+        let registry = registry();
+        let collection_id = |alias: &str| {
+            registry
+                .collections
+                .iter()
+                .find(|item| item.aliases.contains(&alias.to_owned()))
+                .expect("collection")
+                .collection_id
+                .clone()
+        };
+        let alpha = collection_id("alpha");
+        let secret = collection_id("secret");
+        let snapshot = RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation: 1,
+            registry: registry.clone(),
+            documents: vec![
+                document(
+                    USER_ROOT_COLLECTION_ID,
+                    "public",
+                    "복구 절차와 내보내기",
+                    RagVisibility::Shared,
+                ),
+                document(
+                    &alpha,
+                    "private",
+                    "다른 프로젝트의 비공개 자료",
+                    RagVisibility::ProjectPrivate,
+                ),
+                document(
+                    &secret,
+                    "secret",
+                    "승인 필요한 기밀 자료",
+                    RagVisibility::Confidential,
+                ),
+            ],
+            claims: Vec::new(),
+        };
+        let artifact = build_rag_index(&snapshot).expect("index");
+        let mut request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: None,
+            query: "zzzxqwv".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 10,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let prepared = PreparedRagIndex::from_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+        )
+        .expect("prepared");
+        let corpus = |request: &RetrievalRequest, visibility| {
+            let direct = semantic_corpus_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                &registry,
+                request,
+                visibility,
+            );
+            let resident = prepared.semantic_corpus(request, visibility);
+            match (&direct, &resident) {
+                (Ok(left), Ok(right)) => assert_eq!(
+                    serde_json::to_value(left).unwrap(),
+                    serde_json::to_value(right).unwrap()
+                ),
+                (Err(left), Err(right)) => assert_eq!(left.to_string(), right.to_string()),
+                _ => panic!("resident and serialized corpus outcomes differ"),
+            }
+            direct
+        };
+        let public = corpus(&request, RagVisibility::Shared).expect("public corpus");
+        assert_eq!(public.len(), 1);
+        request.scope = RetrievalScope::Collection(alpha);
+        let private =
+            corpus(&request, RagVisibility::ProjectPrivate).expect("explicit private corpus");
+        request.scope = RetrievalScope::Collection(secret.clone());
+        assert!(corpus(&request, RagVisibility::Confidential).is_err());
+        request.confidential_collection_id = Some(secret);
+        let confidential =
+            corpus(&request, RagVisibility::Confidential).expect("authorized secret corpus");
+        request.confidential_collection_id = None;
+        assert!(corpus(&request, RagVisibility::Confidential).is_err());
+        let matches: Vec<_> = public
+            .iter()
+            .chain(&private)
+            .chain(&confidential)
+            .map(|hit| SemanticMatch {
+                chunk_id: hit.chunk_id.clone(),
+                digest: hit.digest.clone(),
+                score: 0.5,
+            })
+            .collect();
+        request.scope = RetrievalScope::Global;
+        request.confidential_collection_id = None;
+        assert!(corpus(&request, RagVisibility::Shared).is_err());
+        assert!(retrieve_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+            &request
+        )
+        .expect("FTS")
+        .hits
+        .is_empty());
+        let hydrate = |request: &RetrievalRequest, matches: &[SemanticMatch]| {
+            let direct = semantic_matches_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                &registry,
+                request,
+                matches,
+            );
+            let resident = prepared.semantic_matches(request, matches);
+            match (&direct, &resident) {
+                (Ok(left), Ok(right)) => assert_eq!(
+                    serde_json::to_value(left).unwrap(),
+                    serde_json::to_value(right).unwrap()
+                ),
+                (Err(left), Err(right)) => assert_eq!(left.to_string(), right.to_string()),
+                _ => panic!("resident and serialized semantic outcomes differ"),
+            }
+            direct
+        };
+        let result = hydrate(&request, &matches).expect("semantic matches");
+        assert_eq!(result.hits.len(), 1);
+        assert_eq!(result.hits[0].collection_id, USER_ROOT_COLLECTION_ID);
+        assert_eq!(result.hits[0].sources, public[0].sources);
+        assert!(result.hits[0].untrusted_content);
+        let partitions = semantic_partitions_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+            &request,
+        )
+        .expect("visible partitions");
+        assert_eq!(
+            partitions,
+            vec![SemanticPartition {
+                collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+                visibility: RagVisibility::Shared
+            }]
+        );
+        let fused = fuse_semantic_results(&request, result.clone(), &result).expect("fused");
+        assert_eq!(fused.hits[0].matched_field, "hybrid");
+        assert_eq!(fused.hits[0].text, result.hits[0].text);
+        assert!((fused.hits[0].score - 1.0).abs() < 0.000_001);
+        let mut lexical = result.clone();
+        let mut second_hit = lexical.hits[0].clone();
+        second_hit.chunk_id = format!("chunk-{}", sha256_digest(b"second chunk"));
+        second_hit.score = 0.0;
+        lexical.hits[0].score = 10.0;
+        lexical.hits.push(second_hit.clone());
+        let mut semantic = lexical.clone();
+        semantic.hits[0].score = 0.0;
+        semantic.hits[1].score = 1.0;
+        let weighted = fuse_semantic_results(&request, lexical, &semantic).expect("score fusion");
+        assert_eq!(weighted.hits[0].chunk_id, second_hit.chunk_id);
+        assert_eq!(
+            weighted.hits[0].score.to_bits(),
+            SEMANTIC_FUSION_WEIGHT.to_bits()
+        );
+        let mut stale = result.clone();
+        stale.generation += 1;
+        assert!(fuse_semantic_results(&request, result.clone(), &stale).is_err());
+        let mut forged = result.clone();
+        forged.hits[0].digest = sha256_digest(b"forged");
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
+        forged = result.clone();
+        forged.hits[0].sources.push("forged source".to_owned());
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
+        forged = result.clone();
+        "contradictory replacement text".clone_into(&mut forged.hits[0].text);
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
+        request.byte_budget = 7;
+        let bounded = hydrate(&request, &matches).expect("bounded matches");
+        assert!(bounded.returned_bytes <= 7);
+        assert!(bounded.insufficient_budget);
+        request.byte_budget = 1;
+        let too_small = hydrate(&request, &matches).expect("UTF-8 budget");
+        assert!(too_small.hits.is_empty());
+        assert!(too_small.insufficient_budget);
+        let mut invalid = matches[..1].to_vec();
+        invalid[0].digest = format!("sha256:{}", "0".repeat(64));
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid = vec![matches[0].clone(), matches[0].clone()];
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid[1].chunk_id = "missing-chunk".to_owned();
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid[1].score = f64::NAN;
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid = matches[..1].to_vec();
+        invalid[0].score = f64::NAN;
+        assert!(hydrate(&request, &invalid).is_err());
+        request.scope = RetrievalScope::Collection(confidential[0].collection_id.clone());
+        request.confidential_collection_id = Some(confidential[0].collection_id.clone());
+        request.byte_budget = 4096;
+        assert_eq!(
+            hydrate(&request, &matches).expect("authorized").hits.len(),
+            1
+        );
+        request.confidential_collection_id = None;
+        assert!(hydrate(&request, &matches).is_ok_and(|result| result.hits.is_empty()));
+    }
+
+    #[test]
+    fn partition_digest_cache_matches_legacy_and_incremental_generations() {
+        let registry = registry();
+        let alpha = collection_id(&registry, "alpha");
+        let mut snapshot = RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation: 1,
+            registry: registry.clone(),
+            documents: vec![
+                document(
+                    USER_ROOT_COLLECTION_ID,
+                    "public",
+                    "recover original notes",
+                    RagVisibility::Shared,
+                ),
+                document(
+                    &alpha,
+                    "private",
+                    "private notes",
+                    RagVisibility::ProjectPrivate,
+                ),
+            ],
+            claims: Vec::new(),
+        };
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "notes".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let initial = build_rag_index(&snapshot).expect("initial");
+        let before = assert_cached_partition_parity(&initial, &registry, &request);
+        assert_eq!(before.len(), 1);
+        let mut relocated = registry.clone();
+        relocated
+            .collections
+            .iter_mut()
+            .find(|record| record.collection_id == USER_ROOT_COLLECTION_ID)
+            .unwrap()
+            .local_locator = Some(
+            std::env::temp_dir()
+                .join("relocated-user-root")
+                .display()
+                .to_string(),
+        );
+        let moved = assert_cached_partition_parity(&initial, &relocated, &request);
+        assert_ne!(before, moved);
+        snapshot.generation = 2;
+        snapshot.documents[0] = document(
+            USER_ROOT_COLLECTION_ID,
+            "public",
+            "changed recovery notes",
+            RagVisibility::Shared,
+        );
+        snapshot.documents[0].revision = 2;
+        snapshot.documents[0].digest = document_digest(&snapshot.documents[0]);
+        let incremental = build_incremental_remote_rag_index(
+            &initial,
+            &snapshot,
+            &BTreeSet::from([snapshot.documents[0].document_id.clone()]),
+            &BTreeSet::new(),
+        )
+        .expect("incremental");
+        let full = build_rag_index(&snapshot).expect("full");
+        let after = assert_cached_partition_parity(&incremental, &registry, &request);
+        assert_ne!(before, after);
+        assert_eq!(
+            after,
+            assert_cached_partition_parity(&full, &registry, &request)
+        );
+        let connection = deserialize_connection(&full.sqlite_bytes).expect("read");
+        connection
+            .execute(
+                "DELETE FROM semantic_partition_digests_v1 WHERE visibility='shared'",
+                [],
+            )
+            .unwrap();
+        let bytes = connection.serialize(MAIN_DB).unwrap().to_vec();
+        let mut manifest = full.manifest.clone();
+        manifest.sqlite_digest = sha256_digest(&bytes);
+        assert!(
+            semantic_partition_states_serialized(&bytes, &manifest, &registry, &request).is_err()
+        );
+        assert!(
+            PreparedRagIndex::from_serialized(&bytes, &manifest, &registry)
+                .expect("valid index with missing cache row")
+                .semantic_partition_states(&request)
+                .is_err()
+        );
+    }
+
+    fn assert_cached_partition_parity(
+        artifact: &RagIndexArtifact,
+        registry: &CollectionRegistry,
+        request: &RetrievalRequest,
+    ) -> Vec<SemanticPartitionState> {
+        let current = semantic_partition_states_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            registry,
+            request,
+        )
+        .expect("cached");
+        let prepared =
+            PreparedRagIndex::from_serialized(&artifact.sqlite_bytes, &artifact.manifest, registry)
+                .expect("prepared cached");
+        assert_eq!(
+            current,
+            prepared.semantic_partition_states(request).unwrap()
+        );
+        let mut invalid = request.clone();
+        invalid.top_k = 0;
+        assert_eq!(
+            prepared
+                .semantic_partition_states(&invalid)
+                .unwrap_err()
+                .to_string(),
+            semantic_partition_states_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                registry,
+                &invalid,
+            )
+            .unwrap_err()
+            .to_string()
+        );
+        let connection = deserialize_connection(&artifact.sqlite_bytes).expect("legacy copy");
+        connection
+            .execute("DROP TABLE semantic_partition_digests_v1", [])
+            .unwrap();
+        let legacy = connection.serialize(MAIN_DB).unwrap().to_vec();
+        let mut manifest = artifact.manifest.clone();
+        manifest.sqlite_digest = sha256_digest(&legacy);
+        assert_eq!(
+            current,
+            semantic_partition_states_serialized(&legacy, &manifest, registry, request)
+                .expect("legacy calculation")
+        );
+        assert_eq!(
+            current,
+            PreparedRagIndex::from_serialized(&legacy, &manifest, registry)
+                .expect("prepared legacy")
+                .semantic_partition_states(request)
+                .expect("legacy prepared calculation")
+        );
+        let lexical = retrieve_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            registry,
+            request,
+        )
+        .expect("new FTS");
+        let old_lexical =
+            retrieve_serialized(&legacy, &manifest, registry, request).expect("old FTS");
+        assert_eq!(
+            serde_json::to_value(lexical).unwrap(),
+            serde_json::to_value(old_lexical).unwrap()
+        );
+        current
+    }
+
+    #[test]
+    fn fusion_normalization_is_query_local_and_rejects_invalid_ranges() {
+        assert_eq!(
+            normalize_fusion_scores(&[]).expect("empty"),
+            Vec::<f64>::new()
+        );
+        assert_eq!(
+            normalize_fusion_scores(&[1.0, 3.0, 2.0]).expect("range"),
+            vec![0.0, 1.0, 0.5]
+        );
+        assert_eq!(
+            normalize_fusion_scores(&[-2.0, -2.0]).expect("ties"),
+            vec![1.0, 1.0]
+        );
+        assert!(normalize_fusion_scores(&[f64::NAN]).is_err());
+        assert!(normalize_fusion_scores(&[-f64::MAX, f64::MAX]).is_err());
     }
 
     #[test]
