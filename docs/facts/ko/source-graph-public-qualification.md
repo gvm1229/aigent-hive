@@ -9,7 +9,7 @@ summary: "0.10.0 source graph의 Source Wiki FTS·근거 있는 Markdown edge �
 tags: [graph, knowledge, qualification, v0-10]
 aliases: ["source graph 수용", "source 관계 자격 검증"]
 sources:
-  - "repo:.github/workflows/release.yml#sha256:b530af22eb2e6f932558e2f2699038d59c1bd8f2c48cedf37433417dac4a66bf"
+  - "repo:.github/workflows/release.yml#sha256:2f3760d989da12d1b07bfe706b9e7f1cd1e3121d3a53b18843e7825b56d86cac"
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:676c827ebe9ed1c4e51d73cf35289b8dfa9149f52287bcfad1a33d0b872b3be2"
   - "repo:crates/hive-wiki/src/source.rs#sha256:f9d3cae67f645e63b1483e83303fd0ecce41d50a9f66d3cd9540fc6e6f824f52"
   - "repo:scripts/qualify-source-graph.py#sha256:62e74cb2994404d7607f33a38da73b1973592609fc1b6af3686a7920c2086710"
