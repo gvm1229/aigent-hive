@@ -117,9 +117,9 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
 
     def test_numbered_test_candidate_requires_new_planned_product_bytes(self) -> None:
         candidate = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
-        self.assertIn("plan_ids", candidate)
         self.assertIn("Automatic numbered-test product gate", candidate)
         self.assertIn("scripts/check-test-release-gate.py", candidate)
+        self.assertIn("--package-version \"$PACKAGE_VERSION\"", candidate)
         self.assertLess(candidate.index("test-release-gate:"), candidate.index("unix:"))
         self.assertIn("needs: test-release-gate", candidate)
 
