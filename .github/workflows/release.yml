@@ -22,6 +22,11 @@ on:
         description: Exact package release date embedded in the shipped CLI (YYYY-MM-DD)
         required: true
         type: string
+      plan_ids:
+        description: Comma-separated completed implementation plan IDs; required for test candidates
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -46,10 +51,34 @@ jobs:
             --release-date "$PACKAGE_RELEASE_DATE" \
             --output json
 
+  test-release-gate:
+    name: Automatic numbered-test product gate
+    runs-on: ubuntu-24.04
+    needs: public-stable-docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Require new completed product bytes for a test candidate
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          PRODUCT_VERSION: ${{ inputs.product_version }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          PLAN_IDS: ${{ inputs.plan_ids }}
+        run: |
+          if [ "$CHANNEL" = stable ]; then
+            exit 0
+          fi
+          python3 scripts/check-test-release-gate.py \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --plan-ids "$PLAN_IDS" \
+            --output json
+
   unix:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
-    needs: public-stable-docs
+    needs: test-release-gate
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -243,7 +272,7 @@ jobs:
   windows:
     name: Windows x86_64
     runs-on: windows-2025
-    needs: public-stable-docs
+    needs: test-release-gate
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
