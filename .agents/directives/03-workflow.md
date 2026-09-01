@@ -159,27 +159,25 @@ Match verification cost to the current boundary:
 
 ## Risk-Tier CI and Candidate Economy
 
-- Classify every pushed concern from its tracked diff before choosing CI. A Markdown-only diff uses
-  the documentation-only integration path; it must not start Rust, cross-platform, native package,
-  release-runtime, or public-candidate work.
-- A product diff runs its affected named test lane plus one Linux full conformance lane and the
-  smallest macOS/Windows smoke that can cover the changed host or installer boundary. Cross-platform
-  full suites remain nightly and release-candidate evidence, not an ordinary-push default.
+- Match CI to the tracked diff. Markdown-only work uses documentation integration and starts no
+  Rust, cross-platform, native package, runtime qualification, or candidate. Product work runs its
+  affected lane, Linux conformance, and the smallest relevant macOS/Windows smoke; full platforms
+  remain nightly or candidate evidence.
 - CI for a superseded PR or branch commit must cancel when a newer commit for that same PR or ref
   starts. Never apply cancellation to release publication, accepted public tests, or protected
   stable candidate workflows.
-- Cache pinned Rust and Python dependencies per operating system. A cache may reduce setup time;
-  it must never substitute a test, alter a lockfile contract, or supply a release artifact.
-- Run multi-platform release-runtime qualification only on its scheduled or explicit manual path.
-  The exact numbered test candidate remains the release package authority.
-- Freeze an exact product tree and package input before a numbered public candidate. Do not create
-  another candidate for a plan, state, fact, Markdown-only, or identical-tree change. A product,
-  packaging, installer, metadata, or acceptance fix reopens only its affected acceptance and
-  requires the next numbered public test.
-- Keep protected-branch required checks scope-neutral. Require one always-run merge gate that
-  verifies the risk-matched jobs: documentation-only conformance for Markdown-only changes and
-  the product verification set for every product change. Never list a conditionally skipped
-  product job as a static required check.
+- Cache only pinned dependencies per OS; never replace a test, lockfile contract, or artifact.
+- At a completed user-authorized product milestone, automatically create, publish, and accept one
+  next numbered test without another approval; intermediate commits never publish. Stable remains
+  version-specific and explicit.
+- Before a test candidate, `check-test-release-gate.py` must prove new shipped product bytes against
+  `docs/public-test-product.json` and one or more checked non-release implementation plan IDs.
+  Missing, stale, identical, source-only, or unplanned evidence refuses the candidate; fix the
+  scope or evidence instead of asking the user to approve a release bypass.
+- Plans, state, facts, docs, source-only Skills/directives, tests, CI, notices, and identical product
+  trees never create or reset a test. Batch product work until milestone verification finishes.
+- One always-run protected merge gate verifies risk-matched jobs; never require a conditionally
+  skipped product job directly.
 
 ## Documentation-Only Integration
 
