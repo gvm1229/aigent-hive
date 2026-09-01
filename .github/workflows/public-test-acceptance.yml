@@ -118,10 +118,18 @@ jobs:
           export PATH="$host_bin:$PATH"
           "$HIVE_BIN" install --scope user --host antigravity --dry-run \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-preview.json"
-          grep -aF "so a five-year-old can follow it" "$HIVE_BIN"
-          grep -aF "Keep core technical terms and define them on first use" "$HIVE_BIN"
-          grep -aF "다섯 살 아이도 배경지식 없이 이해할 쉬운 말" "$HIVE_BIN"
-          grep -aF "증거 한계·안전 및 승인 경계 보존" "$HIVE_BIN"
+          python - "$HIVE_BIN" <<'PY'
+          import pathlib, sys
+          binary = pathlib.Path(sys.argv[1]).read_bytes()
+          for text in (
+              "so a five-year-old can follow it",
+              "Keep core technical terms and define them on first use",
+              "다섯 살 아이도 배경지식 없이 이해할 쉬운 말",
+              "증거 한계·안전 및 승인 경계 보존",
+          ):
+              if text.encode("utf-8") not in binary:
+                  raise SystemExit(f"public binary omitted explanation contract: {text}")
+          PY
       - name: Qualify Korean core, preservation, update, and rollback
         shell: bash
         run: |
