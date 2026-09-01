@@ -153,7 +153,7 @@ class NpmPackagingContract(unittest.TestCase):
                 str(output),
             )
             readme = (output / "aigent-hive/README.md").read_text("utf-8")
-            self.assertIn("Stable `0.9.5` is the current public release.", readme)
+            self.assertIn("Stable `0.10.0` is the current public release.", readme)
             self.assertNotIn("0.10.0-test.9", readme)
             self.assertNotIn("aigent-hive@test", readme)
 
