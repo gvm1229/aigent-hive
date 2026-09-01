@@ -37,6 +37,8 @@ class AutomaticTestReleaseGate(unittest.TestCase):
             "product_tree_sha256": self.module["product_digest"](self.base),
         }), encoding="utf-8")
         self.module["read_registry"].__globals__["REGISTRY"] = registry
+        self.intent = self.root / "docs/test-release-intent.json"
+        self.module["read_intent"].__globals__["INTENT"] = self.intent
 
     def commit(self, path: str, text: str) -> None:
         target = self.root / path
@@ -88,6 +90,32 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.assertFalse(is_product("docs/releases/0.10.0.md"))
         self.assertFalse(is_product(".agents/skills/update-summary/SKILL.md"))
         self.assertFalse(is_product(".github/workflows/release.yml"))
+
+    def test_automatic_intent_supplies_completed_plan_without_user_input(self) -> None:
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        self.intent.write_text(json.dumps({
+            "schema_version": 1,
+            "product_version": "0.10.0",
+            "package_version": "0.10.0-test.12",
+            "plan_ids": ["APP10-001"],
+            "product_tree_sha256": self.module["product_digest"]("HEAD"),
+        }), encoding="utf-8")
+        self.assertEqual(
+            self.module["verify"]("0.10.0", "0.10.0-test.12", None, "HEAD")["status"],
+            "authorized",
+        )
+
+    def test_automatic_intent_cannot_authorize_another_product_tree(self) -> None:
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        self.intent.write_text(json.dumps({
+            "schema_version": 1,
+            "product_version": "0.10.0",
+            "package_version": "0.10.0-test.12",
+            "plan_ids": ["APP10-001"],
+            "product_tree_sha256": "sha256:" + "0" * 64,
+        }), encoding="utf-8")
+        with self.assertRaisesRegex(self.module["GateError"], "does not match"):
+            self.module["verify"]("0.10.0", "0.10.0-test.12", None, "HEAD")
 
 
 if __name__ == "__main__":

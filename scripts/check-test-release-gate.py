@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "docs/public-test-product.json"
+INTENT = ROOT / "docs/test-release-intent.json"
 STABLE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 PLAN_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
 PRODUCT_PREFIXES = ("crates/", "harness/", "schemas/", "packaging/", "vendor/", "LICENSES/")
@@ -85,11 +86,32 @@ def read_registry() -> dict[str, object]:
     return value
 
 
-def verify(product_version: str, package_version: str, plan_ids: str, head: str) -> dict[str, object]:
+def read_intent(product_version: str, package_version: str) -> tuple[str, str]:
+    try:
+        value = json.loads(INTENT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GateError("automatic test intent is unavailable") from error
+    if set(value) != {"schema_version", "product_version", "package_version", "plan_ids", "product_tree_sha256"} or value["schema_version"] != 1:
+        raise GateError("automatic test intent has an unsupported shape")
+    if value["product_version"] != product_version or value["package_version"] != package_version:
+        raise GateError("automatic test intent belongs to another candidate")
+    plan_ids = value["plan_ids"]
+    if not isinstance(plan_ids, list) or not all(isinstance(item, str) for item in plan_ids):
+        raise GateError("automatic test intent plan_ids must be strings")
+    digest = value["product_tree_sha256"]
+    if not isinstance(digest, str):
+        raise GateError("automatic test intent product digest is invalid")
+    return ",".join(plan_ids), digest
+
+
+def verify(product_version: str, package_version: str, plan_ids: str | None, head: str) -> dict[str, object]:
     if STABLE.fullmatch(product_version) is None:
         raise GateError("product version must be stable X.Y.Z")
     if re.fullmatch(re.escape(product_version) + r"-test\.[1-9][0-9]*", package_version) is None:
         raise GateError("package version must be a uniquely numbered public test")
+    expected_digest = None
+    if plan_ids is None:
+        plan_ids, expected_digest = read_intent(product_version, package_version)
     requested = [item for item in plan_ids.split(",") if item]
     if not requested or len(requested) != len(set(requested)) or any(PLAN_ID.fullmatch(item) is None for item in requested):
         raise GateError("one or more unique implementation plan IDs are required")
@@ -109,6 +131,8 @@ def verify(product_version: str, package_version: str, plan_ids: str, head: str)
     paths = changed_product_paths(base, head)
     if not paths or current_digest == prior_digest:
         raise GateError("numbered test refused because shipped product bytes did not change")
+    if expected_digest is not None and current_digest != expected_digest:
+        raise GateError("automatic test intent does not match the current product tree")
     return {
         "schema_version": 1,
         "status": "authorized",
@@ -128,7 +152,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--product-version", required=True)
     parser.add_argument("--package-version", required=True)
-    parser.add_argument("--plan-ids", required=True)
+    parser.add_argument("--plan-ids")
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--output", choices=("json",), default="json")
     args = parser.parse_args()
