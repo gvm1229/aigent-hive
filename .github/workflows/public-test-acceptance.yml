@@ -96,6 +96,7 @@ jobs:
         shell: bash
         run: |
           user_root="$RUNNER_TEMP/explanation-user"
+          mkdir -p "$user_root"
           "$HIVE_BIN" install --scope user --host codex --apply \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
           "$HIVE_BIN" install --scope user --host codex --validate \
