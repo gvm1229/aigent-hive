@@ -10,7 +10,7 @@ tags: [documentation, release, stable]
 aliases: ["public stable docs"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
-  - "repo:.github/workflows/release.yml#sha256:a15f748db5a727188a90c8836fe1a80235a5221f3896dff6f088b3dfaa3b28a4"
+  - "repo:.github/workflows/release.yml#sha256:b530af22eb2e6f932558e2f2699038d59c1bd8f2c48cedf37433417dac4a66bf"
   - "repo:README.md#sha256:27679c3c338ef2f82b352800ccb882c2536bcc2c7dbfd18b93df52e3349554b0"
   - "repo:docs/public-stable-release.json#sha256:d06e22bccdbd8dc6b359be7e827e6bb2a2d981777f42d4fe8f600d92244c203c"
   - "repo:scripts/check-public-stable-docs.py#sha256:fecedad7d9cde787974550b0d754ceedfd0f432f9f035bddb044fbb986b6d6b6"
