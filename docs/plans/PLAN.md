@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 310
-> 기준일: 2026-08-31
+> Revision: 311
+> 기준일: 2026-09-02
 > Product version: `0.10.0`
-> Stable baseline: `0.9.5`
+> Stable baseline: `0.10.0`
 > 수용된 공개 시험: `0.10.0-test.13`
-> 현재 단계: 안정판 명시 승인 대기
+> 현재 단계: `0.10.0` 안정판 게시 완료
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -44,10 +44,9 @@
 
 ## 현재 연속 실행 경계
 
-- 현재 승인: `KTX10-*` 구현·검증·`develop` 병합·번호 시험판. 저장소의 수정된 `verified-workflow` 사용
-- 검증형 실행 적용 주장: 실제 작업에 연결된 실행 생성·검증 근거 필수
-- 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
-- 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
+- `0.10.0` 범위의 모든 checklist 완료
+- 다음 작업은 새 유지보수자 요청이 정한 범위와 버전에만 연결
+- 종료 조건: `0.10.0` Agent 소유 checklist `0건`과 정식 출시 근거 보존
 
 ## 기본 출시 권한
 
@@ -76,10 +75,10 @@
 | Skill migration cleanup | 11 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| `0.10.0` 출시 | 7 | 0 | 100% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
 | 시험판 자동 게시 gate | 6 | 0 | 100% |
-| **합계** | **157** | **2** | **98.7%** |
+| **합계** | **160** | **0** | **100%** |
 
 ## Required load order
 
@@ -124,7 +123,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 8. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
 9. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
 10. `SDB10-002–006` source-only Skill·mock·live draft 수용. Product bytes·release acceptance 불변
-11. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
+11. 유지보수자 명시 승인 뒤 `REL10-005–007` 안정판 출시 완료
 
 ## 비활성 자료
 
