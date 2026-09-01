@@ -90,6 +90,7 @@ modules = [
   "tests.conformance.release.test_vector_runtime_acceptance",
   "tests.conformance.release.test_release_qualification_order",
   "tests.conformance.release.test_stable_release_discord_notification",
+  "tests.conformance.release.test_test_release_gate",
   "tests.conformance.release.test_stable_skill_ledger",
   "tests.conformance.release.test_update_discovery",
 ]
