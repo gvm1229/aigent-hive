@@ -13,11 +13,11 @@
 - [x] [DIR10-006] 비허용 normalized 규범 중복 `0건`, size budget·router target·projection parity·중단 3조건 정적 gate
 - [x] [DIR10-007] `0.7.0–0.9.5` direct upgrade·foreign byte·rollback·historical digest 불변과 Source Wiki error·stale source digest warning `0건`
 - [x] [DIR10-008] 새 version 명시가 없는 개발 요청을 활성 `PLAN.md` product version·다음 번호 시험판에 귀속하고 임의의 미래 version 제안 차단 — `f34c524d`
-- [ ] [DIR10-009] 설치 사용자 지침의 다섯 살 이해 수준 설명·핵심 용어 풀이·정확성 보존
-- [ ] [DIR10-010] 영어·한국어·이중 언어 투영과 직접 갱신·사용자 byte 보존
-- [ ] [DIR10-011] `update-summary`의 2,000자 초과 때만 자동 축약, 제한 안 원문 불변
-- [ ] [DIR10-012] 승인된 설명 개선 문구 추가·2,000자 제한·새 승인 지문 등록
-- [ ] [DIR10-013] 관련 Rust·Python·문서·upgrade 회귀 검사
+- [x] [DIR10-009] 설치 사용자 지침의 다섯 살 이해 수준 설명·핵심 용어 풀이·정확성 보존
+- [x] [DIR10-010] 영어·한국어·이중 언어 투영과 직접 갱신·사용자 byte 보존
+- [x] [DIR10-011] `update-summary`의 2,000자 초과 때만 자동 축약, 제한 안 원문 불변
+- [x] [DIR10-012] 승인된 설명 개선 문구 추가·2,000자 제한·새 승인 지문 등록
+- [x] [DIR10-013] 관련 Rust·Python·문서·upgrade 회귀 검사
 - [ ] [DIR10-014] 다음 번호 공개 시험판과 세 운영체제 설치 지침 수용
 
 ## 규칙 소유권
@@ -49,6 +49,9 @@
 - `REL10-005–007`: 실행 제외
 
 ## 완료 근거
+
+- 쉬운 설명 후속: Hive CLI Rust 448개 통과, 설정 회귀 73개 통과·Windows 조건부 5개 제외, 안내·정적 계약 43개 통과
+- 승인 안내문: 1,989자, SHA-256 `ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426`, 외부 지문 등록 성공
 
 - 구현: `8388428`, `47d4663`, `630c783`, `64125db`, `f34c524d`
 - Fact 정합화: `a9d9bd6`, `a09ed6a`, `e2c3dd6`
