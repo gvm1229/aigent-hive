@@ -247,3 +247,5 @@
 | [passed](runs/20260831T150146-64a2f3506803.md) | Python conformance: release | df6a94f25752090e29d44194c90d489356274540 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260831T151355-bca2f6a84e2a.md) | 벡터 최초 설정 Source graph 자격 실패 재현 | 5f4239299a0c4309bf366223aa37bfc3c97ee052 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T151444-41c6ac22e0e7.md) | 벡터 최초 설정 Source graph 자격 재검증 | 5f4239299a0c4309bf366223aa37bfc3c97ee052 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260901T124409-edaca65cbe64.md) | 설치 사용자 쉬운 설명 지침 Rust 회귀 | 427a483a4e0cf968fa8f506cfd11d5ac4ce50b4b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260901T124529-56fd7d32a73f.md) | 설치 사용자 쉬운 설명 지침 전체 Rust 검증 | ac9161a13e0e01034732992964f6bbd2dd71d8cf | Windows-11-10.0.26200-SP0 |
