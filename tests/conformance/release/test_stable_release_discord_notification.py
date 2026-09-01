@@ -299,7 +299,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         summary = ROOT / "docs/releases/0.10.0.subscriber.ko.md"
         approval = ROOT / "docs/releases/0.10.0.subscriber.ko.sha256"
         expected = (
-            "sha256:5cad1a39245f8d513a0133f70d8666d65f7c50bd32efc5118fec26bc2eaece37"
+            "sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
             "  0.10.0.subscriber.ko.md\n"
         )
         self.assertEqual(approval.read_text(encoding="utf-8"), expected)
