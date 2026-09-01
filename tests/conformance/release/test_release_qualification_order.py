@@ -115,6 +115,14 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
         self.assertIn("scripts/check-release-version.sh \"$version\"", runtime)
         self.assertIn("bash scripts/check-release-version.sh $version", runtime)
 
+    def test_numbered_test_candidate_requires_new_planned_product_bytes(self) -> None:
+        candidate = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertIn("plan_ids", candidate)
+        self.assertIn("Automatic numbered-test product gate", candidate)
+        self.assertIn("scripts/check-test-release-gate.py", candidate)
+        self.assertLess(candidate.index("test-release-gate:"), candidate.index("unix:"))
+        self.assertIn("needs: test-release-gate", candidate)
+
     def test_product_changes_remain_bound_to_the_full_risk_verification_path(self) -> None:
         text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         for required in (
