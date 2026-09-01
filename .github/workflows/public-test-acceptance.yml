@@ -103,10 +103,33 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then
             host_executable=agy.exe
           fi
-          printf '#include <stdio.h>\nint main(void) { puts("1.1.7"); return 0; }\n' \
-            >"$host_bin/host.c"
+          cat >"$host_bin/host.c" <<'EOF'
+          #include <stdio.h>
+          #include <stdlib.h>
+          #include <string.h>
+          int main(int argc, char **argv) {
+            const char *state = getenv("FAKE_AGY_STATE");
+            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "list") == 0) {
+              FILE *file = state ? fopen(state, "r") : NULL;
+              if (!file) { puts("No imported plugins."); return 0; }
+              fclose(file);
+              puts("{\"imports\":[{\"name\":\"aigent-hive\",\"source\":\"antigravity\",\"importedAt\":\"fixture\",\"components\":[\"skills\"]}]}");
+              return 0;
+            }
+            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "import") == 0) {
+              FILE *file = state ? fopen(state, "w") : NULL;
+              if (!file) return 2;
+              fputs("active", file); fclose(file); return 0;
+            }
+            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "uninstall") == 0) {
+              if (state) remove(state); return 0;
+            }
+            puts("1.1.7"); return 0;
+          }
+          EOF
           clang "$host_bin/host.c" -o "$host_bin/$host_executable"
           chmod +x "$host_bin/$host_executable"
+          export FAKE_AGY_STATE="$host_bin/state"
           export PATH="$host_bin:$PATH"
           "$HIVE_BIN" install --scope user --host antigravity --apply \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
