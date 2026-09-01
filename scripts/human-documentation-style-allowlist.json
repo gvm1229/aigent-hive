@@ -376,5 +376,11 @@
     "line": 33,
     "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
     "text_sha256": "20b5800d6d1329ed140cdc5f94c498e275df33a9bca258b61c8544630746d731"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 36,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "e05e831aa22b241146c1e51d7dc1e7e7ed06062c87018b80e03a4e3b1e51de6c"
   }
 ]
