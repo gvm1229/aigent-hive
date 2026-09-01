@@ -2,6 +2,7 @@
   "schema_version": 1,
   "stable_version": "0.10.0",
   "release_date": "2026-09-02",
+  "previous_stable_version": "0.9.5",
   "release_notes": "docs/releases/0.10.0.md",
   "public_surfaces": [
     "README.md",

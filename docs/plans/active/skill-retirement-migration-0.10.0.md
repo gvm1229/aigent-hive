@@ -27,7 +27,7 @@ chain과 cycle 금지.
 - [x] [SKM10-008] Upgrade matrix: `0.7.0`, `0.8.0`, `0.9.0`, `0.9.1`, `0.9.2`, `0.9.3`, `0.9.4`, `0.9.5`, 공개 test predecessor의 direct `0.10.0` upgrade — stable tag exact plugin base와 기존 test predecessor 인증 통과
 - [x] [SKM10-009] 세 host의 clean·modified·missing·foreign·interrupted upgrade와 rollback·reinstall·uninstall 뒤 retired discovery `0건`, canonical·user bytes 보존 — Rust 91·38, Python 53 통과
 - [x] [SKM10-010] 향후 stable publication 전 Skill transition event 또는 exact no-change epoch proof append·immutable prior entry·npm/GitHub stable ledger parity를 검증하고 누락 시 publication 차단 — `0b8328d`; stable Skill ledger와 publication gate
-- [x] [SKM10-011] `0.10.0` stable Skill snapshot·changed compatibility epoch·projection historical coverage와 `test.12` 공개 수용
+- [x] [SKM10-011] `0.10.0` stable Skill snapshot·changed compatibility epoch·projection historical coverage와 `test.13` 공개 수용
 
 ## 성공·충돌 계약
 

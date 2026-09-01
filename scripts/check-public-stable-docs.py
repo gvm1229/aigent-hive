@@ -201,7 +201,14 @@ def check(arguments: argparse.Namespace) -> dict[str, object]:
             add(failures, "stable-target", str(arguments.manifest), f"{arguments.product_version} {arguments.release_date}")
     if arguments.registry_latest_file:
         latest = registry_versions(root / arguments.registry_latest_file)
-        if latest != {version}:
+        allowed = {version}
+        if arguments.channel == "test":
+            previous = manifest.get("previous_stable_version")
+            if not isinstance(previous, str) or not SEMVER.fullmatch(previous):
+                add(failures, "manifest-previous-stable", str(arguments.manifest), str(previous))
+            else:
+                allowed.add(previous)
+        if len(latest) != 1 or next(iter(latest)) not in allowed:
             add(failures, "registry-latest", arguments.registry_latest_file, repr(sorted(latest)))
     return {
         "schema_version": 1,
