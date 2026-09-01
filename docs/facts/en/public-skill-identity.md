@@ -9,7 +9,7 @@ summary: "Aigent Hive has 28 product Skills, direct rename aliases, and separate
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:1e1231e9fd9dec40cb72167f734788f1521177027bd2d2bde44ca94d9ec2be74"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:edbfa7b5ce8edc6b853262d6440c309817e6463509b58bf298af038c4c3219fb"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
   - "repo:docs/skills.md#sha256:b1d168024659e23bc1fee30c46e2b628e607522b9b0da2f59229a277eff2a702"
   - "repo:harness/skills/catalog.yml#sha256:5949525e029f37e08f5ef49302f698be45674b94959f4f5aa301d7138c4e1570"
