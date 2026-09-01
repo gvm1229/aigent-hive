@@ -250,6 +250,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Never invent or suggest a later version as the default destination", agents)
         self.assertIn("언어·활성 version·continuation", ownership)
 
+    def test_every_change_reaches_develop_before_main(self) -> None:
+        workflow = (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/guides/branching-rules.md").read_text(encoding="utf-8")
+        self.assertIn("merges to `develop` first", workflow)
+        self.assertIn("every `main` pull request has `develop` as its head", workflow)
+        self.assertIn("모든 변경 branch는 먼저 `develop`으로 병합", guide)
+        self.assertIn("`main` 대상 Pull Request의 head는 항상 `develop`", guide)
+
     def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         state = (ROOT / ".agents/directives/04-documentation-state.md").read_text(encoding="utf-8")
