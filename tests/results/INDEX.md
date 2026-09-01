@@ -249,3 +249,6 @@
 | [passed](runs/20260831T151444-41c6ac22e0e7.md) | 벡터 최초 설정 Source graph 자격 재검증 | 5f4239299a0c4309bf366223aa37bfc3c97ee052 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260901T124409-edaca65cbe64.md) | 설치 사용자 쉬운 설명 지침 Rust 회귀 | 427a483a4e0cf968fa8f506cfd11d5ac4ce50b4b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260901T124529-56fd7d32a73f.md) | 설치 사용자 쉬운 설명 지침 전체 Rust 검증 | ac9161a13e0e01034732992964f6bbd2dd71d8cf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260901T125331-654cfdf07dae.md) | 쉬운 설명 제품 변경 전체 Rust workspace | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260901T125430-0883ee83bd1c.md) | 쉬운 설명 제품 변경 전체 Python conformance | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260901T125432-b8327f9ab14e.md) | Python conformance: documentation, security, contract, integration, release | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
