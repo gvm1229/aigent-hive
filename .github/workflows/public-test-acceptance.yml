@@ -92,6 +92,20 @@ jobs:
           binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify installed simple-explanation guidance
+        shell: bash
+        run: |
+          user_root="$RUNNER_TEMP/explanation-user"
+          "$HIVE_BIN" install --scope user --host codex --apply \
+            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
+          "$HIVE_BIN" install --scope user --host codex --validate \
+            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-validate.json"
+          guidance="$user_root/AGENTS.md"
+          test -f "$guidance"
+          grep -F "so a five-year-old can follow it" "$guidance"
+          grep -F "Keep core technical terms and define them on first use" "$guidance"
+          grep -F "다섯 살 아이도 배경지식 없이 이해할 쉬운 말" "$guidance"
+          grep -F "증거 한계·안전 및 승인 경계 보존" "$guidance"
       - name: Qualify Korean core, preservation, update, and rollback
         shell: bash
         run: |
