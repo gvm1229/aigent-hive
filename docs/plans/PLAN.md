@@ -78,7 +78,8 @@
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **149** | **3** | **98.0%** |
+| 시험판 자동 게시 gate | 0 | 6 | 0% |
+| **합계** | **149** | **9** | **94.3%** |
 
 ## Required load order
 
@@ -109,6 +110,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/source-draft-devlog.md`](active/source-draft-devlog.md) | `SDB10-*` | Source-only PortareFolium 기술 블로그 workflow |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 | [`active/stable-public-documentation-0.9.5.md`](active/stable-public-documentation-0.9.5.md) | `PUBDOC-*` | 안정판 공개 문서·시험판 비노출 gate |
+| [`active/automatic-test-release-gate-0.10.0.md`](active/automatic-test-release-gate-0.10.0.md) | `TRG10-*` | 엄격한 제품 milestone의 시험판 자동 게시 |
 
 ## 실행 순서
 
