@@ -146,7 +146,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
-| [`0.10.0` 출시 마감](archive/plans/releases/0.10.0/release-0.10.0-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
+| [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
 | [문서 구조 정리](archive/plans/releases/0.10.0/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 완료 기록 |
 | [시험 구조 재편](archive/plans/releases/0.10.0/test-organization-0.10.0.md) | 목적별 시험·fixture 완료 기록 |
 | [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |
