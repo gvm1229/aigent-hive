@@ -21,23 +21,28 @@ class StableSkillLedgerContract(unittest.TestCase):
     def setUp(self) -> None:
         self.ledger = ROOT / "harness/release/stable-skill-ledger.yml"
         self.historical = ROOT / "harness/skills/historical-builtins.yml"
-        self.npm = ["0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5-test.1"]
+        self.npm = ["0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.9.5-test.1"]
         self.github = [
             {"tagName": "v0.9.0", "isPrerelease": False},
             {"tagName": "v0.9.1", "isPrerelease": False},
             {"tagName": "v0.9.2", "isPrerelease": False},
             {"tagName": "v0.9.3", "isPrerelease": False},
             {"tagName": "v0.9.4", "isPrerelease": False},
+            {"tagName": "v0.9.5", "isPrerelease": False},
             {"tagName": "v0.9.5-test.1", "isPrerelease": True},
         ]
 
     def test_public_stable_union_and_target_match_current_ledger(self) -> None:
-        result = MODULE.verify(self.ledger, self.historical, "0.9.5", self.npm, self.github)
-        self.assertEqual(result["stable_versions"][-1], "0.9.5")
+        result = MODULE.verify(self.ledger, self.historical, "0.10.0", self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], "0.10.0")
 
-    def test_missing_target_entry_blocks_stable_publication(self) -> None:
+    def test_current_target_entry_is_available_for_stable_publication(self) -> None:
+        result = MODULE.verify(self.ledger, self.historical, "0.10.0", self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], "0.10.0")
+
+    def test_missing_future_target_entry_blocks_stable_publication(self) -> None:
         with self.assertRaisesRegex(ValueError, "differs from published stable union"):
-            MODULE.verify(self.ledger, self.historical, "0.10.0", self.npm, self.github)
+            MODULE.verify(self.ledger, self.historical, "0.11.0", self.npm, self.github)
 
     def test_no_change_epoch_must_have_identical_skill_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
