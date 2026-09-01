@@ -16,7 +16,7 @@ sources:
   - "repo:crates/hive-render/src/lib.rs#sha256:58d45eb16a719523947a4ad6b50bc225a757aa2ca800ec95dbf957b74325803d"
   - "repo:harness/directives/00-project-harness.md#sha256:b01acbf296d63e415b06c237561494b73ce632174925f9ad5fd4e2dfb6f6a9e4"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"
-  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5e5ce3f56aa6868e8e6195f48cc2c22936d642c70a0f466fe7081108f5ebb28e"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:6158ac21248a2751c232af381793a50ca85806b2652a3a01adb5c3961e0327c5"
 links: [automated-user-handoff, source-development]
 reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active

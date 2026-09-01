@@ -19,6 +19,7 @@
 - [x] [DIR10-012] 승인된 설명 개선 문구 추가·2,000자 제한·새 승인 지문 등록
 - [x] [DIR10-013] 관련 Rust·Python·문서·upgrade 회귀 검사
 - [x] [DIR10-014] 다음 번호 공개 시험판과 세 운영체제 설치 지침 수용
+- [x] [DIR10-015] 모든 변경 branch의 develop 우선 통합과 develop 전용 main PR 계약
 
 ## 규칙 소유권
 
@@ -53,6 +54,7 @@
 - 쉬운 설명 후속: Hive CLI Rust 448개 통과, 설정 회귀 73개 통과·Windows 조건부 5개 제외, 안내·정적 계약 43개 통과
 - 승인 안내문: 1,989자, SHA-256 `ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426`, 외부 지문 등록 성공
 - 공개 수용: `0.10.0-test.11` 공개 바이너리의 영어·한국어 지침 포함과 설치 미리보기, 세 운영체제 통과
+- branch 통합: `release/` 포함 모든 변경 branch → develop → main, main PR head=develop 정적 계약 추가
 
 - 구현: `8388428`, `47d4663`, `630c783`, `64125db`, `f34c524d`
 - Fact 정합화: `a9d9bd6`, `a09ed6a`, `e2c3dd6`
