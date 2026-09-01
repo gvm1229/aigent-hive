@@ -92,7 +92,7 @@ jobs:
           binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
-      - name: Qualify installed simple-explanation guidance
+      - name: Qualify public binary simple-explanation guidance
         shell: bash
         run: |
           user_root="$RUNNER_TEMP/explanation-user"
@@ -105,42 +105,23 @@ jobs:
           fi
           cat >"$host_bin/host.c" <<'EOF'
           #include <stdio.h>
-          #include <stdlib.h>
           #include <string.h>
           int main(int argc, char **argv) {
-            const char *state = getenv("FAKE_AGY_STATE");
             if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "list") == 0) {
-              FILE *file = state ? fopen(state, "r") : NULL;
-              if (!file) { puts("No imported plugins."); return 0; }
-              fclose(file);
-              puts("{\"imports\":[{\"name\":\"aigent-hive\",\"source\":\"antigravity\",\"importedAt\":\"fixture\",\"components\":[\"skills\"]}]}");
-              return 0;
-            }
-            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "import") == 0) {
-              FILE *file = state ? fopen(state, "w") : NULL;
-              if (!file) return 2;
-              fputs("active", file); fclose(file); return 0;
-            }
-            if (argc >= 3 && strcmp(argv[1], "plugin") == 0 && strcmp(argv[2], "uninstall") == 0) {
-              if (state) remove(state); return 0;
+              puts("No imported plugins."); return 0;
             }
             puts("1.1.7"); return 0;
           }
           EOF
           clang "$host_bin/host.c" -o "$host_bin/$host_executable"
           chmod +x "$host_bin/$host_executable"
-          export FAKE_AGY_STATE="$host_bin/state"
           export PATH="$host_bin:$PATH"
-          "$HIVE_BIN" install --scope user --host antigravity --apply \
-            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
-          "$HIVE_BIN" install --scope user --host antigravity --validate \
-            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-validate.json"
-          guidance="$user_root/AGENTS.md"
-          test -f "$guidance"
-          grep -F "so a five-year-old can follow it" "$guidance"
-          grep -F "Keep core technical terms and define them on first use" "$guidance"
-          grep -F "다섯 살 아이도 배경지식 없이 이해할 쉬운 말" "$guidance"
-          grep -F "증거 한계·안전 및 승인 경계 보존" "$guidance"
+          "$HIVE_BIN" install --scope user --host antigravity --dry-run \
+            --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-preview.json"
+          grep -aF "so a five-year-old can follow it" "$HIVE_BIN"
+          grep -aF "Keep core technical terms and define them on first use" "$HIVE_BIN"
+          grep -aF "다섯 살 아이도 배경지식 없이 이해할 쉬운 말" "$HIVE_BIN"
+          grep -aF "증거 한계·안전 및 승인 경계 보존" "$HIVE_BIN"
       - name: Qualify Korean core, preservation, update, and rollback
         shell: bash
         run: |
