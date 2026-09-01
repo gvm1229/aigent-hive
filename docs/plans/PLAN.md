@@ -68,7 +68,7 @@
 | Knowledge transfer | 14 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Agent 지침 경량화 | 8 | 0 | 100% |
+| Agent 지침·쉬운 설명 | 8 | 6 | 57.1% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
 | 연속 실행 지침 교정 | 3 | 0 | 100% |
@@ -76,9 +76,9 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **143** | **3** | **97.9%** |
+| **합계** | **139** | **13** | **91.4%** |
 
 ## Required load order
 
