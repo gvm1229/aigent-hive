@@ -7,3 +7,4 @@ stable_releases:
   - { version: 0.9.3, compatibility_epoch: 0.9.3, transition_proof: changed }
   - { version: 0.9.4, compatibility_epoch: 0.9.4, transition_proof: changed }
   - { version: 0.9.5, compatibility_epoch: 0.9.4, transition_proof: no-change }
+  - { version: 0.10.0, compatibility_epoch: 0.10.0, transition_proof: changed }

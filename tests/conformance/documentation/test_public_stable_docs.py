@@ -76,7 +76,7 @@ class PublicStableDocsTest(unittest.TestCase):
         self.assertIn("stable-target", {item["code"] for item in result["failures"]})
 
         registry = root / "latest.tsv"
-        registry.write_text("aigent-hive\t0.10.0\n@aigent-hive/win32-x64\t0.10.0\n", encoding="utf-8")
+        registry.write_text("aigent-hive\t0.9.5\n@aigent-hive/win32-x64\t0.9.5\n", encoding="utf-8")
         result = self.run_check(root, "--channel", "test", "--registry-latest-file", "latest.tsv")
         self.assertEqual(result["exit_code"], 0)
         registry.write_text("aigent-hive\t0.9.4\n", encoding="utf-8")

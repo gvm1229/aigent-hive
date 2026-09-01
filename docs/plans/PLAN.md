@@ -4,7 +4,7 @@
 > 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 수용된 공개 시험: `0.10.0-test.11`
+> 수용된 공개 시험: `0.10.0-test.13`
 > 현재 단계: 안정판 명시 승인 대기
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
@@ -73,13 +73,13 @@
 | Verified workflow | 12 | 0 | 100% |
 | 연속 실행 지침 교정 | 3 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
-| Skill migration cleanup | 10 | 0 | 100% |
+| Skill migration cleanup | 11 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
 | 시험판 자동 게시 gate | 6 | 0 | 100% |
-| **합계** | **156** | **3** | **98.1%** |
+| **합계** | **157** | **2** | **98.7%** |
 
 ## Required load order
 
