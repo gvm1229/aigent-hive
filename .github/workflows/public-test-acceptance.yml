@@ -96,7 +96,16 @@ jobs:
         shell: bash
         run: |
           user_root="$RUNNER_TEMP/explanation-user"
+          host_bin="$RUNNER_TEMP/explanation-host-bin"
           mkdir -p "$user_root"
+          mkdir -p "$host_bin"
+          host_executable=codex
+          if [ "$RUNNER_OS" = Windows ]; then
+            host_executable=codex.exe
+          fi
+          cp "$HIVE_BIN" "$host_bin/$host_executable"
+          chmod +x "$host_bin/$host_executable"
+          export PATH="$host_bin:$PATH"
           "$HIVE_BIN" install --scope user --host codex --apply \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
           "$HIVE_BIN" install --scope user --host codex --validate \
