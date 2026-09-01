@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.9.5 release-date=2026-08-16 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.0 release-date=2026-09-02 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -90,7 +90,7 @@ current catalog.
 | [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
 | [`0.9.3`](releases/0.9.3.md) | 프로젝트 간 지식 접근·자동 공유 정식 출시 |
 | [`0.9.4`](releases/0.9.4.md) | Skill 표시·전역 검증·지식 안내·프롬프트 기본값 정식 출시 |
-| [`0.9.5`](releases/0.9.5.md) | native account 복구·전역 지식 보관 파일 이전·인증된 user projection 갱신 기능 |
+| [`0.10.0`](releases/0.10.0.md) | 벡터 검색·지식 graph·컴퓨터 간 지식 이전·한국어 품질·검증형 작업 흐름 |
 
 ## Research
 
@@ -105,7 +105,7 @@ current catalog.
 | [Plugin host surface](research/user-plugin-host-surfaces.md) | 세 host install surface |
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
-| [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.9.5` 대비 권장 `0.10.0` 범위 |
+| [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.10.0` 대비 권장 `0.10.0` 범위 |
 | [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
 | [Vector·file memory 검토](research/vector-memory-0.10-feasibility-2026-08-22.md) | Anthropic file memory·Qdrant·SQLite hybrid search |
 | [Vector 재검증 결과](research/vector-requalification-0.10-2026-08-24.md) | 50,000개 고유 embedding·증분·재개 hard gate 판정 |
@@ -146,7 +146,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
-| [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
+| [`0.10.0` 출시 마감](archive/plans/releases/0.10.0/release-0.10.0-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
 | [문서 구조 정리](archive/plans/releases/0.10.0/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 완료 기록 |
 | [시험 구조 재편](archive/plans/releases/0.10.0/test-organization-0.10.0.md) | 목적별 시험·fixture 완료 기록 |
 | [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |

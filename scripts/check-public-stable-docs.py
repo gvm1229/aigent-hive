@@ -79,7 +79,7 @@ def validate_public_surface(
             f"https://unpkg.com/aigent-hive@{version}/install.sh",
             f"https://unpkg.com/aigent-hive@{version}/install.ps1",
             f"https://unpkg.com/aigent-hive@{version}/install.cmd",
-            "## What changed in 0.9.5",
+            f"## What changed in {version}",
         )
     elif relative == "docs/readme/README.ko.md":
         required = (
@@ -90,7 +90,7 @@ def validate_public_surface(
             f"https://unpkg.com/aigent-hive@{version}/install.sh",
             f"https://unpkg.com/aigent-hive@{version}/install.ps1",
             f"https://unpkg.com/aigent-hive@{version}/install.cmd",
-            "## 0.9.5 주요 변경",
+            f"## {version} 주요 변경",
         )
     elif relative == "docs/hive-install-guide.ko.html":
         required = (
