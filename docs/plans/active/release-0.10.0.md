@@ -7,8 +7,8 @@
 
 - [x] [REL10-001] 쉬운 설명 강화 포함 다음 공개 시험 입력·변경 기록 정합화
 - [x] [REL10-002] 설치 사용자 설명 지침 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
-- [ ] [REL10-003] `0.10.0` stable Skill snapshot 뒤 `test.13` 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
-- [ ] [REL10-004] `0.10.0` stable Skill snapshot `test.13`의 Windows x64·macOS arm64·Linux musl 수용
+- [x] [REL10-003] `0.10.0` stable Skill snapshot 뒤 `test.13` 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
+- [x] [REL10-004] `0.10.0` stable Skill snapshot `test.13`의 Windows x64·macOS arm64·Linux musl 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate, 승인 구독자 안내문·버전별 SHA-256 sidecar 대조
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -37,9 +37,9 @@
 ## 현재 공개 시험 근거
 
 - `0.10.0-test.10`: 설명 지침 강화 전 제품의 과거 수용 근거. 현재 stable 승격 근거로 사용 금지
-- `0.10.0-test.11`, 제품 소스 `86f05fd0da3c016d738c7bab6f060ff820948325`
-- 후보 `33512899857`·게시 `33514717158`·최종 공개 수용 `33517244245` 성공
-- npm `test=0.10.0-test.11`, `latest=0.9.5`, GitHub prerelease `v0.10.0-test.11`
+- `0.10.0-test.13`, 제품 소스 `dc9491ca7c6acbab2e67b0d90dcc8cda5d972797`
+- 후보 `33545448836`·게시 `33546575448`·최종 공개 수용 `33546986588` 성공
+- npm `test=0.10.0-test.13`, `latest=0.9.5`, GitHub prerelease `v0.10.0-test.13`
 
 - `0.10.0-test.10`, 소스 `a0cc0a1c0b45a22e70bb93ba92fee744da40c26c`
 - 후보 `33408454546`·게시 `33409550563`·공개 설치 수용 `33409940218` 성공
