@@ -28,3 +28,5 @@
 - 현재 동일 제품에서 `0.10.0-test.12` 거부 확인
 - 후보 workflow: test의 자동 의도·제품 gate 선행, stable 경로는 기존 승인 계약 유지
 - 사용자 workflow 입력 없음: 저장소의 자동 시험 의도 자료에서 plan ID·제품 지문 로드
+- 원격 음성 시험 `33532802743`: `test.12` 의도 부재로 제품 build 전 거부, 모든 build·package job skip
+- 최종 CI `33532787793`: 전체 risk-matched gate 성공
