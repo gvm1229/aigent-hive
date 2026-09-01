@@ -2674,13 +2674,13 @@ fn render_user_guidance(
         None => body,
     };
     let explanation_style = setup.map_or(
-        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision. / 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n",
+        "- Explain every user-facing explanation and explanatory text so a five-year-old can follow it without technical background. Give the purpose, then how and why it works, one step at a time. Keep core technical terms and define them on first use. Use helpful analogies, examples, steps, or comparisons without baby talk or forced analogies. Preserve meaning, numbers, commands, conditions, exceptions, uncertainty, evidence limits, and safety or approval boundaries. / 모든 사용자 설명과 설명형 글은 다섯 살 아이도 배경지식 없이 이해할 쉬운 말로 작성. 목적 뒤 작동 이유와 과정을 한 단계씩 설명하고, 핵심 기술 용어는 첫 등장에 풀이. 필요한 비유·예시·단계·비교 사용, 아기 말투·억지 비유 금지. 의미·수치·명령·조건·예외·불확실성·증거 한계·안전 및 승인 경계 보존.\n",
         |config| match config.interface_language {
             crate::user_setup::InterfaceLanguage::En => {
-                "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n"
+                "- Explain every user-facing explanation and explanatory text so a five-year-old can follow it without technical background. Give the purpose, then how and why it works, one step at a time. Keep core technical terms and define them on first use. Use helpful analogies, examples, steps, or comparisons without baby talk or forced analogies. Preserve meaning, numbers, commands, conditions, exceptions, uncertainty, evidence limits, and safety or approval boundaries.\n"
             }
             crate::user_setup::InterfaceLanguage::Ko => {
-                "- 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n"
+                "- 모든 사용자 설명과 설명형 글은 다섯 살 아이도 배경지식 없이 이해할 쉬운 말로 작성. 목적 뒤 작동 이유와 과정을 한 단계씩 설명하고, 핵심 기술 용어는 첫 등장에 풀이. 필요한 비유·예시·단계·비교 사용, 아기 말투·억지 비유 금지. 의미·수치·명령·조건·예외·불확실성·증거 한계·안전 및 승인 경계 보존.\n"
             }
         },
     );
@@ -9287,8 +9287,9 @@ mod tests {
         assert!(english.contains(
             "A message written in another language does not by itself change this preference"
         ));
-        assert!(english.contains("Explain in simple terms by default"));
-        assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
+        assert!(english.contains("so a five-year-old can follow it"));
+        assert!(english.contains("evidence limits, and safety or approval boundaries"));
+        assert!(english.contains("without baby talk or forced analogies"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(english.contains("Before every final response, review the current user statement"));
         assert!(english
@@ -9314,8 +9315,9 @@ mod tests {
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
-        assert!(korean.contains("기본 설명은 쉬운 말로 작성"));
-        assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
+        assert!(korean.contains("다섯 살 아이도 배경지식 없이 이해할 쉬운 말"));
+        assert!(korean.contains("증거 한계·안전 및 승인 경계 보존"));
+        assert!(korean.contains("아기 말투·억지 비유 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
         assert!(korean.contains("설치 직후 선택 호스트의 모든 폴더에 적용"));
