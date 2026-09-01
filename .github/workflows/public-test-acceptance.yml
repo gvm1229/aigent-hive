@@ -99,16 +99,18 @@ jobs:
           host_bin="$RUNNER_TEMP/explanation-host-bin"
           mkdir -p "$user_root"
           mkdir -p "$host_bin"
-          host_executable=codex
+          host_executable=agy
           if [ "$RUNNER_OS" = Windows ]; then
-            host_executable=codex.exe
+            host_executable=agy.exe
           fi
-          cp "$HIVE_BIN" "$host_bin/$host_executable"
+          printf '#include <stdio.h>\nint main(void) { puts("1.1.7"); return 0; }\n' \
+            >"$host_bin/host.c"
+          clang "$host_bin/host.c" -o "$host_bin/$host_executable"
           chmod +x "$host_bin/$host_executable"
           export PATH="$host_bin:$PATH"
-          "$HIVE_BIN" install --scope user --host codex --apply \
+          "$HIVE_BIN" install --scope user --host antigravity --apply \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-install.json"
-          "$HIVE_BIN" install --scope user --host codex --validate \
+          "$HIVE_BIN" install --scope user --host antigravity --validate \
             --user-root "$user_root" --output json >"$RUNNER_TEMP/explanation-validate.json"
           guidance="$user_root/AGENTS.md"
           test -f "$guidance"
