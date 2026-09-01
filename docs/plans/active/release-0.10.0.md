@@ -9,15 +9,14 @@
 - [x] [REL10-002] 설치 사용자 설명 지침 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
 - [x] [REL10-003] `0.10.0` stable Skill snapshot 뒤 `test.13` 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
 - [x] [REL10-004] `0.10.0` stable Skill snapshot `test.13`의 Windows x64·macOS arm64·Linux musl 수용
-- [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate, 승인 구독자 안내문·버전별 SHA-256 sidecar 대조
-- [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
-- [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
+- [x] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate, 승인 구독자 안내문·버전별 SHA-256 sidecar 대조
+- [x] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
+- [x] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
 
 ## 출시 차단
 
-- `VON10-007`, `REL10-001–004`: 벡터 최초 설정 product bytes의 전체 검사·다음 번호 공개 시험·세 운영체제 공개 수용
-- `REL10-005–007`: 유지보수자의 현재 요청 안 `0.10.0` 안정판 명시 승인 전 protected `main`·tag·게시·설치 금지
-- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256`의 승인 지문과 보호 환경 `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST` 모두 원문과 일치해야 함. 불일치면 배너·Discord 요약 전송 전 차단
+- 해소: `REL10-001–007` 완료
+- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256` 승인 지문·보호 환경 `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST` 동시 대조, 불일치 시 배너·Discord 요약 전송 전 차단
 
 ## 구독자 안내 승인 자동화
 
@@ -28,11 +27,14 @@
 - 출시 권한·제품 바이트·현재 공개 시험 수용 불변
 - 완료 근거: Windows 등록·발송 회귀 21개 통과, 기존 승인 `0.10.0` 지문 실제 등록 성공·항목 존재 확인. 비밀 값 재조회·실제 Discord 전송 검증 제외
 
-## 현재 실행 제외
+## 정식 출시 완료 근거
 
-- `REL10-005–007`: 유지보수자 명시 제외. `0.10.0` 안정판 protected `main` 후보·게시·설치·승인 작업 시작 금지
-- `REL10-001–004`: 벡터 최초 설정 안내의 현재 미완료 항목. 과거 공개 시험 근거는 당시 product bytes 한정
-- `KTX10-*`: `0.10.0-test.8` 수용 완료. 벡터 최초 설정 안내의 전체 완료 근거로 대체 금지
+- 유지보수자 현재 요청의 `0.10.0` 안정판 출시 명시 승인
+- `develop → main` PR #47 병합, `main` source `301147fab8252954b29b7393327dfcff18eb8b1`
+- stable candidate `33549229092`: 다섯 native target·npm 묶음 통과
+- stable publication `33550812035`: 같은 후보 산출물 게시
+- npm `latest=0.10.0`, `test=0.10.0-test.13`; GitHub Release `v0.10.0` prerelease 아님
+- Windows 별도 임시 경로의 `aigent-hive@0.10.0` 설치와 `AIgent Hive v0.10.0 (released 2026-09-02)` 확인. 증명 범위: Windows 설치. 미증명 범위: 다른 운영체제의 새 설치 재실행
 
 ## 현재 공개 시험 근거
 
@@ -40,6 +42,11 @@
 - `0.10.0-test.13`, 제품 소스 `dc9491ca7c6acbab2e67b0d90dcc8cda5d972797`
 - 후보 `33545448836`·게시 `33546575448`·최종 공개 수용 `33546986588` 성공
 - npm `test=0.10.0-test.13`, `latest=0.9.5`, GitHub prerelease `v0.10.0-test.13`
+
+## 안정판 이후 기준
+
+- 현재 안정판: `0.10.0`; 이후 개발 대상: 새 유지보수자 요청의 활성 제품 버전
+- 다음 안정판: 모든 변경의 `develop` 선통합, `develop → main` PR만 사용
 
 - `0.10.0-test.10`, 소스 `a0cc0a1c0b45a22e70bb93ba92fee744da40c26c`
 - 후보 `33408454546`·게시 `33409550563`·공개 설치 수용 `33409940218` 성공

@@ -11,7 +11,7 @@ aliases: ["Retired Skill cleanup"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:7a5c873834ba9a77e6efdedc60a5eed953fa40102dfcf88c084db5b591f465c3"
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:586e27426f1c48ebc8ad92754d478b731d9b07bbba01e61a34e9f0469c43c031"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:5327d6c3417a62069df8eda30e76fe907c48418806023847eb16189cbe3041ef"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:3e2106b90defce8839164efed8054463a8504b873abcb7cd07d7e8a8a45c60bc"
   - "repo:harness/release/stable-skill-ledger.yml#sha256:e1852b13986655af87b6271433d89734b8a260d1e565e81a27dcd5d6081a233a"
