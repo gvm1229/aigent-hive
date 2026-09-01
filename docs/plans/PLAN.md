@@ -4,7 +4,7 @@
 > 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 수용된 공개 시험: `0.10.0-test.10`
+> 수용된 공개 시험: `0.10.0-test.11`
 > 현재 단계: 안정판 명시 승인 대기
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
@@ -68,7 +68,7 @@
 | Knowledge transfer | 14 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Agent 지침·쉬운 설명 | 13 | 1 | 92.9% |
+| Agent 지침·쉬운 설명 | 14 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
 | 연속 실행 지침 교정 | 3 | 0 | 100% |
@@ -76,9 +76,9 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 2 | 5 | 28.6% |
+| `0.10.0` 출시 | 4 | 3 | 57.1% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **146** | **6** | **96.1%** |
+| **합계** | **149** | **3** | **98.0%** |
 
 ## Required load order
 
