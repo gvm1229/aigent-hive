@@ -73,13 +73,13 @@
 | Verified workflow | 12 | 0 | 100% |
 | 연속 실행 지침 교정 | 3 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
-| Skill migration cleanup | 10 | 0 | 100% |
+| Skill migration cleanup | 10 | 1 | 90.9% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| `0.10.0` 출시 | 2 | 5 | 28.6% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
 | 시험판 자동 게시 gate | 6 | 0 | 100% |
-| **합계** | **156** | **3** | **98.1%** |
+| **합계** | **154** | **5** | **96.9%** |
 
 ## Required load order
 
