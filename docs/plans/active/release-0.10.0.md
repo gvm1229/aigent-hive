@@ -6,7 +6,7 @@
 ## Checklist
 
 - [x] [REL10-001] 쉬운 설명 강화 포함 다음 공개 시험 입력·변경 기록 정합화
-- [ ] [REL10-002] 설치 사용자 설명 지침 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
+- [x] [REL10-002] 설치 사용자 설명 지침 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
 - [ ] [REL10-003] 다음 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
 - [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 설치 사용자 설명 지침 공개 시험 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate, 승인 구독자 안내문·버전별 SHA-256 sidecar 대조
