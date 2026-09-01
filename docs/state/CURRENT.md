@@ -15,7 +15,7 @@
 
 ## 현재 장애 요인·다음 작업
 
-- Agent 소유: 0건
+- Agent 소유: `0.10.0` stable Skill snapshot·test.12 공개 수용
 - branch 규칙: 모든 변경 branch → develop → main. main PR head=develop, 안정판 문서 PR도 develop 선행
 - 유지보수자 권한: `REL10-005–007`의 `0.10.0` 안정판 protected `main` 통합·tag·게시·설치. 현재 요청에서 제외
 - 기술 차단: 0건. `test.11` 후보 `33512899857`·게시 `33514717158`·최종 세 운영체제 수용 `33517244245` 성공
