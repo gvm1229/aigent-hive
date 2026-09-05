@@ -252,3 +252,59 @@
 | [passed](runs/20260901T125331-654cfdf07dae.md) | 쉬운 설명 제품 변경 전체 Rust workspace | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260901T125430-0883ee83bd1c.md) | 쉬운 설명 제품 변경 전체 Python conformance | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260901T125432-b8327f9ab14e.md) | Python conformance: documentation, security, contract, integration, release | 0f6c5f598f8f8e65040ce637613838b5b415a0a2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260901T180602-8a9e5d46efd7.md) | 0.10.0 안정 Skill snapshot projection 검증 | 4a76b985e23b20c574ccc4d011493876c2184085 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T215648-eeaeb7cbf458.md) | 0.10.1 historical Skill merge 회귀 | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T215753-769dda4ea7c7.md) | 0.10.1 project migration compile | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T215855-be07f8a22c5d.md) | 0.10.1 historical project lifecycle | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T220004-8c8451485f6a.md) | 0.10.1 full 0.9.5 selection retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T220049-10c3498bae2a.md) | 0.10.1 full selection cleanup retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T220133-58f34c7fe751.md) | 0.10.1 nested Skill cleanup retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T220436-ebf7c4a235b0.md) | 0.10.1 usage policy compile | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T220446-81352d80e656.md) | 0.10.1 usage policy compile retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T220517-9d054ce6c694.md) | 0.10.1 usage policy compile second retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T220641-59081bbe7a69.md) | 0.10.1 same-session usage recheck | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T221038-3b9aaaf51868.md) | 0.10.1 generated compatibility registry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T221104-c3390d1fc145.md) | 0.10.1 generated registry retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T221228-ae36f184e27f.md) | 0.10.1 generated registry ordinal retry | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T221404-6eb5d7646519.md) | 0.10.1 project migration full lifecycle | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T221445-3de7c4903ff9.md) | 0.10.1 Skill migration full | 948b15e503bf31f9a99dd3862d11d6933dc957b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T221656-514a5991877d.md) | 0.10.1 usage guard full Rust | b592e30534df5d36a384405ae2ad74017491eaa1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T221949-a8148a62f026.md) | 0.10.1 usage threshold diagnostics | b592e30534df5d36a384405ae2ad74017491eaa1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T222118-ee2e3d45bde7.md) | 0.10.1 usage final focused | b592e30534df5d36a384405ae2ad74017491eaa1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T222739-1b4c8eb238fb.md) | 0.10.1 historical catalog | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T222850-3ce8d71e1c88.md) | 0.10.1 historical catalog retry | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T222918-044c110f0f1c.md) | 0.10.1 historical catalog clean retry | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T222929-853dce43c407.md) | 0.10.1 historical user projection | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T223032-3d139a80f52e.md) | 0.10.1 binary version | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T223056-a2a9c3c942c0.md) | 0.10.1 predecessor lifecycle | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T223145-976db4e42af8.md) | 0.10.1 release migration metadata | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T223247-836980aee90b.md) | 0.10.1 release migration retry | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T223316-2194c67c4be7.md) | 0.10.1 bugfix bundle retry | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T223342-cddb8271f456.md) | 0.10.1 public surface retry | 856e945f02a5bb8ee085b4fa88e20ba660c565fa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T223819-b6724332ff77.md) | 개발 검증: cargo.EXE | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T223825-f92752c8de6b.md) | 개발 검증: cargo.EXE | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T223843-b01543406efd.md) | 개발 검증: cargo.EXE | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224246-13bb1de75509.md) | 0.10.1 full Rust failure repairs | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T224312-d1a31452b879.md) | 0.10.1 user projection repair | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224322-a67afb0c251d.md) | 0.10.1 Codex plugin version | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224332-c8890f5bf6c4.md) | 0.10.1 historical cleanup scope | 31e437e6d2e92a6e8d83b2574a978b9e21c962e3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224415-6c140cb652c9.md) | 개발 검증: cargo.EXE | ecd92340604353fd0935e8f0c4ccdcd2b34288f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224418-ecc4d40e72d9.md) | 개발 검증: cargo.EXE | ecd92340604353fd0935e8f0c4ccdcd2b34288f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T224426-aedc3dc868a1.md) | 개발 검증: cargo.EXE | ecd92340604353fd0935e8f0c4ccdcd2b34288f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T224529-b4b579567191.md) | 개발 검증: uv.EXE | ecd92340604353fd0935e8f0c4ccdcd2b34288f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T224535-5baef5e45eb5.md) | Python conformance: documentation, security, contract, integration, release | ecd92340604353fd0935e8f0c4ccdcd2b34288f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T225517-92e73ded0152.md) | 개발 검증: uv.EXE | a68789ef1a46ed82c6efe1706b70103a4f51b913 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T225519-5006417a9e37.md) | Python conformance: documentation, security, contract, integration, release | a68789ef1a46ed82c6efe1706b70103a4f51b913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T230627-09c9f365099b.md) | Python conformance: contract | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T231350-43c9f2c474cd.md) | Python conformance: integration | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T233118-f531759edebe.md) | v0101-registered-project-snapshots-rust | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T233204-2dc5b0f054de.md) | v0101-integration-regression | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T233206-d19be2cc42b3.md) | Python conformance: integration | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T233617-15c9347c1bd6.md) | v0101-release-gate | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T233619-ccd493181a3b.md) | Python conformance: release | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T234144-d1cd1bc6efa2.md) | v0101-release-gate-rerun | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T234146-30726b7a8ac6.md) | Python conformance: release | eb0f0dd96783a7e9a736269d511c95b6d7a51f94 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T235012-09fd845c4563.md) | v0101-documentation-current-truth | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260905T235013-2607d990a1ca.md) | Python conformance: documentation | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T235115-9dcf91d48878.md) | v0101-documentation-current-truth-rerun | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T235116-befc28b79bc4.md) | Python conformance: documentation | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
