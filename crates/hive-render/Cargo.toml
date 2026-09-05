@@ -23,5 +23,10 @@ sha2.workspace = true
 tempfile.workspace = true
 toml.workspace = true
 
+[build-dependencies]
+serde.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+
 [lints]
 workspace = true

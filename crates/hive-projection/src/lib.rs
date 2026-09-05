@@ -188,6 +188,24 @@ pub struct SkillCatalog {
     pub skills: Vec<SkillCatalogEntry>,
 }
 
+/// One declared many-to-one Skill selection migration.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct SkillSelectionMerge {
+    /// Distinct historical Skill ids that converge.
+    pub sources: Vec<String>,
+    /// Current public Skill id selected once after migration.
+    pub target: String,
+}
+
+/// Canonical project Skill selection derived from an authenticated historical release.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct HistoricalSkillSelectionMigration {
+    /// Sorted unique current public Skill ids.
+    pub selected: Vec<String>,
+    /// Declared many-to-one transitions applied during normalization.
+    pub merges: Vec<SkillSelectionMerge>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RetiredSkillNameLedger {
@@ -206,6 +224,97 @@ struct SkillLifecycleEvent {
     removed_in: String,
     replacement: String,
     transition_kind: String,
+}
+
+/// Canonicalize a raw project Skill selection from one authenticated historical release.
+///
+/// Raw duplicate ids, ids absent from the source release, and undeclared canonical collisions
+/// remain invalid. Distinct source ids may converge only when the lifecycle ledger declares at
+/// least one member of that collision as a `merge` into the same current id.
+///
+/// # Errors
+///
+/// Returns an error when the source release is unsupported or the selection cannot be migrated
+/// without weakening current-input validation.
+pub fn migrate_historical_project_skill_selection(
+    source_version: &str,
+    selected_names: &[String],
+) -> Result<HistoricalSkillSelectionMigration, ProjectionError> {
+    let source_names = historical_builtin_skills(source_version)?
+        .into_iter()
+        .map(|skill| skill.name)
+        .collect::<BTreeSet<_>>();
+    let raw = selected_names.iter().cloned().collect::<BTreeSet<_>>();
+    if raw.len() != selected_names.len() {
+        return Err(ProjectionError::new(
+            "hive.skill-selection-invalid",
+            "selected historical project Skills must be unique",
+        ));
+    }
+    if let Some(unknown) = raw.iter().find(|name| !source_names.contains(*name)) {
+        return Err(ProjectionError::new(
+            "hive.skill-selection-invalid",
+            format!(
+                "selected project Skill is absent from source release {source_version}: {unknown}"
+            ),
+        ));
+    }
+
+    let ledger: RetiredSkillNameLedger =
+        serde_yaml::from_str(RETIRED_SKILL_NAMES_YAML).map_err(|error| {
+            ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill name ledger is not valid YAML: {error}"),
+            )
+        })?;
+    retired_builtin_skill_names()?;
+    let mut grouped = BTreeMap::<String, Vec<String>>::new();
+    for name in raw {
+        let canonical = ledger
+            .retired_names
+            .get(&name)
+            .cloned()
+            .unwrap_or_else(|| name.clone());
+        grouped.entry(canonical).or_default().push(name);
+    }
+
+    let mut merges = Vec::new();
+    for (target, sources) in &mut grouped {
+        sources.sort();
+        if sources.len() < 2 {
+            continue;
+        }
+        let declared = sources.iter().all(|source| {
+            source == target
+                || ledger
+                    .lifecycle
+                    .iter()
+                    .any(|event| event.retired_name == *source && event.replacement == *target)
+        });
+        let has_merge = sources.iter().any(|source| {
+            ledger.lifecycle.iter().any(|event| {
+                event.retired_name == *source
+                    && event.replacement == *target
+                    && event.transition_kind == "merge"
+            })
+        });
+        if !declared || !has_merge {
+            return Err(ProjectionError::new(
+                "hive.skill-selection-invalid",
+                format!(
+                    "historical project Skills converge without a declared merge into {target}"
+                ),
+            ));
+        }
+        merges.push(SkillSelectionMerge {
+            sources: sources.clone(),
+            target: target.clone(),
+        });
+    }
+    Ok(HistoricalSkillSelectionMigration {
+        selected: grouped.into_keys().collect(),
+        merges,
+    })
 }
 
 /// Returns the canonical retired-ID ledger used by selection migration and
@@ -2896,6 +3005,43 @@ description: Inspect one local file without changing it.
                 Some(current_name),
             );
         }
+    }
+
+    #[test]
+    fn historical_project_selection_accepts_only_declared_many_to_one_merges() {
+        let migrated = migrate_historical_project_skill_selection(
+            "0.9.5",
+            &[
+                "iterative-execution".to_owned(),
+                "ralph-loop".to_owned(),
+                "package-review".to_owned(),
+            ],
+        )
+        .expect("declared historical merge");
+        assert_eq!(
+            migrated.selected,
+            vec!["judge-evidence".to_owned(), "verified-workflow".to_owned()]
+        );
+        assert_eq!(migrated.merges.len(), 1);
+        assert_eq!(
+            migrated.merges[0].sources,
+            vec!["iterative-execution".to_owned(), "ralph-loop".to_owned()]
+        );
+        assert_eq!(migrated.merges[0].target, "verified-workflow");
+
+        let duplicate = migrate_historical_project_skill_selection(
+            "0.9.5",
+            &["ralph-loop".to_owned(), "ralph-loop".to_owned()],
+        )
+        .expect_err("raw duplicate must remain invalid");
+        assert_eq!(duplicate.code(), "hive.skill-selection-invalid");
+
+        let absent = migrate_historical_project_skill_selection(
+            "0.9.2",
+            &["iterative-execution".to_owned()],
+        )
+        .expect_err("source release membership must be authenticated");
+        assert_eq!(absent.code(), "hive.skill-selection-invalid");
     }
 
     #[test]

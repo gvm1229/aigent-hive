@@ -12,8 +12,9 @@ use hive_core::{
 };
 use hive_projection::{
     canonical_builtin_skill_name, compile_project_projection, compile_projection, embedded_catalog,
-    historical_builtin_skills, ActiveSkills, Availability, Host as ProjectionHost,
-    OptionalSkillConsent, OptionalSkillSource, Projection, SkillSourceType,
+    historical_builtin_skills, migrate_historical_project_skill_selection, ActiveSkills,
+    Availability, Host as ProjectionHost, OptionalSkillConsent, OptionalSkillSource, Projection,
+    SkillSelectionMerge, SkillSourceType,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -45,11 +46,10 @@ const FRESH_CAPABILITY_RESOLUTION_MAX_AGE: Duration = Duration::from_mins(1);
 const OPERATIONAL_USER_SETUP_VERSION: (u64, u64, u64) = (0, 8, 0);
 static ACTIVATION_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Historical releases whose complete project-base ledger is embedded in the binary.
-/// Earlier releases retain the separately authenticated legacy Skill-only contract.
-pub const FULL_HISTORICAL_PROJECT_BASE_VERSIONS: &[&str] = &[
-    "0.7.0", "0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4",
-];
+include!(concat!(
+    env!("OUT_DIR"),
+    "/historical_project_base_registry.rs"
+));
 
 /// Report whether a historical release must authenticate against its complete
 /// embedded project-base ledger instead of the legacy Skill-only inventory.
@@ -207,6 +207,14 @@ pub struct SetupChange {
 pub struct ProjectUpgradeCandidate {
     /// Embedded product release version.
     pub product_version: String,
+    /// Authenticated installed release whose support state was normalized.
+    pub source_version: String,
+    /// Pure migration applied before the current projection was rendered.
+    pub migration_id: String,
+    /// Support-state fields normalized during migration.
+    pub normalized_fields: Vec<String>,
+    /// Declared many-to-one Skill transitions applied to the installed selection.
+    pub skill_merges: Vec<SkillSelectionMerge>,
     /// Mergeable path to exact incoming bytes. Shared files contain only the
     /// exact Hive marker block, never foreign bytes.
     pub files: BTreeMap<String, Vec<u8>>,
@@ -848,7 +856,24 @@ pub fn project_upgrade_candidate_in(
     validate_resolution(&answers, &resolution)?;
     validate_schema_instance(SETUP_SCHEMA, &answers_value, "setup answers")?;
     let harness = read_installed_harness(target_dir)?;
-    let effective_preferences = effective_preferences_from_harness(&harness)?;
+    let source_version = harness.harness_version.clone();
+    let mut effective_preferences = effective_preferences_from_harness(&harness)?;
+    let mut normalized_fields = Vec::new();
+    let mut skill_merges = Vec::new();
+    if source_version != env!("CARGO_PKG_VERSION") {
+        if let Some(preferences) = effective_preferences.as_mut() {
+            let migration = migrate_historical_project_skill_selection(
+                &source_version,
+                &preferences.selected_project_skills,
+            )
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+            if migration.selected != preferences.selected_project_skills {
+                normalized_fields.push("selected_project_skills".to_owned());
+            }
+            preferences.selected_project_skills = migration.selected;
+            skill_merges = migration.merges;
+        }
+    }
     let files = render_tree_with_preferences(
         target_dir,
         &answers,
@@ -883,6 +908,10 @@ pub fn project_upgrade_candidate_in(
         })?;
     Ok(ProjectUpgradeCandidate {
         product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        source_version,
+        migration_id: "authenticated-project-state-v1".to_owned(),
+        normalized_fields,
+        skill_merges,
         files: mergeable,
         support_files,
         base_ledger,
@@ -910,16 +939,7 @@ pub fn historical_project_upgrade_candidate_in(
             "historical full project base is not embedded: {version}"
         )));
     }
-    let files = match version {
-        "0.7.0" => frozen_project_base_0_7(target_dir)?,
-        "0.8.0" => frozen_project_base_0_8(target_dir)?,
-        "0.9.0" => frozen_project_base_0_9(target_dir)?,
-        "0.9.1" => frozen_project_base_0_9_1(target_dir)?,
-        "0.9.2" => frozen_project_base_0_9_2(target_dir)?,
-        "0.9.3" => frozen_project_base_0_9_3(target_dir)?,
-        "0.9.4" => frozen_project_base_0_9_4(target_dir)?,
-        _ => unreachable!("full historical project-base registry is exhaustive"),
-    };
+    let files = frozen_project_base_from_registry(target_dir, version)?;
     let files = files
         .into_iter()
         .map(|(path, content)| {
@@ -1463,6 +1483,45 @@ frozen_project_base_0_9_release!(
 frozen_project_base_0_9_release!(
     frozen_project_base_0_9_4,
     "0.9.4",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_5,
+    "0.9.5",
     [
         "00-project-harness.md",
         "01-project-knowledge.md",

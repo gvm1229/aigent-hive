@@ -7,7 +7,7 @@ use hive_core::{
     sha256_digest, validate_hive_directive_projection_relative,
     validate_hive_skill_projection_relative, validate_project_relative,
 };
-use hive_projection::historical_builtin_skills;
+use hive_projection::{historical_builtin_skills, SkillSelectionMerge};
 #[cfg(test)]
 use hive_render::FULL_HISTORICAL_PROJECT_BASE_VERSIONS;
 use hive_render::{
@@ -112,7 +112,11 @@ struct PathReport {
 
 struct UpgradePlan {
     source_version: String,
+    source_snapshot_digest: Option<String>,
     target_version: String,
+    migration_id: String,
+    normalized_fields: Vec<String>,
+    skill_merges: Vec<SkillSelectionMerge>,
     reports: Vec<PathReport>,
     final_files: BTreeMap<String, Option<Vec<u8>>>,
     expected_before: BTreeMap<String, ExpectedBefore>,
@@ -190,12 +194,15 @@ pub(crate) fn authenticate_legacy_knowledge_target(target: &Path) -> Result<(), 
     ensure_consumer_target(target).map_err(|error| UpdateError::Input(error.to_string()))?;
     let target_dir = open_target_capability(target)?;
     ensure_pinned_consumer_target(&target_dir)?;
-    let candidate = project_upgrade_candidate_in(&target_dir).map_err(render_error)?;
-    let ledger = read_base_ledger(&target_dir, &candidate.files)?.ok_or_else(|| {
+    let ledger = read_base_ledger(&target_dir, None)?.ok_or_else(|| {
         UpdateError::Verification(
             "legacy project-local knowledge requires an authenticated project base".to_owned(),
         )
     })?;
+    let candidate = project_upgrade_candidate_in(&target_dir).map_err(render_error)?;
+    if ledger.product_version == env!("CARGO_PKG_VERSION") {
+        authenticate_current_base(&ledger, &candidate.files)?;
+    }
     let version = release_version(&ledger.product_version).ok_or_else(|| {
         UpdateError::Verification("project base product version is invalid".to_owned())
     })?;
@@ -279,12 +286,24 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
 
 #[allow(clippy::too_many_lines)]
 fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
+    let base = read_base_ledger(target, None)?;
     let candidate = project_upgrade_candidate_in(target).map_err(render_error)?;
-    let base = read_base_ledger(target, &candidate.files)?;
+    if let Some(ledger) = base
+        .as_ref()
+        .filter(|ledger| ledger.product_version == env!("CARGO_PKG_VERSION"))
+    {
+        authenticate_current_base(ledger, &candidate.files)?;
+    }
     let source_version = base.as_ref().map_or_else(
         || "legacy-unbased".to_owned(),
         |ledger| ledger.product_version.clone(),
     );
+    if base.is_some() && candidate.source_version != source_version {
+        return Err(UpdateError::Verification(
+            "installed harness version differs from its authenticated project base".to_owned(),
+        ));
+    }
+    let source_snapshot_digest = base.as_ref().map(|ledger| ledger.ledger_digest.clone());
     let base_files = base
         .as_ref()
         .map(|ledger| {
@@ -403,7 +422,11 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
         .map_err(|error| UpdateError::Internal(error.to_string()))?;
     Ok(UpgradePlan {
         source_version,
+        source_snapshot_digest,
         target_version: candidate.product_version,
+        migration_id: candidate.migration_id,
+        normalized_fields: candidate.normalized_fields,
+        skill_merges: candidate.skill_merges,
         reports,
         final_files,
         expected_before,
@@ -449,7 +472,7 @@ fn release_version(version: &str) -> Option<(u64, u64, u64)> {
 
 fn read_base_ledger(
     target: &Dir,
-    incoming: &BTreeMap<String, Vec<u8>>,
+    current_incoming: Option<&BTreeMap<String, Vec<u8>>>,
 ) -> Result<Option<BaseLedger>, UpdateError> {
     let Some(bytes) = read_bounded_optional(target, Path::new(BASE_PATH), MAX_LEDGER_BYTES)? else {
         return Ok(None);
@@ -493,7 +516,9 @@ fn read_base_ledger(
         previous = Some(&entry.path);
     }
     if ledger.product_version == env!("CARGO_PKG_VERSION") {
-        authenticate_current_base(&ledger, incoming)?;
+        if let Some(incoming) = current_incoming {
+            authenticate_current_base(&ledger, incoming)?;
+        }
     } else {
         authenticate_historical_base(target, &ledger)?;
     }
@@ -1031,17 +1056,27 @@ fn prune_empty_project_skill_ancestors<'a>(
     target: &Dir,
     paths: impl IntoIterator<Item = &'a Path>,
 ) -> Result<(), UpdateError> {
-    let boundary = Path::new(".agents");
+    let skills_root = Path::new(".agents/skills");
     let mut directories = BTreeSet::new();
     for path in paths {
-        let mut parent = path.parent();
-        while let Some(directory) = parent.filter(|directory| *directory != boundary) {
-            if !directory.starts_with(boundary) {
-                break;
-            }
-            directories.insert(directory.to_path_buf());
-            parent = directory.parent();
+        validate_hive_skill_projection_relative(path)
+            .map_err(|error| UpdateError::Verification(error.to_string()))?;
+        let skill_name = path
+            .strip_prefix(skills_root)
+            .ok()
+            .and_then(|suffix| suffix.components().next())
+            .ok_or_else(|| {
+                UpdateError::Internal("project Skill path has no Skill directory".to_owned())
+            })?;
+        let skill_directory = skills_root.join(skill_name);
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| *parent != skill_directory.as_path())
+        {
+            directories.insert(parent.to_path_buf());
         }
+        directories.insert(skill_directory);
+        directories.insert(skills_root.to_path_buf());
     }
     let mut directories = directories.into_iter().collect::<Vec<_>>();
     directories.sort_by(|left, right| {
@@ -1071,8 +1106,17 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
         };
         (agents, OsString::from("skills"))
     } else {
-        let skill_path = relative.join("SKILL.md");
-        validate_hive_skill_projection_relative(&skill_path)
+        let suffix = relative.strip_prefix(skills_root).map_err(|_| {
+            UpdateError::Verification("project Skill directory escaped its root".to_owned())
+        })?;
+        let components = suffix.components().collect::<Vec<_>>();
+        let validation_path =
+            if components.len() == 2 && components[1].as_os_str() == OsStr::new("agents") {
+                relative.join("openai.yaml")
+            } else {
+                relative.join("SKILL.md")
+            };
+        validate_hive_skill_projection_relative(&validation_path)
             .map_err(|error| UpdateError::Verification(error.to_string()))?;
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
@@ -1092,11 +1136,25 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
                 )))
             }
         };
-        let name = relative
-            .file_name()
-            .ok_or_else(|| UpdateError::Internal("project Skill directory has no name".to_owned()))?
-            .to_os_string();
-        (skills, name)
+        if components.len() == 2 {
+            let skill = skills
+                .open_dir_nofollow(components[0].as_os_str())
+                .map_err(|error| {
+                    UpdateError::Conflict(format!(
+                        "cannot open project-owned Skill directory {}: {error}",
+                        relative.display()
+                    ))
+                })?;
+            (skill, components[1].as_os_str().to_os_string())
+        } else {
+            let name = relative
+                .file_name()
+                .ok_or_else(|| {
+                    UpdateError::Internal("project Skill directory has no name".to_owned())
+                })?
+                .to_os_string();
+            (skills, name)
+        }
     };
     let directory = match parent.open_dir_nofollow(&name) {
         Ok(directory) => directory,
@@ -2470,7 +2528,11 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
         next_action: None,
         data: Some(json!({
             "source_version": plan.source_version,
+            "source_snapshot_digest": plan.source_snapshot_digest,
             "target_version": plan.target_version,
+            "migration_id": plan.migration_id,
+            "normalized_fields": plan.normalized_fields,
+            "skill_merges": plan.skill_merges,
             "plan_digest": plan.plan_digest,
             "reports": plan.reports
         })),
@@ -2582,7 +2644,11 @@ mod tests {
     fn one_file_plan(path: &str, before: Option<&[u8]>, after: Option<&[u8]>) -> UpgradePlan {
         UpgradePlan {
             source_version: "0.7.0".to_owned(),
+            source_snapshot_digest: None,
             target_version: "0.7.0".to_owned(),
+            migration_id: "test".to_owned(),
+            normalized_fields: Vec::new(),
+            skill_merges: Vec::new(),
             reports: Vec::new(),
             final_files: BTreeMap::from([(path.to_owned(), after.map(<[u8]>::to_vec))]),
             expected_before: BTreeMap::from([(
@@ -2616,7 +2682,11 @@ mod tests {
             .collect();
         UpgradePlan {
             source_version: "0.7.0".to_owned(),
+            source_snapshot_digest: None,
             target_version: "0.8.0".to_owned(),
+            migration_id: "test".to_owned(),
+            normalized_fields: Vec::new(),
+            skill_merges: Vec::new(),
             reports: Vec::new(),
             final_files,
             expected_before,
@@ -3535,7 +3605,7 @@ mod tests {
             content.as_bytes().to_vec(),
         )]);
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &incoming),
+            read_base_ledger(&target_dir(temporary.path()), Some(&incoming)),
             Err(UpdateError::Verification(_))
         ));
     }
@@ -3672,7 +3742,8 @@ mod tests {
         )
         .expect("base ledger");
 
-        let ledger = read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new())
+        let empty = BTreeMap::new();
+        let ledger = read_base_ledger(&target_dir(temporary.path()), Some(&empty))
             .expect("supported historical base")
             .expect("base ledger");
 
@@ -3712,7 +3783,7 @@ mod tests {
             assert!(requires_full_historical_project_base(version));
         }
         assert!(!requires_full_historical_project_base("0.6.0"));
-        assert!(!requires_full_historical_project_base("0.9.5"));
+        assert!(requires_full_historical_project_base("0.9.5"));
     }
 
     #[test]
@@ -3727,7 +3798,7 @@ mod tests {
         .expect("base ledger");
 
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+            read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
             Err(UpdateError::Unsupported(_))
         ));
     }
@@ -3922,7 +3993,7 @@ mod tests {
             )
             .expect("base ledger");
             assert!(matches!(
-                read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+                read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
                 Err(UpdateError::Verification(_))
             ));
         }
@@ -3955,7 +4026,7 @@ mod tests {
         .expect("base ledger");
 
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+            read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
             Err(UpdateError::Verification(_))
         ));
         assert_eq!(
