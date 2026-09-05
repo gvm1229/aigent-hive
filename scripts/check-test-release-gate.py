@@ -46,6 +46,13 @@ def is_product_path(path: str) -> bool:
     )
 
 
+def version_key(value: str) -> tuple[int, int, int]:
+    match = STABLE.fullmatch(value)
+    if match is None:
+        raise GateError("accepted product registry version is invalid")
+    return tuple(int(part) for part in match.groups())
+
+
 def product_entries(ref: str) -> list[str]:
     rows = []
     for line in git("ls-tree", "-r", ref).splitlines():
@@ -121,8 +128,9 @@ def verify(product_version: str, package_version: str, plan_ids: str | None, hea
     if missing:
         raise GateError("product change plan IDs are absent or incomplete: " + ",".join(missing))
     registry = read_registry()
-    if registry["product_version"] != product_version:
-        raise GateError("accepted product registry belongs to another product version")
+    accepted_product_version = registry["product_version"]
+    if not isinstance(accepted_product_version, str) or version_key(product_version) < version_key(accepted_product_version):
+        raise GateError("candidate product version is older than the accepted public-test baseline")
     base = str(registry["accepted_source_commit"])
     prior_digest = product_digest(base)
     if prior_digest != registry["product_tree_sha256"]:

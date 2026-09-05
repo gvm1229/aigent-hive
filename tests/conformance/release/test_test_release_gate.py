@@ -56,6 +56,21 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.assertEqual(result["status"], "authorized")
         self.assertEqual(result["product_paths"], ["crates/app/main.rs"])
 
+    def test_next_patch_product_can_start_at_test_one_from_the_accepted_baseline(self) -> None:
+        self.commit("crates/app/main.rs", "fn main() { println!(\"next patch\"); }\n")
+        result = self.module["verify"]("0.10.1", "0.10.1-test.1", "APP10-001", "HEAD")
+        self.assertEqual(result["status"], "authorized")
+        self.assertEqual(result["base_package_version"], "0.10.0-test.11")
+
+    def test_older_product_cannot_reuse_a_newer_accepted_baseline(self) -> None:
+        registry = self.module["read_registry"].__globals__["REGISTRY"]
+        value = json.loads(registry.read_text(encoding="utf-8"))
+        value["product_version"] = "0.10.1"
+        registry.write_text(json.dumps(value), encoding="utf-8")
+        self.commit("crates/app/main.rs", "fn main() { println!(\"older\"); }\n")
+        with self.assertRaisesRegex(self.module["GateError"], "older than"):
+            self.verify()
+
     def test_source_only_changes_never_create_a_numbered_test(self) -> None:
         for path in ("docs/note.md", ".agents/skills/example/SKILL.md", "tests/test_x.py", ".github/workflows/ci.yml"):
             with self.subTest(path=path):
