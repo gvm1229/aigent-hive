@@ -14,27 +14,27 @@
 
 ## 일반 harness 갱신
 
-- [ ] [HUP101-001] DuckSoul형 비밀 없는 `0.9.5` support state 재현 fixture와 실패 회귀 고정
-- [ ] [HUP101-002] Stable source·compatibility epoch·project base·user projection·state schema의 공통 등록표
-- [ ] [HUP101-003] 등록표 기반 Rust historical registry 자동 생성과 hand-maintained version dispatch 제거
-- [ ] [HUP101-004] Project base 인증을 current candidate render보다 앞에 배치
-- [ ] [HUP101-005] Source-version-bound `ProjectState` parse·cross-file validation·current-state migration
-- [ ] [HUP101-006] Raw duplicate 거부와 declared rename·many-to-one merge 수렴 분리
-- [ ] [HUP101-007] Support files·projection·retired cleanup의 기존 journal·rollback 단일 경계 유지
-- [ ] [HUP101-008] Scan·dry-run의 source digest·migration ID·normalized field·Skill merge 보고
-- [ ] [HUP101-009] 모든 declared predecessor·세 host·설정 variant의 compiled CLI lifecycle matrix
-- [ ] [HUP101-010] Migration table·registry·full base·executable coverage 누락의 build/publication 차단
+- [x] [HUP101-001] DuckSoul형 비밀 없는 `0.9.5` support state 재현 fixture와 실패 회귀 고정
+- [x] [HUP101-002] Stable source·compatibility epoch·project base·user projection·state schema의 공통 등록표
+- [x] [HUP101-003] 등록표 기반 Rust historical registry 자동 생성과 hand-maintained version dispatch 제거
+- [x] [HUP101-004] Project base 인증을 current candidate render보다 앞에 배치
+- [x] [HUP101-005] Source-version-bound `ProjectState` parse·cross-file validation·current-state migration
+- [x] [HUP101-006] Raw duplicate 거부와 declared rename·many-to-one merge 수렴 분리
+- [x] [HUP101-007] Support files·projection·retired cleanup의 기존 journal·rollback 단일 경계 유지
+- [x] [HUP101-008] Scan·dry-run의 source digest·migration ID·normalized field·Skill merge 보고
+- [x] [HUP101-009] 모든 declared predecessor·세 host·설정 variant의 compiled CLI lifecycle matrix
+- [x] [HUP101-010] Migration table·registry·full base·executable coverage 누락의 build/publication 차단
 
 ## 사용량 보호 재평가
 
-- [ ] [UGR101-001] Effective usage policy의 deterministic digest와 halt marker binding
-- [ ] [UGR101-002] Legacy marker의 policy-stale 분류와 `hive.usage-recheck-required` status
-- [ ] [UGR101-003] Current-policy halt short-circuit와 old-policy fresh sensor recheck 분리
-- [ ] [UGR101-004] Allow 때 exact-byte halt 제거, limited·unknown 때 current-policy marker 교체
-- [ ] [UGR101-005] 측정 중 policy 변경의 bounded retry와 fail-closed 결과
-- [ ] [UGR101-006] Threshold 결과의 `session_recheck_required`와 stored/project/effective 값 표시
-- [ ] [UGR101-007] `usage-guard` Skill의 threshold 직후 same-binding enforce, disable mutation `0건`
-- [ ] [UGR101-008] Source·project·global max·legacy·race·run/loop authorization 회귀
+- [x] [UGR101-001] Effective usage policy의 deterministic digest와 halt marker binding
+- [x] [UGR101-002] Legacy marker의 policy-stale 분류와 `hive.usage-recheck-required` status
+- [x] [UGR101-003] Current-policy halt short-circuit와 old-policy fresh sensor recheck 분리
+- [x] [UGR101-004] Allow 때 exact-byte halt 제거, limited·unknown 때 current-policy marker 교체
+- [x] [UGR101-005] 측정 중 policy 변경의 bounded retry와 fail-closed 결과
+- [x] [UGR101-006] Threshold 결과의 `session_recheck_required`와 stored/project/effective 값 표시
+- [x] [UGR101-007] `usage-guard` Skill의 threshold 직후 same-binding enforce, disable mutation `0건`
+- [x] [UGR101-008] Source·project·global max·legacy·race·run/loop authorization 회귀
 
 ## 수락 기준
 

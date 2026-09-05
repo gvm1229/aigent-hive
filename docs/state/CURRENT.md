@@ -47,8 +47,10 @@
 
 ## 현재 근거
 
-- Source Wiki lint: 오류 `0건`, 경고 `0건`
-- Source 작업 트리: 진단 시작 전 clean
+- 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`
+- Rust 전체: 446 통과·수동 qualification 1 제외, core 109·projection 39·render 63·update 54·wiki 177 통과
+- Historical project lifecycle: `0.9.1–0.10.0` scan·dry-run·rollback·apply·validate 통과
+- Source Wiki: 174개 page, 오류 `0건`, 경고 `0건`
 - DuckSoul Git 상태: 기존 사용자 변경 존재, 이번 진단 변경 `0건`
 - 사용량 보호: global threshold `10%`, 현재 Codex session explicit override disabled
-- 미증명: 수정 구현, regression pass, 공개 artifact, macOS/Linux 실제 수용
+- 남은 검증: Python 전체 lane 재실행, CI, 공개 artifact, macOS/Linux 실제 수용

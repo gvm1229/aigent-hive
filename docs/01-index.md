@@ -156,3 +156,14 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [`0.10.0` Skill 예약](plans/active/host-owned-skill-reservations-0.10.0.md) | Host-owned Skill 세션 예약 |
 | [`0.10.0` nested scan](plans/active/nested-project-knowledge-scan-0.10.0.md) | 상위 Git 저장소 아래 등록 project scan |
 | [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |
+| [`0.10.0` Judge](plans/active/adversarial-judge-0.10.0.md) | 명시적 adversarial Judge |
+| [`0.10.0` Agent 지침](plans/active/agent-directive-optimization-0.10.0.md) | Source·소비자 지침 정리 |
+| [`0.10.0` 시험 gate](plans/active/automatic-test-release-gate-0.10.0.md) | 제품 변경 공개 시험 자동화 |
+| [`0.10.0` 연속 실행](plans/active/host-neutral-continuation-0.10.0.md) | Host-neutral closure·hook |
+| [`0.10.0` Skill migration](plans/active/skill-retirement-migration-0.10.0.md) | Rename·폐기 artifact 정리 |
+| [Source devlog](plans/active/source-draft-devlog.md) | Source-only 기술 글 초안 |
+| [`0.9.5` 공개 문서](plans/active/stable-public-documentation-0.9.5.md) | Stable-only 공개 안내 |
+| [`0.10.0` vector onboarding](plans/active/vector-onboarding-0.10.0.md) | 벡터 최초 설정 안내 |
+| [연속 실행 hook 조사](research/host-neutral-continuation-hooks-0.10-feasibility-2026-08-22.md) | 세 host 가능성 검토 |
+| [`0.10.1` harness·usage 수정](plans/active/harness-upgrade-0.10.1.md) | 일반 migration·threshold recheck |
+| [`0.10.1` 공개 시험](plans/active/release-0.10.1.md) | `test.1` 공개 수용 |
