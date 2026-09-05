@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "product_version": "0.10.0",
-  "package_version": "0.10.0-test.13",
-  "plan_ids": ["SKM10-011"],
-  "product_tree_sha256": "sha256:68b8375abd3c3bed6a127d14cf646d8653685ac095aadb4a00cd2219c5c79512"
+  "product_version": "0.10.1",
+  "package_version": "0.10.1-test.1",
+  "plan_ids": ["HUP101-010", "UGR101-008"],
+  "product_tree_sha256": "sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff"
 }

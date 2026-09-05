@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 작업 branch: `develop`
-- Product version: `0.10.1`
+- 제품 버전: `0.10.1`
 - Stable baseline: `0.10.0`
 - 다음 공개 시험: `0.10.1-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -47,10 +47,13 @@
 
 ## 현재 근거
 
-- 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`
+- 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`, `fede7a2a`, `df2a88f8`
 - Rust 전체: 446 통과·수동 qualification 1 제외, core 109·projection 39·render 63·update 54·wiki 177 통과
 - Historical project lifecycle: `0.9.1–0.10.0` scan·dry-run·rollback·apply·validate 통과
+- 공개 `0.10.0` exact support-state fixture: Codex·Claude·Antigravity의 `test.2`·`test.4` 갱신 통과
 - Source Wiki: 174개 page, 오류 `0건`, 경고 `0건`
 - DuckSoul Git 상태: 기존 사용자 변경 존재, 이번 진단 변경 `0건`
-- 사용량 보호: global threshold `10%`, 현재 Codex session explicit override disabled
-- 남은 검증: Python 전체 lane 재실행, CI, 공개 artifact, macOS/Linux 실제 수용
+- 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable을 요구하지 않음
+- Python lane: documentation 87·security 103·contract 466·integration 94·release 115 통과; 플랫폼 조건부 건너뜀은 별도 유지
+- 공개 시험 gate: `0.10.1-test.1`, product digest `sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff` 승인
+- 남은 검증: CI, 공개 artifact, Windows·macOS·Linux 실제 수용

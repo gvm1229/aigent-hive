@@ -7,7 +7,7 @@
 ## Checklist
 
 - [x] [REL101-001] `0.10.1` version·migration·release metadata와 product-byte gate 정합화
-- [ ] [REL101-002] Rust workspace·strict Clippy·Python 전체 lane·문서·보안·rollback 검사
+- [x] [REL101-002] Rust workspace·strict Clippy·Python 전체 lane·문서·보안·rollback 검사
 - [ ] [REL101-003] Candidate와 `0.10.1-test.1` 게시, npm `test`·GitHub prerelease 독립 확인
 - [ ] [REL101-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 설치·upgrade 수용
 - [ ] [REL101-005] Source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
