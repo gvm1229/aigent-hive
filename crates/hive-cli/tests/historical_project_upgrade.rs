@@ -143,7 +143,7 @@ fn write_historical_project_base(target: &Path, version: &str) {
 
 #[test]
 fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_foreign_bytes() {
-    for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5"] {
+    for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0"] {
         let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir_all(&target).expect("consumer directory");

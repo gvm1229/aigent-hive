@@ -9900,6 +9900,7 @@ mod tests {
                 ("0.9.3", 59),
                 ("0.9.4", 59),
                 ("0.9.5", 59),
+                ("0.10.0", 62),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {

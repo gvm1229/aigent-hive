@@ -59,7 +59,7 @@ fn main() {
             "unsupported state schema"
         );
         assert_eq!(
-            release.migration_id, "authenticated-project-state-v1",
+            release.migration_id, "same-major-render-v1",
             "unsupported migration id"
         );
         if let Some(previous) = previous.replace(release.version.clone()) {

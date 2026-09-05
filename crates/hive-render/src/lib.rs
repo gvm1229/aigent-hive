@@ -1558,6 +1558,48 @@ frozen_project_base_0_9_release!(
     ]
 );
 
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_10_0,
+    "0.10.0",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
