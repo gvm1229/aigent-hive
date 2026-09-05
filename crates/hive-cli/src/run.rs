@@ -432,6 +432,33 @@ impl PinnedTarget {
         self.publish(relative, expected, desired)
     }
 
+    pub(crate) fn remove_runtime(
+        &self,
+        relative: &Path,
+        expected: &FileSnapshot,
+    ) -> Result<bool, AdapterError> {
+        self.verify_current()?;
+        validate_project_relative(relative)
+            .map_err(|error| AdapterError::Safety(error.to_string()))?;
+        if !relative.starts_with(".hive/runtime") {
+            return Err(AdapterError::Safety(
+                "runtime removal escaped .hive/runtime".to_owned(),
+            ));
+        }
+        let FileSnapshot::File(expected_bytes) = expected else {
+            return Ok(false);
+        };
+        let Some((parent, file_name)) = self.parent_for(relative)? else {
+            return Ok(false);
+        };
+        remove_parent_file(&parent, &file_name, expected_bytes).map_err(|error| {
+            AdapterError::Conflict(format!(
+                "runtime artifact changed during exact removal at {}: {error}",
+                relative.display()
+            ))
+        })
+    }
+
     pub(crate) fn restore(
         &self,
         relative: &Path,

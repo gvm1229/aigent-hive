@@ -254,6 +254,8 @@ struct UsageHaltMarker {
     decision: String,
     selected_window: String,
     threshold_remaining_percent: u8,
+    #[serde(default)]
+    policy_digest: Option<String>,
     measured_at: u64,
     evidence_digest: String,
     revision: u64,
@@ -2042,6 +2044,10 @@ fn verify_usage_session_state(
                 "session" | "weekly" | "multiple" | "unknown"
             )
             || !(1..=99).contains(&halt.threshold_remaining_percent)
+            || halt
+                .policy_digest
+                .as_deref()
+                .is_some_and(|digest| require_digest(digest, "usage policy digest").is_err())
             || halt.measured_at == 0
             || require_digest(&halt.evidence_digest, "usage halt evidence digest").is_err()
         {

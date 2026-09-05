@@ -87,6 +87,8 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) project_identity: String,
     pub(crate) interface_language: String,
     pub(crate) threshold: u8,
+    pub(crate) global_threshold: Option<u8>,
+    pub(crate) project_threshold: Option<u8>,
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
@@ -214,6 +216,8 @@ struct HaltMarker {
     decision: String,
     selected_window: String,
     threshold_remaining_percent: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    policy_digest: Option<String>,
     #[serde(default)]
     remaining_percent: Option<f64>,
     measured_at: u64,
@@ -845,8 +849,16 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     let loaded = load_control(runtime, &binding)?;
     let halt = load_halt(runtime, &binding)?;
     let guard_enabled = effective_enabled(&loaded, config.guard_enabled);
+    let policy_digest = effective_policy_digest(&config)?;
     let override_state_name = override_name(loaded.state);
-    let halted = guard_enabled && halt.state == OverrideState::Current;
+    let current_halt = halt.state == OverrideState::Current;
+    let current_policy = halt
+        .marker
+        .as_ref()
+        .and_then(|marker| marker.policy_digest.as_deref())
+        == Some(policy_digest.as_str());
+    let halted = guard_enabled && current_halt && current_policy;
+    let recheck_required = guard_enabled && current_halt && !current_policy;
     let mut evidence = vec![Evidence {
         kind: "file",
         locator: config.config_locator.clone(),
@@ -862,14 +874,23 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     Ok(ActionResult {
         schema_version: 1,
         action: "ShowUsageStatus",
-        status: if halted { "blocked" } else { "success" },
-        exit_code: if halted { 3 } else { 0 },
-        code: if halted {
+        status: if halted || recheck_required {
+            "blocked"
+        } else {
+            "success"
+        },
+        exit_code: if halted || recheck_required { 3 } else { 0 },
+        code: if recheck_required {
+            "hive.usage-recheck-required"
+        } else if halted {
             "hive.usage-session-halted"
         } else {
             "hive.usage-status"
         },
-        message: if halted {
+        message: if recheck_required {
+            "the usage threshold changed; run enforce for this session without disabling the safeguard"
+                .to_owned()
+        } else if halted {
             "the current session remains halted until an explicit session disable".to_owned()
         } else {
             "installed usage safeguard status is available".to_owned()
@@ -879,11 +900,16 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         next_action: None,
         data: Some(json!({
             "threshold_remaining_percent": config.threshold,
+            "global_threshold_remaining_percent": config.global_threshold,
+            "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
             "session_override": override_state_name,
             "halt_marker": override_name(halt.state),
             "halt_decision": halt.marker.as_ref().map(|marker| marker.decision.as_str()),
+            "policy_digest": policy_digest,
+            "halt_policy_digest": halt.marker.as_ref().and_then(|marker| marker.policy_digest.as_deref()),
+            "session_recheck_required": recheck_required,
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
         })),
@@ -893,7 +919,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
 #[allow(clippy::too_many_lines)]
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
-    let config = read_effective_config(
+    let mut config = read_effective_config(
         &target,
         arguments.user_root.as_deref(),
         arguments.host.as_deref(),
@@ -909,6 +935,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         &target,
         global_runtime.is_some(),
     );
+    let mut policy_digest = effective_policy_digest(&config)?;
     let loaded = load_control(runtime, &binding)?;
     if !effective_enabled(&loaded, config.guard_enabled) {
         return Ok(ActionResult {
@@ -931,6 +958,8 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 "session_id_digest": binding.session_digest,
                 "process_id": binding.process_id,
                 "threshold_remaining_percent": config.threshold,
+                "global_threshold_remaining_percent": config.global_threshold,
+                "project_threshold_remaining_percent": config.project_threshold,
                 "scope": "automatic-dispatch-preflight",
                 "authorizes_dispatch": false,
             })),
@@ -938,7 +967,12 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     }
 
     let halt = load_halt(runtime, &binding)?;
-    if halt.state == OverrideState::Current {
+    let halt_matches_policy = halt
+        .marker
+        .as_ref()
+        .and_then(|marker| marker.policy_digest.as_deref())
+        == Some(policy_digest.as_str());
+    if halt.state == OverrideState::Current && halt_matches_policy {
         return Ok(halted_result(&binding, &halt, false));
     }
     if halt.state == OverrideState::Stale {
@@ -947,14 +981,59 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         ));
     }
 
-    let observation = observe_usage(
-        runtime,
-        &config,
-        &binding,
-        arguments.account_digest.as_deref(),
-    );
+    let mut attempts = 0_u8;
+    let observation = loop {
+        attempts += 1;
+        let observation = observe_usage(
+            runtime,
+            &config,
+            &binding,
+            arguments.account_digest.as_deref(),
+        );
+        let refreshed = read_effective_config(
+            &target,
+            arguments.user_root.as_deref(),
+            arguments.host.as_deref(),
+        )?;
+        let refreshed_digest = effective_policy_digest(&refreshed)?;
+        if refreshed_digest == policy_digest {
+            break observation;
+        }
+        if attempts == 3 || !refreshed.guard_enabled {
+            return Ok(policy_changed_result(&binding, &refreshed));
+        }
+        config = refreshed;
+        policy_digest = refreshed_digest;
+    };
     let Some(decision) = observation.decision else {
-        return Ok(allowed_result(&binding, &config, &observation));
+        let mut result = allowed_result(&binding, &config, &observation);
+        if let Some(data) = result
+            .data
+            .as_mut()
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            data.insert("policy_digest".to_owned(), json!(policy_digest));
+        }
+        if halt.state == OverrideState::Current {
+            let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
+            if load_halt(runtime, &binding)?.state != OverrideState::Absent {
+                return Err(AdapterError::Verification(
+                    "superseded usage halt marker remained after exact removal".to_owned(),
+                ));
+            }
+            result.changed_paths = changed
+                .then(|| portable_relative_path(&halt.relative))
+                .into_iter()
+                .collect();
+            if let Some(data) = result
+                .data
+                .as_mut()
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                data.insert("halt_transition".to_owned(), json!("cleared-after-recheck"));
+            }
+        }
+        return Ok(result);
     };
 
     let next_action = observation.next_action.clone();
@@ -967,13 +1046,18 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         decision: decision.to_owned(),
         selected_window: observation.selected_window.to_owned(),
         threshold_remaining_percent: config.threshold,
+        policy_digest: Some(policy_digest.clone()),
         remaining_percent: observation.remaining_percent,
         measured_at: observation.measured_at,
         evidence_digest: observation.evidence_digest,
         run_id: context.run_id,
         request_summary: context.request_summary,
         progress: context.progress,
-        revision: 1,
+        revision: halt
+            .marker
+            .as_ref()
+            .filter(|_| halt.state == OverrideState::Current)
+            .map_or(1, |marker| marker.revision.saturating_add(1)),
     };
     let desired = serde_json::to_vec(&marker)
         .map_err(|error| AdapterError::Internal(format!("cannot encode halt marker: {error}")))?
@@ -982,7 +1066,13 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         .collect::<Vec<_>>();
     let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
     let published = load_halt(runtime, &binding)?;
-    if published.state != OverrideState::Current {
+    if published.state != OverrideState::Current
+        || published
+            .marker
+            .as_ref()
+            .and_then(|marker| marker.policy_digest.as_deref())
+            != Some(policy_digest.as_str())
+    {
         return Err(AdapterError::Verification(
             "published halt marker did not bind to the current session".to_owned(),
         ));
@@ -1375,6 +1465,60 @@ fn allowed_result(
     }
 }
 
+fn effective_policy_digest(config: &InstalledUsageConfig) -> Result<String, AdapterError> {
+    let target_class = match config.target_class {
+        UsageTargetClass::Project => "project",
+        UsageTargetClass::Source => "source",
+        UsageTargetClass::NonHive => "non-hive",
+    };
+    let value = json!({
+        "schema_version": 1,
+        "decision_contract": "remaining-percent-v1",
+        "target_class": target_class,
+        "project_identity": config.project_identity,
+        "primary_host": config.primary_host,
+        "guard_enabled": config.guard_enabled,
+        "threshold_remaining_percent": config.threshold,
+        "global_threshold_remaining_percent": config.global_threshold,
+        "project_threshold_remaining_percent": config.project_threshold,
+        "codexbar_fallback_enabled": config.codexbar_fallback_enabled,
+    });
+    let bytes = serde_json_canonicalizer::to_vec(&value).map_err(|error| {
+        AdapterError::Internal(format!("cannot encode effective usage policy: {error}"))
+    })?;
+    Ok(sha256_digest(&bytes))
+}
+
+fn policy_changed_result(binding: &SessionBinding, config: &InstalledUsageConfig) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "CheckUsage",
+        status: "blocked",
+        exit_code: 3,
+        code: "hive.usage-policy-changed",
+        message: "the usage policy changed during measurement; retry enforce for the same session"
+            .to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: config.config_locator.clone(),
+            digest: sha256_digest(&config.bytes),
+        }],
+        next_action: Some("retry hive usage enforce with the same session binding".to_owned()),
+        data: Some(json!({
+            "guard_enabled": config.guard_enabled,
+            "host_scope": binding.host_scope,
+            "session_id_digest": binding.session_digest,
+            "process_id": binding.process_id,
+            "threshold_remaining_percent": config.threshold,
+            "global_threshold_remaining_percent": config.global_threshold,
+            "project_threshold_remaining_percent": config.project_threshold,
+            "session_recheck_required": true,
+            "authorizes_dispatch": false,
+        })),
+    }
+}
+
 fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> ActionResult {
     let marker = halt
         .marker
@@ -1419,6 +1563,7 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
             "decision": marker.decision,
             "selected_window": marker.selected_window,
             "threshold_remaining_percent": marker.threshold_remaining_percent,
+            "policy_digest": marker.policy_digest,
             "measured_at": marker.measured_at,
             "evidence_digest": marker.evidence_digest,
             "revision": marker.revision,
@@ -1460,6 +1605,8 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
                 "scope": "global",
                 "previous_remaining_percent": update.previous,
                 "threshold_remaining_percent": update.current,
+                "stored_global_threshold_remaining_percent": update.current,
+                "session_recheck_required": changed,
             })),
         });
     }
@@ -1515,6 +1662,8 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
             "scope": "project",
             "previous_remaining_percent": current,
             "threshold_remaining_percent": arguments.remaining_percent,
+            "stored_project_threshold_remaining_percent": arguments.remaining_percent,
+            "session_recheck_required": changed,
         })),
     })
 }
@@ -1648,6 +1797,8 @@ fn read_effective_config(
             project_identity: String::new(),
             interface_language: "en".to_owned(),
             threshold: 0,
+            global_threshold: None,
+            project_threshold: None,
             primary_host: requested_host.unwrap_or("unconfigured").to_owned(),
             guard_enabled: false,
             codexbar_fallback_enabled: false,
@@ -1718,11 +1869,14 @@ fn read_effective_config(
         .filter(|name| !name.is_empty() && name.len() <= 512)
         .unwrap_or("unregistered-project")
         .to_owned();
+    let installed_project = installed.is_some();
     let mut effective = installed.take().unwrap_or_else(|| InstalledUsageConfig {
         project_name,
         project_identity: String::new(),
         interface_language: "en".to_owned(),
         threshold: guard.stop_remaining_percent,
+        global_threshold: Some(guard.stop_remaining_percent),
+        project_threshold: None,
         primary_host: host,
         guard_enabled: guard.enabled,
         codexbar_fallback_enabled: guard.enabled && guard.codexbar_fallback_enabled,
@@ -1742,9 +1896,13 @@ fn read_effective_config(
                 .copied()
         })
         .flatten();
-    effective.threshold = configured_project_threshold
-        .unwrap_or(effective.threshold)
+    let project_threshold =
+        installed_project.then_some(configured_project_threshold.unwrap_or(effective.threshold));
+    effective.threshold = project_threshold
+        .unwrap_or(guard.stop_remaining_percent)
         .max(guard.stop_remaining_percent);
+    effective.global_threshold = Some(guard.stop_remaining_percent);
+    effective.project_threshold = project_threshold;
     effective.guard_enabled = guard.enabled;
     effective.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
     effective.discord_guard_enabled = guard.enabled && guard.discord.enabled;
@@ -1872,6 +2030,8 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         project_identity,
         interface_language,
         threshold,
+        global_threshold: None,
+        project_threshold: Some(threshold),
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
@@ -2149,6 +2309,10 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         )
         || !(1..=99).contains(&marker.threshold_remaining_percent)
         || marker
+            .policy_digest
+            .as_deref()
+            .is_some_and(|digest| !is_sha256_digest(digest))
+        || marker
             .remaining_percent
             .is_some_and(|value| !value.is_finite() || !(0.0..=100.0).contains(&value))
         || marker.revision == 0
@@ -2244,18 +2408,19 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::{
-        bind_session, claude_capture_path, control_session, effective_enabled, enforce,
-        native_then_consented_fallback, parse_installed_config, read_claude_capture_snapshot,
-        read_effective_config, set_threshold, status, EnforceArguments, FileSnapshot,
-        LoadedControl, OverrideState, ParsedBinding, SessionAction, SessionArguments,
-        SessionBinding, SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
+        bind_session, claude_capture_path, control_path, control_session, effective_enabled,
+        enforce, halt_path, native_then_consented_fallback, parse_installed_config,
+        read_claude_capture_snapshot, read_effective_config, set_threshold, status,
+        EnforceArguments, FileSnapshot, LoadedControl, OverrideState, ParsedBinding, SessionAction,
+        SessionArguments, SessionBinding, SessionControl, StatusArguments, ThresholdArguments,
+        MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
     use serde_json::{json, Value};
     use std::cell::Cell;
     use std::fs;
-    use std::time::{Duration, UNIX_EPOCH};
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     const NOW: u64 = 1_000;
 
@@ -2448,6 +2613,142 @@ mod tests {
         };
         assert!(!effective_enabled(&loaded, false));
         assert!(effective_enabled(&loaded, true));
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn threshold_change_rechecks_and_clears_only_the_superseded_halt() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).expect("config directory");
+        let config = String::from_utf8(installed_config("claude", true, false))
+            .expect("UTF-8 config")
+            .replace(
+                "usage_stop_remaining_percent = 20",
+                "usage_stop_remaining_percent = 60",
+            );
+        fs::write(config_dir.join("harness.toml"), config).expect("project config");
+        let parsed = ParsedBinding {
+            session_id: "threshold-recheck".to_owned(),
+            process_id: 1,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("current time")
+            .as_secs();
+        let capture_path = project
+            .path()
+            .join(claude_capture_path(&bound.session_digest).expect("capture path"));
+        fs::create_dir_all(capture_path.parent().expect("capture parent"))
+            .expect("capture directory");
+        fs::write(
+            &capture_path,
+            serde_json::to_vec(&json!({
+                "schema_version": 1,
+                "sensor_id": "claude-statusline",
+                "sensor_version": "2.1.0",
+                "host_scope": "claude",
+                "session_id_digest": bound.session_digest,
+                "received_at_unix_seconds": now,
+                "received_at_unix_millis": u128::from(now) * 1000,
+                "expires_at_unix_seconds": now + 120,
+                "windows": [{
+                    "name": "session",
+                    "window_minutes": 300,
+                    "remaining_percent": 50.0,
+                    "resets_at_unix_seconds": now + 3_600,
+                }],
+            }))
+            .expect("capture bytes"),
+        )
+        .expect("capture fixture");
+        let arguments = EnforceArguments {
+            target: project.path().to_owned(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: None,
+            host: Some("claude".to_owned()),
+            run_id: None,
+        };
+        let blocked = enforce(&arguments).expect("initial enforcement");
+        assert_eq!(blocked.code, "hive.usage-limited");
+
+        let changed = set_threshold(&ThresholdArguments {
+            target: Some(project.path().to_owned()),
+            user_root: None,
+            remaining_percent: 10,
+        })
+        .expect("threshold update");
+        assert_eq!(
+            changed
+                .data
+                .as_ref()
+                .map(|data| &data["session_recheck_required"]),
+            Some(&json!(true))
+        );
+        let shown = status(&StatusArguments {
+            target: project.path().to_owned(),
+            binding: parsed,
+            user_root: None,
+            host: Some("claude".to_owned()),
+        })
+        .expect("status after threshold update");
+        assert_eq!(shown.code, "hive.usage-recheck-required");
+
+        let allowed = enforce(&arguments).expect("same-session recheck");
+        assert_eq!(allowed.code, "hive.usage-allowed");
+        assert_eq!(
+            allowed.data.as_ref().map(|data| &data["guard_enabled"]),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            allowed.data.as_ref().map(|data| &data["halt_transition"]),
+            Some(&json!("cleared-after-recheck"))
+        );
+        assert!(!project.path().join(halt_path(&bound)).exists());
+        assert!(!project.path().join(control_path(&bound)).exists());
+
+        set_threshold(&ThresholdArguments {
+            target: Some(project.path().to_owned()),
+            user_root: None,
+            remaining_percent: 60,
+        })
+        .expect("restore blocking threshold");
+        assert_eq!(
+            enforce(&arguments).expect("second halt").code,
+            "hive.usage-limited"
+        );
+        set_threshold(&ThresholdArguments {
+            target: Some(project.path().to_owned()),
+            user_root: None,
+            remaining_percent: 10,
+        })
+        .expect("lower threshold again");
+        let mut capture: Value = serde_json::from_slice(
+            &fs::read(&capture_path).expect("capture before limited recheck"),
+        )
+        .expect("capture JSON");
+        capture["windows"][0]["remaining_percent"] = json!(5.0);
+        fs::write(
+            &capture_path,
+            serde_json::to_vec(&capture).expect("updated capture"),
+        )
+        .expect("limited capture");
+        let limited = enforce(&arguments).expect("limited same-session recheck");
+        assert_eq!(limited.code, "hive.usage-limited");
+        assert_eq!(
+            limited
+                .data
+                .as_ref()
+                .map(|data| &data["threshold_remaining_percent"]),
+            Some(&json!(10))
+        );
+        assert_eq!(
+            limited.data.as_ref().map(|data| &data["revision"]),
+            Some(&json!(2))
+        );
+        assert!(!project.path().join(control_path(&bound)).exists());
     }
 
     #[test]
