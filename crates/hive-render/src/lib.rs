@@ -246,6 +246,32 @@ pub struct HistoricalProjectBaseFile {
     pub content: Vec<u8>,
 }
 
+/// One exact published prerelease projection derived from a stable source
+/// release and authenticated overlay bytes in the compatibility registry.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct HistoricalPublishedProjectSnapshot {
+    /// Published prerelease identifier, such as `0.10.0-test.2`.
+    pub published_version: &'static str,
+    /// Stable product version stored by the installed project ledger.
+    pub source_version: &'static str,
+    /// Digest of the complete ordered overlay source used for this snapshot.
+    pub snapshot_digest: &'static str,
+    /// Exact expected installed base after applying the registered overlays.
+    pub base: HistoricalProjectBase,
+}
+
+fn apply_registered_snapshot_overlay(
+    base: &mut HistoricalProjectBase,
+    replacements: &[(&str, &[u8])],
+) {
+    for file in &mut base.files {
+        if let Some((_, bytes)) = replacements.iter().find(|(path, _)| *path == file.path) {
+            file.content = bytes.to_vec();
+            file.content_digest = sha256_digest(bytes);
+        }
+    }
+}
+
 /// Setup request assembled by the CLI.
 #[derive(Debug)]
 pub struct SetupRequest<'a> {
@@ -943,7 +969,10 @@ pub fn historical_project_upgrade_candidate_in(
     let files = files
         .into_iter()
         .map(|(path, content)| {
-            let kind = if matches!(path.as_str(), "AGENTS.md" | "CLAUDE.md" | "GEMINI.md") {
+            let kind = if matches!(
+                path.as_str(),
+                "AGENTS.md" | "CLAUDE.md" | "GEMINI.md" | ".prettierignore"
+            ) {
                 "shared-marker"
             } else if is_hive_skill_projection_path(Path::new(&path)) {
                 "skill"
@@ -1778,6 +1807,12 @@ fn frozen_project_base_0_8_or_0_9(
     let mut files = BTreeMap::new();
     for &(name, content) in directives {
         files.insert(format!(".agents/directives/{name}"), content.to_vec());
+    }
+    if matches!(version, "0.9.3" | "0.9.4" | "0.9.5" | "0.10.0") {
+        files.insert(
+            ".prettierignore".to_owned(),
+            FORMATTER_IGNORE.as_bytes().to_vec(),
+        );
     }
     for &(name, content, metadata) in skills {
         if !selected.contains(name) {

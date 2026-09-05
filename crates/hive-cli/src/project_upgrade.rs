@@ -11,8 +11,9 @@ use hive_projection::{historical_builtin_skills, SkillSelectionMerge};
 #[cfg(test)]
 use hive_render::FULL_HISTORICAL_PROJECT_BASE_VERSIONS;
 use hive_render::{
-    historical_project_upgrade_candidate_in, project_upgrade_candidate_in,
-    requires_full_historical_project_base, HistoricalProjectBase, RenderError,
+    historical_project_upgrade_candidate_in, historical_published_project_snapshots,
+    project_upgrade_candidate_in, requires_full_historical_project_base, HistoricalProjectBase,
+    RenderError,
 };
 use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition, UpdateError};
 use serde::{Deserialize, Serialize};
@@ -532,35 +533,6 @@ fn authenticate_current_base(
     authenticate_base_bytes(ledger, incoming)
 }
 
-fn test4_projection_bytes(path: &str) -> Option<&'static [u8]> {
-    match path {
-        ".agents/skills/knowledge-recall/SKILL.md" | ".claude/skills/knowledge-recall/SKILL.md" => {
-            Some(include_bytes!(
-                "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-recall/SKILL.md"
-            ))
-        }
-        ".agents/skills/knowledge-maintain/SKILL.md"
-        | ".claude/skills/knowledge-maintain/SKILL.md" => Some(include_bytes!(
-            "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-maintain/SKILL.md"
-        )),
-        _ => None,
-    }
-}
-
-fn test2_projection_bytes(path: &str) -> Option<&'static [u8]> {
-    match path {
-        ".agents/directives/04-korean-language.md" => Some(include_bytes!(
-            "../../../harness/project-bases/0.10.0-test.2/directives/04-korean-language.md"
-        )),
-        ".agents/skills/humanize-kor/SKILL.md" | ".claude/skills/humanize-kor/SKILL.md" => {
-            Some(include_bytes!(
-                "../../../harness/project-bases/0.10.0-test.2/skills/humanize-kor/SKILL.md"
-            ))
-        }
-        _ => None,
-    }
-}
-
 fn authenticate_base_bytes(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
@@ -600,19 +572,16 @@ fn expected_base_kind(path: &str) -> Result<&'static str, UpdateError> {
 
 fn authenticate_historical_base(target: &Dir, ledger: &BaseLedger) -> Result<(), UpdateError> {
     if requires_full_historical_project_base(&ledger.product_version) {
-        let mut expected = historical_project_upgrade_candidate_in(target, &ledger.product_version)
+        let expected = historical_project_upgrade_candidate_in(target, &ledger.product_version)
             .map_err(render_error)?;
         let exact = authenticate_full_historical_base(ledger, &expected);
-        if exact.is_ok() || ledger.product_version != "0.10.0" {
+        if exact.is_ok() {
             return exact;
         }
-        apply_historical_test_deltas(&mut expected, test4_projection_bytes);
-        if authenticate_full_historical_base(ledger, &expected).is_ok() {
-            return Ok(());
-        }
-        apply_historical_test_deltas(&mut expected, test2_projection_bytes);
-        if authenticate_full_historical_base(ledger, &expected).is_ok() {
-            return Ok(());
+        for snapshot in historical_published_project_snapshots(&expected) {
+            if authenticate_full_historical_base(ledger, &snapshot.base).is_ok() {
+                return Ok(());
+            }
         }
         return exact;
     }
@@ -662,18 +631,6 @@ fn authenticate_historical_base(target: &Dir, ledger: &BaseLedger) -> Result<(),
     Ok(())
 }
 
-fn apply_historical_test_deltas(
-    base: &mut HistoricalProjectBase,
-    replacement: fn(&str) -> Option<&'static [u8]>,
-) {
-    for file in &mut base.files {
-        if let Some(bytes) = replacement(&file.path) {
-            file.content = bytes.to_vec();
-            file.content_digest = sha256_digest(bytes);
-        }
-    }
-}
-
 fn authenticate_full_historical_base(
     ledger: &BaseLedger,
     expected: &HistoricalProjectBase,
@@ -682,8 +639,10 @@ fn authenticate_full_historical_base(
         || ledger.files.len() != expected.files.len()
     {
         return Err(UpdateError::Verification(format!(
-            "historical project base {} has a partial full-ledger inventory",
-            ledger.product_version
+            "historical project base {} has a partial full-ledger inventory (installed={}, expected={})",
+            ledger.product_version,
+            ledger.files.len(),
+            expected.files.len()
         )));
     }
     for (entry, expected_entry) in ledger.files.iter().zip(&expected.files) {
@@ -3664,13 +3623,18 @@ mod tests {
         ]);
         let mut expected = full_registry(&incoming);
         expected.product_version = "0.10.0".to_owned();
-        apply_historical_test_deltas(&mut expected, test2_projection_bytes);
-        let mut ledger = ledger_from_historical(&expected);
-        assert!(authenticate_full_historical_base(&ledger, &expected).is_ok());
+        let snapshots = historical_published_project_snapshots(&expected);
+        let test2 = &snapshots
+            .iter()
+            .find(|snapshot| snapshot.published_version == "0.10.0-test.2")
+            .expect("registered test.2 snapshot")
+            .base;
+        let mut ledger = ledger_from_historical(test2);
+        assert!(authenticate_full_historical_base(&ledger, test2).is_ok());
         ledger.files[0].content = "new directive".to_owned();
-        assert!(authenticate_full_historical_base(&ledger, &expected).is_err());
+        assert!(authenticate_full_historical_base(&ledger, test2).is_err());
         ledger.files[0].content = "forged directive".to_owned();
-        assert!(authenticate_full_historical_base(&ledger, &expected).is_err());
+        assert!(authenticate_full_historical_base(&ledger, test2).is_err());
     }
 
     #[test]
@@ -3690,32 +3654,32 @@ mod tests {
                     b"current Korean".to_vec(),
                 ),
             ]);
-            for test2 in [false, true] {
-                let mut expected = full_registry(&incoming);
-                expected.product_version = "0.10.0".to_owned();
-                apply_historical_test_deltas(&mut expected, test4_projection_bytes);
-                if test2 {
-                    apply_historical_test_deltas(&mut expected, test2_projection_bytes);
-                }
-                let mut ledger = ledger_from_historical(&expected);
-                assert!(authenticate_full_historical_base(&ledger, &expected).is_ok());
-                let recall = ledger
-                    .files
-                    .iter_mut()
-                    .find(|file| file.path.contains("knowledge-recall/"))
-                    .unwrap();
-                recall.content = "new recall".to_owned();
-                recall.content_digest = sha256_digest(recall.content.as_bytes());
-                assert!(authenticate_full_historical_base(&ledger, &expected).is_err());
-                let recall = ledger
-                    .files
-                    .iter_mut()
-                    .find(|file| file.path.contains("knowledge-recall/"))
-                    .unwrap();
-                recall.content = "forged recall".to_owned();
-                recall.content_digest = sha256_digest(recall.content.as_bytes());
-                assert!(authenticate_full_historical_base(&ledger, &expected).is_err());
-            }
+            let mut expected = full_registry(&incoming);
+            expected.product_version = "0.10.0".to_owned();
+            let snapshots = historical_published_project_snapshots(&expected);
+            let test4 = &snapshots
+                .iter()
+                .find(|snapshot| snapshot.published_version == "0.10.0-test.4")
+                .expect("registered test.4 snapshot")
+                .base;
+            let mut ledger = ledger_from_historical(test4);
+            assert!(authenticate_full_historical_base(&ledger, test4).is_ok());
+            let recall = ledger
+                .files
+                .iter_mut()
+                .find(|file| file.path.contains("knowledge-recall/"))
+                .unwrap();
+            recall.content = "new recall".to_owned();
+            recall.content_digest = sha256_digest(recall.content.as_bytes());
+            assert!(authenticate_full_historical_base(&ledger, test4).is_err());
+            let recall = ledger
+                .files
+                .iter_mut()
+                .find(|file| file.path.contains("knowledge-recall/"))
+                .unwrap();
+            recall.content = "forged recall".to_owned();
+            recall.content_digest = sha256_digest(recall.content.as_bytes());
+            assert!(authenticate_full_historical_base(&ledger, test4).is_err());
         }
     }
 

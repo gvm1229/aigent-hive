@@ -77,7 +77,7 @@ def tree_digest(root: Path) -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
-def compatibility_registry() -> dict[str, dict[str, object]]:
+def compatibility_registry() -> tuple[dict[str, dict[str, object]], list[dict[str, object]]]:
     value = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
     if value.get("schema_version") != 1 or not isinstance(value.get("releases"), list):
         raise ValueError("invalid project-base compatibility registry")
@@ -96,7 +96,45 @@ def compatibility_registry() -> dict[str, dict[str, object]]:
                 raise ValueError(f"unregistered user projection base: {release}")
         elif tree_digest(user) != expected_user:
             raise ValueError(f"user projection registry digest differs: {release}")
-    return indexed
+    snapshots = value.get("published_snapshots", [])
+    if not isinstance(snapshots, list):
+        raise ValueError("invalid published project snapshots registry")
+    snapshot_versions: set[str] = set()
+    for snapshot in snapshots:
+        snapshot_version = snapshot.get("version")
+        source_version = snapshot.get("source_version")
+        overlays = snapshot.get("overlays")
+        if (
+            not isinstance(snapshot_version, str)
+            or snapshot_version in snapshot_versions
+            or source_version not in indexed
+            or not snapshot_version.startswith(f"{source_version}-test.")
+            or not isinstance(overlays, list)
+            or not overlays
+            or any(not isinstance(overlay, str) for overlay in overlays)
+        ):
+            raise ValueError("invalid published project snapshot registration")
+        snapshot_versions.add(snapshot_version)
+        merged: dict[str, Path] = {}
+        for overlay in overlays:
+            overlay_root = ROOT / "harness/project-bases" / overlay
+            overlay_files = [path for path in overlay_root.rglob("*") if path.is_file()]
+            if not overlay_files:
+                raise ValueError(f"empty published project snapshot overlay: {overlay}")
+            for path in overlay_files:
+                relative = path.relative_to(overlay_root).as_posix()
+                if not (relative.startswith("directives/") or relative.startswith("skills/")):
+                    raise ValueError(f"unsupported published project snapshot path: {relative}")
+                merged[relative] = path
+        digest = hashlib.sha256()
+        for relative, path in sorted(merged.items()):
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+        if f"sha256:{digest.hexdigest()}" != snapshot.get("project_base_digest"):
+            raise ValueError(f"published project snapshot digest differs: {snapshot_version}")
+    return indexed, snapshots
 
 
 def tagged_sources() -> list[str]:
@@ -121,7 +159,7 @@ def main() -> int:
     if table.get("schema_version") != 1 or not isinstance(table.get("routes"), list):
         raise ValueError("invalid migration table")
     target = version(table["target_version"])
-    registry = compatibility_registry()
+    registry, published_snapshots = compatibility_registry()
     sources = tagged_sources()
     coverage: list[dict[str, object]] = []
     for route in table["routes"]:
@@ -154,6 +192,11 @@ def main() -> int:
                         "registry_user_digest": registry[release]["user_projection_digest"],
                         "state_schema": registry[release]["state_schema"],
                         "migration_id": registry[release]["migration_id"],
+                        "published_snapshots": [
+                            snapshot["version"]
+                            for snapshot in published_snapshots
+                            if snapshot["source_version"] == release
+                        ],
                     }
                     for release in selected
                 ],
