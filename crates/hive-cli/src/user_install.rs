@@ -10048,13 +10048,21 @@ mod tests {
     }
 
     #[test]
-    fn every_09_stable_plans_a_direct_jump_and_retired_skill_cleanup() {
+    fn every_historical_stable_plans_a_direct_jump_with_declared_cleanup() {
         for &(version, _) in HISTORICAL_USER_PLUGIN_RELEASES {
             for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
                 let temporary = tempdir().expect("tempdir");
                 seed_historical_09x_user_install(temporary.path(), version, host);
                 let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
                     .expect("direct stable upgrade plan");
+                if version == "0.10.0" {
+                    assert!(plan.retired_files.keys().all(|path| {
+                        !path.to_string_lossy().contains("ralph-loop")
+                            && !path.to_string_lossy().contains("package-review")
+                            && !path.to_string_lossy().contains("iterative-execution")
+                    }));
+                    continue;
+                }
                 for retired in ["ralph-loop", "package-review"] {
                     let existing = retired_skill_artifact_paths(host, retired)
                         .iter()
