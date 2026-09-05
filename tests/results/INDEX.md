@@ -308,3 +308,5 @@
 | [failed](runs/20260905T235013-2607d990a1ca.md) | Python conformance: documentation | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260905T235115-9dcf91d48878.md) | v0101-documentation-current-truth-rerun | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260905T235116-befc28b79bc4.md) | Python conformance: documentation | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T235333-d821c7076d8e.md) | v0101-final-release-gate | 2123fec184881ab6f457aecd9dbf693b380a1c0d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260905T235335-ac686999ee95.md) | Python conformance: release | 2123fec184881ab6f457aecd9dbf693b380a1c0d | Windows-11-10.0.26200-SP0 |
