@@ -13,7 +13,7 @@ sources:
   - "repo:AGENTS.md#sha256:d1a4541174db15faf38f3c90432fbea8cb4b4da6448bfccce2a7e069982031b6"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:5a7d279c9ce96bec6792f191e4be0caa69bf17c9062ad535e11478af7f4408c2"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:b7226be968eac3e205183c1f0c7967066ba0b79f630f5d9715517824ea548b02"
-  - "repo:crates/hive-render/src/lib.rs#sha256:4ce1a5feac500ede6f71c6b1b2ba0764e189ab48b6cae971122e8d5e538eee42"
+  - "repo:crates/hive-render/src/lib.rs#sha256:9b9fd4e3a9734087d452f85e02a21904f60d6233de8bbc566459d4949bf13202"
   - "repo:harness/directives/00-project-harness.md#sha256:b01acbf296d63e415b06c237561494b73ce632174925f9ad5fd4e2dfb6f6a9e4"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"
   - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:6158ac21248a2751c232af381793a50ca85806b2652a3a01adb5c3961e0327c5"
