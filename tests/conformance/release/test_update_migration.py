@@ -192,6 +192,10 @@ class Phase6StaticContracts(unittest.TestCase):
             },
         )
         jobs = workflow["jobs"]
+        self.assertEqual(
+            jobs["protected-merge-gate"]["name"],
+            "${{ github.event_name == 'pull_request' && 'Protected merge gate' || 'Develop push gate' }}",
+        )
         classify = jobs["changes"]["steps"][1]
         self.assertIn('if [[ "$GITHUB_EVENT_NAME" == "push" ]]', classify["run"])
         self.assertIn('echo "scope=product"', classify["run"])

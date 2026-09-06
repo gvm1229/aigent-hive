@@ -306,7 +306,7 @@ jobs:
             tests/results/runs/*.md
 
   protected-merge-gate:
-    name: Protected merge gate
+    name: ${{ github.event_name == 'pull_request' && 'Protected merge gate' || 'Develop push gate' }}
     if: always()
     needs:
       - changes
