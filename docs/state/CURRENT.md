@@ -53,7 +53,7 @@
 - 공개 `0.10.0` exact support-state fixture: Codex·Claude·Antigravity의 `test.2`·`test.4` 갱신 통과
 - Source Wiki: 174개 page, 오류 `0건`, 경고 `0건`
 - DuckSoul Git 상태: 기존 사용자 변경 존재, 이번 진단 변경 `0건`
-- 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable을 요구하지 않음
+- 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable 불필요
 - Python lane: documentation 87·security 103·contract 466·integration 94·release 115 통과; 플랫폼 조건부 건너뜀은 별도 유지
 - 공개 시험 gate: `0.10.1-test.1`, product digest `sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff` 승인
 - Candidate `34000885782`, source `da6636a679ea451d500f26550f7738e3063697f1`; 다섯 native artifact 통과
