@@ -91,6 +91,7 @@ current catalog.
 | [`0.9.3`](releases/0.9.3.md) | 프로젝트 간 지식 접근·자동 공유 정식 출시 |
 | [`0.9.4`](releases/0.9.4.md) | Skill 표시·전역 검증·지식 안내·프롬프트 기본값 정식 출시 |
 | [`0.10.0`](releases/0.10.0.md) | 벡터 검색·지식 graph·컴퓨터 간 지식 이전·한국어 품질·검증형 작업 흐름 |
+| [`0.10.1`](releases/0.10.1.md) | 일반 harness migration·사용량 기준 즉시 재평가 |
 
 ## Research
 
