@@ -70,8 +70,7 @@ require npm, Node.js, or PowerShell 7.
 ## Optional one-prompt setup
 
 If you want Codex, Claude Code, or Gemini Antigravity to guide the entire user-level
-installation, paste the following prompt instead of manually following the first three
-setup steps below. It is optional: the four-step setup remains the predictable manual path.
+installation, paste the following prompt instead of following the manual steps below.
 
 ```text
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
@@ -83,8 +82,8 @@ Detect my operating system and active host (Codex, Claude Code, or Gemini Antigr
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
 requires before installing it. Then install the exact Hive release I selected using the official
-method in the linked guidance, verify `hive --version`, and activate only my host with
-`hive install --scope user --host <detected-host> --apply --output json`.
+method in the linked guidance, verify `hive --version`, then run `hive update` once and select
+the active host when prompted.
 
 Then begin interactive global setup in this conversation. For a first setup, ask only whether I
 want English or Korean first; continue one question at a time. For existing settings, first ask
@@ -121,44 +120,35 @@ unsigned unless free SignPath Foundation signing is approved. See the
 
 ## First setup
 
-Follow these four steps in order. Repeat step 2 for each host, step 4 for each project,
-and step 3 whenever global preferences change.
+First install the executable, then run one global update command. Project setup remains a
+separate, explicit action for each project.
 
 ### 1. Install the Hive CLI
 
 Use one command from [Install the current stable release](#install-the-current-stable-release) above. The npm installation provides the
-`hive` command; it does not yet activate Hive inside a host.
+`hive` command only. It does not create user settings, host projections, or a project harness.
 
-### 2. Activate Hive for this host
+### 2. Initialize or update the global Hive installation
 
-In a terminal, activate the host projection:
+In an interactive terminal, run:
 
 ```console
-hive install --scope user --host codex --apply --output json
+hive update
 ```
 
-Replace `codex` with `claude` or `antigravity` for that host. This operation restores an
-authenticated known prior user installation before updating it to the current projection;
-it still refuses unknown or modified ownership manifests.
+For a first npm installation, choose one or more hosts when prompted. Hive installs only its
+owned minimum user projection. For an existing installation, it refreshes and validates only
+the authenticated saved hosts; it does not inspect or change projects.
 
-### 3. Configure global preferences
+### 3. Answer any new global question
 
-Open Codex, Claude Code, or Gemini Antigravity and paste this shared prompt:
+Open a selected host. If the release introduced a new global choice, Hive asks it before ordinary
+work. This is intentional: choosing whether to enable a feature such as semantic search can
+change storage, downloads, or future behavior. `yes` and `no` are both valid answers; cancelling
+or leaving it unanswered keeps ordinary Hive work blocked.
 
-```text
-Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
-```
-
-Use this prompt for the first setup and later preference changes. It configures only your
-user-scope language, Wiki, user contexts, persona, Skills, and update preferences; it never inspects the
-current folder or creates a project harness.
-
-All built-in Skills are active by default. If you prefer a smaller set, choose Skills one by
-one during setup; `setup-hive` always remains active. You may select multiple user contexts and
-add a short description. They help Hive understand you globally, but never choose a project
-workflow, implementation approach, delivery priority, or active Skill set. Your persona and
-selected host also never change the active Skill set. Users with an earlier recommended-suite
-setting keep its exact existing Skill set until they review and approve a new preview.
+After the final answer, Hive automatically reapplies and validates its global user projection.
+You do not need to run `hive install` or a separate setup command.
 
 ### 4. Configure one project
 
@@ -191,11 +181,11 @@ canonical knowledge in Markdown.
 hive update
 ```
 
-This performs an immediate version check. If a newer version exists, Hive explains the
-exact update and asks before invoking the authenticated install owner. Declining,
-closing stdin, or running non-interactively causes no installation.
-An existing installation keeps its owner evidence and may update to exact stable `0.10.1`
-through the same confirmation flow.
+This performs an immediate version check and reconciles Hive-owned global user files even when
+the executable is already current. If a newer version exists, Hive explains the exact update and
+asks before invoking the authenticated install owner. Declining, closing stdin, or running
+non-interactively causes no installation. The first initialization requires an interactive host
+selection.
 
 When daily checks are enabled, a successful check is throttled for 24 hours. An offline
 or failed check is not recorded as successful, so the next Codex, Claude Code, or
