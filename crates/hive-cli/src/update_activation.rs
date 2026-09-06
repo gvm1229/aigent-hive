@@ -141,46 +141,7 @@ impl ProjectionRefresher for LiveProjectionRefresher {
         user_root: &Path,
         hosts: &[String],
     ) -> Result<(), String> {
-        let executable = executable.to_string_lossy();
-        let program = SystemCommandRunner
-            .qualify(&executable)
-            .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
-        let hosts = hosts.join(",");
-        let user_root = user_root.to_string_lossy();
-        for mode in ["--apply", "--validate"] {
-            let expected_action = projection_refresh_action(mode);
-            let output = SystemCommandRunner
-                .run(
-                    &program,
-                    &[
-                        "install",
-                        "--scope",
-                        "user",
-                        "--hosts",
-                        &hosts,
-                        mode,
-                        "--user-root",
-                        &user_root,
-                        "--output",
-                        "json",
-                    ],
-                    INSTALL_TIMEOUT,
-                    INSTALL_OUTPUT_LIMIT,
-                )
-                .map_err(|error| {
-                    format!("activated Hive user projection {mode} command failed: {error}")
-                })?;
-            let result: ChildActionResult =
-                serde_json::from_slice(&output.stdout).map_err(|_| {
-                    format!("activated Hive user projection {mode} command returned malformed JSON")
-                })?;
-            if !output.success || !projection_refresh_reported_success(expected_action, &result) {
-                return Err(format!(
-                    "activated Hive user projection {mode} command did not report success"
-                ));
-            }
-        }
-        Ok(())
+        run_user_projection(executable, user_root, hosts, "update")
     }
 
     fn bootstrap_and_validate(
@@ -189,47 +150,55 @@ impl ProjectionRefresher for LiveProjectionRefresher {
         user_root: &Path,
         hosts: &[String],
     ) -> Result<(), String> {
-        let executable = executable.to_string_lossy();
-        let program = SystemCommandRunner
-            .qualify(&executable)
-            .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
-        let hosts = hosts.join(",");
-        let user_root = user_root.to_string_lossy();
-        for mode in ["--apply", "--validate"] {
-            let expected_action = projection_refresh_action(mode);
-            let output = SystemCommandRunner
-                .run(
-                    &program,
-                    &[
-                        "install",
-                        "--scope",
-                        "user",
-                        "--hosts",
-                        &hosts,
-                        mode,
-                        "--user-root",
-                        &user_root,
-                        "--output",
-                        "json",
-                    ],
-                    INSTALL_TIMEOUT,
-                    INSTALL_OUTPUT_LIMIT,
-                )
-                .map_err(|error| {
-                    format!("activated Hive user projection {mode} command failed: {error}")
-                })?;
-            let result: ChildActionResult =
-                serde_json::from_slice(&output.stdout).map_err(|_| {
-                    format!("activated Hive user projection {mode} command returned malformed JSON")
-                })?;
-            if !output.success || !projection_refresh_reported_success(expected_action, &result) {
-                return Err(format!(
-                    "activated Hive user projection {mode} command did not report success"
-                ));
-            }
-        }
-        Ok(())
+        run_user_projection(executable, user_root, hosts, "install")
     }
+}
+
+fn run_user_projection(
+    executable: &Path,
+    user_root: &Path,
+    hosts: &[String],
+    operation: &str,
+) -> Result<(), String> {
+    let executable = executable.to_string_lossy();
+    let program = SystemCommandRunner
+        .qualify(&executable)
+        .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
+    let hosts = hosts.join(",");
+    let user_root = user_root.to_string_lossy();
+    for mode in ["--apply", "--validate"] {
+        let expected_action = projection_refresh_action(operation, mode);
+        let output = SystemCommandRunner
+            .run(
+                &program,
+                &[
+                    operation,
+                    "--scope",
+                    "user",
+                    "--hosts",
+                    &hosts,
+                    mode,
+                    "--user-root",
+                    &user_root,
+                    "--output",
+                    "json",
+                ],
+                INSTALL_TIMEOUT,
+                INSTALL_OUTPUT_LIMIT,
+            )
+            .map_err(|error| {
+                format!("activated Hive user projection {mode} command failed: {error}")
+            })?;
+        let result: ChildActionResult = serde_json::from_slice(&output.stdout).map_err(|_| {
+            format!("activated Hive user projection {mode} command returned malformed JSON")
+        })?;
+        if !output.success || !projection_refresh_reported_success(expected_action, &result) {
+            return Err(format!(
+                "activated Hive user projection {mode} command did not report success"
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -267,11 +236,12 @@ struct ChildActionResult {
     exit_code: u8,
 }
 
-fn projection_refresh_action(mode: &str) -> &'static str {
-    match mode {
-        "--apply" => "InstallHiveUser",
-        "--validate" => "ValidateHiveUser",
-        _ => unreachable!("unsupported user projection refresh mode"),
+fn projection_refresh_action(operation: &str, mode: &str) -> &'static str {
+    match (operation, mode) {
+        ("install", "--apply") => "InstallHiveUser",
+        ("update", "--apply") => "UpdateHiveUser",
+        (_, "--validate") => "ValidateHiveUser",
+        _ => unreachable!("unsupported user projection operation or mode"),
     }
 }
 
@@ -1593,10 +1563,20 @@ mod tests {
 
     #[test]
     fn projection_refresh_requires_the_action_for_each_install_mode() {
-        assert_eq!(projection_refresh_action("--apply"), "InstallHiveUser");
-        assert_eq!(projection_refresh_action("--validate"), "ValidateHiveUser");
+        assert_eq!(
+            projection_refresh_action("install", "--apply"),
+            "InstallHiveUser"
+        );
+        assert_eq!(
+            projection_refresh_action("update", "--apply"),
+            "UpdateHiveUser"
+        );
+        assert_eq!(
+            projection_refresh_action("install", "--validate"),
+            "ValidateHiveUser"
+        );
         assert!(projection_refresh_reported_success(
-            projection_refresh_action("--apply"),
+            projection_refresh_action("install", "--apply"),
             &ChildActionResult {
                 action: "InstallHiveUser".to_owned(),
                 status: "success".to_owned(),
@@ -1604,7 +1584,7 @@ mod tests {
             },
         ));
         assert!(projection_refresh_reported_success(
-            projection_refresh_action("--validate"),
+            projection_refresh_action("update", "--validate"),
             &ChildActionResult {
                 action: "ValidateHiveUser".to_owned(),
                 status: "success".to_owned(),
@@ -1612,7 +1592,7 @@ mod tests {
             },
         ));
         assert!(!projection_refresh_reported_success(
-            projection_refresh_action("--validate"),
+            projection_refresh_action("update", "--validate"),
             &ChildActionResult {
                 action: "InstallHiveUser".to_owned(),
                 status: "success".to_owned(),

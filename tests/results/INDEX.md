@@ -331,3 +331,5 @@
 | [failed](runs/20260906T205803-88b54a64bc30.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T205840-268fbeb377fa.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T210018-1eee746f065e.md) | 0.10.2 version build 시험 | a8a33b3df8a72ec3b2549fd4a52ec0758f5d48a7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T210205-c5544927bd8d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T210212-be644de1907d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |

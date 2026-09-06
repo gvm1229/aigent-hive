@@ -1908,7 +1908,13 @@ fn execute_apply(
         validate_antigravity_activation(arguments, plan, host_executable.as_ref(), runner)
     })
     .and_then(|()| validate_plugin_package(arguments, plan))
-    .and_then(|()| rebuild_root_index(arguments))
+    .and_then(|()| {
+        if operation == UserOperation::Update {
+            Ok(())
+        } else {
+            rebuild_root_index(arguments)
+        }
+    })
     .and_then(|()| {
         crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
             |error| {
