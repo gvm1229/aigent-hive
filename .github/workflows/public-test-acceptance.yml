@@ -82,7 +82,9 @@ jobs:
           test -z "$product_drift"
           test "$(npm view "aigent-hive@$PACKAGE_VERSION" version)" = "$PACKAGE_VERSION"
           test "$(npm view aigent-hive 'dist-tags.test')" = "$PACKAGE_VERSION"
-          test "$(npm view aigent-hive 'dist-tags.latest')" = "0.9.5"
+          stable_version=$(jq -r .stable_version docs/public-stable-release.json)
+          [[ "$stable_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(npm view aigent-hive 'dist-tags.latest')" = "$stable_version"
       - name: Install the exact public npm package
         shell: bash
         run: |

@@ -26,7 +26,9 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             'aigent-hive@$PACKAGE_VERSION',
             "dist-tags.test",
             "dist-tags.latest",
-            'test "$(npm view aigent-hive \'dist-tags.latest\')" = "0.9.5"',
+            "docs/public-stable-release.json",
+            "jq -r .stable_version",
+            'test "$(npm view aigent-hive \'dist-tags.latest\')" = "$stable_version"',
             "qualify-korean-public-test.py",
             "qualify-vector-onboarding-public-test.py",
             '--package-version "$PACKAGE_VERSION"',
@@ -34,6 +36,7 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
         self.assertNotIn("channel: stable", text)
+        self.assertNotIn("dist-tags.latest')\" = \"0.9.5", text)
         self.assertIn("workflow_call:", text)
 
     def test_registered_runtime_workflow_calls_the_public_test_gate(self) -> None:
