@@ -326,3 +326,7 @@
 | [failed](runs/20260906T205249-c5827be4c32f.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260906T205259-269afe5a6b9c.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T205346-5efa7238c4da.md) | 0.10.2 update activation reconciliation 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205720-6233fd50b0e9.md) | 0.10.2 질문 대기 사용자 투영 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205726-d7421d36eec0.md) | 0.10.2 질문 대기 사용자 투영 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205803-88b54a64bc30.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205840-268fbeb377fa.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |

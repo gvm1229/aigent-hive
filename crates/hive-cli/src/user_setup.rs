@@ -372,6 +372,14 @@ pub(crate) fn vector_search_enabled(user_root: &Path) -> Result<bool, String> {
     Ok(answers.vector_search == Some(VectorFeatureAnswer::Yes))
 }
 
+/// A release-introduced user question blocks ordinary Hive work until it has an explicit answer.
+/// The answer ledger remains separate from optional feature activation, so `no` completes setup
+/// without enabling a local vector index.
+pub(crate) fn feature_question_pending(root: &Dir) -> Result<bool, SetupError> {
+    let (_, answers) = load_feature_answers(root)?;
+    Ok(answers.vector_search.is_none())
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UserFeatureAnswers {
@@ -786,6 +794,7 @@ fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupEr
             answers.question_claimed_at_unix = None;
             save_feature_answers(&arguments.root_cap, existing.as_deref(), &answers)?;
             changed_paths.push(USER_FEATURE_ANSWERS_RELATIVE.to_owned());
+            resume_user_projection_after_feature_answer(&arguments.user_root, &arguments.root_cap)?;
             (
                 "hive.user-feature-answer-saved",
                 "vector-search feature answer saved".to_owned(),
@@ -838,6 +847,20 @@ fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupEr
             "actual_runtime_or_index_state":"separate; inspect with hive knowledge vector status",
         })),
     })
+}
+
+fn resume_user_projection_after_feature_answer(
+    user_root: &Path,
+    root: &Dir,
+) -> Result<(), SetupError> {
+    let Some((config, resolved_skills)) = resolved_operational_skills(root)? else {
+        return Ok(());
+    };
+    for host in &config.selected_hosts {
+        super::user_install::apply_configured_host(user_root, *host, &config, &resolved_skills)
+            .map_err(SetupError::Verification)?;
+    }
+    Ok(())
 }
 
 fn vector_setup_prompt(
@@ -3315,7 +3338,11 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
 
 fn detect_state(root: &Dir) -> Result<UserSetupState, SetupError> {
     if load_operational_config(root)?.is_some() {
-        return Ok(UserSetupState::Operational);
+        return if feature_question_pending(root)? {
+            Ok(UserSetupState::SetupRequired)
+        } else {
+            Ok(UserSetupState::Operational)
+        };
     }
     let install = Path::new(".hive/install");
     let metadata = match root.symlink_metadata(install) {
