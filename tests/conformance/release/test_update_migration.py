@@ -226,6 +226,19 @@ class Phase6StaticContracts(unittest.TestCase):
             False,
         )
 
+    def test_publication_recovery_accepts_only_exact_candidate_packages(self) -> None:
+        text = (ROOT / ".github/workflows/release-publish.yml").read_text(encoding="utf-8")
+        for required in (
+            "recover_published_packages:",
+            "RECOVER_PUBLISHED_PACKAGES",
+            'expected="sha512-$(openssl dgst -sha512 -binary "$archive" | openssl base64 -A)"',
+            'actual=$(npm view "$package@$PACKAGE_VERSION" dist.integrity)',
+            'test "$actual" = "$expected"',
+            'npm view "$package@$PACKAGE_VERSION" version',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+
     def test_every_new_schema_is_valid_and_representative_instances_pass(self) -> None:
         names = (
             "backup-manifest.schema.json",
