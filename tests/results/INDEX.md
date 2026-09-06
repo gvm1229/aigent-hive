@@ -319,3 +319,6 @@
 | [failed](runs/20260906T005137-5e521d5c6222.md) | Python conformance: release | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T005310-de9a84d4ecab.md) | v0101-stable-promotion-release-gate-rerun | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T005311-6f17971a9ce7.md) | Python conformance: release | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T041730-01a361c169e5.md) | v0101-stable-windows-install | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T041741-2b6462f34840.md) | v0101-stable-windows-install-retry | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T041758-effb95d97f93.md) | v0101-stable-windows-version | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
