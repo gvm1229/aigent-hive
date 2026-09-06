@@ -12,7 +12,7 @@
 - [x] [REL101-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 설치·upgrade 수용
 - [x] [REL101-005] Source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
 - [x] [REL101-006] accepted public test를 source·product digest·세 host 영수증에 묶는 stable promotion mode 구현
-- [ ] [REL101-007] `0.10.1` stable 공개 문서·구독자 요약·승인 digest 정합화
+- [x] [REL101-007] `0.10.1` stable 공개 문서·구독자 요약·승인 digest 정합화
 - [ ] [REL101-008] `develop → main` 통합과 accepted-test promotion candidate·stable publication
 - [ ] [REL101-009] npm `latest=0.10.1`·GitHub stable Release·설치 갱신 독립 확인
 

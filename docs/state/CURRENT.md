@@ -40,7 +40,7 @@
 ## 권한·안전 경계
 
 - Agent 소유: accepted-test promotion 구현·검증·`main` 통합·stable `0.10.1` 공개
-- 사용자 권한 대기: 구독자 요약 문구 승인, 실제 DuckSoul apply
+- 사용자 권한 대기: 실제 DuckSoul apply
 - 사용자·외부 bytes: 보존
 - Historical project/user base bytes: 변경 금지
 - Provider API·credential·OMX/OMC: 사용 금지
@@ -61,4 +61,5 @@
 - Public acceptance `34001760231`: Windows x64·macOS arm64·Linux musl x64 설치·한국어·rollback·vector 통과
 - Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인; accepted-test promotion mode 구현 뒤 진행
 - Stable promotion mode: `35f89f9f`; accepted source·product digest·세 host acceptance run 결합, qualification 재실행 없음
-- 남은 검증: stable 문서·구독자 문구 승인, `main` 통합, stable 공개·독립 확인
+- 구독자 요약 승인 digest: `sha256:36be7d519874b54e7817f26f8819be57ad7d011be3a430aff46ebb89c15768f7`, release 환경 등록 완료
+- 남은 검증: `main` 통합, stable 공개·독립 확인
