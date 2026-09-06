@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stable_version": "0.10.0",
-  "release_date": "2026-09-02",
-  "previous_stable_version": "0.9.5",
-  "release_notes": "docs/releases/0.10.0.md",
+  "stable_version": "0.10.1",
+  "release_date": "2026-09-06",
+  "previous_stable_version": "0.10.0",
+  "release_notes": "docs/releases/0.10.1.md",
   "public_surfaces": [
     "README.md",
     "docs/readme/README.ko.md",
@@ -12,90 +12,35 @@
     "docs/01-index.md"
   ],
   "coverage": {
-    "COMPAT-01": {
+    "COMPAT101-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     },
-    "COMPAT-02": {
+    "COMPAT101-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     },
-    "COMPAT-03": {
+    "COMPAT101-03": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     },
-    "COMPAT-04": {
+    "MIG101-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     },
-    "CON10-01": {
+    "MIG101-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     },
-    "DIR10-01": {
+    "USE101-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "JDG10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "KOR10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "KOR10-02": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "KOR10-03": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "KRG10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "SKM10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "VEC10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "VEC10-02": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "VEC10-03": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "VEC10-04": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
-    },
-    "VWF10-01": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0100"
+      "anchor": "what-changed-in-0101"
     }
   }
 }

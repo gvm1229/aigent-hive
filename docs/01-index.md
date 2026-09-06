@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.0 release-date=2026-09-02 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.1 release-date=2026-09-06 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
