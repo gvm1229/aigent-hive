@@ -310,3 +310,12 @@
 | [passed](runs/20260905T235116-befc28b79bc4.md) | Python conformance: documentation | df2a88f81fbc59c73e6a8444f4b704f08b68c583 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260905T235333-d821c7076d8e.md) | v0101-final-release-gate | 2123fec184881ab6f457aecd9dbf693b380a1c0d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260905T235335-ac686999ee95.md) | Python conformance: release | 2123fec184881ab6f457aecd9dbf693b380a1c0d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T003242-75315bf48bd6.md) | v0101-test1-publication-recovery-download | da6636a679ea451d500f26550f7738e3063697f1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T004816-43177857f18c.md) | v0101-stable-promotion-documentation | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T004818-0a022f3184ae.md) | Python conformance: documentation | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T005111-2ceeb90a7b6d.md) | v0101-stable-promotion-documentation-rerun | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T005112-152835a8c485.md) | Python conformance: documentation | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T005136-bdb6d84cf41b.md) | v0101-stable-promotion-release-gate | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T005137-5e521d5c6222.md) | Python conformance: release | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T005310-de9a84d4ecab.md) | v0101-stable-promotion-release-gate-rerun | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T005311-6f17971a9ce7.md) | Python conformance: release | 35f89f9f590c74c9a89a2dd5fcd53d9d2c5f0138 | Windows-11-10.0.26200-SP0 |
