@@ -9,7 +9,7 @@ summary: "Global setup recommends the usage guard, hides CodexBar until native f
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:ac7b9cc92c876e73c7731f685482a15ef8ba9bc4a1ec9c1ff081e8dc2d14e089"
+  - "repo:README.md#sha256:486cae42b67bad97b9245c9b410b27aa992f47d0d1360f0cccf117e4585b324a"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:b7226be968eac3e205183c1f0c7967066ba0b79f630f5d9715517824ea548b02"
   - "repo:docs/archive/plans/foundations/native-usage-sensor.md#sha256:231e96967c32029d539eb82f245399e37156a43c2028be8a01a51215a5455807"
   - "repo:docs/archive/plans/foundations/usage-guard-policy.md#sha256:4b99d1f046ff56eeb9102b99dec4e88226ca2cdfa4947bb233c9a5c541a19172"
