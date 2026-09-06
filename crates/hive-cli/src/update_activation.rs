@@ -99,9 +99,9 @@ enum Language {
 
 #[derive(Debug, Eq, PartialEq)]
 enum FlowOutcome {
-    Current,
     Declined,
     Installed,
+    Reconciled,
 }
 
 struct UpdateFlowContext<'a> {
@@ -114,6 +114,13 @@ trait ProjectionRefresher {
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String>;
 
     fn refresh_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        hosts: &[String],
+    ) -> Result<(), String>;
+
+    fn bootstrap_and_validate(
         &self,
         executable: &Path,
         user_root: &Path,
@@ -175,6 +182,54 @@ impl ProjectionRefresher for LiveProjectionRefresher {
         }
         Ok(())
     }
+
+    fn bootstrap_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        hosts: &[String],
+    ) -> Result<(), String> {
+        let executable = executable.to_string_lossy();
+        let program = SystemCommandRunner
+            .qualify(&executable)
+            .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
+        let hosts = hosts.join(",");
+        let user_root = user_root.to_string_lossy();
+        for mode in ["--apply", "--validate"] {
+            let expected_action = projection_refresh_action(mode);
+            let output = SystemCommandRunner
+                .run(
+                    &program,
+                    &[
+                        "install",
+                        "--scope",
+                        "user",
+                        "--hosts",
+                        &hosts,
+                        mode,
+                        "--user-root",
+                        &user_root,
+                        "--output",
+                        "json",
+                    ],
+                    INSTALL_TIMEOUT,
+                    INSTALL_OUTPUT_LIMIT,
+                )
+                .map_err(|error| {
+                    format!("activated Hive user projection {mode} command failed: {error}")
+                })?;
+            let result: ChildActionResult =
+                serde_json::from_slice(&output.stdout).map_err(|_| {
+                    format!("activated Hive user projection {mode} command returned malformed JSON")
+                })?;
+            if !output.success || !projection_refresh_reported_success(expected_action, &result) {
+                return Err(format!(
+                    "activated Hive user projection {mode} command did not report success"
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -183,10 +238,19 @@ struct NoopProjectionRefresher;
 #[cfg(test)]
 impl ProjectionRefresher for NoopProjectionRefresher {
     fn authenticated_hosts(&self, _user_root: &Path) -> Result<Vec<String>, String> {
-        Ok(Vec::new())
+        Ok(vec!["codex".to_owned()])
     }
 
     fn refresh_and_validate(
+        &self,
+        _executable: &Path,
+        _user_root: &Path,
+        _hosts: &[String],
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn bootstrap_and_validate(
         &self,
         _executable: &Path,
         _user_root: &Path,
@@ -544,12 +608,15 @@ fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
 fn selected_language(user_root: &Path) -> Result<Language, String> {
     let root = crate::user_install::open_user_root_for_setup(user_root)?;
     let config = crate::user_setup::load_operational_config(&root)
-        .map_err(|error| error.message().to_owned())?
-        .ok_or_else(|| "global Hive setup is required before interactive updates".to_owned())?;
-    Ok(match config.interface_language {
-        crate::user_setup::InterfaceLanguage::En => Language::En,
-        crate::user_setup::InterfaceLanguage::Ko => Language::Ko,
-    })
+        .map_err(|error| error.message().to_owned())?;
+    Ok(
+        match config.map_or(crate::user_setup::InterfaceLanguage::En, |value| {
+            value.interface_language
+        }) {
+            crate::user_setup::InterfaceLanguage::En => Language::En,
+            crate::user_setup::InterfaceLanguage::Ko => Language::Ko,
+        },
+    )
 }
 
 #[cfg(test)]
@@ -619,11 +686,25 @@ fn update_flow_with_projection_channel(
             target.product
         ));
     }
+    let mut hosts = refresher.authenticated_hosts(context.user_root)?;
+    let bootstrap = hosts.is_empty();
     if target <= *owner.package_version() {
-        write_current(output, context.language, owner.package_version())?;
-        return Ok(FlowOutcome::Current);
+        if !bootstrap {
+            refresher
+                .refresh_and_validate(context.executable, context.user_root, &hosts)
+                .map_err(|error| {
+                    format!("authenticated user projection reconciliation failed: {error}")
+                })?;
+            write_reconciled(output, context.language, &hosts)?;
+            return Ok(FlowOutcome::Reconciled);
+        }
+        hosts = select_bootstrap_hosts(context.language, input, output)?;
+        refresher
+            .bootstrap_and_validate(context.executable, context.user_root, &hosts)
+            .map_err(|error| format!("initial user projection bootstrap failed: {error}"))?;
+        write_bootstrapped(output, context.language, &hosts)?;
+        return Ok(FlowOutcome::Reconciled);
     }
-    let hosts = refresher.authenticated_hosts(context.user_root)?;
     write_prompt(output, context.language, &owner, &target, &hosts)?;
     if !selection.confirmed {
         let mut answer = String::new();
@@ -635,12 +716,23 @@ fn update_flow_with_projection_channel(
             return Ok(FlowOutcome::Declined);
         }
     }
+    if bootstrap {
+        hosts = select_bootstrap_hosts(context.language, input, output)?;
+    }
     installer.install(&owner, &target)?;
     let activated_owner = discover_owner(context.executable, target.product)?;
     if activated_owner.label() != owner.label() || activated_owner.package_version() != &target {
         return Err("the install owner did not activate the exact requested package".to_owned());
     }
-    if !hosts.is_empty() {
+    if bootstrap {
+        refresher
+            .bootstrap_and_validate(context.executable, context.user_root, &hosts)
+            .map_err(|error| {
+                format!(
+                    "Aigent Hive binary update completed, but initial user projection bootstrap failed: {error}"
+                )
+            })?;
+    } else {
         refresher
             .refresh_and_validate(context.executable, context.user_root, &hosts)
             .map_err(|error| {
@@ -1023,14 +1115,73 @@ fn write_prompt(
     .map_err(|error| format!("cannot display the update confirmation: {error}"))
 }
 
-fn write_current(
+fn select_bootstrap_hosts(
+    language: Language,
+    input: &mut impl BufRead,
+    output: &mut impl Write,
+) -> Result<Vec<String>, String> {
+    let prompt = match language {
+        Language::En => "No authenticated Hive user installation was found. Select hosts to initialize (codex, claude, antigravity; comma-separated): ",
+        Language::Ko => "인증된 Hive 사용자 설치가 없습니다. 초기화할 호스트를 선택하세요 (codex, claude, antigravity; 쉼표로 구분): ",
+    };
+    output
+        .write_all(prompt.as_bytes())
+        .and_then(|()| output.flush())
+        .map_err(|error| format!("cannot display host selection: {error}"))?;
+    let mut answer = String::new();
+    let read = input
+        .read_line(&mut answer)
+        .map_err(|error| format!("cannot read host selection: {error}"))?;
+    if read == 0 {
+        return Err("initial user projection requires selecting at least one host".to_owned());
+    }
+    let mut hosts = answer
+        .trim()
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    hosts.sort();
+    hosts.dedup();
+    if hosts.is_empty()
+        || hosts
+            .iter()
+            .any(|host| !matches!(host.as_str(), "codex" | "claude" | "antigravity"))
+    {
+        return Err("select one or more of: codex, claude, antigravity".to_owned());
+    }
+    Ok(hosts)
+}
+
+fn write_reconciled(
     output: &mut impl Write,
     language: Language,
-    current: &PackageVersion,
+    hosts: &[String],
 ) -> Result<(), String> {
     let message = match language {
-        Language::En => format!("Aigent Hive is current at {}.\n", current.exact),
-        Language::Ko => format!("Aigent Hive 최신 버전 사용 중: {}.\n", current.exact),
+        Language::En => format!(
+            "Aigent Hive is current; refreshed and validated user projection hosts: {}.\n",
+            hosts.join(", ")
+        ),
+        Language::Ko => format!(
+            "Aigent Hive는 최신 상태이며 사용자 투영 호스트를 갱신·검증했습니다: {}.\n",
+            hosts.join(", ")
+        ),
+    };
+    output
+        .write_all(message.as_bytes())
+        .map_err(|error| format!("cannot display update status: {error}"))
+}
+
+fn write_bootstrapped(
+    output: &mut impl Write,
+    language: Language,
+    hosts: &[String],
+) -> Result<(), String> {
+    let message = match language {
+        Language::En => format!("Aigent Hive is current; initialized setup-required user projections for: {}. Open one selected host to complete setup.\n", hosts.join(", ")),
+        Language::Ko => format!("Aigent Hive는 최신 상태이며 다음 호스트에 설정 대기 사용자 투영을 초기화했습니다: {}. 선택한 호스트 하나를 열어 설정을 완료하세요.\n", hosts.join(", ")),
     };
     output
         .write_all(message.as_bytes())
@@ -1170,6 +1321,20 @@ mod tests {
             ));
             self.refresh.clone()
         }
+
+        fn bootstrap_and_validate(
+            &self,
+            executable: &Path,
+            user_root: &Path,
+            hosts: &[String],
+        ) -> Result<(), String> {
+            self.calls.borrow_mut().push((
+                executable.to_path_buf(),
+                user_root.to_path_buf(),
+                hosts.to_vec(),
+            ));
+            self.refresh.clone()
+        }
     }
 
     fn metadata(version: &str) -> FakeRegistry {
@@ -1289,7 +1454,7 @@ mod tests {
     }
 
     #[test]
-    fn current_package_skips_confirmation_and_installation() {
+    fn current_package_reconciles_authenticated_user_projection() {
         let current = stable_package();
         let (_root, binary) = fake_npm_install(&current);
         let installer = FakeInstaller::default();
@@ -1304,11 +1469,11 @@ mod tests {
             &mut output,
         )
         .expect("current");
-        assert_eq!(outcome, FlowOutcome::Current);
+        assert_eq!(outcome, FlowOutcome::Reconciled);
         assert!(installer.calls.borrow().is_empty());
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("최신 버전 사용 중"));
+            .contains("사용자 투영 호스트를 갱신·검증"));
     }
 
     #[test]
@@ -1517,7 +1682,7 @@ mod tests {
     }
 
     #[test]
-    fn absent_saved_projection_scope_keeps_the_update_binary_only() {
+    fn absent_saved_projection_scope_bootstraps_selected_hosts() {
         let current = package(1);
         let target = stable_package();
         let (root, binary) = fake_npm_install(&current);
@@ -1527,7 +1692,7 @@ mod tests {
         };
         let user_root = tempdir().expect("user root");
         let refresher = FakeProjectionRefresher::ready(&[]);
-        let mut input = Cursor::new(b"y\n");
+        let mut input = Cursor::new(b"y\ncodex\n");
         let mut output = Vec::new();
 
         update_flow_with_projection(
@@ -1542,12 +1707,19 @@ mod tests {
             &mut input,
             &mut output,
         )
-        .expect("binary-only update");
+        .expect("bootstrap update");
 
-        assert!(refresher.calls.borrow().is_empty());
+        assert_eq!(
+            refresher.calls.borrow().as_slice(),
+            [(
+                binary.clone(),
+                user_root.path().to_path_buf(),
+                vec!["codex".to_owned()]
+            )]
+        );
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("No authenticated user projection was present"));
+            .contains("Select hosts to initialize"));
     }
 
     #[test]

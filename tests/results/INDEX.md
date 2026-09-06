@@ -322,3 +322,7 @@
 | [failed](runs/20260906T041730-01a361c169e5.md) | v0101-stable-windows-install | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T041741-2b6462f34840.md) | v0101-stable-windows-install-retry | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T041758-effb95d97f93.md) | v0101-stable-windows-version | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205241-2c0222d4315f.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205249-c5827be4c32f.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205259-269afe5a6b9c.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205346-5efa7238c4da.md) | 0.10.2 update activation reconciliation 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
