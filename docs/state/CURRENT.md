@@ -1,8 +1,8 @@
 # 현재 상태
 
-- 작업 branch: `develop`
+- 작업 branch: `develop`; stable source branch: `main`
 - 제품 버전: `0.10.1`
-- Stable baseline: `0.10.0`
+- Stable release: `0.10.1`
 - 수용 공개 시험: `0.10.1-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
 - 구현 계획: [`harness-upgrade-0.10.1.md`](../plans/active/harness-upgrade-0.10.1.md)
@@ -59,7 +59,12 @@
 - Candidate `34000885782`, source `da6636a679ea451d500f26550f7738e3063697f1`; 다섯 native artifact 통과
 - npm 여섯 package `test=0.10.1-test.1`, `latest=0.10.0`; GitHub prerelease 25개 artifact 확인
 - Public acceptance `34001760231`: Windows x64·macOS arm64·Linux musl x64 설치·한국어·rollback·vector 통과
-- Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인; accepted-test promotion mode 구현 뒤 진행
+- Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인과 공개 완료
 - Stable promotion mode: `35f89f9f`; accepted source·product digest·세 host acceptance run 결합, qualification 재실행 없음
 - 구독자 요약 승인 digest: `sha256:36be7d519874b54e7817f26f8819be57ad7d011be3a430aff46ebb89c15768f7`, release 환경 등록 완료
-- 남은 검증: `main` 통합, stable 공개·독립 확인
+- `main` 통합: PR #49 `5e64ce8a`, recovery PR #50 `bb56037f`
+- Stable candidate `34008946911`: accepted `0.10.1-test.1`과 acceptance `34001760231` 결합, 다섯 native artifact·integrity bundle 통과
+- Stable publication: 최초 run `34009500410`은 npm 전파 지연 뒤 tag 전 중단; recovery run `34010951366` 성공
+- 독립 확인: npm 여섯 package `version/latest=0.10.1`, `test=0.10.1-test.1`; GitHub 정식 Release 29개 asset
+- Windows 공개 stable 설치: `AIgent Hive v0.10.1 (released 2026-09-06)`
+- 남은 Agent 소유 작업: `0건`; 실제 DuckSoul apply는 사용자 별도 승인 대기
