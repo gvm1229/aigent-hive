@@ -25,3 +25,4 @@ Accepted product decision과 선택 근거의 정본.
 | Notion Wiki backend | [ADR-0018](ADR-0018-notion-wiki-backend.md) |
 | Hive-native 반복 실행 | [ADR-0019](ADR-0019-hive-native-iterative-execution.md) |
 | `0.10.0` 제품 범위 | [ADR-0020](ADR-0020-0.10.0-product-scope.md) |
+| `0.10.1` 갱신·사용량 정책 전이 | [ADR-0021](ADR-0021-0.10.1-upgrade-usage-fix.md) |

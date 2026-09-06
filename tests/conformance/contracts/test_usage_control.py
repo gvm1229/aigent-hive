@@ -284,6 +284,10 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(
             result["changed_paths"], [".hive/config/harness.toml"]
         )
+        self.assertTrue(result["data"]["session_recheck_required"])
+        self.assertEqual(
+            result["data"]["stored_project_threshold_remaining_percent"], 17
+        )
         self.assertEqual((self.consumer / "sentinel.bin").read_bytes(), b"user-owned\n")
 
         repeated, repeated_result = self.invoke(
@@ -384,6 +388,10 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             code="hive.usage-global-threshold-updated",
         )
         self.assertEqual(changed_result["data"]["scope"], "global")
+        self.assertTrue(changed_result["data"]["session_recheck_required"])
+        self.assertEqual(
+            changed_result["data"]["stored_global_threshold_remaining_percent"], 5
+        )
 
         status, status_result = self.invoke(
             "usage",
@@ -408,6 +416,12 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             code="hive.usage-status",
         )
         self.assertEqual(status_result["data"]["threshold_remaining_percent"], 5)
+        self.assertEqual(
+            status_result["data"]["global_threshold_remaining_percent"], 5
+        )
+        self.assertIsNone(
+            status_result["data"]["project_threshold_remaining_percent"]
+        )
         self.assertFalse((source / ".hive").exists())
 
     def test_threshold_rejects_invalid_primary_host_without_mutation(self) -> None:
@@ -568,8 +582,8 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
                     result["data"]["session_override"], expected_override
                 )
 
-    def test_current_halt_blocks_every_status_gate_until_explicit_bypass(self) -> None:
-        self.write_halt(session_id="session-a", process_id=606)
+    def test_legacy_halt_requires_same_session_recheck_without_bypass(self) -> None:
+        marker = self.write_halt(session_id="session-a", process_id=606)
 
         for _ in range(2):
             process, result = self.invoke(
@@ -588,72 +602,37 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
                 action="ShowUsageStatus",
                 exit_code=3,
                 status="blocked",
-                code="hive.usage-session-halted",
+                code="hive.usage-recheck-required",
             )
             self.assertTrue(result["data"]["guard_enabled"])
             self.assertEqual(result["data"]["halt_marker"], "current")
+            self.assertTrue(result["data"]["session_recheck_required"])
 
-        disabled, _ = self.invoke(
+        allowed, allowed_result = self.invoke(
             "usage",
-            "session",
+            "enforce",
             "--target",
             str(self.consumer),
             "--session-id",
             "session-a",
             "--process-id",
             "606",
-            "--action",
-            "disable",
-            "--confirm-session-disable",
-        )
-        self.assertEqual(disabled.returncode, 0, disabled.stderr)
-
-        bypassed, bypassed_result = self.invoke(
-            "usage",
-            "status",
-            "--target",
-            str(self.consumer),
-            "--session-id",
-            "session-a",
-            "--process-id",
-            "606",
+            sensor_case="allow",
         )
         self.assert_result(
-            bypassed,
-            bypassed_result,
-            action="ShowUsageStatus",
+            allowed,
+            allowed_result,
+            action="CheckUsage",
             exit_code=0,
             status="success",
-            code="hive.usage-status",
+            code="hive.usage-allowed",
         )
-        self.assertFalse(bypassed_result["data"]["guard_enabled"])
-        self.assertEqual(bypassed_result["data"]["halt_marker"], "current")
-
-        enabled, _ = self.invoke(
-            "usage",
-            "session",
-            "--target",
-            str(self.consumer),
-            "--session-id",
-            "session-a",
-            "--process-id",
-            "606",
-            "--action",
-            "enable",
+        self.assertTrue(allowed_result["data"]["guard_enabled"])
+        self.assertEqual(
+            allowed_result["data"]["halt_transition"], "cleared-after-recheck"
         )
-        self.assertEqual(enabled.returncode, 0, enabled.stderr)
-        blocked_again, blocked_result = self.invoke(
-            "usage",
-            "status",
-            "--target",
-            str(self.consumer),
-            "--session-id",
-            "session-a",
-            "--process-id",
-            "606",
-        )
-        self.assertEqual(blocked_again.returncode, 3, blocked_again.stderr)
-        self.assertEqual(blocked_result["code"], "hive.usage-session-halted")
+        self.assertFalse(marker.exists())
+        self.assertFalse(marker.with_name("control.json").exists())
 
     def test_halt_marker_is_not_replayed_to_another_binding(self) -> None:
         self.write_halt(session_id="session-a", process_id=707)
@@ -1080,7 +1059,19 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 2)
 
     def test_explicit_disable_bypasses_sensor_and_enable_reapplies_latch(self) -> None:
-        self.write_halt(session_id="session-bypass", process_id=903)
+        latched, latched_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            "session-bypass",
+            "--process-id",
+            "903",
+            sensor_case="threshold",
+        )
+        self.assertEqual(latched.returncode, 3, latched.stderr)
+        self.assertEqual(latched_result["code"], "hive.usage-limited")
         disabled, _ = self.invoke(
             "usage",
             "session",

@@ -17,7 +17,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
-   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
+   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A halt marker takes priority only while its policy digest matches the effective policy. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions except the same-session policy recheck required immediately after a changed threshold. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 4. If native sensing is unavailable or unsupported and CodexBar is missing, report the returned provider-specific notification and exact `next_action`. Do not substitute a different provider:
 
    ```text
@@ -76,6 +76,11 @@ Enforce or control only the installed Hive usage policy and the current host ses
      `--confirm-session-disable` whenever the result would disable enforcement.
 8. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
 9. `status` is inspection only and never substitutes for an automatic-dispatch preflight. Run `enforce` after a mutation only when a new automatic dispatch is pending. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
+   When a threshold mutation returns `session_recheck_required=true` for an active task, run
+   `enforce` immediately with the same exact target, host, session id, process id, user root, and
+   available account digest. This recheck also applies to manual source work. Continue only after
+   fresh `hive.usage-allowed`; limited, unknown, or policy-changed results remain blocked. Never
+   disable the session merely to acknowledge a changed threshold.
 10. When a canonical `--run` is available, Hive sends only the run title and checklist count to Discord. It never sends a raw prompt, session ID, absolute path, or credential. Report the saved global threshold, selected project override, active threshold, selected window, effective current-session state, changed Hive-owned path, and exact CLI result code.
 
 ## Intent rules

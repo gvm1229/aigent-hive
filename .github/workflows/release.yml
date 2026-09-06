@@ -22,8 +22,17 @@ on:
         description: Exact package release date embedded in the shipped CLI (YYYY-MM-DD)
         required: true
         type: string
+      promoted_test_version:
+        description: Accepted numbered public test used for a stable promotion
+        required: false
+        type: string
+      acceptance_run_id:
+        description: Successful Public test acceptance workflow run id
+        required: false
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -56,13 +65,57 @@ jobs:
           fetch-depth: 0
       - name: Require new completed product bytes for a test candidate
         env:
+          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           CHANNEL: ${{ inputs.channel }}
+          GH_TOKEN: ${{ github.token }}
           PRODUCT_VERSION: ${{ inputs.product_version }}
           PACKAGE_VERSION: ${{ inputs.package_version }}
+          PROMOTED_TEST_VERSION: ${{ inputs.promoted_test_version }}
         run: |
           if [ "$CHANNEL" = stable ]; then
+            if [ -z "$PROMOTED_TEST_VERSION" ] && [ -z "$ACCEPTANCE_RUN_ID" ]; then
+              exit 0
+            fi
+            [[ "$PROMOTED_TEST_VERSION" =~ ^${PRODUCT_VERSION//./\.}-test\.[1-9][0-9]*$ ]]
+            [[ "$ACCEPTANCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+            test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
+            registry=docs/public-test-product.json
+            test "$(jq -r .product_version "$registry")" = "$PRODUCT_VERSION"
+            test "$(jq -r .accepted_package_version "$registry")" = "$PROMOTED_TEST_VERSION"
+            accepted_source=$(jq -r .accepted_source_commit "$registry")
+            test "$(git rev-list -n 1 "v$PROMOTED_TEST_VERSION")" = "$accepted_source"
+            product_drift=$(git diff --name-only "$accepted_source"..HEAD -- \
+              Cargo.toml Cargo.lock crates harness schemas \
+              scripts/install.sh scripts/install.ps1 scripts/install.cmd \
+              scripts/package-npm.mjs scripts/render-installers.py)
+            test -z "$product_drift"
+            test "$(npm view "aigent-hive@$PROMOTED_TEST_VERSION" version)" = \
+              "$PROMOTED_TEST_VERSION"
+            test "$(npm view aigent-hive 'dist-tags.test')" = "$PROMOTED_TEST_VERSION"
+            release=$(gh release view "v$PROMOTED_TEST_VERSION" \
+              --json isPrerelease,targetCommitish)
+            test "$(jq -r .isPrerelease <<<"$release")" = true
+            test "$(jq -r .targetCommitish <<<"$release")" = "$accepted_source"
+            acceptance=$(gh api \
+              "repos/$GITHUB_REPOSITORY/actions/runs/$ACCEPTANCE_RUN_ID")
+            test "$(jq -r .name <<<"$acceptance")" = "Public test acceptance"
+            test "$(jq -r .event <<<"$acceptance")" = workflow_dispatch
+            test "$(jq -r .head_branch <<<"$acceptance")" = develop
+            test "$(jq -r .conclusion <<<"$acceptance")" = success
+            acceptance_source=$(jq -r .head_sha <<<"$acceptance")
+            acceptance_drift=$(git diff --name-only "$accepted_source".."$acceptance_source" -- \
+              Cargo.toml Cargo.lock crates harness schemas \
+              scripts/install.sh scripts/install.ps1 scripts/install.cmd \
+              scripts/package-npm.mjs scripts/render-installers.py)
+            test -z "$acceptance_drift"
+            artifacts=$(gh api \
+              "repos/$GITHUB_REPOSITORY/actions/runs/$ACCEPTANCE_RUN_ID/artifacts")
+            test "$(jq -r '[.artifacts[].name] | sort | join(",")' <<<"$artifacts")" = \
+              "korean-public-test-darwin-arm64,korean-public-test-linux-x64,korean-public-test-win32-x64"
             exit 0
           fi
+          test -z "$PROMOTED_TEST_VERSION"
+          test -z "$ACCEPTANCE_RUN_ID"
           python3 scripts/check-test-release-gate.py \
             --product-version "$PRODUCT_VERSION" \
             --package-version "$PACKAGE_VERSION" \
@@ -158,6 +211,7 @@ jobs:
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
       - name: Qualify exact and grounded source graph questions
+        if: ${{ inputs.channel != 'stable' || inputs.promoted_test_version == '' }}
         run: |
           extra=()
           case "$TARGET" in
@@ -328,6 +382,7 @@ jobs:
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
       - name: Qualify exact and grounded source graph questions
+        if: ${{ inputs.channel != 'stable' || inputs.promoted_test_version == '' }}
         shell: pwsh
         run: >-
           python scripts/qualify-source-graph.py

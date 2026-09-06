@@ -9,9 +9,12 @@ import json
 import subprocess
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 FULL_BASE_MINIMUM = (0, 9, 1)
+REGISTRY = ROOT / "harness/project-bases/registry.yml"
 
 
 def version(value: str) -> tuple[int, int, int]:
@@ -63,6 +66,77 @@ def frozen_base_digest(release: str) -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
+def tree_digest(root: Path) -> str:
+    digest = hashlib.sha256()
+    files = (path for path in root.rglob("*") if path.is_file())
+    for path in sorted(files, key=lambda path: path.relative_to(root).as_posix()):
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return f"sha256:{digest.hexdigest()}"
+
+
+def compatibility_registry() -> tuple[dict[str, dict[str, object]], list[dict[str, object]]]:
+    value = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
+    if value.get("schema_version") != 1 or not isinstance(value.get("releases"), list):
+        raise ValueError("invalid project-base compatibility registry")
+    releases = value["releases"]
+    indexed = {entry["version"]: entry for entry in releases}
+    if len(indexed) != len(releases):
+        raise ValueError("duplicate project-base compatibility release")
+    for release, entry in indexed.items():
+        project = ROOT / "harness/project-bases" / release
+        if tree_digest(project) != entry.get("project_base_digest"):
+            raise ValueError(f"project-base registry digest differs: {release}")
+        expected_user = entry.get("user_projection_digest")
+        user = ROOT / "harness/user-bases" / release
+        if expected_user is None:
+            if user.exists():
+                raise ValueError(f"unregistered user projection base: {release}")
+        elif tree_digest(user) != expected_user:
+            raise ValueError(f"user projection registry digest differs: {release}")
+    snapshots = value.get("published_snapshots", [])
+    if not isinstance(snapshots, list):
+        raise ValueError("invalid published project snapshots registry")
+    snapshot_versions: set[str] = set()
+    for snapshot in snapshots:
+        snapshot_version = snapshot.get("version")
+        source_version = snapshot.get("source_version")
+        overlays = snapshot.get("overlays")
+        if (
+            not isinstance(snapshot_version, str)
+            or snapshot_version in snapshot_versions
+            or source_version not in indexed
+            or not snapshot_version.startswith(f"{source_version}-test.")
+            or not isinstance(overlays, list)
+            or not overlays
+            or any(not isinstance(overlay, str) for overlay in overlays)
+        ):
+            raise ValueError("invalid published project snapshot registration")
+        snapshot_versions.add(snapshot_version)
+        merged: dict[str, Path] = {}
+        for overlay in overlays:
+            overlay_root = ROOT / "harness/project-bases" / overlay
+            overlay_files = [path for path in overlay_root.rglob("*") if path.is_file()]
+            if not overlay_files:
+                raise ValueError(f"empty published project snapshot overlay: {overlay}")
+            for path in overlay_files:
+                relative = path.relative_to(overlay_root).as_posix()
+                if not (relative.startswith("directives/") or relative.startswith("skills/")):
+                    raise ValueError(f"unsupported published project snapshot path: {relative}")
+                merged[relative] = path
+        digest = hashlib.sha256()
+        for relative, path in sorted(merged.items()):
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+        if f"sha256:{digest.hexdigest()}" != snapshot.get("project_base_digest"):
+            raise ValueError(f"published project snapshot digest differs: {snapshot_version}")
+    return indexed, snapshots
+
+
 def tagged_sources() -> list[str]:
     tags = subprocess.check_output(["git", "tag", "--list", "v*"], cwd=ROOT, text=True).splitlines()
     releases = []
@@ -85,6 +159,7 @@ def main() -> int:
     if table.get("schema_version") != 1 or not isinstance(table.get("routes"), list):
         raise ValueError("invalid migration table")
     target = version(table["target_version"])
+    registry, published_snapshots = compatibility_registry()
     sources = tagged_sources()
     coverage: list[dict[str, object]] = []
     for route in table["routes"]:
@@ -101,11 +176,28 @@ def main() -> int:
         ]
         if not selected:
             raise ValueError(f"same-major migration has no tagged source: {route.get('route_id')}")
+        missing = [release for release in selected if release not in registry]
+        if missing:
+            raise ValueError(
+                f"migration source is missing from project-base compatibility registry: {missing}"
+            )
         coverage.append(
             {
                 "route_id": route["route_id"],
                 "sources": [
-                    {"version": release, "base_digest": frozen_base_digest(release)}
+                    {
+                        "version": release,
+                        "base_digest": frozen_base_digest(release),
+                        "registry_project_digest": registry[release]["project_base_digest"],
+                        "registry_user_digest": registry[release]["user_projection_digest"],
+                        "state_schema": registry[release]["state_schema"],
+                        "migration_id": registry[release]["migration_id"],
+                        "published_snapshots": [
+                            snapshot["version"]
+                            for snapshot in published_snapshots
+                            if snapshot["source_version"] == release
+                        ],
+                    }
                     for release in selected
                 ],
             }

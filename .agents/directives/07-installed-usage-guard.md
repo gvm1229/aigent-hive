@@ -25,12 +25,13 @@ repository owns no second sensor, threshold file, watcher, or halt implementatio
    hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
    ```
 
-5. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks ordinary source work. While
-   blocked, permit only the exact installed-product guard control or consented fallback recovery.
+5. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks source work. While blocked,
+   permit only exact guard control, consented fallback, or one same-binding `enforce` after a
+   changed threshold. Continue only on fresh `hive.usage-allowed`, never by disabling the session.
 
 Do not repeat the preflight before each tool, mutation, push, or final response. Do not start a
-background watcher. The installed marker and exact session binding remain authoritative for the
-task, and a new session defaults to enabled.
+background watcher. The installed marker and exact binding remain authoritative; a new session
+defaults enabled.
 
 ## Control and safety
 

@@ -1,92 +1,65 @@
 # 현재 상태
 
-- 작업 브랜치: `develop`
-- 제품 버전: `0.10.0`
-- 공개 시험판: `0.10.0-test.13`, 배포일 2026-09-02
-- 제품 수용 소스: `dc9491ca7c6acbab2e67b0d90dcc8cda5d972797`
-- 벡터 최초 설정·고정 범위 안내·세 운영체제 공개 수용 완료
-- 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
-- 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
-- 지식 이전: PR #41로 `develop@e1890c87` 병합. 기능 브랜치 원격·로컬 삭제, main·develop만 유지
-- `KTX10-001–014` 완료. A·B 등 여러 `.hivekb`의 자동 통합·원문 보존·Windows 100·1,000·5,000파일 측정·세 방향 교차 운영체제·test.8 공개 설치 수용 완료
-- 검증형 작업: 사용자 승인한 저장소의 수정된 Skill과 소스 종료 정책 적용. 전역 설치 변경·host 실행 graph 활성화 주장 없음
-- 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
-- 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
+- 작업 branch: `develop`
+- 제품 버전: `0.10.1`
+- Stable baseline: `0.10.0`
+- 수용 공개 시험: `0.10.1-test.1`
+- 활성 계획: [`PLAN.md`](../plans/PLAN.md)
+- 구현 계획: [`harness-upgrade-0.10.1.md`](../plans/active/harness-upgrade-0.10.1.md)
+- 출시 계획: [`release-0.10.1.md`](../plans/active/release-0.10.1.md)
+- 결정: [`ADR-0021`](../decisions/ADR-0021-0.10.1-upgrade-usage-fix.md)
 
-## 현재 장애 요인·다음 작업
+## 현재 결함
 
-- Agent 소유: 0건
-- branch 규칙: 모든 변경 branch → develop → main. main PR head=develop, 안정판 문서 PR도 develop 선행
-- 유지보수자 권한: `REL10-005–007`의 `0.10.0` 안정판 protected `main` 통합·tag·게시·설치. 현재 요청에서 제외
-- 기술 차단: 0건. `test.13` 후보 `33545448836`·게시 `33546575448`·최종 세 운영체제 수용 `33546986588` 성공
-- 구독자 안내: 문구 승인 뒤 외부 지문 자동 등록. 현재 승인된 `0.10.0` 지문 등록 완료, 출시마다 GitHub 수동 설정 불필요
-- 등록 도구·전송 회귀: Windows 21개 통과. 실제 등록 성공·항목 존재 확인, GitHub 비밀 값 재조회 불가. 실제 Discord 전송·안정판 게시 미실행
-- 쉬운 설명: 설치 사용자 영어·한국어·이중 언어 지침 강화, Rust 448개·설정73개·안내 계약43개 통과. 승인 안내문 1,989자와 새 지문 등록 완료
-- 시험판 자동 게시: 별도 승인 질문 없음. 새 제품 지문·완료 구현 plan ID·중복 없음 필수, source-only 변경과 동일 제품은 후보 생성 차단
-- 시험판 gate 원격 검증: `test.12` 후보 요청 `33532802743` build 전 거부·package 0건, CI `33532787793` 성공
+### Project harness upgrade
 
-## 이번 완료
+- Windows Codex 공개 `0.10.0` 실제 실행: DuckSoul `0.9.5` scan 실패
+- 오류: `hive.skill-selection-invalid: selected user Skills must be unique`
+- 실제 raw Skill 이름: 25개·중복 `0건`
+- Canonical 변환 뒤: 24개
+- 충돌: `iterative-execution`, `ralph-loop` → `verified-workflow`
+- 추가 발견: tracked `0.9.5` full project base 57개 파일, runtime full-base registry coverage 누락
+- DuckSoul `.hive` 변경·apply·recover journal 생성 `0건`
 
-- 파일·대상 원문 지문을 쓰기 잠금 안에서 재대조, 충돌 제외와 재시도 보존 회귀 13개 통과
-- 이전별 벡터 예·아니요·취소와 전역 설정 보존, 실제 모델 8개 원문 재생성과 완성 색인 재사용 통과
-- 프로젝트 사용자 지정 설정의 옛 Skill 대장 수정, `hive-render` 63개 통과. 과거 안정판 기준 파일 불변
-- Windows 100·1,000·5,000개 작은 Markdown의 원문·FTS 복원과 [동일 조건 변경 전후 측정](../../tests/results/knowledge-transfer-2026-08-31.md) 완료
-- [동일 묶음의 Windows→macOS/Linux, macOS→Windows 수용](../../tests/results/knowledge-transfer-cross-os-2026-08-31.md) 통과. CI `33366642438` 전체 성공
+### Usage guard threshold
 
-- 연속 실행 지침: 실제 실행 근거·시도 중단과 전체 종료 구분·소스 경로·종료 결과 대조. [검증 결과와 한계](../../tests/results/continuation-directive-repair.md)
-- Windows 실행 계약 40개 통과·POSIX 전용 3개 제외, 제품 투영 38개 통과. 실제 호스트 종료 차단·응용 프로그램 재시작 검증 제외
-- Wiki 옛 Skill 경로와 계획 문체 오류 수정. 변경 원본 지문 정합화·Wiki 오류와 경고 0건
-- 출시 집계: 현재 체크리스트의 재개방된 `REL10-001–004` 반영. 과거 `test.6` 수용을 새 변경 완료로 집계 금지
+- 공개 `0.10.0` 실제 실행: global threshold `60% → 10%` 저장 성공
+- 기존 `halt.json`: `60%` policy decision 유지
+- 같은 session `status`: `hive.usage-session-halted`, explicit disable 요구
+- 현재 원인: halt binding에 effective policy identity 부재, enforce의 current-session marker 무조건 우선
+- 목표: fresh recheck 뒤 allow 또는 current-policy halt, session disable 불필요
 
-- 벡터 전용 브랜치 구현을 `develop`에 통합
-- 유지보수자의 현재 스트레스 성능 수용에 따라 sqlite-vec·MiniLM 채택. 기존 실패 기록·품질·안전 기준 유지
-- 요청 사이 모델 메모리 유지는 성능 개선안이므로 생략. 현재 한 번의 생성·검색 안에서의 재사용 유지, 상시 서버 추가 없음
-- [test.6 공개 수용](../research/vector-public-test6-2026-08-29.md): 당시 `VEC10-012`, `REL10-001–004` 완료 근거. 지식 이전 변경의 새 공개 수용과 구분
-- HTML의 구조·링크 24개·스크립트·외부 자원 없음 확인. 자동 화면 검증은 브라우저 로컬 파일 접근 정책으로 미실행
+## 현재 실행 순서
 
-## 정확한 출시 근거
+1. 공통 compatibility registry와 historical-state fixture
+2. 인증 우선 ProjectState migration과 Skill merge
+3. Policy-bound halt marker와 same-session recheck
+4. 전체 회귀·release gate
+5. `0.10.1-test.1` 세 운영체제 공개 수용
 
-| 단계 | 실행 | 결과 |
-| --- | --- | --- |
-| 구현 CI | `33366642438` | 전체 필수 검사·세 방향 교차 운영체제 이전 통과, PR #41 병합 |
-| 후보 | `33367751906` | Windows x64·Mac 두 아키텍처·Linux 두 musl 아키텍처 및 npm 묶음 통과 |
-| 게시 | `33368655619` | 정확한 후보 파일로 `test.7` 게시, 안정 채널 불변 |
-| 공개 설치 | `33369217961` | Windows x64·macOS arm64·Linux musl x64의 실제 공개 바이너리 수용 통과 |
+## 권한·안전 경계
 
-- npm 정확 버전·시험 채널과 GitHub 시험판 태그 독립 확인. 바이너리·원본 결과 지문은 [test.7 수용 대장](../../tests/results/knowledge-transfer-public-test7-2026-08-31.md) 참조
-- 공통: 한국어 활성 규칙·잘못된 규칙 거부·언어 팩 복구, 실제 임베딩·의미 인용·손상 시 FTS 복귀·비활성화·이전 세대 복구
-- 새 루트 원문 8개 복원·벡터 재생성, 공유 모음 3개·24청크 증분, 소스 81청크의 첫 생성과 새 생성 2회의 재개 관찰
-- 원본·FTS 보존, 묶음 파일에 벡터 포함 0건. Windows의 이미 할당된 실제 모델 자식 취소·복구 통과
-- 로컬 Windows 전체 Rust 900개 통과·수동 실행 전용 4개 제외. Python 다섯 lane와 수정 release lane 재실행 통과, 정확 기능 소스의 원격 전체 CI 성공
-- 이전 test.6의 시험 수·바이너리·원본 결과 지문: [당시 수용 기록](../research/vector-public-test6-2026-08-29.md). 새 제품의 검사 수와 혼합 금지
-- 비벡터 test.4와 취소된 test.3/test.5는 과거 기록. 현재 제품 수용의 대체 근거로 사용 금지
+- Agent 소유: accepted-test promotion 구현·검증·`main` 통합·stable `0.10.1` 공개
+- 사용자 권한 대기: 실제 DuckSoul apply
+- 사용자·외부 bytes: 보존
+- Historical project/user base bytes: 변경 금지
+- Provider API·credential·OMX/OMC: 사용 금지
 
-## 수용한 성능과 범위
+## 현재 근거
 
-Windows 합성 5만 청크·100모음 기준. [승인 정책](../research/vector-acceptance-2026-08-29.md)과 [원본 실측](../research/vector-product-integration-2026-08-28.md) 보존.
-
-| 항목 | 실측 | 현재 기준 |
-| --- | ---: | ---: |
-| 전체 생성 | 638.597초 | 900초 |
-| 100개 변경 | 벡터 51.989초, FTS 포함 70.419초 | 벡터 90초 |
-| 전체 의미 조회 p95 | 전역 3.067초·한 모음 2.276초 | 4초 |
-| 열린 100DB SQL p95 | 98.876ms | 150ms |
-| 파생 색인·작업·실패 자료 | 442,751,701B | 512MiB |
-
-- 의미 질문: 원본·독립 평가 각각 58/60. 정확 질문 평균 역순위 0.975 유지, 번호 의미 조회 60개도 기존 FTS 1위 보존
-- 전체 재생성의 벡터 5만 개 바이트 일치, 증분의 기존 49,900개 보존
-- 기존 FTS 기준선 유지. 임베딩 실행 환경·모델 용량은 색인 용량과 별도
-- 초기 설치/생성 대기 안내. 모델·처리 계약 변경·색인 삭제 때 전체 재생성 가능. 소규모 변경의 미측정 시간을 단순 비례 계산 금지
-- 비공개/기밀 경계·일회성 승인·손상 복귀는 별도 Windows 근거와 전체 회귀 시험으로 유지. 이번 공개 소규모 시험의 대규모 성능·기밀 재측정 주장 금지
-
-## 미증명 범위와 다음 작업
-
-- 요청 사이 모델 유지 방식의 warm 500ms: 미측정·범위 제외, 통과로 표시 금지
-- 새 루트 공개 설치 검사와 세 방향 CI의 동일 묶음 전달 모두 실제 실행. 사용자 USB·네트워크 장치의 물리 전달 품질 검증 제외
-- Unix의 실제 모델 자식 취소, Windows 생성→Job 할당의 원자성, 모든 PC의 동일 성능: 이번 공개 수용에서 미증명
-- Intel Mac·Linux arm64 CLI 빌드와 벡터 설치 수용은 구분. Alpine musl Python은 현재 벡터 미지원
-- 실제 사용자 지식 변환·전역 벡터 설치 없음. 수용 대상은 격리 합성 자료
-- 별도 시험 산출물 정리 작업은 다른 세션 소유. 신규 도구·기록은 비출하 소스 변경이며 test.6 제품 바이트와 분리
-- 안정판 `REL10-005–007`: 버전명 포함 현재 사용자 승인 전 `main` 통합·태그·게시·설치 금지
-
-이전 누적 상태: [test.6 수용 전 기록](../archive/state/0.10.0-vector-before-test6.md).
+- 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`, `fede7a2a`, `df2a88f8`
+- Rust 전체: 446 통과·수동 qualification 1 제외, core 109·projection 39·render 63·update 54·wiki 177 통과
+- Historical project lifecycle: `0.9.1–0.10.0` scan·dry-run·rollback·apply·validate 통과
+- 공개 `0.10.0` exact support-state fixture: Codex·Claude·Antigravity의 `test.2`·`test.4` 갱신 통과
+- Source Wiki: 174개 page, 오류 `0건`, 경고 `0건`
+- DuckSoul Git 상태: 기존 사용자 변경 존재, 이번 진단 변경 `0건`
+- 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable 불필요
+- Python lane: documentation 87·security 103·contract 466·integration 94·release 115 통과; 플랫폼 조건부 건너뜀은 별도 유지
+- 공개 시험 gate: `0.10.1-test.1`, product digest `sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff` 승인
+- Candidate `34000885782`, source `da6636a679ea451d500f26550f7738e3063697f1`; 다섯 native artifact 통과
+- npm 여섯 package `test=0.10.1-test.1`, `latest=0.10.0`; GitHub prerelease 25개 artifact 확인
+- Public acceptance `34001760231`: Windows x64·macOS arm64·Linux musl x64 설치·한국어·rollback·vector 통과
+- Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인; accepted-test promotion mode 구현 뒤 진행
+- Stable promotion mode: `35f89f9f`; accepted source·product digest·세 host acceptance run 결합, qualification 재실행 없음
+- 구독자 요약 승인 digest: `sha256:36be7d519874b54e7817f26f8819be57ad7d011be3a430aff46ebb89c15768f7`, release 환경 등록 완료
+- 남은 검증: `main` 통합, stable 공개·독립 확인

@@ -53,7 +53,9 @@ fn main() {
 
 fn write_historical_user_plugin_tables(manifest_dir: &Path) {
     let mut releases = Vec::new();
-    for version in ["0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5"] {
+    for version in [
+        "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0",
+    ] {
         let base = manifest_dir.join(format!(
             "../../harness/user-bases/{version}/plugins/aigent-hive"
         ));

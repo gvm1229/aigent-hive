@@ -89,6 +89,10 @@ fn seed_historical_project(target: &Path, version: &str) {
         );
     fs::write(&harness, historical_harness).expect("historical harness config");
 
+    write_historical_project_base(target, version);
+}
+
+fn write_historical_project_base(target: &Path, version: &str) {
     let capability = Dir::open_ambient_dir(target, ambient_authority()).expect("target capability");
     let historical = historical_project_upgrade_candidate_in(&capability, version)
         .expect("embedded historical project base");
@@ -139,7 +143,7 @@ fn seed_historical_project(target: &Path, version: &str) {
 
 #[test]
 fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_foreign_bytes() {
-    for version in ["0.9.1", "0.9.2", "0.9.3"] {
+    for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0"] {
         let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir_all(&target).expect("consumer directory");
@@ -211,6 +215,117 @@ fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_fo
             foreign_bytes
         );
     }
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
+    let temporary = secure_tempdir();
+    let target = temporary.path().join("consumer");
+    fs::create_dir_all(&target).expect("consumer directory");
+    seed_historical_project(&target, "0.9.5");
+
+    let harness_path = target.join(".hive/config/harness.toml");
+    let harness = fs::read_to_string(&harness_path).expect("historical harness");
+    let selected = [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+    ];
+    let replacement = format!(
+        "selected_project_skills = [{}]",
+        selected
+            .iter()
+            .map(|name| format!("\"{name}\""))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let rewritten = harness
+        .lines()
+        .map(|line| {
+            if line.starts_with("selected_project_skills = ") {
+                replacement.as_str()
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
+    fs::write(&harness_path, rewritten).expect("historical selection");
+    write_historical_project_base(&target, "0.9.5");
+
+    for mode in ["--scan", "--dry-run"] {
+        let output = run_hive(&[
+            "project",
+            "upgrade",
+            "--target",
+            target.to_str().expect("target UTF-8"),
+            mode,
+            "--output",
+            "json",
+        ]);
+        require_success(&output, mode);
+        let result: Value = serde_json::from_slice(&output.stdout).expect("upgrade result");
+        assert_eq!(result["data"]["source_version"], "0.9.5");
+        assert_eq!(
+            result["data"]["migration_id"],
+            "authenticated-project-state-v1"
+        );
+        assert_eq!(
+            result["data"]["normalized_fields"],
+            json!(["selected_project_skills"])
+        );
+        assert_eq!(
+            result["data"]["skill_merges"][0],
+            json!({
+                "sources": ["iterative-execution", "ralph-loop"],
+                "target": "verified-workflow"
+            })
+        );
+    }
+    for mode in ["--apply", "--validate"] {
+        require_success(
+            &run_hive(&[
+                "project",
+                "upgrade",
+                "--target",
+                target.to_str().expect("target UTF-8"),
+                mode,
+                "--output",
+                "json",
+            ]),
+            mode,
+        );
+    }
+    let current = fs::read_to_string(&harness_path).expect("current harness");
+    assert!(current.contains("\"verified-workflow\""));
+    assert!(!current.contains("\"iterative-execution\""));
+    assert!(!current.contains("\"ralph-loop\""));
+    assert!(!target.join(".agents/skills/iterative-execution").exists());
+    assert!(!target.join(".agents/skills/ralph-loop").exists());
 }
 
 #[test]

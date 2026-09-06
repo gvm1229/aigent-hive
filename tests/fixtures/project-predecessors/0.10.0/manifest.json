@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "product_version": "0.10.0",
+  "capture_source": "published npm artifact installed as AIgent Hive v0.10.0",
+  "fixture_kind": "synthetic-project-support-state",
+  "archive_digest_algorithm": "sha256",
+  "hosts": {
+    "antigravity": "sha256:ad3d140750d127717da744f5ab3586e89050ad14ef3b88e94925feb70c32069b",
+    "claude": "sha256:63065806a9edf5cb34db64ba13b959c103b103cd3aefd0e222728d08a2e2f978",
+    "codex": "sha256:d2f2bdd02ae4f461511f2b8a80b971e6e6ce1d839f6764cf146607c61c0909d5"
+  }
+}

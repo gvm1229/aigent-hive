@@ -47,7 +47,7 @@
 - `harness/project-bases/**`, `harness/user-bases/**`: byte 변경 `0건`
 - 공개 CLI·schema·Skill ID 변경 `0건`
 - Provider API·credential·외부 byte·stable 승인·continuation 중단 3조건 유지
-- `REL10-005–007`: 실행 제외
+- `REL10-005–007`: 지침 최적화 범위에서는 실행 제외였고, 이후 별도 명시 승인으로 정식 출시 완료
 
 ## 완료 근거
 

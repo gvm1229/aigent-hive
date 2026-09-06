@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.0 release-date=2026-09-02 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.1 release-date=2026-09-06 -->
 
 ## 목적
 
@@ -64,7 +64,7 @@ provider-neutral 로컬 agent harness.
 | Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Installed policy](../guides/installed-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.10.0` release](../releases/0.10.0.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.10.1` release](../releases/0.10.1.md) |
 
 ## Artifact 흐름
 
@@ -82,8 +82,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.10.0` (released 2026-09-02)
-- `0.10.0`: optional vector search, relationship graph exploration, portable knowledge transfer and merge, verified workflow, Korean language improvements, and safe Skill migration
+- Current public stable version: `0.10.1` (released 2026-09-06)
+- `0.10.1`: authenticated general harness migration and immediate same-session usage-threshold rechecks without disabling protection
 - `0.9.4`: 교차 프로젝트 명시 지식 조회, index-time 일반 지식 자동 승격과 harness 개선
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 

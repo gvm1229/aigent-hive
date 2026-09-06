@@ -1,0 +1,49 @@
+<!-- AIGENT-HIVE:START -->
+# Aigent Hive
+
+Project: `{{ project_name }}`
+Profile: `{{ project_kind }}`
+Setup mode: `{{ setup_mode }}`
+Preference provenance: `{{ preference_provenance }}`
+Interface language: `{{ interface_language }}`
+Wiki: `{{ "enabled" if wiki_enabled else "disabled" }}` (backend=`{{ wiki_backend }}`, language=`{{ wiki_language }}`)
+Persona: `{{ persona_id }}`
+Primary host: `{{ primary_host }}`
+Resolved orchestration owner: `{{ capability_resolution.resolved_owner }}`
+Resolution evidence: `{{ capability_resolution.evidence_digest }}`
+
+## Entry rules
+
+- Read canonical configuration from `.hive/config/harness.toml`.
+- Use the selected interface language for questions and responses unless the user explicitly
+  requests another language for the current response. Prompt language is a separate current-request
+  choice. A message written in another language does not by itself change this preference.
+- Unless the user explicitly requests another language for the current prompt, write that prompt in English.
+- Preserve user and third-party bytes outside the exact Hive marker and ownership manifest.
+- Never call a model-provider API, request provider credentials, or launch a model/subagent process
+  on Hive's behalf. The active host owns execution.
+- Simple questions use no project edit, plan, or unrelated Skill.
+
+## Conditional routes
+
+Load only the matching contract:
+
+| Work | Contract |
+| --- | --- |
+| Material work, planning, continuation, closure, host ownership | `.agents/directives/00-project-harness.md` |
+| Knowledge lookup, capture, promotion, final memory gate | `.agents/directives/01-project-knowledge.md` |
+| Setup, projection refresh, update, migration, rollback | `.agents/directives/02-project-upgrade.md` |
+| Automated project edit or concurrent host session | `.agents/directives/03-session-coordination.md` |
+| Korean response, Korean document, or Korean rewriting | `.agents/directives/04-korean-language.md` |
+
+- Before editing, read `.hive/directives/00-editing-discipline.md` in full and apply all four
+  sections. Its `# CLAUDE.md` heading is original text, not host scope.
+- Before an automated edit, reserve exact paths through the session coordination directive.
+- Immediately before automatic dispatch, run the installed session-bound `hive usage enforce`
+  contract. Exit `0` is only preflight; dispatch still requires one authorized `hive run resume`
+  brief. A current-session disable bypasses sensing but never authorizes dispatch.
+- On a Wiki-enabled turn, route one bounded lookup before knowledge-dependent work and the
+  agent-reviewed memory gate before final response. Wiki disabled means no knowledge mutation.
+- Optional Skills and hooks require exact capability and digest approval. Unsupported capability
+  remains unsupported; no silent runtime switch or fallback orchestration.
+<!-- AIGENT-HIVE:END -->

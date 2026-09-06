@@ -1,0 +1,77 @@
+schema_version: 1
+releases:
+  - version: 0.7.0
+    compatibility_epoch: 0.7.0
+    renderer: frozen_project_base_0_7
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:01996b8d578b6512dbe66d2b96018ebfab04492a6e9948864624d7a4e5317ae3
+    user_projection_digest: null
+  - version: 0.8.0
+    compatibility_epoch: 0.8.0
+    renderer: frozen_project_base_0_8
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:7b94e724b674aa7b2d218b785eb5784bf81d454fd8f75309f5e225e511554e16
+    user_projection_digest: sha256:ec337b94a86538d9de294724814274d3079bf760273f01c7452208c67ca03991
+  - version: 0.9.0
+    compatibility_epoch: 0.9.0
+    renderer: frozen_project_base_0_9
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:87cfa5ae2efe97056c6bc5be92eb2371d4c73a66931c177ff56947ceb32d1152
+    user_projection_digest: sha256:55e7737d8228a3031f140e6c6b27823f73dd6858a543993207c8ac84bb6f61b5
+  - version: 0.9.1
+    compatibility_epoch: 0.9.1
+    renderer: frozen_project_base_0_9_1
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:d6a96aee364f285207e290d296379ff840446046dd71c56dcfd3f87320f201f2
+    user_projection_digest: sha256:2911f5984f30a1ea3daeff015ade5f69e55562558539fb5d0c0464b2b572a5c7
+  - version: 0.9.2
+    compatibility_epoch: 0.9.2
+    renderer: frozen_project_base_0_9_2
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:8ceac426a6911d6032c85a3dd1afa9b950dd937e86a615b1e049146775244fb7
+    user_projection_digest: sha256:cf02589bfb6f65f05230750b522a5955f341d5b17e343edc7cc99dbacaf9e303
+  - version: 0.9.3
+    compatibility_epoch: 0.9.3
+    renderer: frozen_project_base_0_9_3
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:ed60ace8c55d296c93b11ead11a1e8f1625ae40f71814c915921ec98ba0cbec2
+    user_projection_digest: sha256:e7ea73a4badf0c168de10f1923f5d59077ac0e20e4c57185c605c80d112228a9
+  - version: 0.9.4
+    compatibility_epoch: 0.9.4
+    renderer: frozen_project_base_0_9_4
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:d65cb6412ce976ba718244f252de361fcdb3ca140aa1e39cbefd77c45cf2e0bc
+    user_projection_digest: sha256:b8dc2a4c73f84ff81e19aceb16b9ab6d32385f4d7121709bc94806c5579236a8
+  - version: 0.9.5
+    compatibility_epoch: 0.9.4
+    renderer: frozen_project_base_0_9_5
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:d65cb6412ce976ba718244f252de361fcdb3ca140aa1e39cbefd77c45cf2e0bc
+    user_projection_digest: sha256:bd239d889ce14e4ebefa17e416b1533a97c6b1090abaf9f4436ec62d67e93dcf
+  - version: 0.10.0
+    compatibility_epoch: 0.10.0
+    renderer: frozen_project_base_0_10_0
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:39d3a2253d8292c6f16250d0ac55b8e1c41e0454a2f319840be7bbcd48a86839
+    user_projection_digest: sha256:03f6bf11016cbc8d6f257ea791b7ef8c02137948f36b9636b0b4e03ee27a3329
+published_snapshots:
+  - version: 0.10.0-test.2
+    source_version: 0.10.0
+    overlays:
+      - 0.10.0-test.2
+    project_base_digest: sha256:a86d81cb4cfcb1b0679d38992d4573a3d248555d492d2767313099b8fc53730b
+  - version: 0.10.0-test.4
+    source_version: 0.10.0
+    overlays:
+      - 0.10.0-test.2
+      - 0.10.0-test.4
+    project_base_digest: sha256:f7111bba56d490b98212681f629581870f7f7b0de108228eb67101defaa96be9

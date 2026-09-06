@@ -94,6 +94,7 @@
 | `0.10.0` 제품 범위 | [en](en/v0-10-product-scope.md) | [ko](ko/v0-10-product-scope.md) |
 | `0.10.0` hybrid vector search | [en](en/hybrid-vector-search-0-10.md) | [ko](ko/hybrid-vector-search-0-10.md) |
 | `0.10.0` 벡터 검색 최초 설정 | [en](en/vector-onboarding-0-10.md) | [ko](ko/vector-onboarding-0-10.md) |
+| `0.10.1` harness 갱신·사용량 정책 복구 | [en](en/upgrade-usage-v0101.md) | [ko](ko/upgrade-usage-v0101.md) |
 | npm `0.8.0` distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
 | npm README packaging | [en](en/npm-readme-packaging.md) | [ko](ko/npm-readme-packaging.md) |
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |

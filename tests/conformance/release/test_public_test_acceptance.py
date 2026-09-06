@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github/workflows/public-test-acceptance.yml"
 REGISTERED_WORKFLOW = ROOT / ".github/workflows/release-runtime.yml"
+CANDIDATE_WORKFLOW = ROOT / ".github/workflows/release.yml"
 SCRIPT = ROOT / "scripts/qualify-korean-public-test.py"
 VECTOR_ONBOARDING_SCRIPT = ROOT / "scripts/qualify-vector-onboarding-public-test.py"
 
@@ -26,7 +27,9 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             'aigent-hive@$PACKAGE_VERSION',
             "dist-tags.test",
             "dist-tags.latest",
-            'test "$(npm view aigent-hive \'dist-tags.latest\')" = "0.9.5"',
+            "docs/public-stable-release.json",
+            "jq -r .stable_version",
+            'test "$(npm view aigent-hive \'dist-tags.latest\')" = "$stable_version"',
             "qualify-korean-public-test.py",
             "qualify-vector-onboarding-public-test.py",
             '--package-version "$PACKAGE_VERSION"',
@@ -34,6 +37,7 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
         self.assertNotIn("channel: stable", text)
+        self.assertNotIn("dist-tags.latest')\" = \"0.9.5", text)
         self.assertIn("workflow_call:", text)
 
     def test_registered_runtime_workflow_calls_the_public_test_gate(self) -> None:
@@ -48,6 +52,24 @@ class PublicTestAcceptanceContract(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)
+
+    def test_stable_promotion_binds_the_accepted_test_and_skips_replayed_qualification(self) -> None:
+        text = CANDIDATE_WORKFLOW.read_text(encoding="utf-8")
+        for required in (
+            "promoted_test_version:",
+            "acceptance_run_id:",
+            "docs/public-test-product.json",
+            'test "$(jq -r .accepted_package_version "$registry")" = "$PROMOTED_TEST_VERSION"',
+            'test "$(jq -r .name <<<"$acceptance")" = "Public test acceptance"',
+            "korean-public-test-darwin-arm64,korean-public-test-linux-x64,korean-public-test-win32-x64",
+            "inputs.channel != 'stable' || inputs.promoted_test_version == ''",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+        self.assertEqual(
+            text.count("inputs.channel != 'stable' || inputs.promoted_test_version == ''"),
+            2,
+        )
 
     def test_qualifier_has_bounded_preservation_and_pack_rollback_checks(self) -> None:
         text = SCRIPT.read_text(encoding="utf-8")

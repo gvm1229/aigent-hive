@@ -9,6 +9,7 @@ import stat
 import subprocess
 import tomllib
 from pathlib import Path
+from zipfile import ZipFile
 
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -35,18 +36,38 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
         self._check_same_product_test_upgrade("0.10.0-test.4")
 
     def _check_same_product_test_upgrade(self, version: str) -> None:
+        fixture_root = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.0"
+        fixture_manifest = json.loads((fixture_root / "manifest.json").read_bytes())
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
-                target = self.setup_project(f"test2-{host}", host=host)
+                target = self.work_root / f"published-{version}-{host}"
+                source = fixture_root / f"{host}.zip"
+                self.assertEqual(
+                    "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+                    fixture_manifest["hosts"][host],
+                )
+                with ZipFile(source) as archive:
+                    for member in archive.infolist():
+                        member_path = Path(member.filename)
+                        self.assertFalse(member_path.is_absolute())
+                        self.assertNotIn("..", member_path.parts)
+                    archive.extractall(target)
                 ledger_path = target / ".hive/config/project-base.json"
                 ledger = json.loads(ledger_path.read_bytes())
                 for entry in ledger["files"]:
-                    base = "0.10.0-test.2"
-                    if version == "0.10.0-test.2" and entry["path"] == ".agents/directives/04-korean-language.md":
+                    if entry["path"] == ".agents/directives/04-korean-language.md":
+                        if version not in ("0.10.0-test.2", "0.10.0-test.4"):
+                            continue
+                        base = "0.10.0-test.2"
                         source = "directives/04-korean-language.md"
-                    elif version == "0.10.0-test.2" and entry["path"] in (".agents/skills/humanize-kor/SKILL.md", ".claude/skills/humanize-kor/SKILL.md"):
+                    elif entry["path"] in (".agents/skills/humanize-kor/SKILL.md", ".claude/skills/humanize-kor/SKILL.md"):
+                        if version not in ("0.10.0-test.2", "0.10.0-test.4"):
+                            continue
+                        base = "0.10.0-test.2"
                         source = "skills/humanize-kor/SKILL.md"
-                    elif entry["path"].endswith(("/knowledge-recall/SKILL.md", "/knowledge-maintain/SKILL.md")):
+                    elif version == "0.10.0-test.4" and entry["path"].endswith(
+                        ("/knowledge-recall/SKILL.md", "/knowledge-maintain/SKILL.md")
+                    ):
                         base = "0.10.0-test.4"
                         source = "skills/" + "/".join(entry["path"].split("/")[-2:])
                     else:

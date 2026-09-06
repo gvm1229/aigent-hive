@@ -7,12 +7,13 @@ use hive_core::{
     sha256_digest, validate_hive_directive_projection_relative,
     validate_hive_skill_projection_relative, validate_project_relative,
 };
-use hive_projection::historical_builtin_skills;
+use hive_projection::{historical_builtin_skills, SkillSelectionMerge};
 #[cfg(test)]
 use hive_render::FULL_HISTORICAL_PROJECT_BASE_VERSIONS;
 use hive_render::{
-    historical_project_upgrade_candidate_in, project_upgrade_candidate_in,
-    requires_full_historical_project_base, HistoricalProjectBase, RenderError,
+    historical_project_upgrade_candidate_in, historical_published_project_snapshots,
+    project_upgrade_candidate_in, requires_full_historical_project_base, HistoricalProjectBase,
+    RenderError,
 };
 use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition, UpdateError};
 use serde::{Deserialize, Serialize};
@@ -112,7 +113,11 @@ struct PathReport {
 
 struct UpgradePlan {
     source_version: String,
+    source_snapshot_digest: Option<String>,
     target_version: String,
+    migration_id: String,
+    normalized_fields: Vec<String>,
+    skill_merges: Vec<SkillSelectionMerge>,
     reports: Vec<PathReport>,
     final_files: BTreeMap<String, Option<Vec<u8>>>,
     expected_before: BTreeMap<String, ExpectedBefore>,
@@ -190,12 +195,15 @@ pub(crate) fn authenticate_legacy_knowledge_target(target: &Path) -> Result<(), 
     ensure_consumer_target(target).map_err(|error| UpdateError::Input(error.to_string()))?;
     let target_dir = open_target_capability(target)?;
     ensure_pinned_consumer_target(&target_dir)?;
-    let candidate = project_upgrade_candidate_in(&target_dir).map_err(render_error)?;
-    let ledger = read_base_ledger(&target_dir, &candidate.files)?.ok_or_else(|| {
+    let ledger = read_base_ledger(&target_dir, None)?.ok_or_else(|| {
         UpdateError::Verification(
             "legacy project-local knowledge requires an authenticated project base".to_owned(),
         )
     })?;
+    let candidate = project_upgrade_candidate_in(&target_dir).map_err(render_error)?;
+    if ledger.product_version == env!("CARGO_PKG_VERSION") {
+        authenticate_current_base(&ledger, &candidate.files)?;
+    }
     let version = release_version(&ledger.product_version).ok_or_else(|| {
         UpdateError::Verification("project base product version is invalid".to_owned())
     })?;
@@ -279,12 +287,24 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
 
 #[allow(clippy::too_many_lines)]
 fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
+    let base = read_base_ledger(target, None)?;
     let candidate = project_upgrade_candidate_in(target).map_err(render_error)?;
-    let base = read_base_ledger(target, &candidate.files)?;
+    if let Some(ledger) = base
+        .as_ref()
+        .filter(|ledger| ledger.product_version == env!("CARGO_PKG_VERSION"))
+    {
+        authenticate_current_base(ledger, &candidate.files)?;
+    }
     let source_version = base.as_ref().map_or_else(
         || "legacy-unbased".to_owned(),
         |ledger| ledger.product_version.clone(),
     );
+    if base.is_some() && candidate.source_version != source_version {
+        return Err(UpdateError::Verification(
+            "installed harness version differs from its authenticated project base".to_owned(),
+        ));
+    }
+    let source_snapshot_digest = base.as_ref().map(|ledger| ledger.ledger_digest.clone());
     let base_files = base
         .as_ref()
         .map(|ledger| {
@@ -403,7 +423,11 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
         .map_err(|error| UpdateError::Internal(error.to_string()))?;
     Ok(UpgradePlan {
         source_version,
+        source_snapshot_digest,
         target_version: candidate.product_version,
+        migration_id: candidate.migration_id,
+        normalized_fields: candidate.normalized_fields,
+        skill_merges: candidate.skill_merges,
         reports,
         final_files,
         expected_before,
@@ -449,7 +473,7 @@ fn release_version(version: &str) -> Option<(u64, u64, u64)> {
 
 fn read_base_ledger(
     target: &Dir,
-    incoming: &BTreeMap<String, Vec<u8>>,
+    current_incoming: Option<&BTreeMap<String, Vec<u8>>>,
 ) -> Result<Option<BaseLedger>, UpdateError> {
     let Some(bytes) = read_bounded_optional(target, Path::new(BASE_PATH), MAX_LEDGER_BYTES)? else {
         return Ok(None);
@@ -493,7 +517,9 @@ fn read_base_ledger(
         previous = Some(&entry.path);
     }
     if ledger.product_version == env!("CARGO_PKG_VERSION") {
-        authenticate_current_base(&ledger, incoming)?;
+        if let Some(incoming) = current_incoming {
+            authenticate_current_base(&ledger, incoming)?;
+        }
     } else {
         authenticate_historical_base(target, &ledger)?;
     }
@@ -504,61 +530,7 @@ fn authenticate_current_base(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), UpdateError> {
-    let current = authenticate_base_bytes(ledger, incoming);
-    if current.is_ok() || env!("CARGO_PKG_VERSION") != "0.10.0" {
-        return current;
-    }
-    // Numbered tests share the product version. Authenticate each complete published
-    // generation against the current projection plus its exact frozen deltas.
-    // Never authorize arbitrary ledger contents merely from their self-reported digest.
-    let mut prior = incoming.clone();
-    for (path, bytes) in &mut prior {
-        if let Some(frozen) = test4_projection_bytes(path) {
-            *bytes = frozen.to_vec();
-        }
-    }
-    if authenticate_base_bytes(ledger, &prior).is_ok() {
-        return Ok(());
-    }
-    // test.2 predates the Korean repair as well as the vector Skill routing.
-    for (path, bytes) in &mut prior {
-        if let Some(frozen) = test2_projection_bytes(path) {
-            *bytes = frozen.to_vec();
-        }
-    }
-    if authenticate_base_bytes(ledger, &prior).is_ok() {
-        return Ok(());
-    }
-    current
-}
-
-fn test4_projection_bytes(path: &str) -> Option<&'static [u8]> {
-    match path {
-        ".agents/skills/knowledge-recall/SKILL.md" | ".claude/skills/knowledge-recall/SKILL.md" => {
-            Some(include_bytes!(
-                "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-recall/SKILL.md"
-            ))
-        }
-        ".agents/skills/knowledge-maintain/SKILL.md"
-        | ".claude/skills/knowledge-maintain/SKILL.md" => Some(include_bytes!(
-            "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-maintain/SKILL.md"
-        )),
-        _ => None,
-    }
-}
-
-fn test2_projection_bytes(path: &str) -> Option<&'static [u8]> {
-    match path {
-        ".agents/directives/04-korean-language.md" => Some(include_bytes!(
-            "../../../harness/project-bases/0.10.0-test.2/directives/04-korean-language.md"
-        )),
-        ".agents/skills/humanize-kor/SKILL.md" | ".claude/skills/humanize-kor/SKILL.md" => {
-            Some(include_bytes!(
-                "../../../harness/project-bases/0.10.0-test.2/skills/humanize-kor/SKILL.md"
-            ))
-        }
-        _ => None,
-    }
+    authenticate_base_bytes(ledger, incoming)
 }
 
 fn authenticate_base_bytes(
@@ -602,7 +574,16 @@ fn authenticate_historical_base(target: &Dir, ledger: &BaseLedger) -> Result<(),
     if requires_full_historical_project_base(&ledger.product_version) {
         let expected = historical_project_upgrade_candidate_in(target, &ledger.product_version)
             .map_err(render_error)?;
-        return authenticate_full_historical_base(ledger, &expected);
+        let exact = authenticate_full_historical_base(ledger, &expected);
+        if exact.is_ok() {
+            return exact;
+        }
+        for snapshot in historical_published_project_snapshots(&expected) {
+            if authenticate_full_historical_base(ledger, &snapshot.base).is_ok() {
+                return Ok(());
+            }
+        }
+        return exact;
     }
     let skills = historical_builtin_skills(&ledger.product_version).map_err(|error| {
         if error.code() == "hive.skill-history-unsupported" {
@@ -658,8 +639,10 @@ fn authenticate_full_historical_base(
         || ledger.files.len() != expected.files.len()
     {
         return Err(UpdateError::Verification(format!(
-            "historical project base {} has a partial full-ledger inventory",
-            ledger.product_version
+            "historical project base {} has a partial full-ledger inventory (installed={}, expected={})",
+            ledger.product_version,
+            ledger.files.len(),
+            expected.files.len()
         )));
     }
     for (entry, expected_entry) in ledger.files.iter().zip(&expected.files) {
@@ -1031,17 +1014,27 @@ fn prune_empty_project_skill_ancestors<'a>(
     target: &Dir,
     paths: impl IntoIterator<Item = &'a Path>,
 ) -> Result<(), UpdateError> {
-    let boundary = Path::new(".agents");
+    let skills_root = Path::new(".agents/skills");
     let mut directories = BTreeSet::new();
     for path in paths {
-        let mut parent = path.parent();
-        while let Some(directory) = parent.filter(|directory| *directory != boundary) {
-            if !directory.starts_with(boundary) {
-                break;
-            }
-            directories.insert(directory.to_path_buf());
-            parent = directory.parent();
+        validate_hive_skill_projection_relative(path)
+            .map_err(|error| UpdateError::Verification(error.to_string()))?;
+        let skill_name = path
+            .strip_prefix(skills_root)
+            .ok()
+            .and_then(|suffix| suffix.components().next())
+            .ok_or_else(|| {
+                UpdateError::Internal("project Skill path has no Skill directory".to_owned())
+            })?;
+        let skill_directory = skills_root.join(skill_name);
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| *parent != skill_directory.as_path())
+        {
+            directories.insert(parent.to_path_buf());
         }
+        directories.insert(skill_directory);
+        directories.insert(skills_root.to_path_buf());
     }
     let mut directories = directories.into_iter().collect::<Vec<_>>();
     directories.sort_by(|left, right| {
@@ -1071,8 +1064,17 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
         };
         (agents, OsString::from("skills"))
     } else {
-        let skill_path = relative.join("SKILL.md");
-        validate_hive_skill_projection_relative(&skill_path)
+        let suffix = relative.strip_prefix(skills_root).map_err(|_| {
+            UpdateError::Verification("project Skill directory escaped its root".to_owned())
+        })?;
+        let components = suffix.components().collect::<Vec<_>>();
+        let validation_path =
+            if components.len() == 2 && components[1].as_os_str() == OsStr::new("agents") {
+                relative.join("openai.yaml")
+            } else {
+                relative.join("SKILL.md")
+            };
+        validate_hive_skill_projection_relative(&validation_path)
             .map_err(|error| UpdateError::Verification(error.to_string()))?;
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
@@ -1092,11 +1094,25 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
                 )))
             }
         };
-        let name = relative
-            .file_name()
-            .ok_or_else(|| UpdateError::Internal("project Skill directory has no name".to_owned()))?
-            .to_os_string();
-        (skills, name)
+        if components.len() == 2 {
+            let skill = skills
+                .open_dir_nofollow(components[0].as_os_str())
+                .map_err(|error| {
+                    UpdateError::Conflict(format!(
+                        "cannot open project-owned Skill directory {}: {error}",
+                        relative.display()
+                    ))
+                })?;
+            (skill, components[1].as_os_str().to_os_string())
+        } else {
+            let name = relative
+                .file_name()
+                .ok_or_else(|| {
+                    UpdateError::Internal("project Skill directory has no name".to_owned())
+                })?
+                .to_os_string();
+            (skills, name)
+        }
     };
     let directory = match parent.open_dir_nofollow(&name) {
         Ok(directory) => directory,
@@ -2470,7 +2486,11 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
         next_action: None,
         data: Some(json!({
             "source_version": plan.source_version,
+            "source_snapshot_digest": plan.source_snapshot_digest,
             "target_version": plan.target_version,
+            "migration_id": plan.migration_id,
+            "normalized_fields": plan.normalized_fields,
+            "skill_merges": plan.skill_merges,
             "plan_digest": plan.plan_digest,
             "reports": plan.reports
         })),
@@ -2582,7 +2602,11 @@ mod tests {
     fn one_file_plan(path: &str, before: Option<&[u8]>, after: Option<&[u8]>) -> UpgradePlan {
         UpgradePlan {
             source_version: "0.7.0".to_owned(),
+            source_snapshot_digest: None,
             target_version: "0.7.0".to_owned(),
+            migration_id: "test".to_owned(),
+            normalized_fields: Vec::new(),
+            skill_merges: Vec::new(),
             reports: Vec::new(),
             final_files: BTreeMap::from([(path.to_owned(), after.map(<[u8]>::to_vec))]),
             expected_before: BTreeMap::from([(
@@ -2616,7 +2640,11 @@ mod tests {
             .collect();
         UpgradePlan {
             source_version: "0.7.0".to_owned(),
+            source_snapshot_digest: None,
             target_version: "0.8.0".to_owned(),
+            migration_id: "test".to_owned(),
+            normalized_fields: Vec::new(),
+            skill_merges: Vec::new(),
             reports: Vec::new(),
             final_files,
             expected_before,
@@ -2756,6 +2784,24 @@ mod tests {
                     .to_owned(),
                     content_digest: sha256_digest(content),
                     content: content.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    fn ledger_from_historical(base: &HistoricalProjectBase) -> BaseLedger {
+        BaseLedger {
+            schema_version: 1,
+            product_version: base.product_version.clone(),
+            ledger_digest: digest('a'),
+            files: base
+                .files
+                .iter()
+                .map(|file| BaseFile {
+                    path: file.path.clone(),
+                    kind: file.kind.clone(),
+                    content_digest: file.content_digest.clone(),
+                    content: String::from_utf8(file.content.clone()).expect("UTF-8"),
                 })
                 .collect(),
         }
@@ -3535,7 +3581,7 @@ mod tests {
             content.as_bytes().to_vec(),
         )]);
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &incoming),
+            read_base_ledger(&target_dir(temporary.path()), Some(&incoming)),
             Err(UpdateError::Verification(_))
         ));
     }
@@ -3575,28 +3621,20 @@ mod tests {
             (paths[0].to_owned(), b"new directive".to_vec()),
             (paths[1].to_owned(), b"new skill".to_vec()),
         ]);
-        let mut ledger = BaseLedger {
-            schema_version: 1,
-            product_version: "0.10.0".to_owned(),
-            ledger_digest: digest('a'),
-            files: paths
-                .iter()
-                .map(|path| {
-                    let bytes = test2_projection_bytes(path).expect("frozen delta");
-                    BaseFile {
-                        path: (*path).to_owned(),
-                        kind: expected_base_kind(path).expect("kind").to_owned(),
-                        content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
-                        content_digest: sha256_digest(bytes),
-                    }
-                })
-                .collect(),
-        };
-        assert!(authenticate_current_base(&ledger, &incoming).is_ok());
+        let mut expected = full_registry(&incoming);
+        expected.product_version = "0.10.0".to_owned();
+        let snapshots = historical_published_project_snapshots(&expected);
+        let test2 = &snapshots
+            .iter()
+            .find(|snapshot| snapshot.published_version == "0.10.0-test.2")
+            .expect("registered test.2 snapshot")
+            .base;
+        let mut ledger = ledger_from_historical(test2);
+        assert!(authenticate_full_historical_base(&ledger, test2).is_ok());
         ledger.files[0].content = "new directive".to_owned();
-        assert!(authenticate_current_base(&ledger, &incoming).is_err());
+        assert!(authenticate_full_historical_base(&ledger, test2).is_err());
         ledger.files[0].content = "forged directive".to_owned();
-        assert!(authenticate_current_base(&ledger, &incoming).is_err());
+        assert!(authenticate_full_historical_base(&ledger, test2).is_err());
     }
 
     #[test]
@@ -3616,48 +3654,32 @@ mod tests {
                     b"current Korean".to_vec(),
                 ),
             ]);
-            for test2 in [false, true] {
-                let mut ledger = BaseLedger {
-                    schema_version: 1,
-                    product_version: "0.10.0".to_owned(),
-                    ledger_digest: digest('a'),
-                    files: incoming
-                        .iter()
-                        .map(|(path, current)| {
-                            let bytes = if test2 {
-                                test2_projection_bytes(path)
-                                    .or_else(|| test4_projection_bytes(path))
-                            } else {
-                                test4_projection_bytes(path)
-                            }
-                            .unwrap_or(current);
-                            BaseFile {
-                                path: path.clone(),
-                                kind: "skill".to_owned(),
-                                content_digest: sha256_digest(bytes),
-                                content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
-                            }
-                        })
-                        .collect(),
-                };
-                assert!(authenticate_current_base(&ledger, &incoming).is_ok());
-                let recall = ledger
-                    .files
-                    .iter_mut()
-                    .find(|file| file.path.contains("knowledge-recall/"))
-                    .unwrap();
-                recall.content = "new recall".to_owned();
-                recall.content_digest = sha256_digest(recall.content.as_bytes());
-                assert!(authenticate_current_base(&ledger, &incoming).is_err());
-                let recall = ledger
-                    .files
-                    .iter_mut()
-                    .find(|file| file.path.contains("knowledge-recall/"))
-                    .unwrap();
-                recall.content = "forged recall".to_owned();
-                recall.content_digest = sha256_digest(recall.content.as_bytes());
-                assert!(authenticate_current_base(&ledger, &incoming).is_err());
-            }
+            let mut expected = full_registry(&incoming);
+            expected.product_version = "0.10.0".to_owned();
+            let snapshots = historical_published_project_snapshots(&expected);
+            let test4 = &snapshots
+                .iter()
+                .find(|snapshot| snapshot.published_version == "0.10.0-test.4")
+                .expect("registered test.4 snapshot")
+                .base;
+            let mut ledger = ledger_from_historical(test4);
+            assert!(authenticate_full_historical_base(&ledger, test4).is_ok());
+            let recall = ledger
+                .files
+                .iter_mut()
+                .find(|file| file.path.contains("knowledge-recall/"))
+                .unwrap();
+            recall.content = "new recall".to_owned();
+            recall.content_digest = sha256_digest(recall.content.as_bytes());
+            assert!(authenticate_full_historical_base(&ledger, test4).is_err());
+            let recall = ledger
+                .files
+                .iter_mut()
+                .find(|file| file.path.contains("knowledge-recall/"))
+                .unwrap();
+            recall.content = "forged recall".to_owned();
+            recall.content_digest = sha256_digest(recall.content.as_bytes());
+            assert!(authenticate_full_historical_base(&ledger, test4).is_err());
         }
     }
 
@@ -3672,7 +3694,8 @@ mod tests {
         )
         .expect("base ledger");
 
-        let ledger = read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new())
+        let empty = BTreeMap::new();
+        let ledger = read_base_ledger(&target_dir(temporary.path()), Some(&empty))
             .expect("supported historical base")
             .expect("base ledger");
 
@@ -3712,7 +3735,7 @@ mod tests {
             assert!(requires_full_historical_project_base(version));
         }
         assert!(!requires_full_historical_project_base("0.6.0"));
-        assert!(!requires_full_historical_project_base("0.9.5"));
+        assert!(requires_full_historical_project_base("0.9.5"));
     }
 
     #[test]
@@ -3727,7 +3750,7 @@ mod tests {
         .expect("base ledger");
 
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+            read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
             Err(UpdateError::Unsupported(_))
         ));
     }
@@ -3922,7 +3945,7 @@ mod tests {
             )
             .expect("base ledger");
             assert!(matches!(
-                read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+                read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
                 Err(UpdateError::Verification(_))
             ));
         }
@@ -3955,7 +3978,7 @@ mod tests {
         .expect("base ledger");
 
         assert!(matches!(
-            read_base_ledger(&target_dir(temporary.path()), &BTreeMap::new()),
+            read_base_ledger(&target_dir(temporary.path()), Some(&BTreeMap::new())),
             Err(UpdateError::Verification(_))
         ));
         assert_eq!(

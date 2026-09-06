@@ -136,6 +136,10 @@ class NpmPackagingContract(unittest.TestCase):
                 )
 
     def test_prerelease_package_keeps_stable_only_readme(self) -> None:
+        stable = json.loads((ROOT / "docs/public-stable-release.json").read_text("utf-8"))[
+            "stable_version"
+        ]
+        package_version = f"{stable}-test.9"
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
             output = work / "packages"
@@ -144,17 +148,17 @@ class NpmPackagingContract(unittest.TestCase):
                 str(PACKAGER),
                 "umbrella",
                 "--product-version",
-                "0.10.0",
+                stable,
                 "--package-version",
-                "0.10.0-test.9",
+                package_version,
                 "--installer-dir",
                 str(self.write_installers(work)),
                 "--output",
                 str(output),
             )
             readme = (output / "aigent-hive/README.md").read_text("utf-8")
-            self.assertIn("Stable `0.10.0` is the current public release.", readme)
-            self.assertNotIn("0.10.0-test.9", readme)
+            self.assertIn(f"Stable `{stable}` is the current public release.", readme)
+            self.assertNotIn(package_version, readme)
             self.assertNotIn("aigent-hive@test", readme)
 
     def test_bare_and_numbered_test_versions_preserve_product_identity(self) -> None:
