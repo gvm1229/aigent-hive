@@ -1,41 +1,35 @@
 # 현재 상태
 
 - 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.1`
-- Stable release: `0.10.1`
-- 수용 공개 시험: `0.10.1-test.1`
+- 제품 버전: `0.10.2`
+- Stable baseline: `0.10.1`
+- 첫 공개 시험: `0.10.2-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 구현 계획: [`harness-upgrade-0.10.1.md`](../plans/active/harness-upgrade-0.10.1.md)
-- 출시 계획: [`release-0.10.1.md`](../plans/active/release-0.10.1.md)
-- 결정: [`ADR-0021`](../decisions/ADR-0021-0.10.1-upgrade-usage-fix.md)
+- 구현 계획: [`global-user-update-0.10.2.md`](../plans/active/global-user-update-0.10.2.md)
+- 출시 계획: [`release-0.10.2.md`](../plans/active/release-0.10.2.md)
+- 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 결함
 
-### Project harness upgrade
+### 전역 사용자 설치 자동 갱신
 
-- Windows Codex 공개 `0.10.0` 실제 실행: DuckSoul `0.9.5` scan 실패
-- 오류: `hive.skill-selection-invalid: selected user Skills must be unique`
-- 실제 raw Skill 이름: 25개·중복 `0건`
-- Canonical 변환 뒤: 24개
-- 충돌: `iterative-execution`, `ralph-loop` → `verified-workflow`
-- 추가 발견: tracked `0.9.5` full project base 57개 파일, runtime full-base registry coverage 누락
-- DuckSoul `.hive` 변경·apply·recover journal 생성 `0건`
+- 최신 `hive update`는 실행 파일만 최신이면 전역 사용자 상태를 재검증·복구하지 않고 종료
+- 구형 전역 설정은 새 projection refresh 전에 parse되어, 이관이 필요한 상태에서 진입이 막힐 수 있음
+- 신규 질문은 전역 installation transaction과 결합되지 않아 사용자에게 별도 명령을 요구할 수 있음
+- 등록 프로젝트·실제 사용자 루트 변경 `0건`
 
-### Usage guard threshold
+### 사용량 보호
 
-- 공개 `0.10.0` 실제 실행: global threshold `60% → 10%` 저장 성공
-- 기존 `halt.json`: `60%` policy decision 유지
-- 같은 session `status`: `hive.usage-session-halted`, explicit disable 요구
-- 현재 원인: halt binding에 effective policy identity 부재, enforce의 current-session marker 무조건 우선
-- 목표: fresh recheck 뒤 allow 또는 current-policy halt, session disable 불필요
+- 2026-09-07 유지보수자 명시 승인으로 global threshold `10% → 2%` 변경
+- Windows Codex 같은 session fresh enforce: `hive.usage-allowed`, stale halt 제거
 
 ## 현재 실행 순서
 
-1. 공통 compatibility registry와 historical-state fixture
-2. 인증 우선 ProjectState migration과 Skill merge
-3. Policy-bound halt marker와 same-session recheck
+1. `0.10.2` version·user compatibility·question state
+2. update reconciliation·setup-required·answer resume
+3. 전역 update와 README 회귀
 4. 전체 회귀·release gate
-5. `0.10.1-test.1` 세 운영체제 공개 수용
+5. `0.10.2-test.1` 세 운영체제 공개 수용과 stable 공개
 
 ## 권한·안전 경계
 
