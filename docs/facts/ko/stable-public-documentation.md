@@ -9,7 +9,7 @@ summary: "일반 사용자 공개 문서는 현재 안정판만 안내하고 번
 tags: [documentation, release, stable]
 aliases: ["공개 안정판 문서"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
+  - "repo:.github/workflows/release-publish.yml#sha256:e664105a2734fc5ec7c35f93ddc5ce0362ad5e391ae881c63e326a8c25866bca"
   - "repo:.github/workflows/release.yml#sha256:0b800d9f74b331f34aad1507b57129fb319fdf49934815026c6352c6aa91a5d7"
   - "repo:README.md#sha256:486cae42b67bad97b9245c9b410b27aa992f47d0d1360f0cccf117e4585b324a"
   - "repo:docs/public-stable-release.json#sha256:f091745b705cf0b26792d40679f667ef49c290e62e897e5c2e5a24f231f99411"
