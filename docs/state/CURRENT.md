@@ -3,7 +3,7 @@
 - 작업 branch: `develop`
 - 제품 버전: `0.10.1`
 - Stable baseline: `0.10.0`
-- 다음 공개 시험: `0.10.1-test.1`
+- 수용 공개 시험: `0.10.1-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
 - 구현 계획: [`harness-upgrade-0.10.1.md`](../plans/active/harness-upgrade-0.10.1.md)
 - 출시 계획: [`release-0.10.1.md`](../plans/active/release-0.10.1.md)
@@ -39,8 +39,8 @@
 
 ## 권한·안전 경계
 
-- Agent 소유: 구현·검증·관심사별 commit·develop push·`0.10.1-test.1` 공개 수용
-- 사용자 권한 대기: stable `0.10.1`, protected `main`, npm `latest`, 실제 DuckSoul apply
+- Agent 소유: accepted-test promotion 구현·검증·`main` 통합·stable `0.10.1` 공개
+- 사용자 권한 대기: 구독자 요약 문구 승인, 실제 DuckSoul apply
 - 사용자·외부 bytes: 보존
 - Historical project/user base bytes: 변경 금지
 - Provider API·credential·OMX/OMC: 사용 금지
@@ -56,4 +56,9 @@
 - 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable을 요구하지 않음
 - Python lane: documentation 87·security 103·contract 466·integration 94·release 115 통과; 플랫폼 조건부 건너뜀은 별도 유지
 - 공개 시험 gate: `0.10.1-test.1`, product digest `sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff` 승인
-- 남은 검증: CI, 공개 artifact, Windows·macOS·Linux 실제 수용
+- Candidate `34000885782`, source `da6636a679ea451d500f26550f7738e3063697f1`; 다섯 native artifact 통과
+- npm 여섯 package `test=0.10.1-test.1`, `latest=0.10.0`; GitHub prerelease 25개 artifact 확인
+- Public acceptance `34001760231`: Windows x64·macOS arm64·Linux musl x64 설치·한국어·rollback·vector 통과
+- Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인; accepted-test promotion mode 구현 뒤 진행
+- Stable promotion mode: `35f89f9f`; accepted source·product digest·세 host acceptance run 결합, qualification 재실행 없음
+- 남은 검증: stable 문서·구독자 문구 승인, `main` 통합, stable 공개·독립 확인

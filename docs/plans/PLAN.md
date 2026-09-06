@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 313
+> Revision: 315
 > 기준일: 2026-09-06
 > Product version: `0.10.1`
 > Stable baseline: `0.10.0`
-> 다음 공개 시험: `0.10.1-test.1`
-> 현재 단계: `0.10.1-test.1` 후보·공개 수용
+> 수용 공개 시험: `0.10.1-test.1`
+> 현재 단계: accepted `0.10.1-test.1`의 stable promotion
 > 결정: [`ADR-0021`](../decisions/ADR-0021-0.10.1-upgrade-usage-fix.md)
 
 ## 목표
@@ -27,7 +27,6 @@
 ## 중지 경계
 
 - 실제 DuckSoul `.hive` 수정·`hive project upgrade --apply`
-- protected `main`, stable `0.10.1` 후보·tag·npm `latest`·GitHub 정식 Release
 - Provider API·provider credential·OMX/OMC 사용
 
 ## Completion index
@@ -36,8 +35,8 @@
 | --- | ---: | ---: | ---: |
 | 일반 harness 갱신 | 10 | 0 | 100% |
 | 사용량 보호 재평가 | 8 | 0 | 100% |
-| `0.10.1` 공개 시험 | 2 | 3 | 40% |
-| **합계** | **20** | **3** | **87.0%** |
+| `0.10.1` 공개 시험·안정판 승격 | 6 | 3 | 66.7% |
+| **합계** | **24** | **3** | **88.9%** |
 
 ## Required load order
 
@@ -62,6 +61,7 @@
 3. `UGR101-001–008`: policy-bound halt·same-session fresh recheck·자동 지침
 4. `REL101-001–003`: 전체 회귀·후보·공개 시험판 게시
 5. `REL101-004–005`: 세 운영체제 공개 수용·현재 상태 정합화
+6. `REL101-006–009`: 수용 시험판 결합 promotion·stable 공개·독립 확인
 
 ## 비활성 자료
 
