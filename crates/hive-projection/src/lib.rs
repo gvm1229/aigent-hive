@@ -1265,13 +1265,13 @@ fn localized_skill_text(
         ),
         "judge-evidence" => (
             "Judge evidence",
-            "Verify a work package and its signed attestations.",
+            "Validate a clean-context work package and signed Judge attestations.",
             "Judge 증거 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
         ),
         "adversarial-judge" => (
             "Adversarial Judge",
-            "Prepare an explicit clean-context request for an independent host-owned Judge.",
+            "Prepare an explicit independent clean-context Judge request.",
             "반대 검토 Judge",
             "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
         ),

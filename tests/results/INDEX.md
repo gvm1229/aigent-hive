@@ -348,3 +348,4 @@
 | [failed](runs/20260907T162335-68b05550cd3c.md) | 0.10.2 합성 release fixture update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260907T162431-ded94df3292b.md) | 0.10.2 0.10.1 surface baseline update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T162515-8f6410e21080.md) | 0.10.2 surface YAML 교정 후 update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T162559-181fd60f7d7f.md) | 0.10.2 전체 Rust 최종 재검증 | c2485e40cd20bc6545709ed12b5eeed3903dd7b3 | Windows-11-10.0.26200-SP0 |
