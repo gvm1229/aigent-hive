@@ -38,11 +38,8 @@ The test: Every changed line should trace directly to the user's request.
 
 **Define success criteria. Loop until verified.**
 
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-- "Streamline a README" → "Map every removed durable claim to a retained canonical locator"
+Use reproducible acceptance checks for the requested behavior. Documentation removal preserves
+valid claims through the current-truth procedure above.
 
 For material multi-step work, use the source plan contract. Match verification to the changed
 behavior and preserve evidence limits; a passed unit test does not prove an unrun user workflow.
