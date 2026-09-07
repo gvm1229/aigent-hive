@@ -167,7 +167,7 @@ skills:
   consent_digest: null
 - name: prompt-refine
   source_type: built-in
-  content_digest: sha256:295d98f2daf0bc8a0551e2c6066ee1735ffa69389bf9d4761a289b6ec91416ed
+  content_digest: sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed
   side_effect_class: none
   capabilities: []
   consent_digest: null

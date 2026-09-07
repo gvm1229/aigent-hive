@@ -136,7 +136,7 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertIn("$aigent-hive:<Skill 이름>", catalog)
 
     def test_user_setup_keeps_the_bilingual_response_language_contract(self) -> None:
-        text = (SKILL_ROOT / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        text = (SKILL_ROOT / "user-setup/references/language.md").read_text(encoding="utf-8")
         for expected in (
             "## Response language contract",
             "ASD-STE100 Simplified Technical English",

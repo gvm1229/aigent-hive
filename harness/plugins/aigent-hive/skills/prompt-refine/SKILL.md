@@ -21,8 +21,11 @@ Preserve the user's meaning while producing a concise, copy-ready prompt.
 - Select for explicit prompt-authoring intent. Investigate ambiguity in ordinary work under the existing task authority instead of selecting this Skill.
 - Do not rewrite or execute a sufficiently clear ordinary task, simple question, editless question, explicit external workflow, or explicit unrelated Skill.
 - Do not treat urgency, autonomy language, or a request for a complete prompt as permission to run it.
-- In `refine-only`, return the refined prompt and its digest with state `awaiting-approval`.
-- In `refine-only`, do not execute the prompt, read project files, call tools, write files, spawn subagents, create a run, capture memory, or continue automatically.
+- In `refine-only`, the prompt-writing task completes when the prompt and digest are delivered.
+  `awaiting-approval` describes possible later execution only, not unfinished prompt writing.
+- In `refine-only`, do not execute the prompt, inspect the project, write files, spawn subagents,
+  create a run, or capture memory. A read-only local hash calculation on the exact authored prompt
+  is permitted solely to produce the approval digest; it does not authorize execution.
 - A correction returns a new refined prompt and invalidates any prior digest. A later execution requires an explicit approval naming the current exact digest and target host.
 
 ## Workflow

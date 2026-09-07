@@ -853,6 +853,7 @@ fn compile_selected(
         names.insert(entry.name.clone());
         let source = localized_skill_source(&entry.name, source, language)?;
         files.insert(skill_path(host, &entry.name), source.clone());
+        add_skill_resources(&mut files, host, &entry.name);
         if matches!(host, Host::Codex | Host::Antigravity) {
             let metadata = embedded_skill_metadata(&entry.name).ok_or_else(|| {
                 ProjectionError::new(
@@ -1364,6 +1365,46 @@ fn localized_skill_text(
         DescriptorLanguage::En => (en_name, en_description),
         DescriptorLanguage::Ko => (ko_name, ko_description),
     })
+}
+
+fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: &str) {
+    if name == "user-setup" {
+        for (relative, bytes) in user_setup_resources() {
+            files.insert(
+                format!("{}/user-setup/{relative}", host.skill_root()),
+                bytes.to_vec(),
+            );
+        }
+    }
+}
+
+fn user_setup_resources() -> [(&'static str, &'static [u8]); 6] {
+    [
+        (
+            "references/workflow.md",
+            include_bytes!("../../../harness/skills/user-setup/references/workflow.md"),
+        ),
+        (
+            "references/questions.md",
+            include_bytes!("../../../harness/skills/user-setup/references/questions.md"),
+        ),
+        (
+            "references/reconfiguration.md",
+            include_bytes!("../../../harness/skills/user-setup/references/reconfiguration.md"),
+        ),
+        (
+            "references/recovery.md",
+            include_bytes!("../../../harness/skills/user-setup/references/recovery.md"),
+        ),
+        (
+            "references/language.md",
+            include_bytes!("../../../harness/skills/user-setup/references/language.md"),
+        ),
+        (
+            "scripts/resolve-hive.ps1",
+            include_bytes!("../../../harness/skills/user-setup/scripts/resolve-hive.ps1"),
+        ),
+    ]
 }
 
 fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
@@ -2903,6 +2944,12 @@ description: Inspect one local file without changing it.
         let expected_files = BTreeSet::from([
             ".agents/skills/user-setup/SKILL.md",
             ".agents/skills/user-setup/agents/openai.yaml",
+            ".agents/skills/user-setup/references/workflow.md",
+            ".agents/skills/user-setup/references/questions.md",
+            ".agents/skills/user-setup/references/reconfiguration.md",
+            ".agents/skills/user-setup/references/recovery.md",
+            ".agents/skills/user-setup/references/language.md",
+            ".agents/skills/user-setup/scripts/resolve-hive.ps1",
             ".agents/skills/product-update/SKILL.md",
             ".agents/skills/product-update/agents/openai.yaml",
             ".agents/skills/usage-guard/SKILL.md",
@@ -2943,6 +2990,21 @@ description: Inspect one local file without changing it.
                 expected_implicit,
                 "{name} user metadata policy"
             );
+        }
+    }
+
+    #[test]
+    fn setup_router_resources_are_complete_for_each_host() {
+        let selected = vec!["user-setup".to_owned()];
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            let projection = compile_user_projection(host, &selected, &[]).expect("projection");
+            for (relative, source) in user_setup_resources() {
+                let path = format!("{}/user-setup/{relative}", host.skill_root());
+                assert_eq!(projection.files.get(&path).map(Vec::as_slice), Some(source));
+            }
+            let other = compile_user_projection(host, &["quick-answer".to_owned()], &[])
+                .expect("unrelated skill");
+            assert!(!other.files.keys().any(|path| path.contains("/user-setup/")));
         }
     }
 

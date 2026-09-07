@@ -857,6 +857,19 @@ fn resume_user_projection_after_feature_answer(
         return Ok(());
     };
     for host in &config.selected_hosts {
+        // Saved preferences alone are not evidence that this host has a Hive installation.
+        // Do not let answering a feature question activate an unrelated live host.
+        let manifest = format!(".hive/install/{}.json", host.as_str());
+        if super::user_install::read_user_setup_file(
+            root,
+            Path::new(&manifest),
+            MAX_USER_SETUP_BYTES,
+        )
+        .map_err(SetupError::Conflict)?
+        .is_none()
+        {
+            continue;
+        }
         super::user_install::apply_configured_host(user_root, *host, &config, &resolved_skills)
             .map_err(SetupError::Verification)?;
     }
@@ -3830,7 +3843,7 @@ usage_guard:
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
-            .replace("# Setup Hive", "# Earlier Setup Hive");
+            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive");
         base = replaced.into_bytes();
 
         let (planned, expected, target) = seeded_projection_plan(&base, base.clone());
@@ -3860,7 +3873,7 @@ usage_guard:
         let incoming = files.get(&path).expect("user-setup source").clone();
         let base = String::from_utf8(incoming)
             .expect("UTF-8 Skill")
-            .replace("# Setup Hive", "# Earlier Setup Hive")
+            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive")
             .into_bytes();
 
         let mut disjoint_local = base.clone();

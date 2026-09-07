@@ -326,6 +326,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_global_setup_contract_uses_describe_progress_and_conditional_integrations(self) -> None:
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        skill += "\n".join(path.read_text(encoding="utf-8") for path in
+                           sorted((SKILLS / "user-setup/references").glob("*.md")))
         for required in (
             "hive setup --scope user --describe --output json",
             "Get-Command hive",
@@ -371,7 +373,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
             encoding="utf-8"
         )
-        user_setup_skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        user_setup_skill = (SKILLS / "user-setup/references/workflow.md").read_text(encoding="utf-8")
         project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
             encoding="utf-8"
         )

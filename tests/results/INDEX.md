@@ -336,3 +336,11 @@
 | [passed](runs/20260907T154636-481a29532688.md) | 0.10.2 지침 변경 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T154746-ac01648eed4f.md) | 0.10.2 모호한 요청의 작업 권한 유지 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T154824-a17c65992121.md) | 0.10.2 최종 Skill 설명과 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T155536-00d4badb3ec0.md) | INS102 참조 문서의 세 호스트 투영 시험 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T155641-70141003ac53.md) | INS102 동반 자료 투영 및 선택 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T155851-d163b62395ff.md) | INS102 관련 CLI 및 Skill 계약 검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160356-86f3f84f06df.md) | INS102 최신 투영과 승인 경계 관련 계약 재검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T160511-c2734d118c20.md) | INS102 설치 기록 없는 기능 답변과 CLI 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160617-4e466367c930.md) | INS102 CLI 전체 최종 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160748-8f80991a40c2.md) | INS102 최종 참조 포함성 검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T161050-4b1d913dc9cf.md) | INS102 최종 투영 함수 분리 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
