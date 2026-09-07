@@ -33,13 +33,13 @@
 
 ## 권한·안전 경계
 
-- Agent 소유: accepted-test promotion 구현·검증·`main` 통합·stable `0.10.1` 공개
+- Agent 소유: `INS102-*` 지침 개선·전역 갱신 완성·공개 시험·`main` 통합·stable `0.10.2` 공개
 - 사용자 권한 대기: 실제 DuckSoul apply
 - 사용자·외부 bytes: 보존
 - Historical project/user base bytes: 변경 금지
 - Provider API·credential·OMX/OMC: 사용 금지
 
-## 현재 근거
+## 이전 `0.10.1` 출시 근거 — `0.10.2` 완료 증명에서 제외
 
 - 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`, `fede7a2a`, `df2a88f8`
 - Rust 전체: 446 통과·수동 qualification 1 제외, core 109·projection 39·render 63·update 54·wiki 177 통과
@@ -61,4 +61,4 @@
 - Stable publication: 최초 run `34009500410`은 npm 전파 지연 뒤 tag 전 중단; recovery run `34010951366` 성공
 - 독립 확인: npm 여섯 package `version/latest=0.10.1`, `test=0.10.1-test.1`; GitHub 정식 Release 29개 asset
 - Windows 공개 stable 설치: `AIgent Hive v0.10.1 (released 2026-09-06)`
-- 남은 Agent 소유 작업: `0건`; 실제 DuckSoul apply는 사용자 별도 승인 대기
+- 위 완료 근거의 적용 범위: 이전 `0.10.1` 출시만. 현재 `0.10.2` 미완료 항목은 활성 계획 기준

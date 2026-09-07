@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 318
+> Revision: 319
 > 기준일: 2026-09-07
 > Product version: `0.10.2`
 > Stable baseline: `0.10.1`
@@ -9,6 +9,8 @@
 > 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
 
 ## 목표
+
+- 소스·harness 지침의 승인 경계·지속성·현재 참조 개선: `INS102-*`
 
 - `hive update` 한 번으로 실행 파일과 전역 사용자 설정·호스트 투영을 수렴
 - 새 전역 질문은 답변 전 일반 Hive 작업을 차단하고, 답변 뒤 같은 transaction을 재개
@@ -33,8 +35,9 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 전역 사용자 갱신 | 0 | 10 | 0% |
+| 지침 품질 개선 | 0 | 6 | 0% |
 | `0.10.2` 공개 시험·안정판 승격 | 0 | 9 | 0% |
-| **합계** | **0** | **19** | **0%** |
+| **합계** | **0** | **25** | **0%** |
 
 ## Required load order
 
@@ -49,6 +52,7 @@
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
+| [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md) | `INS102-*` | 소스·harness 지침 품질 |
 | [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md) | `GUU102-*` | 전역 사용자 설치·질문 대기·자동 재개 |
 | [`release-0.10.2.md`](active/release-0.10.2.md) | `REL102-*` | 공개 시험·세 운영체제 수용·stable 공개 |
 
