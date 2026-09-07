@@ -71,7 +71,7 @@ dependency 없음.
 ## 선택형 one-prompt 설정
 
 Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진행을 맡기려면 아래
-prompt 사용. 선택 사항이며, 아래 수동 경로를 대신함.
+아래 안내문 사용. 수동 경로를 대신하는 선택 사항.
 
 ```text
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
@@ -136,11 +136,11 @@ hive update
 ```
 
 최초 npm 설치면 질문이 표시될 때 하나 이상의 host 선택. Hive가 소유한 최소 사용자 투영만 설치.
-기존 설치면 인증된 저장 host만 갱신·검증하며 project는 검사·변경하지 않음.
+기존 설치: 인증된 저장 호스트만 갱신·검증. 프로젝트 검사·변경 제외.
 
 ### 3. 새 전역 질문 답변
 
-선택한 host를 열기. release가 새 전역 선택을 도입했으면 일반 작업 전에 질문. 의미 검색처럼 저장소·다운로드·향후 동작을 바꿀 수 있는 선택이므로 의도된 차단. `yes`와 `no` 모두 유효한 답이며 취소·무응답은 일반 Hive 작업을 계속 막음.
+선택한 호스트 열기. 새 버전의 전역 선택은 일반 작업 전에 질문. 의미 검색처럼 저장소·다운로드·향후 동작에 영향을 주는 선택의 답변 확인 목적. `yes`·`no` 모두 유효한 답. 취소·무응답은 일반 Hive 작업 대기 유지.
 
 마지막 답 뒤 Hive가 전역 사용자 투영을 자동 재적용·검증. `hive install` 또는 별도 setup 명령 직접 실행 불필요.
 
