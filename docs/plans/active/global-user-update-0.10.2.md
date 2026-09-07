@@ -12,16 +12,23 @@
 
 ## Checklist
 
-- [ ] [GUU102-001] `0.10.2` version·release compatibility·historical user inventory 등록
-- [ ] [GUU102-002] 전역 update 상태와 versioned question catalog·answer ledger 도입
-- [ ] [GUU102-003] 인증된 `0.9.5–0.10.1` 설정·Skill rename/merge 이관
-- [ ] [GUU102-004] `hive update`의 최신-version reconciliation·backup·apply·validate transaction
-- [ ] [GUU102-005] 미응답 질문의 최소 `setup-required` host projection과 CLI 차단
-- [ ] [GUU102-006] claim·answer·마지막 답 이후 digest-bound 자동 resume
-- [ ] [GUU102-007] 최초 npm 설치의 대화형 호스트 선택과 같은-version recovery
-- [ ] [GUU102-008] 변조·foreign bytes·symlink·중단 transaction 무변경/rollback 회귀
-- [ ] [GUU102-009] Rust·Python integration 및 세 host fixture lifecycle
-- [ ] [GUU102-010] README·Skill·bilingual Source Wiki 현재 truth 정합화
+- [x] [GUU102-001] `0.10.2` version·release compatibility·historical user inventory 등록
+- [x] [GUU102-002] 전역 update 상태와 versioned question catalog·answer ledger 도입
+- [x] [GUU102-003] 인증된 `0.9.5–0.10.1` 설정·Skill rename/merge 이관
+- [x] [GUU102-004] `hive update`의 최신-version reconciliation·backup·apply·validate transaction
+- [x] [GUU102-005] 미응답 질문의 최소 `setup-required` host projection과 CLI 차단
+- [x] [GUU102-006] claim·answer·마지막 답 이후 digest-bound 자동 resume
+- [x] [GUU102-007] 최초 npm 설치의 대화형 호스트 선택과 같은-version recovery
+- [x] [GUU102-008] 변조·foreign bytes·symlink·중단 transaction 무변경/rollback 회귀
+- [x] [GUU102-009] Rust·Python integration 및 세 host fixture lifecycle
+- [x] [GUU102-010] README·Skill·bilingual Source Wiki 현재 truth 정합화
+
+## 완료 근거
+
+- `v0.10.1` 공개 사용자 플러그인 62개 파일 동결과 세 호스트 적용·manifest 검증 통과
+- Windows에서 Rust workspace, strict Clippy, 계약 466건, 통합 94건, 문서 87건, 보안 103건, 출시 119건 실행
+- Source Wiki 174쪽 오류·경고 없는 lint 통과
+- Windows에서 실행할 수 없는 POSIX·symlink·macOS 항목은 공개 시험의 해당 운영체제 수용 범위로 유지
 
 ## 수용 기준
 

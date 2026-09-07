@@ -6,8 +6,8 @@
 
 ## Checklist
 
-- [ ] [REL102-001] version·migration·release metadata와 product-byte gate 정합화
-- [ ] [REL102-002] Rust workspace·strict Clippy·Python·문서·보안·rollback 검사
+- [x] [REL102-001] version·migration·release metadata와 product-byte gate 정합화
+- [x] [REL102-002] Rust workspace·strict Clippy·Python·문서·보안·rollback 검사
 - [ ] [REL102-003] Candidate와 `0.10.2-test.1` 게시, npm `test`·GitHub prerelease 독립 확인
 - [ ] [REL102-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 신규 설치·`0.9.5` 갱신 수용
 - [ ] [REL102-005] source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록

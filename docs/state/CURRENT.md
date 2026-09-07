@@ -2,8 +2,8 @@
 
 - 작업 branch: `develop`; stable source branch: `main`
 - 제품 버전: `0.10.2`; 현재 공개 stable: `0.10.1`
-- 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6
-- 출시 상태: 유지보수자가 stable `0.10.2` 공개 재개 승인. 전역 갱신 완성·공개 시험 수용 뒤 게시
+- 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
+- 출시 상태: 로컬 출시 검증 통과. 유지보수자가 승인한 `0.10.2-test.1` 공개·세 운영체제 수용·stable 게시 진행 중
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
 - 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
@@ -26,8 +26,8 @@
 - 독립 문서 기반 행동 평가와 관련 시험 완료. 실제 장시간 호스트 성공률 증명은 제외
 - 완료 수치는 개선 계획의 검증된 체크리스트 기준
 
-## 보류된 전역 갱신과 출시
+## 전역 갱신과 출시
 
-- 기존 `GUU102-*`, `REL102-*`의 미완료 기준 유지
-- 지침 개선 완료와 전역 갱신 기능·공개 시험·stable 출시 완료는 별도
+- `GUU102-*` 10건과 로컬 출시 검증 `REL102-001–002` 완료
+- `REL102-003–009` 공개 시험·세 운영체제 수용·stable 게시 기준 진행 중
 - 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)
