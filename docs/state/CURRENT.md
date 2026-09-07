@@ -3,7 +3,7 @@
 - 작업 branch: `develop`; stable source branch: `main`
 - 제품 버전: `0.10.2`; 현재 공개 stable: `0.10.1`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6
-- 출시 상태: 유지보수자 요청으로 보류. 이번 개선 완료가 출시 재개 승인은 아님
+- 출시 상태: 유지보수자가 stable `0.10.2` 공개 재개 승인. 전역 갱신 완성·공개 시험 수용 뒤 게시
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
 - 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
@@ -12,8 +12,8 @@
 
 ## 권한과 범위
 
-- 현재 승인: 지침 개선 구현·검증·로컬 commit
-- 현재 제외: 실제 사용자 설치·등록 프로젝트 변경·stable 게시
+- 현재 승인: 전역 갱신 구현·검증·commit·push·공개 시험·`main` 통합·stable 게시
+- 현재 제외: 실제 사용자 루트와 등록 프로젝트 변경
 - 과거 project/user base·외부 파일·사용자 선택 보존
 - 전역 사용량 보호: 유지보수자가 지정한 남은 사용량 `2%`
 
