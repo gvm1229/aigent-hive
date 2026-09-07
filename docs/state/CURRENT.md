@@ -1,7 +1,8 @@
 # 현재 상태
 
 - 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.2`; 현재 공개 stable: `0.10.1`
+- 제품 버전: `0.10.2`
+- 현재 공개 stable: `0.10.1`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
 - 출시 상태: 로컬 출시 검증 통과. 유지보수자가 승인한 `0.10.2-test.1` 공개·세 운영체제 수용·stable 게시 진행 중
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
