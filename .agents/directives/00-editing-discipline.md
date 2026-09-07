@@ -1,34 +1,23 @@
 # 00-editing-discipline.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
-
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+Apply these editing rules within the user's authorized scope.
 
 ## 1. Think Before Coding
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
 Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
+- Resolve uncertainty with relevant read-only evidence first. State material assumptions.
+- Ask only when different interpretations require a material user choice or new authority.
 - If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- Pause only the dependent action when a user decision is required; continue independent authorized work.
 
 ## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
 
 - No features beyond what was asked.
 - No abstractions for single-use code.
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
 ## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
 
 When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
@@ -55,17 +44,5 @@ Transform tasks into verifiable goals:
 - "Refactor X" → "Ensure tests pass before and after"
 - "Streamline a README" → "Map every removed durable claim to a retained canonical locator"
 
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
-
----
+For material multi-step work, use the source plan contract. Match verification to the changed
+behavior and preserve evidence limits; a passed unit test does not prove an unrun user workflow.

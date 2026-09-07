@@ -227,7 +227,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("automatically load installed `aigent-hive:prompt-refine`", behavior.lower())
+        self.assertIn("Use `prompt-refine` for explicit prompt-authoring requests", behavior)
+        self.assertNotIn("Automatically load installed `aigent-hive:prompt-refine`", behavior)
         self.assertIn("Source Wiki lookup", behavior)
         self.assertIn("hive source-wiki query --target", agents)
         self.assertIn("session-bound `hive usage enforce`", agents)

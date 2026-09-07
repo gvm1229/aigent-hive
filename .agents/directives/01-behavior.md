@@ -40,9 +40,9 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
   suggest the work to a later version merely because a numbered test already exists; apply the
   post-test acceptance reset in `03-workflow.md` when product bytes change.
 - Answer a simple question after that lookup without a plan, project edit, or unrelated Skill.
-- Automatically load installed `aigent-hive:prompt-refine` in `refine-only` mode for explicit
-  prompt authoring or material ambiguity. Before digest-bound approval, do not execute the refined
-  prompt. Skip refinement for a sufficiently clear task, simple question, or explicit other Skill.
+- Use `prompt-refine` for explicit prompt-authoring requests. Ordinary implementation ambiguity
+  calls for scoped investigation or a material user question, not automatic conversion into a
+  prompt-approval workflow. Existing task authorization remains valid across continuation turns.
 - Before implementation, identify outcome, constraints, ownership surfaces, verification, and stop
   condition. Prefer deletion or maintained existing capability over new infrastructure.
 - Finish every safe in-scope action before presenting pending work. Ask only for a material choice,

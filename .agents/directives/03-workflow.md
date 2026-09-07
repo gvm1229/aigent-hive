@@ -6,7 +6,7 @@ This directive governs Git branches, commits, staging, pushes, and repository hi
 
 Before any Git operation that stages, unstages, commits, switches branches, merges, rebases, tags, pushes, or rewrites history:
 
-1. Reread this directive.
+1. Read the applicable sections at task start; reread when their content or the operation class changes.
 2. Run `git status --short --branch`.
 3. Classify the operation as bootstrap, ordinary development, integration, release, or remote publication.
 4. Inspect the exact paths and refs that will change.
@@ -161,7 +161,9 @@ Match verification cost to the current boundary:
 
 ## Risk-Tier CI and Candidate Economy
 
-- Match CI to the tracked diff. Markdown-only work uses documentation integration and starts no
+- Match CI to behavior as well as paths. Shipped Skill or directive changes affecting routing,
+  consent, execution, or closure require affected behavioral and packaging checks even when all
+  files are Markdown. Prose-only work uses documentation integration and starts no
   Rust, cross-platform, native package, runtime qualification, or candidate. Product work runs its
   affected lane, Linux conformance, and the smallest relevant macOS/Windows smoke; full platforms
   remain nightly or candidate evidence.
@@ -183,7 +185,8 @@ Match verification cost to the current boundary:
 
 ## Documentation-Only Integration
 
-- Classify a change as documentation-only when every changed tracked file is Markdown. The only
+- Exclude shipped Skill/directive changes affecting execution, consent, routing, or closure from
+  documentation-only classification. Classify prose-only changes as documentation-only when every changed tracked file is Markdown. The only
   permitted non-Markdown companion is a static-contract test whose changed lines merely assert
   those Markdown paths or exact guidance tokens and execute no product behavior. The diff must
   contain no product source, workflow, package manifest, lockfile, schema, fixture, generated
