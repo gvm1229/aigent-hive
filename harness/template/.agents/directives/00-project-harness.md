@@ -50,8 +50,8 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 
 ## Host and Skill boundary
 
-- Start a new run with verified host-native capabilities. Use OMX or OMC only after explicit user
-  selection and preserve an existing pinned owner, including a 0.8.x external owner.
+- Start a new run with verified host-native capabilities. Do not select or invoke OMX/OMC for
+  new work. Preserve existing external owner pins as historical provenance without migration.
 - The host owns model, subagent, and Judge launches. Hive prepares declarative envelopes and typed
   receipts; `spawned=false` is mandatory.
 - Missing or unverified capability returns truthful unsupported or `dispatch-uncertain` without a

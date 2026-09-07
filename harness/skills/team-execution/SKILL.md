@@ -15,7 +15,7 @@ Coordinate bounded host-native lanes over one canonical Hive event chain.
    Acquire leases in stable path order; reject overlaps before dispatch.
 3. Commit immutable mailbox messages with sender, recipient, sequence, and digest. Exact duplicates
    are no-ops; conflicting bytes quarantine the lane.
-4. Use `$aigent-hive:iterative-execution` within each lane. The active host launches native tasks
+4. Use `$aigent-hive:verified-workflow` within each lane. The active host launches native tasks
    and returns typed receipts; Hive never launches them.
 5. Evaluate barriers against their committed membership revision, quorum, timeout, and failed-lane
    rule. Parent cancellation fans out through signed cancel events and quarantines late results.

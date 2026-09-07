@@ -15,7 +15,7 @@ Coordinate a bounded goal graph over canonical Hive orchestration state.
    authority is required for decomposition changes.
 3. Reserve the parent budget before child allocation. Refund unused child budget exactly once.
 4. Use `$aigent-hive:team-execution` for parallel children and
-   `$aigent-hive:iterative-execution` for retrying criteria. Preserve evidence through nested
+   `$aigent-hive:verified-workflow` for retrying criteria. Preserve evidence through nested
    cancellation and rollback.
 5. Apply the terminal lattice without treating `blocked`, `failed`, `cancelled`, or `quarantined`
    as progress. A parent completes only when its aggregation rule and all required verified

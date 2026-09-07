@@ -13,13 +13,20 @@ Configure user-scope Hive preferences without modifying a project harness or pro
   or usage-guard requests.
 - Treat a bare request to set up, install, configure, or reconfigure Hive as global user-scope
   setup. Do not inspect an ambient working directory or request a project path.
-- When the user explicitly requests both global and project setup, finish global setup first, then
-  ask whether to start the separately scoped project setup.
+- When the user explicitly requests both global and project setup, finish global setup first,
+  then continue the already authorized project setup. Ask only if its target or authority is missing.
 - Never create, preview, or apply a project harness through this Skill.
 
 ## Workflow
 
-1. Resolve the installed signed CLI before asking any preference question.
+Read only the branch required by the request: initial setup uses steps 1–3 and Question Order;
+an explicitly named setting uses Reconfiguration for that setting only; interrupted setup uses
+saved progress; authenticated repair uses Clean reinstall. Shared apply and validation rules
+apply to each branch. Do not load every question catalog for a named single-setting change.
+
+1. Locate the installed CLI before asking any preference question. Version output establishes
+   executable discovery, not cryptographic authentication; require the CLI's release ownership
+   checks before trusting an installed generation for mutation.
    - On Windows, run this Skill's `scripts/resolve-hive.ps1`. It tries `Get-Command hive`, then
      `where.exe hive`, then `(npm prefix -g) + '\\hive.cmd'`, and verifies the selected exact
      executable with its own `--version` call. Use the returned absolute executable path for the
@@ -63,7 +70,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Start with this one question only: `Welcome to Aigent Hive. Would you like to continue in English or Korean?`
 4. For a valid reconfiguration without pending progress, start with this one question in the saved interface language:
    `Your Hive settings are ready. Would you like to change one setting or review everything from the beginning?`
-   - `Change one setting`: first show the full partial-reconfiguration catalog below in the saved
+   - `Change one setting` without a named setting: first show the full partial-reconfiguration catalog below in the saved
      interface language. This required list is not an examples-only prompt: do not say `for
      example`, use an ellipsis, or omit conditional children. Then show the current quick-answer for
      each requested setting, preserve every other quick-answer, and ask one question at a time.
@@ -80,8 +87,8 @@ Configure user-scope Hive preferences without modifying a project harness or pro
      boundary.
 6. Ask for setup mode in the selected language.
    - Offer `Expedited — set everything to default` and `Custom`.
-   - Initial setup asks for update-check consent next. Expedited performs no further preference
-     questions after that consent and uses the fixed defaults below.
+   - Update-check consent was collected before setup mode; do not repeat it. Expedited uses the
+     fixed defaults below, except the separately required new-feature question in step 15.
    - Custom asks exactly one question at a time in the required order below.
    - Reconfiguration preserves existing quick-answers and asks only for requested changes.
 7. Resolve expedited defaults from the signed catalog.
@@ -221,7 +228,8 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Without pending progress, start with `change one setting` or `review everything from the beginning`.
   With pending progress, offer `review everything`, `review selected settings`, or `continue from
   where I left off`; do not infer the choice.
-- `Change one setting` and `Review selected settings` must both begin with the full
+- If the user already names the setting, show its current value and relevant choices directly.
+  Keep all other answers unchanged. Otherwise `Change one setting` and `Review selected settings` begin with the full
   partial-reconfiguration catalog. Translate descriptions into the saved interface language,
   preserve product terms such as `Aigent Hive`, `Skill`, `Wiki`, `Discord`, and `CodexBar`, and
   show every parent and child as a separate Markdown list entry.
@@ -262,7 +270,9 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
   the user to rediscover a hidden Discord option through the usage-guard question.
 - During a full review, language remains the first question and all saved quick-answers remain defaults.
 - Preserve canonical Wiki Markdown when Wiki is disabled.
-- Treat Wiki deletion, host uninstall, Skill data deletion, and provider configuration changes as separate destructive actions outside this Skill.
+- Treat Wiki deletion, arbitrary host uninstall, Skill data deletion, and provider configuration
+  changes as separate actions. Only authenticated Hive-owned recovery uses the bounded reinstall
+  procedure below; a structurally valid manifest alone does not establish ownership.
 - Re-run dry-run, apply, and validate with one consistent quick-answer file.
 
 ## Clean reinstall

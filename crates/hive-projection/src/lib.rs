@@ -1690,14 +1690,8 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     } else {
         resolve_non_plain_route(request, fallback_action)?
     };
-    if should_automatically_refine(request, &resolved) {
-        return resolve_hive_skill(
-            request,
-            "prompt-refine",
-            LogicalAction::RefinePrompt,
-            Route::HiveSkill,
-        );
-    }
+    // Ambiguity does not replace an authorized work request with prompt authoring.
+    resolved.refine_suggestion = should_suggest_refinement(request, &resolved);
     if request.workflow_override == Some(WorkflowOverride::SimpleContinuation) {
         resolved.workflow_route = Some(WorkflowRoute::Simple);
     }
@@ -1705,7 +1699,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     Ok(resolved)
 }
 
-fn should_automatically_refine(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
+fn should_suggest_refinement(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
     matches!(
         request.prompt_quality,
         PromptQuality::Ambiguous | PromptQuality::MissingCoreDetails
@@ -2607,7 +2601,7 @@ mod tests {
     }
 
     #[test]
-    fn ambiguous_host_native_work_automatically_loads_refine_only() {
+    fn ambiguous_host_native_work_preserves_execution_without_loading_refinement() {
         let mut request = routing_request();
         request.explicit_action = None;
         request.prompt_quality = PromptQuality::Ambiguous;
@@ -2615,12 +2609,12 @@ mod tests {
 
         let resolved = resolve_route(&request).expect("routing succeeds");
 
-        assert_eq!(resolved.route, Route::HiveSkill);
-        assert_eq!(resolved.logical_action, LogicalAction::RefinePrompt);
-        assert!(!resolved.refine_suggestion);
-        assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
-        assert_eq!(resolved.load_skill_bodies, ["prompt-refine"]);
-        assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
+        assert_eq!(resolved.route, Route::HostNative);
+        assert_eq!(resolved.logical_action, LogicalAction::RunWork);
+        assert!(resolved.refine_suggestion);
+        assert!(resolved.selected_skill.is_none());
+        assert!(resolved.load_skill_bodies.is_empty());
+        assert!(resolved.mode.is_none());
     }
 
     #[test]

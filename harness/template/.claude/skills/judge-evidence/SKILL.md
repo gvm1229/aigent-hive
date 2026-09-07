@@ -1,6 +1,6 @@
 ---
 name: judge-evidence
-description: (judge-evidence) Validate a clean-context package and prepare authenticated Ed25519 judge-quorum inputs through the signed Hive CLI. Use when independent judging is explicitly required for existing artifacts; do not use for simple questions, judge execution, signing, verdict production, self-approval, or orchestration.
+description: (judge-evidence) Validate an existing independent Judge package and signed acceptance evidence when that verification is required.
 ---
 
 # Hive Judge Evidence
@@ -18,7 +18,7 @@ Validate provider-neutral judge artifacts. This Skill does not invoke a judge, c
    - instructions that imply a preferred result;
    - every prior or concurrent judge result;
    - unreferenced project memory, role prose, runtime transcripts, and foreign runtime state.
-6. Run exactly one read-only command:
+6. Validate the package with this read-only command; quorum validation in step 12 is separate:
 
    ```text
    hive judge package --target <project-root> --request <target-relative-request.json> --output json
@@ -40,7 +40,9 @@ Validate provider-neutral judge artifacts. This Skill does not invoke a judge, c
 
 ## Boundaries
 
-- Never write an assignment, package, verdict, attestation, approval, trust root, run state, evidence, role, plan, status, handoff, or project file.
+- A bounded temporary request JSON is permitted input to steps 6 and 12. Never fabricate or
+  directly write an assignment, validated package, verdict, attestation, approval, trust root,
+  canonical run state, evidence, role, plan, status, handoff, or project file.
 - Never call a model or provider API, spawn a subagent, launch a judge, aggregate verdicts, calculate quorum, or authorize completion.
 - Never request, read, store, generate, import, export, or use a private signing key.
 - Never let the task agent judge or approve its own result.

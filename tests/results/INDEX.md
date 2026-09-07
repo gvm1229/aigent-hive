@@ -333,3 +333,6 @@
 | [passed](runs/20260906T210018-1eee746f065e.md) | 0.10.2 version build 시험 | a8a33b3df8a72ec3b2549fd4a52ec0758f5d48a7 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260906T210205-c5544927bd8d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T210212-be644de1907d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154636-481a29532688.md) | 0.10.2 지침 변경 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154746-ac01648eed4f.md) | 0.10.2 모호한 요청의 작업 권한 유지 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154824-a17c65992121.md) | 0.10.2 최종 Skill 설명과 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |

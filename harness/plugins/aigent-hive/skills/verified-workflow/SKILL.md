@@ -1,6 +1,6 @@
 ---
 name: verified-workflow
-description: (verified-workflow) Build and execute a bounded evidence-gated Hive workflow with dependency edges, host-native receipts, retry limits, independent verification, steering, and recovery. Use for complex work that requires more than ordinary continuation.
+description: (verified-workflow) Coordinate a Hive run needing dependency gates, bounded retries, and independent verification beyond ordinary continuation.
 ---
 
 # Hive Verified Workflow
@@ -73,7 +73,9 @@ User override:
 
 ## Boundaries
 
-- Do not call a provider API, access credentials, spawn a process, or invoke OMX/OMC.
+- Hive must not launch model or subagent processes or call provider APIs. The host may run
+  authorized CLI checks, builds, tests, and native tasks; this restriction does not prohibit them.
+- Do not access provider credentials or invoke OMX/OMC.
 - Do not create a second scheduler, mutate a host Goal, or infer host capability.
 - Do not use a Judge for scheduler ticks, heartbeats, ordinary retries, or an implementation
   agent's self-review.
