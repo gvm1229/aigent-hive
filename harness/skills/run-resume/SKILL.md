@@ -8,7 +8,7 @@ description: (run-resume) Load and validate an existing Hive run when resuming a
 Recover provider-neutral state only. The host owns execution after recovery. When the user has
 already requested continuation, return validated recovery data to that authorized workflow in
 the same task; finishing this Skill is not permission to end the user's unfinished task.
-Preserve existing owner pins without migration.
+Preserve existing owner pins, including legacy 0.8.x external owners, without migration.
 
 ## Workflow
 

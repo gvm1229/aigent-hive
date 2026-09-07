@@ -49,7 +49,7 @@ skills:
   consent_digest: null
 - name: judge-evidence
   source_type: built-in
-  content_digest: sha256:6b26f32272b049e9b6b4e29889451eabcf7a0e5877757472355b024c9ff8da0a
+  content_digest: sha256:140dafda618921f8178a0bf8ab9ffa44607ca5ed0fc17079f5990c7bd0e79e77
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -206,7 +206,7 @@ skills:
   consent_digest: null
 - name: run-resume
   source_type: built-in
-  content_digest: sha256:5f4c450a2c00d8775bb10efed4e2a6b334a5c6ea4ad626d7cbf0071e3408c953
+  content_digest: sha256:aeb1e246783741d2d2879ac1618f1ae970079f9725db4849b164eb97c23bc345
   side_effect_class: read-only
   capabilities:
   - filesystem-read

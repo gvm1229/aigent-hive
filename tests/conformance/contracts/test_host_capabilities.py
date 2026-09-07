@@ -17,8 +17,8 @@ CURRENT_REQUIRED = {
     ),
     "harness/directives/00-project-harness.md": (
         "verified host-native capabilities",
-        "after explicit user selection",
-        "including a 0.8.x external owner",
+        "Do not select or invoke OMX/OMC for new work",
+        "Preserve existing external owner pins",
     ),
     "harness/template/AGENTS.md.jinja": (
         ".agents/directives/00-project-harness.md",
@@ -26,13 +26,13 @@ CURRENT_REQUIRED = {
     ),
     "harness/skills/project-setup/SKILL.md": (
         "Default a new run to the active host's verified native capabilities",
-        "Treat OMX and OMC as external compatibility options only",
+        "Do not select OMX/OMC for a new run",
         "including a 0.8.x OMX/OMC owner",
         "host_capability_unsupported",
     ),
     "harness/skills/judge-evidence/SKILL.md": (
-        "host-native owner by default",
-        "explicitly selected external compatibility owner",
+        "New judging uses the host-native owner",
+        "preserved existing external compatibility owner",
         "legacy 0.8.x owner",
     ),
 }
