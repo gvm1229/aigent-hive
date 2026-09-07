@@ -11,7 +11,7 @@ aliases: ["Continuation closure gate"]
 sources:
   - "repo:crates/hive-cli/src/run.rs#sha256:1e8bfe91d5309015c5f60214340c550059ce48822c08620b270e5f0c67b53a1b"
   - "repo:crates/hive-core/src/run.rs#sha256:f9f45d8c48283ce08dbe900387493e268143f6f3b1280dcab7c8e3c358b80103"
-  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:fc19bed8a17b8b8652c37ff518528ada2aec511e163b15c99af90235e6728a82"
+  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf"
   - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:42a2bacfb28c1ee12a73765d027cfb74b7ad786b659d12dbffc098337e09d62c"
 links: [agent-autonomous-continuation, consumer-session-coordination, v0-10-product-scope]
 reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"

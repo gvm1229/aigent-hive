@@ -11,10 +11,10 @@ aliases: ["0.10.1 upgrade repair"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d5e36f5d1cb6080fa7952b1cf4354e7d54f0df12bc0799d758ced53d7f083b84"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:66dc337fae3ced831c3775915aef1b83c6406314cee873f20cf81e75d3c826cf"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:5a7d279c9ce96bec6792f191e4be0caa69bf17c9062ad535e11478af7f4408c2"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:274d1221abb312197451cd8afc55a45eda881d08980b932d87454659b46c562d"
-  - "repo:crates/hive-render/src/lib.rs#sha256:9b9fd4e3a9734087d452f85e02a21904f60d6233de8bbc566459d4949bf13202"
-  - "repo:harness/project-bases/registry.yml#sha256:469e3f26642d0129736e1df9760ec3ce0a41011a01263954436a456af7b16b36"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:3b45af9ce1038d97165445c5a78ad3f354921db983146e83f0313ca6627755e4"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:0dc1073646fca6b4d24fdfca35e48c64ec7e3a799bbde25ed5fd32d841d2e309"
+  - "repo:crates/hive-render/src/lib.rs#sha256:4e68aec9b3386fcf30cc49629a69614ef08f64cbc7b974db89cc279e52c60cc1"
+  - "repo:harness/project-bases/registry.yml#sha256:8cb8e05cedd08af25f00ed26a69208276143a8cf4915e330db54c82f744125b9"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
 reviewed_revision: "git:fede7a2a753884a414766773c6cf197721937028"
 status: active
