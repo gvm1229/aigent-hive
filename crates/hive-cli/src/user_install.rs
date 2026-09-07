@@ -9947,6 +9947,7 @@ mod tests {
                 ("0.9.4", 59),
                 ("0.9.5", 59),
                 ("0.10.0", 62),
+                ("0.10.1", 62),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10101,7 +10102,7 @@ mod tests {
                 seed_historical_09x_user_install(temporary.path(), version, host);
                 let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
                     .expect("direct stable upgrade plan");
-                if version == "0.10.0" {
+                if matches!(version, "0.10.0" | "0.10.1") {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
                             && !path.to_string_lossy().contains("package-review")
@@ -10132,6 +10133,37 @@ mod tests {
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn v0_10_1_user_install_applies_and_validates_for_every_host() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            seed_historical_09x_user_install(temporary.path(), "0.10.1", host);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            match host {
+                UserHost::Codex | UserHost::Claude => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &StatefulHostRunner::new(temporary.path(), HostSabotage::None),
+                )
+                .expect("0.10.1 user upgrade"),
+                UserHost::Antigravity => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &AntigravityRunner::new(temporary.path()),
+                )
+                .expect("0.10.1 user upgrade"),
+            };
+            let manifest_path = temporary
+                .path()
+                .join(format!(".hive/install/{}.json", host.as_str()));
+            let upgraded: UserOwnershipManifest =
+                serde_json::from_slice(&fs::read(manifest_path).expect("upgraded 0.10.1 manifest"))
+                    .expect("upgraded 0.10.1 manifest JSON");
+            assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+            assert_eq!(upgraded.host, host);
         }
     }
 

@@ -11,7 +11,7 @@ aliases: ["No mid-task halt"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:7679dd5603fdfa1104b0017e9fe7c7acb6a81f9e4095233ccddf3db01a325af8"
   - "repo:AGENTS.md#sha256:127f2532d044071d58a1d28dc351aba100029f59513a5b45d35f9a112382d6b3"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:3b45af9ce1038d97165445c5a78ad3f354921db983146e83f0313ca6627755e4"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:6d2138ea9d68803f4447e7295cc08fcf5b548c23df8b2d1e5826c0aa46bff668"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:633265271a82ee37ef07acd9e5a3d406ea80a3f17c7c9809d3d8d7619dd91260"
   - "repo:crates/hive-render/src/lib.rs#sha256:4e68aec9b3386fcf30cc49629a69614ef08f64cbc7b974db89cc279e52c60cc1"
   - "repo:harness/directives/00-project-harness.md#sha256:1c86dade7bbc2dcf791b8eda27d68e7759645033c54c885553b69b08cf9da319"
