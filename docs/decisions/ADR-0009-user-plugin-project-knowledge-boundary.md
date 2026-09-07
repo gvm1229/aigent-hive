@@ -34,7 +34,7 @@ Project harness:
 Prompt refinement:
 
 - Explicit `$aigent-hive:prompt-refine`와 prompt 작성·개선 intent: `refine-only` 기본
-- Materially ambiguous ordinary work: automatic `prompt-refine` 선택
+- 모호한 일반 작업: 기존 작업 경로 유지, 필요한 조사·질문 또는 선택적 개선 제안
 - Refined prompt 제시 뒤 상태: `awaiting-approval`
 - Same-request 실행: explicit `--run`에만 허용
 - 후속 실행: exact refined prompt digest를 특정한 사용자 승인 필수
@@ -67,10 +67,9 @@ Upgrade merge:
 - Source development: 설치 product `prompt-refine`와 repository directive 사용.
   Consumer projection으로서의 source-only `.agents/skills`와 consumer shipping source 사용 금지.
   명시 유지보수자 요청의 비출하 source-project `update-summary|draft-devlog`는 제한된 예외
-- Prompt quality gate: 명시적 작성·개선 intent와 material ambiguity는 automatic
-  `refine-only`, refined prompt 제시 뒤 승인 대기
-- 승인 대기에서 project read·tool·write·memory capture·run·execution 0회,
-  sufficiently clear work·simple/editless question은 기존 route 유지
+- 프롬프트 작성·개선 명시 요청만 `refine-only` 선택. 작성 완료와 후속 실행 승인 분리
+- 작성 중 프로젝트 읽기·쓰기·기록·실행 제외. 작성한 문자열의 로컬 지문 계산만 허용
+- 일반 작업의 모호함은 프롬프트 승인 대기로 전환하지 않고 기존 작업 경로 유지
 - Plugin uninstall과 user knowledge 삭제 lifecycle 분리
 - Project SQLite와 root SQLite의 독립 rebuild
 - Current `.hive/` compatibility 유지와 `.agents/` additive projection

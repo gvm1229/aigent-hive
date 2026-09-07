@@ -5,22 +5,25 @@ topic_slug: prompt-refine-routing
 language: en
 counterpart: ../ko/prompt-refine-routing.md
 title: "Prompt Refine Approval Routing"
-summary: "Materially ambiguous work enters refine-only and stops for exact user approval."
+summary: "Explicit prompt authoring requires execution approval; ambiguous work retains its authorized route."
 tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
-  - "repo:docs/archive/plans/foundations/prompt-refine-auto-routing.md#sha256:a56c022be4e24ac6e7acf402e186d1ddbe4a1a39bc4d2c0eb16104e472b3108a"
-  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:a78f7c3acbe764bc04916912e9fbb15bd9c5b90275db7f376add543439f1e90a"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:0dc1073646fca6b4d24fdfca35e48c64ec7e3a799bbde25ed5fd32d841d2e309"
+  - "repo:harness/skills/prompt-refine/SKILL.md#sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed"
 links: [orchestration-ownership, skill-routing]
-reviewed_revision: "git:bf7c1d3e36cd94e8ee5f2a68d9f8ca5c4c9f9c87"
+reviewed_revision: "git:c5155855b9fb416db1b6a50286175c5cea930238"
 status: active
 ---
 
 # Prompt Refine Approval Routing
 
-Hive will route explicit prompt authoring and materially ambiguous ordinary work
-to `prompt-refine` in `refine-only` mode. The refined prompt and digest enter
-`awaiting-approval` with no project read, tool, write, memory capture, run creation,
-or task execution. Only explicit `--run` or later approval bound to the exact digest
-authorizes host-owned execution. Simple questions, editless questions, clear work,
-and prompt-classifier hooks remain outside this route.
+Explicit prompt authoring uses `refine-only`. Delivering the prompt completes that writing task;
+`awaiting-approval` refers only to later execution. A local hash of the authored text is allowed,
+but project inspection, writes, memory capture, and task execution remain outside refinement.
+Explicit same-request run intent or later exact approval authorizes execution.
+
+Ambiguous ordinary work keeps `RunWork` and the host-native route with an optional refinement
+suggestion, not automatic Skill activation. Continue authorized investigation and ask only for
+material user choices or new authority. The 0.10.2 instruction review replaces the earlier
+automatic ambiguity-to-refinement policy; no prompt-classifier hook is introduced.

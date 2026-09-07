@@ -5,21 +5,24 @@ topic_slug: prompt-refine-routing
 language: ko
 counterpart: ../en/prompt-refine-routing.md
 title: "Prompt refine 승인 routing"
-summary: "Material ambiguity가 있는 work의 refine-only 진입과 exact 사용자 승인 대기."
+summary: "명시적 프롬프트 작성과 일반 작업의 조사·계속 진행 경계 분리."
 tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
-  - "repo:docs/archive/plans/foundations/prompt-refine-auto-routing.md#sha256:a56c022be4e24ac6e7acf402e186d1ddbe4a1a39bc4d2c0eb16104e472b3108a"
-  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:a78f7c3acbe764bc04916912e9fbb15bd9c5b90275db7f376add543439f1e90a"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:0dc1073646fca6b4d24fdfca35e48c64ec7e3a799bbde25ed5fd32d841d2e309"
+  - "repo:harness/skills/prompt-refine/SKILL.md#sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed"
 links: [orchestration-ownership, skill-routing]
-reviewed_revision: "git:bf7c1d3e36cd94e8ee5f2a68d9f8ca5c4c9f9c87"
+reviewed_revision: "git:c5155855b9fb416db1b6a50286175c5cea930238"
 status: active
 ---
 
-# Prompt refine 승인 routing
+# 프롬프트 작성과 작업 실행 경계
 
-명시적 prompt 작성과 material ambiguity가 있는 ordinary work:
-`prompt-refine`의 `refine-only` route. Refined prompt·digest 반환 상태:
-`awaiting-approval`. 승인 전 project read·tool·write·memory capture·run 생성·task
-execution 0건. 실행 권한: explicit `--run` 또는 exact digest에 결합된 후속 승인.
-제외: simple question, editless question, clear work, prompt-classifier hook.
+명시적 프롬프트 작성 요청: `refine-only`. 결과 전달로 작성 작업 완료.
+`awaiting-approval`은 이후 실행에만 적용. 작성 문자열의 로컬 지문 계산 허용,
+프로젝트 검사·쓰기·기억 저장·실제 작업 실행 제외.
+실행 권한: 같은 요청의 명시적 실행 지시 또는 정확한 후속 승인.
+
+모호한 일반 작업: `RunWork`와 호스트 기본 경로 유지, 개선 제안만 선택적으로 표시.
+승인된 조사 지속, 실질적 사용자 선택·새 권한만 질문.
+`0.10.2` 지침 감사로 이전 자동 개선 선택 정책 대체. 프롬프트 분류 hook 추가 없음.
