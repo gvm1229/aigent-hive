@@ -344,3 +344,7 @@
 | [passed](runs/20260907T160617-4e466367c930.md) | INS102 CLI 전체 최종 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T160748-8f80991a40c2.md) | INS102 최종 참조 포함성 검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T161050-4b1d913dc9cf.md) | INS102 최종 투영 함수 분리 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162159-4cfa1bd61f68.md) | 0.10.2 전체 Rust workspace 검증 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162335-68b05550cd3c.md) | 0.10.2 합성 release fixture update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162431-ded94df3292b.md) | 0.10.2 0.10.1 surface baseline update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T162515-8f6410e21080.md) | 0.10.2 surface YAML 교정 후 update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
