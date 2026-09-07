@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d5e36f5d1cb6080fa7952b1cf4354e7d54f0df12bc0799d758ced53d7f083b84"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:66dc337fae3ced831c3775915aef1b83c6406314cee873f20cf81e75d3c826cf"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:3b45af9ce1038d97165445c5a78ad3f354921db983146e83f0313ca6627755e4"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:0dc1073646fca6b4d24fdfca35e48c64ec7e3a799bbde25ed5fd32d841d2e309"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:69f96abcee52980e03fe542e335a02181e2f03b42218bdaa12b8acc6213dee51"
   - "repo:crates/hive-render/src/lib.rs#sha256:4e68aec9b3386fcf30cc49629a69614ef08f64cbc7b974db89cc279e52c60cc1"
   - "repo:harness/project-bases/registry.yml#sha256:8cb8e05cedd08af25f00ed26a69208276143a8cf4915e330db54c82f744125b9"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
