@@ -4,7 +4,7 @@
 - 제품 버전: `0.10.2`
 - 현재 공개 stable: `0.10.1`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
-- 출시 상태: 로컬 출시 검증 통과. 유지보수자가 승인한 `0.10.2-test.1` 공개·세 운영체제 수용·stable 게시 진행 중
+- 출시 상태: `0.10.2-test.1` 공개와 세 운영체제 수용 통과. stable 구독자 안내 문구 승인 뒤 `main` 승격·게시 진행
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
 - 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
@@ -30,5 +30,6 @@
 ## 전역 갱신과 출시
 
 - `GUU102-*` 10건과 로컬 출시 검증 `REL102-001–002` 완료
-- `REL102-003–009` 공개 시험·세 운영체제 수용·stable 게시 기준 진행 중
+- `REL102-003–006` 공개 시험·세 운영체제 수용·증거 결합 완료
+- `REL102-007–009` stable 문서 승인·`main` 승격·게시 기준 진행 중
 - 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)
