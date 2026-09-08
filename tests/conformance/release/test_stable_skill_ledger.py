@@ -31,6 +31,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             "0.9.5",
             "0.9.5-test.1",
             "0.10.0",
+            "0.10.1",
         ]
         self.github = [
             {"tagName": "v0.9.0", "isPrerelease": False},
@@ -41,15 +42,16 @@ class StableSkillLedgerContract(unittest.TestCase):
             {"tagName": "v0.9.5", "isPrerelease": False},
             {"tagName": "v0.9.5-test.1", "isPrerelease": True},
             {"tagName": "v0.10.0", "isPrerelease": False},
+            {"tagName": "v0.10.1", "isPrerelease": False},
         ]
 
     def test_public_stable_union_and_target_match_current_ledger(self) -> None:
-        result = MODULE.verify(self.ledger, self.historical, "0.10.1", self.npm, self.github)
-        self.assertEqual(result["stable_versions"][-1], "0.10.1")
+        result = MODULE.verify(self.ledger, self.historical, "0.10.2", self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], "0.10.2")
 
     def test_current_target_entry_is_available_for_stable_publication(self) -> None:
-        result = MODULE.verify(self.ledger, self.historical, "0.10.1", self.npm, self.github)
-        self.assertEqual(result["stable_versions"][-1], "0.10.1")
+        result = MODULE.verify(self.ledger, self.historical, "0.10.2", self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], "0.10.2")
 
     def test_missing_future_target_entry_blocks_stable_publication(self) -> None:
         with self.assertRaisesRegex(ValueError, "differs from published stable union"):
@@ -64,7 +66,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             )
             ledger.write_text(text, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "different Skill bytes"):
-                MODULE.verify(ledger, self.historical, "0.10.1", self.npm, self.github)
+                MODULE.verify(ledger, self.historical, "0.10.2", self.npm, self.github)
 
 
 if __name__ == "__main__":
