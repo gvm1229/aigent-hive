@@ -12,7 +12,7 @@
 - [x] [REL102-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 신규 설치·`0.9.5` 갱신 수용
 - [x] [REL102-005] source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
 - [x] [REL102-006] accepted public test를 source·product digest·세 host 영수증에 결합
-- [ ] [REL102-007] `0.10.2` stable 문서·구독자 요약·승인 digest 정합화
+- [x] [REL102-007] `0.10.2` stable 문서·구독자 요약·승인 digest 정합화
 - [ ] [REL102-008] `develop → main` 통합과 stable publication
 - [ ] [REL102-009] npm `latest=0.10.2`·GitHub stable Release·독립 확인
 
@@ -28,3 +28,4 @@
 - 공개 tag `v0.10.2-test.1`, source `05526842f10d288feb19a5da8db363d0bfe0ab59`
 - 제품 tree digest `sha256:fb7eab520803250ac4989c89617703f7bb3acab541536ebcbee9a6e67e7950a2`
 - Windows x64, macOS arm64, Linux musl x64 영수증 artifact 3개
+- 승인 구독자 안내 digest `sha256:ab8a9fac5f277c80d819e7bf3e698d5f443484f8c690eeed6f504d6b8e8f6112`
