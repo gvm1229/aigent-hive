@@ -1908,7 +1908,13 @@ fn execute_apply(
         validate_antigravity_activation(arguments, plan, host_executable.as_ref(), runner)
     })
     .and_then(|()| validate_plugin_package(arguments, plan))
-    .and_then(|()| rebuild_root_index(arguments))
+    .and_then(|()| {
+        if operation == UserOperation::Update {
+            Ok(())
+        } else {
+            rebuild_root_index(arguments)
+        }
+    })
     .and_then(|()| {
         crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
             |error| {
@@ -2009,7 +2015,16 @@ fn build_desired_user_files(
     let guidance_existing =
         read_optional_regular(&arguments.root_cap, &guidance_relative, MAX_USER_FILE_BYTES)?
             .unwrap_or_default();
-    let guidance = render_user_guidance(arguments.host, operational.map(|(config, _)| config));
+    let question_pending = operational
+        .map(|_| crate::user_setup::feature_question_pending(&arguments.root_cap))
+        .transpose()
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?
+        .unwrap_or(false);
+    let guidance = render_user_guidance(
+        arguments.host,
+        operational.map(|(config, _)| config),
+        question_pending,
+    );
     validate_operational_guidance(&guidance, operational.map(|(config, _)| config))?;
     files.insert(
         guidance_relative.clone(),
@@ -2582,6 +2597,7 @@ fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bo
 fn render_user_guidance(
     host: UserHost,
     setup: Option<&crate::user_setup::UserSetupConfig>,
+    question_pending: bool,
 ) -> Vec<u8> {
     let (heading, adapter_label, body, footer) = setup.map_or_else(
         || {
@@ -2695,8 +2711,20 @@ fn render_user_guidance(
             }
         },
     );
+    let question_gate = if question_pending {
+        match setup.map(|config| config.interface_language) {
+            Some(crate::user_setup::InterfaceLanguage::Ko) => {
+                "- 상태: `setup-required`. 새 release의 전역 질문이 아직 답변되지 않았음. 일반 Hive 작업 전에 설치된 `aigent-hive:user-setup` Skill로 질문을 한 번 묻고 답을 저장. 답변 전에는 setup, doctor, update, recover, 질문 명령만 허용.\n"
+            }
+            _ => {
+                "- State: `setup-required`. A global question introduced by this release is unanswered. Use the installed `aigent-hive:user-setup` Skill to ask and save the answer before ordinary Hive work. Until then only setup, doctor, update, recover, and question commands are available.\n"
+            }
+        }
+    } else {
+        ""
+    };
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{question_gate}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -9224,11 +9252,12 @@ mod tests {
     #[test]
     fn user_marker_append_and_replace_preserve_foreign_bytes() {
         let foreign = b"before\r\n<!-- omx:block -->\r\nafter";
-        let first = merge_user_marker(foreign, &render_user_guidance(UserHost::Codex, None))
+        let first = merge_user_marker(foreign, &render_user_guidance(UserHost::Codex, None, false))
             .expect("append");
         assert!(first.starts_with(foreign));
-        let second = merge_user_marker(&first, &render_user_guidance(UserHost::Claude, None))
-            .expect("replace");
+        let second =
+            merge_user_marker(&first, &render_user_guidance(UserHost::Claude, None, false))
+                .expect("replace");
         let outside = [&second[..foreign.len()]];
         assert_eq!(outside[0], foreign);
         assert_eq!(find_all(&second, USER_MARKER_START).len(), 1);
@@ -9279,6 +9308,7 @@ mod tests {
         let english = String::from_utf8(render_user_guidance(
             UserHost::Codex,
             Some(&config(InterfaceLanguage::En)),
+            false,
         ))
         .expect("English guidance");
         assert!(english.contains(
@@ -9310,6 +9340,7 @@ mod tests {
         let korean = String::from_utf8(render_user_guidance(
             UserHost::Codex,
             Some(&config(InterfaceLanguage::Ko)),
+            false,
         ))
         .expect("Korean guidance");
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
@@ -9346,8 +9377,12 @@ mod tests {
 
         let mut disabled = config(InterfaceLanguage::En);
         disabled.wiki.enabled = false;
-        let disabled = String::from_utf8(render_user_guidance(UserHost::Codex, Some(&disabled)))
-            .expect("disabled guidance");
+        let disabled = String::from_utf8(render_user_guidance(
+            UserHost::Codex,
+            Some(&disabled),
+            false,
+        ))
+        .expect("disabled guidance");
         assert!(disabled.contains("Global Wiki is disabled: do not write or refresh knowledge"));
         assert!(!disabled.contains("hive knowledge remember --user-root"));
 
@@ -9362,17 +9397,28 @@ mod tests {
         ));
 
         for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
-            let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)));
+            let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)), false);
             validate_operational_guidance(&guidance, Some(&config(InterfaceLanguage::En)))
                 .expect("every host must retain the mandatory capture contract");
         }
     }
 
     #[test]
+    fn pending_global_feature_question_renders_a_setup_required_gate() {
+        let guidance =
+            String::from_utf8(render_user_guidance(UserHost::Codex, None, true)).expect("guidance");
+        assert!(guidance.contains("State / 상태: `setup-required`"));
+        assert!(guidance.contains("Before setup completes"));
+    }
+
+    #[test]
     fn malformed_user_markers_fail_closed() {
         let malformed = b"<!-- AIGENT-HIVE:USER:START -->\nmissing end";
         assert!(matches!(
-            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex, None)),
+            merge_user_marker(
+                malformed,
+                &render_user_guidance(UserHost::Codex, None, false)
+            ),
             Err(InstallError::Conflict(_))
         ));
     }
@@ -9901,6 +9947,7 @@ mod tests {
                 ("0.9.4", 59),
                 ("0.9.5", 59),
                 ("0.10.0", 62),
+                ("0.10.1", 62),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10055,7 +10102,7 @@ mod tests {
                 seed_historical_09x_user_install(temporary.path(), version, host);
                 let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
                     .expect("direct stable upgrade plan");
-                if version == "0.10.0" {
+                if matches!(version, "0.10.0" | "0.10.1") {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
                             && !path.to_string_lossy().contains("package-review")
@@ -10086,6 +10133,37 @@ mod tests {
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn v0_10_1_user_install_applies_and_validates_for_every_host() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            seed_historical_09x_user_install(temporary.path(), "0.10.1", host);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            match host {
+                UserHost::Codex | UserHost::Claude => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &StatefulHostRunner::new(temporary.path(), HostSabotage::None),
+                )
+                .expect("0.10.1 user upgrade"),
+                UserHost::Antigravity => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &AntigravityRunner::new(temporary.path()),
+                )
+                .expect("0.10.1 user upgrade"),
+            };
+            let manifest_path = temporary
+                .path()
+                .join(format!(".hive/install/{}.json", host.as_str()));
+            let upgraded: UserOwnershipManifest =
+                serde_json::from_slice(&fs::read(manifest_path).expect("upgraded 0.10.1 manifest"))
+                    .expect("upgraded 0.10.1 manifest JSON");
+            assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+            assert_eq!(upgraded.host, host);
         }
     }
 

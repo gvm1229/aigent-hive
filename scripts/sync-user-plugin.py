@@ -69,6 +69,10 @@ def sync_directories(
         else:
             destination.mkdir()
             shutil.copy2(source / "SKILL.md", destination / "SKILL.md")
+            # Mode-specific guidance must accompany a router in every host projection.
+            for companion in ("references", "scripts"):
+                if (source / companion).is_dir():
+                    shutil.copytree(source / companion, destination / companion)
         if copy_explicit_openai_metadata:
             source_metadata = source / "agents" / "openai.yaml"
             destination_metadata = destination / "agents" / "openai.yaml"

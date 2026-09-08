@@ -19,6 +19,7 @@ field·동등성·언어 계약 검사.
 
 | 제품 버전 | 상태 | 문서 |
 | --- | --- | --- |
+| `0.10.2` | 전역 사용자 갱신·설정 질문·지침 선택 개선, 공개 시험 준비 | [`Release`](0.10.2.md) · [`구독자 요약 초안`](0.10.2.subscriber.ko.md) |
 | `0.10.0` | 관계 graph·검증형 workflow·historical Skill cleanup 공개 시험 준비 | [`Release`](0.10.0.md) |
 | `0.10.1` | 일반 harness migration·같은 대화 사용량 기준 재평가 | [`Release`](0.10.1.md) · [`구독자 요약`](0.10.1.subscriber.ko.md) |
 | `0.9.5` | 네이티브 사용량 복구·지식 이전 안내·갱신 수용 patch | [`Release`](0.9.5.md) · [`구독자 요약`](0.9.5.subscriber.ko.md) |

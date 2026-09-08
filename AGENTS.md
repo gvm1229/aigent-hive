@@ -33,8 +33,9 @@ Repository directives live under `.agents/`; shipping consumer sources live unde
 
 1. For a source task, run the installed session-bound `hive usage enforce` contract from
    [`.agents/directives/07-installed-usage-guard.md`](.agents/directives/07-installed-usage-guard.md).
-2. Before an edit, read [`.agents/directives/00-editing-discipline.md`](.agents/directives/00-editing-discipline.md)
-   in full.
+2. For code edits or documentation restructuring, consult
+   [`.agents/directives/00-editing-discipline.md`](.agents/directives/00-editing-discipline.md).
+   Reuse unchanged guidance within the task; do not reload unrelated procedures for each edit.
 3. Load only the directive rows that match the task.
 
 | Task | Directive |

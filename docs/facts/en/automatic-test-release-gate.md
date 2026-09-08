@@ -9,9 +9,9 @@ summary: "A completed authorized product milestone publishes and accepts one num
 tags: [automation, product, release]
 aliases: ["numbered public test gate"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:629d32bb289108bbc782e295e4ffda6a4a4d5006fbf151212db0cc79457391f0"
+  - "repo:.agents/directives/03-workflow.md#sha256:8d3afcb2e885232dcb7e7775d55d0b48477358ddbc0266ff4a48de80af34e9fc"
   - "repo:.github/workflows/release.yml#sha256:0b800d9f74b331f34aad1507b57129fb319fdf49934815026c6352c6aa91a5d7"
-  - "repo:docs/public-test-product.json#sha256:e2ab292cc712fb449ba212ee3f2fa0354e2400f828e402f8ab3a30d3a3a8fa87"
+  - "repo:docs/public-test-product.json#sha256:1503b47bf2ea301ffa91390565c69694e93c7de36aed4f628b2f71ec939ba0ec"
   - "repo:scripts/check-test-release-gate.py#sha256:c431835735bd0ca5b8e95c2e295c14a03fbe8906f5256ca72aa2055a41d12525"
 links: [source-development, v0-9-full-release]
 reviewed_revision: "git:97928e522edbad00c2fc5c137f246c15fcad06a5"

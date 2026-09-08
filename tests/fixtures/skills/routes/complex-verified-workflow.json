@@ -12,7 +12,7 @@
     {
       "name": "verified-workflow",
       "source_type": "built-in",
-      "content_digest": "sha256:fc19bed8a17b8b8652c37ff518528ada2aec511e163b15c99af90235e6728a82",
+      "content_digest": "sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf",
       "side_effect_class": "project-write",
       "capabilities": ["filesystem-read", "filesystem-write", "run-state", "shell", "subagents"],
       "consent_digest": null,

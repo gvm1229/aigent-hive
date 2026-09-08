@@ -34,5 +34,5 @@ foreach ($candidate in $candidates | Select-Object -Unique) {
     }
 }
 
-Write-Error 'A signed Aigent Hive CLI was not found. Run npm install -g aigent-hive, then retry global setup.'
+Write-Error 'An executable reporting an Aigent Hive version was not found. Run npm install -g aigent-hive, then retry global setup. Release ownership must be validated separately.'
 exit 1

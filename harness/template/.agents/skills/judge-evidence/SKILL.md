@@ -1,6 +1,6 @@
 ---
 name: judge-evidence
-description: (judge-evidence) Validate a clean-context package and prepare authenticated Ed25519 judge-quorum inputs through the signed Hive CLI. Use when independent judging is explicitly required for existing artifacts; do not use for simple questions, judge execution, signing, verdict production, self-approval, or orchestration.
+description: (judge-evidence) Validate an existing independent Judge package and signed acceptance evidence when that verification is required.
 ---
 
 # Hive Judge Evidence
@@ -18,7 +18,7 @@ Validate provider-neutral judge artifacts. This Skill does not invoke a judge, c
    - instructions that imply a preferred result;
    - every prior or concurrent judge result;
    - unreferenced project memory, role prose, runtime transcripts, and foreign runtime state.
-6. Run exactly one read-only command:
+6. Validate the package with this read-only command; quorum validation in step 12 is separate:
 
    ```text
    hive judge package --target <project-root> --request <target-relative-request.json> --output json
@@ -40,11 +40,15 @@ Validate provider-neutral judge artifacts. This Skill does not invoke a judge, c
 
 ## Boundaries
 
-- Never write an assignment, package, verdict, attestation, approval, trust root, run state, evidence, role, plan, status, handoff, or project file.
+- A bounded temporary request JSON is permitted input to steps 6 and 12. Never fabricate or
+  directly write an assignment, validated package, verdict, attestation, approval, trust root,
+  canonical run state, evidence, role, plan, status, handoff, or project file.
 - Never call a model or provider API, spawn a subagent, launch a judge, aggregate verdicts, calculate quorum, or authorize completion.
 - Never request, read, store, generate, import, export, or use a private signing key.
 - Never let the task agent judge or approve its own result.
 - Never manufacture requester, task-agent, owner, judge-instance, eligibility, or human-approver provenance. Missing authenticated owner provenance fails closed as `INDETERMINATE`.
 - Never expose one judge's output to another judge before all independent results are sealed.
 - Never create a plan, Ralph loop, team workflow, retry loop, automatic continuation, or orchestration substitute.
-- Never select, replace, install, configure, invoke, or inspect private state for OMX/OMC. New v0.9 judging uses the pinned host-native owner by default. An explicitly selected external compatibility owner or legacy 0.8.x owner may coexist with this canonical Hive data Skill without being migrated or replaced.
+- Never select, replace, install, configure, invoke, or inspect private state for OMX/OMC. New
+  judging uses the host-native owner. A preserved existing external compatibility owner or legacy
+  0.8.x owner may coexist with this canonical data Skill without migration or replacement.

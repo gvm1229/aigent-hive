@@ -13,8 +13,8 @@ Configure a consumer project without copying Hive source-development instruction
   current project as the target for a local harness.
 - Do not select it for global or user-scope preference changes, or for a bare request to set up,
   install, configure, or reconfigure Hive. Those requests belong to `user-setup`.
-- When the user explicitly requests both scopes, let `user-setup` finish first and wait for a
-  separate confirmation before project inspection, preview, or apply.
+- When the user explicitly requests both scopes, let `user-setup` finish first, then continue the
+  authorized project scope. Ask only for missing target information, material choices, or new authority.
 
 ## Workflow
 
@@ -37,7 +37,8 @@ Configure a consumer project without copying Hive source-development instruction
    - Do not infer preference, risk tolerance, host choice, or optional Skill approval.
 4. Resolve the v0.9 owner and capabilities.
    - Default a new run to the active host's verified native capabilities without asking an owner question.
-   - Treat OMX and OMC as external compatibility options only. Accept one only when the user explicitly requests and confirms it before the run starts; installation or capability evidence alone never changes the default.
+   - Do not select OMX/OMC for a new run. Existing external owner pins are historical provenance;
+     their presence never authorizes invocation or changes the host-native default.
    - Preserve any owner already pinned by an existing run, including a 0.8.x OMX/OMC owner. Reconfiguration never migrates or replaces that owner implicitly.
    - Normalize host-native capability support to `supported`, `best-effort`, `unsupported`, or `unverified`. A required `unsupported` or `unverified` capability stops before writes with `host_capability_unsupported`.
    - Retain `available`, `absent`, `incompatible`, or `unknown` external detection only for an explicitly selected compatibility layer or validation of legacy 0.8.x state.
@@ -159,7 +160,7 @@ Do not ask about these:
 - Seven-day maximum backup retention
 - Hive-native iterative, team, multi-goal, and logical-scheduler capabilities remain unavailable until their signed release, host qualification, and activation gates pass
 - No provider session engine, model runtime, direct model/subagent process launcher, or OMX/OMC runtime dependency
-- Orchestration owner selection: new v0.9 runs use verified host-native capabilities by default; OMX/OMC requires explicit user selection; existing 0.8.x owner pins remain unchanged
+- Orchestration owner selection: new runs use verified host-native capabilities; existing external owner pins remain unchanged and never authorize new invocation
 - Owner detection evidence sources: active-host capability metadata and side-effect-free public `--version` only
 
 ## Safety Invariants

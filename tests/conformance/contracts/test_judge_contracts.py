@@ -411,9 +411,10 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
     ) -> None:
         text = SKILL.read_text(encoding="utf-8").casefold()
         self.assertIn("simple-question gate first", text)
-        self.assertIn("host-native owner by default", text)
-        self.assertIn("explicitly selected external compatibility owner", text)
-        self.assertIn("legacy 0.8.x owner", text)
+        normalized = " ".join(text.split())
+        self.assertIn("new judging uses the host-native owner", normalized)
+        self.assertIn("preserved existing external compatibility owner", normalized)
+        self.assertIn("legacy 0.8.x owner", normalized)
         command_lines = tuple(
             line.strip()
             for line in text.splitlines()

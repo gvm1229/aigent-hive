@@ -322,3 +322,30 @@
 | [failed](runs/20260906T041730-01a361c169e5.md) | v0101-stable-windows-install | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T041741-2b6462f34840.md) | v0101-stable-windows-install-retry | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260906T041758-effb95d97f93.md) | v0101-stable-windows-version | b2971f251826a8e62cb2292d7dd53a363c460bf4 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205241-2c0222d4315f.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205249-c5827be4c32f.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205259-269afe5a6b9c.md) | 0.10.2 update activation 단위 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205346-5efa7238c4da.md) | 0.10.2 update activation reconciliation 시험 | b13c5a076d4f74841a8542c4155659045275f6cf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205720-6233fd50b0e9.md) | 0.10.2 질문 대기 사용자 투영 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205726-d7421d36eec0.md) | 0.10.2 질문 대기 사용자 투영 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T205803-88b54a64bc30.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T205840-268fbeb377fa.md) | 0.10.2 질문 대기 차단 회귀 시험 | 0cba24687c294846c09d78c9932b4aee3a6f4fc9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T210018-1eee746f065e.md) | 0.10.2 version build 시험 | a8a33b3df8a72ec3b2549fd4a52ec0758f5d48a7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260906T210205-c5544927bd8d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260906T210212-be644de1907d.md) | 0.10.2 전역 update 프로젝트 미접근 회귀 시험 | f41278b58b53a4796ebb92afadaba897a5740582 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154636-481a29532688.md) | 0.10.2 지침 변경 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154746-ac01648eed4f.md) | 0.10.2 모호한 요청의 작업 권한 유지 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T154824-a17c65992121.md) | 0.10.2 최종 Skill 설명과 투영 회귀 | 70be27ab71bb484201c7d2287509299daadff5e2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T155536-00d4badb3ec0.md) | INS102 참조 문서의 세 호스트 투영 시험 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T155641-70141003ac53.md) | INS102 동반 자료 투영 및 선택 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T155851-d163b62395ff.md) | INS102 관련 CLI 및 Skill 계약 검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160356-86f3f84f06df.md) | INS102 최신 투영과 승인 경계 관련 계약 재검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T160511-c2734d118c20.md) | INS102 설치 기록 없는 기능 답변과 CLI 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160617-4e466367c930.md) | INS102 CLI 전체 최종 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T160748-8f80991a40c2.md) | INS102 최종 참조 포함성 검증 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T161050-4b1d913dc9cf.md) | INS102 최종 투영 함수 분리 회귀 | e4c0a3fe62d4537922bcb9d9ee8f85fe1434bdf2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162159-4cfa1bd61f68.md) | 0.10.2 전체 Rust workspace 검증 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162335-68b05550cd3c.md) | 0.10.2 합성 release fixture update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162431-ded94df3292b.md) | 0.10.2 0.10.1 surface baseline update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T162515-8f6410e21080.md) | 0.10.2 surface YAML 교정 후 update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T162559-181fd60f7d7f.md) | 0.10.2 전체 Rust 최종 재검증 | c2485e40cd20bc6545709ed12b5eeed3903dd7b3 | Windows-11-10.0.26200-SP0 |

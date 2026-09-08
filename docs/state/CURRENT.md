@@ -1,70 +1,36 @@
 # 현재 상태
 
 - 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.1`
-- Stable release: `0.10.1`
-- 수용 공개 시험: `0.10.1-test.1`
-- 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 구현 계획: [`harness-upgrade-0.10.1.md`](../plans/active/harness-upgrade-0.10.1.md)
-- 출시 계획: [`release-0.10.1.md`](../plans/active/release-0.10.1.md)
-- 결정: [`ADR-0021`](../decisions/ADR-0021-0.10.1-upgrade-usage-fix.md)
+- 제품 버전: `0.10.2`
+- 현재 공개 stable: `0.10.1`
+- 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
+- 출시 상태: `0.10.2-test.1` 공개와 세 운영체제 수용, stable 구독자 안내 문구 승인 완료. `main` 승격·게시 진행
+- 활성 계획: [PLAN.md](../plans/PLAN.md)
+- 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
+- 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
+- 출시 계획: [release-0.10.2.md](../plans/active/release-0.10.2.md)
+- 결정: [ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
-## 현재 결함
+## 권한과 범위
 
-### Project harness upgrade
+- 현재 승인: 전역 갱신 구현·검증·commit·push·공개 시험·`main` 통합·stable 게시
+- 현재 제외: 실제 사용자 루트와 등록 프로젝트 변경
+- 과거 project/user base·외부 파일·사용자 선택 보존
+- 전역 사용량 보호: 유지보수자가 지정한 남은 사용량 `2%`
 
-- Windows Codex 공개 `0.10.0` 실제 실행: DuckSoul `0.9.5` scan 실패
-- 오류: `hive.skill-selection-invalid: selected user Skills must be unique`
-- 실제 raw Skill 이름: 25개·중복 `0건`
-- Canonical 변환 뒤: 24개
-- 충돌: `iterative-execution`, `ralph-loop` → `verified-workflow`
-- 추가 발견: tracked `0.9.5` full project base 57개 파일, runtime full-base registry coverage 누락
-- DuckSoul `.hive` 변경·apply·recover journal 생성 `0건`
+## 개선 작업
 
-### Usage guard threshold
+- 모호한 일반 요청의 작업 권한 유지와 명시적 프롬프트 작성 경로 분리
+- 현재 Skill 참조·기본 stable 채널·공유 지식 색인·종료 hook 규칙 정합화
+- 사용자 설정 진입 문서와 작업별 참조 분리, Rust·정적 호스트 투영에 동반 자료 포함
+- 인증 실패의 읽기 전용 진단 우선, 전체 제거·재설치의 별도 권한 유지
+- 독립 문서 기반 행동 평가와 관련 시험 완료. 실제 장시간 호스트 성공률 증명은 제외
+- 완료 수치는 개선 계획의 검증된 체크리스트 기준
 
-- 공개 `0.10.0` 실제 실행: global threshold `60% → 10%` 저장 성공
-- 기존 `halt.json`: `60%` policy decision 유지
-- 같은 session `status`: `hive.usage-session-halted`, explicit disable 요구
-- 현재 원인: halt binding에 effective policy identity 부재, enforce의 current-session marker 무조건 우선
-- 목표: fresh recheck 뒤 allow 또는 current-policy halt, session disable 불필요
+## 전역 갱신과 출시
 
-## 현재 실행 순서
-
-1. 공통 compatibility registry와 historical-state fixture
-2. 인증 우선 ProjectState migration과 Skill merge
-3. Policy-bound halt marker와 same-session recheck
-4. 전체 회귀·release gate
-5. `0.10.1-test.1` 세 운영체제 공개 수용
-
-## 권한·안전 경계
-
-- Agent 소유: accepted-test promotion 구현·검증·`main` 통합·stable `0.10.1` 공개
-- 사용자 권한 대기: 실제 DuckSoul apply
-- 사용자·외부 bytes: 보존
-- Historical project/user base bytes: 변경 금지
-- Provider API·credential·OMX/OMC: 사용 금지
-
-## 현재 근거
-
-- 구현 commit: `b592e305`, `856e945f`, `31e437e6`, `8f399700`, `ecd92340`, `fede7a2a`, `df2a88f8`
-- Rust 전체: 446 통과·수동 qualification 1 제외, core 109·projection 39·render 63·update 54·wiki 177 통과
-- Historical project lifecycle: `0.9.1–0.10.0` scan·dry-run·rollback·apply·validate 통과
-- 공개 `0.10.0` exact support-state fixture: Codex·Claude·Antigravity의 `test.2`·`test.4` 갱신 통과
-- Source Wiki: 174개 page, 오류 `0건`, 경고 `0건`
-- DuckSoul Git 상태: 기존 사용자 변경 존재, 이번 진단 변경 `0건`
-- 사용량 보호: global threshold `10%`; 제품 수정은 같은 session 재평가를 사용하며 disable 불필요
-- Python lane: documentation 87·security 103·contract 466·integration 94·release 115 통과; 플랫폼 조건부 건너뜀은 별도 유지
-- 공개 시험 gate: `0.10.1-test.1`, product digest `sha256:033ae9d5bd8bfbcfe5ab6eeb8243546048bcff5f8954122b14162a5f34c793ff` 승인
-- Candidate `34000885782`, source `da6636a679ea451d500f26550f7738e3063697f1`; 다섯 native artifact 통과
-- npm 여섯 package `test=0.10.1-test.1`, `latest=0.10.0`; GitHub prerelease 25개 artifact 확인
-- Public acceptance `34001760231`: Windows x64·macOS arm64·Linux musl x64 설치·한국어·rollback·vector 통과
-- Stable `0.10.1`: 2026-09-06 유지보수자 명시 승인과 공개 완료
-- Stable promotion mode: `35f89f9f`; accepted source·product digest·세 host acceptance run 결합, qualification 재실행 없음
-- 구독자 요약 승인 digest: `sha256:36be7d519874b54e7817f26f8819be57ad7d011be3a430aff46ebb89c15768f7`, release 환경 등록 완료
-- `main` 통합: PR #49 `5e64ce8a`, recovery PR #50 `bb56037f`
-- Stable candidate `34008946911`: accepted `0.10.1-test.1`과 acceptance `34001760231` 결합, 다섯 native artifact·integrity bundle 통과
-- Stable publication: 최초 run `34009500410`은 npm 전파 지연 뒤 tag 전 중단; recovery run `34010951366` 성공
-- 독립 확인: npm 여섯 package `version/latest=0.10.1`, `test=0.10.1-test.1`; GitHub 정식 Release 29개 asset
-- Windows 공개 stable 설치: `AIgent Hive v0.10.1 (released 2026-09-06)`
-- 남은 Agent 소유 작업: `0건`; 실제 DuckSoul apply는 사용자 별도 승인 대기
+- `GUU102-*` 10건과 로컬 출시 검증 `REL102-001–002` 완료
+- `REL102-003–006` 공개 시험·세 운영체제 수용·증거 결합 완료
+- `REL102-007` stable 문서·구독자 안내 digest 승인 완료
+- `REL102-008–009` `main` 승격·stable 게시·독립 확인 진행 중
+- 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)

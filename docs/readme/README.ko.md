@@ -71,7 +71,7 @@ dependency 없음.
 ## 선택형 one-prompt 설정
 
 Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진행을 맡기려면 아래
-prompt 사용. 선택 사항이며, 아래 4단계 설정은 예측 가능한 수동 경로로 유지.
+아래 안내문 사용. 수동 경로를 대신하는 선택 사항.
 
 ```text
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
@@ -83,8 +83,8 @@ Detect my operating system and active host (Codex, Claude Code, or Gemini Antigr
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
 requires before installing it. Then install the exact Hive release I selected using the official
-method in the linked guidance, verify `hive --version`, and activate only my host with
-`hive install --scope user --host <detected-host> --apply --output json`.
+method in the linked guidance, verify `hive --version`, then run `hive update` once and select
+the active host when prompted.
 
 Then begin interactive global setup in this conversation. For a first setup, ask only whether I
 want English or Korean first; continue one question at a time. For existing settings, first ask
@@ -120,39 +120,29 @@ SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계�
 
 ## 첫 설정
 
-아래 4단계 순서. Host마다 2단계, project마다 4단계 반복. Global preference 변경 시 3단계 재실행.
+먼저 실행 파일을 설치한 뒤 전역 갱신 명령 하나를 실행. project 설정은 project마다 별도 명시 작업 유지.
 
 ### 1. Hive CLI 설치
 
 위 [현재 stable 설치](#현재-stable-설치) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
-host 내부 Hive 활성화 전 단계.
+명령만 제공. 사용자 설정·host 투영·project harness 생성 없음.
 
-### 2. 이 host에 Hive 연결
+### 2. 전역 Hive 설치 초기화 또는 갱신
 
-Terminal에서 host projection 활성화:
+대화형 terminal에서 실행:
 
 ```console
-hive install --scope user --host codex --apply --output json
+hive update
 ```
 
-필요 시 `codex`를 `claude` 또는 `antigravity`로 변경. 이 작업은 authenticated known prior user
-installation을 현재 projection으로 갱신하기 전에 복구. Unknown 또는 modified ownership manifest는
-계속 거부.
+최초 npm 설치면 질문이 표시될 때 하나 이상의 host 선택. Hive가 소유한 최소 사용자 투영만 설치.
+기존 설치: 인증된 저장 호스트만 갱신·검증. 프로젝트 검사·변경 제외.
 
-### 3. Global preference 설정
+### 3. 새 전역 질문 답변
 
-Codex, Claude Code 또는 Gemini Antigravity에서 아래 공통 prompt 입력:
+선택한 호스트 열기. 새 버전의 전역 선택은 일반 작업 전에 질문. 의미 검색처럼 저장소·다운로드·향후 동작에 영향을 주는 선택의 답변 확인 목적. `yes`·`no` 모두 유효한 답. 취소·무응답은 일반 Hive 작업 대기 유지.
 
-```text
-Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
-```
-
-최초 설정·기본값 변경용 prompt. User-scope language·Wiki·persona·Skill·update preference만
-설정; 현재 folder inspection·project harness 생성 없음.
-
-모든 built-in Skill: 기본 활성화. 더 작은 구성이 필요하면 setup 중 Skill을 하나씩 선택. `user-setup`은
-항상 활성 상태 유지. Profile·persona·selected host는 활성 Skill set 변경 없음. Earlier recommended
-suite 설정: 새 preview 검토·승인 전 기존 Skill set 유지.
+마지막 답 뒤 Hive가 전역 사용자 투영을 자동 재적용·검증. `hive install` 또는 별도 setup 명령 직접 실행 불필요.
 
 ### 4. Project 한 개 설정
 
@@ -180,10 +170,9 @@ project inspection·change 전 별도 확인.
 hive update
 ```
 
-즉시 version 확인. 새 version이 있으면 exact update 내용을 설명하고 authenticated
-install owner를 실행하기 전에 질문. 거절·stdin 종료·noninteractive 실행에서는 설치
-mutation 0건.
-기존 설치의 소유권 증거 유지. 같은 확인 절차로 exact stable `0.10.1` 갱신 가능.
+즉시 version 확인과 Hive 소유 전역 사용자 파일 수렴 수행. 실행 파일이 최신이어도 불완전한 사용자
+설치를 복구. 새 version이면 exact update 내용을 설명하고 authenticated install owner 실행 전 질문.
+거절·stdin 종료·noninteractive 실행에서는 설치 mutation 0건. 최초 초기화에는 대화형 host 선택 필요.
 
 Daily check: 마지막 성공 확인부터 24시간 throttle. Offline·failed check는 성공
 기록 제외; 다음 Codex·Claude Code·Antigravity session에서 재시도.

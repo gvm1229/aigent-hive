@@ -853,6 +853,7 @@ fn compile_selected(
         names.insert(entry.name.clone());
         let source = localized_skill_source(&entry.name, source, language)?;
         files.insert(skill_path(host, &entry.name), source.clone());
+        add_skill_resources(&mut files, host, &entry.name);
         if matches!(host, Host::Codex | Host::Antigravity) {
             let metadata = embedded_skill_metadata(&entry.name).ok_or_else(|| {
                 ProjectionError::new(
@@ -1264,13 +1265,13 @@ fn localized_skill_text(
         ),
         "judge-evidence" => (
             "Judge evidence",
-            "Verify a work package and its signed attestations.",
+            "Validate a clean-context work package and signed Judge attestations.",
             "Judge 증거 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
         ),
         "adversarial-judge" => (
             "Adversarial Judge",
-            "Prepare an explicit clean-context request for an independent host-owned Judge.",
+            "Prepare an explicit independent clean-context Judge request.",
             "반대 검토 Judge",
             "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
         ),
@@ -1364,6 +1365,46 @@ fn localized_skill_text(
         DescriptorLanguage::En => (en_name, en_description),
         DescriptorLanguage::Ko => (ko_name, ko_description),
     })
+}
+
+fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: &str) {
+    if name == "user-setup" {
+        for (relative, bytes) in user_setup_resources() {
+            files.insert(
+                format!("{}/user-setup/{relative}", host.skill_root()),
+                bytes.to_vec(),
+            );
+        }
+    }
+}
+
+fn user_setup_resources() -> [(&'static str, &'static [u8]); 6] {
+    [
+        (
+            "references/workflow.md",
+            include_bytes!("../../../harness/skills/user-setup/references/workflow.md"),
+        ),
+        (
+            "references/questions.md",
+            include_bytes!("../../../harness/skills/user-setup/references/questions.md"),
+        ),
+        (
+            "references/reconfiguration.md",
+            include_bytes!("../../../harness/skills/user-setup/references/reconfiguration.md"),
+        ),
+        (
+            "references/recovery.md",
+            include_bytes!("../../../harness/skills/user-setup/references/recovery.md"),
+        ),
+        (
+            "references/language.md",
+            include_bytes!("../../../harness/skills/user-setup/references/language.md"),
+        ),
+        (
+            "scripts/resolve-hive.ps1",
+            include_bytes!("../../../harness/skills/user-setup/scripts/resolve-hive.ps1"),
+        ),
+    ]
 }
 
 fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
@@ -1690,14 +1731,8 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     } else {
         resolve_non_plain_route(request, fallback_action)?
     };
-    if should_automatically_refine(request, &resolved) {
-        return resolve_hive_skill(
-            request,
-            "prompt-refine",
-            LogicalAction::RefinePrompt,
-            Route::HiveSkill,
-        );
-    }
+    // Ambiguity does not replace an authorized work request with prompt authoring.
+    resolved.refine_suggestion = should_suggest_refinement(request, &resolved);
     if request.workflow_override == Some(WorkflowOverride::SimpleContinuation) {
         resolved.workflow_route = Some(WorkflowRoute::Simple);
     }
@@ -1705,7 +1740,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     Ok(resolved)
 }
 
-fn should_automatically_refine(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
+fn should_suggest_refinement(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
     matches!(
         request.prompt_quality,
         PromptQuality::Ambiguous | PromptQuality::MissingCoreDetails
@@ -2607,7 +2642,7 @@ mod tests {
     }
 
     #[test]
-    fn ambiguous_host_native_work_automatically_loads_refine_only() {
+    fn ambiguous_host_native_work_preserves_execution_without_loading_refinement() {
         let mut request = routing_request();
         request.explicit_action = None;
         request.prompt_quality = PromptQuality::Ambiguous;
@@ -2615,12 +2650,12 @@ mod tests {
 
         let resolved = resolve_route(&request).expect("routing succeeds");
 
-        assert_eq!(resolved.route, Route::HiveSkill);
-        assert_eq!(resolved.logical_action, LogicalAction::RefinePrompt);
-        assert!(!resolved.refine_suggestion);
-        assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
-        assert_eq!(resolved.load_skill_bodies, ["prompt-refine"]);
-        assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
+        assert_eq!(resolved.route, Route::HostNative);
+        assert_eq!(resolved.logical_action, LogicalAction::RunWork);
+        assert!(resolved.refine_suggestion);
+        assert!(resolved.selected_skill.is_none());
+        assert!(resolved.load_skill_bodies.is_empty());
+        assert!(resolved.mode.is_none());
     }
 
     #[test]
@@ -2909,6 +2944,12 @@ description: Inspect one local file without changing it.
         let expected_files = BTreeSet::from([
             ".agents/skills/user-setup/SKILL.md",
             ".agents/skills/user-setup/agents/openai.yaml",
+            ".agents/skills/user-setup/references/workflow.md",
+            ".agents/skills/user-setup/references/questions.md",
+            ".agents/skills/user-setup/references/reconfiguration.md",
+            ".agents/skills/user-setup/references/recovery.md",
+            ".agents/skills/user-setup/references/language.md",
+            ".agents/skills/user-setup/scripts/resolve-hive.ps1",
             ".agents/skills/product-update/SKILL.md",
             ".agents/skills/product-update/agents/openai.yaml",
             ".agents/skills/usage-guard/SKILL.md",
@@ -2949,6 +2990,21 @@ description: Inspect one local file without changing it.
                 expected_implicit,
                 "{name} user metadata policy"
             );
+        }
+    }
+
+    #[test]
+    fn setup_router_resources_are_complete_for_each_host() {
+        let selected = vec!["user-setup".to_owned()];
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            let projection = compile_user_projection(host, &selected, &[]).expect("projection");
+            for (relative, source) in user_setup_resources() {
+                let path = format!("{}/user-setup/{relative}", host.skill_root());
+                assert_eq!(projection.files.get(&path).map(Vec::as_slice), Some(source));
+            }
+            let other = compile_user_projection(host, &["quick-answer".to_owned()], &[])
+                .expect("unrelated skill");
+            assert!(!other.files.keys().any(|path| path.contains("/user-setup/")));
         }
     }
 

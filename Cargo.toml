@@ -14,13 +14,13 @@ resolver = "2"
 process-wrap = { path = "vendor/process-wrap-9.1.0" }
 
 [workspace.package]
-version = "0.10.1"
+version = "0.10.2"
 edition = "2021"
 repository = "https://github.com/gvm1229/aigent-hive"
 license = "Apache-2.0"
 
 [workspace.metadata.hive]
-release-date = "2026-08-28"
+release-date = "2026-09-07"
 
 [workspace.dependencies]
 cap-fs-ext = "=4.0.2"

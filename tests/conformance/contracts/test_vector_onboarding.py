@@ -129,7 +129,12 @@ class VectorOnboardingContract(Phase1CliTestCase):
         for path in paths[1:]:
             with self.subTest(path=path):
                 self.assertEqual(path.read_bytes(), source)
-        text = source.decode("utf-8")
+        relative = "references/workflow.md"
+        reference = paths[0].parent / relative
+        self.assertIn(relative, source.decode("utf-8"))
+        for path in paths[1:]:
+            self.assertEqual((path.parent / relative).read_bytes(), reference.read_bytes())
+        text = reference.read_text(encoding="utf-8")
         for required in (
             "hive setup feature claim --id vector-search",
             "question_required",

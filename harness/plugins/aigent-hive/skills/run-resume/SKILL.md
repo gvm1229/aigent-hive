@@ -1,11 +1,14 @@
 ---
 name: run-resume
-description: (run-resume) Read and validate a durable Hive run through the signed Hive CLI and prepare bounded manual recovery or one-role usage-guarded automatic dispatch data. Automatic mode may update only Hive-owned, Git-ignored `.hive/runtime/` usage history and authorization claims. Use when resuming a specific `.hive/runs/RUN_ID/` after compaction, handoff, or a new session; do not use for simple questions, plan creation, runtime spawning, or persistent execution loops.
+description: (run-resume) Load and validate an existing Hive run when resuming after interruption, handoff, or a new session.
 ---
 
 # Hive Run Resume
 
-Recover provider-neutral state only. This Skill never starts work or launches the pinned owner. It preserves host-native v0.9 owners, explicitly selected external compatibility owners, and legacy 0.8.x OMX/OMC owners without migration.
+Recover provider-neutral state only. The host owns execution after recovery. When the user has
+already requested continuation, return validated recovery data to that authorized workflow in
+the same task; finishing this Skill is not permission to end the user's unfinished task.
+Preserve existing owner pins, including legacy 0.8.x external owners, without migration.
 
 ## Workflow
 

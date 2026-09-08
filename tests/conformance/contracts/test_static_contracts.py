@@ -227,7 +227,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("automatically load installed `aigent-hive:prompt-refine`", behavior.lower())
+        self.assertIn("Use `prompt-refine` for explicit prompt-authoring requests", behavior)
+        self.assertNotIn("Automatically load installed `aigent-hive:prompt-refine`", behavior)
         self.assertIn("Source Wiki lookup", behavior)
         self.assertIn("hive source-wiki query --target", agents)
         self.assertIn("session-bound `hive usage enforce`", agents)
@@ -325,6 +326,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_global_setup_contract_uses_describe_progress_and_conditional_integrations(self) -> None:
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        skill += "\n".join(path.read_text(encoding="utf-8") for path in
+                           sorted((SKILLS / "user-setup/references").glob("*.md")))
         for required in (
             "hive setup --scope user --describe --output json",
             "Get-Command hive",
@@ -370,7 +373,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
             encoding="utf-8"
         )
-        user_setup_skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        user_setup_skill = (SKILLS / "user-setup/references/workflow.md").read_text(encoding="utf-8")
         project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
             encoding="utf-8"
         )

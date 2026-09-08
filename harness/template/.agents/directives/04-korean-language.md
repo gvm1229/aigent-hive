@@ -28,7 +28,7 @@ or explicit Korean rewriting task.
 - `verbatim`: inspect only. Do not rewrite.
 
 Codex uses this instruction and final self-review because no verified final-response replacement
-hook is available. Claude may use a consented bounded `Stop` validation retry. Antigravity may use
+hook is available. Claude `Stop` hooks are diagnostic-only and return neutral allow without retry or re-invocation. Antigravity may use
 a consented bounded `AfterAgent` validation retry when fresh capability evidence supports it.
 Unsupported host events remain instruction-only and must not be described as active hooks.
 

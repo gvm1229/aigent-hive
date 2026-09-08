@@ -46,6 +46,10 @@ The manifest is ignored runtime coordination state, never canonical project memo
 1. Read every manifest not marked `done` or `complete`.
 2. Compare exact paths and ancestor/descendant scopes.
 3. Stop before an overlapping automated write from another live session.
+   A saved `active` label or old date alone does not prove liveness. Inspect available host/session
+   evidence first. If a session is verified ended, retain its work and close only its stale path
+   reservation; this does not mark its product criteria complete. If liveness is ambiguous, pause
+   overlapping writes only and continue independent work. Ask only when the evidence cannot be resolved.
 4. Update this session's reservation before adding a path.
 5. Assign each edited path to exactly one commit concern.
 6. Serialize a shared foundational file; do not let agents edit it concurrently.

@@ -115,16 +115,16 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertIsNone(decision["selected_skill"])
         self.assertEqual(decision["load_skill_bodies"], [])
 
-    def test_ambiguous_work_automatically_selects_refine_only(self) -> None:
+    def test_ambiguous_work_preserves_host_execution(self) -> None:
         process, result = self.invoke_route("ambiguous-work.json")
         self.assertEqual(process.returncode, 0, process.stderr)
         decision = self.decision(result)
-        self.assertEqual(decision["route"], "hive-skill")
-        self.assertEqual(decision["logical_action"], "RefinePrompt")
-        self.assertFalse(decision.get("refine_suggestion", False))
-        self.assertEqual(decision["selected_skill"], "prompt-refine")
-        self.assertEqual(decision["load_skill_bodies"], ["prompt-refine"])
-        self.assertEqual(decision["mode"], "refine-only")
+        self.assertEqual(decision["route"], "host-native")
+        self.assertEqual(decision["logical_action"], "RunWork")
+        self.assertTrue(decision.get("refine_suggestion", False))
+        self.assertIsNone(decision["selected_skill"])
+        self.assertEqual(decision["load_skill_bodies"], [])
+        self.assertIsNone(decision["mode"])
 
     def test_prompt_refine_defaults_to_refine_only(self) -> None:
         process, result = self.invoke_route("prompt-refine.json")
