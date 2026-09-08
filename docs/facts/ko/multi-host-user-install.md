@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:024500782daa35d5ab3a6df26a443bf0e4c0653a2a2c19caaa2f1b2a7836cdb6"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:6d2138ea9d68803f4447e7295cc08fcf5b548c23df8b2d1e5826c0aa46bff668"
   - "repo:docs/archive/plans/foundations/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
-  - "repo:docs/hive-install-guide.ko.html#sha256:2842f53246990fb13ab5f46a3185767a4d2915cad222fb38a5ecd4b435b2e449"
+  - "repo:docs/hive-install-guide.ko.html#sha256:68e0f9863649ef6c045e3de6d946be686fc64edd5772e825a090b41472935d91"
 links: [global-onboarding, supported-hosts]
 reviewed_revision: "git:f91816a46d44d57929cb0b580ca32ff4caa95053"
 status: active

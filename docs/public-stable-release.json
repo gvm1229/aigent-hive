@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stable_version": "0.10.1",
-  "release_date": "2026-09-06",
-  "previous_stable_version": "0.10.0",
-  "release_notes": "docs/releases/0.10.1.md",
+  "stable_version": "0.10.2",
+  "release_date": "2026-09-07",
+  "previous_stable_version": "0.10.1",
+  "release_notes": "docs/releases/0.10.2.md",
   "public_surfaces": [
     "README.md",
     "docs/readme/README.ko.md",
@@ -12,35 +12,40 @@
     "docs/01-index.md"
   ],
   "coverage": {
-    "COMPAT101-01": {
+    "UPD102-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
     },
-    "COMPAT101-02": {
+    "UPD102-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
     },
-    "COMPAT101-03": {
+    "INS102-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
     },
-    "MIG101-01": {
+    "INS102-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
     },
-    "MIG101-02": {
+    "COMPAT102-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
     },
-    "USE101-01": {
+    "COMPAT102-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0101"
+      "anchor": "what-changed-in-0102"
+    },
+    "COMPAT102-03": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0102"
     }
   }
 }
