@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product_version": "0.10.2",
-  "accepted_package_version": "0.10.2-test.1",
-  "accepted_source_commit": "05526842f10d288feb19a5da8db363d0bfe0ab59",
-  "product_tree_sha256": "sha256:fb7eab520803250ac4989c89617703f7bb3acab541536ebcbee9a6e67e7950a2"
+  "accepted_package_version": "0.10.2-test.2",
+  "accepted_source_commit": "cfc0988cab0c599e4d347e1c6d72aab0851846ab",
+  "product_tree_sha256": "sha256:9cc1a609990d6dd5cfc04620a9feb29302becec13c73af92e5613e1d408896fe"
 }
