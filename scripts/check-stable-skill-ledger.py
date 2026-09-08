@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,41 @@ def published_versions(npm_payload: Any, github_payload: Any) -> set[str]:
     return {version for version in versions if version_key(version) >= (0, 8, 0)}
 
 
+def current_skill_snapshot(historical_path: Path) -> list[dict[str, Any]]:
+    skills_root = historical_path.parent
+    catalog = yaml.safe_load((skills_root / "catalog.yml").read_text(encoding="utf-8"))
+    entries = catalog.get("skills") if isinstance(catalog, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError("current Skill catalog is malformed")
+    snapshot: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("availability") != "implemented":
+            continue
+        name = entry.get("name")
+        side_effect = entry.get("side_effect_class")
+        capabilities = entry.get("capabilities")
+        if (
+            not isinstance(name, str)
+            or not isinstance(side_effect, str)
+            or not isinstance(capabilities, list)
+            or not all(isinstance(item, str) for item in capabilities)
+        ):
+            raise ValueError("current Skill catalog entry is malformed")
+        skill_path = skills_root / name / "SKILL.md"
+        digest = hashlib.sha256(skill_path.read_bytes()).hexdigest()
+        snapshot.append(
+            {
+                "name": name,
+                "content_digest": f"sha256:{digest}",
+                "side_effect_class": side_effect,
+                "capabilities": capabilities,
+            }
+        )
+    if not snapshot:
+        raise ValueError("current Skill snapshot is empty")
+    return snapshot
+
+
 def verify(
     ledger_path: Path,
     historical_path: Path,
@@ -66,6 +102,7 @@ def verify(
         for release in historical_releases
         if isinstance(release, dict) and isinstance(release.get("version"), str)
     }
+    current_skills = current_skill_snapshot(historical_path)
 
     versions: list[str] = []
     for entry in entries:
@@ -82,12 +119,23 @@ def verify(
             raise ValueError("stable Skill ledger versions must be strings")
         if proof not in {"changed", "no-change"}:
             raise ValueError("stable Skill transition proof is invalid")
-        if version not in historical_by_version or epoch not in historical_by_version:
+        known_versions = set(historical_by_version) | {target_version}
+        if version not in known_versions or epoch not in known_versions:
             raise ValueError("stable Skill ledger references an unknown historical release")
         if proof == "changed" and epoch != version:
             raise ValueError("changed stable release must start its own compatibility epoch")
         if proof == "no-change":
-            if historical_by_version[version].get("skills") != historical_by_version[epoch].get("skills"):
+            version_skills = (
+                current_skills
+                if version == target_version and version not in historical_by_version
+                else historical_by_version[version].get("skills")
+            )
+            epoch_skills = (
+                current_skills
+                if epoch == target_version and epoch not in historical_by_version
+                else historical_by_version[epoch].get("skills")
+            )
+            if version_skills != epoch_skills:
                 raise ValueError("no-change epoch has different Skill bytes")
         versions.append(version)
     if versions != sorted(set(versions), key=version_key):

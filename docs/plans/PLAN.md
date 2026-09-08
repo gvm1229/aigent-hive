@@ -1,11 +1,12 @@
 # Aigent Hive 활성 계획
 
-> Revision: 323
+> Revision: 327
 > 기준일: 2026-09-08
 > Product version: `0.10.2`
 > Stable baseline: `0.10.1`
 > 첫 공개 시험: `0.10.2-test.1`
-> 현재 단계: `0.10.2-test.1` 수용과 stable 문구 승인 완료, `main` 승격·게시 준비
+> 다음 공개 시험: `0.10.2-test.3`
+> 현재 단계: `0.10.2-test.3` 세 운영체제 공개 수용 완료, Stable 통합 준비
 > 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
 
 ## 목표

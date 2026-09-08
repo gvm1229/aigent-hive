@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product_version": "0.10.2",
-  "package_version": "0.10.2-test.1",
+  "package_version": "0.10.2-test.3",
   "plan_ids": [
     "GUU102-001",
     "GUU102-002",
@@ -14,5 +14,5 @@
     "GUU102-009",
     "GUU102-010"
   ],
-  "product_tree_sha256": "sha256:fb7eab520803250ac4989c89617703f7bb3acab541536ebcbee9a6e67e7950a2"
+  "product_tree_sha256": "sha256:468b576252174cc9082ccf2513b272a73b4040e46bce8193179a6e8943b0cafc"
 }
