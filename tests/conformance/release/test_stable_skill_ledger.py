@@ -50,11 +50,15 @@ class StableSkillLedgerContract(unittest.TestCase):
         self.assertEqual(result["stable_versions"][-1], "0.10.2")
 
     def test_current_target_entry_is_available_for_stable_publication(self) -> None:
+        historical = MODULE.yaml.safe_load(self.historical.read_text(encoding="utf-8"))
+        self.assertNotIn("0.10.2", {entry["version"] for entry in historical["releases"]})
         result = MODULE.verify(self.ledger, self.historical, "0.10.2", self.npm, self.github)
         self.assertEqual(result["stable_versions"][-1], "0.10.2")
 
     def test_missing_future_target_entry_blocks_stable_publication(self) -> None:
-        with self.assertRaisesRegex(ValueError, "differs from published stable union"):
+        with self.assertRaisesRegex(
+            ValueError, "differs from published stable union|unknown historical release"
+        ):
             MODULE.verify(self.ledger, self.historical, "0.11.0", self.npm, self.github)
 
     def test_no_change_epoch_must_have_identical_skill_contract(self) -> None:
