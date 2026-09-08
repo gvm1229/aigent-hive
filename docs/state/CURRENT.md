@@ -2,9 +2,9 @@
 
 - 작업 branch: `develop`; stable source branch: `main`
 - 제품 버전: `0.10.2`
-- 현재 공개 stable: `0.10.1`
+- 현재 공개 stable: `0.10.2`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
-- 출시 상태: `0.10.2-test.3` 세 운영체제 공개 수용 완료, Stable 통합 준비
+- 출시 상태: Stable `0.10.2` 공개·독립 검증 완료
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
 - 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
@@ -32,5 +32,7 @@
 - `GUU102-*` 10건과 로컬 출시 검증 `REL102-001–002` 완료
 - `REL102-003–006`은 `0.10.2-test.3` 후보·게시·세 운영체제 공개 수용과 source·제품 digest 결합 완료
 - `REL102-007` stable 문서·구독자 안내 digest 승인 완료
-- `REL102-008–009` `main` 승격·stable 게시·독립 확인 진행 중
+- `REL102-008–009` 완료: PR `#54`의 `main` 통합, 후보 `34190329196`, 최종 게시 `34200601474`
+- npm 여섯 package의 `0.10.2`·`latest`·무결성 값과 GitHub 정식 Release·annotated tag·공개 자산 독립 확인 완료
+- 남은 `agent-owned|awaiting-user-authority|awaiting-external-evidence|blocked` 항목: 각 `0건`
 - 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)
