@@ -2,17 +2,17 @@
 
 > Checklist owner: `REL102-*`
 > 첫 공개 시험: `0.10.2-test.1`
-> 다음 공개 시험: `0.10.2-test.2`
+> 다음 공개 시험: `0.10.2-test.3`
 > Stable baseline: `0.10.1`
 
 ## Checklist
 
 - [x] [REL102-001] version·migration·release metadata와 product-byte gate 정합화
 - [x] [REL102-002] Rust workspace·strict Clippy·Python·문서·보안·rollback 검사
-- [x] [REL102-003] Candidate와 최신 번호 공개 시험 게시, npm `test`·GitHub prerelease 독립 확인
-- [x] [REL102-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 신규 설치·`0.9.5` 갱신 수용
-- [x] [REL102-005] source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
-- [x] [REL102-006] accepted public test를 source·product digest·세 host 영수증에 결합
+- [ ] [REL102-003] Candidate와 최신 번호 공개 시험 게시, npm `test`·GitHub prerelease 독립 확인
+- [ ] [REL102-004] Windows x64·macOS arm64·Linux musl x64 공개 artifact 신규 설치·`0.9.5` 갱신 수용
+- [ ] [REL102-005] source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
+- [ ] [REL102-006] accepted public test를 source·product digest·세 host 영수증에 결합
 - [x] [REL102-007] `0.10.2` stable 문서·구독자 요약·승인 digest 정합화
 - [ ] [REL102-008] `develop → main` 통합과 stable publication
 - [ ] [REL102-009] npm `latest=0.10.2`·GitHub stable Release·독립 확인
@@ -33,3 +33,4 @@
 - `test.1` 수용 뒤 Stable Skill 이력 제품 바이트 보완으로 제품 digest 변경, `test.2` 재수용 필요
 - `test.2` 후보 `34185228729`, 게시 `34185931583`, 수용 `34186318745`
 - `test.2` source `cfc0988cab0c599e4d347e1c6d72aab0851846ab`, 제품 digest `sha256:9cc1a609990d6dd5cfc04620a9feb29302becec13c73af92e5613e1d408896fe`
+- `test.2` 수용 뒤 historical runtime 범위 보정으로 제품 digest 변경, `test.3` 재수용 필요
