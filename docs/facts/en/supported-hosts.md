@@ -9,7 +9,7 @@ summary: "Hive has adapters for Codex, Claude Code, and Gemini Antigravity."
 tags: [host, support]
 aliases: ["Host support"]
 sources:
-  - "repo:docs/overview/product.md#sha256:c2bc2c981429391869012156f8df0b1f7a5081d4bd66b5bd6bae8b890587171e"
+  - "repo:docs/overview/product.md#sha256:91f150bf5db0ed3e0bb61d2293ca8c792a05f281df2556713b1d3ed1a0ad921b"
 links: [product-purpose, usage-sensor-policy]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
