@@ -2,8 +2,8 @@
 
 > Checklist owner: `REL102-*`
 > 첫 공개 시험: `0.10.2-test.1`
-> 다음 공개 시험: `0.10.2-test.3`
-> Stable baseline: `0.10.1`
+> 수용 공개 시험: `0.10.2-test.3`
+> 공개 Stable: `0.10.2`
 
 ## Checklist
 
@@ -14,8 +14,8 @@
 - [x] [REL102-005] source·artifact digest·실행 host·통과·건너뜀·미증명 범위 기록
 - [x] [REL102-006] accepted public test를 source·product digest·세 host 영수증에 결합
 - [x] [REL102-007] `0.10.2` stable 문서·구독자 요약·승인 digest 정합화
-- [ ] [REL102-008] `develop → main` 통합과 stable publication
-- [ ] [REL102-009] npm `latest=0.10.2`·GitHub stable Release·독립 확인
+- [x] [REL102-008] `develop → main` 통합과 stable publication
+- [x] [REL102-009] npm `latest=0.10.2`·GitHub stable Release·독립 확인
 
 ## 출시 경계
 
@@ -39,3 +39,8 @@
 - Windows x64·macOS arm64·Linux musl x64 공개 package 설치와 전역 갱신·질문 차단·재개·rollback 수용 성공
 - 세 host 영수증 artifact: `korean-public-test-win32-x64`, `korean-public-test-darwin-arm64`, `korean-public-test-linux-x64`
 - Linux와 Windows의 SQLite-capable Python 선택 단계: 조건 불충족에 따른 건너뜀. 각 host의 공개 binary 선택 vector 수용 단계: 성공. 실제 사용자 루트와 등록 프로젝트 설치: 미실행
+- Stable 통합 PR `#54`, merge commit `059973ee8c71d396170bc4e41c6c7caa38127c`
+- Stable 후보 `34190329196`, npm 첫 게시 `34199520577`, staged package 복구 확인 `34200229980`, 최종 복구 게시 `34200601474`
+- npm 여섯 package: `0.10.2`, 각 `latest=0.10.2`, 각 `dist.integrity` 존재
+- GitHub Release `v0.10.2`: 정식판, target `059973ee8c71d396170bc4e41c6c7caa38127c`, binary·npm·installer·attestation·integrity receipt 자산 공개
+- annotated tag `v0.10.2`: Stable merge commit 지시 확인
