@@ -20,7 +20,7 @@ repository = "https://github.com/gvm1229/aigent-hive"
 license = "Apache-2.0"
 
 [workspace.metadata.hive]
-release-date = "2026-09-07"
+release-date = "2026-09-10"
 
 [workspace.dependencies]
 cap-fs-ext = "=4.0.2"
