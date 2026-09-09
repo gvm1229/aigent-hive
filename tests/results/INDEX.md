@@ -364,3 +364,5 @@
 | [failed](runs/20260909T200459-e4dd7ea1806a.md) | 0.10.3 Hive update 회귀 조사 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260909T201105-5f56d8f541ad.md) | 0.10.3 update fixture 재검증 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260909T201210-546632a0f566.md) | 0.10.3 update baseline 재검증 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260909T201255-4029115302c9.md) | 0.10.3 전체 Rust 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260909T201420-a60b82f5efb1.md) | 0.10.3 전체 Python 적합성 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |

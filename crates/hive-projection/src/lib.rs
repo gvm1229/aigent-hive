@@ -613,9 +613,9 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 16] = [
+    const SUPPORTED: [&str; 17] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
-        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1",
+        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -3290,6 +3290,7 @@ description: Inspect one local file without changing it.
             ("0.9.5", 25),
             ("0.10.0", 28),
             ("0.10.1", 28),
+            ("0.10.2", 28),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");
