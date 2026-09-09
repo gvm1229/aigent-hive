@@ -5,8 +5,8 @@
 *.ps1 text eol=crlf
 
 # Frozen release evidence must retain the exact tagged bytes on every host.
-harness/project-bases/** -text
-harness/user-bases/** -text
+harness/project-bases/0.10.2/** -text
+harness/user-bases/0.10.2/** -text
 
 *.png binary
 *.jpg binary
