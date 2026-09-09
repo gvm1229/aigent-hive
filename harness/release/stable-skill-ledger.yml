@@ -10,3 +10,4 @@ stable_releases:
   - { version: 0.10.0, compatibility_epoch: 0.10.0, transition_proof: changed }
   - { version: 0.10.1, compatibility_epoch: 0.10.1, transition_proof: changed }
   - { version: 0.10.2, compatibility_epoch: 0.10.2, transition_proof: changed }
+  - { version: 0.10.3, compatibility_epoch: 0.10.3, transition_proof: changed }
