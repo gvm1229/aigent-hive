@@ -635,10 +635,22 @@ pub fn observe_surface_delta(
             "compiled migration-inert retirement list is not sorted and unique".to_owned(),
         ));
     }
+    let latest_stable: SurfaceInventory = serde_json::from_str(include_str!(
+        "../../../harness/release/0.10.2/release-surface-inventory.json"
+    ))
+    .map_err(|error| {
+        UpdateError::Internal(format!(
+            "compiled latest stable surface inventory is invalid: {error}"
+        ))
+    })?;
     let baseline = registry
         .releases
         .iter()
         .find(|inventory| inventory.product_version == baseline_version.to_string())
+        .or_else(|| {
+            (latest_stable.product_version == baseline_version.to_string())
+                .then_some(&latest_stable)
+        })
         .ok_or_else(|| {
             UpdateError::Unsupported(format!(
                 "no compiled public-surface baseline exists for {baseline_version}"
