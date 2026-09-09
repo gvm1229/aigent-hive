@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "docs/public-test-product.json"
+STABLE_REGISTRY = ROOT / "docs/public-stable-release.json"
 INTENT = ROOT / "docs/test-release-intent.json"
 STABLE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 PLAN_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -93,6 +94,17 @@ def read_registry() -> dict[str, object]:
     return value
 
 
+def read_stable_version() -> str:
+    try:
+        value = json.loads(STABLE_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GateError("public stable registry is unavailable") from error
+    version = value.get("stable_version")
+    if not isinstance(version, str) or STABLE.fullmatch(version) is None:
+        raise GateError("public stable registry version is invalid")
+    return version
+
+
 def read_intent(product_version: str, package_version: str) -> tuple[str, str]:
     try:
         value = json.loads(INTENT.read_text(encoding="utf-8"))
@@ -128,11 +140,12 @@ def verify(product_version: str, package_version: str, plan_ids: str | None, hea
     if missing:
         raise GateError("product change plan IDs are absent or incomplete: " + ",".join(missing))
     registry = read_registry()
+    stable_version = read_stable_version()
+    if version_key(product_version) <= version_key(stable_version):
+        raise GateError("candidate product version must be newer than the public stable version")
     accepted_product_version = registry["product_version"]
-    if not isinstance(accepted_product_version, str) or version_key(product_version) <= version_key(accepted_product_version):
-        raise GateError(
-            "candidate product version must be newer than the accepted stable baseline"
-        )
+    if not isinstance(accepted_product_version, str) or version_key(product_version) < version_key(accepted_product_version):
+        raise GateError("candidate product version is older than the accepted public-test baseline")
     base = str(registry["accepted_source_commit"])
     prior_digest = product_digest(base)
     if prior_digest != registry["product_tree_sha256"]:
