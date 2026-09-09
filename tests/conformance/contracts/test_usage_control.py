@@ -424,6 +424,79 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         )
         self.assertFalse((source / ".hive").exists())
 
+    def test_source_rechecks_and_removes_a_legacy_halt_in_user_runtime(self) -> None:
+        user_root = self.work_root / "source-recovery-user"
+        user_config = user_root / ".hive/config"
+        user_config.mkdir(parents=True, exist_ok=True)
+        (user_config / "user-setup.yml").write_text(
+            USER_CONFIG.replace("codexbar_fallback_enabled: false", "codexbar_fallback_enabled: true"),
+            encoding="utf-8",
+        )
+        source = self.work_root / "source-recovery"
+        source.mkdir()
+        (source / "hive-source.json").write_text("{}\n", encoding="utf-8")
+        session_id = "source-legacy-session"
+        session_digest = hashlib.sha256(
+            b"codex" + bytes([0]) + session_id.encode()
+        ).hexdigest()
+        target_scope = hashlib.sha256(str(source).encode()).hexdigest()
+        marker = (
+            user_root
+            / ".hive/runtime/usage-guard/targets"
+            / target_scope
+            / "sessions"
+            / session_digest
+            / "halt.json"
+        )
+        marker.parent.mkdir(parents=True)
+        marker.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "host_scope": "codex",
+                    "session_id_digest": f"sha256:{session_digest}",
+                    "process_id": 901,
+                    "decision": "halted",
+                    "selected_window": "weekly",
+                    "threshold_remaining_percent": 20,
+                    "measured_at": 1_750_000_000,
+                    "evidence_digest": "sha256:" + "a" * 64,
+                    "revision": 1,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        process, result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(source),
+            "--host",
+            "codex",
+            "--session-id",
+            session_id,
+            "--process-id",
+            "902",
+            "--user-root",
+            str(user_root),
+            sensor_case="allow",
+        )
+        self.assert_result(
+            process,
+            result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertEqual(result["data"]["recheck_reason"], "legacy-format")
+        self.assertFalse(marker.exists())
+        self.assertFalse((source / ".hive").exists())
+
     def test_threshold_rejects_invalid_primary_host_without_mutation(self) -> None:
         config = self.consumer / ".hive/config/harness.toml"
         invalid = HARNESS_CONFIG.replace(
