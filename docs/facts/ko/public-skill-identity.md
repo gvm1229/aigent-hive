@@ -9,7 +9,7 @@ summary: "28개 제품 Skill과 직접 이름 이관, 지식 스캔·이전 역�
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:69f96abcee52980e03fe542e335a02181e2f03b42218bdaa12b8acc6213dee51"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:c80df9705880a64e92a2af923ac394fccbdbd19385b4edd8fecfbf7f8c0dce67"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
   - "repo:docs/skills.md#sha256:b1d168024659e23bc1fee30c46e2b628e607522b9b0da2f59229a277eff2a702"
   - "repo:harness/skills/catalog.yml#sha256:5949525e029f37e08f5ef49302f698be45674b94959f4f5aa301d7138c4e1570"
