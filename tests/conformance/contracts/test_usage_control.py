@@ -1242,11 +1242,30 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             )
             + "\n"
         ).encode()
-        for payload in (
-            b"{not-json\n",
-            b"x" * (16 * 1024 + 1),
-            invalid_evidence,
-        ):
+        marker.write_bytes(b"{not-json\n")
+        recovered, recovered_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            session_id,
+            "--process-id",
+            "907",
+            sensor_case="allow",
+        )
+        self.assert_result(
+            recovered,
+            recovered_result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertFalse(marker.exists())
+        self.assertEqual(recovered_result["data"]["recheck_reason"], "damaged-record")
+
+        for payload in (b"x" * (16 * 1024 + 1), invalid_evidence):
             with self.subTest(size=len(payload)):
                 marker.write_bytes(payload)
                 process, result = self.invoke(

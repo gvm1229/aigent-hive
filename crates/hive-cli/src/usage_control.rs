@@ -236,6 +236,7 @@ enum OverrideState {
     Absent,
     Current,
     Stale,
+    Damaged,
 }
 
 struct LoadedControl {
@@ -858,7 +859,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         .and_then(|marker| marker.policy_digest.as_deref())
         == Some(policy_digest.as_str());
     let halted = guard_enabled && current_halt && current_policy;
-    let recheck_required = guard_enabled && current_halt && !current_policy;
+    let recheck_required = guard_enabled
+        && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
     let mut evidence = vec![Evidence {
         kind: "file",
         locator: config.config_locator.clone(),
@@ -887,7 +889,9 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         } else {
             "hive.usage-status"
         },
-        message: if recheck_required {
+        message: if halt.state == OverrideState::Damaged {
+            "the stored usage halt is damaged; run enforce to collect current usage".to_owned()
+        } else if recheck_required {
             "the usage threshold changed; run enforce for this session without disabling the safeguard"
                 .to_owned()
         } else if halted {
@@ -2316,9 +2320,18 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
             "session halt marker exceeds the bounded runtime size".to_owned(),
         ));
     }
-    let marker: HaltMarker = serde_json::from_slice(&bytes).map_err(|error| {
-        AdapterError::Safety(format!("session halt marker is malformed: {error}"))
-    })?;
+    let marker: HaltMarker = match serde_json::from_slice(&bytes) {
+        Ok(marker) => marker,
+        Err(_) => {
+            return Ok(LoadedHalt {
+                relative,
+                snapshot,
+                bytes: Some(bytes),
+                marker: None,
+                state: OverrideState::Damaged,
+            });
+        }
+    };
     if !matches!(marker.schema_version, 1 | 2)
         || marker.host_scope != binding.host_scope
         || marker.session_id_digest != binding.session_digest
@@ -2359,7 +2372,11 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
 
 fn halt_recheck_reason(halt: &LoadedHalt, policy_digest: &str) -> &'static str {
     let Some(marker) = halt.marker.as_ref() else {
-        return "fresh-check";
+        return if halt.state == OverrideState::Damaged {
+            "damaged-record"
+        } else {
+            "fresh-check"
+        };
     };
     if marker.schema_version == 1 {
         "legacy-format"
@@ -2412,6 +2429,7 @@ const fn override_name(state: OverrideState) -> &'static str {
         OverrideState::Absent => "absent",
         OverrideState::Current => "current",
         OverrideState::Stale => "stale",
+        OverrideState::Damaged => "damaged",
     }
 }
 
