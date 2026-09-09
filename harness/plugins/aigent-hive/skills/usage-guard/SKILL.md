@@ -17,7 +17,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
-   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A halt marker takes priority only while its policy digest matches the effective policy. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions except the same-session policy recheck required immediately after a changed threshold. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
+   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. `enforce` remeasures current usage before it acts on any existing halt marker, including a marker from an earlier process or legacy format. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions except the same-session policy recheck required immediately after a changed threshold. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 4. If native sensing is unavailable or unsupported and CodexBar is missing, report the returned provider-specific notification and exact `next_action`. Do not substitute a different provider:
 
    ```text
