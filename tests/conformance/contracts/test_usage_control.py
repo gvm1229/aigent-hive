@@ -654,7 +654,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             self.assertTrue(result["data"]["guard_enabled"])
             self.assertEqual(result["data"]["halt_marker"], expected)
 
-    def test_enforce_refuses_a_process_replayed_halt_marker_without_sensor_use(
+    def test_enforce_rechecks_a_legacy_halt_from_another_process_without_bypass(
         self,
     ) -> None:
         self.write_halt(session_id="replayed-session", process_id=707)
@@ -672,9 +672,24 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log)},
         )
 
-        self.assertEqual(process.returncode, 3, process.stderr)
-        self.assertEqual(result["code"], "hive.usage-control-blocked")
-        self.assertFalse(sensor_log.exists())
+        self.assert_result(
+            process,
+            result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertTrue(sensor_log.exists())
+        self.assertFalse(
+            self.consumer
+            .joinpath(".hive/runtime/usage-guard/sessions")
+            .joinpath(
+                hashlib.sha256(b"codex" + bytes([0]) + b"replayed-session").hexdigest()
+            )
+            .joinpath("halt.json")
+            .exists()
+        )
 
     def test_enable_and_toggle_apply_only_to_the_current_binding(self) -> None:
         disabled, _ = self.invoke(
@@ -1002,7 +1017,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "multiple",
         )
 
-    def test_enforce_creates_a_latched_marker_and_repeat_skips_the_sensor(
+    def test_enforce_rechecks_a_latched_marker_and_clears_it_after_recovery(
         self,
     ) -> None:
         sensor_log = self.work_root / "sensor.log"
@@ -1038,6 +1053,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(marker["host_scope"], "codex")
         self.assertEqual(marker["process_id"], 902)
         self.assertEqual(marker["decision"], "halted")
+        self.assertEqual(marker["schema_version"], 2)
         self.assertEqual(marker["threshold_remaining_percent"], 10)
         self.assertEqual(marker["revision"], 1)
         self.assertNotIn(RAW_ACCOUNT, marker_path.read_text(encoding="utf-8"))
@@ -1051,14 +1067,15 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             repeated,
             repeated_result,
             action="CheckUsage",
-            exit_code=3,
-            status="blocked",
-            code="hive.usage-limited",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
         )
-        self.assertEqual(repeated_result["changed_paths"], [])
-        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 2)
+        self.assertEqual(repeated_result["data"]["halt_transition"], "cleared-after-recheck")
+        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 4)
+        self.assertFalse(marker_path.exists())
 
-    def test_explicit_disable_bypasses_sensor_and_enable_reapplies_latch(self) -> None:
+    def test_explicit_disable_bypasses_sensor_and_enable_rechecks_latch(self) -> None:
         latched, latched_result = self.invoke(
             "usage",
             "enforce",
@@ -1134,8 +1151,8 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "903",
             sensor_case="allow",
         )
-        self.assertEqual(blocked.returncode, 3, blocked.stderr)
-        self.assertEqual(blocked_result["code"], "hive.usage-limited")
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertEqual(blocked_result["code"], "hive.usage-allowed")
 
     def test_enforce_uses_weekly_only_as_fallback_and_supports_unique_account(
         self,

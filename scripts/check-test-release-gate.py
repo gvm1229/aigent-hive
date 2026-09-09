@@ -129,8 +129,10 @@ def verify(product_version: str, package_version: str, plan_ids: str | None, hea
         raise GateError("product change plan IDs are absent or incomplete: " + ",".join(missing))
     registry = read_registry()
     accepted_product_version = registry["product_version"]
-    if not isinstance(accepted_product_version, str) or version_key(product_version) < version_key(accepted_product_version):
-        raise GateError("candidate product version is older than the accepted public-test baseline")
+    if not isinstance(accepted_product_version, str) or version_key(product_version) <= version_key(accepted_product_version):
+        raise GateError(
+            "candidate product version must be newer than the accepted stable baseline"
+        )
     base = str(registry["accepted_source_commit"])
     prior_digest = product_digest(base)
     if prior_digest != registry["product_tree_sha256"]:

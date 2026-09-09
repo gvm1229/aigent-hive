@@ -966,20 +966,11 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         });
     }
 
+    // A halt records a past observation, not permission to reuse that observation forever.
+    // In particular, a process restart must remeasure instead of asking the user to disable the
+    // safeguard. The exact snapshot remains the compare-and-swap input for the later removal or
+    // replacement.
     let halt = load_halt(runtime, &binding)?;
-    let halt_matches_policy = halt
-        .marker
-        .as_ref()
-        .and_then(|marker| marker.policy_digest.as_deref())
-        == Some(policy_digest.as_str());
-    if halt.state == OverrideState::Current && halt_matches_policy {
-        return Ok(halted_result(&binding, &halt, false));
-    }
-    if halt.state == OverrideState::Stale {
-        return Err(AdapterError::Safety(
-            "session halt marker belongs to a different process binding".to_owned(),
-        ));
-    }
 
     let mut attempts = 0_u8;
     let observation = loop {
@@ -1013,8 +1004,12 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             .and_then(serde_json::Value::as_object_mut)
         {
             data.insert("policy_digest".to_owned(), json!(policy_digest));
+            data.insert(
+                "halt_schema_before".to_owned(),
+                json!(halt.marker.as_ref().map(|marker| marker.schema_version)),
+            );
         }
-        if halt.state == OverrideState::Current {
+        if halt.state != OverrideState::Absent {
             let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
             if load_halt(runtime, &binding)?.state != OverrideState::Absent {
                 return Err(AdapterError::Verification(
@@ -1031,6 +1026,10 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 .and_then(serde_json::Value::as_object_mut)
             {
                 data.insert("halt_transition".to_owned(), json!("cleared-after-recheck"));
+                data.insert(
+                    "recheck_reason".to_owned(),
+                    json!(halt_recheck_reason(&halt, &policy_digest)),
+                );
             }
         }
         return Ok(result);
@@ -1039,7 +1038,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let next_action = observation.next_action.clone();
     let context = read_run_notification_context(&target, arguments.run_id.as_deref())?;
     let marker = HaltMarker {
-        schema_version: 1,
+        schema_version: 2,
         host_scope: binding.host_scope.clone(),
         session_id_digest: binding.session_digest.clone(),
         process_id: binding.process_id,
@@ -1078,6 +1077,28 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         ));
     }
     let mut result = halted_result(&binding, &published, changed);
+    if let Some(data) = result
+        .data
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        data.insert(
+            "recheck_reason".to_owned(),
+            json!(halt_recheck_reason(&halt, &policy_digest)),
+        );
+        data.insert(
+            "halt_schema_before".to_owned(),
+            json!(halt.marker.as_ref().map(|marker| marker.schema_version)),
+        );
+        data.insert(
+            "halt_transition".to_owned(),
+            json!(if halt.state == OverrideState::Absent {
+                "none"
+            } else {
+                "replaced-after-recheck"
+            }),
+        );
+    }
     result.next_action = next_action;
     if changed {
         let marker = published
@@ -2298,7 +2319,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
     let marker: HaltMarker = serde_json::from_slice(&bytes).map_err(|error| {
         AdapterError::Safety(format!("session halt marker is malformed: {error}"))
     })?;
-    if marker.schema_version != 1
+    if !matches!(marker.schema_version, 1 | 2)
         || marker.host_scope != binding.host_scope
         || marker.session_id_digest != binding.session_digest
         || !is_sha256_digest(&marker.evidence_digest)
@@ -2312,6 +2333,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
             .policy_digest
             .as_deref()
             .is_some_and(|digest| !is_sha256_digest(digest))
+        || (marker.schema_version == 2 && marker.policy_digest.is_none())
         || marker
             .remaining_percent
             .is_some_and(|value| !value.is_finite() || !(0.0..=100.0).contains(&value))
@@ -2333,6 +2355,21 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         marker: Some(marker),
         state,
     })
+}
+
+fn halt_recheck_reason(halt: &LoadedHalt, policy_digest: &str) -> &'static str {
+    let Some(marker) = halt.marker.as_ref() else {
+        return "fresh-check";
+    };
+    if marker.schema_version == 1 {
+        "legacy-format"
+    } else if halt.state == OverrideState::Stale {
+        "process-changed"
+    } else if marker.policy_digest.as_deref() != Some(policy_digest) {
+        "policy-changed"
+    } else {
+        "previous-halt"
+    }
 }
 
 fn is_sha256_digest(value: &str) -> bool {
