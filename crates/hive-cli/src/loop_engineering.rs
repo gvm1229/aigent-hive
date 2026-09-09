@@ -2033,7 +2033,7 @@ fn verify_usage_session_state(
     let halt_path = root.join("halt.json");
     if let Some(bytes) = target.read_optional(&halt_path, USAGE_CONTROL_PATH_BYTES)? {
         let halt: UsageHaltMarker = parse_json(&bytes, "usage halt marker")?;
-        if halt.schema_version != 1
+        if !matches!(halt.schema_version, 1 | 2)
             || halt.revision == 0
             || halt.host_scope != config.primary_host
             || halt.session_id_digest != expected_session
@@ -2048,6 +2048,7 @@ fn verify_usage_session_state(
                 .policy_digest
                 .as_deref()
                 .is_some_and(|digest| require_digest(digest, "usage policy digest").is_err())
+            || (halt.schema_version == 2 && halt.policy_digest.is_none())
             || halt.measured_at == 0
             || require_digest(&halt.evidence_digest, "usage halt evidence digest").is_err()
         {
