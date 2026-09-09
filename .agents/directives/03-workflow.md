@@ -205,6 +205,12 @@ Match verification cost to the current boundary:
 
 ## Release Qualification Ordering
 
+- Once a stable version is public, every later product-byte change must target a newer product
+  version. The first public test for that version is `<new-version>-test.1`; never append a test
+  number to a public stable version. A user-named version takes priority; otherwise select the
+  next patch version for a bug fix. Release gates must reject a candidate whose product version is
+  not newer than the accepted stable baseline.
+
 - Treat a successful `Release candidate` workflow as a private artifact-generation result only.
   It is not a published public test. A public test exists only after the separate publication
   workflow succeeds with that exact successful candidate run ID, and independent registry and

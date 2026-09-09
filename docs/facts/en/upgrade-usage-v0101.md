@@ -28,3 +28,4 @@ status: active
 - Registry: exact project/user digests and generated published-prerelease overlay chains, including frozen `v0.10.0` release bytes.
 - Usage halt: bind the effective policy digest and recheck a changed threshold in the same session.
 - Recheck: remove the exact old halt on allow; replace it on limited or unknown; no guard disable.
+- Recovery excludes process changes and unchanged-policy halts; both remain blocked.

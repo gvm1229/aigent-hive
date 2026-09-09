@@ -1,15 +1,18 @@
 # Aigent Hive 활성 계획
 
-> Revision: 328
-> 기준일: 2026-09-08
-> Product version: `0.10.2`
+> Revision: 331
+> 기준일: 2026-09-10
+> Product version: `0.10.3`
 > 공개 Stable: `0.10.2`
 > 첫 공개 시험: `0.10.2-test.1`
 > 수용 공개 시험: `0.10.2-test.3`
-> 현재 단계: Stable `0.10.2` 공개·독립 검증 완료
+> 현재 단계: Stable `0.10.2` 공개 완료; `0.10.3` 사용량 복구 구현 진행
+> 첫 공개 시험: `0.10.3-test.1`
 > 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
 
 ## 목표
+
+- 모든 Hive 프로젝트·소스의 옛 `halt.json`을 같은 위치에서 교체·제거하는 공통 복구, 추가 영구 상태 파일 0건: `UGR103-*`
 
 - 소스·harness 지침의 승인 경계·지속성·현재 참조 개선: `INS102-*`
 
@@ -38,7 +41,8 @@
 | 전역 사용자 갱신 | 10 | 0 | 100% |
 | 지침 품질 개선 | 6 | 0 | 100% |
 | `0.10.2` 공개 시험·안정판 승격 | 9 | 0 | 100% |
-| **합계** | **25** | **0** | **100%** |
+| `0.10.3` 사용량 보호 기존 설치 복구 | 0 | 10 | 0% |
+| **합계** | **25** | **10** | **71.4%** |
 
 ## Required load order
 
@@ -53,11 +57,14 @@
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
+| [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md) | `UGR103-*` | 기존 표식 교체·모든 Hive 대상의 공통 복구 |
 | [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md) | `INS102-*` | 소스·harness 지침 품질 |
 | [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md) | `GUU102-*` | 전역 사용자 설치·질문 대기·자동 재개 |
 | [`release-0.10.2.md`](active/release-0.10.2.md) | `REL102-*` | 공개 시험·세 운영체제 수용·stable 공개 |
 
 ## 실행 순서
+
+현재 후속 작업: `usage-recovery-0.10.2.md`의 `UGR103-001–010` 순서. Stable 공개 뒤 제품 변경은 다음 patch version과 해당 version의 `-test.1`부터 다시 수용.
 
 1. `GUU102-001–004`: version·호환성·질문 catalog·전역 transaction
 2. `GUU102-005–007`: setup-required 투영·답변·자동 재개·같은 버전 복구

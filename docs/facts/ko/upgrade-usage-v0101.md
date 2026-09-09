@@ -28,3 +28,4 @@ status: active
 - 공통 등록표: project·user exact digest, 생성형 공개 시험판 overlay chain, 동결 `v0.10.0` bytes
 - Usage halt: effective policy digest 결합과 변경 threshold same-session 재검사
 - 재검사: allow 때 old halt 제거, limited·unknown 때 교체, guard disable 없음
+- 복구 범위: 같은 프로세스의 정책 변경; 다른 프로세스 표식은 안전 오류, 같은 정책 중단은 재사용
