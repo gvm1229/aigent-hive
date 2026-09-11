@@ -6,24 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.10.2-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.10.3-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.2 release-date=2026-09-07 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.3 release-date=2026-09-10 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.10.2` is the current public release.
+Stable `0.10.3` is the current public release.
 
 ## Install the current stable release
 
-`0.10.2` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.10.3` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.10.2
+npm install -g aigent-hive@0.10.3
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.10.2 (released 2026-09-07)
+AIgent Hive v0.10.3 (released 2026-09-10)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.10.2/install.sh | sh
+  https://unpkg.com/aigent-hive@0.10.3/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.10.2/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.10.3/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.10.2/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.10.3/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -76,7 +76,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.10.2. The stable install guidance is
+Install the current stable release 0.10.3. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -94,7 +94,7 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.10.2
+## What changed in 0.10.3
 
 - `hive update` now reconciles authenticated global user settings and selected-host projections even when the executable is already current.
 - A first npm installation selects one or more hosts through `hive update`; npm itself still installs executable packages only.
@@ -104,7 +104,7 @@ This option installs only the current stable release.
 
 ## Supported targets
 
-| Platform | Native target | 0.10.2 evidence |
+| Platform | Native target | 0.10.3 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public stable install acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -114,7 +114,7 @@ This option installs only the current stable release.
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.10.2` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.10.3` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
