@@ -1,18 +1,16 @@
 {
   "schema_version": 1,
-  "product_version": "0.10.2",
-  "package_version": "0.10.2-test.3",
+  "product_version": "0.10.3",
+  "package_version": "0.10.3-test.1",
   "plan_ids": [
-    "GUU102-001",
-    "GUU102-002",
-    "GUU102-003",
-    "GUU102-004",
-    "GUU102-005",
-    "GUU102-006",
-    "GUU102-007",
-    "GUU102-008",
-    "GUU102-009",
-    "GUU102-010"
+    "UGR103-001",
+    "UGR103-002",
+    "UGR103-003",
+    "UGR103-004",
+    "UGR103-005",
+    "UGR103-006",
+    "UGR103-007",
+    "UGR103-008"
   ],
-  "product_tree_sha256": "sha256:468b576252174cc9082ccf2513b272a73b4040e46bce8193179a6e8943b0cafc"
+  "product_tree_sha256": "sha256:4b4764a406425115d0cea2f66ef0da50973f1539394e917bf22e19d644b13e9d"
 }

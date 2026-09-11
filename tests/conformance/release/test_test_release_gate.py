@@ -37,6 +37,11 @@ class AutomaticTestReleaseGate(unittest.TestCase):
             "product_tree_sha256": self.module["product_digest"](self.base),
         }), encoding="utf-8")
         self.module["read_registry"].__globals__["REGISTRY"] = registry
+        stable_registry = self.root / "docs/public-stable-release.json"
+        stable_registry.write_text(
+            json.dumps({"stable_version": "0.10.0"}), encoding="utf-8"
+        )
+        self.module["read_stable_version"].__globals__["STABLE_REGISTRY"] = stable_registry
         self.intent = self.root / "docs/test-release-intent.json"
         self.module["read_intent"].__globals__["INTENT"] = self.intent
 
@@ -48,7 +53,7 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         subprocess.run(["git", "commit", "-qm", path], cwd=self.root, check=True)
 
     def verify(self, plan_ids: str = "APP10-001") -> dict[str, object]:
-        return self.module["verify"]("0.10.0", "0.10.0-test.12", plan_ids, "HEAD")
+        return self.module["verify"]("0.10.1", "0.10.1-test.1", plan_ids, "HEAD")
 
     def test_completed_product_change_authorizes_automatic_test(self) -> None:
         self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
@@ -58,18 +63,23 @@ class AutomaticTestReleaseGate(unittest.TestCase):
 
     def test_next_patch_product_can_start_at_test_one_from_the_accepted_baseline(self) -> None:
         self.commit("crates/app/main.rs", "fn main() { println!(\"next patch\"); }\n")
-        result = self.module["verify"]("0.10.1", "0.10.1-test.1", "APP10-001", "HEAD")
+        result = self.module["verify"]("0.10.2", "0.10.2-test.1", "APP10-001", "HEAD")
         self.assertEqual(result["status"], "authorized")
         self.assertEqual(result["base_package_version"], "0.10.0-test.11")
 
     def test_older_product_cannot_reuse_a_newer_accepted_baseline(self) -> None:
         registry = self.module["read_registry"].__globals__["REGISTRY"]
         value = json.loads(registry.read_text(encoding="utf-8"))
-        value["product_version"] = "0.10.1"
+        value["product_version"] = "0.10.2"
         registry.write_text(json.dumps(value), encoding="utf-8")
         self.commit("crates/app/main.rs", "fn main() { println!(\"older\"); }\n")
         with self.assertRaisesRegex(self.module["GateError"], "older than"):
             self.verify()
+
+    def test_public_stable_version_cannot_receive_another_test_number(self) -> None:
+        self.commit("crates/app/main.rs", "fn main() { println!(\"reused stable\"); }\n")
+        with self.assertRaisesRegex(self.module["GateError"], "newer than"):
+            self.module["verify"]("0.10.0", "0.10.0-test.12", "APP10-001", "HEAD")
 
     def test_source_only_changes_never_create_a_numbered_test(self) -> None:
         for path in ("docs/note.md", ".agents/skills/example/SKILL.md", "tests/test_x.py", ".github/workflows/ci.yml"):
@@ -110,13 +120,13 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
         self.intent.write_text(json.dumps({
             "schema_version": 1,
-            "product_version": "0.10.0",
-            "package_version": "0.10.0-test.12",
+            "product_version": "0.10.1",
+            "package_version": "0.10.1-test.1",
             "plan_ids": ["APP10-001"],
             "product_tree_sha256": self.module["product_digest"]("HEAD"),
         }), encoding="utf-8")
         self.assertEqual(
-            self.module["verify"]("0.10.0", "0.10.0-test.12", None, "HEAD")["status"],
+            self.module["verify"]("0.10.1", "0.10.1-test.1", None, "HEAD")["status"],
             "authorized",
         )
 
@@ -124,13 +134,13 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
         self.intent.write_text(json.dumps({
             "schema_version": 1,
-            "product_version": "0.10.0",
-            "package_version": "0.10.0-test.12",
+            "product_version": "0.10.1",
+            "package_version": "0.10.1-test.1",
             "plan_ids": ["APP10-001"],
             "product_tree_sha256": "sha256:" + "0" * 64,
         }), encoding="utf-8")
         with self.assertRaisesRegex(self.module["GateError"], "does not match"):
-            self.module["verify"]("0.10.0", "0.10.0-test.12", None, "HEAD")
+            self.module["verify"]("0.10.1", "0.10.1-test.1", None, "HEAD")
 
 
 if __name__ == "__main__":

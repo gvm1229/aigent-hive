@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.2`
+- 제품 버전: `0.10.3`
 - 현재 공개 stable: `0.10.2`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
 - 출시 상태: Stable `0.10.2` 공개·독립 검증 완료
@@ -12,6 +12,12 @@
 - 결정: [ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 권한과 범위
+
+- 2026-09-10 후속 요청: [사용량 복구 실행 계획](../plans/active/usage-recovery-0.10.2.md) `0.10.3`으로 전환, 표식 재측정·같은 위치 교체 구현 완료; 실제 설치·공개 수용 미착수
+- 사용자 보정: 별도 `v2` 저장소 제안 폐기, 같은 위치의 옛 파일 교체·제거. 모든 Hive 프로젝트·소스 공통 적용; `AI_Learning` 전용 해결 금지
+- `UGR103-*`: 10/10. 실제 사용자 설치 `0.10.3-test.1`, `AI_Learning`의 형식 1·이전 프로세스 표식 재측정 제거, 소스 작업 허용, 다른 등록 프로젝트 기준 보존 확인
+- 안정판 구독자 안내 초안: `docs/releases/0.10.3.subscriber.ko.md`, 616자, 문구 승인·digest 등록 전 상태
+- 아래 게시 승인은 기존 출시 완료 범위; 이번 후속 안정판·실제 설치 적용 승인으로 재사용 금지
 
 - 현재 승인: 전역 갱신 구현·검증·commit·push·공개 시험·`main` 통합·stable 게시
 - 현재 제외: 실제 사용자 루트와 등록 프로젝트 변경
@@ -34,5 +40,5 @@
 - `REL102-007` stable 문서·구독자 안내 digest 승인 완료
 - `REL102-008–009` 완료: PR `#54`의 `main` 통합, 후보 `34190329196`, 최종 게시 `34200601474`
 - npm 여섯 package의 `0.10.2`·`latest`·무결성 값과 GitHub 정식 Release·annotated tag·공개 자산 독립 확인 완료
-- 남은 `agent-owned|awaiting-user-authority|awaiting-external-evidence|blocked` 항목: 각 `0건`
+- 기존 출시 종료 시 남은 항목: 0건. 현재 계획 작성 범위의 남은 작업: 0건; 제품 복구는 후속 `UGR102-*` 10건으로 별도 관리
 - 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)

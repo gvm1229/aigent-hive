@@ -67,6 +67,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-conformance.txt
+      - name: Install pinned conformance dependencies
+        shell: bash
+        run: python -m pip install --disable-pip-version-check -r requirements-conformance.txt
       - name: Bind numbered public test source and registry state
         shell: bash
         run: |
@@ -132,6 +137,13 @@ jobs:
               if text.encode("utf-8") not in binary:
                   raise SystemExit(f"public binary omitted explanation contract: {text}")
           PY
+      - name: Qualify legacy usage halt recovery with the exact public binary
+        shell: bash
+        run: |
+          python -m unittest -v \
+            tests.conformance.contracts.test_usage_control.ShippingUsageControlConformance.test_enforce_rechecks_a_legacy_halt_from_another_process_without_bypass \
+            tests.conformance.contracts.test_usage_control.ShippingUsageControlConformance.test_enforce_rejects_malformed_oversized_and_symlink_halt_markers \
+            tests.conformance.contracts.test_usage_control.ShippingUsageControlConformance.test_source_rechecks_and_removes_a_legacy_halt_in_user_runtime
       - name: Qualify Korean core, preservation, update, and rollback
         shell: bash
         run: |

@@ -349,3 +349,22 @@
 | [failed](runs/20260907T162431-ded94df3292b.md) | 0.10.2 0.10.1 surface baseline update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T162515-8f6410e21080.md) | 0.10.2 surface YAML 교정 후 update 회귀 | 6017f12dac90c6e0a6954311d98e50d2faad8858 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260907T162559-181fd60f7d7f.md) | 0.10.2 전체 Rust 최종 재검증 | c2485e40cd20bc6545709ed12b5eeed3903dd7b3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162720-278d57f7e86b.md) | Python conformance: documentation, security, contract, integration, release | c2485e40cd20bc6545709ed12b5eeed3903dd7b3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T162812-b62a2bd0c35e.md) | Python conformance: documentation | c2485e40cd20bc6545709ed12b5eeed3903dd7b3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T162913-876c2547dea7.md) | Python conformance: documentation, security, contract, integration, release | 9598b0b767e3b925952c78a9f7adefbcab2804a5 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T164222-9801d65903e6.md) | Python conformance: contract | 84d2c7d3a9790ba9c078a13e46edd89e66e58d0e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T165009-c063e13a4443.md) | Python conformance: contract | 84d2c7d3a9790ba9c078a13e46edd89e66e58d0e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T165941-f6e71abc2cdb.md) | Python conformance: contract | f009b9357056eadcb8bb8154df1d9bf26d34fa1d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260907T171007-ccd23bd2941d.md) | Python conformance: contract | 0107c4c5e3730da38ea98b2ddb48c4686c53eef6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T172824-e4b967581fdd.md) | Python conformance: contract | a3ea288e69b6793dc856329593be8f101e9665d8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T173529-fc71a1b1e838.md) | Python conformance: integration | a3ea288e69b6793dc856329593be8f101e9665d8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T173925-55a70760380b.md) | Python conformance: release | a3ea288e69b6793dc856329593be8f101e9665d8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T174135-617c8d654bd2.md) | Python conformance: documentation | a3ea288e69b6793dc856329593be8f101e9665d8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260907T174156-58245985aea7.md) | Python conformance: security | a3ea288e69b6793dc856329593be8f101e9665d8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260909T200459-e4dd7ea1806a.md) | 0.10.3 Hive update 회귀 조사 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260909T201105-5f56d8f541ad.md) | 0.10.3 update fixture 재검증 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260909T201210-546632a0f566.md) | 0.10.3 update baseline 재검증 | 1b75ae5b5ce185d866e495f2183a88220f53f6d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260909T201255-4029115302c9.md) | 0.10.3 전체 Rust 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260909T201420-a60b82f5efb1.md) | 0.10.3 전체 Python 적합성 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260909T202613-ecf5607e543f.md) | 0.10.3 전체 Python 최종 재검증 | 7ead19c96746d8aca122a2ccf8130eb642b5e94b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260909T204703-438b97274e95.md) | 0.10.3 전체 Python 통과 재검증 | c4181fb07c739b13d7f63afa17cbc0ed67e11eaa | Windows-11-10.0.26200-SP0 |

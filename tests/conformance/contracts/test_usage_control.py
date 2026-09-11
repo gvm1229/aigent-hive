@@ -424,6 +424,79 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         )
         self.assertFalse((source / ".hive").exists())
 
+    def test_source_rechecks_and_removes_a_legacy_halt_in_user_runtime(self) -> None:
+        user_root = self.work_root / "source-recovery-user"
+        user_config = user_root / ".hive/config"
+        user_config.mkdir(parents=True, exist_ok=True)
+        (user_config / "user-setup.yml").write_text(
+            USER_CONFIG.replace("codexbar_fallback_enabled: false", "codexbar_fallback_enabled: true"),
+            encoding="utf-8",
+        )
+        source = self.work_root / "source-recovery"
+        source.mkdir()
+        (source / "hive-source.json").write_text("{}\n", encoding="utf-8")
+        session_id = "source-legacy-session"
+        session_digest = hashlib.sha256(
+            b"codex" + bytes([0]) + session_id.encode()
+        ).hexdigest()
+        target_scope = hashlib.sha256(str(source).encode()).hexdigest()
+        marker = (
+            user_root
+            / ".hive/runtime/usage-guard/targets"
+            / target_scope
+            / "sessions"
+            / session_digest
+            / "halt.json"
+        )
+        marker.parent.mkdir(parents=True)
+        marker.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "host_scope": "codex",
+                    "session_id_digest": f"sha256:{session_digest}",
+                    "process_id": 901,
+                    "decision": "halted",
+                    "selected_window": "weekly",
+                    "threshold_remaining_percent": 20,
+                    "measured_at": 1_750_000_000,
+                    "evidence_digest": "sha256:" + "a" * 64,
+                    "revision": 1,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        process, result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(source),
+            "--host",
+            "codex",
+            "--session-id",
+            session_id,
+            "--process-id",
+            "902",
+            "--user-root",
+            str(user_root),
+            sensor_case="allow",
+        )
+        self.assert_result(
+            process,
+            result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertEqual(result["data"]["recheck_reason"], "legacy-format")
+        self.assertFalse(marker.exists())
+        self.assertFalse((source / ".hive").exists())
+
     def test_threshold_rejects_invalid_primary_host_without_mutation(self) -> None:
         config = self.consumer / ".hive/config/harness.toml"
         invalid = HARNESS_CONFIG.replace(
@@ -654,7 +727,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             self.assertTrue(result["data"]["guard_enabled"])
             self.assertEqual(result["data"]["halt_marker"], expected)
 
-    def test_enforce_refuses_a_process_replayed_halt_marker_without_sensor_use(
+    def test_enforce_rechecks_a_legacy_halt_from_another_process_without_bypass(
         self,
     ) -> None:
         self.write_halt(session_id="replayed-session", process_id=707)
@@ -672,9 +745,24 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log)},
         )
 
-        self.assertEqual(process.returncode, 3, process.stderr)
-        self.assertEqual(result["code"], "hive.usage-control-blocked")
-        self.assertFalse(sensor_log.exists())
+        self.assert_result(
+            process,
+            result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertTrue(sensor_log.exists())
+        self.assertFalse(
+            self.consumer
+            .joinpath(".hive/runtime/usage-guard/sessions")
+            .joinpath(
+                hashlib.sha256(b"codex" + bytes([0]) + b"replayed-session").hexdigest()
+            )
+            .joinpath("halt.json")
+            .exists()
+        )
 
     def test_enable_and_toggle_apply_only_to_the_current_binding(self) -> None:
         disabled, _ = self.invoke(
@@ -1002,7 +1090,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "multiple",
         )
 
-    def test_enforce_creates_a_latched_marker_and_repeat_skips_the_sensor(
+    def test_enforce_rechecks_a_latched_marker_and_clears_it_after_recovery(
         self,
     ) -> None:
         sensor_log = self.work_root / "sensor.log"
@@ -1038,6 +1126,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(marker["host_scope"], "codex")
         self.assertEqual(marker["process_id"], 902)
         self.assertEqual(marker["decision"], "halted")
+        self.assertEqual(marker["schema_version"], 2)
         self.assertEqual(marker["threshold_remaining_percent"], 10)
         self.assertEqual(marker["revision"], 1)
         self.assertNotIn(RAW_ACCOUNT, marker_path.read_text(encoding="utf-8"))
@@ -1051,14 +1140,15 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             repeated,
             repeated_result,
             action="CheckUsage",
-            exit_code=3,
-            status="blocked",
-            code="hive.usage-limited",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
         )
-        self.assertEqual(repeated_result["changed_paths"], [])
-        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 2)
+        self.assertEqual(repeated_result["data"]["halt_transition"], "cleared-after-recheck")
+        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 4)
+        self.assertFalse(marker_path.exists())
 
-    def test_explicit_disable_bypasses_sensor_and_enable_reapplies_latch(self) -> None:
+    def test_explicit_disable_bypasses_sensor_and_enable_rechecks_latch(self) -> None:
         latched, latched_result = self.invoke(
             "usage",
             "enforce",
@@ -1134,8 +1224,8 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "903",
             sensor_case="allow",
         )
-        self.assertEqual(blocked.returncode, 3, blocked.stderr)
-        self.assertEqual(blocked_result["code"], "hive.usage-limited")
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertEqual(blocked_result["code"], "hive.usage-allowed")
 
     def test_enforce_uses_weekly_only_as_fallback_and_supports_unique_account(
         self,
@@ -1225,11 +1315,30 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             )
             + "\n"
         ).encode()
-        for payload in (
-            b"{not-json\n",
-            b"x" * (16 * 1024 + 1),
-            invalid_evidence,
-        ):
+        marker.write_bytes(b"{not-json\n")
+        recovered, recovered_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            session_id,
+            "--process-id",
+            "907",
+            sensor_case="allow",
+        )
+        self.assert_result(
+            recovered,
+            recovered_result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertFalse(marker.exists())
+        self.assertEqual(recovered_result["data"]["recheck_reason"], "damaged-record")
+
+        for payload in (b"x" * (16 * 1024 + 1), invalid_evidence):
             with self.subTest(size=len(payload)):
                 marker.write_bytes(payload)
                 process, result = self.invoke(

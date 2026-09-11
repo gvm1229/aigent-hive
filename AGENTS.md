@@ -21,6 +21,7 @@ Repository directives live under `.agents/`; shipping consumer sources live unde
 - Stable `tag`, protected `main` integration, publication, and installation require the
   maintainer's current, version-specific approval. `release`, `ship`, `continue`, and `all todos`
   authorize at most implementation, verification, and numbered public tests.
+- After a stable release, new product bytes use a newer version and its `-test.1`; never add a test to the published stable version.
 - Resolve development work against the active `docs/plans/PLAN.md` product version and its next
   numbered public test unless the maintainer names a different version in the current request.
   Never invent or suggest a later version as the default destination.
