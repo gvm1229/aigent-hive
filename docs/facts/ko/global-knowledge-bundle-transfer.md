@@ -9,9 +9,9 @@ summary: "전역 .hivekb 이전은 현재 셸의 홈 경로, SHA-256 확인, dry
 tags: [bundle, global, knowledge, portability]
 aliases: [".hivekb 이전", "지식 내보내기 가져오기"]
 sources:
-  - "repo:README.md#sha256:10e54403d7f420452254c6e9389c5bd0b2707d39b6c9a7c02877b70833a01d5f"
+  - "repo:README.md#sha256:ba515cb5d9ee4f825305a99d0807b19bf608cb792eb768644776e3c0b4522735"
   - "repo:docs/archive/plans/releases/0.9.5/knowledge-bundle-portability-0.9.5.md#sha256:78721fbbaf589353a17fdee534e5c86f1406283cf546eb32acd9996e84adb3c3"
-  - "repo:docs/hive-install-guide.ko.html#sha256:68e0f9863649ef6c045e3de6d946be686fc64edd5772e825a090b41472935d91"
+  - "repo:docs/hive-install-guide.ko.html#sha256:f469a1fe79c427ab89f36aa0dd85667c0cf9c574262689377dcee5b4584690e8"
 links: [knowledge-portability-scan, knowledge-storage]
 reviewed_revision: "git:1b755a995d91739d758830210d93cdc012e9e61b"
 status: active

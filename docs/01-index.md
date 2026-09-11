@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.2 release-date=2026-09-07 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.3 release-date=2026-09-10 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -92,7 +92,7 @@ current catalog.
 | [`0.9.4`](releases/0.9.4.md) | Skill 표시·전역 검증·지식 안내·프롬프트 기본값 정식 출시 |
 | [`0.10.0`](releases/0.10.0.md) | 벡터 검색·지식 graph·컴퓨터 간 지식 이전·한국어 품질·검증형 작업 흐름 |
 | [`0.10.1`](releases/0.10.1.md) | 일반 harness migration·사용량 기준 즉시 재평가 |
-| [`0.10.2`](releases/0.10.2.md) | 전역 `hive update` 수렴·새 질문 대기와 자동 재개·지침 품질 개선 |
+| [`0.10.3`](releases/0.10.3.md) | 전역 `hive update` 수렴·새 질문 대기와 자동 재개·지침 품질 개선 |
 
 ## Research
 
