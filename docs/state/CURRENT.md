@@ -2,9 +2,9 @@
 
 - 작업 branch: `develop`; stable source branch: `main`
 - 제품 버전: `0.10.3`
-- 현재 공개 stable: `0.10.2`
+- 현재 공개 stable: `0.10.3`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
-- 출시 상태: Stable `0.10.2` 공개·독립 검증 완료
+- 출시 상태: Stable `0.10.3` 공개·독립 검증 완료
 - 활성 계획: [PLAN.md](../plans/PLAN.md)
 - 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
@@ -13,16 +13,21 @@
 
 ## 권한과 범위
 
-- 2026-09-10 후속 요청: [사용량 복구 실행 계획](../plans/active/usage-recovery-0.10.2.md) `0.10.3`으로 전환, 표식 재측정·같은 위치 교체 구현 완료; 실제 설치·공개 수용 미착수
+- 2026-09-12: [사용량 복구 실행 계획](../plans/active/usage-recovery-0.10.2.md)의 `0.10.3` 안정판 공개 완료; 표식 재측정·같은 위치 교체의 공개 시험·실제 설치 수용
 - 사용자 보정: 별도 `v2` 저장소 제안 폐기, 같은 위치의 옛 파일 교체·제거. 모든 Hive 프로젝트·소스 공통 적용; `AI_Learning` 전용 해결 금지
 - `UGR103-*`: 10/10. 실제 사용자 설치 `0.10.3-test.1`, `AI_Learning`의 형식 1·이전 프로세스 표식 재측정 제거, 소스 작업 허용, 다른 등록 프로젝트 기준 보존 확인
-- 안정판 구독자 안내 초안: `docs/releases/0.10.3.subscriber.ko.md`, 616자, 문구 승인·digest 등록 전 상태
-- 아래 게시 승인은 기존 출시 완료 범위; 이번 후속 안정판·실제 설치 적용 승인으로 재사용 금지
+- 안정판 구독자 안내: `docs/releases/0.10.3.subscriber.ko.md`, 승인 digest `sha256:bbb0cc20655adb4e08fcbb9bcff6e1c837bec2a3905a69a2b8991b41d60381a6` 등록·게시 완료
 
-- 현재 승인: 전역 갱신 구현·검증·commit·push·공개 시험·`main` 통합·stable 게시
-- 현재 제외: 실제 사용자 루트와 등록 프로젝트 변경
+- 이번 안정판 승인 범위의 게시·실제 사용자 루트 설치 갱신 완료
 - 과거 project/user base·외부 파일·사용자 선택 보존
 - 전역 사용량 보호: 유지보수자가 지정한 남은 사용량 `2%`
+
+## `0.10.3` 안정판 증거
+
+- `main` 통합 commit: `8afe730759325bc003475f81545da7afc88cfb18`; 안정판 후보 `34640191785` 성공
+- 최초 게시 `34678212448`은 macOS 보조 npm 패키지의 태그 전파 지연으로 중단. 같은 후보의 복구 게시 `34678404622` 성공
+- npm `aigent-hive@0.10.3`와 `latest=0.10.3`, GitHub 정식 Release·annotated tag `v0.10.3`을 독립 확인
+- 이 Windows Codex 설치: `0.10.3-test.1`에서 `0.10.3` 갱신과 `hive --version` 확인; 이전 `AI_Learning` 경로 부재로 안정판 재실행 미수행
 
 ## 개선 작업
 

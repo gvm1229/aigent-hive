@@ -1,12 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 331
-> 기준일: 2026-09-10
+> Revision: 332
+> 기준일: 2026-09-12
 > Product version: `0.10.3`
-> 공개 Stable: `0.10.2`
-> 첫 공개 시험: `0.10.2-test.1`
-> 수용 공개 시험: `0.10.2-test.3`
-> 현재 단계: `0.10.3-test.1` 공개·세 운영체제·실제 설치 수용 완료; stable 문구 승인 대기
+> 공개 Stable: `0.10.3`
+> 현재 단계: `0.10.3` 안정판 공개·독립 확인 완료
 > 첫 공개 시험: `0.10.3-test.1`
 > 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
 
@@ -19,7 +17,7 @@
 - `hive update` 한 번으로 실행 파일과 전역 사용자 설정·호스트 투영을 수렴
 - 새 전역 질문은 답변 전 일반 Hive 작업을 차단하고, 답변 뒤 같은 transaction을 재개
 - npm 설치는 실행 파일만 제공하고 최초 전역 초기화는 `hive update`가 담당
-- `0.10.2-test.1` 세 운영체제 공개 수용 뒤 stable `0.10.2` 공개
+- `0.10.3-test.1` 세 운영체제 공개 수용 뒤 stable `0.10.3` 공개
 
 ## 완료 조건
 
@@ -64,7 +62,7 @@
 
 ## 실행 순서
 
-현재 후속 작업: `usage-recovery-0.10.2.md`의 `UGR103-001–010` 순서. Stable 공개 뒤 제품 변경은 다음 patch version과 해당 version의 `-test.1`부터 다시 수용.
+현재 활성 완료 항목: 0건. Stable 공개 뒤 제품 변경: 다음 patch version과 해당 version의 `-test.1`부터 새 수용
 
 1. `GUU102-001–004`: version·호환성·질문 catalog·전역 transaction
 2. `GUU102-005–007`: setup-required 투영·답변·자동 재개·같은 버전 복구
