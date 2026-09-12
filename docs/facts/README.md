@@ -80,6 +80,7 @@
 | Installed usage guard | [en](en/installed-usage-guard.md) | [ko](ko/installed-usage-guard.md) |
 | Judge verification | [en](en/judge-verification.md) | [ko](ko/judge-verification.md) |
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
+| `0.10.3` usage guard recovery stable release | [en](en/v0-10-3-usage-recovery-release.md) | [ko](ko/v0-10-3-usage-recovery-release.md) |
 | Stable public documentation | [en](en/stable-public-documentation.md) | [ko](ko/stable-public-documentation.md) |
 | `dev-check` 플랫폼 PATH | [en](en/dev-check-platform-path.md) | [ko](ko/dev-check-platform-path.md) |
 | Linux musl qualification | [en](en/linux-musl-qualification.md) | [ko](ko/linux-musl-qualification.md) |
