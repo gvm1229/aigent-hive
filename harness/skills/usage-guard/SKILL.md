@@ -96,7 +96,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - Mutate global `.hive/config/user-setup.yml` only through explicit `hive usage threshold --user-root`, a configured project's `.hive/config/harness.toml` only through project threshold control, and the current binding under ignored `.hive/runtime/usage-guard/` only for a configured Hive target.
 - Never edit those files directly or persist the raw session identifier.
 - Never install a fallback hook, rewrite a prompt, activate another Skill, start a watcher, spawn a subagent, create an orchestration loop, continue a stopped task, or invoke OMX/OMC.
-- `reset_booster_enabled` defaults to true. A reset observation blocks automatic dispatch with
+- `quota_reset_guard_enabled` defaults to true. A reset observation blocks automatic dispatch with
   `hive.usage-reset`; it does not authorize a watcher, a provider call, or a host-process signal.
 - CodexBar installation is the sole optional fallback install action. It is allowed only through the exact consented CLI flow above and a qualified package-manager adapter.
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.

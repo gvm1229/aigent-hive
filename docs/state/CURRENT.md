@@ -31,7 +31,7 @@
 
 ## 개선 작업
 
-- reset-booster `RB104-001–003` 구현: 같은 측정 범위의 잔량 증가를 `hive.usage-reset`으로 차단하고,
+- Quota Reset Guard `RB104-001–003` 구현: 같은 측정 범위의 잔량 증가를 `hive.usage-reset`으로 차단하고,
   기준 관측을 같은 런타임 표식에 저장. 15초 감시·진행 중 추론 중단·현재 작업 opt-out은 검증된 host API가
   없어 `RB104-004`에 남음.
 

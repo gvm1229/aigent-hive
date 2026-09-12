@@ -35,15 +35,15 @@ Task당 one-shot 확인 1회. Tool·mutation·push·최종 응답 전 반복 gat
 Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 fallback recovery 외
 작업 중단.
 
-## reset-booster
+## Quota Reset Guard
 
-`usage_guard.reset_booster_enabled`의 기본값은 `true`다. 같은 session·account·quota pool·window의
+`usage_guard.quota_reset_guard_enabled`의 기본값은 `true`다. 같은 session·account·quota pool·window의
 유효한 두 측정값에서 남은 비율이 증가하면 `hive.usage-reset`으로 자동 실행을 차단한다. 첫 측정은
 비교 기준만 만들며, reset 시각을 미리 예약하거나 외부 소식을 추적하지 않는다.
 
 현재 설치본은 `enforce` 경계에서만 새 측정을 비교한다. 진행 중인 모델 추론을 15초마다 확인하거나
 호스트 프로세스를 중단하는 기능은 아직 지원하지 않는다. 이 한계는 `status`의
-`reset_booster_monitoring=false`로 표시한다.
+`quota_reset_guard_monitoring=false`로 표시한다.
 
 ## Threshold 변경
 

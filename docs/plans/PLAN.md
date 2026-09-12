@@ -56,7 +56,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md) | `UGR103-*` | 기존 표식 교체·모든 Hive 대상의 공통 복구 |
-| [reset-booster-0.10.4.md](active/reset-booster-0.10.4.md) | `RB104-*` | 초기화된 사용량 감지·자동 실행 차단 |
+| [quota-reset-guard-0.10.4.md](active/quota-reset-guard-0.10.4.md) | `RB104-*` | 초기화된 사용량 감지·자동 실행 차단 |
 | [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md) | `INS102-*` | 소스·harness 지침 품질 |
 | [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md) | `GUU102-*` | 전역 사용자 설치·질문 대기·자동 재개 |
 | [`release-0.10.2.md`](active/release-0.10.2.md) | `REL102-*` | 공개 시험·세 운영체제 수용·stable 공개 |

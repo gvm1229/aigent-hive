@@ -92,7 +92,7 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
-    pub(crate) reset_booster_enabled: bool,
+    pub(crate) quota_reset_guard_enabled: bool,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
     pub(crate) discord_request_privacy: String,
@@ -918,9 +918,9 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
-            "reset_booster_enabled": config.reset_booster_enabled,
-            "reset_booster_monitoring": false,
-            "reset_booster_monitoring_reason": "host-bound periodic interruption is unsupported",
+            "quota_reset_guard_enabled": config.quota_reset_guard_enabled,
+            "quota_reset_guard_monitoring": false,
+            "quota_reset_guard_monitoring_reason": "host-bound periodic interruption is unsupported",
             "session_override": override_state_name,
             "halt_marker": override_name(halt.state),
             "halt_decision": halt.marker.as_ref().map(|marker| marker.decision.as_str()),
@@ -1029,7 +1029,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 json!(halt.marker.as_ref().map(|marker| marker.schema_version)),
             );
         }
-        if config.reset_booster_enabled
+        if config.quota_reset_guard_enabled
             && halt
                 .marker
                 .as_ref()
@@ -1073,8 +1073,11 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 .as_mut()
                 .and_then(serde_json::Value::as_object_mut)
             {
-                data.insert("reset_booster_enabled".to_owned(), json!(true));
-                data.insert("reset_booster_baseline_updated".to_owned(), json!(changed));
+                data.insert("quota_reset_guard_enabled".to_owned(), json!(true));
+                data.insert(
+                    "quota_reset_guard_baseline_updated".to_owned(),
+                    json!(changed),
+                );
             }
         } else if halt.state != OverrideState::Absent {
             let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
@@ -1336,7 +1339,7 @@ fn observe_usage(
         Some(UsageDecision::Block(block)) => (Some("halted"), Some(block.remaining_percent)),
         Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
-    if config.reset_booster_enabled
+    if config.quota_reset_guard_enabled
         && decision.is_none()
         && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
     {
@@ -1637,7 +1640,7 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
                 marker.threshold_remaining_percent
             )
         } else if marker.decision == "usage-reset" {
-            "subscription usage increased after the reset-booster baseline; explicit user continuation is required".to_owned()
+            "subscription usage increased after the quota reset guard baseline; explicit user continuation is required".to_owned()
         } else {
             "subscription usage could not be verified safely".to_owned()
         },
@@ -1900,7 +1903,7 @@ fn read_effective_config(
             primary_host: requested_host.unwrap_or("unconfigured").to_owned(),
             guard_enabled: false,
             codexbar_fallback_enabled: false,
-            reset_booster_enabled: false,
+            quota_reset_guard_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
             discord_request_privacy: "summary".to_owned(),
@@ -1979,7 +1982,7 @@ fn read_effective_config(
         primary_host: host,
         guard_enabled: guard.enabled,
         codexbar_fallback_enabled: guard.enabled && guard.codexbar_fallback_enabled,
-        reset_booster_enabled: guard.reset_booster_enabled,
+        quota_reset_guard_enabled: guard.quota_reset_guard_enabled,
         discord_guard_enabled: guard.enabled && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
@@ -2005,7 +2008,7 @@ fn read_effective_config(
     effective.project_threshold = project_threshold;
     effective.guard_enabled = guard.enabled;
     effective.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
-    effective.reset_booster_enabled = guard.reset_booster_enabled;
+    effective.quota_reset_guard_enabled = guard.quota_reset_guard_enabled;
     effective.discord_guard_enabled = guard.enabled && guard.discord.enabled;
     effective
         .discord_webhook_url_env
@@ -2136,7 +2139,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
-        reset_booster_enabled: true,
+        quota_reset_guard_enabled: true,
         discord_guard_enabled,
         discord_webhook_url_env,
         discord_request_privacy,

@@ -302,8 +302,8 @@ pub(crate) struct UsageGuardPreferences {
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
     /// Stop automatic work when a previously observed quota window refills.
-    #[serde(default = "default_reset_booster_enabled")]
-    pub(crate) reset_booster_enabled: bool,
+    #[serde(default = "default_quota_reset_guard_enabled")]
+    pub(crate) quota_reset_guard_enabled: bool,
     #[serde(default)]
     pub(crate) discord: DiscordGuardPreferences,
     /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
@@ -311,7 +311,7 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) project_overrides: BTreeMap<String, u8>,
 }
 
-const fn default_reset_booster_enabled() -> bool {
+const fn default_quota_reset_guard_enabled() -> bool {
     true
 }
 
@@ -1731,8 +1731,13 @@ fn migrate_legacy_missing_usage_threshold(value: &mut JsonValue) {
     usage_guard
         .entry("stop_remaining_percent".to_owned())
         .or_insert_with(|| JsonValue::from(LEGACY_080_USAGE_THRESHOLD));
+    if let Some(legacy) = usage_guard.remove("reset_booster_enabled") {
+        usage_guard
+            .entry("quota_reset_guard_enabled".to_owned())
+            .or_insert(legacy);
+    }
     usage_guard
-        .entry("reset_booster_enabled".to_owned())
+        .entry("quota_reset_guard_enabled".to_owned())
         .or_insert_with(|| JsonValue::Bool(true));
 }
 
@@ -4356,6 +4361,7 @@ usage_guard:
         assert!(!config.usage_guard.enabled);
         assert_eq!(config.usage_guard.stop_remaining_percent, 20);
         assert!(!config.usage_guard.codexbar_fallback_enabled);
+        assert!(config.usage_guard.quota_reset_guard_enabled);
         assert!(!config.usage_guard.discord.enabled);
         assert!(config.usage_guard.discord.webhook_url_env.is_none());
         assert_eq!(
