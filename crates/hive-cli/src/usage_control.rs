@@ -2,7 +2,7 @@ use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarget};
 use crate::usage;
 use hive_core::sha256_digest;
-use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePolicy};
+use hive_core::usage_guard::{detect_usage_reset, evaluate_usage, UsageDecision, UsagePolicy};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, Read};
@@ -92,6 +92,7 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
+    pub(crate) reset_booster_enabled: bool,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
     pub(crate) discord_request_privacy: String,
@@ -125,6 +126,7 @@ struct TurnObservation {
     evidence_digest: String,
     remaining_percent: Option<f64>,
     next_action: Option<String>,
+    snapshots: Vec<hive_core::usage_guard::UsageSnapshot>,
 }
 
 #[derive(Default)]
@@ -229,6 +231,8 @@ struct HaltMarker {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     progress: Option<String>,
     revision: u64,
+    #[serde(default)]
+    snapshots: Vec<hive_core::usage_guard::UsageSnapshot>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -858,7 +862,13 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         .as_ref()
         .and_then(|marker| marker.policy_digest.as_deref())
         == Some(policy_digest.as_str());
-    let halted = guard_enabled && current_halt && current_policy;
+    let halted = guard_enabled
+        && current_halt
+        && current_policy
+        && halt
+            .marker
+            .as_ref()
+            .is_some_and(|marker| marker.decision != "observed");
     let recheck_required = guard_enabled
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
     let mut evidence = vec![Evidence {
@@ -908,6 +918,9 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
+            "reset_booster_enabled": config.reset_booster_enabled,
+            "reset_booster_monitoring": false,
+            "reset_booster_monitoring_reason": "host-bound periodic interruption is unsupported",
             "session_override": override_state_name,
             "halt_marker": override_name(halt.state),
             "halt_decision": halt.marker.as_ref().map(|marker| marker.decision.as_str()),
@@ -984,6 +997,9 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             &config,
             &binding,
             arguments.account_digest.as_deref(),
+            halt.marker
+                .as_ref()
+                .map_or(&[], |marker| marker.snapshots.as_slice()),
         );
         let refreshed = read_effective_config(
             &target,
@@ -1013,13 +1029,55 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 json!(halt.marker.as_ref().map(|marker| marker.schema_version)),
             );
         }
-        if halt.state != OverrideState::Absent {
-            let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
-            if load_halt(runtime, &binding)?.state != OverrideState::Absent {
-                return Err(AdapterError::Verification(
-                    "superseded usage halt marker remained after exact removal".to_owned(),
-                ));
+        if config.reset_booster_enabled
+            && halt
+                .marker
+                .as_ref()
+                .is_none_or(|marker| marker.decision == "observed")
+        {
+            let marker = HaltMarker {
+                schema_version: 2,
+                host_scope: binding.host_scope.clone(),
+                session_id_digest: binding.session_digest.clone(),
+                process_id: binding.process_id,
+                decision: "observed".to_owned(),
+                selected_window: observation.selected_window.to_owned(),
+                threshold_remaining_percent: config.threshold,
+                policy_digest: Some(policy_digest.clone()),
+                remaining_percent: None,
+                measured_at: observation.measured_at,
+                evidence_digest: observation.evidence_digest.clone(),
+                run_id: None,
+                request_summary: None,
+                progress: None,
+                snapshots: observation.snapshots.clone(),
+                revision: halt
+                    .marker
+                    .as_ref()
+                    .map_or(1, |marker| marker.revision.saturating_add(1)),
+            };
+            let desired = serde_json::to_vec(&marker)
+                .map_err(|error| {
+                    AdapterError::Internal(format!("cannot encode usage observation: {error}"))
+                })?
+                .into_iter()
+                .chain(std::iter::once(b'\n'))
+                .collect::<Vec<_>>();
+            let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
+            result.changed_paths = changed
+                .then(|| portable_relative_path(&halt.relative))
+                .into_iter()
+                .collect();
+            if let Some(data) = result
+                .data
+                .as_mut()
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                data.insert("reset_booster_enabled".to_owned(), json!(true));
+                data.insert("reset_booster_baseline_updated".to_owned(), json!(changed));
             }
+        } else if halt.state != OverrideState::Absent {
+            let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
             result.changed_paths = changed
                 .then(|| portable_relative_path(&halt.relative))
                 .into_iter()
@@ -1056,6 +1114,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         run_id: context.run_id,
         request_summary: context.request_summary,
         progress: context.progress,
+        snapshots: observation.snapshots,
         revision: halt
             .marker
             .as_ref()
@@ -1231,6 +1290,7 @@ fn observe_usage(
     config: &InstalledUsageConfig,
     binding: &SessionBinding,
     account_digest: Option<&str>,
+    previous_snapshots: &[hive_core::usage_guard::UsageSnapshot],
 ) -> TurnObservation {
     let sampled_at = SystemTime::now();
     let sampled_at_unix = sampled_at
@@ -1257,9 +1317,11 @@ fn observe_usage(
             ),
             remaining_percent: None,
             next_action,
+            snapshots: Vec::new(),
         };
     };
-    let (decision, remaining_percent) = match sampled_at_unix.and_then(|now| {
+    let core_snapshots = snapshot.core_snapshots();
+    let (mut decision, remaining_percent) = match sampled_at_unix.and_then(|now| {
         UsagePolicy::new(
             &snapshot.sensor_id,
             &snapshot.sensor_version,
@@ -1268,12 +1330,18 @@ fn observe_usage(
         )
         .with_stop_remaining_percent(config.threshold)
         .ok()
-        .map(|policy| evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now))
+        .map(|policy| evaluate_usage(&policy, &core_snapshots, &[], now))
     }) {
         Some(UsageDecision::Allow(_)) => (None, None),
         Some(UsageDecision::Block(block)) => (Some("halted"), Some(block.remaining_percent)),
         Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
+    if config.reset_booster_enabled
+        && decision.is_none()
+        && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
+    {
+        decision = Some("usage-reset");
+    }
     TurnObservation {
         decision,
         selected_window: snapshot.selected_window_label(),
@@ -1281,6 +1349,7 @@ fn observe_usage(
         evidence_digest: snapshot.evidence_digest(),
         remaining_percent,
         next_action: None,
+        snapshots: core_snapshots,
     }
 }
 
@@ -1557,6 +1626,8 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
         exit_code: 3,
         code: if marker.decision == "halted" {
             "hive.usage-limited"
+        } else if marker.decision == "usage-reset" {
+            "hive.usage-reset"
         } else {
             "hive.usage-unknown"
         },
@@ -1565,6 +1636,8 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
                 "subscription usage is at or below the {}% remaining threshold",
                 marker.threshold_remaining_percent
             )
+        } else if marker.decision == "usage-reset" {
+            "subscription usage increased after the reset-booster baseline; explicit user continuation is required".to_owned()
         } else {
             "subscription usage could not be verified safely".to_owned()
         },
@@ -1827,6 +1900,7 @@ fn read_effective_config(
             primary_host: requested_host.unwrap_or("unconfigured").to_owned(),
             guard_enabled: false,
             codexbar_fallback_enabled: false,
+            reset_booster_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
             discord_request_privacy: "summary".to_owned(),
@@ -1905,6 +1979,7 @@ fn read_effective_config(
         primary_host: host,
         guard_enabled: guard.enabled,
         codexbar_fallback_enabled: guard.enabled && guard.codexbar_fallback_enabled,
+        reset_booster_enabled: guard.reset_booster_enabled,
         discord_guard_enabled: guard.enabled && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
@@ -1930,6 +2005,7 @@ fn read_effective_config(
     effective.project_threshold = project_threshold;
     effective.guard_enabled = guard.enabled;
     effective.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
+    effective.reset_booster_enabled = guard.reset_booster_enabled;
     effective.discord_guard_enabled = guard.enabled && guard.discord.enabled;
     effective
         .discord_webhook_url_env
@@ -2060,6 +2136,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
+        reset_booster_enabled: true,
         discord_guard_enabled,
         discord_webhook_url_env,
         discord_request_privacy,
@@ -2336,7 +2413,10 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         || marker.host_scope != binding.host_scope
         || marker.session_id_digest != binding.session_digest
         || !is_sha256_digest(&marker.evidence_digest)
-        || !matches!(marker.decision.as_str(), "halted" | "usage-unknown")
+        || !matches!(
+            marker.decision.as_str(),
+            "halted" | "usage-unknown" | "usage-reset" | "observed"
+        )
         || !matches!(
             marker.selected_window.as_str(),
             "session" | "weekly" | "multiple" | "unknown"

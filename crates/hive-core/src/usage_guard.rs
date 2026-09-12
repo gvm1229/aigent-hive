@@ -242,6 +242,45 @@ pub struct UsageBlock {
     pub threshold_percent: f64,
 }
 
+/// A valid quota refill observed for one previously measured quota window.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UsageReset {
+    /// Window whose remaining quota increased.
+    pub window: UsageWindow,
+    /// Remaining percentage in the earlier accepted measurement.
+    pub previous_percent: f64,
+    /// Remaining percentage in the current accepted measurement.
+    pub current_percent: f64,
+}
+
+/// Detect a quota refill between two already validated observations.
+///
+/// Only matching account, host, pool, and window measurements are compared. A
+/// first measurement is therefore only a baseline. Measurements that move
+/// backwards in time are ignored here and remain the responsibility of normal
+/// monotonicity validation.
+#[must_use]
+pub fn detect_usage_reset(
+    current_snapshots: &[UsageSnapshot],
+    previous_snapshots: &[UsageSnapshot],
+) -> Option<UsageReset> {
+    current_snapshots.iter().find_map(|current| {
+        previous_snapshots.iter().find_map(|previous| {
+            (current.host_scope == previous.host_scope
+                && current.account_scope_digest == previous.account_scope_digest
+                && raw_quota_pool(current) == raw_quota_pool(previous)
+                && current.quota_window == previous.quota_window
+                && current.measured_at_unix_seconds >= previous.measured_at_unix_seconds
+                && current.remaining_percent > previous.remaining_percent)
+                .then_some(UsageReset {
+                    window: current.quota_window,
+                    previous_percent: previous.remaining_percent,
+                    current_percent: current.remaining_percent,
+                })
+        })
+    })
+}
+
 /// A non-cloneable, one-shot authorization for one automatic dispatch.
 #[derive(Debug)]
 pub struct UsagePermit {
@@ -565,8 +604,8 @@ fn validate_monotonicity(
 #[cfg(test)]
 mod tests {
     use super::{
-        evaluate_usage, SourceConfidence, UsageDecision, UsagePermitError, UsagePolicy,
-        UsagePolicyError, UsageSnapshot, UsageUnknownReason, UsageWindow,
+        detect_usage_reset, evaluate_usage, SourceConfidence, UsageDecision, UsagePermitError,
+        UsagePolicy, UsagePolicyError, UsageSnapshot, UsageUnknownReason, UsageWindow,
     };
 
     const NOW: i64 = 1_000;
@@ -677,6 +716,21 @@ mod tests {
                 Err(UsagePolicyError::StopThresholdOutOfRange { value: threshold })
             );
         }
+    }
+
+    #[test]
+    fn reset_detection_requires_a_matching_newer_window_and_any_increase() {
+        let previous = scoped_snapshot("primary", UsageWindow::Session, 30.0);
+        let mut current = previous.clone();
+        current.remaining_percent = 30.1;
+        current.measured_at_unix_seconds += 1;
+        let reset = detect_usage_reset(&[current.clone()], &[previous.clone()])
+            .expect("any matching increase is a refill");
+        assert_eq!(reset.previous_percent, 30.0);
+        assert_eq!(reset.current_percent, 30.1);
+
+        current.account_scope_digest = "sha256:other".to_owned();
+        assert!(detect_usage_reset(&[current], &[previous]).is_none());
     }
 
     #[test]

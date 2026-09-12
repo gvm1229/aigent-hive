@@ -301,11 +301,18 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) stop_remaining_percent: u8,
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
+    /// Stop automatic work when a previously observed quota window refills.
+    #[serde(default = "default_reset_booster_enabled")]
+    pub(crate) reset_booster_enabled: bool,
     #[serde(default)]
     pub(crate) discord: DiscordGuardPreferences,
     /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
     #[serde(default)]
     pub(crate) project_overrides: BTreeMap<String, u8>,
+}
+
+const fn default_reset_booster_enabled() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -1724,6 +1731,9 @@ fn migrate_legacy_missing_usage_threshold(value: &mut JsonValue) {
     usage_guard
         .entry("stop_remaining_percent".to_owned())
         .or_insert_with(|| JsonValue::from(LEGACY_080_USAGE_THRESHOLD));
+    usage_guard
+        .entry("reset_booster_enabled".to_owned())
+        .or_insert_with(|| JsonValue::Bool(true));
 }
 
 fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {

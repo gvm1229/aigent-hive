@@ -9300,6 +9300,7 @@ mod tests {
                 enabled: false,
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
+                reset_booster_enabled: true,
                 discord: DiscordGuardPreferences::default(),
                 project_overrides: BTreeMap::new(),
             },

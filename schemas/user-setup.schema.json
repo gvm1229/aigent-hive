@@ -166,6 +166,7 @@
           "maximum": 99
         },
         "codexbar_fallback_enabled": { "type": "boolean", "default": false },
+        "reset_booster_enabled": { "type": "boolean", "default": true },
         "project_overrides": {
           "type": "object",
           "propertyNames": {
