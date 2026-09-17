@@ -9,10 +9,10 @@ summary: "Source branches other than main and develop require a work-class prefi
 tags: [branch, git, policy]
 aliases: []
 sources:
-  - "repo:docs/guides/branching-rules.md#sha256:76be6ab2fa1ad493840d33974d9b6b30c8b89daa0619f2cdc7f7f21eceda745b"
-  - "repo:scripts/branch-policy.py#sha256:e1dd087bf7d2bf9f4057a89959e89690a69486cd05b42fc1ad87c7ee2134f394"
+  - "repo:docs/guides/branching-rules.md#sha256:3820e9a509c4eaee972e2900550d03d2f1a8f7140c8dbc3f6adf1c55596a00ae"
+  - "repo:scripts/branch-policy.py#sha256:3be4d5412e7c4060636f93f612b1df9b118ff9fa54d980e805a6362fdbb3f1f7"
 links: [git-worktree-lifecycle]
-reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
+reviewed_revision: "git:a642bd91e1cabdf80673b836f2e801a2c6cf9b61"
 status: active
 ---
 
