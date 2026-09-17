@@ -100,6 +100,7 @@ current catalog.
 | 문서 | 설명 |
 | --- | --- |
 | [Research 안내](research/README.md) | Dated external research MOC |
+| [호스트 정책 훅 조사](research/host-policy-hooks-2026-09-18.md) | 세 호스트 공식 계약·실제 강제 경계·0.11.0 설계 |
 | [브랜치 이름 규칙 조사](research/branch-naming-audit-2026-09-18.md) | 금지 접두사 생성 원인·검사 누락·수정 제안 |
 | [Codex app-server usage](research/codex-app-server-usage-sensor.md) | Codex native sensor |
 | [Claude usage](research/claude-code-native-usage-sensor.md) | Claude status-line sensor |
