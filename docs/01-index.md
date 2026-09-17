@@ -100,6 +100,7 @@ current catalog.
 | 문서 | 설명 |
 | --- | --- |
 | [Research 안내](research/README.md) | Dated external research MOC |
+| [브랜치 이름 규칙 조사](research/branch-naming-audit-2026-09-18.md) | 금지 접두사 생성 원인·검사 누락·수정 제안 |
 | [Codex app-server usage](research/codex-app-server-usage-sensor.md) | Codex native sensor |
 | [Claude usage](research/claude-code-native-usage-sensor.md) | Claude status-line sensor |
 | [Antigravity usage](research/antigravity-native-usage-sensor.md) | Antigravity native surface |
