@@ -12,7 +12,9 @@ named developer branch 유지 없음.
 `test/`, `refactor/`, `build/`, `chore/` 중 가장 좁은 분류 선택. agent·model·assistant·사람
 이름 접두사 사용 금지.
 
-`staging`: 정식 릴리스 계획에서 별도 사전 운영 환경이 필요하고 사용자가 승인한 경우만
+접두사 없는 이름: `main`·`develop`만 허용. `codex/` 등 도구 기본 제안의 예외 적용 금지.
+
+`release/staging`: 정식 릴리스 계획에서 별도 사전 운영 환경이 필요하고 사용자가 승인한 경우만
 생성. 생성 시 Pull Request·필수 상태 검사·삭제 차단·force-push 차단의 엄격한
 ruleset 적용.
 
@@ -53,4 +55,24 @@ git remote -v
 - 대상 remote와 ref 확인
 - history rewrite는 명시 요청 때만 수행
 - force push가 필요하면 `--force-with-lease`만 사용
-- `main`, `develop`, 활성 릴리스 `staging` 삭제 금지
+- `main`, `develop`, 활성 릴리스 `release/staging` 삭제 금지
+
+## 이름 검사와 설치
+
+```sh
+python scripts/branch-policy.py check refactor/hive-foundations
+python scripts/branch-policy.py create refactor/example
+python scripts/branch-policy.py rename refactor/example refactor/new-name
+python scripts/branch-policy.py install-hooks
+python scripts/branch-policy.py install-hooks --apply
+```
+
+- `check`: 접두사와 Git 문법 검사. `create`: 명시 승인된 작업의 새 브랜치 생성
+- `install-hooks`: 미리 보기, `--apply`: 현재 저장소의 참조 변경·게시 전 훅 설치
+- 기존 훅·사용자 `core.hooksPath` 발견 시 보존과 수동 통합 안내, 덮어쓰기 제외
+- 로컬 참조 검사: 변경 확정 전 거부, 게시 검사: 로컬 이름과 다른 원격 목적지도 검사
+- `dev-check.py pre-push`: 이름 검사 후 기존 전체 시험 실행
+- 원격 규칙 정본: `scripts/branch-policy.py`; `.github/branch-policy-ruleset.json`은 생성 결과
+- 로컬 훅의 우회 가능성 때문에 GitHub 이름 규칙과 PR 검사 병행
+- Git 2.45.1의 직접 `git branch -m`은 참조 훅 우회 가능. 이름 변경은 `rename` 도구 사용, 우회된 이름의 커밋·게시도 별도 거부
+- 소스 개발 도구에 한정, 소비자 프로젝트에 소스 규칙 자동 설치 제외

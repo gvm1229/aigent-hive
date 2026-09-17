@@ -29,6 +29,9 @@ Repository directives live under `.agents/`; shipping consumer sources live unde
   completed criteria. Every other failure remains agent-owned work.
 - Preserve historical `harness/project-bases/` and `harness/user-bases/` bytes.
 - Verify completion claims with fresh evidence.
+- Branch names: only `main`, `develop`, or an approved work-class prefix such as
+  `refactor/`; never `codex/` or another agent-name prefix. Run
+  `python scripts/branch-policy.py check <name>` before branch creation or rename.
 
 ## Entry sequence
 
