@@ -368,3 +368,11 @@
 | [failed](runs/20260909T201420-a60b82f5efb1.md) | 0.10.3 전체 Python 적합성 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260909T202613-ecf5607e543f.md) | 0.10.3 전체 Python 최종 재검증 | 7ead19c96746d8aca122a2ccf8130eb642b5e94b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260909T204703-438b97274e95.md) | 0.10.3 전체 Python 통과 재검증 | c4181fb07c739b13d7f63afa17cbc0ed67e11eaa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260912T064110-f4dfb68b267f.md) | Python conformance: documentation | 84d22552f3dbff083e2e40c807ed113dbaa3b780 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260912T151728-671db64d2c06.md) | Quota Reset Guard 이름 변경 검증 | 23670b61faf3c49d351309c4a54a7dbccba05ab3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T170652-7ee425e6a210.md) | 브랜치 정책 실제 Git 참조·게시 회귀 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T170813-98d9eb4629d9.md) | 브랜치 이름 변경 우회·커밋·게시 차단 회귀 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T170913-96fa464d00be.md) | 브랜치 정책 최종 회귀와 Windows Git 자료 격리 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T171108-7b497ed5e0d6.md) | 브랜치 정책·지침·검사 목록 최종 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T171208-0454614c7d60.md) | 브랜치 검사와 지침 크기 회귀 마감 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T171316-ab0d5a8ff6a5.md) | PR 출처 누락 거부와 최종 브랜치 정책 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
