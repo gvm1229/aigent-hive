@@ -70,6 +70,8 @@ python scripts/branch-policy.py install-hooks --apply
 - `check`: 접두사와 Git 문법 검사. `create`: 명시 승인된 작업의 새 브랜치 생성
 - `install-hooks`: 미리 보기, `--apply`: 현재 저장소의 참조 변경·게시 전 훅 설치
 - 기존 훅·사용자 `core.hooksPath` 발견 시 보존과 수동 통합 안내, 덮어쓰기 제외
+- 검사기는 Git 내부 훅 디렉터리에 사본 설치, 작업 브랜치 전환으로 원본이 사라져도 검사 유지
+- 다른 내용의 설치 사본은 자동 덮어쓰기 거부, 검토 후 갱신. 예전 Hive 경로 연결은 정확한 바이트가 일치할 때만 이관
 - 로컬 참조 검사: 변경 확정 전 거부, 게시 검사: 로컬 이름과 다른 원격 목적지도 검사
 - `dev-check.py pre-push`: 이름 검사 후 기존 전체 시험 실행
 - 원격 규칙 정본: `scripts/branch-policy.py`; `.github/branch-policy-ruleset.json`은 생성 결과

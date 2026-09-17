@@ -129,7 +129,7 @@ class BranchPolicyTest(unittest.TestCase):
     def test_installer_preview_idempotence_and_foreign_hook_preservation(self):
         hooks = self.repo / ".git/hooks"
         hooks.mkdir(exist_ok=True)
-        self.assertEqual(len(POLICY.install_hooks(self.repo, False)), 3)
+        self.assertEqual(len(POLICY.install_hooks(self.repo, False)), 4)
         self.assertFalse((hooks / "reference-transaction").exists())
         (hooks / "pre-push").write_text("foreign hook\n")
         with self.assertRaises(POLICY.PolicyError):
@@ -145,6 +145,32 @@ class BranchPolicyTest(unittest.TestCase):
         with self.assertRaises(POLICY.PolicyError):
             self.install()
         self.assertFalse((self.repo / "owned-by-user").exists())
+
+    def test_installed_hooks_survive_source_file_disappearing(self):
+        copied = self.repo / "policy.py"
+        copied.write_bytes(SCRIPT.read_bytes())
+        result = subprocess.run([sys.executable, str(copied), "install-hooks", "--apply"],
+                                cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        copied.unlink()
+        self.git("branch", "codex/no-source", success=False)
+        self.git("switch", "-c", "fix/no-source")
+        self.git("commit", "--allow-empty", "-m", "snapshot still works")
+
+    def test_exact_legacy_hook_migration_and_changed_snapshot_refusal(self):
+        hooks = self.repo / ".git/hooks"
+        hooks.mkdir(exist_ok=True)
+        legacy = hooks / "reference-transaction"
+        legacy.write_bytes(POLICY.hook_bytes("reference-transaction"))
+        legacy.chmod(0o755)
+        self.install()
+        snapshot = hooks / "hive-branch-policy.py"
+        self.assertEqual(snapshot.read_bytes(), SCRIPT.read_bytes())
+        self.assertIn(b"hive-branch-policy.py", legacy.read_bytes())
+        snapshot.write_bytes(b"foreign change\n")
+        with self.assertRaises(POLICY.PolicyError):
+            self.install()
+        self.assertEqual(snapshot.read_bytes(), b"foreign change\n")
 
     def test_invalid_hook_input_and_ignored_completion_state(self):
         for function, args in ((POLICY.validate_push, ("bad", self.repo)),

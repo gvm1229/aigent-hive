@@ -108,9 +108,9 @@ def ruleset_text() -> str:
     return json.dumps(ruleset(), indent=2) + "\n"
 
 
-def hook_bytes(event: str) -> bytes:
+def hook_bytes(event: str, installed_script: Path | None = None) -> bytes:
     python = shlex.quote(Path(sys.executable).resolve().as_posix())
-    script = shlex.quote(Path(__file__).resolve().as_posix())
+    script = shlex.quote((installed_script or Path(__file__)).resolve().as_posix())
     return (
         "#!/bin/sh\n# Hive source branch policy v1\n"
         f'exec {python} {script} {event} "$@"\n'
@@ -127,35 +127,56 @@ def install_hooks(repo: Path, apply: bool) -> list[str]:
     for ancestor in (directory, *directory.parents):
         if ancestor.is_symlink():
             raise PolicyError("refusing a symlink in the hooks directory path")
-    planned = []
+    snapshot = directory / "hive-branch-policy.py"
+    snapshot_bytes = Path(__file__).read_bytes()
+    if snapshot.is_symlink() or (snapshot.exists() and not snapshot.is_file()):
+        raise PolicyError("unsafe installed policy snapshot")
+    if snapshot.exists() and snapshot.read_bytes() != snapshot_bytes:
+        raise PolicyError("installed policy differs; review its exact bytes before upgrading")
+    planned = [] if snapshot.exists() else [(snapshot, snapshot_bytes, None)]
     for event in ("reference-transaction", "pre-push", "pre-commit"):
         path = directory / event
-        expected = hook_bytes("current" if event == "pre-commit" else event)
+        command = "current" if event == "pre-commit" else event
+        expected = hook_bytes(command, snapshot)
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise PolicyError(f"unsafe existing hook: {path}")
         if path.exists():
-            if path.read_bytes() != expected:
+            previous = path.read_bytes()
+            # Migrate only the exact source-path wrappers emitted by v1, never
+            # merely a file containing our marker. Keep foreign edits untouched.
+            if previous != expected and (snapshot.exists() or previous != hook_bytes(command)):
                 raise PolicyError(f"existing hook preserved: {path}")
+            if previous != expected:
+                planned.append((path, expected, previous))
             if os.name != "nt" and not path.stat().st_mode & 0o111:
                 raise PolicyError(f"existing hook is not executable: {path}")
         else:
-            planned.append((path, expected))
+            planned.append((path, expected, None))
     if apply:
         directory.mkdir(parents=True, exist_ok=True)
         written = []
         try:
-            for path, expected in planned:
-                with path.open("xb") as stream:
-                    written.append((path, expected))
-                    stream.write(expected)
+            for path, expected, previous in planned:
+                if previous is None:
+                    with path.open("xb") as stream:
+                        written.append((path, expected, previous))
+                        stream.write(expected)
+                else:
+                    if path.is_symlink() or path.read_bytes() != previous:
+                        raise PolicyError(f"hook changed during install: {path}")
+                    path.write_bytes(expected)
+                    written.append((path, expected, previous))
                 path.chmod(0o755)
-        except OSError:
+        except (OSError, PolicyError):
             # Only remove the exact hook bytes created by this invocation.
-            for path, expected in reversed(written):
+            for path, expected, previous in reversed(written):
                 if not path.is_symlink() and path.is_file() and path.read_bytes() == expected:
-                    path.unlink()
+                    if previous is None:
+                        path.unlink()
+                    else:
+                        path.write_bytes(previous)
             raise
-    return [str(path) for path, _ in planned]
+    return [str(path) for path, _, _ in planned]
 
 
 def main(argv: list[str] | None = None) -> int:
