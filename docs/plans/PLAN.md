@@ -1,7 +1,7 @@
 # Aigent Hive 활성 계획
 
-> Revision: 333
-> 기준일: 2026-09-17
+> Revision: 334
+> 기준일: 2026-09-18
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
 > 현재 단계: 기존 `0.10.4` 변경을 계승하는 `0.11.0` 리팩터링 계획
@@ -11,7 +11,7 @@
 ## 현재 요청과 경계
 
 - 요청: 새 브랜치와 다섯 영역의 구현 계획. 이번 작업의 제품 구현·설치·게시 제외
-- 브랜치: `codex/refactor-hive-foundations`, 기준 `develop@87b84f42`
+- 브랜치: `refactor/hive-foundations`, 기준 `develop@87b84f42`
 - 확정: 기존 기능·명령 유지, 핵심 지식 흐름 우선, Codex 검증 후 다른 호스트 확대
 - 목표: 지식 이어 가기·호스트 검증·코드 중심 안전 검사·공통 파일 처리·상태 단일 정본
 - [총괄 계획](active/refactor-foundations.md)의 21개 구현 항목. 계획 작성 완료와 제품 구현 완료의 별도 판정
@@ -56,9 +56,11 @@
 | 리팩터링 지식·호스트 `RF-K*`, `RF-H*` | 0 | 6 | 0% |
 | 리팩터링 안전·설치 `RF-P*`, `RF-T*` | 0 | 8 | 0% |
 | 리팩터링 계획·상태 `RF-S*` | 0 | 4 | 0% |
-| **등록 항목 합계** | **38** | **22** | **63.3%** |
+| 브랜치 강제·호스트 조사 `BR-*` | 0 | 5 | 0% |
+| 호스트 정책 훅 `HK-*` | 0 | 4 | 0% |
+| **등록 항목 합계** | **38** | **31** | **55.1%** |
 
-이번 리팩터링 구현: **0/21**. `0.11.0` 범위: 기존 사용량 보호 포함 **3/25**. 기존 38개 완료 표시는 이전 근거의 보존이며 이번 환경의 재시험 성공과 구분.
+이번 리팩터링 구현: **0/21**. `0.11.0` 범위: 기존 사용량 보호 포함 **3/34**. 기존 38개 완료 표시는 이전 근거의 보존이며 이번 환경의 재시험 성공과 구분.
 
 ## Required load order
 
@@ -73,6 +75,8 @@
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
+| [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
+| [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-*` | 호스트 정책 훅 제품 계획 |
 | [refactor-foundations.md](active/refactor-foundations.md) | `RF-B*`, `RF-R*` | 공통 기준·실행 순서·통합 수용 |
 | [refactor-context-hosts.md](active/refactor-context-hosts.md) | `RF-K*`, `RF-H*` | 지식 흐름·실제 호스트 검증 |
 | [refactor-policy-transactions.md](active/refactor-policy-transactions.md) | `RF-P*`, `RF-T*` | 안전 검사·설치·복구 |
@@ -87,7 +91,7 @@
 
 리팩터링: `RF-B01–B02` → `RF-S01–S02` → `RF-K01`·`RF-H01` → 안전·지식 개선 → 설치 분리 → 호스트 확대·상태 이관 → `RF-R01`. 상세 선행 조건은 [총괄 계획](active/refactor-foundations.md) 참조.
 
-현재 요청의 종료 조건: 브랜치·계획·선택 사항 반영·문서 검사·로컬 커밋. 제품 구현은 후속 작업.
+현재 요청: `BR-001–005` 구현·검증과 `HK-*` 조사·설계. 나머지 제품 구현은 후속 작업.
 
 ### 이전 출시의 실행 순서
 

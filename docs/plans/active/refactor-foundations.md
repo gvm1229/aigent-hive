@@ -11,7 +11,7 @@
 - 확정 방향: 기존 기능·명령 유지, 지식 저장·조회·새 대화에서 이어 가기부터 개선
 - 실제 앱 검증: Codex 우선, 이후 Claude Code·Antigravity 확대
 - 목표: 같은 설명의 반복 감소, 필요한 지식의 정확한 회수, 안전 규칙과 파일 변경 처리의 단일 책임
-- 브랜치: `codex/refactor-hive-foundations`; 기존 `develop` 변경과 과거 출시 기록 보존
+- 브랜치: `refactor/hive-foundations`; 기존 `develop` 변경과 과거 출시 기록 보존
 - 버전 결정: 미출시 `0.10.4` 변경을 그대로 계승하는 `0.11.0`, 별도 `0.10.4` 출시 제외
 - 기존 사용량 보호: [RB104 계획](quota-reset-guard-0.11.0.md)의 식별자·구현·증거 유지
 
