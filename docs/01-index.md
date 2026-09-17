@@ -62,6 +62,7 @@ current catalog.
 | [ADR-0018](decisions/ADR-0018-notion-wiki-backend.md) | Notion Wiki backend |
 | [ADR-0019](decisions/ADR-0019-hive-native-iterative-execution.md) | Hive-native 반복 실행 소유권 |
 | [ADR-0020](decisions/ADR-0020-0.10.0-product-scope.md) | `0.10.0` 최종 제품 범위 |
+| [ADR-0023](decisions/ADR-0023-foundation-refactor.md) | 기존 기능 유지·핵심 흐름 우선 리팩터링 |
 
 ## Guides
 
@@ -146,6 +147,10 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | --- | --- |
 | [Plan 안내](plans/README.md) | Plan structure |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
+| [기반 구조 리팩터링](plans/active/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
+| [지식·호스트 리팩터링](plans/active/refactor-context-hosts.md) | 지식 이어 가기·Codex 우선 수용 |
+| [안전·설치 리팩터링](plans/active/refactor-policy-transactions.md) | 코드 검사·파일 변경 책임 분리 |
+| [계획·상태 리팩터링](plans/active/refactor-plan-state.md) | Markdown 정본 기반 집계 생성 |
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
 | [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |

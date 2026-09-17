@@ -1,7 +1,7 @@
 # 현재 상태
 
-- 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.3`
+- 작업 branch: `codex/refactor-hive-foundations`; 통합 branch: `develop`; stable source branch: `main`
+- 개발 목표: `0.11.0-test.1`; 현재 제품 파일의 버전: `0.10.3`
 - 현재 공개 stable: `0.10.3`
 - 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
 - 출시 상태: Stable `0.10.3` 공개·독립 검증 완료
@@ -10,6 +10,22 @@
 - 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
 - 출시 계획: [release-0.10.2.md](../plans/active/release-0.10.2.md)
 - 결정: [ADR-0022](../decisions/ADR-0022-global-user-update.md)
+
+## 현재 리팩터링 계획
+
+- 요청 범위: 브랜치 생성·구현 계획. 제품 코드는 이번 작업에서 변경 없음
+- 기준: `develop@87b84f42`; 사용자 선택: 기존 기능·명령 유지, 핵심 지식 흐름 개선, Codex 우선 검증
+- 총괄: [리팩터링 기반 구조](../plans/active/refactor-foundations.md), 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md)
+- 세부: [지식·호스트](../plans/active/refactor-context-hosts.md), [안전·설치](../plans/active/refactor-policy-transactions.md), [계획·상태](../plans/active/refactor-plan-state.md)
+- 구현 기준: 21개, 완료 0개. 기존 완료 35개와 별도 `RB104-*` 3/4의 집계 분리
+- 목표 제품 버전: `0.11.0`, 첫 공개 시험 `0.11.0-test.1`. 미출시 `0.10.4` 구현 계승과 별도 출시 제외
+- 계승 대상: [사용량 보호](../plans/active/quota-reset-guard-0.11.0.md)의 `RB104-*` 3/4. 전체 `0.11.0` 범위 3/25, 새 버전의 실제 수용은 후속 검증
+- 후속 첫 작업: `RF-B01–B02` 확정 버전의 제품 메타데이터·호환성·기준 측정, 이후 `RF-S01–S02` 상태 검사 기반
+- `RB104-004`: 기존 소유 문서와 미완료 상태 유지; 다른 호스트의 실제 근거 없이 완료 처리 금지
+- 검증 범위: Windows Codex의 문서·코드 조사. 제품 시험·새 대화 수용·다른 운영체제 실행은 후속 구현 범위
+- 계획 검증: Markdown 링크·항목 집계·문서 크기 검사 성공. 전체 문서 시험은 기존 Source Wiki 원본 지문 불일치로 실패; 기존 사용량 보호 안내의 문체 오류 5개는 `RF-B02`의 기준 정리 대상
+
+아래 내용은 이전 출시의 근거와 기존 후속 작업 기록. 이전의 남은 작업 0건은 해당 출시 범위에 한정.
 
 ## 권한과 범위
 
@@ -31,9 +47,8 @@
 
 ## 개선 작업
 
-- Quota Reset Guard `RB104-001–003` 구현: 같은 측정 범위의 잔량 증가를 `hive.usage-reset`으로 차단하고,
-  기준 관측을 같은 런타임 표식에 저장. 15초 감시·진행 중 추론 중단·현재 작업 opt-out은 검증된 host API가
-  없어 `RB104-004`에 남음.
+- Quota Reset Guard `RB104-001–003`: 같은 측정 범위의 잔량 증가에 `hive.usage-reset` 차단, 같은 실행 상태 표식에 기준 관측 저장
+- `RB104-004`: 검증된 호스트 API 부재로 15초 감시·진행 중 추론 중단·현재 작업별 제외·명시적 재개 미완료
 
 - 모호한 일반 요청의 작업 권한 유지와 명시적 프롬프트 작성 경로 분리
 - 현재 Skill 참조·기본 stable 채널·공유 지식 색인·종료 hook 규칙 정합화
