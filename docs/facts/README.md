@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 소스 브랜치 이름 규칙 | [en](en/branch-naming-policy.md) | [ko](ko/branch-naming-policy.md) |
 | `0.11.0` 기반 구조 리팩터링 | [en](en/foundation-refactor.md) | [ko](ko/foundation-refactor.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
