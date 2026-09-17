@@ -376,3 +376,5 @@
 | [failed](runs/20260917T171108-7b497ed5e0d6.md) | 브랜치 정책·지침·검사 목록 최종 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260917T171208-0454614c7d60.md) | 브랜치 검사와 지침 크기 회귀 마감 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260917T171316-ab0d5a8ff6a5.md) | PR 출처 누락 거부와 최종 브랜치 정책 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T172309-79ba73cc62c6.md) | 브랜치 전환 뒤 훅 검사기 보존과 정확한 이전 훅 이관 | 4ea8657a4ec2a06aac1d2162554f7a35fe08e36b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T172438-13bc33261979.md) | Git 신규 준비 단계 호환성과 정책 최종 검증 | 64864cd76406b123f87b1fe569e96bb9f793efe9 | Windows-11-10.0.26200-SP0 |
