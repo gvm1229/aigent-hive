@@ -9,9 +9,9 @@ summary: "미출시 0.10.4 변경을 계승하는 0.11.0 리팩터링, 기존 �
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:8a61ed9ab2c5194bed2ccaad40ee31154be17dc4cfc6f006fbc68f2c2a50f487"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:f548166391661d9103bf724f42c96bf073c9a4ba947103932b352806544ecfcd"
 links: [artifact-boundaries, orchestration-ownership]
-reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
+reviewed_revision: "git:23a94c06874fd65f8cdb0151f8512caed88fd792"
 status: active
 ---
 
