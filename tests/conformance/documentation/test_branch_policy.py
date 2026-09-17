@@ -178,6 +178,7 @@ class BranchPolicyTest(unittest.TestCase):
             with self.assertRaises(POLICY.PolicyError):
                 function(*args)
         POLICY.validate_transaction("bad", "committed", self.repo)
+        self.assertEqual(POLICY.main(["--repo", str(self.repo), "reference-transaction", "preparing"]), 0)
         POLICY.validate_push("(delete) " + "0" * 40 + " refs/heads/codex/old " + "a" * 40, self.repo)
 
     def test_main_pr_requires_same_repository_develop(self):

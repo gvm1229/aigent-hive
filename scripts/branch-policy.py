@@ -192,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     rename.add_argument("old")
     rename.add_argument("new")
     transaction = commands.add_parser("reference-transaction")
-    transaction.add_argument("state", choices=("prepared", "committed", "aborted"))
+    transaction.add_argument("state", choices=("preparing", "prepared", "committed", "aborted"))
     push = commands.add_parser("pre-push")
     push.add_argument("remote", nargs="?")
     push.add_argument("url", nargs="?")
