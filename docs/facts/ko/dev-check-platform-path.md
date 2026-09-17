@@ -9,9 +9,9 @@ summary: "호스트 전용 pathlib 클래스 생성 없는 사전 푸시 도구 
 tags: [development, portability, verification]
 aliases: ["dev-check PATH 이식성"]
 sources:
-  - "repo:scripts/dev-check.py#sha256:6ba74f6a9b9f262b11046e3f2003285839b447e55b2f03aeafc62f054e1690ba"
+  - "repo:scripts/dev-check.py#sha256:2518cca41040548e7f62a060c8bb8e0a77e880ad7b21a6ebd599892f4a0b5ece"
 links: [release-verification]
-reviewed_revision: "git:39569b7a2a7c67f8ab19010db8c4df32da470f86"
+reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
 ---
 

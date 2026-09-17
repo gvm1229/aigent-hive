@@ -9,10 +9,10 @@ summary: "Ordinary work uses one primary worktree; authorized temporary worktree
 tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:8d3afcb2e885232dcb7e7775d55d0b48477358ddbc0266ff4a48de80af34e9fc"
+  - "repo:.agents/directives/03-workflow.md#sha256:fc79be9eea10702b0770715b5fe154e41a2e707557171be3819d493ad5a85ed5"
   - "repo:.agents/directives/06-session-coordination.md#sha256:af121dbbd4cc3f3d8141ef6ff10d5645c13f833e8f809609495a249079b92424"
 links: [source-development]
-reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
+reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
 ---
 

@@ -9,9 +9,9 @@ summary: "미출시 0.10.4 변경을 계승하는 0.11.0 리팩터링, 기존 �
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:3e395404715ede791de670330489065939b0c81292a7897e30cdfacae601085c"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:8a61ed9ab2c5194bed2ccaad40ee31154be17dc4cfc6f006fbc68f2c2a50f487"
 links: [artifact-boundaries, orchestration-ownership]
-reviewed_revision: "git:5829f07a1626ec8adad1aad8bdbfd0ec25bc0fd6"
+reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
 ---
 
@@ -20,5 +20,6 @@ status: active
 - 유지보수자 선택: 미출시 `0.10.4` 변경을 계승하는 `0.11.0-test.1`, 별도 `0.10.4` 출시 제외
 - 기존 기능·명령 유지, 지식 저장·조회·새 대화 연결부터 개선
 - 실제 검증: Codex 우선, 이후 다른 호스트 확대
-- 현재 승인 범위: 브랜치와 구현 계획. 제품 구현·실제 수용은 후속 작업
+- 소스 브랜치 검사 구현 완료, 호스트 정책 훅의 리팩터링 계획 편입
+- 제품 훅 구현·실제 호스트 수용은 후속 작업
 - 안정판: 해당 버전의 별도 명시 승인 필요
