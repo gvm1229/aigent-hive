@@ -151,6 +151,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Plan 안내](plans/README.md) | Plan structure |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
 | [기반 구조 리팩터링](plans/active/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
+| [작업 후 개선 후보 검토](plans/active/hook-review-candidates-0.11.0.md) | 승인 제안의 후보·사람 검토·자동 수정 방지 |
 | [지식·호스트 리팩터링](plans/active/refactor-context-hosts.md) | 지식 이어 가기·Codex 우선 수용 |
 | [안전·설치 리팩터링](plans/active/refactor-policy-transactions.md) | 코드 검사·파일 변경 책임 분리 |
 | [계획·상태 리팩터링](plans/active/refactor-plan-state.md) | Markdown 정본 기반 집계 생성 |

@@ -15,7 +15,7 @@
 
 - 사용자 승인: [브랜치 강제](../plans/active/branch-enforcement-0.11.0.md)의 구현·로컬 설치·원격 적용과 세 호스트 훅 조사
 - 브랜치 교정: `refactor/hive-foundations`, 변경 전후 `8365da7f` 동일
-- 제품 후속 범위: [호스트 정책 훅](../plans/active/host-policy-hooks-0.11.0.md), `HK-*` 0/4
+- 제품 후속 범위: [호스트 정책 훅](../plans/active/host-policy-hooks-0.11.0.md)과 [개선 후보 검토](../plans/active/hook-review-candidates-0.11.0.md), `HK-*` 0/5
 - `BR-*` 5/5: 이름 검사·Git 훅·CI 정의 구현, 실제 저장소 생성 거부와 원격 규칙 `23612617` 확인
 - Windows Git 관련 시험 35개 성공, 지침 크기·Markdown 링크 검사 성공
 - CI 정의의 원격 실행·macOS/Linux·호스트 훅 실제 수용은 미실행
@@ -24,6 +24,7 @@
 - 조사 결과: [세 호스트 훅 계약](../research/host-policy-hooks-2026-09-18.md); 기존 Hive 전용 입력·종료 3의 직접 연결 제외
 - [프로젝트 전체 정책 분석](../research/project-policy-enforcement-2026-09-18.md): 20개 규칙군의 강제·부분 검사·의미 판단 구분
 - 선행 공백: 계획 ID 21개와 출시 문법 불일치, 현재 등록 범위 밖 완료 ID 187개 수집. 분석만 수행, 코드·ID 수정과 `HK-*` 완료 처리 없음
+- 2026-09-19: 제안 7개 편입 승인. 기존 기준 보강과 `HK-005` 추가, [ADR 소유 표](../decisions/ADR-0023-foundation-refactor.md) 연결. 계획 갱신만 수행, 제품 구현·설치·외부 도구 도입 없음
 
 ## 기존 리팩터링 계획
 
@@ -33,7 +34,7 @@
 - 세부: [지식·호스트](../plans/active/refactor-context-hosts.md), [안전·설치](../plans/active/refactor-policy-transactions.md), [계획·상태](../plans/active/refactor-plan-state.md)
 - 구현 기준: 21개, 완료 0개. 기존 완료 35개와 별도 `RB104-*` 3/4의 집계 분리
 - 목표 제품 버전: `0.11.0`, 첫 공개 시험 `0.11.0-test.1`. 미출시 `0.10.4` 구현 계승과 별도 출시 제외
-- 계승 대상: [사용량 보호](../plans/active/quota-reset-guard-0.11.0.md)의 `RB104-*` 3/4. 전체 `0.11.0` 범위 8/34, 새 버전의 실제 수용은 후속 검증
+- 계승 대상: [사용량 보호](../plans/active/quota-reset-guard-0.11.0.md)의 `RB104-*` 3/4. 전체 `0.11.0` 범위 8/35, 새 버전의 실제 수용은 후속 검증
 - 후속 첫 작업: `RF-B01–B02` 확정 버전의 제품 메타데이터·호환성·기준 측정, 이후 `RF-S01–S02` 상태 검사 기반
 - `RB104-004`: 기존 소유 문서와 미완료 상태 유지; 다른 호스트의 실제 근거 없이 완료 처리 금지
 - 검증 범위: Windows Codex의 문서·코드 조사. 제품 시험·새 대화 수용·다른 운영체제 실행은 후속 구현 범위
