@@ -239,6 +239,10 @@ pub struct FailureProposal {
     pub evidence: Vec<String>,
     /// Always true; no model claim automatically updates policy.
     pub review_required: bool,
+    /// Always unconfirmed: bounded evidence does not establish causal attribution.
+    pub certainty: &'static str,
+    /// Owning review area, not an automatically assigned or executed task.
+    pub review_area: &'static str,
 }
 
 /// Prepare a bounded causal-review candidate without collecting raw input.
@@ -273,6 +277,13 @@ pub fn propose_failure(class: FailureClass, evidence: &[String]) -> FailurePropo
             Vec::new()
         },
         review_required: true,
+        certainty: "unconfirmed",
+        review_area: match proposed_class {
+            FailureClass::MissingRule | FailureClass::HarmfulRule => "policy-review",
+            FailureClass::NonCompliance => "enforcement-boundary",
+            FailureClass::ToolEnvironment => "tool-environment",
+            FailureClass::InsufficientEvidence => "evidence-review",
+        },
     }
 }
 
