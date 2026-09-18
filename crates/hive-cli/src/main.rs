@@ -29,6 +29,7 @@ mod knowledge_scan;
 mod korean;
 mod loop_engineering;
 mod orchestration;
+mod policy;
 mod project_upgrade;
 mod report;
 mod role;
@@ -73,6 +74,7 @@ USAGE:
     hive prompt validate --request <input.json> --result <result.json> --output json
     hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
+    hive policy evaluate --input <json> --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
@@ -229,6 +231,7 @@ fn main() -> ExitCode {
         Some("route") => run_route(&arguments[1..]),
         Some("prompt") => run_prompt(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
+        Some("policy") => policy::run(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
