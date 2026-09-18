@@ -735,7 +735,8 @@ pub(super) fn restore_projection_claim(mut claim: ProjectionClaim) -> io::Result
         .quarantine
         .as_ref()
         .expect("live projection claim retains its quarantine handle");
-    quarantine.hard_link(
+    hive_core::file_ops::publish_exclusive(
+        quarantine,
         OsStr::new("claimed-SKILL.md"),
         &claim.parent,
         &claim.destination_name,
@@ -765,11 +766,12 @@ pub(super) fn publish_claimed_projection_replacement(
             ));
         }
     };
-    if let Err(error) =
-        claim
-            .parent
-            .hard_link(&temporary_name, &claim.parent, &claim.destination_name)
-    {
+    if let Err(error) = hive_core::file_ops::publish_exclusive(
+        &claim.parent,
+        &temporary_name,
+        &claim.parent,
+        &claim.destination_name,
+    ) {
         let _ = claim.parent.remove_file(&temporary_name);
         return Err(projection_claim_conflict(
             claim,
@@ -881,23 +883,16 @@ pub(super) fn create_capability_file_exclusive(
     let (parent, file_name) = capability_parent(target, destination, false, &mut created)
         .map_err(|error| render_error_to_io(&error))?
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "managed parent is missing"))?;
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    options.follow(FollowSymlinks::No);
-    match parent.open_with(&file_name, &options) {
-        Ok(mut file) => {
-            if let Err(error) = file
-                .write_all(bytes)
-                .and_then(|()| file.flush())
-                .and_then(|()| file.sync_all())
-            {
-                drop(file);
-                let _ = parent.remove_file(&file_name);
-                return Err(error);
-            }
-            Ok(())
+    match hive_core::file_ops::stage(&parent, &file_name, bytes, |_| Ok::<_, io::Error>(())) {
+        Ok(()) => Ok(()),
+        Err(hive_core::file_ops::StageError::Create(error)) => Err(error),
+        Err(
+            hive_core::file_ops::StageError::Configure(error)
+            | hive_core::file_ops::StageError::Write(error),
+        ) => {
+            let _ = parent.remove_file(&file_name);
+            Err(error)
         }
-        Err(error) => Err(error),
     }
 }
 
@@ -991,23 +986,18 @@ pub(super) fn create_capability_temporary(
             "{prefix}-{}-{epoch_nanos:x}-{counter:x}",
             std::process::id()
         ));
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        match parent.open_with(&name, &options) {
-            Ok(mut file) => {
-                if let Err(error) = file
-                    .write_all(bytes)
-                    .and_then(|()| file.flush())
-                    .and_then(|()| file.sync_all())
-                {
-                    drop(file);
-                    let _ = parent.remove_file(&name);
-                    return Err(error);
-                }
-                return Ok(name);
+        match hive_core::file_ops::stage(parent, &name, bytes, |_| Ok::<_, io::Error>(())) {
+            Ok(()) => return Ok(name),
+            Err(hive_core::file_ops::StageError::Create(error))
+                if error.kind() == io::ErrorKind::AlreadyExists => {}
+            Err(hive_core::file_ops::StageError::Create(error)) => return Err(error),
+            Err(
+                hive_core::file_ops::StageError::Configure(error)
+                | hive_core::file_ops::StageError::Write(error),
+            ) => {
+                let _ = parent.remove_file(&name);
+                return Err(error);
             }
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(error) => return Err(error),
         }
     }
     Err(io::Error::new(
@@ -1428,7 +1418,7 @@ pub(super) fn rollback_deleted_projection(
         .quarantine
         .as_ref()
         .expect("live projection recovery retains its quarantine handle");
-    match quarantine.hard_link(
+    match hive_core::file_ops::publish_exclusive(quarantine,
         OsStr::new("prior-SKILL.md"),
         &recovery.parent,
         &recovery.destination_name,

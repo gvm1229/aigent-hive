@@ -473,6 +473,8 @@ dependencies = [
 name = "hive-core"
 version = "0.11.0"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "ed25519-dalek",
  "jsonschema",
  "regex",
@@ -480,6 +482,7 @@ dependencies = [
  "serde_json",
  "serde_json_canonicalizer",
  "sha2",
+ "tempfile",
  "yaml_serde",
 ]
 
