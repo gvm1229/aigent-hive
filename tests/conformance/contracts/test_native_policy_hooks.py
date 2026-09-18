@@ -80,7 +80,8 @@ class NativePolicyProtocolTests(Phase1CliTestCase):
     def test_stop_is_neutral_and_startup_only_delivers_bounded_context(self):
         before = snapshot_tree(self.target)
         for host in ("codex", "claude", "antigravity"):
-            self.assertEqual(self.invoke_native(host, "not JSON", "Stop"), {})
+            expected_stop = {"decision": "allow"} if host == "antigravity" else {}
+            self.assertEqual(self.invoke_native(host, "not JSON", "Stop"), expected_stop)
             event = "PreInvocation" if host == "antigravity" else "SessionStart"
             context = self.invoke_native(host, {}, event)
             self.assertLess(len(json.dumps(context)), 1024)

@@ -58,7 +58,14 @@ pub(super) fn run(args: &[String]) -> ExitCode {
     };
     // A turn ending is neither task success nor authority to continue or capture memory.
     if args[3] == "Stop" {
-        println!("{{}}");
+        println!(
+            "{}",
+            if host == Host::Antigravity {
+                json!({"decision":"allow"})
+            } else {
+                json!({})
+            }
+        );
         return ExitCode::SUCCESS;
     }
     let mut bytes = Vec::new();
