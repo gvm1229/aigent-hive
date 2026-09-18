@@ -7,6 +7,7 @@ use cap_primitives::fs::FollowSymlinks;
 use cap_primitives::fs::PermissionsExt as CapPermissionsExt;
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
+use hive_core::file_ops::publish_exclusive;
 use hive_core::sha256_digest;
 use hive_projection::{
     compile_user_projection_localized, DescriptorLanguage, Host as ProjectionHost,
@@ -33,7 +34,9 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 #[cfg(test)]
 use std::fs;
-use std::io::{self, Read, Write};
+#[cfg(test)]
+use std::io::Write;
+use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -6202,8 +6205,7 @@ fn cas_activate_with_barrier(
                     ))
                 },
             )?;
-            quarantine
-                .hard_link("replacement.bin", &parent, &name)
+            publish_exclusive(&quarantine, OsStr::new("replacement.bin"), &parent, &name)
                 .map_err(|error| retained_claim_error(relative, "publish replacement", error))?;
             quarantine.remove_file("replacement.bin").map_err(|error| {
                 retained_claim_error(relative, "clean staged replacement", error)
@@ -6263,7 +6265,9 @@ fn create_new_exclusive(
         }
         return Err(error);
     }
-    if let Err(error) = quarantine.hard_link("replacement.bin", &parent, &name) {
+    if let Err(error) =
+        publish_exclusive(&quarantine, OsStr::new("replacement.bin"), &parent, &name)
+    {
         let _ = quarantine.remove_file("replacement.bin");
         drop(quarantine);
         let _ = parent.remove_dir(&quarantine_name);
@@ -6288,18 +6292,16 @@ fn stage_file(
     permissions: FilePermissions,
     relative: &Path,
 ) -> Result<(), InstallError> {
-    let mut options = OpenOptions::new();
-    options
-        .write(true)
-        .create_new(true)
-        .follow(FollowSymlinks::No);
-    let mut file = directory
-        .open_with(name, &options)
-        .map_err(|error| io_internal("stage", relative, error))?;
-    set_file_permissions(&file, permissions, relative)?;
-    file.write_all(bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|error| io_internal("write staged", relative, error))
+    hive_core::file_ops::stage(directory, OsStr::new(name), bytes, |file| {
+        set_file_permissions(file, permissions, relative)
+    })
+    .map_err(|error| match error {
+        hive_core::file_ops::StageError::Create(error) => io_internal("stage", relative, error),
+        hive_core::file_ops::StageError::Configure(error) => error,
+        hive_core::file_ops::StageError::Write(error) => {
+            io_internal("write staged", relative, error)
+        }
+    })
 }
 
 fn restore_claim(
@@ -6309,8 +6311,7 @@ fn restore_claim(
     quarantine_name: &OsStr,
     relative: &Path,
 ) -> Result<(), InstallError> {
-    quarantine
-        .hard_link("claimed.bin", parent, name)
+    publish_exclusive(&quarantine, OsStr::new("claimed.bin"), parent, name)
         .map_err(|error| retained_claim_error(relative, "restore claimed bytes", error))?;
     quarantine
         .remove_file("claimed.bin")
