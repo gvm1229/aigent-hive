@@ -4,15 +4,15 @@
 > Scope: product
 
 > 소유 항목: `HK-001–003`
-> 상태: 조사 후 설계 구체화, 제품 구현 전
+> 상태: 공통 판정 완료, 호스트 변환·등록·수용 진행
 > 목적: 규칙 전달과 실제 변경 차단의 분리, 세 호스트의 검증된 기능만 사용
 > 조사: [공식 계약·로컬 증거·설계](../../research/host-policy-hooks-2026-09-18.md)
 > 전체 적용 분석: [규칙 20개 영역과 최종 검사 지점](../../research/project-policy-enforcement-2026-09-18.md)
 > 2026-09-19 승인: 실패 분류·결과 합산·작동 진단·보류 평가·규칙 전달 비용의 구체화
 > 별도 소유: [검토 후보 HK-005](hook-review-candidates-0.11.0.md), [문맥 유효성 RFK-002](refactor-context-hosts.md)
 
-- [ ] [HK-001] 공통 판정·실패 분류·규칙 ID별 필수 결과 합산과 변경 지점 검사 계약 확정
-  - state: agent-owned; depends: RFS-001
+- [x] [HK-001] 공통 판정·실패 분류·규칙 ID별 필수 결과 합산과 변경 지점 검사 계약 확정
+  - state: complete; depends: RFS-001; evidence: repo:tests/results/runs/20260918T180744-a37939738810.md#sha256:3389135dac4100ef6b640c66f74f295d053747a9ff691f79482d28f0f026184a
 - [ ] [HK-002] 세 호스트 변환·설치·철회, 실제 적용 상태 진단과 고정 규칙·동적 상태 분리 구현
   - state: agent-owned; depends: HK-001,RFH-001
 - [ ] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
@@ -84,3 +84,9 @@
 
 
 - 독립 평가의 소유 항목: [HK-004](hook-policy-evaluation-0.11.0.md)
+
+## 구현 근거
+
+- 공통 판정·실패 분류: `hive-core/src/policy.rs`, 규칙별 범위는 [검사 목록](../../architecture/policy-rule-inventory.md)
+- 현재 호스트 변환: `hive policy hook`, 파일 편집과 시작·종료 응답의 CLI 시험 완료
+- 실제 등록·철회·진단과 앱 수용은 미완료. `HK-002–004` 완료의 대체 근거에서 제외

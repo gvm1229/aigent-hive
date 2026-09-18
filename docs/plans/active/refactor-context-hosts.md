@@ -3,7 +3,7 @@
 > Plan version: 0.11.0
 > Scope: product
 
-> 상태: 구현 전 계획
+> 상태: 구현·검증 진행
 > 소유 항목: `RFK-001–003`, `RFH-001–003`
 > 선행 조건: [공통 기준](refactor-foundations.md)의 `RFB-001–002`
 

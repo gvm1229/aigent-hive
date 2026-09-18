@@ -3,7 +3,7 @@
 > Plan version: 0.11.0
 > Scope: release
 
-> 상태: 구현 전 계획
+> 상태: 구현·검증 진행
 > 소유 항목: `RFB-001`, `RFB-002`, `RFR-001`
 > 기준 코드: `87b84f42`; 제품 버전: `0.11.0`; 첫 공개 시험: `0.11.0-test.1`
 > 결정: [ADR-0023](../../decisions/ADR-0023-foundation-refactor.md)
@@ -43,8 +43,8 @@
 
 ## 공통 완료 조건
 
-- [ ] [RFB-001] 확정된 `0.11.0-test.1`의 제품·패키지·이관 메타데이터 준비, 기존 `0.10.4` 구현 계승과 `RB104-*` 회귀 범위 확인
-  - state: agent-owned; depends: RFS-002
+- [x] [RFB-001] 확정된 `0.11.0-test.1`의 제품·패키지·이관 메타데이터 준비, 기존 `0.10.4` 구현 계승과 `RB104-*` 회귀 범위 확인
+  - state: complete; depends: RFS-002; evidence: repo:tests/results/runs/20260918T175340-186b7bfd41f8.md#sha256:f413ef7f1e4112d91d42f32edfa4798cf7d6f0ea01d5c99e224c89f8223be90c
 - [ ] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: agent-owned
 - [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
