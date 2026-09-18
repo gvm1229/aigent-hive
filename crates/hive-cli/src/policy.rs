@@ -1,5 +1,7 @@
 //! Read-only policy evaluation. Native hook translation is a separate surface.
 
+mod native;
+
 use crate::{emit_action_result, ActionResult};
 use hive_core::policy::{evaluate, Decision, Evaluation};
 use serde_json::json;
@@ -42,6 +44,9 @@ fn read_request(path: &Path) -> Result<Evaluation, &'static str> {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.first().is_some_and(|argument| argument == "hook") {
+        return native::run(&arguments[1..]);
+    }
     if arguments == ["--help"] || arguments == ["evaluate", "--help"] {
         println!("Read-only policy evaluation; never execution authority.\n\nhive policy evaluate --input <json> --output json");
         return ExitCode::SUCCESS;

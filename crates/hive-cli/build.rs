@@ -49,6 +49,23 @@ fn main() {
     println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_RELEASE_DATE");
     println!("cargo:rustc-env=HIVE_PACKAGE_RELEASE_DATE={package_release_date}");
     write_historical_user_plugin_tables(&manifest_dir);
+    let mut policy = Sha256::new();
+    for relative in [
+        "src/policy/native.rs",
+        "src/main.rs",
+        "../hive-core/src/policy.rs",
+    ] {
+        let path = manifest_dir.join(relative);
+        println!("cargo:rerun-if-changed={}", path.display());
+        policy.update(relative.as_bytes());
+        policy.update([0]);
+        policy.update(fs::read(path).expect("native policy source is readable"));
+    }
+    let mut digest = String::from("sha256:");
+    for byte in policy.finalize() {
+        write!(digest, "{byte:02x}").expect("format policy digest");
+    }
+    println!("cargo:rustc-env=HIVE_NATIVE_POLICY_DIGEST={digest}");
 }
 
 fn write_historical_user_plugin_tables(manifest_dir: &Path) {

@@ -1884,6 +1884,10 @@ fn windows_portable_path(path: &Path) -> Option<String> {
 }
 
 fn is_protected_hive_path(path: &Path) -> bool {
+    #[cfg(windows)]
+    let folded = path.to_string_lossy().to_ascii_lowercase();
+    #[cfg(windows)]
+    let path = Path::new(&folded);
     [
         ".hive/.gitignore",
         ".hive/LICENSE-AIGENT-HIVE.txt",
