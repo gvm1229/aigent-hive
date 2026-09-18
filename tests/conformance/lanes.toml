@@ -7,6 +7,7 @@ contract = "human documentation, local verification command, and developer-insta
 release_gate = true
 modules = [
   "tests.conformance.documentation.test_branch_policy",
+  "tests.conformance.documentation.test_plan_state",
   "tests.conformance.documentation.test_dev_check",
   "tests.conformance.documentation.test_dev_install_script",
   "tests.conformance.documentation.test_docs_wiki",
