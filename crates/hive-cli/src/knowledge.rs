@@ -5674,6 +5674,24 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0]["collection_id"], "user-root");
         assert_eq!(hits[0]["untrusted_content"], true);
+        let claim_path = fs::read_dir(&claims)
+            .expect("claims")
+            .next()
+            .expect("claim")
+            .expect("entry")
+            .path();
+        let index_path = user.path().join(SHARED_INDEX_RELATIVE);
+        let before_index = fs::read(&index_path).expect("index");
+        fs::write(&claim_path, b"changed canonical evidence").expect("missed change event");
+        assert!(run_retrieve(&retrieve_arguments).is_err());
+        assert_eq!(
+            fs::read(&index_path).expect("unchanged index"),
+            before_index
+        );
+        assert_eq!(
+            fs::read(&claim_path).expect("unchanged claim"),
+            b"changed canonical evidence"
+        );
     }
 
     #[test]

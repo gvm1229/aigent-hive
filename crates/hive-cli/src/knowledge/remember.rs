@@ -1,6 +1,12 @@
 //! Remember command parsing and execution.
 
-use super::*;
+use super::{
+    ensure_rag_registry, json, map_rag_error, optional, parse_options, plan_remember,
+    read_json_bounded, require_shared_wiki_enabled, required, sha256_digest, success,
+    AssertionStatus, ClaimKind, ClaimProvenance, KnowledgeResult, Path, PathBuf, RagStore,
+    RagVisibility, RememberRequest, RememberSourceKind, WikiError, SHARED_INDEX_RELATIVE,
+    USER_ROOT_COLLECTION_ID,
+};
 
 pub(super) fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(

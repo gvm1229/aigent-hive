@@ -1,6 +1,12 @@
 //! Retrieve command parsing and execution.
 
-use super::*;
+use super::{
+    derive_optional_current_collection_authority, map_rag_error, optional, parse_bounded_usize,
+    parse_options, read_json_bounded, require_shared_wiki_enabled, required,
+    resolve_collection_reference, success, vector, verify_and_consume_authorization, BTreeSet,
+    CollectionResolution, FromStr, KnowledgeResult, Path, PathBuf, RagStore, RetrievalRequest,
+    RetrievalScope, WikiError, SHARED_INDEX_RELATIVE, USER_ROOT_COLLECTION_ID,
+};
 
 #[allow(clippy::too_many_lines)]
 pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
@@ -79,7 +85,7 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
     let result = if mode == "semantic" {
         vector::retrieve(&user_root, &store, &request)?
     } else {
-        serde_json::to_value(store.retrieve(&request)?)
+        serde_json::to_value(store.checked_retrieve(&request)?)
             .map_err(|error| WikiError::Io(error.to_string()))?
     };
     let digest = result["manifest_digest"]
