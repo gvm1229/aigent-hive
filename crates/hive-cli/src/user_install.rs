@@ -1742,6 +1742,117 @@ pub(crate) fn replace_user_setup_file(
     .map_err(|error| error.message().to_owned())
 }
 
+/// Reuse the owned-file CAS while retaining the permissions of foreign host settings.
+pub(crate) fn replace_host_policy_file(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<&[u8]>,
+    desired: Option<&[u8]>,
+    expected_mode: Option<u32>,
+) -> Result<(), String> {
+    let prior = expected
+        .map(|_| file_permissions(root, relative))
+        .transpose()
+        .map_err(|error| error.message().to_owned())?;
+    let permissions = prior.unwrap_or(FilePermissions {
+        executable: false,
+        unix_mode: Some(0o600),
+    });
+    if expected.is_some() && permissions.unix_mode != expected_mode {
+        return Err("host setting permissions changed after the approved snapshot".to_owned());
+    }
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile { bytes, permissions }),
+        desired,
+        permissions,
+    )
+    .map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn host_policy_mode(root: &Dir, relative: &Path) -> Result<Option<u32>, String> {
+    file_permissions(root, relative)
+        .map(|value| value.unix_mode)
+        .map_err(|error| error.message().to_owned())
+}
+
+/// Recover only bytes and modes bound by the already approved control intent.
+pub(crate) fn recover_host_policy_file(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<(), String> {
+    if let Some((parent, name)) =
+        capability_parent(root, relative, false).map_err(|error| error.message().to_owned())?
+    {
+        let claim_name = claim_name(relative);
+        match parent.open_dir_nofollow(&claim_name) {
+            Ok(claim)
+                if claim
+                    .entries()
+                    .map_err(|error| error.to_string())?
+                    .next()
+                    .is_none() =>
+            {
+                let bytes = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)
+                    .map_err(|error| error.message().to_owned())?;
+                let current = bytes
+                    .as_deref()
+                    .map_or_else(|| "absent".to_owned(), sha256_digest);
+                if current != before && current != after {
+                    return Err("empty recovery claim is beside changed host settings".to_owned());
+                }
+                if bytes.is_some() {
+                    let actual = host_policy_mode(root, relative)?;
+                    let expected = if current == before {
+                        mode
+                    } else if cfg!(unix) {
+                        Some(mode.unwrap_or(0o600))
+                    } else {
+                        None
+                    };
+                    if actual != expected {
+                        return Err("host setting permissions changed during recovery".to_owned());
+                    }
+                }
+                drop(claim);
+                parent
+                    .remove_dir(&claim_name)
+                    .map_err(|error| error.to_string())?;
+                let _ = name;
+                return Ok(());
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    let installed_mode = if cfg!(unix) {
+        Some(mode.unwrap_or(0o600))
+    } else {
+        None
+    };
+    let entry = UserBackupEntry {
+        path: portable(relative),
+        existed: before != "absent",
+        digest: (before != "absent").then(|| before.to_owned()),
+        installed_digest: (after != "absent").then(|| after.to_owned()),
+        installed_executable: (after != "absent")
+            .then(|| !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0)),
+        installed_unix_mode: if after == "absent" {
+            None
+        } else {
+            installed_mode
+        },
+        executable: !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0),
+        unix_mode: mode,
+    };
+    reconcile_retained_claim(root, relative, &entry).map_err(|error| error.message().to_owned())
+}
+
 pub(crate) fn prune_user_setup_empty_ancestors<'a>(
     root: &Dir,
     paths: impl IntoIterator<Item = &'a Path>,

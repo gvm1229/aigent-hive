@@ -43,11 +43,12 @@ pub(super) fn run(args: &[String]) -> ExitCode {
         println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json\nNative file-edit policy only; registration and host trust are separate.");
         return ExitCode::SUCCESS;
     }
-    if args.len() != 7
+    if !matches!(args.len(), 7 | 9)
         || args[0] != "--host"
         || args[2] != "--event"
         || args[4] != "--target"
         || args[6] != "--stdin-json"
+        || (args.len() == 9 && args[7] != "--expected-policy")
     {
         eprintln!("invalid native policy hook arguments; inspect hive policy hook --help");
         return ExitCode::from(2);
@@ -66,6 +67,18 @@ pub(super) fn run(args: &[String]) -> ExitCode {
                 json!({})
             }
         );
+        return ExitCode::SUCCESS;
+    }
+    if args.len() == 9 && args[8] != env!("HIVE_NATIVE_POLICY_DIGEST") {
+        let response = if args[3] == "PreToolUse" {
+            deny(
+                host,
+                "registered policy changed; preview and approve the updated hook definition",
+            )
+        } else {
+            json!({})
+        };
+        println!("{response}");
         return ExitCode::SUCCESS;
     }
     let mut bytes = Vec::new();
@@ -223,17 +236,11 @@ fn check_files(host: Host, target: &Path, payload: &Value) -> Result<Decision, &
                 .join(&path)
         };
         let absolute = absolute.to_str().ok_or("native file target is not UTF-8")?;
-        let relative = crate::normalize_hook_path(&target, absolute)
-            .map_err(|_| "unsafe native file target")?
+        let relative = crate::observed_hook_relative(&target, absolute)
             .ok_or("file target is outside the registered policy scope")?;
-        hive_core::ensure_no_symlink_ancestors(&target, &relative)
+        hive_core::inspect_host_edit_path(&target, &relative)
             .map_err(|_| "native file target has an unsafe path ancestor")?;
-        let input = serde_json::from_value::<crate::HookInput>(json!({"schema_version":1,
-            "event":"PreToolUse", "operation":"overwrite", "path":absolute}))
-        .map_err(|_| "invalid normalized file operation")?;
-        let result = crate::protect_hive_owned_state(&target, &input)
-            .map_err(|_| "file target cannot be safely normalized")?;
-        if result.decision == "block" {
+        if crate::is_protected_hive_path(&relative) {
             decision = Decision::Deny;
         }
     }

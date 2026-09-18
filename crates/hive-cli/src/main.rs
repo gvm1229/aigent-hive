@@ -1813,13 +1813,20 @@ fn protect_hive_owned_state(target: &Path, input: &HookInput) -> Result<HookResu
 }
 
 fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, RenderError> {
+    let relative = observed_hook_relative(target, value);
+    if let Some(relative) = &relative {
+        validate_project_relative(relative).map_err(|error| {
+            RenderError::Input(format!("unsafe hook input path {value}: {error}"))
+        })?;
+    }
+    Ok(relative)
+}
+
+fn observed_hook_relative(target: &Path, value: &str) -> Option<PathBuf> {
     let path = PathBuf::from(value);
     #[cfg(windows)]
     let relative = if path.is_absolute() {
-        match windows_target_relative(target, &path) {
-            Some(relative) => relative,
-            None => return Ok(None),
-        }
+        windows_target_relative(target, &path)?
     } else {
         path
     };
@@ -1827,14 +1834,12 @@ fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, Re
     let relative = if path.is_absolute() {
         match path.strip_prefix(target) {
             Ok(relative) => relative.to_path_buf(),
-            Err(_) => return Ok(None),
+            Err(_) => return None,
         }
     } else {
         path
     };
-    validate_project_relative(&relative)
-        .map_err(|error| RenderError::Input(format!("unsafe hook input path {value}: {error}")))?;
-    Ok(Some(relative))
+    Some(relative)
 }
 
 #[cfg(windows)]

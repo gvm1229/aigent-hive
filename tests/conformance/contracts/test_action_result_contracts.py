@@ -20,6 +20,7 @@ LOOP_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "loop_engineering.rs"
 
 EXPECTED_ACTIONS = {
     "EvaluatePolicy",
+    "ConfigurePolicyHooks",
     "UnknownAction",
     "SetupHarness",
     "SetupHiveUser",

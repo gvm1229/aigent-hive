@@ -388,6 +388,18 @@ pub fn ensure_no_symlink_ancestors(target: &Path, relative: &Path) -> Result<(),
     ensure_no_symlink_ancestors_validated(target, relative)
 }
 
+/// Inspect a host-owned edit target without granting Hive ownership of its namespace.
+///
+/// This read-only hook check may observe foreign host files. Hive mutation callers
+/// must still use their narrower namespace and ownership validation.
+///
+/// # Errors
+/// Rejects unsafe lexical paths and existing symlink components.
+pub fn inspect_host_edit_path(target: &Path, relative: &Path) -> Result<(), TargetGuardError> {
+    let _ = validate_relative_lexical(relative)?;
+    ensure_no_symlink_ancestors_validated(target, relative)
+}
+
 /// Reject a projected Skill destination when an existing component below
 /// `target` is a symlink.
 ///

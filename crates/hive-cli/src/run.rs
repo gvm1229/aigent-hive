@@ -187,6 +187,12 @@ impl PinnedTarget {
         })
     }
 
+    /// Pin an explicitly approved host-configuration target, including a source root.
+    /// The policy adapter owns its fixed configuration paths; consumer run paths stay forbidden.
+    pub(crate) fn open_policy_configuration(target: &Path) -> Result<Self, AdapterError> {
+        Self::open_usage(target)
+    }
+
     pub(crate) fn read_required(
         &self,
         relative: &Path,
@@ -538,7 +544,7 @@ impl PinnedTarget {
         Ok(Some((current, file_name)))
     }
 
-    fn verify_current(&self) -> Result<(), AdapterError> {
+    pub(crate) fn verify_current(&self) -> Result<(), AdapterError> {
         let current = open_directory_nofollow_path(&self.requested).map_err(|error| {
             AdapterError::Conflict(format!(
                 "target no longer resolves safely: {}",

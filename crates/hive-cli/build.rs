@@ -52,8 +52,10 @@ fn main() {
     let mut policy = Sha256::new();
     for relative in [
         "src/policy/native.rs",
+        "src/policy/configure.rs",
         "src/main.rs",
         "../hive-core/src/policy.rs",
+        "../hive-core/src/lib.rs",
     ] {
         let path = manifest_dir.join(relative);
         println!("cargo:rerun-if-changed={}", path.display());
