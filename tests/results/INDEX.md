@@ -386,3 +386,17 @@
 | [passed](runs/20260918T164022-1065e14ef4f2.md) | 기존 0.10.4 변경을 포함한 Rust 전체 기준 회귀 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260918T164407-d8b3ab9c84cd.md) | 실제 활성 계획과 생성 상태·출시 공통 계약 수용 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260918T164622-1e3a1fa4d256.md) | 계획 생성의 부분 실패 복구와 변경된 시험 근거 거부 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T165700-7ed8d6d54929.md) | 0.11.0 정책 결과 합산·실패 분류 core 회귀 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T165843-abdfee684f21.md) | 개발 검증: cargo.EXE | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170026-5c3ee34aa414.md) | 개발 검증: cargo.EXE | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170322-f16647765d32.md) | 0.11.0 정책 CLI 읽기 전용 연결과 core 계약 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T170846-89ad923eba33.md) | 0.10.3 정확한 기준본과 0.11.0 호환 빌드 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170919-96c787f04ca7.md) | 새 동결 기준본 경로 정렬과 호환 빌드 재검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171040-add8a7681f3f.md) | 0.11.0에서 모든 과거 설치 기준본의 실제 호환 회귀 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171227-50fc2520a6ad.md) | 0.10.3 이력 범위·직접 갱신·동결 투영 재검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171245-c0e485b13901.md) | 확장된 공개 이력 목록의 0.11.0 호환성 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171536-f388ed9e0cdf.md) | 0.11.0 제품 버전·날짜와 CLI 별칭 일치 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171647-301001daff59.md) | 개발 검증: cargo.EXE | 51c0fb88365127aa62b02ae548d0a220894d78bb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171825-6269a163ec1c.md) | 개발 검증: cargo.EXE | 51c0fb88365127aa62b02ae548d0a220894d78bb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T172044-7ad357fd7cfa.md) | 0.11.0 출시 메타데이터 전체 일치 검사 | ccc68f6e99d5ab92192c8898754016f0a7245dc8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T172332-5fb45b220014.md) | 계승된 사용량 지침·투영과 스키마 회귀 | 819dd6c0d4b43ccf9edbcd3c0de8222a78de8b63 | Windows-11-10.0.26200-SP0 |
