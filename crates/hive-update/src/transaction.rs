@@ -2694,10 +2694,9 @@ mod tests {
         assert!(marker_lowered.contains("public release artifact"));
         let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))
             .expect("synthetic integrity manifest");
-        assert!(manifest.contains(&format!(
-            r#""release_version":"{}""#,
-            env!("CARGO_PKG_VERSION")
-        )));
+        let manifest_value: serde_json::Value =
+            serde_json::from_str(&manifest).expect("valid synthetic integrity manifest");
+        assert_eq!(manifest_value["release_version"], env!("CARGO_PKG_VERSION"));
         assert!(manifest.contains("migration-table.json"));
         assert!(manifest.contains("release-surface-inventory.json"));
 
