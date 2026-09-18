@@ -82,6 +82,8 @@ struct ParsedBinding {
     process_id: u32,
 }
 
+// Independent persisted policy switches, not mutually exclusive execution states.
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct InstalledUsageConfig {
     pub(crate) project_name: String,
     pub(crate) project_identity: String,

@@ -724,10 +724,13 @@ mod tests {
         let mut current = previous.clone();
         current.remaining_percent = 30.1;
         current.measured_at_unix_seconds += 1;
-        let reset = detect_usage_reset(&[current.clone()], &[previous.clone()])
-            .expect("any matching increase is a refill");
-        assert_eq!(reset.previous_percent, 30.0);
-        assert_eq!(reset.current_percent, 30.1);
+        let reset = detect_usage_reset(
+            std::slice::from_ref(&current),
+            std::slice::from_ref(&previous),
+        )
+        .expect("any matching increase is a refill");
+        assert_eq!(reset.previous_percent.to_bits(), 30.0_f64.to_bits());
+        assert_eq!(reset.current_percent.to_bits(), 30.1_f64.to_bits());
 
         current.account_scope_digest = "sha256:other".to_owned();
         assert!(detect_usage_reset(&[current], &[previous]).is_none());
