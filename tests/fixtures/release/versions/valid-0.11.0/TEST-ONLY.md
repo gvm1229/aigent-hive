@@ -1,3 +1,3 @@
-# Test-only 0.11.0 bundle
+# Test-only `0.11.0` release bundle fixture
 
-Synthetic update and version fixtures; not a published artifact.
+Local updater and version-parity tests only. This synthetic bundle is not a public release artifact.
