@@ -11,6 +11,8 @@ use std::fmt::{self, Display, Formatter};
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 
+pub mod hook_config;
+
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
 const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
