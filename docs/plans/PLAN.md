@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 338
+> Revision: 339
 > 기준일: 2026-09-19
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
@@ -46,22 +46,20 @@
 
 ## Completion index
 
+<!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 전역 사용자 갱신 | 10 | 0 | 100% |
-| 지침 품질 개선 | 6 | 0 | 100% |
-| `0.10.2` 공개 시험·안정판 승격 | 9 | 0 | 100% |
-| `0.10.3` 사용량 보호 기존 설치 복구 | 10 | 0 | 100% |
-| 기존 후속 사용량 보호 `RB104-*` | 3 | 1 | 75% |
-| 리팩터링 공통 기준·통합 `RFB-*`, `RFR-*` | 0 | 3 | 0% |
-| 리팩터링 지식·호스트 `RFK-*`, `RFH-*` | 0 | 6 | 0% |
-| 리팩터링 안전·설치 `RFP-*`, `RFT-*` | 0 | 8 | 0% |
-| 리팩터링 계획·상태 `RFS-*` | 0 | 4 | 0% |
-| 브랜치 강제·호스트 조사 `BR-*` | 5 | 0 | 100% |
-| 호스트 정책 훅·검토 후보 `HK-*` | 0 | 5 | 0% |
-| **등록 항목 합계** | **43** | **27** | **61.4%** |
-
-이번 리팩터링 구현: **0/21**. `0.11.0` 범위: 기존 사용량 보호 포함 **8/35**. 기존 38개 완료는 이전 근거, 새 5개 완료는 소스 브랜치 수정·조사 범위. 훅·검토 후보 5개는 구현 전 상태.
+| 브랜치 규칙 강제·호스트 조사 | 5 | 0 | 100.0% |
+| 호스트 정책 훅 제품 계획 | 0 | 3 | 0.0% |
+| 호스트 훅 독립 평가 | 0 | 1 | 0.0% |
+| 작업 후 개선 후보·사람 검토 | 0 | 1 | 0.0% |
+| 공통 기준·실행 순서·통합 수용 | 0 | 3 | 0.0% |
+| 지식 흐름·실제 호스트 검증 | 0 | 6 | 0.0% |
+| 안전 검사·설치·복구 | 0 | 8 | 0.0% |
+| Markdown 정본·집계 생성 | 4 | 0 | 100.0% |
+| 미출시 `0.10.4`에서 계승한 사용량 보호 | 3 | 1 | 75.0% |
+| **현재 범위 합계** | **12** | **23** | **34.3%** |
+<!-- HIVE:PLAN-STATE:END -->
 
 ## Required load order
 
@@ -77,21 +75,18 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
-| [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-001–004` | 호스트 정책 훅 제품 계획 |
+| [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-001–003` | 호스트 정책 훅 제품 계획 |
+| [hook-policy-evaluation-0.11.0.md](active/hook-policy-evaluation-0.11.0.md) | `HK-004` | 호스트 훅 독립 평가 |
 | [hook-review-candidates-0.11.0.md](active/hook-review-candidates-0.11.0.md) | `HK-005` | 작업 후 개선 후보·사람 검토 |
 | [refactor-foundations.md](active/refactor-foundations.md) | `RFB-*`, `RFR-*` | 공통 기준·실행 순서·통합 수용 |
 | [refactor-context-hosts.md](active/refactor-context-hosts.md) | `RFK-*`, `RFH-*` | 지식 흐름·실제 호스트 검증 |
 | [refactor-policy-transactions.md](active/refactor-policy-transactions.md) | `RFP-*`, `RFT-*` | 안전 검사·설치·복구 |
 | [refactor-plan-state.md](active/refactor-plan-state.md) | `RFS-*` | Markdown 정본·집계 생성 |
-| [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md) | `UGR103-*` | 기존 표식 교체·모든 Hive 대상의 공통 복구 |
 | [quota-reset-guard-0.11.0.md](active/quota-reset-guard-0.11.0.md) | `RB104-*` | 미출시 `0.10.4`에서 계승한 사용량 보호 |
-| [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md) | `INS102-*` | 소스·harness 지침 품질 |
-| [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md) | `GUU102-*` | 전역 사용자 설치·질문 대기·자동 재개 |
-| [`release-0.10.2.md`](active/release-0.10.2.md) | `REL102-*` | 공개 시험·세 운영체제 수용·stable 공개 |
 
 ## 실행 순서
 
-리팩터링: `RFB-001–002` → `RFS-001–002` → `RFK-001`·`RFH-001` → 안전·지식 개선 → 설치 분리 → 호스트 확대·상태 이관 → `RFR-001`. 상세 선행 조건은 [총괄 계획](active/refactor-foundations.md) 참조.
+리팩터링: 기준 보존 → `RFS-001–004` → `RFB-001–002` → `RFK-001`·`RFH-001` → 안전·지식 개선 → 설치 분리 → 호스트 확대·상태 이관 → `RFR-001`. 상세 선행 조건은 [총괄 계획](active/refactor-foundations.md) 참조.
 
 훅 상세 순서: `HK-001` 실패 분류·결과 합산 → `HK-002` 변환·진단·전달 → `HK-003` 실제 수용 → `HK-004` 보류 평가. `HK-005`는 `HK-001`과 기존 실행 결과 계약 뒤 구현, `RFK-002`는 문맥 유효성 소유.
 
@@ -115,3 +110,12 @@
 - 완료·대체 기록: [`../archive/README.md`](../archive/README.md)
 
 - [리팩터링 ID 대응표](refactor-id-mapping.md): 현재 ID 정합화, 과거 조사 기록 보존
+
+## 이전 출시 완료 기록
+
+현재 0.11.0 집계에서 제외, 기존 체크 표시와 증거 보존.
+
+- [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md)
+- [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md)
+- [global-user-update-0.10.2.md](active/global-user-update-0.10.2.md)
+- [release-0.10.2.md](active/release-0.10.2.md)

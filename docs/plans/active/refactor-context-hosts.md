@@ -1,5 +1,8 @@
 # 지식 흐름과 실제 호스트 검증
 
+> Plan version: 0.11.0
+> Scope: product
+
 > 상태: 구현 전 계획
 > 소유 항목: `RFK-001–003`, `RFH-001–003`
 > 선행 조건: [공통 기준](refactor-foundations.md)의 `RFB-001–002`
@@ -16,8 +19,11 @@
 | 호스트 행동 | `harness/skills/knowledge-{capture,recall}/` | 최소 자료 전달, 중복 기록 방지, 실패 이유와 다음 행동 표시 |
 
 - [ ] [RFK-001] 합성 결정·질문·기대 근거 20개 이상의 고정 평가 자료와 기존 결과 기록
+  - state: agent-owned; depends: RFB-002
 - [ ] [RFK-002] 저장·조회 책임 분리, 범위 판정과 코드 변경에 따른 문맥 유효성 검사, 기존 CLI·결과 호환성 검증
+  - state: agent-owned; depends: RFK-001
 - [ ] [RFK-003] 고정 자료의 재평가, 새 대화 전달 묶음의 정확성·중복 기록·지연·질문 횟수 비교
+  - state: agent-owned; depends: RFK-002
 
 평가 자료: 같은 결정 재저장, 결정 교체, 한국어·영어 질문, 결과 없는 질문, 사용자 전역·현재 프로젝트·명시 다른 프로젝트, 미등록 대상, 기밀 승인 거부, 오래되거나 손상된 색인, 선택형 검색 부재 포함.
 
@@ -51,8 +57,11 @@
 대상: `crates/hive-core/src/{run,orchestration,native_workflow}.rs`, `crates/hive-cli/src/run.rs`, `schemas/capability-matrix.schema.json`, 기존 호스트별 투영과 실행 결과 계약.
 
 - [ ] [RFH-001] 현재 호스트 기능 탐지·작업 결과 확인·취소·재개 계약의 코드 및 공식 근거 확인, 호스트·버전·운영체제별 상태표 작성
+  - state: agent-owned; depends: RFB-002
 - [ ] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
+  - state: agent-owned; depends: RFH-001,RFK-003,HK-002
 - [ ] [RFH-003] 동일 자료로 Claude Code·Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
+  - state: agent-owned; depends: RFH-002
 
 상태표 필드: 작업 종류, 호스트·버전, 운영체제, 호출 방법, 대상·세션 결합, 중복 요청 처리, 완료 확인, 취소 확인, 복구, 근거 위치, `verified|unsupported|unverified`.
 

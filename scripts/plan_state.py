@@ -104,7 +104,9 @@ def evidence_input(root: Path, locator: str, inputs: dict[Path, bytes]) -> None:
             payload = json.loads(report[1]) if report else {}
         except json.JSONDecodeError as error:
             raise PlanError("malformed test evidence") from error
-        if payload.get("status") != "passed" or payload.get("exit_code") != 0:
+        if (not isinstance(payload, dict) or payload.get("status") != "passed"
+                or type(payload.get("exit_code")) is not int or payload["exit_code"] != 0
+                or payload.get("source_changed_during_run") is True):
             raise PlanError(f"test evidence did not pass: {match[1]}")
 
 
@@ -144,7 +146,7 @@ def load_plan(root: Path) -> Plan:
             if columns[0] not in ("Fragment", "---"):
                 raise PlanError("unlinked fragment row")
             continue
-        if len(columns) != 3 or len(links) != 1 or not re.fullmatch(r"active/[a-z0-9-]+\.md", links[0]):
+        if len(columns) != 3 or len(links) != 1 or not re.fullmatch(r"active/[a-z0-9][a-z0-9.-]*\.md", links[0]):
             raise PlanError("invalid active fragment registration")
         relative = "docs/plans/" + links[0]
         if relative in [path for path, _ in groups]:
@@ -164,7 +166,7 @@ def load_plan(root: Path) -> Plan:
         count = 0
         metadata_lines = set()
         for index, line in enumerate(lines):
-            if not line.startswith("- ["):
+            if not re.match(r"^- \[[^]]?\]\s", line):
                 continue
             match = re.fullmatch(r"- \[([ x])\] \[([^]]+)\] (.+)", line)
             if not match or not PLAN_ID.fullmatch(match[2]):

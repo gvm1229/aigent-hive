@@ -1,5 +1,8 @@
 # 안전 규칙과 설치·갱신 처리 분리
 
+> Plan version: 0.11.0
+> Scope: product
+
 > 상태: 구현 전 계획
 > 소유 항목: `RFP-001–004`, `RFT-001–004`
 > 선행 조건: [공통 기준](refactor-foundations.md)의 `RFB-001–002`
@@ -9,9 +12,13 @@
 목표: 프로그램이 판정할 수 있는 안전 조건을 CLI에서 강제하고, 에이전트 지침에는 작업 선택과 설명에 필요한 규칙만 유지.
 
 - [ ] [RFP-001] 현재 규칙→정본→코드 검사→진입 명령→시험의 대응표와 작업별 지침 읽기 비용 기록
+  - state: agent-owned; depends: RFB-001,RFB-002
 - [ ] [RFP-002] 이미 존재하는 판정 함수 재사용과 빠진 직접 CLI 진입 검사 보강; 동일 실패의 일관된 기존 결과 코드 유지
+  - state: agent-owned; depends: RFP-001
 - [ ] [RFP-003] 코드로 검증되는 상세 절차의 지침 중복 축소, 정본과 현재 세 호스트 투영 동기화
+  - state: agent-owned; depends: RFP-002
 - [ ] [RFP-004] 허용·거부·취소·재개·일반 질문의 전후 행동 평가와 정보량·호출 수 비교
+  - state: agent-owned; depends: RFP-003
 
 코드 대상: `crates/hive-core/src/{lib,usage_guard,run}.rs`, `crates/hive-cli/src/{knowledge,run,usage_control,user_setup}.rs`, 해당 JSON 스키마.
 
@@ -35,9 +42,13 @@
 목표: 도메인별 변경 계산과 공통 파일 처리를 분리하면서 사용자·프로젝트의 서로 다른 승인 범위 보존.
 
 - [ ] [RFT-001] `user_install.rs`와 `hive-render/src/lib.rs`의 책임별 내부 모듈 분리, 기존 진입 함수·출력·테스트 호환성 유지
+  - state: agent-owned; depends: RFB-001,RFB-002
 - [ ] [RFT-002] 두 호출 경로의 공통 파일 교체·복구 원시 기능 추출, 순환 의존 없는 공유 경계와 오류 계약 검증
+  - state: agent-owned; depends: RFT-001
 - [ ] [RFT-003] 프로젝트 생성과 사용자 설치의 순차 전환, 기존 변경 계획·지문·거부 결과·중단 후 복구의 동등성 비교
+  - state: agent-owned; depends: RFT-002
 - [ ] [RFT-004] 프로젝트 갱신까지 공통 처리 연결, 장애 삽입·동시 변경·세 운영체제 수용과 기존 이관 검증
+  - state: agent-owned; depends: RFT-003
 
 권장 모듈 경계:
 

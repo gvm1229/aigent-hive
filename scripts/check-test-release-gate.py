@@ -35,7 +35,8 @@ class GateError(ValueError):
 
 def git(*arguments: str) -> str:
     result = subprocess.run(
-        ["git", *arguments], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30
+        ["git", *arguments], cwd=ROOT, check=False, capture_output=True, text=True,
+        encoding="utf-8", timeout=30
     )
     if result.returncode != 0:
         raise GateError("required Git evidence is unavailable")

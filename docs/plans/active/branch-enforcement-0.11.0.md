@@ -1,14 +1,22 @@
 # 브랜치 규칙 강제와 호스트 훅 조사
 
+> Plan version: 0.11.0
+> Scope: source
+
 > 소유 항목: `BR-001–005`
 > 범위: 소스 개발 도구 구현, 저장소 Git 훅·GitHub 규칙 적용, 제품 훅 조사
 > 제품 코드·설치된 소비자 지침의 변경 제외
 
 - [x] [BR-001] 브랜치 이름 교정과 현재 문서·기본 규칙의 작업 종류 접두사 정합화
+  - state: complete; evidence: repo:docs/research/host-policy-hooks-2026-09-18.md#sha256:f0a2d0633f974eeda6fe84e9eb8f9c062b9fd3ba4311c17d6b4239ada1350def
 - [x] [BR-002] 단일 이름 검사·생성 도구·Git 참조 및 게시 훅 구현과 실제 Git 회귀
+  - state: complete; evidence: repo:docs/research/host-policy-hooks-2026-09-18.md#sha256:f0a2d0633f974eeda6fe84e9eb8f9c062b9fd3ba4311c17d6b4239ada1350def
 - [x] [BR-003] 가벼운 자동 검사와 원격 이름 제한 적용·효과 확인, 기존 기본 브랜치 보호 보존
+  - state: complete; evidence: repo:docs/research/host-policy-hooks-2026-09-18.md#sha256:f0a2d0633f974eeda6fe84e9eb8f9c062b9fd3ba4311c17d6b4239ada1350def
 - [x] [BR-004] 세 호스트의 공식 훅 계약·기존 구현·실행 가능성 조사와 `0.11.0` 설계 반영
+  - state: complete; evidence: repo:docs/research/host-policy-hooks-2026-09-18.md#sha256:f0a2d0633f974eeda6fe84e9eb8f9c062b9fd3ba4311c17d6b4239ada1350def
 - [x] [BR-005] 소스 저장소 훅 설치·거부 확인, 문서·시험·근거·상태 정합화
+  - state: complete; evidence: repo:docs/research/host-policy-hooks-2026-09-18.md#sha256:f0a2d0633f974eeda6fe84e9eb8f9c062b9fd3ba4311c17d6b4239ada1350def
 
 ## 순서와 검증
 

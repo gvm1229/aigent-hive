@@ -149,6 +149,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | 문서 | 설명 |
 | --- | --- |
 | [Plan 안내](plans/README.md) | Plan structure |
+| [계획 상태 검사](guides/plan-state.md) | 단일 파서·생성 구간·출시 근거 연결 |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
 | [기반 구조 리팩터링](plans/active/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
 | [작업 후 개선 후보 검토](plans/active/hook-review-candidates-0.11.0.md) | 승인 제안의 후보·사람 검토·자동 수정 방지 |

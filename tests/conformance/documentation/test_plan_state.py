@@ -41,6 +41,16 @@ class PlanStateTests(unittest.TestCase):
         self.assertEqual(set(plan.criteria), {"A-001"})
         self.assertEqual(plan.completed_product_ids(), set())
 
+    def test_versioned_fragment_filename_is_supported(self):
+        p = self.root / "docs/plans/PLAN.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("active/one.md", "active/work-0.11.0.md"), encoding="utf-8")
+        (self.root / "docs/plans/active/one.md").rename(self.root / "docs/plans/active/work-0.11.0.md")
+        self.assertEqual(set(policy.load_plan(self.root).criteria), {"A-001"})
+
+    def test_navigation_links_are_not_checkboxes(self):
+        self.fragment("- [ ] [A-001] first\n  - state: agent-owned\n\n- [Related plan](other.md)\n")
+        self.assertEqual(set(policy.load_plan(self.root).criteria), {"A-001"})
+
     def test_completion_requires_state_and_fresh_evidence(self):
         for item in ("- [x] [A-001] done\n  - state: agent-owned\n",
                      "- [x] [A-001] done\n  - state: complete\n",
@@ -63,6 +73,14 @@ class PlanStateTests(unittest.TestCase):
         evidence = "repo:tests/results/runs/fail.md#sha256:" + hashlib.sha256(p.read_bytes()).hexdigest()
         self.fragment(f"- [x] [A-001] done\n  - state: complete; evidence: {evidence}\n")
         with self.assertRaisesRegex(policy.PlanError, "did not pass"): policy.load_plan(self.root)
+
+    def test_invalid_or_concurrently_changed_test_receipt_is_rejected(self):
+        for payload in ('[]', '{"status":"passed","exit_code":false}',
+                        '{"status":"passed","exit_code":0,"source_changed_during_run":true}'):
+            p = self.write("tests/results/runs/receipt.md", '```json\n' + payload + '\n```\n')
+            evidence = 'repo:tests/results/runs/receipt.md#sha256:' + hashlib.sha256(p.read_bytes()).hexdigest()
+            self.fragment(f'- [x] [A-001] done\n  - state: complete; evidence: {evidence}\n')
+            with self.assertRaises(policy.PlanError): policy.load_plan(self.root)
 
     def test_rejects_bad_ids_versions_metadata_and_duplicates(self):
         for item in ("- [ ] [RF-A01] first\n  - state: agent-owned\n",
@@ -122,12 +140,36 @@ class PlanStateTests(unittest.TestCase):
         with self.assertRaisesRegex(policy.PlanError, "changed"): policy.render(plan, write=True)
         self.assertTrue(p.read_bytes().endswith(b"concurrent edit\n"))
 
+    def test_partial_write_failure_is_reported_and_next_generation_converges(self):
+        replace = policy.os.replace
+        calls = 0
+
+        def fail_second(source, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("injected second publication failure")
+            return replace(source, destination)
+
+        with mock.patch.object(policy.os, "replace", side_effect=fail_second):
+            with self.assertRaises(OSError): policy.render(policy.load_plan(self.root), write=True)
+        self.assertEqual(policy.render(policy.load_plan(self.root), write=True), ['docs/state/CURRENT.md'])
+        self.assertEqual(policy.render(policy.load_plan(self.root)), [])
+        self.assertFalse(list(self.root.rglob('.hive-plan-*')))
+
     def test_rejects_escaping_or_unlinked_registration(self):
         p = self.root / "docs/plans/PLAN.md"
         original = p.read_text(encoding="utf-8")
         for link in ("../secret.md", "active/../secret.md", "active/missing.md"):
             p.write_text(original.replace("active/one.md", link), encoding="utf-8")
             with self.assertRaises(policy.PlanError): policy.load_plan(self.root)
+
+
+class RepositoryPlanTests(unittest.TestCase):
+    def test_registered_plan_and_generated_views_are_current(self):
+        root = Path(__file__).resolve().parents[3]
+        plan = policy.load_plan(root)
+        self.assertFalse(policy.render(plan), "run scripts/check-plan-state.py --write")
 
 
 if __name__ == "__main__":
