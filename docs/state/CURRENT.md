@@ -1,7 +1,8 @@
 # 현재 상태
 
 - 작업 branch: `refactor/hive-foundations`; 통합 branch: `develop`; 안정판 branch: `main`
-- 개발 목표: `0.11.0-test.1`; 공개 안정판·현재 제품 파일: `0.10.3`
+- 개발 목표: `0.11.0-test.1`; 공개 안정판: `0.10.3`
+- 제품 버전: `0.11.0`
 - 사용자 승인: 기존 `0.10.4` 변경을 계승하는 전체 리팩터링 구현, 기존 기능·명령 유지, Codex 우선 검증
 - 정본: [활성 계획](../plans/PLAN.md), [결정](../decisions/ADR-0023-foundation-refactor.md)
 

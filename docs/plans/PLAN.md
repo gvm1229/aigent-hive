@@ -5,7 +5,7 @@
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
 > 현재 단계: `0.11.0` 구현 진행, 기준 검증·계획 및 상태 정합화
-> 첫 공개 시험: `0.11.0-test.1`; 현재 제품 파일의 버전: `0.10.3`
+> 첫 공개 시험: `0.11.0-test.1`; 현재 제품 파일의 버전: `0.11.0`
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 요청과 경계
