@@ -1,13 +1,8 @@
 use super::{emit_action_result, ActionResult, Evidence};
 pub(crate) mod policy_review;
 use crate::usage::{
-    check_codexbar_provider_unique_with_runner, check_codexbar_provider_with_runner,
-    qualify_and_dispatch_preferred_with_runners, qualify_and_dispatch_snapshot,
-    read_codex_native_with_account_recovery, AutomaticDispatchError, SensorError,
-    SystemCommandRunner, UsageGuardEvidence, UsageHost, UsageObservation,
-};
-use crate::usage_control::{
-    native_then_consented_fallback, read_claude_capture_for_session, read_installed_config,
+    qualify_and_dispatch_snapshot, AutomaticDispatchError, SensorError, UsageGuardEvidence,
+    UsageObservation,
 };
 use cap_fs_ext::{
     DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt,
@@ -48,10 +43,11 @@ USAGE:
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
 ";
 const RESUME_USAGE: &str = "\
-Read and validate one durable run without mutation or spawning.
+Inspect a durable run, or prepare one session-bound automatic authorization without spawning.
 
 USAGE:
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <1..99>]] --output json
+    Automatic preparation requires --session-id, --process-id, and --role. Manual inspection remains read-only.
 ";
 const CLOSURE_USAGE: &str = "\
 Calculate whether one durable Hive run may finish without spawning or mutation.
@@ -1298,6 +1294,8 @@ struct ResumeArguments {
     dispatch_intent: DispatchIntent,
     account_digest: Option<String>,
     session_id: Option<String>,
+    process_id: Option<u32>,
+    user_root: Option<PathBuf>,
     role_id: Option<String>,
     threshold: Option<u8>,
 }
@@ -1735,6 +1733,8 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
             "--dispatch-intent",
             "--account-digest",
             "--session-id",
+            "--process-id",
+            "--user-root",
             "--role",
             "--threshold",
         ],
@@ -1750,6 +1750,18 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
     };
     let account_digest = optional(&options, "--account-digest").map(str::to_owned);
     let session_id = optional(&options, "--session-id").map(str::to_owned);
+    let process_id = optional(&options, "--process-id")
+        .map(|value| {
+            value
+                .parse::<u32>()
+                .ok()
+                .filter(|pid| *pid > 0)
+                .ok_or_else(|| {
+                    AdapterError::Input("host process id must be a positive u32".to_owned())
+                })
+        })
+        .transpose()?;
+    let user_root = optional(&options, "--user-root").map(PathBuf::from);
     let role_id = optional(&options, "--role").map(str::to_owned);
     let threshold = optional(&options, "--threshold")
         .map(|value| {
@@ -1764,19 +1776,44 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
                 })
         })
         .transpose()?;
-    match dispatch_intent {
+    let parsed = ResumeArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        run_id: required(&options, "--run")?.to_owned(),
+        capabilities: PathBuf::from(required(&options, "--capabilities")?),
+        dispatch_intent,
+        account_digest,
+        session_id,
+        process_id,
+        user_root,
+        role_id,
+        threshold,
+    };
+    validate_resume_arguments(&parsed)?;
+    Ok(parsed)
+}
+
+fn validate_resume_arguments(arguments: &ResumeArguments) -> Result<(), AdapterError> {
+    match arguments.dispatch_intent {
         DispatchIntent::Manual
-            if account_digest.is_some()
-                || session_id.is_some()
-                || role_id.is_some()
-                || threshold.is_some() =>
+            if arguments.account_digest.is_some()
+                || arguments.session_id.is_some()
+                || arguments.process_id.is_some()
+                || arguments.user_root.is_some()
+                || arguments.role_id.is_some()
+                || arguments.threshold.is_some() =>
         {
             return Err(AdapterError::Input(
-                "--account-digest, --session-id, --role, and --threshold require --dispatch-intent automatic".to_owned(),
+                "usage account, session, process, user root, role, and threshold options require --dispatch-intent automatic".to_owned(),
             ));
         }
         DispatchIntent::Automatic => {
-            if account_digest
+            if arguments.session_id.is_none() || arguments.process_id.is_none() {
+                return Err(AdapterError::Input(
+                    "--dispatch-intent automatic requires --session-id and --process-id".to_owned(),
+                ));
+            }
+            if arguments
+                .account_digest
                 .as_deref()
                 .is_some_and(|digest| !is_sha256_digest(digest))
             {
@@ -1784,20 +1821,14 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
                     "account digest must be sha256 followed by 64 lowercase hex digits".to_owned(),
                 ));
             }
-            if session_id.as_deref().is_some_and(|session| {
+            if arguments.session_id.as_deref().is_some_and(|session| {
                 session.is_empty() || session.len() > 256 || session.chars().any(char::is_control)
             }) {
                 return Err(AdapterError::Input(
                     "host session id must contain 1 through 256 non-control characters".to_owned(),
                 ));
             }
-            if account_digest.is_none() && session_id.is_none() {
-                return Err(AdapterError::Input(
-                    "--dispatch-intent automatic requires --account-digest or --session-id"
-                        .to_owned(),
-                ));
-            }
-            let role_id = role_id.as_deref().ok_or_else(|| {
+            let role_id = arguments.role_id.as_deref().ok_or_else(|| {
                 AdapterError::Input("--dispatch-intent automatic requires --role".to_owned())
             })?;
             validate_project_relative(Path::new(role_id)).map_err(|_| {
@@ -1811,16 +1842,7 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
         }
         DispatchIntent::Manual => {}
     }
-    Ok(ResumeArguments {
-        target: PathBuf::from(required(&options, "--target")?),
-        run_id: required(&options, "--run")?.to_owned(),
-        capabilities: PathBuf::from(required(&options, "--capabilities")?),
-        dispatch_intent,
-        account_digest,
-        session_id,
-        role_id,
-        threshold,
-    })
+    Ok(())
 }
 
 fn is_sha256_digest(value: &str) -> bool {
@@ -2113,6 +2135,8 @@ struct DispatchAuthorizationRecord {
     role_id: String,
     brief_digest: String,
     usage_evidence_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    session_guard_digest: Option<String>,
     state: String,
     record_digest: String,
 }
@@ -2120,25 +2144,26 @@ struct DispatchAuthorizationRecord {
 struct InstalledUsageConfig {
     threshold: u8,
     primary_host: Host,
-    guard_enabled: bool,
-    codexbar_fallback_enabled: bool,
-    config_digest: String,
 }
 
-fn installed_usage_config(target: &PinnedTarget) -> Result<InstalledUsageConfig, AdapterError> {
-    let config = read_installed_config(target)?;
+fn installed_usage_config(
+    target: &PinnedTarget,
+    user_root: Option<&Path>,
+) -> Result<InstalledUsageConfig, AdapterError> {
+    let config = crate::usage_control::read_effective_config(target, user_root, None)?;
     let primary_host = match config.primary_host.as_str() {
         "codex" => Host::Codex,
         "claude" => Host::Claude,
         "antigravity" => Host::Antigravity,
-        _ => unreachable!("installed usage config validates the primary host"),
+        _ => {
+            return Err(AdapterError::Safety(
+                "configured Hive usage protection is required for automatic dispatch".to_owned(),
+            ))
+        }
     };
     Ok(InstalledUsageConfig {
         threshold: config.threshold,
         primary_host,
-        guard_enabled: config.guard_enabled,
-        codexbar_fallback_enabled: config.codexbar_fallback_enabled,
-        config_digest: sha256_digest(&config.bytes),
     })
 }
 
@@ -2370,7 +2395,15 @@ fn existing_authorization(
     }
     let record: DispatchAuthorizationRecord = serde_json::from_slice(bytes)
         .map_err(|_| AdapterError::Safety("dispatch authorization is malformed".to_owned()))?;
-    if record.schema_version != 1
+    let valid_session = match (
+        record.schema_version,
+        record.session_guard_digest.as_deref(),
+    ) {
+        (1, None) => true, // Historical issuance remains consumed; it never grants a new permit.
+        (2, Some(digest)) => is_sha256_digest(digest),
+        _ => false,
+    };
+    if !valid_session
         || record.authorization_id != authorization_id
         || record.run_id != run_id
         || record.status_revision != status_revision
@@ -2390,7 +2423,7 @@ fn existing_authorization(
 fn authorization_record_digest(
     record: &DispatchAuthorizationRecord,
 ) -> Result<String, AdapterError> {
-    let payload = json!({
+    let mut payload = json!({
         "schema_version": record.schema_version,
         "authorization_id": record.authorization_id,
         "run_id": record.run_id,
@@ -2400,6 +2433,9 @@ fn authorization_record_digest(
         "usage_evidence_digest": record.usage_evidence_digest,
         "state": record.state,
     });
+    if record.schema_version == 2 {
+        payload["session_guard_digest"] = json!(record.session_guard_digest);
+    }
     Ok(sha256_digest(
         &serde_json_canonicalizer::to_vec(&payload)
             .map_err(|error| AdapterError::Internal(error.to_string()))?,
@@ -2428,15 +2464,18 @@ fn issue_dispatch_authorization(
     role_id: &str,
     brief_digest: &str,
     usage_evidence_digest: &str,
+    preflight: &crate::usage_control::DispatchPreflight,
 ) -> Result<bool, AdapterError> {
+    crate::usage_control::verify_dispatch_preflight(preflight)?;
     let mut record = DispatchAuthorizationRecord {
-        schema_version: 1,
+        schema_version: 2,
         authorization_id: authorization_id.to_owned(),
         run_id: run_id.to_owned(),
         status_revision,
         role_id: role_id.to_owned(),
         brief_digest: brief_digest.to_owned(),
         usage_evidence_digest: usage_evidence_digest.to_owned(),
+        session_guard_digest: Some(preflight.binding_digest()),
         state: "issued".to_owned(),
         record_digest: String::new(),
     };
@@ -2444,8 +2483,23 @@ fn issue_dispatch_authorization(
     publish_authorization(target, path, expected, &record)
 }
 
-#[allow(clippy::too_many_lines)]
 fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
+    let mut changes = Vec::new();
+    match resume_inner(arguments, &mut changes) {
+        Err(error) if !changes.is_empty() => {
+            let mut result = failure_result("ResumeWork", &error);
+            result.changed_paths = changes;
+            Ok(result)
+        }
+        outcome => outcome,
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn resume_inner(
+    arguments: &ResumeArguments,
+    runtime_changed_paths: &mut Vec<String>,
+) -> Result<ActionResult, AdapterError> {
     let capability_bytes =
         read_fresh_capability_file(&arguments.capabilities, MAX_EXPLICIT_FILE_BYTES)?;
     let capability = CapabilityResolution::parse_json(&capability_bytes)
@@ -2495,7 +2549,6 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
     let mut usage_failure = None;
     let mut usage_evidence = None;
     let mut usage_next_action = None;
-    let mut runtime_changed_paths = Vec::new();
     let (briefs, usage_guard) = 'dispatch: {
         if !dispatchable {
             break 'dispatch (
@@ -2526,7 +2579,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             .role_id
             .as_deref()
             .ok_or_else(|| AdapterError::Internal("automatic role was not parsed".to_owned()))?;
-        let installed = installed_usage_config(&target)?;
+        let installed = installed_usage_config(&target, arguments.user_root.as_deref())?;
         if installed.primary_host != capability.host {
             return Err(AdapterError::OwnerBlocked(
                 "installed primary_host does not match the pinned run host".to_owned(),
@@ -2541,22 +2594,18 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                 "--threshold must equal installed usage_stop_remaining_percent ({configured_threshold})"
             )));
         }
-        if installed.guard_enabled
-            && matches!(installed.primary_host, Host::Codex | Host::Antigravity)
-            && requested_account_digest.is_none()
-        {
-            return Err(AdapterError::Input(
-                "Codex and Antigravity automatic dispatch require --account-digest".to_owned(),
-            ));
-        }
-        if installed.guard_enabled
-            && installed.primary_host == Host::Claude
-            && arguments.session_id.is_none()
-        {
-            return Err(AdapterError::Input(
-                "Claude automatic dispatch requires --session-id for exact capture binding"
-                    .to_owned(),
-            ));
+        let session_id = arguments.session_id.as_deref().ok_or_else(|| {
+            AdapterError::Input("automatic dispatch requires a host session id".to_owned())
+        })?;
+        let process_id = arguments.process_id.filter(|pid| *pid > 0).ok_or_else(|| {
+            AdapterError::Input("automatic dispatch requires a positive host process id".to_owned())
+        })?;
+        if let Some(binding) = &status.status().continuation {
+            if binding.cancel_requested
+                || binding.session_binding_digest != sha256_digest(session_id.as_bytes())
+            {
+                return Err(AdapterError::Safety("run is cancelled or bound to another host session; inspect its checkpoint before automatic dispatch".to_owned()));
+            }
         }
         let selected_role = roles
             .iter()
@@ -2605,7 +2654,85 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             let Some(authorization_snapshot) = authorization_snapshot else {
                 unreachable!("existing authorization is handled by the replay branch")
             };
-            if !installed.guard_enabled {
+            let host_name = match installed.primary_host {
+                Host::Codex => "codex",
+                Host::Claude => "claude",
+                Host::Antigravity => "antigravity",
+            };
+            let mut history = None;
+            let preflight = crate::usage_control::dispatch_preflight(
+                &arguments.target,
+                host_name,
+                session_id,
+                process_id,
+                arguments.user_root.as_deref(),
+                &arguments.run_id,
+                requested_account_digest,
+                |snapshot| {
+                    // Reject malformed/foreign history before shared enforcement can write runtime state.
+                    history = Some(read_usage_history(&target, &snapshot.account_digest)?);
+                    Ok(())
+                },
+            )?;
+            runtime_changed_paths.extend(preflight.result.changed_paths.iter().cloned());
+            let configured_threshold = preflight
+                .result
+                .data
+                .as_ref()
+                .and_then(|data| data["threshold_remaining_percent"].as_u64())
+                .and_then(|value| u8::try_from(value).ok())
+                .filter(|value| (1..=99).contains(value))
+                .unwrap_or(configured_threshold);
+            if arguments
+                .threshold
+                .is_some_and(|requested| requested != configured_threshold)
+            {
+                return Err(AdapterError::Conflict(
+                    "usage threshold changed during dispatch preparation".to_owned(),
+                ));
+            }
+            if preflight.result.exit_code != 0 {
+                let history_state = history
+                    .as_ref()
+                    .map_or("not_sampled", |(_, _, _, state)| *state);
+                if let (Some(snapshot), Some((path, expected, _, _))) =
+                    (preflight.snapshot(), history.as_ref())
+                {
+                    if publish_usage_history(&target, path, expected, &snapshot.core_snapshots())? {
+                        runtime_changed_paths.push(portable_relative_path(path));
+                    }
+                }
+                let outcome = match preflight.result.code {
+                    "hive.usage-limited" => "limited",
+                    "hive.usage-reset" => "reset",
+                    _ => "unknown",
+                };
+                let evidence_digest = preflight
+                    .result
+                    .data
+                    .as_ref()
+                    .and_then(|data| data["evidence_digest"].as_str());
+                let window = preflight
+                    .result
+                    .data
+                    .as_ref()
+                    .and_then(|data| data["selected_window"].as_str());
+                usage_evidence = preflight.snapshot().map(|snapshot| UsageGuardEvidence {
+                    digest: snapshot.evidence_digest(),
+                    window: snapshot.selected_window_label(),
+                });
+                usage_next_action.clone_from(&preflight.result.next_action);
+                usage_failure = Some((preflight.result.code, preflight.result.message.clone()));
+                break 'dispatch (
+                    Vec::new(),
+                    json!({"dispatch_intent":"automatic","enforced":false,"outcome":outcome,
+                    "evidence_digest":evidence_digest,"window":window,"configured_threshold_percent":configured_threshold,
+                    "history":history_state,"authorization_id":null,"role_id":role_id,"host_scope":installed.primary_host,
+                    "session_id_digest":sha256_digest(session_id.as_bytes()),"process_id":process_id,
+                    "preflight":preflight.result.data}),
+                );
+            }
+            if preflight.result.code == "hive.usage-session-bypassed" {
                 if issue_dispatch_authorization(
                     &target,
                     &authorization_path,
@@ -2615,7 +2742,8 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                     status.status().revision,
                     role_id,
                     &brief_digest,
-                    &installed.config_digest,
+                    &preflight.binding_digest(),
+                    &preflight,
                 )? {
                     runtime_changed_paths.push(portable_relative_path(&authorization_path));
                 }
@@ -2625,123 +2753,39 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         "dispatch_intent": "automatic",
                         "enforced": false,
                         "outcome": "disabled",
-                        "evidence_digest": installed.config_digest,
+                        "evidence_digest": preflight.binding_digest(),
                         "window": null,
                         "configured_threshold_percent": configured_threshold,
                         "history": "not_sampled",
                         "authorization_id": authorization_id,
                         "role_id": role_id,
                         "host_scope": installed.primary_host,
+                        "session_id_digest": sha256_digest(session_id.as_bytes()),
+                        "process_id": process_id,
+                        "session_guard_digest": preflight.binding_digest(),
                     }),
                 );
             }
             let sampled_at = SystemTime::now();
-            let prequalified = match installed.primary_host {
-                Host::Codex if installed.codexbar_fallback_enabled => None,
-                Host::Codex => Some(read_codex_native_with_account_recovery(
-                    &SystemCommandRunner,
-                    requested_account_digest,
-                    sampled_at,
-                )),
-                Host::Claude => {
-                    let session_id = arguments
-                        .session_id
-                        .as_deref()
-                        .expect("Claude session id was validated");
-                    Some(native_then_consented_fallback(
-                        UsageHost::Claude,
-                        read_claude_capture_for_session(&target, session_id, sampled_at),
-                        installed.codexbar_fallback_enabled,
-                        || match requested_account_digest {
-                            Some(account_digest) => check_codexbar_provider_with_runner(
-                                &SystemCommandRunner,
-                                UsageHost::Claude,
-                                account_digest,
-                                sampled_at,
-                            ),
-                            None => check_codexbar_provider_unique_with_runner(
-                                &SystemCommandRunner,
-                                UsageHost::Claude,
-                                sampled_at,
-                            ),
-                        },
-                    ))
-                }
-                Host::Antigravity => Some(native_then_consented_fallback(
-                    UsageHost::Antigravity,
-                    Err(SensorError::Unsupported),
-                    installed.codexbar_fallback_enabled,
-                    || {
-                        check_codexbar_provider_with_runner(
-                            &SystemCommandRunner,
-                            UsageHost::Antigravity,
-                            requested_account_digest
-                                .expect("Antigravity account digest was validated"),
-                            sampled_at,
-                        )
-                    },
-                )),
-            };
-            let usage_scope_digest = prequalified
-                .as_ref()
-                .and_then(|result| result.as_ref().ok())
-                .map_or_else(
-                    || {
-                        if installed.primary_host == Host::Claude {
-                            let mut scoped = b"claude\0".to_vec();
-                            scoped.extend_from_slice(
-                                arguments
-                                    .session_id
-                                    .as_deref()
-                                    .expect("Claude session id was validated")
-                                    .as_bytes(),
-                            );
-                            sha256_digest(&scoped)
-                        } else {
-                            requested_account_digest
-                                .expect("account digest was validated")
-                                .to_owned()
-                        }
-                    },
-                    |snapshot| snapshot.account_digest.clone(),
-                );
-            let (history_path, history_snapshot, previous_snapshots, history_state) =
-                read_usage_history(&target, &usage_scope_digest)?;
-            let mut dispatch_brief = Some(brief);
-            let dispatch_result = match prequalified {
-                None => qualify_and_dispatch_preferred_with_runners(
-                    &SystemCommandRunner,
-                    &SystemCommandRunner,
-                    &usage_scope_digest,
-                    configured_threshold,
-                    &previous_snapshots,
-                    sampled_at,
-                    current_usage_unix_seconds,
-                    || {
-                        Ok::<DispatchBrief, AdapterError>(
-                            dispatch_brief
-                                .take()
-                                .expect("dispatch brief is consumed exactly once"),
-                        )
-                    },
-                ),
-                Some(Ok(snapshot)) => qualify_and_dispatch_snapshot(
-                    &snapshot,
-                    &usage_scope_digest,
-                    configured_threshold,
-                    &previous_snapshots,
-                    sampled_at,
-                    current_usage_unix_seconds,
-                    || {
-                        Ok::<DispatchBrief, AdapterError>(
-                            dispatch_brief
-                                .take()
-                                .expect("dispatch brief is consumed exactly once"),
-                        )
-                    },
-                ),
-                Some(Err(error)) => Err(AutomaticDispatchError::Sensor(error)),
-            };
+            let snapshot = preflight.snapshot().ok_or_else(|| {
+                AdapterError::Safety("allowed dispatch has no current usage snapshot".to_owned())
+            })?;
+            let usage_scope_digest = &snapshot.account_digest;
+            let (history_path, history_snapshot, previous_snapshots, history_state) = history
+                .ok_or_else(|| {
+                    AdapterError::Safety(
+                        "usage history was not validated before dispatch".to_owned(),
+                    )
+                })?;
+            let dispatch_result = qualify_and_dispatch_snapshot(
+                snapshot,
+                usage_scope_digest,
+                configured_threshold,
+                &previous_snapshots,
+                sampled_at,
+                current_usage_unix_seconds,
+                || Ok::<DispatchBrief, AdapterError>(brief),
+            );
             match dispatch_result {
                 Ok(authorized) => {
                     let observation = authorized.observation;
@@ -2765,6 +2809,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         role_id,
                         &brief_digest,
                         &evidence.digest,
+                        &preflight,
                     )? {
                         runtime_changed_paths.push(portable_relative_path(&authorization_path));
                     }
@@ -2780,6 +2825,9 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         "authorization_id": authorization_id,
                         "role_id": role_id,
                         "host_scope": installed.primary_host,
+                        "session_id_digest": sha256_digest(session_id.as_bytes()),
+                        "process_id": process_id,
+                        "session_guard_digest": preflight.binding_digest(),
                     });
                     usage_evidence = Some(evidence);
                     (briefs, data)
@@ -2907,7 +2955,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
         exit_code: if blocked { 3 } else { 0 },
         code,
         message,
-        changed_paths: runtime_changed_paths,
+        changed_paths: runtime_changed_paths.clone(),
         evidence: result_evidence,
         next_action: usage_next_action.or_else(|| status.status().next_action.clone()),
         data: Some(data),
@@ -3585,6 +3633,10 @@ mod tests {
             [
                 "--dispatch-intent",
                 "automatic",
+                "--session-id",
+                "fixture-session",
+                "--process-id",
+                "4242",
                 "--account-digest",
                 "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "--role",
@@ -3628,7 +3680,9 @@ mod tests {
                 "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                     .to_owned(),
             ),
-            session_id: None,
+            session_id: Some("fixture-session".to_owned()),
+            process_id: Some(4242),
+            user_root: None,
             role_id: Some("reviewer".to_owned()),
             threshold: None,
         };
@@ -3716,6 +3770,8 @@ mod tests {
             dispatch_intent: DispatchIntent::Manual,
             account_digest: None,
             session_id: None,
+            process_id: None,
+            user_root: None,
             role_id: None,
             threshold: None,
         })
@@ -3738,6 +3794,8 @@ mod tests {
             dispatch_intent: DispatchIntent::Manual,
             account_digest: None,
             session_id: None,
+            process_id: None,
+            user_root: None,
             role_id: None,
             threshold: None,
         })
@@ -3765,6 +3823,8 @@ mod tests {
             dispatch_intent: DispatchIntent::Manual,
             account_digest: None,
             session_id: None,
+            process_id: None,
+            user_root: None,
             role_id: None,
             threshold: None,
         })
@@ -3791,6 +3851,8 @@ mod tests {
             dispatch_intent: DispatchIntent::Manual,
             account_digest: None,
             session_id: None,
+            process_id: None,
+            user_root: None,
             role_id: None,
             threshold: None,
         })
@@ -3817,6 +3879,8 @@ mod tests {
             dispatch_intent: DispatchIntent::Manual,
             account_digest: None,
             session_id: None,
+            process_id: None,
+            user_root: None,
             role_id: None,
             threshold: None,
         })

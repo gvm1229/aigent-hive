@@ -958,33 +958,6 @@ where
     )
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn qualify_and_dispatch_preferred_with_runners<T, C>(
-    native: &impl NativeUsageRunner,
-    fallback: &impl CommandRunner,
-    account_digest: &str,
-    threshold_percent: u8,
-    previous_snapshots: &[UsageSnapshot],
-    sampled_at: SystemTime,
-    dispatch_clock: C,
-    dispatch: impl FnOnce() -> T,
-) -> Result<AuthorizedDispatch<T>, AutomaticDispatchError>
-where
-    C: FnOnce() -> Result<i64, SensorError>,
-{
-    let snapshot = check_preferred_with_runners(native, fallback, account_digest, sampled_at)
-        .map_err(AutomaticDispatchError::Sensor)?;
-    qualify_and_dispatch_snapshot(
-        &snapshot,
-        &snapshot.account_digest,
-        threshold_percent,
-        previous_snapshots,
-        sampled_at,
-        dispatch_clock,
-        dispatch,
-    )
-}
-
 pub(crate) fn qualify_and_dispatch_snapshot<T, C>(
     snapshot: &NormalizedSnapshot,
     account_digest: &str,

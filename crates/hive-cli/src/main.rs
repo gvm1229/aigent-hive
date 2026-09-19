@@ -86,7 +86,7 @@ USAGE:
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <1..99>]] --output json
     hive run closure --target <dir> --run <run-id> --output json
     hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help

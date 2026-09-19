@@ -130,6 +130,161 @@ struct TurnObservation {
     remaining_percent: Option<f64>,
     next_action: Option<String>,
     snapshots: Vec<hive_core::usage_guard::UsageSnapshot>,
+    normalized: Option<usage::NormalizedSnapshot>,
+}
+
+#[derive(Default)]
+struct EnforcementTrace {
+    normalized: Option<usage::NormalizedSnapshot>,
+    policy_digest: String,
+    control_digest: String,
+    halt_digest: String,
+}
+
+/// One in-memory observation shared with dispatch qualification; never a stored permission cache.
+pub(crate) struct DispatchPreflight {
+    pub(crate) result: ActionResult,
+    arguments: EnforceArguments,
+    trace: EnforcementTrace,
+}
+
+impl DispatchPreflight {
+    pub(crate) fn snapshot(&self) -> Option<&usage::NormalizedSnapshot> {
+        self.trace.normalized.as_ref()
+    }
+
+    pub(crate) fn binding_digest(&self) -> String {
+        sha256_digest(
+            json!([
+                "hive.dispatch-session.v1",
+                self.arguments.host,
+                sha256_digest(self.arguments.binding.session_id.as_bytes()),
+                self.arguments.binding.process_id,
+                self.trace.policy_digest,
+                self.trace.control_digest,
+                self.trace.halt_digest
+            ])
+            .to_string()
+            .as_bytes(),
+        )
+    }
+}
+
+fn runtime_digest(bytes: Option<&[u8]>) -> String {
+    bytes.map_or_else(|| "absent".to_owned(), sha256_digest)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn dispatch_preflight(
+    target: &Path,
+    host: &str,
+    session: &str,
+    process: u32,
+    user_root: Option<&Path>,
+    run_id: &str,
+    account: Option<&str>,
+    mut validate_observation: impl FnMut(&usage::NormalizedSnapshot) -> Result<(), AdapterError>,
+) -> Result<DispatchPreflight, AdapterError> {
+    let _consumer = PinnedTarget::open(target)?;
+    if process == 0
+        || session.is_empty()
+        || session.len() > 256
+        || session.chars().any(char::is_control)
+    {
+        return Err(AdapterError::Input(
+            "automatic dispatch requires an exact host session and positive process id".to_owned(),
+        ));
+    }
+    let arguments = EnforceArguments {
+        target: target.to_path_buf(),
+        binding: ParsedBinding {
+            session_id: session.to_owned(),
+            process_id: process,
+        },
+        account_digest: account.map(str::to_owned),
+        user_root: user_root.map(Path::to_path_buf),
+        host: Some(host.to_owned()),
+        run_id: Some(run_id.to_owned()),
+    };
+    let mut trace = EnforcementTrace::default();
+    let result = enforce_captured(&arguments, &mut trace, &mut validate_observation)?;
+    if result.exit_code == 0
+        && !matches!(
+            result.code,
+            "hive.usage-allowed" | "hive.usage-session-bypassed"
+        )
+    {
+        return Err(AdapterError::Safety(
+            "automatic dispatch requires configured current usage protection".to_owned(),
+        ));
+    }
+    Ok(DispatchPreflight {
+        result,
+        arguments,
+        trace,
+    })
+}
+
+/// Reread mutable policy and session records immediately before an authorization is published.
+pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result<(), AdapterError> {
+    if preflight.result.exit_code != 0 {
+        return Err(AdapterError::Safety(
+            "blocked preflight cannot authorize dispatch".to_owned(),
+        ));
+    }
+    let args = &preflight.arguments;
+    let target = PinnedTarget::open(&args.target)?;
+    let config = read_effective_config(&target, args.user_root.as_deref(), args.host.as_deref())?;
+    let global = open_global_runtime(&config, args.user_root.as_deref())?;
+    let runtime = global.as_ref().unwrap_or(&target);
+    let binding = bind_runtime_session(
+        &args.binding,
+        &config.primary_host,
+        &target,
+        global.is_some(),
+    );
+    let control = load_control(runtime, &binding)?;
+    if effective_policy_digest(&config)? != preflight.trace.policy_digest
+        || runtime_digest(control.snapshot.bytes()) != preflight.trace.control_digest
+    {
+        return Err(AdapterError::Conflict(
+            "usage policy or session control changed before dispatch authorization".to_owned(),
+        ));
+    }
+    if effective_enabled(&control, config.guard_enabled) {
+        let halt = load_halt(runtime, &binding)?;
+        if runtime_digest(halt.snapshot.bytes()) != preflight.trace.halt_digest {
+            return Err(AdapterError::Conflict(
+                "usage halt changed before dispatch authorization".to_owned(),
+            ));
+        }
+        let snapshot = preflight.snapshot().ok_or_else(|| {
+            AdapterError::Safety("enforced dispatch lacks a fresh sensor observation".to_owned())
+        })?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .ok()
+            .and_then(|duration| i64::try_from(duration.as_secs()).ok())
+            .ok_or_else(|| AdapterError::Safety("dispatch clock is invalid".to_owned()))?;
+        let policy = UsagePolicy::new(
+            &snapshot.sensor_id,
+            &snapshot.sensor_version,
+            &snapshot.provider,
+            &snapshot.account_digest,
+        )
+        .with_stop_remaining_percent(config.threshold)
+        .map_err(|_| AdapterError::Safety("dispatch usage policy is invalid".to_owned()))?;
+        if !matches!(
+            evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now),
+            UsageDecision::Allow(_)
+        ) {
+            return Err(AdapterError::Safety(
+                "usage observation no longer permits dispatch".to_owned(),
+            ));
+        }
+    }
+    target.verify_current()?;
+    runtime.verify_current()
 }
 
 #[derive(Default)]
@@ -962,8 +1117,16 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     })
 }
 
-#[allow(clippy::too_many_lines)]
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
+    enforce_captured(arguments, &mut EnforcementTrace::default(), &mut |_| Ok(()))
+}
+
+#[allow(clippy::too_many_lines)]
+fn enforce_captured(
+    arguments: &EnforceArguments,
+    trace: &mut EnforcementTrace,
+    validate_observation: &mut impl FnMut(&usage::NormalizedSnapshot) -> Result<(), AdapterError>,
+) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let mut config = read_effective_config(
         &target,
@@ -983,6 +1146,9 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     );
     let mut policy_digest = effective_policy_digest(&config)?;
     let loaded = load_control(runtime, &binding)?;
+    trace.policy_digest.clone_from(&policy_digest);
+    trace.control_digest = runtime_digest(loaded.snapshot.bytes());
+    "absent".clone_into(&mut trace.halt_digest);
     if !effective_enabled(&loaded, config.guard_enabled) {
         return Ok(ActionResult {
             schema_version: 1,
@@ -1017,6 +1183,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     // protection. The exact snapshot remains the compare-and-swap input for later replacement.
     let halt = load_halt(runtime, &binding)?;
 
+    trace.halt_digest = runtime_digest(halt.snapshot.bytes());
     if config.quota_reset_guard_enabled
         && halt
             .marker
@@ -1053,6 +1220,11 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         config = refreshed;
         policy_digest = refreshed_digest;
     };
+    if let Some(snapshot) = &observation.normalized {
+        validate_observation(snapshot)?;
+    }
+    trace.normalized.clone_from(&observation.normalized);
+    trace.policy_digest.clone_from(&policy_digest);
     let Some(decision) = observation.decision else {
         let mut result = allowed_result(&binding, &config, &observation);
         if let Some(data) = result
@@ -1101,6 +1273,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 .chain(std::iter::once(b'\n'))
                 .collect::<Vec<_>>();
             let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
+            trace.halt_digest = sha256_digest(&desired);
             result.changed_paths = changed
                 .then(|| portable_relative_path(&halt.relative))
                 .into_iter()
@@ -1118,6 +1291,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             }
         } else if halt.state != OverrideState::Absent {
             let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
+            "absent".clone_into(&mut trace.halt_digest);
             result.changed_paths = changed
                 .then(|| portable_relative_path(&halt.relative))
                 .into_iter()
@@ -1358,6 +1532,7 @@ fn observe_usage(
             remaining_percent: None,
             next_action,
             snapshots: Vec::new(),
+            normalized: None,
         };
     };
     let core_snapshots = snapshot.core_snapshots();
@@ -1390,6 +1565,7 @@ fn observe_usage(
         remaining_percent,
         next_action: None,
         snapshots: core_snapshots,
+        normalized: Some(snapshot),
     }
 }
 
@@ -1541,24 +1717,6 @@ fn read_claude_capture_snapshot(
     })
 }
 
-pub(crate) fn read_claude_capture_for_session(
-    target: &PinnedTarget,
-    session_id: &str,
-    sampled_at: SystemTime,
-) -> Result<usage::NormalizedSnapshot, usage::SensorError> {
-    if session_id.is_empty() || session_id.len() > 256 || session_id.chars().any(char::is_control) {
-        return Err(usage::SensorError::WrongSession);
-    }
-    let binding = bind_session(
-        &ParsedBinding {
-            session_id: session_id.to_owned(),
-            process_id: 1,
-        },
-        "claude",
-    );
-    read_claude_capture_snapshot(target, &binding, sampled_at)
-}
-
 fn allowed_result(
     binding: &SessionBinding,
     config: &InstalledUsageConfig,
@@ -1599,7 +1757,9 @@ fn allowed_result(
     }
 }
 
-fn effective_policy_digest(config: &InstalledUsageConfig) -> Result<String, AdapterError> {
+pub(crate) fn effective_policy_digest(
+    config: &InstalledUsageConfig,
+) -> Result<String, AdapterError> {
     let target_class = match config.target_class {
         UsageTargetClass::Project => "project",
         UsageTargetClass::Source => "source",
@@ -1976,7 +2136,7 @@ pub(crate) fn read_installed_config(
 /// Resolve one policy for a configured Hive project or the Hive source workspace. Other folders
 /// are deliberately inactive even when global preferences exist.
 #[allow(clippy::too_many_lines)]
-fn read_effective_config(
+pub(crate) fn read_effective_config(
     target: &PinnedTarget,
     user_root: Option<&Path>,
     requested_host: Option<&str>,
@@ -2691,10 +2851,94 @@ mod tests {
     }
 
     fn temporary_target() -> tempfile::TempDir {
+        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(std::path::Path::parent)
+            .expect("workspace root")
+            .join("tests/work");
+        fs::create_dir_all(&work).expect("owned test work directory");
         tempfile::Builder::new()
             .prefix("hive-usage-control-")
-            .tempdir_in(std::env::current_dir().expect("current directory should resolve"))
+            .tempdir_in(work)
             .expect("temporary target should exist")
+    }
+
+    #[test]
+    fn dispatch_proof_reuses_one_observation_and_rejects_policy_control_or_halt_drift() {
+        let root = temporary_target();
+        let config_path = root.path().join(".hive/config/harness.toml");
+        fs::create_dir_all(config_path.parent().expect("config parent")).expect("config dir");
+        let config =
+            String::from_utf8(installed_config("claude", true, false)).expect("config text");
+        fs::write(&config_path, &config).expect("config");
+        let session = "fixture-dispatch-session";
+        let binding = binding(session);
+        let mut capture = valid_capture(&binding);
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_secs();
+        capture["received_at_unix_seconds"] = json!(now);
+        capture["received_at_unix_millis"] = json!(now * 1000);
+        capture["expires_at_unix_seconds"] = json!(now + 120);
+        capture["windows"][0]["resets_at_unix_seconds"] = json!(now + 3600);
+        let capture_path = root
+            .path()
+            .join(claude_capture_path(&binding.session_digest).expect("path"));
+        fs::create_dir_all(capture_path.parent().expect("capture parent")).expect("capture dir");
+        fs::write(
+            &capture_path,
+            serde_json::to_vec(&capture).expect("capture bytes"),
+        )
+        .expect("capture");
+        let preflight = super::dispatch_preflight(
+            root.path(),
+            "claude",
+            session,
+            1,
+            None,
+            "absent-run",
+            None,
+            |_| Ok(()),
+        );
+        // An allowing observation does not read run titles or require a notification artifact.
+        let preflight = preflight.expect("preflight");
+        assert_eq!(preflight.result.code, "hive.usage-allowed");
+        super::verify_dispatch_preflight(&preflight).expect("fresh proof");
+        fs::remove_file(&capture_path).expect("remove sensor fixture");
+        super::verify_dispatch_preflight(&preflight).expect("no second sensor read");
+
+        let halt_path = root.path().join(halt_path(&binding));
+        let halt = fs::read(&halt_path).expect("halt baseline");
+        let mut changed = halt.clone();
+        changed.push(b' ');
+        fs::write(&halt_path, changed).expect("concurrent halt edit");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
+        fs::write(&halt_path, halt).expect("restore exact baseline");
+        fs::write(
+            &config_path,
+            config.replace(
+                "usage_stop_remaining_percent = 20",
+                "usage_stop_remaining_percent = 30",
+            ),
+        )
+        .expect("policy edit");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
+        fs::write(&config_path, config).expect("restore policy");
+        control_session(&SessionArguments {
+            target: root.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: session.to_owned(),
+                process_id: 1,
+            },
+            user_root: None,
+            host: Some("claude".to_owned()),
+            action: SessionAction::Disable,
+            confirm_disable: true,
+            confirm_reset: None,
+        })
+        .expect("disable");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
     }
 
     fn read_capture_bytes(
