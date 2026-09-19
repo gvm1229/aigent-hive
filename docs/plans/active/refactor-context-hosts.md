@@ -82,6 +82,8 @@
 
 직접 관련 시험: `tests/conformance/contracts/test_host_capabilities.py`, `test_run_role_contracts.py`, `test_skill_projections.py`와 해당 Rust 실행 상태 시험.
 
+- 2026-09-20 미완료 항목 해결 요청: [재개 절차와 검증 기록](../../research/host-acceptance-resume-2026-09-20.md). 기존 기준·승인 경계 유지
+
 ## 완료 증거
 
 - 모든 결과에 코드 지문·자료 지문·실행 호스트·운영체제·실제 실행 여부·실패 이유·증명 범위 기록
