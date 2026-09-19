@@ -16,6 +16,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from tests.conformance.support.harness import (
+    BUILTIN_REFERENCE_PATHS,
     EXPECTED_ROOT,
     FIXTURE_ROOT,
     REPOSITORY_ROOT,
@@ -186,6 +187,13 @@ class Phase1CopierParity(Phase1CliTestCase):
                         source.read_bytes(),
                     )
                     expected_entries = {"SKILL.md"}
+                    resources = [Path(relative).relative_to(name) for relative in BUILTIN_REFERENCE_PATHS
+                                 if relative.startswith(name + "/")]
+                    if resources:
+                        expected_entries.add("references")
+                        expected_resources = {relative.relative_to("references").as_posix():
+                            ("file", (source.parent / relative).read_bytes()) for relative in resources}
+                        self.assertEqual(snapshot_tree(projected.parent / "references"), expected_resources)
                     if projection_root == ".agents":
                         expected_entries.add("agents")
                     self.assertEqual(
