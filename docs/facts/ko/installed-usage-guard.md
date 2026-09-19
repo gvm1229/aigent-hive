@@ -9,10 +9,10 @@ summary: "설정 완료 Hive project와 Hive source에만 설치 guard 적용, n
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:267309f9d7f56095b6cc00f4602aeaf1249e0e8988f7fc5bd897dff04e2be5f5"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:9cf01b711909bca15472e95b5a25325b7094df4115795b6fdf04cf2bc3f017f5"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:3a88481c3ede3f60aef3a9d39442a7b4064c231ddaa56a3d560f76f329ec6ed9"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:3a6aea1c476fb4efcb45de83ed94d35de51abc94e9476694fc5ebe60d15a9fec"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:4afd5ba4483d98f63ae42c065837f9b010506657"
+reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
 status: active
 ---
 

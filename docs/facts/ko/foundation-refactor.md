@@ -9,17 +9,18 @@ summary: "미출시 0.10.4 변경을 계승하는 0.11.0 리팩터링, 기존 �
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/architecture/policy-rule-inventory.md#sha256:925d51703dc8db78bb15bc7598d18225766fae6aeb582fa31bd2c2a0ad58921d"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:f811647803b6816a30e62ad03653f54700b7e53a4a876ec2802f83fde8332ca3"
+  - "repo:docs/architecture/policy-rule-inventory.md#sha256:77bd57357ba6cb08f84c1ee8908d8859514bd114951faf6abc92b67d7ef30920"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:6ae9aef7bbcf7d770646de35852dbdb7d5d0e8bfc70069626bb9d0865d67b13b"
 links: [artifact-boundaries, orchestration-ownership]
-reviewed_revision: "git:a1b96c88b4938c8771ccf635ffef0e8dcafa9ff1"
+reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
 status: active
 ---
 
 # 0.11.0 기반 구조 리팩터링 범위
 
 - 미출시 `0.10.4` 계승, 목표 `0.11.0-test.1`; 별도 `0.10.4` 출시 제외
-- 기존 기능·명령 유지, 지식 흐름 개선과 Codex 우선 검증
+- 기능·명령 유지, 지식 흐름 개선·Codex 우선 검증
+- 승인된 호환성 예외: 자동 재개의 현재 세션·양수 프로세스 ID 필수
 - 승인 7개: 실패 분류·결과 합산·실제 진단·보류 평가·고정 문맥 재사용·개선 후보 검토·문맥 유효성
 - 후보 검토 `HK-005`, 나머지 기존 `HK-*`·`RFK-002` 소유
 - 소스 브랜치 검사·파일 훅 변환·명시적 등록·실행 후보 검토 구현

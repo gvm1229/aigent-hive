@@ -9,13 +9,13 @@ summary: "The 0.11.0 refactor inherits unreleased 0.10.4 changes, preserves exis
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/architecture/policy-rule-inventory.md#sha256:925d51703dc8db78bb15bc7598d18225766fae6aeb582fa31bd2c2a0ad58921d"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:f811647803b6816a30e62ad03653f54700b7e53a4a876ec2802f83fde8332ca3"
+  - "repo:docs/architecture/policy-rule-inventory.md#sha256:77bd57357ba6cb08f84c1ee8908d8859514bd114951faf6abc92b67d7ef30920"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:6ae9aef7bbcf7d770646de35852dbdb7d5d0e8bfc70069626bb9d0865d67b13b"
 links: [artifact-boundaries, orchestration-ownership]
-reviewed_revision: "git:a1b96c88b4938c8771ccf635ffef0e8dcafa9ff1"
+reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
 status: active
 ---
 
 # 0.11.0 Foundation Refactor Scope
 
-0.11.0-test.1 inherits unreleased 0.10.4 changes without a separate release. Preserve features and commands; improve knowledge flows and verify Codex first. Seven approved proposals cover failure classification, result aggregation, effective diagnostics, held-out evaluation, stable-context reuse, reviewed improvement candidates, and context freshness. HK-005 owns review; existing HK criteria and RFK-002 own the rest. Source branch checks, native file-hook adapters, explicit configuration and run candidate review are implemented. Live host acceptance remains pending. Stable release and user installation need separate approval.
+0.11.0-test.1 inherits unreleased 0.10.4 changes without a separate release. Preserve features and commands; improve knowledge flows and verify Codex first. Approved exception: automatic resume requires the current session and positive process ID. Seven approved proposals cover failure classification, result aggregation, effective diagnostics, held-out evaluation, stable-context reuse, reviewed improvement candidates, and context freshness. HK-005 owns review; existing HK criteria and RFK-002 own the rest. Source branch checks, native file-hook adapters, explicit configuration and run candidate review are implemented. Live host acceptance remains pending. Stable release and user installation need separate approval.
