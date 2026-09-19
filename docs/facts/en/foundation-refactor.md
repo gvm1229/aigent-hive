@@ -9,12 +9,13 @@ summary: "The 0.11.0 refactor inherits unreleased 0.10.4 changes, preserves exis
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:4052a4c14e26af16fefcd94116c8060f351ccb0fe5fe8321d127c59ff0d517a7"
+  - "repo:docs/architecture/policy-rule-inventory.md#sha256:925d51703dc8db78bb15bc7598d18225766fae6aeb582fa31bd2c2a0ad58921d"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:f811647803b6816a30e62ad03653f54700b7e53a4a876ec2802f83fde8332ca3"
 links: [artifact-boundaries, orchestration-ownership]
-reviewed_revision: "git:568f9540dc893c089dbd72244d7b0c0608518eeb"
+reviewed_revision: "git:a1b96c88b4938c8771ccf635ffef0e8dcafa9ff1"
 status: active
 ---
 
 # 0.11.0 Foundation Refactor Scope
 
-0.11.0-test.1 inherits unreleased 0.10.4 changes without a separate 0.10.4 release. Preserve features and commands; improve core knowledge flows and verify Codex first. Source branch enforcement is implemented. Seven accepted proposals cover failure classification, result aggregation, effective diagnostics, held-out evaluation, stable-context reuse, reviewed improvement candidates, and context freshness. HK-005 owns candidate review; existing HK criteria and RF-K02 own the rest. Product hooks and live acceptance remain pending. Stable release requires version-specific approval.
+0.11.0-test.1 inherits unreleased 0.10.4 changes without a separate release. Preserve features and commands; improve knowledge flows and verify Codex first. Seven approved proposals cover failure classification, result aggregation, effective diagnostics, held-out evaluation, stable-context reuse, reviewed improvement candidates, and context freshness. HK-005 owns review; existing HK criteria and RFK-002 own the rest. Source branch checks, native file-hook adapters, explicit configuration and run candidate review are implemented. Live host acceptance remains pending. Stable release and user installation need separate approval.

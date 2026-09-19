@@ -10,13 +10,15 @@ tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d5e36f5d1cb6080fa7952b1cf4354e7d54f0df12bc0799d758ced53d7f083b84"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:881ae77507817b888cf66ff0da2ee52fbc4048fbb9355641a093dcf6f3d69fc1"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:6d2138ea9d68803f4447e7295cc08fcf5b548c23df8b2d1e5826c0aa46bff668"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:c80df9705880a64e92a2af923ac394fccbdbd19385b4edd8fecfbf7f8c0dce67"
-  - "repo:crates/hive-render/src/lib.rs#sha256:b32ec4b80e8196069441c3f6658a6167163b33439ea1859b0349f76b56ccc823"
-  - "repo:harness/project-bases/registry.yml#sha256:195103d23c1539bcdb6cd3a84807e52306ed772f8a2fcbbf3f97ab3a56ece039"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:267309f9d7f56095b6cc00f4602aeaf1249e0e8988f7fc5bd897dff04e2be5f5"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:72d1a5158093bb93070183b12db1d2ce8388fd274f6b9a1fd21188ef7bac04b1"
+  - "repo:crates/hive-render/src/lib.rs#sha256:d7ac376de1ffbfdf6f04f900fa8b46d78749755ffe9c30e1710be42611353ef7"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:9cf01b711909bca15472e95b5a25325b7094df4115795b6fdf04cf2bc3f017f5"
+  - "repo:docs/releases/0.10.3.md#sha256:94a75051e50352ff04de8e649b8382db81ee5b6b2ea95276203bdddeedcc2ea8"
+  - "repo:harness/project-bases/registry.yml#sha256:0184c52dee665e90424d64cafa8c0a76e673d4a43019549e138879cc2085cafc"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
-reviewed_revision: "git:fede7a2a753884a414766773c6cf197721937028"
+reviewed_revision: "git:a1b96c88b4938c8771ccf635ffef0e8dcafa9ff1"
 status: active
 ---
 
@@ -28,4 +30,4 @@ status: active
 - 공통 등록표: project·user exact digest, 생성형 공개 시험판 overlay chain, 동결 `v0.10.0` bytes
 - Usage halt: effective policy digest 결합과 변경 threshold same-session 재검사
 - 재검사: allow 때 old halt 제거, limited·unknown 때 교체, guard disable 없음
-- 복구 범위: 같은 프로세스의 정책 변경; 다른 프로세스 표식은 안전 오류, 같은 정책 중단은 재사용
+- 옛 동일 프로세스 복구 제한은 `0.10.3` 재측정으로 대체. `0.11.0` 초기화 확인은 별도 절차
