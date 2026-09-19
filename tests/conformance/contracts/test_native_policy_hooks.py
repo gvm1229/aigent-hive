@@ -3,12 +3,27 @@
 from __future__ import annotations
 
 import json
+import base64
 import hashlib
 import os
 import subprocess
 from jsonschema import Draft202012Validator
 
 from tests.conformance.support.harness import Phase1CliTestCase, snapshot_tree, REPOSITORY_ROOT
+
+
+def command_script(command):
+    if " -EncodedCommand " in command:
+        return base64.b64decode(command.split(" -EncodedCommand ", 1)[1]).decode("utf-16-le")
+    return command
+
+
+def rewrite_command(command, transform):
+    if " -EncodedCommand " in command:
+        prefix = command.split(" -EncodedCommand ", 1)[0]
+        encoded = base64.b64encode(transform(command_script(command)).encode("utf-16-le")).decode()
+        return prefix + " -EncodedCommand " + encoded
+    return transform(command)
 
 
 class NativePolicyProtocolTests(Phase1CliTestCase):
@@ -251,32 +266,35 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
             with self.subTest(host=host):
                 preview = self.configure(host, "preview")["data"]["preview"]
                 command = preview["after"][0]["value"]["hooks"][0]["command"]
-                self.assertIn(str(self.hive_binary), command)
+                self.assertIn(str(self.hive_binary), command_script(command))
                 def quote(value):
                     return "'" + value.replace("'", "''" if os.name == "nt" else "'\\''") + "'"
 
                 executable = quote(str(self.hive_binary))
                 python = quote(os.sys.executable)
                 failures = (
-                    command.replace(str(self.hive_binary), str(self.work_root / "missing checker.exe"), 1),
-                    command.replace(f"'--host' '{host}'", "'--host' 'unsupported-fixture'", 1),
-                    command.replace(executable, f"{python} '-c' 'pass'", 1),
-                    command.replace(executable, f"{python} '-c' 'import sys;print(sys.stdin.read());sys.exit(3)'", 1),
+                    rewrite_command(command, lambda text: text.replace(str(self.hive_binary), str(self.work_root / "missing checker.exe"), 1)),
+                    rewrite_command(command, lambda text: text.replace(f"'--host' '{host}'", "'--host' 'unsupported-fixture'", 1)),
+                    rewrite_command(command, lambda text: text.replace(executable, f"{python} '-c' 'pass'", 1)),
+                    rewrite_command(command, lambda text: text.replace(executable, f"{python} '-c' 'import sys;print(sys.stdin.read());sys.exit(3)'", 1)),
                 )
                 for failing_command in failures:
                     self.assertNotEqual(failing_command, command)
-                    process = subprocess.run(failing_command, shell=True, input="PRIVATE-SENTINEL",
-                        capture_output=True, text=True, encoding="utf-8", timeout=20, cwd=self.target)
-                    self.assertEqual(process.returncode, 0, process.stderr)
-                    self.assertEqual(process.stderr, "")
-                    response = json.loads(process.stdout)
-                    if host == "antigravity":
-                        self.assertEqual(response["decision"], "deny")
-                    else:
-                        self.assertEqual(response["hookSpecificOutput"]["permissionDecision"], "deny")
-                    self.assertIn("repair the registered checker", process.stdout)
-                    self.assertNotIn("PRIVATE-SENTINEL", process.stdout)
-                    self.assertEqual(snapshot_tree(self.target), before)
+                    shells = [None, "powershell.exe"] if os.name == "nt" else [None]
+                    for outer in shells:
+                        invocation = failing_command if outer is None else [outer, "-NoProfile", "-NonInteractive", "-Command", failing_command]
+                        process = subprocess.run(invocation, shell=outer is None, input="PRIVATE-SENTINEL",
+                            capture_output=True, text=True, encoding="utf-8", timeout=20, cwd=self.target)
+                        self.assertEqual(process.returncode, 0, process.stderr)
+                        self.assertEqual(process.stderr, "")
+                        response = json.loads(process.stdout)
+                        if host == "antigravity":
+                            self.assertEqual(response["decision"], "deny")
+                        else:
+                            self.assertEqual(response["hookSpecificOutput"]["permissionDecision"], "deny")
+                        self.assertIn("repair the registered checker", process.stdout)
+                        self.assertNotIn("PRIVATE-SENTINEL", process.stdout)
+                        self.assertEqual(snapshot_tree(self.target), before)
 
     def test_generated_command_executes_the_native_protocol_without_a_model(self):
         before = snapshot_tree(self.target)
@@ -285,18 +303,20 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
             command = preview["after"][0]["value"]["hooks"][0]["command"]
             for path in ("ordinary.txt", ".hive/config/harness.toml"):
                 payload = NativePolicyProtocolTests.payload(self, host, path)
-                process = subprocess.run(command, shell=True, input=json.dumps(payload), capture_output=True,
-                                         text=True, encoding="utf-8", timeout=20, cwd=self.target)
-                self.assertEqual(process.returncode, 0, process.stderr)
-                response = json.loads(process.stdout)
-                if path == "ordinary.txt":
-                    if host == "antigravity":
-                        self.assertEqual(response["decision"], "ask")
-                        self.assertNotIn("permissionOverrides", response)
+                for outer in ([None, "powershell.exe"] if os.name == "nt" else [None]):
+                    invocation = command if outer is None else [outer, "-NoProfile", "-NonInteractive", "-Command", command]
+                    process = subprocess.run(invocation, shell=outer is None, input=json.dumps(payload), capture_output=True,
+                                             text=True, encoding="utf-8", timeout=20, cwd=self.target)
+                    self.assertEqual(process.returncode, 0, process.stderr)
+                    response = json.loads(process.stdout)
+                    if path == "ordinary.txt":
+                        if host == "antigravity":
+                            self.assertEqual(response["decision"], "ask")
+                            self.assertNotIn("permissionOverrides", response)
+                        else:
+                            self.assertEqual(response, {})
                     else:
-                        self.assertEqual(response, {})
-                else:
-                    NativePolicyProtocolTests.assert_denied(self, host, response)
+                        NativePolicyProtocolTests.assert_denied(self, host, response)
         self.assertEqual(snapshot_tree(self.target), before)
 
     def test_legacy_command_receipts_upgrade_without_accepting_arbitrary_commands(self):
@@ -312,7 +332,7 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
                 handler = receipt["after"][0]["value"]["hooks"][0]
                 command = handler["command"]
                 if os.name == "nt":
-                    raw = command.split("$hiveResponse = & ", 1)[1].split(" 2>$null;", 1)[0]
+                    raw = command_script(command).split("$hiveResponse = & ", 1)[1].split(" 2>$null;", 1)[0]
                     legacy = f'powershell.exe -NoProfile -NonInteractive -Command "& {raw}"'
                 else:
                     legacy = command.split("if hive_response=$(", 1)[1].split(" 2>/dev/null)", 1)[0]
@@ -346,11 +366,30 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
                 config[namespace]["PreToolUse"][0]["hooks"][0]["command"] = legacy
                 write_legacy()
                 upgrade = self.configure(host, "preview")["data"]["preview"]
-                self.assertEqual(upgrade["command_format"], 2)
+                self.assertEqual(upgrade["command_format"], 3)
                 self.assertEqual(upgrade["prior_command_format"], 1)
                 self.configure(host, "apply", upgrade["approval_digest"])
-                self.assertEqual(json.loads(receipt_path.read_text(encoding="utf-8"))["command_format"], 2)
+                self.assertEqual(json.loads(receipt_path.read_text(encoding="utf-8"))["command_format"], 3)
                 self.configure(host, "status")
+                # Version 2 was approved before the outer-shell parsing defect was found.
+                old_two = command
+                if os.name == "nt":
+                    script = command_script(command).removeprefix("$ProgressPreference='SilentlyContinue';")
+                    old_two = f'powershell.exe -NoProfile -NonInteractive -Command "{script}"'
+                ordered = {}
+                for key, value in receipt.items():
+                    ordered[key] = value
+                    if key == "prior_policy_digest":
+                        ordered["command_format"] = 2
+                receipt = ordered
+                handler["command"] = old_two
+                config[namespace]["PreToolUse"][0]["hooks"][0]["command"] = old_two
+                write_legacy()
+                second = self.configure(host, "preview")["data"]["preview"]
+                self.assertEqual(second["prior_command_format"], 2)
+                self.configure(host, "apply", second["approval_digest"])
+                self.assertEqual(json.loads(receipt_path.read_text(encoding="utf-8"))["command_format"], 3)
+
 
     def test_explicit_run_notice_binds_host_session_and_never_requests_continuation(self):
         base = self.target

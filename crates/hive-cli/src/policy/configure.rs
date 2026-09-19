@@ -3,6 +3,7 @@
 use crate::run::PinnedTarget;
 use crate::user_install::replace_host_policy_file;
 use crate::{emit_action_result, ActionResult};
+use base64::Engine;
 use hive_core::{policy::valid_digest, sha256_digest};
 use hive_projection::hook_config::{contains_path, edit_entry, prune_empty};
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const LIMIT: usize = 1024 * 1024;
-const COMMAND_FORMAT: u8 = 2;
+const COMMAND_FORMAT: u8 = 3;
 
 const fn legacy_command_format() -> u8 {
     1
@@ -90,7 +91,7 @@ fn command(
     review_run: Option<&str>,
     command_format: u8,
 ) -> Result<String, String> {
-    if !matches!(command_format, 1 | COMMAND_FORMAT) {
+    if !matches!(command_format, 1 | 2 | COMMAND_FORMAT) {
         return Err("unsupported native hook command format".to_owned());
     }
     let binary = std::env::current_exe().map_err(|_| "cannot resolve Hive executable")?;
@@ -131,7 +132,7 @@ fn command(
             .map(|arg| format!("'{}'", arg.replace('\'', "''")))
             .collect::<Vec<_>>()
             .join(" ");
-        if event == "PreToolUse" && command_format == COMMAND_FORMAT {
+        if event == "PreToolUse" && command_format >= 2 {
             let failure = if host == "antigravity" {
                 "@{decision='deny';reason='Hive policy checker failed; repair the registered checker before file edits'}"
             } else {
@@ -139,8 +140,22 @@ fn command(
             };
             // Host command errors are not necessarily blocking. Capture output until the
             // checker succeeds; do not forward an execution failure or partial output.
+            let script = format!("$ErrorActionPreference='Stop'; try {{ $hiveResponse = & {quoted} 2>$null; if ($LASTEXITCODE -ne 0 -or -not $hiveResponse) {{ throw 'checker failed' }}; $hiveResponse }} catch {{ {failure} | ConvertTo-Json -Depth 4 -Compress }}");
+            if command_format == COMMAND_FORMAT {
+                // Host launchers may use cmd, PowerShell, or Bash. Do not let the outer
+                // shell expand the inner script's variables before PowerShell reads it.
+                let script = format!("$ProgressPreference='SilentlyContinue';{script}");
+                let bytes = script
+                    .encode_utf16()
+                    .flat_map(u16::to_le_bytes)
+                    .collect::<Vec<_>>();
+                let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+                return Ok(format!(
+                    "powershell.exe -NoProfile -NonInteractive -EncodedCommand {encoded}"
+                ));
+            }
             return Ok(format!(
-                "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; try {{ $hiveResponse = & {quoted} 2>$null; if ($LASTEXITCODE -ne 0 -or -not $hiveResponse) {{ throw 'checker failed' }}; $hiveResponse }} catch {{ {failure} | ConvertTo-Json -Depth 4 -Compress }}\""
+                "powershell.exe -NoProfile -NonInteractive -Command \"{script}\""
             ));
         }
         Ok(format!(
@@ -152,7 +167,7 @@ fn command(
             .map(|arg| format!("'{}'", arg.replace('\'', "'\\''")))
             .collect::<Vec<_>>()
             .join(" ");
-        if event == "PreToolUse" && command_format == COMMAND_FORMAT {
+        if event == "PreToolUse" && command_format >= 2 {
             let reason =
                 "Hive policy checker failed; repair the registered checker before file edits";
             let failure = if host == "antigravity" {

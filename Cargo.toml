@@ -23,6 +23,7 @@ license = "Apache-2.0"
 release-date = "2026-09-19"
 
 [workspace.dependencies]
+base64 = "=0.22.1"
 cap-fs-ext = "=4.0.2"
 cap-primitives = "=4.0.2"
 cap-std = "=4.0.2"
