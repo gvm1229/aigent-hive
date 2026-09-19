@@ -7,6 +7,8 @@
 # Frozen release evidence must retain the exact tagged bytes on every host.
 harness/project-bases/0.10.2/** -text
 harness/user-bases/0.10.2/** -text
+harness/project-bases/0.10.3/** -text
+harness/user-bases/0.10.3/** -text
 
 *.png binary
 *.jpg binary
