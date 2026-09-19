@@ -6954,6 +6954,7 @@ mod tests {
             "usage-guard/references/sensors.md",
             "knowledge-recall/references/confidential.md",
             "knowledge-capture/references/ingest.md",
+            "run-checkpoint/references/policy-review.md",
         ] {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
@@ -8958,7 +8959,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 31);
+        assert_eq!(deletions.len(), 32);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

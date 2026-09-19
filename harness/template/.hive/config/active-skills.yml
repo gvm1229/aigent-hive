@@ -188,7 +188,7 @@ skills:
   consent_digest: null
 - name: run-checkpoint
   source_type: built-in
-  content_digest: sha256:4cded991dfcf13ff09d5ad28f88e014091b0412cd35f6c531f4224208224ba9c
+  content_digest: sha256:2892a1d16f2795a0a2629c5d9082410d29205b0b9f46a41707d3cf40e764f655
   side_effect_class: project-write
   capabilities:
   - filesystem-read

@@ -353,6 +353,7 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
             ("usage-guard", "control.md" | "sensors.md")
                 | ("knowledge-recall", "confidential.md")
                 | ("knowledge-capture", "ingest.md")
+                | ("run-checkpoint", "policy-review.md")
         );
     }
     (parts.len() == 4
