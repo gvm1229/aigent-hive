@@ -82,6 +82,7 @@
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Automatic numbered-test release gate | [en](en/automatic-test-release-gate.md) | [ko](ko/automatic-test-release-gate.md) |
 | Installed usage guard | [en](en/installed-usage-guard.md) | [ko](ko/installed-usage-guard.md) |
+| 현재 작업의 초기화 감지 제어 | [en](en/quota-reset-session-control.md) | [ko](ko/quota-reset-session-control.md) |
 | Judge verification | [en](en/judge-verification.md) | [ko](ko/judge-verification.md) |
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
 | `0.10.3` usage guard recovery stable release | [en](en/v0-10-3-usage-recovery-release.md) | [ko](ko/v0-10-3-usage-recovery-release.md) |
