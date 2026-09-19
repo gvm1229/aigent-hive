@@ -11,6 +11,17 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const LIMIT: usize = 1024 * 1024;
+const COMMAND_FORMAT: u8 = 2;
+
+const fn legacy_command_format() -> u8 {
+    1
+}
+
+// Serde requires a borrowed field for skip_serializing_if.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_legacy_command_format(value: &u8) -> bool {
+    *value == 1
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -27,6 +38,13 @@ struct Intent {
     target_digest: String,
     policy_digest: String,
     prior_policy_digest: Option<String>,
+    #[serde(
+        default = "legacy_command_format",
+        skip_serializing_if = "is_legacy_command_format"
+    )]
+    command_format: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    prior_command_format: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     review_run: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -70,7 +88,11 @@ fn command(
     target: &Path,
     policy: &str,
     review_run: Option<&str>,
+    command_format: u8,
 ) -> Result<String, String> {
+    if !matches!(command_format, 1 | COMMAND_FORMAT) {
+        return Err("unsupported native hook command format".to_owned());
+    }
     let binary = std::env::current_exe().map_err(|_| "cannot resolve Hive executable")?;
     let mut args = vec![
         binary.to_str().ok_or("Hive executable must be UTF-8")?,
@@ -109,7 +131,7 @@ fn command(
             .map(|arg| format!("'{}'", arg.replace('\'', "''")))
             .collect::<Vec<_>>()
             .join(" ");
-        if event == "PreToolUse" {
+        if event == "PreToolUse" && command_format == COMMAND_FORMAT {
             let failure = if host == "antigravity" {
                 "@{decision='deny';reason='Hive policy checker failed; repair the registered checker before file edits'}"
             } else {
@@ -130,7 +152,7 @@ fn command(
             .map(|arg| format!("'{}'", arg.replace('\'', "'\\''")))
             .collect::<Vec<_>>()
             .join(" ");
-        if event == "PreToolUse" {
+        if event == "PreToolUse" && command_format == COMMAND_FORMAT {
             let reason =
                 "Hive policy checker failed; repair the registered checker before file edits";
             let failure = if host == "antigravity" {
@@ -152,6 +174,7 @@ fn entries(
     target: &Path,
     policy: &str,
     review_run: Option<&str>,
+    command_format: u8,
 ) -> Result<Vec<Entry>, String> {
     if review_run.is_some_and(|run| {
         run.is_empty()
@@ -179,7 +202,7 @@ fn entries(
         .iter()
         .map(|event| {
             let handler =
-                json!({"type":"command","command":command(host,event,target,policy,review_run)?,"timeout":10});
+                json!({"type":"command","command":command(host,event,target,policy,review_run,command_format)?,"timeout":10});
             let value = if *event == "PreToolUse" {
                 json!({"matcher":matcher,"hooks":[handler]})
             } else if host == "antigravity" {
@@ -261,15 +284,22 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
             target,
             &intent.policy_digest,
             intent.review_run.as_deref(),
+            intent.command_format,
         )?
     } else {
         Vec::new()
     };
     let before = match &intent.prior_policy_digest {
-        Some(policy) if valid_digest(policy) => {
-            entries(host, target, policy, intent.prior_review_run.as_deref())?
+        Some(policy) if valid_digest(policy) => entries(
+            host,
+            target,
+            policy,
+            intent.prior_review_run.as_deref(),
+            intent.prior_command_format.unwrap_or(1),
+        )?,
+        None if intent.prior_review_run.is_none() && intent.prior_command_format.is_none() => {
+            Vec::new()
         }
-        None if intent.prior_review_run.is_none() => Vec::new(),
         _ => return Err("invalid prior policy digest".to_owned()),
     };
     if intent.after != after || intent.before != before {
@@ -280,6 +310,7 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
         target,
         &intent.policy_digest,
         intent.review_run.as_deref(),
+        intent.command_format,
     )?;
     if intent.created_containers.iter().any(|path| {
         !allowed
@@ -372,7 +403,13 @@ fn plan(
     }
     let policy = env!("HIVE_NATIVE_POLICY_DIGEST").to_owned();
     let after = if operation == "install" {
-        entries(host, target.requested_path(), &policy, review_run)?
+        entries(
+            host,
+            target.requested_path(),
+            &policy,
+            review_run,
+            COMMAND_FORMAT,
+        )?
     } else {
         Vec::new()
     };
@@ -398,6 +435,8 @@ fn plan(
         target_digest: sha256_digest(target.requested_path().to_string_lossy().as_bytes()),
         policy_digest: policy,
         prior_policy_digest: installed.map(|prior| prior.policy_digest.clone()),
+        command_format: COMMAND_FORMAT,
+        prior_command_format: installed.map(|prior| prior.command_format),
         review_run: review_run.map(str::to_owned),
         prior_review_run: installed.and_then(|prior| prior.review_run.clone()),
         operation: operation.to_owned(),
@@ -546,6 +585,7 @@ fn replay(
     };
     if intent.operation != desired_action
         || (action == "apply" && intent.policy_digest != env!("HIVE_NATIVE_POLICY_DIGEST"))
+        || (action == "apply" && intent.command_format != COMMAND_FORMAT)
         || (action == "apply" && intent.review_run.as_deref() != review_run)
     {
         return Ok(None);
@@ -607,6 +647,7 @@ fn inspect_or_recover(
                 "review_run":null,
                 "configuration_state":if config.is_some(){"unowned-or-receipt-missing"}else{"absent"},
                 "policy_current":null,"pending":null,
+                "command_format":null,"current_command_format":COMMAND_FORMAT,
                 "host_loaded":"unverified","event_matched":"unverified","checker_executed":"unverified",
                 "denial_observed":"unverified","actual_effect":"unverified","authorizes_model_execution":false}),
             Vec::new(),
@@ -670,7 +711,8 @@ fn inspect_or_recover(
         "review_run":intent.review_run,
         "configuration_state":if configured{"configured"}else{"not-configured-or-pending"},
         "observed_config_digest":digest(observed.as_deref()),"approved_config_digest":intent.after_digest,
-        "configured":configured,"policy_current":intent.policy_digest==env!("HIVE_NATIVE_POLICY_DIGEST"),
+        "configured":configured,"policy_current":intent.policy_digest==env!("HIVE_NATIVE_POLICY_DIGEST") && intent.command_format==COMMAND_FORMAT,
+        "command_format":intent.command_format,"current_command_format":COMMAND_FORMAT,
         "pending":digest(observed.as_deref())!=intent.after_digest && !configured,
         "host_loaded":"unverified","event_matched":"unverified","checker_executed":"unverified",
         "denial_observed":"unverified","actual_effect":"unverified","authorizes_model_execution":false}),

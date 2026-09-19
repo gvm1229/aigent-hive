@@ -299,6 +299,59 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
                     NativePolicyProtocolTests.assert_denied(self, host, response)
         self.assertEqual(snapshot_tree(self.target), before)
 
+    def test_legacy_command_receipts_upgrade_without_accepting_arbitrary_commands(self):
+        for host, relative in (("codex", ".codex/hooks.json"),
+                               ("claude", ".claude/settings.local.json"),
+                               ("antigravity", ".agents/hooks.json")):
+            with self.subTest(host=host):
+                preview = self.configure(host, "preview")["data"]["preview"]
+                self.configure(host, "apply", preview["approval_digest"])
+                config_path = self.target / relative
+                receipt_path = self.target / f".hive/config/host-policy-hooks/{host}.json"
+                receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+                handler = receipt["after"][0]["value"]["hooks"][0]
+                command = handler["command"]
+                if os.name == "nt":
+                    raw = command.split("$hiveResponse = & ", 1)[1].split(" 2>$null;", 1)[0]
+                    legacy = f'powershell.exe -NoProfile -NonInteractive -Command "& {raw}"'
+                else:
+                    legacy = command.split("if hive_response=$(", 1)[1].split(" 2>/dev/null)", 1)[0]
+                handler["command"] = legacy
+                receipt.pop("command_format")
+                self.assertNotIn("prior_command_format", receipt)
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                namespace = "aigent-hive-policy" if host == "antigravity" else "hooks"
+                config[namespace]["PreToolUse"][0]["hooks"][0]["command"] = legacy
+
+                def write_legacy():
+                    raw_config = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode()
+                    config_path.write_bytes(raw_config)
+                    receipt["after_digest"] = "sha256:" + hashlib.sha256(raw_config).hexdigest()
+                    receipt["approval_digest"] = ""
+                    approved = (json.dumps(receipt, ensure_ascii=False, indent=2) + "\n").encode()
+                    receipt["approval_digest"] = "sha256:" + hashlib.sha256(approved).hexdigest()
+                    receipt_path.write_bytes((json.dumps(receipt, ensure_ascii=False, indent=2) + "\n").encode())
+
+                write_legacy()
+                old_status = self.configure(host, "status")["data"]
+                self.assertEqual(old_status["command_format"], 1)
+                self.assertFalse(old_status["policy_current"])
+                handler["command"] = legacy + " ; echo PRIVATE-SENTINEL"
+                config[namespace]["PreToolUse"][0]["hooks"][0]["command"] = handler["command"]
+                write_legacy()
+                before = snapshot_tree(self.target)
+                self.configure(host, "preview", expected=3)
+                self.assertEqual(snapshot_tree(self.target), before)
+                handler["command"] = legacy
+                config[namespace]["PreToolUse"][0]["hooks"][0]["command"] = legacy
+                write_legacy()
+                upgrade = self.configure(host, "preview")["data"]["preview"]
+                self.assertEqual(upgrade["command_format"], 2)
+                self.assertEqual(upgrade["prior_command_format"], 1)
+                self.configure(host, "apply", upgrade["approval_digest"])
+                self.assertEqual(json.loads(receipt_path.read_text(encoding="utf-8"))["command_format"], 2)
+                self.configure(host, "status")
+
     def test_explicit_run_notice_binds_host_session_and_never_requests_continuation(self):
         base = self.target
         digest = lambda value: "sha256:" + hashlib.sha256(value).hexdigest()
