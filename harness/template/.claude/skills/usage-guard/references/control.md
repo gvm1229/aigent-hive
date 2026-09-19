@@ -1,6 +1,6 @@
 # Explicit usage control
 
-Read before any threshold, disable, enable, or toggle operation.
+Read before any threshold, disable, enable, toggle, or reset acknowledgement operation.
 
 7. Perform at most the explicitly requested control mutation:
    - A global threshold requires explicit global intent and an integer from 1 through 99:
@@ -37,6 +37,18 @@ Read before any threshold, disable, enable, or toggle operation.
    available account digest. This recheck also applies to manual source work. Continue only after
    fresh `hive.usage-allowed`; limited, unknown, or policy-changed results remain blocked. Never
    disable the session merely to acknowledge a changed threshold.
+
+## Quota reset acknowledgement
+
+- A `hive.usage-reset` stop persists across repeated enforcement and process restarts. Do not retry sensing to clear it.
+- Only after the user explicitly acknowledges the reported reset and requests continuation, use the current halt's `reset_acknowledgement_digest` (or `status`'s `halt_digest`):
+
+  ```text
+  hive usage session --target <hive-target> --host <host> --user-root <user-root> --session-id <current-session-id> --process-id <current-process-id> --action acknowledge-reset --confirm-reset <halt-digest> --output json
+  ```
+
+- Use installed help first; older releases may not support this action. Never substitute session disable or direct marker editing.
+- Immediately run `enforce` with the same exact binding and available account digest. Acknowledgement keeps the threshold guard enabled and does not authorize work or dispatch. Proceed only after fresh `hive.usage-allowed`; all blocked outcomes remain stops.
 
 ## Intent rules
 
