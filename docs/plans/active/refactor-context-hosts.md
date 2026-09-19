@@ -56,14 +56,16 @@
 
 대상: `crates/hive-core/src/{run,orchestration,native_workflow}.rs`, `crates/hive-cli/src/run.rs`, `schemas/capability-matrix.schema.json`, 기존 호스트별 투영과 실행 결과 계약.
 
-- [ ] [RFH-001] 현재 호스트 기능 탐지·작업 결과 확인·취소·재개 계약의 코드 및 공식 근거 확인, 호스트·버전·운영체제별 상태표 작성
-  - state: agent-owned; depends: RFB-002
+- [x] [RFH-001] 현재 호스트 기능 탐지·작업 결과 확인·취소·재개 계약의 코드 및 공식 근거 확인, 호스트·버전·운영체제별 상태표 작성
+  - state: complete; depends: RFB-002; evidence: repo:docs/research/host-contract-matrix-0.11.0.md#sha256:6ab6e66d2153edd8d5d83dc1ab9ed9a95ff8f30d3f3e40c1f8a3f750158c9b6e
 - [ ] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
   - state: agent-owned; depends: RFH-001,RFK-003,HK-002
 - [ ] [RFH-003] 동일 자료로 Claude Code·Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
   - state: agent-owned; depends: RFH-002
 
 상태표 필드: 작업 종류, 호스트·버전, 운영체제, 호출 방법, 대상·세션 결합, 중복 요청 처리, 완료 확인, 취소 확인, 복구, 근거 위치, `verified|unsupported|unverified`.
+
+현재 조사·코드 대조: [호스트 연결 상태표](../../research/host-contract-matrix-0.11.0.md). 버전·기능 플래그 조회와 실제 앱 작업 수용의 별도 판정.
 
 구현 규칙:
 

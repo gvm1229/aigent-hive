@@ -99,6 +99,7 @@ current catalog.
 ## Research
 
 - [리팩터링 측정 기준](research/refactor-baseline-0.11.0.md): 기존 CLI·지식 평가·지침 크기
+- [호스트 연결 확인 범위](research/host-contract-matrix-0.11.0.md): 설치 버전·공식 규약·실제 실행의 구분
 - [정책 규칙과 최종 검사 위치](architecture/policy-rule-inventory.md): `HK-001`, `RFP-001`의 범위와 한계
 
 | 문서 | 설명 |

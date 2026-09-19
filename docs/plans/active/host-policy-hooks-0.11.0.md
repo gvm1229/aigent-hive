@@ -89,4 +89,4 @@
 
 - 공통 판정·실패 분류: `hive-core/src/policy.rs`, 규칙별 범위는 [검사 목록](../../architecture/policy-rule-inventory.md)
 - 현재 호스트 변환: `hive policy hook`, 파일 편집과 시작·종료 응답의 CLI 시험 완료
-- 실제 등록·철회·진단과 앱 수용은 미완료. `HK-002–004` 완료의 대체 근거에서 제외
+- 등록·철회·진단·복구 명령과 합성 수용 구현. [호스트 상태표](../../research/host-contract-matrix-0.11.0.md)의 실제 앱 미확인 범위 유지
