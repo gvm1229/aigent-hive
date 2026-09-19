@@ -55,6 +55,18 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 확인은 잔여량 보호 해제나 작업 실행 허가와 구분. 낮거나 확인할 수 없는 잔여량은 계속 차단.
 공개 `0.10.3` 설치본에 새 명령이 있다는 가정 금지.
 
+현재 작업의 초기화 감지만 제외하는 개발 명령:
+
+```text
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-reset-guard --confirm-reset-guard-disable --output json
+```
+
+- 복원: 확인 인자 없이 `--action enable-reset-guard`. 두 동작 뒤 같은 연결 정보로 `enforce` 필수
+- 전역 설정·잔여량 하한 보호 유지. 낮거나 알 수 없는 잔여량의 차단 유지
+- 기존 초기화 중단의 해제 수단에서 제외. 먼저 위의 지문 확인 절차 필요
+- 다른 호스트·세션·프로세스에 제외 권한 이전 금지. 일반 보호의 켜기·끄기와 별개 설정
+- 공개 설치본의 도움말에서 지원 여부 확인. 15초 감시·진행 중 작업 중단의 구현 증명과 구분
+
 ## Threshold 변경
 
 명시적 global 변경:
