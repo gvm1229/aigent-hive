@@ -15,6 +15,8 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from tests.validate_scaffold import validate_render
+
 from tests.conformance.support.harness import (
     BUILTIN_REFERENCE_PATHS,
     EXPECTED_ROOT,
@@ -430,6 +432,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                 self.assert_copier_trees_equal(rust_target, copier_target)
                 self.assert_builtin_projection(rust_target, host=host)
                 self.assert_builtin_projection(copier_target, host=host)
+                validate_render(copier_target, copier_data_path)
 
 
 class Phase1RoleConformance(Phase1CliTestCase):
