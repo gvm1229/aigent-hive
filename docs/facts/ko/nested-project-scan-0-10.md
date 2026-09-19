@@ -14,9 +14,9 @@ sources:
   - "repo:docs/plans/active/nested-project-knowledge-scan-0.10.0.md#sha256:09e75e39def220648906afa58722a15a1997ca9013eeeb02f579b8eb4b1aaf8f"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
-  - "repo:tests/conformance/integration/test_wiki_cli_e2e.py#sha256:7fe5b4532dfb5d4e60bc63fcac462a4b0eca0bd18a3a430edd693f1ac83862b5"
+  - "repo:tests/conformance/integration/test_wiki_cli_e2e.py#sha256:430fb068e1e87dba1bec696bce9db71383bf0b3d40184c233d1be7a1b7629cab"
 links: [knowledge-portability-scan, version-policy]
-reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
+reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"
 status: active
 ---
 

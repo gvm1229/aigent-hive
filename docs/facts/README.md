@@ -24,6 +24,7 @@
 | 프로젝트 전체 정책 검사 설계 | [en](en/project-policy-enforcement.md) | [ko](ko/project-policy-enforcement.md) |
 | 소스 브랜치 이름 규칙 | [en](en/branch-naming-policy.md) | [ko](ko/branch-naming-policy.md) |
 | `0.11.0` 기반 구조 리팩터링 | [en](en/foundation-refactor.md) | [ko](ko/foundation-refactor.md) |
+| 과거 지식과 현재 원본 | [en](en/knowledge-source-freshness.md) | [ko](ko/knowledge-source-freshness.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
 | Supported host | [en](en/supported-hosts.md) | [ko](ko/supported-hosts.md) |

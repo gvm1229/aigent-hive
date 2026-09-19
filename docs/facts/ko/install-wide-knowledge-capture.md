@@ -11,13 +11,13 @@ aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:0ffab09ca1eaac47b41608e04003fdbc51ee7e5edbaf2386554c885d9f55ec58"
   - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:9010d4a0aa30eec68c1069f7b94a373846bb7a756bfe5d099183ce500164bde2"
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:78a309398bc924b72c98eb522ac4ef7d944f172f769eab72d8b8916444c257cc"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:5fce1cb75770b24fc3e38fa434eb4afc3feb5975a1bfc83002541190374489dd"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:7ca8ab883c9dc93c06e585f75be3a4ff0dd2ee0dc6c9adcbf68cf5798a43a416"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:15980e7d0b06bf6d7f9d8f44dd006fb5e916925656c90bc4f79cbbfb4ba57f82"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
-reviewed_revision: "git:dd63333a702a7a89585d101d2b9d043ebd0987d8"
+reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"
 status: active
 ---
 
