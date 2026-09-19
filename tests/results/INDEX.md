@@ -581,3 +581,18 @@
 | [failed](runs/20260919T172955-799546381676.md) | Windows Codex 새 작업의 실제 조회와 후속 파일 독립 확인 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260919T173008-7e221f47a315.md) | 격리 자료의 빈 Wiki 디렉터리 보완 후 실제 지식 연결 재검증 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T173028-d530c967ecef.md) | 격리 기본 디렉터리 보완 후 Codex 지식 연결의 정본·색인 확인 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T173450-571d43562b9a.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173458-c73e7f709c73.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173530-c308ee78545b.md) | 개발 검증: uv.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173556-764ba944fab0.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173641-6d88edaa00ec.md) | 개발 검증: uv.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173711-90fc39c9ff0b.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173850-2ea56c146a97.md) | 개발 검증: uv.EXE | 7445f519202377d37228a63ae1258f0b3e558a07 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174055-5e4c8c6eb634.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174058-e469a6377e56.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174105-3d8aaddbbf81.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T174213-4b369f1e83d6.md) | 개발 검증: uv.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T174217-2b768b5636d0.md) | Python conformance: documentation, security, contract, integration, release | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174436-6e01db8aef0c.md) | 개발 검증: uv.EXE | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174439-c94228c3a950.md) | Python conformance: documentation, security, contract, integration, release | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T181200-a74ac7e20bbb.md) | 초기화 감지 제외의 세 운영체제 CI 근거 확인 | 83ac6eb8f2ea6811187bb459bfb746a5b571849e | Windows-11-10.0.26200-SP0 |
