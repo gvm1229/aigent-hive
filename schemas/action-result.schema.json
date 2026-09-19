@@ -21,6 +21,7 @@
         "UnknownAction",
         "EvaluatePolicy",
         "ConfigurePolicyHooks",
+        "ReviewPolicyCandidate",
         "SetupHarness",
         "SetupHiveUser",
         "DescribeHiveUserSetup",

@@ -1,4 +1,5 @@
 use super::{emit_action_result, ActionResult, Evidence};
+mod policy_review;
 use crate::usage::{
     check_codexbar_provider_unique_with_runner, check_codexbar_provider_with_runner,
     qualify_and_dispatch_preferred_with_runners, qualify_and_dispatch_snapshot,
@@ -1339,6 +1340,12 @@ impl DispatchIntent {
 }
 
 pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
+    if arguments
+        .first()
+        .is_some_and(|argument| argument == "policy-review")
+    {
+        return policy_review::run(&arguments[1..]);
+    }
     if arguments == ["checkpoint", "--help"] {
         print!("{CHECKPOINT_USAGE}");
         return ExitCode::SUCCESS;
