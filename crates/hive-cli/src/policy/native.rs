@@ -58,7 +58,7 @@ pub(super) fn run(args: &[String]) -> ExitCode {
     };
     let mut expected_policy = None;
     let mut review_run = None;
-    for pair in args[7..].chunks_exact(2) {
+    for pair in args[7..].as_chunks::<2>().0 {
         match pair[0].as_str() {
             "--expected-policy" if expected_policy.is_none() => {
                 expected_policy = Some(pair[1].as_str());

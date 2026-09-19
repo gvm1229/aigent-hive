@@ -425,7 +425,7 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
     let action = &args[0];
     let mut confirmation = None;
     let mut review_run = None;
-    for pair in args[7..].chunks_exact(2) {
+    for pair in args[7..].as_chunks::<2>().0 {
         match pair[0].as_str() {
             "--confirm" if confirmation.is_none() => confirmation = Some(pair[1].as_str()),
             "--review-run"
