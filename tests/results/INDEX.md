@@ -480,3 +480,12 @@
 | [passed](runs/20260919T054447-4a9e232489b0.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T054521-0f14088c8b42.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T054656-9b4165cadab7.md) | 대표 프로젝트 설정의 변경 전후 파일·결과 비교 | 80b26734ebd9cccba01a8d2aff72d78d3cb1c06c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055035-b3ba7530612d.md) | release 빌드의 50000개 지식 조회 성능 수용 | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055303-a2e688188a5e.md) | 개발 검증: cargo.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T055319-b2f24c8d67e3.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T055335-bf0c4f5f5f6d.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055402-839901f02c26.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055847-2f53de7904e0.md) | 개발 검증: uv.EXE | bae90c3e3ae09c770763d07dff687aef2265788b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055926-0ec7921da0ae.md) | 개발 검증: cargo.EXE | bae90c3e3ae09c770763d07dff687aef2265788b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060123-cc827933a573.md) | 보존 CLI의 같은 기기 시작 비용 재측정 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060145-6430c92f8f5b.md) | 현재 CLI의 같은 기기 시작 비용 비교 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
