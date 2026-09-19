@@ -23,7 +23,9 @@ Enforce or control only the installed Hive usage policy and the current host ses
    prerequisites as usage-guard errors.
 2. Run `hive usage enforce --help`. If unavailable, report the installed release as unsupported. Do not reconstruct the control format manually.
 3. Obtain the exact current host session identifier and process ID from the active host context. Never invent, reuse, persist, or transfer a binding.
-4. Immediately before each new automatic dispatch, apply any explicitly requested threshold/off/on control, then run:
+4. Before automatic dispatch, apply explicit threshold/off/on control. `run resume` automatic
+   mode performs this shared preflight internally with the same session, process, and user root;
+   do not sample twice for that dispatch. For a standalone preflight, run:
 
    ```text
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
@@ -32,7 +34,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
    Supply the exposed active account digest; omit only for one unambiguous locally sensed account. `enforce` remeasures ordinary halts, including earlier-process and legacy markers. A reset halt requires explicit acknowledgement under [control procedures](references/control.md). Exit `3`, limited, unknown, or reset results block dispatch. Do not run `enforce` for quick answers, manual work, or other non-dispatch actions except the required same-session recheck after a threshold change or reset acknowledgement. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 5. If native sensing is unavailable or unsupported, read [sensor fallback](references/sensors.md). Never install a fallback without explicit current-action acceptance.
 6. Before any explicitly requested threshold or session control, read [control procedures](references/control.md). Never guess a percentage or infer bypass from a bare continue, resume, finish, urgency, or an active run.
-7. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
+7. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a `hive run resume --dispatch-intent automatic --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root>` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
 8. `status` is inspection only and never substitutes for an automatic-dispatch preflight. After mutation, run `enforce` only for pending automatic dispatch or the same-session recheck required by the control reference. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
 9. Report saved global and project thresholds, active threshold, selected window, effective session state, changed Hive path, and exact CLI code. With a canonical `--run`, Discord receives only run title and checklist count; never raw prompts, session IDs, absolute paths, or credentials.
 

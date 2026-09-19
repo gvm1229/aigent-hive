@@ -206,7 +206,7 @@ skills:
   consent_digest: null
 - name: run-resume
   source_type: built-in
-  content_digest: sha256:aeb1e246783741d2d2879ac1618f1ae970079f9725db4849b164eb97c23bc345
+  content_digest: sha256:106c44df121b382a306e6725a31ceccb038915eb007b27b438ec587022895d40
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -234,7 +234,7 @@ skills:
   consent_digest: null
 - name: usage-guard
   source_type: built-in
-  content_digest: sha256:a42cef63042cd8efc5cb98a7b060c8b29c2a116873fee8ee8d2f205426655476
+  content_digest: sha256:5a4d3977c1b451f7adc97e4f6aecbc79c35c11e20df5af3bddadd8808270ffdd
   side_effect_class: project-write
   capabilities:
   - filesystem-read
