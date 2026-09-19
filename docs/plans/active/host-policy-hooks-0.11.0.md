@@ -14,9 +14,9 @@
 - [x] [HK-001] 공통 판정·실패 분류·규칙 ID별 필수 결과 합산과 변경 지점 검사 계약 확정
   - state: complete; depends: RFS-001; evidence: repo:tests/results/runs/20260918T180744-a37939738810.md#sha256:3389135dac4100ef6b640c66f74f295d053747a9ff691f79482d28f0f026184a
 - [x] [HK-002] 세 호스트 변환·설치·철회, 실제 적용 상태 진단과 고정 규칙·동적 상태 분리 구현
-  - state: complete; depends: HK-001,RFH-001; evidence: repo:tests/results/runs/20260919T055847-2f53de7904e0.md#sha256:8043428d47b06871176edb3f113fc72c39a715129f7517fed182d188cea5d778
+  - state: complete; depends: HK-001,RFH-001; evidence: repo:tests/results/runs/20260919T192041-e2bc1eb319ea.md#sha256:df60991c84d328e05839a55a26f0ff2c5796aab963088ecf85050ae60fd84fe5
 - [ ] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
-  - state: awaiting-external-evidence; depends: HK-002,RFH-002,RFH-003; owner: 실제 호스트; reason: 정의별 신뢰와 실제 차단 수용 대기
+  - state: awaiting-user-authority; depends: HK-002,RFH-002,RFH-003; owner: 유지보수자; reason: 형식 3 적용·신뢰 승인 대기
 
 ## 고정 설계 조건
 
@@ -52,8 +52,7 @@
 
 - `HK-001`은 소스 개발·소비자 프로젝트·사용자 전역·출시의 범위를 구분하는 정책 목록 소유
 - 각 규칙을 강제·부분 검사·의미 판단으로 분류, 현재 정본·검사 함수·최종 변경 지점 연결
-- `RFS-001`과 공통 계획 파서 사용: 현재 `RFB-001` 등 ID 21개와 출시 형식의 불일치 해소 필요
-- 현재 등록 범위 밖 완료 ID 187개를 수집하는 출시 검사기의 대상을 활성 문서·버전과 정합화
+- `RFS-001` 공통 파서: 구현 ID 21개·출시 형식 정합화, 범위 밖 완료 ID 187개의 과거 기록 분리
 - 백업·검증 완료의 호출자 주장만으로 허용 금지, 실제 처리 내부의 상태·증거 사용
 - `HK-002`의 변환기는 기존 검사 재사용. 별도 분류 모델·전용 규칙 언어·상시 서버·두 번째 지식 저장소 도입 제외
 - `HK-003`은 훅 경로와 직접 CLI 경로를 함께 검증, 미지원 도구·기존 터미널 입력·다른 편집기의 한계 표시
@@ -86,6 +85,8 @@
 - 독립 평가의 소유 항목: [HK-004](hook-policy-evaluation-0.11.0.md)
 
 ## 구현 근거
+
+- 검사기 부재·셸 해석 실패 보완: [수용 기록](../../research/host-acceptance-resume-2026-09-20.md)
 
 - 공통 판정·실패 분류: `hive-core/src/policy.rs`, 규칙별 범위는 [검사 목록](../../architecture/policy-rule-inventory.md)
 - 현재 호스트 변환: `hive policy hook`, 파일 편집과 시작·종료 응답의 CLI 시험 완료

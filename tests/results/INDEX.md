@@ -596,3 +596,40 @@
 | [passed](runs/20260919T174436-6e01db8aef0c.md) | 개발 검증: uv.EXE | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T174439-c94228c3a950.md) | Python conformance: documentation, security, contract, integration, release | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T181200-a74ac7e20bbb.md) | 초기화 감지 제외의 세 운영체제 CI 근거 확인 | 83ac6eb8f2ea6811187bb459bfb746a5b571849e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T183420-8f8d8ce55b96.md) | 신뢰된 Codex 훅의 고정 파일 사례 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T183747-291a80a45066.md) | 신뢰 훅 여섯 사례의 파일 효과 확인과 지침 단독 비교 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184011-b6f6de3fb75d.md) | 지침 단독 여섯 사례 확인과 승인 훅 정의 복원 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184108-5843e350579a.md) | Codex 훅 실행 파일 부재의 격리 실패 조건 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T184323-f82cad853d4f.md) | 검사기 부재에서 보호 편집 허용 확인과 동결 실행 파일 복원 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184629-4e654cb2faab.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T184810-302170d306e4.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184947-b84b238e2f83.md) | 개발 검증: cargo.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T185038-00f34a5beb00.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T185203-a094b30fb1c8.md) | 개발 검증: cargo.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T185337-e53f80cde20d.md) | 실행 실패 차단을 보완한 Codex 정의의 적용 미리 보기 | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T185832-fbaf318eec31.md) | 개발 검증: uv.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190101-88e80825ff35.md) | 개발 검증: uv.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T190154-c98730427d10.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190240-f689b66167ce.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190251-4e162e5e1e72.md) | 기존 실행 위치에서 새 훅 정의 미리 보기와 동결 바이너리 원복 | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190441-9123f810aa62.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190656-eb0f04f2b875.md) | 사용자 승인 지문에 결합한 검사 실패 차단 정의 적용 | 80779cb0da9104108c3e5349d6493cd726e9077d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190939-63ca8d2bd80e.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190942-834cb6982235.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190944-a1e83372d5b5.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191045-6d6bcaa90e5c.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191049-8e73deda47e1.md) | Python conformance: documentation, security, contract, integration, release | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191241-b78544199943.md) | 등록된 Windows 훅 명령의 바깥 셸별 해석 비교 | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T191518-75a9b125cca6.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191559-5e1d1bc9db87.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191814-ddc198cc501a.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192041-e2bc1eb319ea.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192130-b3e52c73dc1e.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192228-8cbae82b8a8c.md) | 바깥 셸 해석을 차단한 훅 정의 미리 보기와 이전 바이너리 원복 | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192344-7bb8a6ba0e7a.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192538-90cafabdfc8c.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192541-c14a2af5068a.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192546-3d9fa21840b4.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192643-1cefab299173.md) | 개발 검증: uv.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192646-002ae3023009.md) | Python conformance: documentation, security, contract, integration, release | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T192807-b64643c8d3ab.md) | 형식 2의 실제 보호 편집 실패 관측 검토 | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
