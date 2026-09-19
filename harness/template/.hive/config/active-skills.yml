@@ -234,7 +234,7 @@ skills:
   consent_digest: null
 - name: usage-guard
   source_type: built-in
-  content_digest: sha256:5a4d3977c1b451f7adc97e4f6aecbc79c35c11e20df5af3bddadd8808270ffdd
+  content_digest: sha256:7f7e3b9add1ad700d032c2cd0f8a5251ecfdbccf9fa44161dfbb626cb9683cac
   side_effect_class: project-write
   capabilities:
   - filesystem-read
