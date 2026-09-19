@@ -92,7 +92,11 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         .as_str()
         .ok_or_else(|| WikiError::Verification("retrieval manifest is absent".to_owned()))?
         .to_owned();
-    Ok(success(
+    let historical = result["hits"].as_array().is_some_and(|hits| {
+        hits.iter()
+            .any(|hit| hit["source_freshness"] == "historical-unverified")
+    });
+    let mut outcome = success(
         "RetrieveKnowledge",
         "hive.knowledge-retrieved",
         "bounded knowledge retrieval completed",
@@ -100,7 +104,11 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         SHARED_INDEX_RELATIVE,
         &digest,
         result,
-    ))
+    );
+    if historical {
+        outcome.next_action = Some("Historical knowledge is available, but original sources are unavailable locally. Do not treat these items as current source evidence; restore the sources or explicitly rescan and review before current-code use.".to_owned());
+    }
+    Ok(outcome)
 }
 
 pub(super) fn parse_retrieval_request(

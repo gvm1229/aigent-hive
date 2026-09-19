@@ -582,6 +582,16 @@ pub struct WikiPageQueryHit {
     pub rank: f64,
 }
 
+/// Source availability checked for a returned scan claim, separate from canonical integrity.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceFreshness {
+    /// Every reviewed source matches its recorded content at this read boundary.
+    VerifiedCurrent,
+    /// Canonical history is intact, but its original source is unavailable locally.
+    HistoricalUnverified,
+}
+
 /// One stable citation-bearing retrieval result.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -615,6 +625,9 @@ pub struct RetrievalHit {
     /// Typed scan review metadata projected from the canonical claim.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scan_metadata: Option<ScanClaimMetadata>,
+    /// Current-source validation; absence never asserts current source freshness.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_freshness: Option<SourceFreshness>,
     /// Deterministic rank score; chunk ID is the final tie-breaker.
     pub score: f64,
     /// Highest-priority field that matched.
@@ -2150,6 +2163,7 @@ fn semantic_hit(
 ) -> Result<RetrievalHit, RagError> {
     let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
     Ok(RetrievalHit {
+        source_freshness: None,
         chunk_id: candidate.chunk_id,
         collection_id: candidate.collection_id,
         item_id: candidate.item_id,
@@ -2404,6 +2418,7 @@ fn retrieve_from_connection(
         let rank_score = candidate_score(&candidate, &folded_query);
         returned_bytes += text.len();
         hits.push(RetrievalHit {
+            source_freshness: None,
             chunk_id: candidate.chunk_id,
             collection_id: candidate.collection_id,
             item_id: candidate.item_id,
@@ -4746,6 +4761,7 @@ mod tests {
             confidential_collection_id: None,
         };
         let hit = |name: &str, text: &str, score| RetrievalHit {
+            source_freshness: None,
             chunk_id: name.to_owned(),
             collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
             item_id: name.to_owned(),

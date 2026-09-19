@@ -1649,10 +1649,10 @@ impl RagStore {
                     "semantic generation is stale".to_owned(),
                 ));
             }
-            let result = crate::rag::semantic_matches_serialized(
+            let mut result = crate::rag::semantic_matches_serialized(
                 bytes, manifest, registry, request, matches,
             )?;
-            self.validate_semantic_hits(registry, &result.hits)
+            self.validate_semantic_hits(registry, &mut result.hits)
                 .map_err(|_| {
                     RagError::RepairRequired(
                         "canonical semantic citations changed or are unavailable".to_owned(),
@@ -1729,8 +1729,8 @@ impl RagStore {
         request: &RetrievalRequest,
     ) -> Result<RetrievalResult, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
-            let result = retrieve_serialized(bytes, manifest, registry, request)?;
-            self.validate_semantic_hits(registry, &result.hits)
+            let mut result = retrieve_serialized(bytes, manifest, registry, request)?;
+            self.validate_semantic_hits(registry, &mut result.hits)
                 .map_err(|_| {
                     RagError::RepairRequired(
                         "canonical retrieval citations or source evidence changed; explicitly review current sources and rebuild the index before reuse".to_owned(),
@@ -1775,8 +1775,9 @@ impl RagStore {
         expanded.byte_budget = 1024 * 1024;
         let lexical = prepared.retrieve(&expanded)?;
         let semantic = prepared.semantic_matches(&expanded, matches)?;
-        let result = crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
-        self.validate_semantic_hits(registry, &result.result.hits)
+        let mut result =
+            crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
+        self.validate_semantic_hits(registry, &mut result.result.hits)
             .map_err(|_| {
                 RagError::RepairRequired(
                     "canonical hybrid citations changed or are unavailable".to_owned(),
@@ -1861,14 +1862,17 @@ impl RagStore {
     fn validate_semantic_hits(
         &self,
         registry: &CollectionRegistry,
-        hits: &[crate::rag::RetrievalHit],
+        hits: &mut [crate::rag::RetrievalHit],
     ) -> Result<(), WikiError> {
         let by_id = registry.by_id();
-        let mut checked = BTreeSet::new();
+        let mut checked = BTreeMap::new();
         for hit in hits {
-            if !checked.insert((&hit.collection_id, &hit.item_kind, &hit.item_id)) {
+            let key = (&hit.collection_id, &hit.item_kind, &hit.item_id);
+            if let Some(freshness) = checked.get(&key) {
+                hit.source_freshness = *freshness;
                 continue;
             }
+            hit.source_freshness = None;
             let collection = by_id.get(hit.collection_id.as_str()).ok_or_else(|| {
                 WikiError::Verification("canonical collection is absent".to_owned())
             })?;
@@ -1902,7 +1906,7 @@ impl RagStore {
                         "canonical claim changed".to_owned(),
                     ));
                 }
-                self.validate_claim_sources(registry, &claim)?;
+                hit.source_freshness = self.validate_claim_sources(registry, &claim)?;
             } else if hit.item_kind == "document" {
                 let relative = Path::new(locator)
                     .strip_prefix(WIKI_RELATIVE)
@@ -1950,6 +1954,7 @@ impl RagStore {
                     "unknown canonical item kind".to_owned(),
                 ));
             }
+            checked.insert(key, hit.source_freshness);
         }
         Ok(())
     }
@@ -6022,17 +6027,22 @@ mod tests {
         let scanned = tempfile::tempdir().expect("source root");
         let path = scanned.path().join("README.md");
         std::fs::write(&path, b"reviewed evidence\n").expect("evidence");
-        let inventory = scan_inventory(&[("README.md", b"reviewed evidence\n")]);
-        let review = validate_claims(
+        let second = scanned.path().join("z-second.md");
+        std::fs::write(&second, b"second evidence\n").expect("second evidence");
+        let inventory = scan_inventory(&[
+            ("README.md", b"reviewed evidence\n"),
+            ("z-second.md", b"second evidence\n"),
+        ]);
+        let mut claim = reviewed_scan_claim(
+            "freshness",
+            "The project uses freshness validation.",
+            "README.md",
             &inventory,
-            &[reviewed_scan_claim(
-                "freshness",
-                "The project uses freshness validation.",
-                "README.md",
-                &inventory,
-            )],
-        )
-        .expect("review");
+        );
+        claim.evidence.extend(
+            reviewed_scan_claim("second", "Second source.", "z-second.md", &inventory).evidence,
+        );
+        let review = validate_claims(&inventory, &[claim]).expect("review");
         let collection = store
             .register_collection(registration(scanned.path(), "freshness"))
             .expect("collection")
@@ -6077,9 +6087,26 @@ mod tests {
         assert!(store.checked_retrieve(&request).is_ok());
         let moved = scanned.path().join("renamed.md");
         std::fs::rename(&path, &moved).expect("rename");
-        assert!(store.checked_retrieve(&request).is_err());
+        let unavailable = store.checked_retrieve(&request).expect("historical memory");
+        assert!(unavailable
+            .hits
+            .iter()
+            .all(|hit| hit.source_freshness
+                == Some(crate::rag::SourceFreshness::HistoricalUnverified)));
+        std::fs::write(&second, b"changed second evidence\n").expect("changed evidence");
+        assert!(
+            store.checked_retrieve(&request).is_err(),
+            "missing evidence must not hide a later source mismatch"
+        );
+        std::fs::write(&second, b"second evidence\n").expect("restore second evidence");
         std::fs::remove_file(&moved).expect("delete");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("deleted source history")
+                .hits,
+            unavailable.hits
+        );
         let after = protected
             .iter()
             .map(|relative| std::fs::read(temporary.path().join(relative)).expect("after"))

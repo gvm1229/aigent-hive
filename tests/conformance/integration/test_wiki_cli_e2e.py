@@ -860,19 +860,22 @@ The local index is rebuilt from canonical Markdown. See [[beta]].
         self.assertEqual(attached["collection"]["collection_id"], collection_id)
         self.assertEqual(attached["collection"]["state"], "attached")
 
-        attached_auto = self.assert_success(
-            self.invoke_knowledge(
-                "retrieve",
-                "--target",
-                str(restored_project),
-                "--query",
-                "cobalt retrieval anchors",
-                user_root=destination,
-            )[1]
-        )
+        attached_result = self.invoke_knowledge(
+            "retrieve",
+            "--target",
+            str(restored_project),
+            "--query",
+            "cobalt retrieval anchors",
+            user_root=destination,
+        )[1]
+        attached_auto = self.assert_success(attached_result)
+        self.assertIn("restore the sources", attached_result["next_action"])
         Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(attached_auto)
         self.assertEqual(attached_auto["hits"][0]["collection_id"], collection_id)
         self.assertLessEqual(attached_auto["returned_bytes"], 16 * 1024)
+        self.assertTrue(attached_auto["hits"])
+        self.assertTrue(all(hit["source_freshness"] == "historical-unverified"
+                            for hit in attached_auto["hits"]))
 
         recalled = self.assert_success(
             self.invoke_knowledge(
@@ -891,6 +894,8 @@ The local index is rebuilt from canonical Markdown. See [[beta]].
             )[1]
         )
         Draft202012Validator(RETRIEVAL_RESULT_SCHEMA).validate(recalled)
+        self.assertTrue(all(hit["source_freshness"] == "historical-unverified"
+                            for hit in recalled["hits"]))
         self.assertEqual(
             [hit["digest"] for hit in recalled["hits"]],
             [hit["digest"] for hit in portable_source["hits"]],
