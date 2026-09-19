@@ -42,6 +42,18 @@ Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 f
 - 첫 측정: 비교 기준만 기록. 초기화 시각 예약·외부 소식 추적 제외
 - 비교 시점: `enforce`의 새 측정. 진행 중 추론의 15초 감시·호스트 프로세스 중단은 미지원
 - 제한 표시: `status`의 `quota_reset_guard_monitoring=false`. 공개 설치본의 지원 여부와 개발 구현 구분
+- 초기화 중단: 같은 값 재조회·프로세스 변경 뒤에도 유지. 현재 중단 표식의 지문과 명시적 사용자 확인 필요
+
+초기화 사실 확인 뒤 재개 요청을 받은 경우의 개발 명령:
+
+```text
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action acknowledge-reset --confirm-reset <halt-digest> --output json
+```
+
+`halt-digest`는 중단 결과의 `reset_acknowledgement_digest` 또는 `status`의 `halt_digest` 값.
+확인 후 동일한 대상·세션·사용자 루트와 현재 계정 정보로 `enforce` 재실행 필수.
+확인은 잔여량 보호 해제나 작업 실행 허가와 구분. 낮거나 확인할 수 없는 잔여량은 계속 차단.
+공개 `0.10.3` 설치본에 새 명령이 있다는 가정 금지.
 
 ## Threshold 변경
 
