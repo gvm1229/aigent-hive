@@ -2127,18 +2127,18 @@ struct UsageHistoryRecordV2 {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct DispatchAuthorizationRecord {
-    schema_version: u32,
-    authorization_id: String,
-    run_id: String,
-    status_revision: u64,
-    role_id: String,
-    brief_digest: String,
-    usage_evidence_digest: String,
+pub(crate) struct DispatchAuthorizationRecord {
+    pub(crate) schema_version: u32,
+    pub(crate) authorization_id: String,
+    pub(crate) run_id: String,
+    pub(crate) status_revision: u64,
+    pub(crate) role_id: String,
+    pub(crate) brief_digest: String,
+    pub(crate) usage_evidence_digest: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    session_guard_digest: Option<String>,
-    state: String,
-    record_digest: String,
+    pub(crate) session_guard_digest: Option<String>,
+    pub(crate) state: String,
+    pub(crate) record_digest: String,
 }
 
 struct InstalledUsageConfig {
@@ -2420,7 +2420,7 @@ fn existing_authorization(
     Ok(None)
 }
 
-fn authorization_record_digest(
+pub(crate) fn authorization_record_digest(
     record: &DispatchAuthorizationRecord,
 ) -> Result<String, AdapterError> {
     let mut payload = json!({

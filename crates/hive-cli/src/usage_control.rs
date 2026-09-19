@@ -154,20 +154,83 @@ impl DispatchPreflight {
     }
 
     pub(crate) fn binding_digest(&self) -> String {
-        sha256_digest(
-            json!([
-                "hive.dispatch-session.v1",
-                self.arguments.host,
-                sha256_digest(self.arguments.binding.session_id.as_bytes()),
-                self.arguments.binding.process_id,
-                self.trace.policy_digest,
-                self.trace.control_digest,
-                self.trace.halt_digest
-            ])
-            .to_string()
-            .as_bytes(),
+        dispatch_binding_digest(
+            self.arguments.host.as_deref(),
+            &self.arguments.binding,
+            &self.trace,
         )
     }
+}
+
+fn dispatch_binding_digest(
+    host: Option<&str>,
+    binding: &ParsedBinding,
+    trace: &EnforcementTrace,
+) -> String {
+    sha256_digest(
+        json!([
+            "hive.dispatch-session.v1",
+            host,
+            sha256_digest(binding.session_id.as_bytes()),
+            binding.process_id,
+            trace.policy_digest,
+            trace.control_digest,
+            trace.halt_digest
+        ])
+        .to_string()
+        .as_bytes(),
+    )
+}
+
+/// Revalidate persisted session authority without another sensor call or runtime mutation.
+pub(crate) fn current_dispatch_binding(
+    target: &PinnedTarget,
+    host: &str,
+    session_id: &str,
+    process_id: u32,
+    user_root: Option<&Path>,
+) -> Result<String, AdapterError> {
+    let config = read_effective_config(target, user_root, Some(host))?;
+    if !config.guard_enabled || config.primary_host != host || process_id == 0 {
+        return Err(AdapterError::OwnerBlocked(
+            "usage guard is disabled or bound to another host".to_owned(),
+        ));
+    }
+    let parsed = ParsedBinding {
+        session_id: session_id.to_owned(),
+        process_id,
+    };
+    let binding = bind_session(&parsed, host);
+    let control = load_control(target, &binding)?;
+    if matches!(control.state, OverrideState::Stale | OverrideState::Damaged)
+        || !effective_enabled(&control, config.guard_enabled)
+    {
+        return Err(AdapterError::OwnerBlocked(
+            "usage session control is stale, disabled, or incorrectly bound".to_owned(),
+        ));
+    }
+    let halt = load_halt(target, &binding)?;
+    if matches!(halt.state, OverrideState::Stale | OverrideState::Damaged)
+        || halt
+            .marker
+            .as_ref()
+            .is_some_and(|marker| marker.decision != "observed")
+    {
+        return Err(AdapterError::OwnerBlocked(
+            "usage session is halted and cannot authorize loop preparation".to_owned(),
+        ));
+    }
+    target.verify_current()?;
+    Ok(dispatch_binding_digest(
+        Some(host),
+        &parsed,
+        &EnforcementTrace {
+            normalized: None,
+            policy_digest: effective_policy_digest(&config)?,
+            control_digest: runtime_digest(control.snapshot.bytes()),
+            halt_digest: runtime_digest(halt.snapshot.bytes()),
+        },
+    ))
 }
 
 fn runtime_digest(bytes: Option<&[u8]>) -> String {
@@ -2907,6 +2970,17 @@ mod tests {
         super::verify_dispatch_preflight(&preflight).expect("fresh proof");
         fs::remove_file(&capture_path).expect("remove sensor fixture");
         super::verify_dispatch_preflight(&preflight).expect("no second sensor read");
+        assert_eq!(
+            super::current_dispatch_binding(
+                &PinnedTarget::open(root.path()).expect("consumer"),
+                "claude",
+                session,
+                1,
+                None,
+            )
+            .expect("current observed baseline"),
+            preflight.binding_digest(),
+        );
 
         let halt_path = root.path().join(halt_path(&binding));
         let halt = fs::read(&halt_path).expect("halt baseline");
