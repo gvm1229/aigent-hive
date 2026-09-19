@@ -61,7 +61,7 @@
 - [x] [RFH-001] 현재 호스트 기능 탐지·작업 결과 확인·취소·재개 계약의 코드 및 공식 근거 확인, 호스트·버전·운영체제별 상태표 작성
   - state: complete; depends: RFB-002; evidence: repo:docs/research/host-contract-matrix-0.11.0.md#sha256:7be7c8421f6ba3f66c32cc78d61aa402b096de9b96f164f023e3c518fc6b34f6
 - [ ] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
-  - state: awaiting-external-evidence; depends: RFH-001,RFK-003,HK-002; owner: 실제 호스트 수용; reason: Codex 보호 편집 차단 실패 뒤 정의별 신뢰 검토를 사용자가 보류
+  - state: awaiting-external-evidence; depends: RFH-001,RFK-003,HK-002; owner: 실제 호스트 수용; reason: 지식 연결 실측 완료·훅 신뢰 확인과 취소 후 재개 증거 대기
 - [ ] [RFH-003] 동일 자료로 Claude Code·Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
   - state: awaiting-external-evidence; depends: RFH-002; owner: 실제 호스트 수용; reason: Codex 수용 이후 다른 호스트의 실제 작업 증거 필요
 

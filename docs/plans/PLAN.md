@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 339
-> 기준일: 2026-09-19
+> Revision: 340
+> 기준일: 2026-09-20
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: `0.11.0` 구현 진행, 기준 검증·계획 및 상태 정합화
+> 현재 단계: `0.11.0` 초기화 감지 제외 구현·실제 지식 연결 검증, 호스트 수용 진행
 > 첫 공개 시험: `0.11.0-test.1`; 현재 제품 파일의 버전: `0.11.0`
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
