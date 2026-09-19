@@ -16,7 +16,7 @@
 - [x] [HK-002] 세 호스트 변환·설치·철회, 실제 적용 상태 진단과 고정 규칙·동적 상태 분리 구현
   - state: complete; depends: HK-001,RFH-001; evidence: repo:tests/results/runs/20260919T055847-2f53de7904e0.md#sha256:8043428d47b06871176edb3f113fc72c39a715129f7517fed182d188cea5d778
 - [ ] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
-  - state: agent-owned; depends: HK-002,RFH-002,RFH-003
+  - state: awaiting-external-evidence; depends: HK-002,RFH-002,RFH-003; owner: 실제 호스트; reason: 정의별 신뢰와 실제 차단 수용 대기
 
 ## 고정 설계 조건
 

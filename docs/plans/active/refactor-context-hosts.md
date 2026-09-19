@@ -22,8 +22,8 @@
   - state: complete; depends: RFB-002; evidence: repo:tests/results/runs/20260918T173211-8f6954125afd.md#sha256:c00138d57c64b0fa4034202a9e702363e1da2f00f934eb7073a413600394d881
 - [x] [RFK-002] 저장·조회 책임 분리, 범위 판정과 코드 변경에 따른 문맥 유효성 검사, 기존 CLI·결과 호환성 검증
   - state: complete; depends: RFK-001; evidence: repo:tests/results/runs/20260919T053227-5fb662be3b1e.md#sha256:5ad138d4bd7be03a54861f8bbb5677f20c28905f202c8d1347ff8d2fec600769
-- [ ] [RFK-003] 고정 자료의 재평가, 새 대화 전달 묶음의 정확성·중복 기록·지연·질문 횟수 비교
-  - state: agent-owned; depends: RFK-002
+- [x] [RFK-003] 고정 자료의 재평가, 새 대화 전달 묶음의 정확성·중복 기록·지연·질문 횟수 비교
+  - state: complete; depends: RFK-002; evidence: repo:tests/results/runs/20260919T094435-b4bfa56effab.md#sha256:2d6a878fc401180688af748be393c5f4e055c4a466d7912c52f7e94bcf4e1748
 
 평가 자료: 같은 결정 재저장, 결정 교체, 한국어·영어 질문, 결과 없는 질문, 사용자 전역·현재 프로젝트·명시 다른 프로젝트, 미등록 대상, 기밀 승인 거부, 오래되거나 손상된 색인, 선택형 검색 부재 포함.
 
@@ -59,11 +59,11 @@
 대상: `crates/hive-core/src/{run,orchestration,native_workflow}.rs`, `crates/hive-cli/src/run.rs`, `schemas/capability-matrix.schema.json`, 기존 호스트별 투영과 실행 결과 계약.
 
 - [x] [RFH-001] 현재 호스트 기능 탐지·작업 결과 확인·취소·재개 계약의 코드 및 공식 근거 확인, 호스트·버전·운영체제별 상태표 작성
-  - state: complete; depends: RFB-002; evidence: repo:docs/research/host-contract-matrix-0.11.0.md#sha256:385596d8ad1e55ef3f80ef48b3788d068bed0bfbbdfd9db0d9ba20039b0d42c2
+  - state: complete; depends: RFB-002; evidence: repo:docs/research/host-contract-matrix-0.11.0.md#sha256:7be7c8421f6ba3f66c32cc78d61aa402b096de9b96f164f023e3c518fc6b34f6
 - [ ] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
-  - state: agent-owned; depends: RFH-001,RFK-003,HK-002
+  - state: awaiting-external-evidence; depends: RFH-001,RFK-003,HK-002; owner: 실제 호스트 수용; reason: Codex 보호 편집 차단 실패 뒤 정의별 신뢰 검토를 사용자가 보류
 - [ ] [RFH-003] 동일 자료로 Claude Code·Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
-  - state: agent-owned; depends: RFH-002
+  - state: awaiting-external-evidence; depends: RFH-002; owner: 실제 호스트 수용; reason: Codex 수용 이후 다른 호스트의 실제 작업 증거 필요
 
 상태표 필드: 작업 종류, 호스트·버전, 운영체제, 호출 방법, 대상·세션 결합, 중복 요청 처리, 완료 확인, 취소 확인, 복구, 근거 위치, `verified|unsupported|unverified`.
 

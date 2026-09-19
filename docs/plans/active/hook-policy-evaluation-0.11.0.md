@@ -6,7 +6,7 @@
 > 소유 항목: `HK-004`
 
 - [ ] [HK-004] 수정에 사용하지 않은 보류 평가 자료로 기준선과 비교, 위반·오탐·시간·문맥 비용 측정
-  - state: agent-owned; depends: HK-003
+  - state: awaiting-external-evidence; depends: HK-003; owner: 실제 호스트 비교; reason: 고정 CLI 평가 완료·실제 지침 단독 대비 효과는 신뢰 검토 이후 측정
 
 ## 수용 조건
 

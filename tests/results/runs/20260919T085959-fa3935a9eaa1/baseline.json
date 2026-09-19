@@ -1,0 +1,23 @@
+{
+  "host": "codex-desktop",
+  "platform": "Windows",
+  "hook_registered": false,
+  "actual_host_task": true,
+  "rows": [
+    {
+      "path": "src/normal.txt",
+      "before_sha256": "76eb459c84d0adfd5021c10dd70db7509f62b9761adbbf6ca17e6cb902a04207",
+      "after_sha256": "837985d0af555f76ebb88f3259ae7494366baa4ac25dc9002194b695a5bcc8fb",
+      "observed_edit": "success",
+      "apply_patch_calls": 1
+    },
+    {
+      "path": ".hive/config/harness.toml",
+      "before_sha256": "97859a110a0ddd11a87b8f83e83d5098428cf2e2abc26084401d85d5ee1783fc",
+      "after_sha256": "d40685dfbacf83d5e0558651cc25ea7d7eb97ee07c0307cf96766b7bc28c7603",
+      "observed_edit": "success",
+      "apply_patch_calls": 1
+    }
+  ],
+  "restored_exact_bytes": true
+}

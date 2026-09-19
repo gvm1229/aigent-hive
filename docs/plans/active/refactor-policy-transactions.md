@@ -17,8 +17,8 @@
   - state: complete; depends: RFP-001; evidence: repo:tests/results/runs/20260919T083543-4aa35fb79366.md#sha256:8281963d66ab25b55bd9c19d5f23a6307d98ce927efc41d81bb94c16f1606a12
 - [x] [RFP-003] 코드로 검증되는 상세 절차의 지침 중복 축소, 정본과 현재 세 호스트 투영 동기화
   - state: complete; depends: RFP-002; evidence: repo:tests/results/runs/20260919T084503-04af8f3aa6f4.md#sha256:15de7117022ca333d10dad24d98358aa8f66b1c68a81dbf543920164edf18363
-- [ ] [RFP-004] 허용·거부·취소·재개·일반 질문의 전후 행동 평가와 정보량·호출 수 비교
-  - state: agent-owned; depends: RFP-003
+- [x] [RFP-004] 허용·거부·취소·재개·일반 질문의 전후 행동 평가와 정보량·호출 수 비교
+  - state: complete; depends: RFP-003; evidence: repo:tests/results/runs/20260919T094252-cd5de58152a7.md#sha256:aba1ba10658443991cc4fcf814f66e578bf0f6d965ddb244348a047e48886d90
 
 코드 대상: `crates/hive-core/src/{lib,usage_guard,run}.rs`, `crates/hive-cli/src/{knowledge,run,usage_control,user_setup}.rs`, 해당 JSON 스키마.
 
