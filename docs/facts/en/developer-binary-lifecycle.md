@@ -9,12 +9,12 @@ summary: "A source-local dev binary can replace the active executable and safely
 tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
-  - "repo:crates/hive-cli/build.rs#sha256:c0e22dc58c8cfe920197b8e5c6ba6073660c3fb1b4e3017e401cd440a6fbfde8"
-  - "repo:crates/hive-cli/src/main.rs#sha256:024500782daa35d5ab3a6df26a443bf0e4c0653a2a2c19caaa2f1b2a7836cdb6"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:6d2138ea9d68803f4447e7295cc08fcf5b548c23df8b2d1e5826c0aa46bff668"
+  - "repo:crates/hive-cli/build.rs#sha256:fef09afeb15af91f57c9efcbc2571b32bbf06e8a206b32927ceb45dd7feedec0"
+  - "repo:crates/hive-cli/src/main.rs#sha256:c4a2a3267134b6572a39f37cec8a76b15ed4da0896a02ce701cf508525224785"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
   - "repo:scripts/dev-install.sh#sha256:675d29e359a127a994d3b7904d3c842b3dafd884b8e28659a0d2b21ef3fc2a79"
 links: [interactive-binary-update, source-development, version-policy]
-reviewed_revision: "git:f91816a46d44d57929cb0b580ca32ff4caa95053"
+reviewed_revision: "git:4afd5ba4483d98f63ae42c065837f9b010506657"
 status: active
 ---
 
