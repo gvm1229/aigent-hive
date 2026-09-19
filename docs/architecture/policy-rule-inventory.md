@@ -48,6 +48,24 @@
 - 소스 브랜치·게시의 최종 검사는 Git·원격 검사 유지. 새 변환기의 전체 소스 정책 강제 주장 제외
 - 실제 등록·철회·작동 진단은 `HK-002`, 실제 효과와 별도 평가 자료는 `HK-003–004`에서 추가 검증
 
+## 실행 후 개선 후보 검토
+
+`hive run policy-review`는 기존 소비자 실행 폴더의 `PLAN.md`·`STATUS.md`에 결합된 검토 명령. 소스 작업 폴더에서 소비자 실행 상태 생성 금지.
+
+1. `list --target <dir> --run <id> --output json`: 후보와 대상 지문 조회. 쓰기 없음
+2. `preview`에 `--evaluation <실행-상대-파일> --rule <등록-규칙> --class <실패-종류>` 추가: 해당 실행의 근거 목록에 등록된 정책 검사 JSON 확인과 후보 미리 보기
+3. 같은 인자로 `add --confirm <preview_digest>` 호출: 검토한 내용만 `POLICY-REVIEW.md`에 등록
+4. `accept|revise|reject|cancel --candidate <id> --confirm <book_digest>` 호출: 현재 후보 내용에 대한 명시적 판단 기록. `revise`는 `--class`로 수정 분류 지정
+
+- 모든 명령에 `--target`, `--run`, `--output json` 필수. 검사 JSON의 작업 ID·정규화한 대상 경로 지문과 실행 결합 필수
+- 정책·규칙·실패 종류가 같은 후보의 중복 생성 방지. 허용 결과는 기존 후보의 반례로 추가 가능, 새 실패 후보 생성 근거에서는 제외
+- 새 근거·반례 추가 시 `pending` 복귀. 같은 근거 재전달 시 채택·기각 상태 유지
+- 채택·수정 전 근거 파일 재확인. 변경된 파일·잘못된 승인 지문·다른 대상 결합은 무변경 거부
+- 저장 범위: 등록된 규칙·정책 지문·실패 분류·근거 지문·검토 상태·실행 범위 지문. 대화·도구 출력·기밀 원문·임의 메모 저장 제외
+- `accepted`는 검토 판단이며 실제 적용 상태와 구분. 모든 결과의 `authorizes_mutation=false`, 원인 확정 없음. 지침·정책·지식 변경은 별도 승인 작업 필요
+- 근거 등록·지문 일치는 검사 결과의 내용이 사실이라는 보증과 구분. 호스트의 사람 검토와 실제 실행 증거 필요
+- Windows Codex에서 CLI 회귀 [5개 통과](../../tests/results/runs/20260919T052025-ef7a98bb6272.md), 공개 명령·스키마 [6개 통과](../../tests/results/runs/20260919T052144-7300e8843dfb.md). 실제 호스트 종료 알림·다른 운영체제는 미실행
+
 관련 근거: [전체 적용 분석](../research/project-policy-enforcement-2026-09-18.md),
 [호스트 훅 계획](../plans/active/host-policy-hooks-0.11.0.md),
 [측정 기준](../research/refactor-baseline-0.11.0.md).

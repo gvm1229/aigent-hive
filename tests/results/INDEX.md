@@ -445,3 +445,23 @@
 | [passed](runs/20260918T191401-43023b46a8b5.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260918T192435-2b1780d9511f.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260918T193129-dbd1401c6095.md) | 호스트 정책 등록의 출시 목록 정합성 | 92c7c772b0b4785b4915304f87b52a52f78760a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T193223-752d5c8d7e23.md) | 개발 검증: cargo.EXE | 92c7c772b0b4785b4915304f87b52a52f78760a3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T193952-14fc95db27b5.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194213-0a437c6b7125.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194230-30a6f99b2b78.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194337-78cd47a1a77d.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194530-ded3dec3980b.md) | 개발 검증: uv.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T194833-9c4ef8633307.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T194930-1de790e7c8ea.md) | 개발 검증: uv.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051056-72f6640ab571.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051319-f8e2cdd1cdfa.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051652-97f2b559cee1.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051811-eaed61c90220.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051851-8dfa875f9291.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051915-ad0f4c8234e5.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051940-0f18c8960cd0.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052025-ef7a98bb6272.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052037-f55d8bddf6bb.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052051-1aa19aaa6ca3.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052144-7300e8843dfb.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052231-4f585bc8bb92.md) | 정책 후보 검토와 지침 참조의 출시 목록 검사 | 9c288fe2b9e3cb88e3e4c1e0ca54ebb99d27eb4b | Windows-11-10.0.26200-SP0 |
