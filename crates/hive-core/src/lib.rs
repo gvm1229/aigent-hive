@@ -343,6 +343,18 @@ pub fn is_hive_directive_projection_path(path: &Path) -> bool {
 
 fn is_hive_skill_projection_portable(path: &str) -> bool {
     let parts = path.split('/').collect::<Vec<_>>();
+    if parts.len() == 5
+        && matches!(parts[0], ".agents" | ".claude")
+        && parts[1] == "skills"
+        && parts[3] == "references"
+    {
+        return matches!(
+            (parts[2], parts[4]),
+            ("usage-guard", "control.md" | "sensors.md")
+                | ("knowledge-recall", "confidential.md")
+                | ("knowledge-capture", "ingest.md")
+        );
+    }
     (parts.len() == 4
         && matches!(parts[0], ".agents" | ".claude")
         && parts[1] == "skills"

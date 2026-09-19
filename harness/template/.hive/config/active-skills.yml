@@ -57,7 +57,7 @@ skills:
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:9e86075240574d1e589329ae724c97fac32dab2e2d367b7d878bd84e69d4b483
+  content_digest: sha256:5fce1cb75770b24fc3e38fa434eb4afc3feb5975a1bfc83002541190374489dd
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -89,7 +89,7 @@ skills:
   consent_digest: null
 - name: knowledge-recall
   source_type: built-in
-  content_digest: sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267
+  content_digest: sha256:7ca8ab883c9dc93c06e585f75be3a4ff0dd2ee0dc6c9adcbf68cf5798a43a416
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -234,7 +234,7 @@ skills:
   consent_digest: null
 - name: usage-guard
   source_type: built-in
-  content_digest: sha256:e7b998e61d40abed13f618a259254566fa65a9b5a85f6d737476d464d2c1af79
+  content_digest: sha256:a567c5ceb99c1c956d099144be3243c82e3d068f658c3cd9cdca7db14fb34bf9
   side_effect_class: project-write
   capabilities:
   - filesystem-read

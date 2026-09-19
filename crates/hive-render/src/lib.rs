@@ -4981,21 +4981,22 @@ fn authenticate_projected_skill_files<T: TargetRead + ?Sized>(
         }
     }
     if source_version == env!("CARGO_PKG_VERSION") {
-        for (relative, expected) in &portable_projection.files {
-            let relative = Path::new(relative);
-            if !relative.ends_with("agents/openai.yaml") {
+        for (relative, expected) in &expected_files {
+            if files.contains_key(relative) {
                 continue;
             }
             validate_hive_skill_projection_relative(relative)
                 .map_err(|error| RenderError::Verification(error.to_string()))?;
-            let installed = read_projected(relative, "projected Skill metadata")?;
-            if installed != *expected {
+            let installed = read_projected(relative, "projected Skill companion")?;
+            if installed != *expected
+                && (relative.ends_with("agents/openai.yaml") || !local_preserved.contains(relative))
+            {
                 return Err(RenderError::Verification(format!(
-                    "projected Skill metadata bytes changed: {}",
+                    "projected Skill companion bytes changed: {}",
                     relative.display()
                 )));
             }
-            files.insert(relative.to_path_buf(), installed);
+            files.insert(relative.clone(), installed);
         }
     } else if matches!(source_version, "0.8.0" | "0.9.0") {
         for skill in expected_active
@@ -6948,6 +6949,17 @@ mod tests {
         expected.push(".agents/directives/03-session-coordination.md".to_owned());
         expected.push(".agents/directives/04-korean-language.md".to_owned());
         expected.push(".prettierignore".to_owned());
+        for resource in [
+            "usage-guard/references/control.md",
+            "usage-guard/references/sensors.md",
+            "knowledge-recall/references/confidential.md",
+            "knowledge-capture/references/ingest.md",
+        ] {
+            expected.push(format!(".agents/skills/{resource}"));
+            if capabilities == "capabilities-claude-omc.json" {
+                expected.push(format!(".claude/skills/{resource}"));
+            }
+        }
         expected.extend(
             new_body_skills
                 .iter()
@@ -8946,7 +8958,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 27);
+        assert_eq!(deletions.len(), 31);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

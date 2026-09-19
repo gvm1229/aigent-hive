@@ -188,7 +188,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 self.assertNotIn("start a watcher", agents)
                 self.assertIn(
                     "illustrative rather than a finite phrase",
-                    skill,
+                    (self.discovery_root(target, host) / "usage-guard/references/control.md").read_text(encoding="utf-8"),
                 )
 
     def test_catalog_only_skills_are_not_discoverable(self) -> None:

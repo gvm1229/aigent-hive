@@ -1378,6 +1378,33 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
             );
         }
     }
+    let resources: &[(&str, &[u8])] = match name {
+        "usage-guard" => &[
+            (
+                "references/control.md",
+                include_bytes!("../../../harness/skills/usage-guard/references/control.md"),
+            ),
+            (
+                "references/sensors.md",
+                include_bytes!("../../../harness/skills/usage-guard/references/sensors.md"),
+            ),
+        ],
+        "knowledge-recall" => &[(
+            "references/confidential.md",
+            include_bytes!("../../../harness/skills/knowledge-recall/references/confidential.md"),
+        )],
+        "knowledge-capture" => &[(
+            "references/ingest.md",
+            include_bytes!("../../../harness/skills/knowledge-capture/references/ingest.md"),
+        )],
+        _ => &[],
+    };
+    for (relative, bytes) in resources {
+        files.insert(
+            format!("{}/{name}/{relative}", host.skill_root()),
+            bytes.to_vec(),
+        );
+    }
 }
 
 fn user_setup_resources() -> [(&'static str, &'static [u8]); 6] {
@@ -2905,7 +2932,7 @@ description: Inspect one local file without changing it.
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
             assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 28 } else { 55 };
+            let expected_file_count = if host == Host::Claude { 32 } else { 59 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2956,6 +2983,8 @@ description: Inspect one local file without changing it.
             ".agents/skills/product-update/agents/openai.yaml",
             ".agents/skills/usage-guard/SKILL.md",
             ".agents/skills/usage-guard/agents/openai.yaml",
+            ".agents/skills/usage-guard/references/control.md",
+            ".agents/skills/usage-guard/references/sensors.md",
             ".hive/config/active-skills.yml",
         ]);
         assert_eq!(
