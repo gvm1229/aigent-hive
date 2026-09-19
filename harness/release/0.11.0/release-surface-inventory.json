@@ -114,6 +114,7 @@
     "provider-neutral-continuation",
     "reviewed-directory-scan",
     "run-policy-review",
+    "session-bound-policy-review-notice",
     "signed-offline-update"
   ],
   "migrations": [
@@ -151,6 +152,7 @@
     ".agents/skills/quick-answer/SKILL.md",
     ".agents/skills/research-best-practices/SKILL.md",
     ".agents/skills/run-checkpoint/SKILL.md",
+    ".agents/skills/run-checkpoint/references/policy-review.md",
     ".agents/skills/run-handoff/SKILL.md",
     ".agents/skills/run-resume/SKILL.md",
     ".agents/skills/ship/SKILL.md",
