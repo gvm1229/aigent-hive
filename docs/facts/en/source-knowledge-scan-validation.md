@@ -9,10 +9,10 @@ summary: "Candidate and apply share credential validation, and scan provenance e
 tags: [knowledge, scan, source, v0-9-4, validation]
 aliases: ["Reviewed source import", "Scan validation parity"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:676c827ebe9ed1c4e51d73cf35289b8dfa9149f52287bcfad1a33d0b872b3be2"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:6d6a377a6cd0c0c38ca48a85e89e871210ef4e87bbe05cf80c17713a566ae9a0"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:0ffab09ca1eaac47b41608e04003fdbc51ee7e5edbaf2386554c885d9f55ec58"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:a804c6475388324fe8e785f4afdb852a3318cfc4ba2e2fba1c9ae8eb313d2e20"
 links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
-reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
+reviewed_revision: "git:dd63333a702a7a89585d101d2b9d043ebd0987d8"
 status: active
 ---
 
