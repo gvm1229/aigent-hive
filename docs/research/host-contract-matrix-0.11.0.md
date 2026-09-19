@@ -36,7 +36,7 @@
 | Antigravity 파일 변경 | `.agents/hooks.json`, 세 파일 편집 도구 | CLI 변환 `verified`; 보호 대상은 `deny`, 다른 파일은 `ask`. 도구 권한을 새로 허용하는 `allow` 응답 제외 |
 | 고정 규칙 전달 | Codex·Claude `SessionStart`, Antigravity `PreInvocation`의 `invocationNum=0` | CLI 변환 `verified`; 읽기·준수율·실제 전달 `unverified` |
 | 문맥 압축 후 재전달 | Codex의 `SessionStart` compact 경로 | 공식 경로 존재. 현재 호스트의 실제 재전달 `unverified`; Antigravity의 별도 압축 연결 미구현 |
-| 종료 알림 | Codex·Claude `Stop`의 `systemMessage` 후보 | 공식 경로 확인, 후보 알림 연결은 후속 구현. 종료를 작업 완료로 판정하지 않는 경계 |
+| 종료 알림 | Codex·Claude `Stop`의 `systemMessage`, 명시적 `--review-run` | 실행·호스트·세션 결합의 CLI 연결 `verified`, 실제 앱 전달 `unverified`. 종료의 완료 판정 없음 |
 | Antigravity 종료 알림 | 현재 `Stop`은 `decision=allow` | 비재개 알림은 현재 연결에서 `unsupported`. 알림을 위해 `continue`를 반환하는 방식 제외 |
 | 셸·기존 터미널 입력·MCP·다른 편집기 | 이번 파일 변환기의 등록 범위 밖 | `unsupported`는 이 Hive 변환기의 범위. 호스트 자체의 훅 지원 여부와 구분 |
 
@@ -54,6 +54,7 @@ Antigravity 종료 `reason`의 모델 전달은 `continue` 조건이므로 중�
 - [configure.rs](../../crates/hive-cli/src/policy/configure.rs): 명시적 미리 보기와 지문 승인, 외부 설정 보존, 등록·제거·복구·단계별 미확인 진단. 설정 존재와 보호 활성의 구분
 - [실행·결과 회귀](../../tests/results/runs/20260919T052051-1aa19aaa6ca3.md): Windows 48개 중 45개 통과, Unix 프로세스·POSIX 권한 등 3개 제외. 결정적 계약과 합성 자료의 증명, 실제 호스트 완료·취소의 증명 제외
 - [훅 변환·등록 회귀](../../tests/results/runs/20260919T055402-839901f02c26.md): Windows 10개 통과. 생성 명령과 입력·출력 검증이며 앱 신뢰·자식 실행·시간 초과 수용은 미검증
+- [실행별 안내 회귀](../../tests/results/runs/20260919T060857-b7ac1e0676c3.md): Windows 12개 통과. 생성 명령에서 다른 세션의 알림 없음·반복 호출의 쓰기 없음·검토 후 알림 종료·등록 철회 확인. 실제 앱 실행 증명의 대체 자료에서 제외
 
 `RB104-004`의 15초 감시·진행 중 추론 중단은 여전히 `unverified`.
 검증된 인터페이스로 현재 작업을 정확히 제어한 결과가 없으므로 별도 감시 프로세스나 모델 실행을 만들지 않는 경계.

@@ -42,7 +42,7 @@
 ## 호스트 연결의 현재 범위
 
 - 새 `hive policy hook`: Codex `apply_patch`, Claude 파일 편집, Antigravity 파일 편집 입력 변환과 직접 Hive 상태 변경 거부
-- 공통 보호 경로 함수 재사용, 필수 결과의 공통 합산. 시작 이벤트는 짧은 규칙 전달, `Stop`은 중립 응답
+- 공통 보호 경로 함수 재사용, 필수 결과의 공통 합산. 시작 규칙 전달과 기본 중립 `Stop`, 명시적 실행의 검토 안내 분리
 - 별도 CLI 프로세스 시험: 실제 앱 로드·신뢰·도구 차단 증거와 구분
 - 셸·기존 터미널 입력·MCP·다른 편집기: 이 파일 편집 변환기의 적용 범위 밖
 - 소스 브랜치·게시의 최종 검사는 Git·원격 검사 유지. 새 변환기의 전체 소스 정책 강제 주장 제외
@@ -64,7 +64,13 @@
 - 저장 범위: 등록된 규칙·정책 지문·실패 분류·근거 지문·검토 상태·실행 범위 지문. 대화·도구 출력·기밀 원문·임의 메모 저장 제외
 - `accepted`는 검토 판단이며 실제 적용 상태와 구분. 모든 결과의 `authorizes_mutation=false`, 원인 확정 없음. 지침·정책·지식 변경은 별도 승인 작업 필요
 - 근거 등록·지문 일치는 검사 결과의 내용이 사실이라는 보증과 구분. 호스트의 사람 검토와 실제 실행 증거 필요
-- Windows Codex에서 CLI 회귀 [5개 통과](../../tests/results/runs/20260919T052025-ef7a98bb6272.md), 공개 명령·스키마 [6개 통과](../../tests/results/runs/20260919T052144-7300e8843dfb.md). 실제 호스트 종료 알림·다른 운영체제는 미실행
+- Windows Codex에서 CLI 회귀 [6개 통과](../../tests/results/runs/20260919T060650-331c65f5dbc9.md), 공개 명령·스키마 [6개 통과](../../tests/results/runs/20260919T052144-7300e8843dfb.md). 실제 앱의 종료 알림·다른 운영체제는 미실행
+
+선택형 종료 안내: Codex·Claude의 `policy hooks preview|apply`에 `--review-run <id>` 추가.
+기존 실행의 호스트와 `STATUS.md` 세션 지문이 이벤트에 맞을 때만 `systemMessage` 반환.
+다른 세션·취소 상태·이미 검토된 후보는 알림 제외, 기록 변경·작업 재개 없음.
+Antigravity의 비재개 종료 안내는 미지원으로 거부하며 명시적 `policy-review list` 유지.
+출하 절차는 [run-checkpoint 참조](../../harness/skills/run-checkpoint/references/policy-review.md).
 
 관련 근거: [전체 적용 분석](../research/project-policy-enforcement-2026-09-18.md),
 [호스트 훅 계획](../plans/active/host-policy-hooks-0.11.0.md),

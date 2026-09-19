@@ -489,3 +489,10 @@
 | [passed](runs/20260919T055926-0ec7921da0ae.md) | 개발 검증: cargo.EXE | bae90c3e3ae09c770763d07dff687aef2265788b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T060123-cc827933a573.md) | 보존 CLI의 같은 기기 시작 비용 재측정 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T060145-6430c92f8f5b.md) | 현재 CLI의 같은 기기 시작 비용 비교 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060650-331c65f5dbc9.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060857-b7ac1e0676c3.md) | 개발 검증: uv.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T061036-b2cc802fcc7e.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061054-bddf5cb57a2a.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061249-0a00ec34f319.md) | 개발 검증: cargo.EXE | c28e2b07bf761ccd1a00db03e847355e384e8ba6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061711-9c3ee7bd5b45.md) | 개발 검증: uv.EXE | c28e2b07bf761ccd1a00db03e847355e384e8ba6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061917-9ff7c9b2a5a8.md) | 세션 결합 검토 알림의 출시 목록 검사 | bd7fc621d1a41baa91807f9f6a19cf1f1b878fec | Windows-11-10.0.26200-SP0 |
