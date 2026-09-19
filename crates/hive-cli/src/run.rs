@@ -1,5 +1,5 @@
 use super::{emit_action_result, ActionResult, Evidence};
-mod policy_review;
+pub(crate) mod policy_review;
 use crate::usage::{
     check_codexbar_provider_unique_with_runner, check_codexbar_provider_with_runner,
     qualify_and_dispatch_preferred_with_runners, qualify_and_dispatch_snapshot,

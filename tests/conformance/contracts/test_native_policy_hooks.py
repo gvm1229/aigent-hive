@@ -109,11 +109,13 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
         config.mkdir(parents=True)
         (config / "harness.toml").write_text('schema_version = 1\nresolved_owner = "host-native"\n', encoding="utf-8")
 
-    def configure(self, host, action, confirm=None, expected=0):
+    def configure(self, host, action, confirm=None, expected=0, review_run=None):
         args = [str(self.hive_binary), "policy", "hooks", action, "--host", host,
                 "--target", str(self.target), "--output", "json"]
         if confirm is not None:
             args += ["--confirm", confirm]
+        if review_run is not None:
+            args += ["--review-run", review_run]
         process = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", timeout=15)
         self.assertEqual(process.returncode, expected, process.stdout + process.stderr)
         result = json.loads(process.stdout)
@@ -250,3 +252,76 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
                                  text=True, encoding="utf-8", timeout=20, cwd=self.target)
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(json.loads(process.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_explicit_run_notice_binds_host_session_and_never_requests_continuation(self):
+        base = self.target
+        digest = lambda value: "sha256:" + hashlib.sha256(value).hexdigest()
+        for host in ("codex", "claude", "antigravity"):
+            self.target = base / host
+            config = self.target / ".hive/config"
+            config.mkdir(parents=True)
+            (config / "harness.toml").write_text('schema_version = 1\nresolved_owner = "host-native"\n', encoding="utf-8")
+            run = self.target / ".hive/runs/review-1"
+            (run / "evidence").mkdir(parents=True)
+            (run / "PLAN.md").write_text("# Plan\n\n- [ ] [build] Build succeeds\n", encoding="utf-8")
+            state = {"schema_version":1,"run_id":"review-1","revision":1,"state":"executing",
+                "required_criteria":["build"],"passed_criteria":[],"failed_criteria":[],"active_roles":[],
+                "next_action":"verify","latest_evidence":[],"blocker":None,"updated_at":"2026-09-19T00:00:00Z",
+                "host":host,"host_version":"fixture","surface":"cli","external_runtime":None,
+                "resolved_owner":"host-native","resolution_evidence_digest":digest(b"capability"),
+                "subagent_support":"supported","criterion_evidence":{},
+                "continuation":{"session_binding_digest":digest(b"fixture-session"),"max_retry_attempts":3,
+                                "attempts_used":0,"cancel_requested":False}}
+            def write_status():
+                (run / "STATUS.md").write_text("---\n"+json.dumps(state)+"\n---\n# Status\n", encoding="utf-8")
+            def review(action, *extra):
+                process = subprocess.run([str(self.hive_binary), "run", "policy-review", action,
+                    "--target",str(self.target),"--run","review-1","--output","json",*extra],
+                    capture_output=True,text=True,encoding="utf-8",timeout=15)
+                self.assertEqual(process.returncode,0,process.stdout+process.stderr)
+                return json.loads(process.stdout)["data"]
+            write_status()
+            target_digest = review("list")["target_digest"]
+            binding = {"operation_id":"review-1","policy_digest":digest(b"policy"),"target_digest":target_digest}
+            evaluation = {"schema_version":1,"binding":binding,
+                "requirements":[{"rule_id":"exact-authority","mandatory":True}],
+                "results":[{"rule_id":"exact-authority","binding":binding,"decision":"deny","code":"hive.denied"}]}
+            evaluation_bytes = json.dumps(evaluation).encode()
+            (run / "evidence/policy.json").write_bytes(evaluation_bytes)
+            state["latest_evidence"] = [".hive/runs/review-1/evidence/policy.json#"+digest(evaluation_bytes)]
+            write_status()
+            args = ("--evaluation","evidence/policy.json","--rule","exact-authority","--class","non-compliance")
+            preview = review("preview", *args)
+            added = review("add", *args, "--confirm", preview["preview_digest"])
+            before = snapshot_tree(self.target)
+            if host == "antigravity":
+                refusal = self.configure(host,"preview",expected=3,review_run="review-1")
+                self.assertIn("non-continuing",refusal["message"])
+                self.assertEqual(snapshot_tree(self.target),before)
+                continue
+            ordinary = self.configure(host,"preview")["data"]["preview"]
+            self.assertNotIn("review_run",ordinary)
+            self.configure(host,"apply",ordinary["approval_digest"])
+            hooks = self.configure(host,"preview",review_run="review-1")["data"]["preview"]
+            self.configure(host,"apply",hooks["approval_digest"],review_run="review-1")
+            self.assertEqual(self.configure(host,"status")["data"]["review_run"],"review-1")
+            command = next(entry for entry in hooks["after"] if entry["path"][-1]=="Stop")["value"]["hooks"][0]["command"]
+            def notice(session):
+                process = subprocess.run(command,shell=True,input=json.dumps({"hook_event_name":"Stop",
+                    "session_id":session,"transcript_path":"PRIVATE-SENTINEL"}),capture_output=True,
+                    text=True,encoding="utf-8",timeout=20,cwd=self.target)
+                self.assertEqual(process.returncode,0,process.stderr)
+                self.assertNotIn("PRIVATE-SENTINEL",process.stdout+process.stderr)
+                return json.loads(process.stdout)
+            unchanged = snapshot_tree(self.target)
+            self.assertEqual(notice("other-session"),{})
+            for _ in range(2):
+                output = notice("fixture-session")
+                self.assertEqual(set(output),{"systemMessage"})
+                self.assertIn("1 policy review",output["systemMessage"])
+            self.assertEqual(snapshot_tree(self.target),unchanged)
+            review("reject","--candidate",added["book"]["candidates"][0]["id"],"--confirm",added["book_digest"])
+            self.assertEqual(notice("fixture-session"),{})
+            removal = self.configure(host,"remove")["data"]["preview"]
+            self.configure(host,"remove",removal["approval_digest"])
+            self.assertFalse(self.configure(host,"status")["data"]["configured"])

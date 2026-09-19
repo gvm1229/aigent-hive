@@ -40,15 +40,14 @@ fn deny(host: Host, reason: &str) -> Value {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json\nNative file-edit policy only; registration and host trust are separate.");
+        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json [--expected-policy <digest>] [--review-run <id>]\nNative file-edit policy and optional session-bound review notice; registration and host trust are separate.");
         return ExitCode::SUCCESS;
     }
-    if !matches!(args.len(), 7 | 9)
+    if !matches!(args.len(), 7 | 9 | 11)
         || args[0] != "--host"
         || args[2] != "--event"
         || args[4] != "--target"
         || args[6] != "--stdin-json"
-        || (args.len() == 9 && args[7] != "--expected-policy")
     {
         eprintln!("invalid native policy hook arguments; inspect hive policy hook --help");
         return ExitCode::from(2);
@@ -57,8 +56,24 @@ pub(super) fn run(args: &[String]) -> ExitCode {
         eprintln!("unsupported native policy host");
         return ExitCode::from(2);
     };
+    let mut expected_policy = None;
+    let mut review_run = None;
+    for pair in args[7..].chunks_exact(2) {
+        match pair[0].as_str() {
+            "--expected-policy" if expected_policy.is_none() => {
+                expected_policy = Some(pair[1].as_str());
+            }
+            "--review-run" if review_run.is_none() && args[3] == "Stop" => {
+                review_run = Some(pair[1].as_str());
+            }
+            _ => {
+                eprintln!("invalid native hook option");
+                return ExitCode::from(2);
+            }
+        }
+    }
     // A turn ending is neither task success nor authority to continue or capture memory.
-    if args[3] == "Stop" {
+    if args[3] == "Stop" && (review_run.is_none() || host == Host::Antigravity) {
         println!(
             "{}",
             if host == Host::Antigravity {
@@ -69,7 +84,7 @@ pub(super) fn run(args: &[String]) -> ExitCode {
         );
         return ExitCode::SUCCESS;
     }
-    if args.len() == 9 && args[8] != env!("HIVE_NATIVE_POLICY_DIGEST") {
+    if expected_policy.is_some_and(|policy| policy != env!("HIVE_NATIVE_POLICY_DIGEST")) {
         let response = if args[3] == "PreToolUse" {
             deny(
                 host,
@@ -97,6 +112,9 @@ pub(super) fn run(args: &[String]) -> ExitCode {
             serde_json::from_slice::<Value>(&bytes).map_err(|_| "invalid native hook JSON")
         });
     let output = match input {
+        Ok(payload) if args[3] == "Stop" => {
+            review_notice(host, Path::new(&args[5]), review_run, &payload)
+        }
         Ok(payload) => respond(host, &args[3], Path::new(&args[5]), &payload),
         Err(reason) if args[3] == "PreToolUse" => deny(host, reason),
         Err(_) => json!({}),
@@ -104,6 +122,29 @@ pub(super) fn run(args: &[String]) -> ExitCode {
     println!("{output}");
     // Exit 0 carries native JSON denial. Hive's legacy exit 3 is never forwarded.
     ExitCode::SUCCESS
+}
+
+fn review_notice(host: Host, target: &Path, run: Option<&str>, payload: &Value) -> Value {
+    let Some(run) = run else {
+        return json!({});
+    };
+    let Some(session) = payload["session_id"].as_str() else {
+        return json!({});
+    };
+    if payload["hook_event_name"] != "Stop" {
+        return json!({});
+    }
+    let host = match host {
+        Host::Codex => "codex",
+        Host::Claude => "claude",
+        Host::Antigravity => return json!({"decision":"allow"}),
+    };
+    match crate::run::policy_review::pending_notice(target, run, host, session) {
+        Ok(count) if count > 0 => {
+            json!({"systemMessage":format!("Hive: {count} policy review candidate(s) await explicit review. No policy changes are authorized by this notice.")})
+        }
+        _ => json!({}),
+    }
 }
 
 fn paths(host: Host, payload: &Value) -> Result<Vec<String>, &'static str> {

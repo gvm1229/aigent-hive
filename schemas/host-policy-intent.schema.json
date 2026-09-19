@@ -11,6 +11,8 @@
     "target_digest": {"$ref": "#/$defs/digest"},
     "policy_digest": {"$ref": "#/$defs/digest"},
     "prior_policy_digest": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "review_run": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
+    "prior_review_run": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
     "operation": {"enum": ["install", "remove"]},
     "before_digest": {"$ref": "#/$defs/snapshot"},
     "after_digest": {"$ref": "#/$defs/snapshot"},

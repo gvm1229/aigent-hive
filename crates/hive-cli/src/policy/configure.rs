@@ -27,6 +27,10 @@ struct Intent {
     target_digest: String,
     policy_digest: String,
     prior_policy_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    review_run: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    prior_review_run: Option<String>,
     operation: String,
     before_digest: String,
     after_digest: String,
@@ -60,9 +64,15 @@ fn config_path(host: &str) -> Result<PathBuf, String> {
     }
 }
 
-fn command(host: &str, event: &str, target: &Path, policy: &str) -> Result<String, String> {
+fn command(
+    host: &str,
+    event: &str,
+    target: &Path,
+    policy: &str,
+    review_run: Option<&str>,
+) -> Result<String, String> {
     let binary = std::env::current_exe().map_err(|_| "cannot resolve Hive executable")?;
-    let args = [
+    let mut args = vec![
         binary.to_str().ok_or("Hive executable must be UTF-8")?,
         "policy",
         "hook",
@@ -76,6 +86,11 @@ fn command(host: &str, event: &str, target: &Path, policy: &str) -> Result<Strin
         "--expected-policy",
         policy,
     ];
+    if event == "Stop" {
+        if let Some(run) = review_run {
+            args.extend(["--review-run", run]);
+        }
+    }
     if args.iter().any(|arg| arg.contains(['\r', '\n', '\0'])) {
         return Err("hook command contains unsupported control characters".to_owned());
     }
@@ -106,7 +121,24 @@ fn command(host: &str, event: &str, target: &Path, policy: &str) -> Result<Strin
     }
 }
 
-fn entries(host: &str, target: &Path, policy: &str) -> Result<Vec<Entry>, String> {
+fn entries(
+    host: &str,
+    target: &Path,
+    policy: &str,
+    review_run: Option<&str>,
+) -> Result<Vec<Entry>, String> {
+    if review_run.is_some_and(|run| {
+        run.is_empty()
+            || run.len() > 128
+            || !run
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"_-".contains(&byte))
+    }) {
+        return Err("invalid review run identifier".to_owned());
+    }
+    if host == "antigravity" && review_run.is_some() {
+        return Err("Antigravity has no supported non-continuing Stop notice; use explicit policy-review list".to_owned());
+    }
     let (namespace, start, matcher) = match host {
         "codex" => ("hooks", "SessionStart", "^apply_patch$"),
         "claude" => ("hooks", "SessionStart", "^(Write|Edit|MultiEdit)$"),
@@ -121,7 +153,7 @@ fn entries(host: &str, target: &Path, policy: &str) -> Result<Vec<Entry>, String
         .iter()
         .map(|event| {
             let handler =
-                json!({"type":"command","command":command(host,event,target,policy)?,"timeout":10});
+                json!({"type":"command","command":command(host,event,target,policy,review_run)?,"timeout":10});
             let value = if *event == "PreToolUse" {
                 json!({"matcher":matcher,"hooks":[handler]})
             } else if host == "antigravity" {
@@ -198,19 +230,31 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
         return Err("hook intent binding is invalid".to_owned());
     }
     let after = if intent.operation == "install" {
-        entries(host, target, &intent.policy_digest)?
+        entries(
+            host,
+            target,
+            &intent.policy_digest,
+            intent.review_run.as_deref(),
+        )?
     } else {
         Vec::new()
     };
     let before = match &intent.prior_policy_digest {
-        Some(policy) if valid_digest(policy) => entries(host, target, policy)?,
-        None => Vec::new(),
+        Some(policy) if valid_digest(policy) => {
+            entries(host, target, policy, intent.prior_review_run.as_deref())?
+        }
+        None if intent.prior_review_run.is_none() => Vec::new(),
         _ => return Err("invalid prior policy digest".to_owned()),
     };
     if intent.after != after || intent.before != before {
         return Err("hook definitions differ from their bounded contract".to_owned());
     }
-    let allowed = entries(host, target, &intent.policy_digest)?;
+    let allowed = entries(
+        host,
+        target,
+        &intent.policy_digest,
+        intent.review_run.as_deref(),
+    )?;
     if intent.created_containers.iter().any(|path| {
         !allowed
             .iter()
@@ -269,13 +313,22 @@ fn transform(bytes: Option<&[u8]>, intent: &Intent) -> Result<Option<Vec<u8>>, S
     Ok(Some(output))
 }
 
-fn plan(target: &PinnedTarget, host: &str, operation: &str) -> Result<Plan, String> {
+fn plan(
+    target: &PinnedTarget,
+    host: &str,
+    operation: &str,
+    review_run: Option<&str>,
+) -> Result<Plan, String> {
     let config_path = config_path(host)?;
     let receipt_path = receipt_path(target, host)?;
     let config = read(target, &config_path)?;
     let receipt = read(target, &receipt_path)?;
     if operation == "install" {
         require_native_owner(target)?;
+        if let Some(run) = review_run {
+            crate::run::policy_review::validate_notice_run(target.requested_path(), run, host)
+                .map_err(|error| error.message().to_owned())?;
+        }
     }
     let previous = receipt
         .as_deref()
@@ -293,7 +346,7 @@ fn plan(target: &PinnedTarget, host: &str, operation: &str) -> Result<Plan, Stri
     }
     let policy = env!("HIVE_NATIVE_POLICY_DIGEST").to_owned();
     let after = if operation == "install" {
-        entries(host, target.requested_path(), &policy)?
+        entries(host, target.requested_path(), &policy, review_run)?
     } else {
         Vec::new()
     };
@@ -319,6 +372,8 @@ fn plan(target: &PinnedTarget, host: &str, operation: &str) -> Result<Plan, Stri
         target_digest: sha256_digest(target.requested_path().to_string_lossy().as_bytes()),
         policy_digest: policy,
         prior_policy_digest: installed.map(|prior| prior.policy_digest.clone()),
+        review_run: review_run.map(str::to_owned),
+        prior_review_run: installed.and_then(|prior| prior.review_run.clone()),
         operation: operation.to_owned(),
         before_digest: digest(config.as_deref()),
         after_digest: String::new(),
@@ -352,7 +407,7 @@ fn result(code: &'static str, data: Value, changed_paths: Vec<String>) -> Action
 }
 
 fn configure(args: &[String]) -> Result<ActionResult, String> {
-    if !matches!(args.len(), 7 | 9)
+    if !matches!(args.len(), 7 | 9 | 11)
         || !matches!(
             args[0].as_str(),
             "preview" | "apply" | "remove" | "status" | "recover"
@@ -361,7 +416,6 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
         || args[3] != "--target"
         || args[5] != "--output"
         || args[6] != "json"
-        || (args.len() == 9 && args[7] != "--confirm")
     {
         return Err("expected hooks preview|apply|remove|status|recover --host <host> --target <project> --output json [--confirm <preview-digest>]".to_owned());
     }
@@ -369,11 +423,28 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
         .map_err(|error| error.message().to_owned())?;
     let host = &args[2];
     let action = &args[0];
+    let mut confirmation = None;
+    let mut review_run = None;
+    for pair in args[7..].chunks_exact(2) {
+        match pair[0].as_str() {
+            "--confirm" if confirmation.is_none() => confirmation = Some(pair[1].as_str()),
+            "--review-run"
+                if review_run.is_none() && matches!(action.as_str(), "preview" | "apply") =>
+            {
+                review_run = Some(pair[1].as_str());
+            }
+            _ => {
+                return Err(
+                    "unknown, repeated, or inapplicable hook configuration option".to_owned(),
+                )
+            }
+        }
+    }
     if action == "status" || action == "recover" {
         return inspect_or_recover(&target, host, action == "recover");
     }
     if action == "apply" || action == "remove" {
-        if let Some(outcome) = replay(&target, host, action)? {
+        if let Some(outcome) = replay(&target, host, action, review_run)? {
             return Ok(outcome);
         }
     }
@@ -382,13 +453,13 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
     } else {
         "install"
     };
-    let planned = plan(&target, host, operation)?;
+    let planned = plan(&target, host, operation, review_run)?;
     let data = json!({"preview":planned.intent,"config_path":planned.config_path,"receipt_path":planned.receipt_path,
         "host_loaded":"unverified","actual_effect":"unverified","authorizes_model_execution":false});
-    if action == "preview" || (action == "remove" && args.len() == 7) {
+    if action == "preview" || (action == "remove" && confirmation.is_none()) {
         return Ok(result("hive.policy-hooks-preview", data, Vec::new()));
     }
-    if args.len() != 9 || args[8] != planned.intent.approval_digest {
+    if confirmation != Some(planned.intent.approval_digest.as_str()) {
         return Err("exact current preview confirmation is required".to_owned());
     }
     if planned.config.is_some()
@@ -430,7 +501,12 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
     Ok(result("hive.policy-hooks-configured", data, changed))
 }
 
-fn replay(target: &PinnedTarget, host: &str, action: &str) -> Result<Option<ActionResult>, String> {
+fn replay(
+    target: &PinnedTarget,
+    host: &str,
+    action: &str,
+    review_run: Option<&str>,
+) -> Result<Option<ActionResult>, String> {
     let path = receipt_path(target, host)?;
     let Some(bytes) = read(target, &path)? else {
         return Ok(None);
@@ -444,6 +520,7 @@ fn replay(target: &PinnedTarget, host: &str, action: &str) -> Result<Option<Acti
     };
     if intent.operation != desired_action
         || (action == "apply" && intent.policy_digest != env!("HIVE_NATIVE_POLICY_DIGEST"))
+        || (action == "apply" && intent.review_run.as_deref() != review_run)
     {
         return Ok(None);
     }
@@ -501,6 +578,7 @@ fn inspect_or_recover(
                 "policy_digest":null,"current_policy_digest":env!("HIVE_NATIVE_POLICY_DIGEST"),
                 "observed_config_digest":digest(config.as_deref()),"approved_config_digest":null,
                 "receipt_present":false,"configured":config.is_none().then_some(false),
+                "review_run":null,
                 "configuration_state":if config.is_some(){"unowned-or-receipt-missing"}else{"absent"},
                 "policy_current":null,"pending":null,
                 "host_loaded":"unverified","event_matched":"unverified","checker_executed":"unverified",
@@ -563,6 +641,7 @@ fn inspect_or_recover(
         "host_version":null,"host_version_reason":"configuration does not observe the executing host",
         "operating_system":std::env::consts::OS,"policy_digest":intent.policy_digest,"target_digest":intent.target_digest,
         "current_policy_digest":env!("HIVE_NATIVE_POLICY_DIGEST"),"receipt_present":true,
+        "review_run":intent.review_run,
         "configuration_state":if configured{"configured"}else{"not-configured-or-pending"},
         "observed_config_digest":digest(observed.as_deref()),"approved_config_digest":intent.after_digest,
         "configured":configured,"policy_current":intent.policy_digest==env!("HIVE_NATIVE_POLICY_DIGEST"),
@@ -595,7 +674,7 @@ fn require_native_owner(target: &PinnedTarget) -> Result<(), String> {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive policy hooks preview|apply|remove|status|recover --host codex|claude|antigravity --target <project> --output json [--confirm <preview-digest>]\nPreview is read-only. Apply and removal require their exact preview. Recovery uses the retained approved intent. Host trust and effect remain separately unverified.");
+        println!("hive policy hooks preview|apply|remove|status|recover --host codex|claude|antigravity --target <project> --output json [--confirm <preview-digest>] [--review-run <id>]\nOptional review-run is for Codex/Claude install previews and binds notices to an existing run's recorded session. Preview is read-only. Apply and removal require their exact preview. Host trust and effect remain separately unverified.");
         return ExitCode::SUCCESS;
     }
     let before = observe(args);
@@ -613,7 +692,7 @@ pub(super) fn run(args: &[String]) -> ExitCode {
 }
 
 fn observe(args: &[String]) -> Option<std::collections::BTreeMap<String, String>> {
-    if !matches!(args.len(), 7 | 9) || args[1] != "--host" || args[3] != "--target" {
+    if !matches!(args.len(), 7 | 9 | 11) || args[1] != "--host" || args[3] != "--target" {
         return None;
     }
     let target = PinnedTarget::open_policy_configuration(Path::new(&args[4])).ok()?;

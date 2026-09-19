@@ -431,9 +431,94 @@ fn execute(args: &[String]) -> Result<ActionResult, AdapterError> {
         next_action: None,
         data: Some(
             json!({"book":book,"book_digest":sha256_digest(&desired),"preview_digest":preview_digest,"target_digest":target_digest,
+            "run_status_digest":sha256_digest(&status_bytes),
             "cause":"unconfirmed","authorizes_mutation":false,"actual_execution":"cli-review-only","host_hook_execution":"unverified"}),
         ),
     })
+}
+
+/// Require an existing, owner-bound run with a recorded host session. No run creation or writes.
+pub(crate) fn validate_notice_run(
+    target: &Path,
+    run_id: &str,
+    host: &str,
+) -> Result<(), AdapterError> {
+    notice_context(target, run_id, host).map(|_| ())
+}
+
+/// A Stop event may report pending candidates only to the run's recorded host session.
+pub(crate) fn pending_notice(
+    target: &Path,
+    run_id: &str,
+    host: &str,
+    session: &str,
+) -> Result<usize, AdapterError> {
+    if session.is_empty() || session.len() > 256 || session.chars().any(char::is_control) {
+        return Err(verification("invalid notice session binding"));
+    }
+    let (count, expected) = notice_context(target, run_id, host)?;
+    Ok(if sha256_digest(session.as_bytes()) == expected {
+        count
+    } else {
+        0
+    })
+}
+
+fn notice_context(path: &Path, run_id: &str, host: &str) -> Result<(usize, String), AdapterError> {
+    let args = [
+        "list",
+        "--target",
+        path.to_str()
+            .ok_or_else(|| verification("notice target is not UTF-8"))?,
+        "--run",
+        run_id,
+        "--output",
+        "json",
+    ]
+    .map(str::to_owned);
+    let data = execute(&args)?
+        .data
+        .ok_or_else(|| verification("review data absent"))?;
+    if data["book"]["host"] != host {
+        return Err(verification("notice host differs from the run owner"));
+    }
+    let target = PinnedTarget::open(path)?;
+    let bytes = target.read_required(&run_path(run_id, "STATUS.md")?, LIMIT)?;
+    if data["run_status_digest"] != sha256_digest(&bytes) {
+        return Err(verification("run changed during notice inspection"));
+    }
+    let status = RunStatusDocument::parse_markdown(&bytes).map_err(super::core_verification)?;
+    let binding = status
+        .status()
+        .continuation
+        .as_ref()
+        .ok_or_else(|| verification("run has no recorded host session binding"))?;
+    if let Some(bytes) = target.read_optional(&run_path(run_id, "POLICY-REVIEW.md")?, LIMIT)? {
+        if data["book_digest"] != sha256_digest(&bytes) {
+            return Err(verification("candidates changed during notice inspection"));
+        }
+    } else if data["book"]["candidates"]
+        .as_array()
+        .is_none_or(|candidates| !candidates.is_empty())
+    {
+        return Err(verification(
+            "candidate record disappeared during notice inspection",
+        ));
+    }
+    target.verify_current()?;
+    let count = if binding.cancel_requested
+        || status.status().state == hive_core::run::RunState::Cancelled
+    {
+        0
+    } else {
+        data["book"]["candidates"]
+            .as_array()
+            .ok_or_else(|| verification("candidate list absent"))?
+            .iter()
+            .filter(|candidate| candidate["state"] == "pending")
+            .count()
+    };
+    Ok((count, binding.session_binding_digest.clone()))
 }
 
 #[cfg(test)]
@@ -492,7 +577,8 @@ mod tests {
             "required_criteria":["build"],"passed_criteria":[],"failed_criteria":[],"blocked_criteria":[],"active_roles":[],"next_action":"verify",
             "latest_evidence":locators,"blocker":null,"updated_at":"2026-09-19T00:00:00Z","host":"codex","host_version":"fixture",
             "surface":"cli","external_runtime":null,"resolved_owner":"host-native","resolution_evidence_digest":sha256_digest(b"capability"),
-            "subagent_support":"supported","resume_note":null,"criterion_evidence":{}});
+            "subagent_support":"supported","resume_note":null,"criterion_evidence":{},
+            "continuation":{"session_binding_digest":sha256_digest(b"fixture-session"),"max_retry_attempts":3,"attempts_used":0,"cancel_requested":false}});
         fs::write(
             target.join(".hive/runs/review-1/STATUS.md"),
             format!(
@@ -714,5 +800,45 @@ mod tests {
         .expect("schema valid");
         fs::write(temp.path().join("hive-source.json"), "{}").expect("source marker");
         assert!(call(temp.path(), "list", &[]).is_err());
+    }
+
+    #[test]
+    fn notice_is_read_only_and_requires_the_exact_host_and_session() {
+        let (temp, _) = fixture();
+        assert_eq!(
+            pending_notice(temp.path(), "review-1", "codex", "fixture-session").expect("empty"),
+            0
+        );
+        let added = add(temp.path());
+        let path = temp.path().join(".hive/runs/review-1/POLICY-REVIEW.md");
+        let before = fs::read(&path).expect("book");
+        for _ in 0..2 {
+            assert_eq!(
+                pending_notice(temp.path(), "review-1", "codex", "fixture-session").expect("bound"),
+                1
+            );
+        }
+        assert_eq!(
+            pending_notice(temp.path(), "review-1", "codex", "another-session")
+                .expect("other session"),
+            0
+        );
+        assert!(pending_notice(temp.path(), "review-1", "claude", "fixture-session").is_err());
+        assert_eq!(fs::read(path).expect("unchanged"), before);
+        call(
+            temp.path(),
+            "reject",
+            &[
+                "--candidate",
+                added["book"]["candidates"][0]["id"].as_str().expect("id"),
+                "--confirm",
+                added["book_digest"].as_str().expect("digest"),
+            ],
+        )
+        .expect("reject");
+        assert_eq!(
+            pending_notice(temp.path(), "review-1", "codex", "fixture-session").expect("reviewed"),
+            0
+        );
     }
 }

@@ -54,6 +54,12 @@ fn main() {
         "src/policy/native.rs",
         "src/policy/configure.rs",
         "src/main.rs",
+        "src/run.rs",
+        "src/run/policy_review.rs",
+        "../hive-core/src/run.rs",
+        "../../schemas/host-policy-intent.schema.json",
+        "../../schemas/policy-review.schema.json",
+        "../../schemas/run-status.schema.json",
         "../hive-core/src/policy.rs",
         "../hive-core/src/lib.rs",
     ] {
