@@ -108,7 +108,9 @@ class VectorRuntimeAcceptance(unittest.TestCase):
         handle = observer.api.OpenProcess(0x00101000,False,os.getpid())
         self.assertTrue(handle)
         try:
-            self.assertTrue(os.path.samefile(observer.image(handle),sys.executable))
+            # Windows venv launchers run the base interpreter image in this process.
+            executable = getattr(sys, "_base_executable", None) or sys.executable
+            self.assertTrue(os.path.samefile(observer.image(handle), executable))
             self.assertGreater(observer.memory(handle),0)
             self.assertTrue(observer.live(handle))
         finally:
