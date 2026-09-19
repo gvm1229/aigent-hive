@@ -477,3 +477,6 @@
 | [passed](runs/20260919T054249-6814127966c2.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T054309-33e4e13074a5.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T054323-4147d662c40d.md) | 중복 검사 비용 축소 뒤 고정 지식 조회 재비교 | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054447-4a9e232489b0.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054521-0f14088c8b42.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054656-9b4165cadab7.md) | 대표 프로젝트 설정의 변경 전후 파일·결과 비교 | 80b26734ebd9cccba01a8d2aff72d78d3cb1c06c | Windows-11-10.0.26200-SP0 |

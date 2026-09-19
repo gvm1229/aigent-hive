@@ -18,10 +18,10 @@
 | 소스 지식 | `crates/hive-cli/src/source_wiki.rs` | 소스 전용 조회 경계 유지; 소비자 경로와 무리한 통합 제외 |
 | 호스트 행동 | `harness/skills/knowledge-{capture,recall}/` | 최소 자료 전달, 중복 기록 방지, 실패 이유와 다음 행동 표시 |
 
-- [ ] [RFK-001] 합성 결정·질문·기대 근거 20개 이상의 고정 평가 자료와 기존 결과 기록
-  - state: agent-owned; depends: RFB-002
-- [ ] [RFK-002] 저장·조회 책임 분리, 범위 판정과 코드 변경에 따른 문맥 유효성 검사, 기존 CLI·결과 호환성 검증
-  - state: agent-owned; depends: RFK-001
+- [x] [RFK-001] 합성 결정·질문·기대 근거 20개 이상의 고정 평가 자료와 기존 결과 기록
+  - state: complete; depends: RFB-002; evidence: repo:tests/results/runs/20260918T173211-8f6954125afd.md#sha256:c00138d57c64b0fa4034202a9e702363e1da2f00f934eb7073a413600394d881
+- [x] [RFK-002] 저장·조회 책임 분리, 범위 판정과 코드 변경에 따른 문맥 유효성 검사, 기존 CLI·결과 호환성 검증
+  - state: complete; depends: RFK-001; evidence: repo:tests/results/runs/20260919T053227-5fb662be3b1e.md#sha256:5ad138d4bd7be03a54861f8bbb5677f20c28905f202c8d1347ff8d2fec600769
 - [ ] [RFK-003] 고정 자료의 재평가, 새 대화 전달 묶음의 정확성·중복 기록·지연·질문 횟수 비교
   - state: agent-owned; depends: RFK-002
 

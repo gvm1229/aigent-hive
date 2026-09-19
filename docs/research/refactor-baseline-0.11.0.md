@@ -84,3 +84,19 @@
 - 판정: 정확한 근거·중복 저장·읽기 전용 계약은 통과. 전체 p95는 초기 목표 안이지만 질문별 변동과 추가 정본 검사의 비용을 고려하면 모든 지연 기준 통과로 확대 불가. 큰 자료의 release 성능은 별도 검증 대상
 - 비밀값 검사 순서 변경 실험은 거부 시험 6개 통과에도 일관된 지연 개선이 없어 원래 코드로 복원. 해당 실험의 자료를 최종 성능 통과 근거로 사용하지 않는 경계
 - 원자료·분산·표본·파일 지문: `tests/work/refactor-knowledge-comparison-1/`, `refactor-knowledge-paired-1/`; 복원된 최종 제품의 지문으로 후속 비교 필요
+
+## 설정 파일과 기준 검증 정합화
+
+- [변경 전후 대표 설정](../../tests/results/runs/20260919T054656-9b4165cadab7.md): Windows Codex에서 보존된 실행 파일과 현재 CLI의 미리 보기·적용·재적용·검증·잘못된 입력 거부를 실제 실행
+- 두 실행 파일의 action·code·종료 코드 동일. 미리 보기·검증·거부는 쓰기 0건, 재적용 파일 지문 동일, 사용자 지침 앞부분·외부 파일 바이트 보존
+- 추가 파일은 조건부 참조 4개, 삭제 0개. 기존 파일 차이는 세 Skill 본문·선택 대장·버전·소유권 지문과 격리 대상별 파생 지식 등록·색인
+- `harness.toml`의 변경 키는 `harness_version`, `source_release_version` 두 개. 설정값과 기능 기본값 차이 없음
+- 전체 파일 지도와 SHA-256은 `tests/work/refactor-setup-comparison-1/comparison.json` 보존. 전역 실설치·다른 운영체제·실제 호스트 실행의 증명 제외
+- [현재 전체 Rust 회귀](../../tests/results/runs/20260919T053227-5fb662be3b1e.md): 934개 통과, 4개 제외. 제외 사유는 동의된 선택형 실행 환경, 50,000개 기밀 자료, release 전용 묶음·조회 성능의 별도 조건
+- 현재 사실의 과거 대기 상태·버전별 복구 범위 정정 후 두 언어 31쌍의 주장과 모듈 이동 대조. `153cc537`에서 위키 재색인·오류 0건·출처 경고 0건 확인
+
+재현 자료의 저장소 보존본: [초기 CLI](../../tests/results/refactor-0.11.0/cli-baseline.json),
+[지식 CLI](../../tests/results/refactor-0.11.0/knowledge-cli.json),
+[교대 측정](../../tests/results/refactor-0.11.0/knowledge-paired.json),
+[설정 파일 지도](../../tests/results/refactor-0.11.0/setup-files.json).
+합성 자료·실행 파일 지문·원시 측정 표본의 보존이며 실제 사용자 데이터 포함 없음.
