@@ -245,15 +245,59 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
         self.configure("codex", "recover")
         self.assertEqual(snapshot_tree(self.target), before)
 
+    def test_generated_command_denies_checker_startup_and_process_failure(self):
+        before = snapshot_tree(self.target)
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                preview = self.configure(host, "preview")["data"]["preview"]
+                command = preview["after"][0]["value"]["hooks"][0]["command"]
+                self.assertIn(str(self.hive_binary), command)
+                def quote(value):
+                    return "'" + value.replace("'", "''" if os.name == "nt" else "'\\''") + "'"
+
+                executable = quote(str(self.hive_binary))
+                python = quote(os.sys.executable)
+                failures = (
+                    command.replace(str(self.hive_binary), str(self.work_root / "missing checker.exe"), 1),
+                    command.replace(f"'--host' '{host}'", "'--host' 'unsupported-fixture'", 1),
+                    command.replace(executable, f"{python} '-c' 'pass'", 1),
+                    command.replace(executable, f"{python} '-c' 'import sys;print(sys.stdin.read());sys.exit(3)'", 1),
+                )
+                for failing_command in failures:
+                    self.assertNotEqual(failing_command, command)
+                    process = subprocess.run(failing_command, shell=True, input="PRIVATE-SENTINEL",
+                        capture_output=True, text=True, encoding="utf-8", timeout=20, cwd=self.target)
+                    self.assertEqual(process.returncode, 0, process.stderr)
+                    self.assertEqual(process.stderr, "")
+                    response = json.loads(process.stdout)
+                    if host == "antigravity":
+                        self.assertEqual(response["decision"], "deny")
+                    else:
+                        self.assertEqual(response["hookSpecificOutput"]["permissionDecision"], "deny")
+                    self.assertIn("repair the registered checker", process.stdout)
+                    self.assertNotIn("PRIVATE-SENTINEL", process.stdout)
+                    self.assertEqual(snapshot_tree(self.target), before)
+
     def test_generated_command_executes_the_native_protocol_without_a_model(self):
-        preview = self.configure("codex", "preview")["data"]["preview"]
-        command = preview["after"][0]["value"]["hooks"][0]["command"]
-        payload = {"cwd": str(self.target), "hook_event_name": "PreToolUse", "tool_name": "apply_patch",
-                   "tool_input": {"command": "*** Begin Patch\n*** Delete File: .hive/config/harness.toml\n*** End Patch"}}
-        process = subprocess.run(command, shell=True, input=json.dumps(payload), capture_output=True,
-                                 text=True, encoding="utf-8", timeout=20, cwd=self.target)
-        self.assertEqual(process.returncode, 0, process.stderr)
-        self.assertEqual(json.loads(process.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+        before = snapshot_tree(self.target)
+        for host in ("codex", "claude", "antigravity"):
+            preview = self.configure(host, "preview")["data"]["preview"]
+            command = preview["after"][0]["value"]["hooks"][0]["command"]
+            for path in ("ordinary.txt", ".hive/config/harness.toml"):
+                payload = NativePolicyProtocolTests.payload(self, host, path)
+                process = subprocess.run(command, shell=True, input=json.dumps(payload), capture_output=True,
+                                         text=True, encoding="utf-8", timeout=20, cwd=self.target)
+                self.assertEqual(process.returncode, 0, process.stderr)
+                response = json.loads(process.stdout)
+                if path == "ordinary.txt":
+                    if host == "antigravity":
+                        self.assertEqual(response["decision"], "ask")
+                        self.assertNotIn("permissionOverrides", response)
+                    else:
+                        self.assertEqual(response, {})
+                else:
+                    NativePolicyProtocolTests.assert_denied(self, host, response)
+        self.assertEqual(snapshot_tree(self.target), before)
 
     def test_explicit_run_notice_binds_host_session_and_never_requests_continuation(self):
         base = self.target

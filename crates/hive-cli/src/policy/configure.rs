@@ -109,15 +109,41 @@ fn command(
             .map(|arg| format!("'{}'", arg.replace('\'', "''")))
             .collect::<Vec<_>>()
             .join(" ");
+        if event == "PreToolUse" {
+            let failure = if host == "antigravity" {
+                "@{decision='deny';reason='Hive policy checker failed; repair the registered checker before file edits'}"
+            } else {
+                "@{hookSpecificOutput=@{hookEventName='PreToolUse';permissionDecision='deny';permissionDecisionReason='Hive policy checker failed; repair the registered checker before file edits'}}"
+            };
+            // Host command errors are not necessarily blocking. Capture output until the
+            // checker succeeds; do not forward an execution failure or partial output.
+            return Ok(format!(
+                "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; try {{ $hiveResponse = & {quoted} 2>$null; if ($LASTEXITCODE -ne 0 -or -not $hiveResponse) {{ throw 'checker failed' }}; $hiveResponse }} catch {{ {failure} | ConvertTo-Json -Depth 4 -Compress }}\""
+            ));
+        }
         Ok(format!(
             "powershell.exe -NoProfile -NonInteractive -Command \"& {quoted}\""
         ))
     } else {
-        Ok(args
+        let quoted = args
             .iter()
             .map(|arg| format!("'{}'", arg.replace('\'', "'\\''")))
             .collect::<Vec<_>>()
-            .join(" "))
+            .join(" ");
+        if event == "PreToolUse" {
+            let reason =
+                "Hive policy checker failed; repair the registered checker before file edits";
+            let failure = if host == "antigravity" {
+                json!({"decision":"deny","reason":reason})
+            } else {
+                json!({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":reason}})
+            };
+            let failure = failure.to_string().replace('\'', "'\\''");
+            return Ok(format!(
+                "if hive_response=$({quoted} 2>/dev/null) && [ -n \"$hive_response\" ]; then printf '%s\\n' \"$hive_response\"; else printf '%s\\n' '{failure}'; fi"
+            ));
+        }
+        Ok(quoted)
     }
 }
 
