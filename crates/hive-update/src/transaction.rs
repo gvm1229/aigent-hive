@@ -1681,17 +1681,18 @@ fn write_new_target_file(
     let (parent, file_name) = capability_parent(target.dir, relative, true)?.ok_or_else(|| {
         UpdateError::Internal("backup parent disappeared during creation".to_owned())
     })?;
-    let mut options = CapOpenOptions::new();
-    options
-        .write(true)
-        .create_new(true)
-        .follow(FollowSymlinks::No);
-    let mut file = parent
-        .open_with(&file_name, &options)
-        .map_err(|error| UpdateError::Conflict(format!("cannot create backup file: {error}")))?;
-    file.write_all(bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|error| UpdateError::Internal(format!("cannot persist backup file: {error}")))?;
+    hive_core::file_ops::stage(&parent, &file_name, bytes, |_| {
+        Ok::<_, std::convert::Infallible>(())
+    })
+    .map_err(|error| match error {
+        hive_core::file_ops::StageError::Create(error) => {
+            UpdateError::Conflict(format!("cannot create backup file: {error}"))
+        }
+        hive_core::file_ops::StageError::Configure(never) => match never {},
+        hive_core::file_ops::StageError::Write(error) => {
+            UpdateError::Internal(format!("cannot persist backup file: {error}"))
+        }
+    })?;
     sync_capability_directory(&parent, relative)
 }
 
@@ -1745,19 +1746,18 @@ fn write_atomic_relative(
         std::process::id(),
         TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
-    let mut options = CapOpenOptions::new();
-    options
-        .write(true)
-        .create_new(true)
-        .follow(FollowSymlinks::No);
-    let mut temporary = parent
-        .open_with(&temporary_name, &options)
-        .map_err(|error| UpdateError::Internal(format!("cannot create atomic temp: {error}")))?;
-    temporary
-        .write_all(bytes)
-        .and_then(|()| temporary.sync_all())
-        .map_err(|error| UpdateError::Internal(format!("cannot persist atomic temp: {error}")))?;
-    drop(temporary);
+    hive_core::file_ops::stage(&parent, &temporary_name, bytes, |_| {
+        Ok::<_, std::convert::Infallible>(())
+    })
+    .map_err(|error| match error {
+        hive_core::file_ops::StageError::Create(error) => {
+            UpdateError::Internal(format!("cannot create atomic temp: {error}"))
+        }
+        hive_core::file_ops::StageError::Configure(never) => match never {},
+        hive_core::file_ops::StageError::Write(error) => {
+            UpdateError::Internal(format!("cannot persist atomic temp: {error}"))
+        }
+    })?;
     if let Err(error) = parent.rename(&temporary_name, &parent, &file_name) {
         let _ = parent.remove_file(&temporary_name);
         return Err(UpdateError::Internal(format!(
