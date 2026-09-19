@@ -465,3 +465,15 @@
 | [passed](runs/20260919T052051-1aa19aaa6ca3.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T052144-7300e8843dfb.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T052231-4f585bc8bb92.md) | 정책 후보 검토와 지침 참조의 출시 목록 검사 | 9c288fe2b9e3cb88e3e4c1e0ca54ebb99d27eb4b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052508-4b34ca16c7c5.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052542-7f8867819ab5.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052700-196fb74d8558.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T052857-8f53d8ee09ff.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052916-5fd124249784.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052928-e80b522a654f.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T053227-5fb662be3b1e.md) | 개발 검증: cargo.EXE | 4afd5ba4483d98f63ae42c065837f9b010506657 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T053739-554f9f2a6983.md) | 변경 전후 실행 파일의 고정 지식 조회 비교 | 153cc537b290a3153aa37e0a666d4281b9c6d937 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054030-25d24499525d.md) | 실행 순서를 교대한 동일 지식 조회 지연 재측정 | 53d30cd76253f28deade9a7e3734dff483fc1ce5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054249-6814127966c2.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054309-33e4e13074a5.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054323-4147d662c40d.md) | 중복 검사 비용 축소 뒤 고정 지식 조회 재비교 | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
