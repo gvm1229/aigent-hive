@@ -58,10 +58,13 @@ class NativePolicyProtocolTests(Phase1CliTestCase):
             with self.subTest(host=host):
                 self.assert_denied(host, self.invoke_native(
                     host, self.payload(host, ".hive/config/harness.toml")))
-                self.assertEqual(self.invoke_native(
-                    host, self.payload(host, "src/application.rs")), {})
-                self.assertEqual(self.invoke_native(
-                    host, self.payload(host, ".claude/user-owned-note.md")), {})
+                for path in ("src/application.rs", ".claude/user-owned-note.md"):
+                    normal = self.invoke_native(host, self.payload(host, path))
+                    if host == "antigravity":
+                        self.assertEqual(normal["decision"], "ask")
+                        self.assertNotIn("permissionOverrides", normal)
+                    else:
+                        self.assertEqual(normal, {})
         self.assertEqual(snapshot_tree(self.target), before)
 
     def test_malformed_and_oversized_input_cannot_be_reported_as_allow(self):
@@ -88,9 +91,13 @@ class NativePolicyProtocolTests(Phase1CliTestCase):
             expected_stop = {"decision": "allow"} if host == "antigravity" else {}
             self.assertEqual(self.invoke_native(host, "not JSON", "Stop"), expected_stop)
             event = "PreInvocation" if host == "antigravity" else "SessionStart"
-            context = self.invoke_native(host, {}, event)
+            context = self.invoke_native(host, {"invocationNum": 0}, event)
+            self.assertTrue(context)
             self.assertLess(len(json.dumps(context)), 1024)
             self.assertNotIn("permissionDecision", json.dumps(context))
+        self.assertEqual(self.invoke_native("antigravity", {"invocationNum": 1}, "PreInvocation"), {})
+        allowed = self.invoke_native("antigravity", self.payload("antigravity", "ordinary.txt"))
+        self.assertEqual(allowed["decision"], "ask")
         self.assertEqual(snapshot_tree(self.target), before)
 
 

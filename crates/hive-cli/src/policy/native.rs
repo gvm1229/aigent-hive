@@ -184,7 +184,10 @@ fn respond(host: Host, event: &str, target: &Path, payload: &Value) -> Value {
         || (host != Host::Antigravity && event == "SessionStart")
     {
         return match host {
-            Host::Antigravity => json!({"injectSteps":[{"ephemeralMessage":CONTEXT}]}),
+            Host::Antigravity if payload["invocationNum"].as_u64() == Some(0) => {
+                json!({"injectSteps":[{"ephemeralMessage":CONTEXT}]})
+            }
+            Host::Antigravity => json!({}),
             _ => {
                 json!({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":CONTEXT}})
             }
@@ -195,6 +198,10 @@ fn respond(host: Host, event: &str, target: &Path, payload: &Value) -> Value {
     }
     let checked = check_files(host, target, payload);
     match checked {
+        // Antigravity requires a decision. "allow" grants tool permission; "ask" retains its
+        // native permission review and respects prior Always Allow settings instead.
+        Ok(Decision::Allow) if host == Host::Antigravity => json!({"decision":"ask",
+            "reason":"Hive file checks passed; host permission review still applies"}),
         Ok(Decision::Allow) => json!({}), // Never override another host permission decision.
         Ok(_) => deny(
             host,
@@ -328,5 +335,35 @@ mod tests {
             respond(Host::Claude, "Stop", root.path(), &json!({})),
             json!({})
         );
+    }
+
+    #[test]
+    fn antigravity_uses_required_permission_decision_and_injects_static_context_only_at_start() {
+        let root = tempfile::tempdir().expect("root");
+        let payload = json!({"workspacePaths":[root.path()],"toolCall":{"name":"write_to_file","args":{"TargetFile":"src/app.rs"}}});
+        assert_eq!(
+            respond(Host::Antigravity, "PreToolUse", root.path(), &payload)["decision"],
+            "ask"
+        );
+        let start = respond(
+            Host::Antigravity,
+            "PreInvocation",
+            root.path(),
+            &json!({"invocationNum":0}),
+        );
+        assert!(start["injectSteps"][0]["ephemeralMessage"]
+            .as_str()
+            .is_some());
+        for payload in [
+            json!({"invocationNum":1}),
+            json!({"invocationNum":-1}),
+            json!({}),
+        ] {
+            assert_eq!(
+                respond(Host::Antigravity, "PreInvocation", root.path(), &payload),
+                json!({})
+            );
+        }
+        assert_eq!(std::fs::read_dir(root.path()).expect("readonly").count(), 0);
     }
 }
