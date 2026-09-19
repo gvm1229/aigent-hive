@@ -12,11 +12,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 28/35 완료
+- 현재 등록 항목: 29/35 완료
 
-- `agent-owned`: `RFR-001`, `RFT-004`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `HK-003`, `HK-004`, `RFH-002`, `RFH-003`, `RB104-004`
+- `awaiting-external-evidence`: `HK-003`, `HK-004`, `RFR-001`, `RFH-002`, `RFH-003`, `RB104-004`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -48,9 +48,13 @@
 - 등록된 Windows 명령을 직접 실행하면 보호 파일 거부·일반 파일 중립 정상. 이 결과를 앱 호출의 증거로 대체 금지
 - `tests/work/codex-policy-acceptance-1/`에 설정·실행 파일·실패 기록 보존. 사용자 보류 해제 전 신뢰 우회나 실제 앱 재시험 없음
 - Claude·Antigravity 실제 수용, 15초 감시·진행 중 추론 중단은 미검증. 버전 조회·모사 시험과 구분
-- macOS·Windows CI에 공통 파일 처리·설정·갱신 모듈 추가. 다른 운영체제 실제 실행 결과는 아직 대기
-- [초안 PR #60](https://github.com/gvm1229/aigent-hive/pull/60)으로 `develop` 대상 CI 검증 중. 번호 시험판 미게시, 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
-- 첫 CI는 새 체크아웃의 `0.10.3` PowerShell 줄바꿈 변환과 독립 스캐폴드의 참조 파일 기대값에서 실패. 동결 바이트 변경 없이 변환 예외 보완, 세 호스트 참조 검증 연결 후 재검증 준비
+- [세 운영체제 CI](https://github.com/gvm1229/aigent-hive/actions/runs/35438802989) 통과: Linux Rust 976개·4개 제외, macOS 관련 모듈 730개·1개 제외, Windows 관련 모듈 704개·1개 제외
+- Linux Python 926개 중 917개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T111250-b3b407ccb780.md)에 보존
+- [초안 PR #60](https://github.com/gvm1229/aigent-hive/pull/60)의 제품 코드 `4ea17dc2`에서 필수 CI 통과. 번호 시험판 미게시, 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
+- 첫 CI는 새 체크아웃의 `0.10.3` PowerShell 줄바꿈 변환과 독립 스캐폴드의 참조 파일 기대값에서 실패. 동결 바이트 변경 없이 변환 예외 보완, 세 호스트 참조 검증 연결 후 재검증 통과. Rust 1.98의 새 문법 검사도 경고 억제 없이 보완
+
+- 독립 에이전트 소유 구현·검증 작업 0개. 보류한 호스트 수용 전 전체 계획 완료·시험판 수용 완료 주장 없음
+- 완료 근거의 문서 전용 후속 커밋은 관련 문서 검사로 검증. 제품 코드 불변인 자동 CI 재실행은 별도로 진행 가능
 
 ## 이전 근거
 

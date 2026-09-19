@@ -48,8 +48,8 @@
   - state: complete; depends: RFT-001; evidence: repo:tests/results/runs/20260919T053227-5fb662be3b1e.md#sha256:5ad138d4bd7be03a54861f8bbb5677f20c28905f202c8d1347ff8d2fec600769
 - [x] [RFT-003] 프로젝트 생성과 사용자 설치의 순차 전환, 기존 변경 계획·지문·거부 결과·중단 후 복구의 동등성 비교
   - state: complete; depends: RFT-002; evidence: repo:tests/results/runs/20260919T053227-5fb662be3b1e.md#sha256:5ad138d4bd7be03a54861f8bbb5677f20c28905f202c8d1347ff8d2fec600769
-- [ ] [RFT-004] 프로젝트 갱신까지 공통 처리 연결, 장애 삽입·동시 변경·세 운영체제 수용과 기존 이관 검증
-  - state: agent-owned; depends: RFT-003
+- [x] [RFT-004] 프로젝트 갱신까지 공통 처리 연결, 장애 삽입·동시 변경·세 운영체제 수용과 기존 이관 검증
+  - state: complete; depends: RFT-003; evidence: repo:tests/results/runs/20260919T111250-b3b407ccb780.md#sha256:916595dd12f92f4f017b9dbd3c1a55e07a471c40a2f32534a46433870dd72454
 
 권장 모듈 경계:
 
