@@ -49,6 +49,7 @@
     "orchestration-authority.schema.json",
     "orchestration-trust-root.schema.json",
     "policy-evaluation.schema.json",
+    "policy-review.schema.json",
     "project-registry.schema.json",
     "prompt-refinement-input.schema.json",
     "prompt-refinement-lifecycle.schema.json",
@@ -112,6 +113,7 @@
     "portable-knowledge-bundle",
     "provider-neutral-continuation",
     "reviewed-directory-scan",
+    "run-policy-review",
     "signed-offline-update"
   ],
   "migrations": [
@@ -134,10 +136,12 @@
     ".agents/skills/custom-subagent-create/SKILL.md",
     ".agents/skills/judge-evidence/SKILL.md",
     ".agents/skills/knowledge-capture/SKILL.md",
+    ".agents/skills/knowledge-capture/references/ingest.md",
     ".agents/skills/knowledge-import/SKILL.md",
     ".agents/skills/knowledge-maintain/SKILL.md",
     ".agents/skills/knowledge-promote/SKILL.md",
     ".agents/skills/knowledge-recall/SKILL.md",
+    ".agents/skills/knowledge-recall/references/confidential.md",
     ".agents/skills/multi-goal/SKILL.md",
     ".agents/skills/product-update/SKILL.md",
     ".agents/skills/project-refresh/SKILL.md",
@@ -152,6 +156,8 @@
     ".agents/skills/ship/SKILL.md",
     ".agents/skills/team-execution/SKILL.md",
     ".agents/skills/usage-guard/SKILL.md",
+    ".agents/skills/usage-guard/references/control.md",
+    ".agents/skills/usage-guard/references/sensors.md",
     ".agents/skills/user-setup/SKILL.md",
     ".agents/skills/verified-workflow/SKILL.md"
   ]
