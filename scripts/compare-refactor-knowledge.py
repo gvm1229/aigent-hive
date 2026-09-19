@@ -121,17 +121,67 @@ def run(binary, work, gold):
             "queries_write_zero": True, "caller_questions": 0}
 
 
+def paired_recheck(binaries, existing, work, gold):
+    existing = existing.resolve()
+    if not existing.is_relative_to((ROOT / "tests/work").resolve()):
+        raise ValueError("existing comparison must stay under tests/work")
+    prior = json.loads((existing / "comparison.json").read_text(encoding="utf-8"))
+    if prior["gold_digest"] != digest(GOLD.read_bytes()):
+        raise ValueError("gold corpus changed")
+    snapshots = {}
+    for label, binary in binaries.items():
+        if prior[label]["binary_digest"] != digest(binary.read_bytes()):
+            raise ValueError("binary changed; this cannot qualify the prior measurement")
+        snapshots[label] = snapshot(existing / label / "user")
+        if snapshots[label] != prior[label]["files_after"]:
+            raise ValueError("stored comparison inputs changed")
+    rows = []
+    for row in gold:
+        for language in ("english", "korean"):
+            samples = {label: [] for label in binaries}
+            expected = next(item["hit_ids"] for item in prior["before"]["queries"]
+                            if item["key"] == row["key"] and item["language"] == language)
+            for iteration in range(35):
+                order = ("before", "after") if iteration % 2 == 0 else ("after", "before")
+                for label in order:
+                    result, elapsed = invoke(binaries[label], ["knowledge", "retrieve", "--user-root",
+                        existing / label / "user", "--target", existing / label / "unregistered-project",
+                        "--scope", "auto", "--query", row[f"{language}_query"], "--top-k", "5",
+                        "--byte-budget", "16384"])
+                    if [hit["item_id"] for hit in result["data"]["hits"]] != expected:
+                        raise ValueError("paired query output changed")
+                    if iteration >= 5:
+                        samples[label].append(elapsed)
+            rows.append({"key": row["key"], "language": language, "samples_ms": samples,
+                         "p95_ms": {label: sorted(values)[28] for label, values in samples.items()}})
+    for label in binaries:
+        if snapshot(existing / label / "user") != snapshots[label]:
+            raise ValueError("paired retrieval changed stored bytes")
+    result = {"schema_version": 1, "platform": platform.platform(), "gold_digest": prior["gold_digest"],
+              "binary_digests": {label: prior[label]["binary_digest"] for label in binaries},
+              "method": "alternate order for every pair; five warmups then thirty fresh CLI samples per query",
+              "rows": rows, "same_retrieval_results": True, "queries_write_zero": True,
+              "query_p95_over_ten_percent": [row["key"] + ":" + row["language"] for row in rows
+                  if row["p95_ms"]["after"] > row["p95_ms"]["before"] * 1.1]}
+    (work / "paired.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(f"Paired recheck complete; p95 increases over 10%: {len(result['query_p95_over_ten_percent'])}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--before", type=Path, required=True)
     parser.add_argument("--after", type=Path, required=True)
     parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--paired-existing", type=Path)
     args = parser.parse_args()
     work = args.work.resolve()
     if not work.is_relative_to((ROOT / "tests/work").resolve()) or work.exists():
         raise ValueError("use a new exact directory under tests/work; never overwrite comparison evidence")
     work.mkdir(parents=True)
     gold = cases()
+    if args.paired_existing:
+        paired_recheck({"before": args.before.resolve(), "after": args.after.resolve()}, args.paired_existing, work, gold)
+        return
     report = {"schema_version": 1, "platform": platform.platform(), "gold_digest": digest(GOLD.read_bytes()),
         "gold_subset": "11 existing user-root facts, 22 bilingual queries; project cases remain in Rust qualification",
         "warmups": 5, "samples": 30, "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
