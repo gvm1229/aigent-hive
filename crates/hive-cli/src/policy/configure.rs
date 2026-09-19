@@ -494,7 +494,17 @@ fn inspect_or_recover(
     let Some(bytes) = receipt else {
         return Ok(result(
             "hive.policy-hooks-status",
-            json!({"configured":false,"host_loaded":"unverified","actual_effect":"unverified"}),
+            json!({"host":host,"config_path":config_path,"receipt_path":receipt_path,
+                "host_version":null,"host_version_reason":"configuration does not observe the executing host",
+                "operating_system":std::env::consts::OS,
+                "target_digest":sha256_digest(target.requested_path().to_string_lossy().as_bytes()),
+                "policy_digest":null,"current_policy_digest":env!("HIVE_NATIVE_POLICY_DIGEST"),
+                "observed_config_digest":digest(config.as_deref()),"approved_config_digest":null,
+                "receipt_present":false,"configured":config.is_none().then_some(false),
+                "configuration_state":if config.is_some(){"unowned-or-receipt-missing"}else{"absent"},
+                "policy_current":null,"pending":null,
+                "host_loaded":"unverified","event_matched":"unverified","checker_executed":"unverified",
+                "denial_observed":"unverified","actual_effect":"unverified","authorizes_model_execution":false}),
             Vec::new(),
         ));
     };
@@ -552,6 +562,8 @@ fn inspect_or_recover(
         json!({"host":host,"config_path":config_path,"receipt_path":receipt_path,
         "host_version":null,"host_version_reason":"configuration does not observe the executing host",
         "operating_system":std::env::consts::OS,"policy_digest":intent.policy_digest,"target_digest":intent.target_digest,
+        "current_policy_digest":env!("HIVE_NATIVE_POLICY_DIGEST"),"receipt_present":true,
+        "configuration_state":if configured{"configured"}else{"not-configured-or-pending"},
         "observed_config_digest":digest(observed.as_deref()),"approved_config_digest":intent.after_digest,
         "configured":configured,"policy_current":intent.policy_digest==env!("HIVE_NATIVE_POLICY_DIGEST"),
         "pending":digest(observed.as_deref())!=intent.after_digest && !configured,

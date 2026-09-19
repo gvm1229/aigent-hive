@@ -147,6 +147,24 @@ class NativePolicyConfigurationTests(Phase1CliTestCase):
                 self.assertEqual(path.read_bytes(), foreign)
                 self.assertFalse(self.configure(host, "status")["data"]["configured"])
 
+    def test_missing_receipt_reports_unknown_configuration_without_inventing_host_effect(self):
+        empty = self.configure("codex", "status")["data"]
+        self.assertFalse(empty["configured"])
+        self.assertFalse(empty["receipt_present"])
+        preview = self.configure("codex", "preview")["data"]["preview"]
+        self.configure("codex", "apply", preview["approval_digest"])
+        (self.target / ".hive/config/host-policy-hooks/codex.json").unlink()
+        before = snapshot_tree(self.target)
+        unknown = self.configure("codex", "status")["data"]
+        self.assertIsNone(unknown["configured"])
+        self.assertEqual(unknown["configuration_state"], "unowned-or-receipt-missing")
+        self.assertIsNone(unknown["policy_digest"])
+        self.assertIsNone(unknown["host_version"])
+        for stage in ("host_loaded", "event_matched", "checker_executed", "denial_observed", "actual_effect"):
+            self.assertEqual(empty[stage], "unverified")
+            self.assertEqual(unknown[stage], "unverified")
+        self.assertEqual(before, snapshot_tree(self.target))
+
     def test_recovery_reuses_verified_claims_and_preserves_a_foreign_racer(self):
         path = self.target / ".codex/hooks.json"
         path.parent.mkdir()
