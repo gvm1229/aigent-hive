@@ -1898,18 +1898,28 @@ fn is_protected_hive_path(path: &Path) -> bool {
         ".hive/LICENSE-AIGENT-HIVE.txt",
         ".hive/README.md",
         ".hive/setup-answers.yml",
+        ".hive/directives/00-editing-discipline.md",
     ]
     .iter()
-    .any(|owned| path == Path::new(owned))
-        || [
-            ".hive/config",
-            ".hive/hooks",
-            ".hive/knowledge",
-            ".hive/team",
-            ".hive/runs",
-        ]
-        .iter()
-        .any(|prefix| path == Path::new(prefix) || path.starts_with(prefix))
+    .any(|owned| {
+        #[cfg(windows)]
+        let matches_owned = path == Path::new(&owned.to_ascii_lowercase());
+        #[cfg(not(windows))]
+        let matches_owned = path == Path::new(owned);
+        matches_owned
+    }) || [
+        ".hive/config",
+        ".hive/hooks",
+        ".hive/knowledge",
+        ".hive/team",
+        ".hive/runs",
+        ".hive/index",
+        ".hive/backups",
+        ".hive/runtime",
+        ".hive/language-packs",
+    ]
+    .iter()
+    .any(|prefix| path == Path::new(prefix) || path.starts_with(prefix))
 }
 
 fn update_integrity_guard(input: &HookInput) -> Result<HookResult, RenderError> {
@@ -2205,6 +2215,40 @@ mod tests {
             "aigent-hive-cli-{name}-{}-{nonce}",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn file_guard_covers_manifest_owned_hive_state_without_claiming_foreign_paths() {
+        let manifest: toml::Value =
+            toml::from_str(include_str!("../../../harness/manifest.toml")).expect("manifest");
+        for entry in manifest["paths"].as_array().expect("paths") {
+            let pattern = entry["pattern"].as_str().expect("path pattern");
+            if !pattern.starts_with(".hive/") {
+                continue;
+            }
+            let path = pattern.strip_suffix("/**").map_or_else(
+                || pattern.to_owned(),
+                |prefix| format!("{prefix}/fixture.txt"),
+            );
+            assert!(
+                !path.contains('*'),
+                "review newly introduced manifest pattern: {pattern}"
+            );
+            assert!(
+                super::is_protected_hive_path(Path::new(&path)),
+                "unprotected manifest state: {pattern}"
+            );
+        }
+        for foreign in [
+            "src/.hive/runtime/log.json",
+            ".hive/runtime-notes.txt",
+            ".claude/user-owned-note.md",
+        ] {
+            assert!(
+                !super::is_protected_hive_path(Path::new(foreign)),
+                "foreign path: {foreign}"
+            );
+        }
     }
 
     #[test]

@@ -56,8 +56,10 @@ class NativePolicyProtocolTests(Phase1CliTestCase):
         before = snapshot_tree(self.target)
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
-                self.assert_denied(host, self.invoke_native(
-                    host, self.payload(host, ".hive/config/harness.toml")))
+                for protected in (".hive/config/harness.toml", ".hive/LICENSE-AIGENT-HIVE.txt", ".hive/README.md", ".hive/index/hive.sqlite3",
+                                  ".hive/backups/restore.json", ".hive/runtime/usage-guard/halt.json",
+                                  ".hive/language-packs/policy.json", ".hive/directives/00-editing-discipline.md"):
+                    self.assert_denied(host, self.invoke_native(host, self.payload(host, protected)))
                 for path in ("src/application.rs", ".claude/user-owned-note.md"):
                     normal = self.invoke_native(host, self.payload(host, path))
                     if host == "antigravity":
