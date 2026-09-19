@@ -11,9 +11,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 25/35 완료
+- 현재 등록 항목: 26/35 완료
 
-- `agent-owned`: `HK-003`, `HK-004`, `RFR-001`, `RFK-003`, `RFH-002`, `RFH-003`, `RFP-003`, `RFP-004`, `RFT-004`
+- `agent-owned`: `HK-003`, `HK-004`, `RFR-001`, `RFK-003`, `RFH-002`, `RFH-003`, `RFP-004`, `RFT-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `RB104-004`
 - `blocked`: 없음
