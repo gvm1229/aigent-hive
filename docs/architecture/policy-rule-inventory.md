@@ -21,7 +21,7 @@
 | `canonical-freshness` | 소비자·전역, 지식 계약 | `RagStore::checked_retrieve`, 반환 근거와 원본 지문 확인 | `knowledge retrieve`; 저장소·조회 회귀 | 조회 경로 강제 |
 | `knowledge-scope` | 소비자·전역, `01-project-knowledge` | `derive_optional_current_collection_authority`, 반환 전 필터 | 일반·명시 프로젝트·기밀 조회; 지식 통합 시험 | 강제 |
 | `reviewed-memory` | 전역·소비자, 기록 Skill | `plan_remember`, 출처·중복·비밀 검사 뒤 정본 저장 | `knowledge remember`; 기억 요청 회귀 | 구조 강제·의미 판단 |
-| `usage-preflight` | 소스·소비자, 사용량 지침 | `usage_control::enforce`, `run::resume`의 현재 관측 | 사용량·자동 실행 시험 | 실행 준비 강제·진행 중 추론 별도 |
+| `usage-preflight` | 소스·소비자, 사용량 지침 | `usage_control`의 공통 관측·세션 검사, `run::resume`·`loop`의 허가 직전 확인 | 사용량·자동 실행 시험 | 실행 준비 강제·진행 중 추론 별도 |
 | `exact-authority` | 소비자·전역·출시, 승인 계약 | `hive-core::orchestration`의 대상·작업·지문·세대 결합 | 위조·재사용·대상 변경 회귀 | 강제·자연어 해석 별도 |
 | `release-authority` | 출시, 활성 버전·출시 지침 | 후보 검사·게시 workflow·보호된 원격 | 버전·출시 계약 시험 | 해당 게시 경로 강제 |
 | `host-owned-model` | 전체, 아키텍처 지침 | 공급자 호출 없는 제품 경로·호스트 소유 실행 계약 | `test_host_capabilities.py`·실행 상태 시험 | 제품 경계·외부 도구 별도 |

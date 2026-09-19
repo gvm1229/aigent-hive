@@ -13,8 +13,8 @@
 
 - [x] [RFP-001] 현재 규칙→정본→코드 검사→진입 명령→시험의 대응표와 작업별 지침 읽기 비용 기록
   - state: complete; depends: RFB-001,RFB-002; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
-- [ ] [RFP-002] 이미 존재하는 판정 함수 재사용과 빠진 직접 CLI 진입 검사 보강; 동일 실패의 일관된 기존 결과 코드 유지
-  - state: agent-owned; depends: RFP-001
+- [x] [RFP-002] 이미 존재하는 판정 함수 재사용과 빠진 직접 CLI 진입 검사 보강; 동일 실패의 일관된 기존 결과 코드 유지
+  - state: complete; depends: RFP-001; evidence: repo:tests/results/runs/20260919T083543-4aa35fb79366.md#sha256:8281963d66ab25b55bd9c19d5f23a6307d98ce927efc41d81bb94c16f1606a12
 - [ ] [RFP-003] 코드로 검증되는 상세 절차의 지침 중복 축소, 정본과 현재 세 호스트 투영 동기화
   - state: agent-owned; depends: RFP-002
 - [ ] [RFP-004] 허용·거부·취소·재개·일반 질문의 전후 행동 평가와 정보량·호출 수 비교

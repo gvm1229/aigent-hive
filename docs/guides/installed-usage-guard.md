@@ -89,3 +89,17 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 새 session 기본값: 활성. Raw account·session ID 저장 없음. Native sensor 우선, CodexBar는
 별도 동의를 받은 failure-only fallback. Provider credential·API 호출·OMX/OMC·host process signal
 경로 없음.
+
+## 자동 재개와 반복 작업 준비
+
+- `0.11.0` 자동 `run resume`: 현재 호스트의 `--session-id`, 양수 `--process-id`, 실행할 `--role` 필수. 수동 복구의 기존 읽기 전용 동작 유지
+- `--user-root`에 연결된 사용자 루트를 전달하여 전역·프로젝트 정책 함께 적용. 계정 지문 생략은 센서가 계정 하나만 식별한 경우에 한정
+- 자동 재개 내부의 공통 사용량 검사 1회. 같은 실행을 위한 선행 `usage enforce` 중복 호출 제외
+- 허가 기록 직전 정책·세션 제어·중단 기록 지문 재확인. 이후 `loop` 준비와 결과 등록도 같은 결합 확인, 변경 시 거부
+- 반복 작업의 사용량 근거에 `user_root`를 선택적으로 전달 가능. 전역 정책을 사용해 발급한 허가는 같은 사용자 루트로 검증 필수
+- 새 허가 기록 형식 2와 기존 형식 1 판독 지원. 이미 발급한 같은 작업의 허가 재발급 금지
+- 초기화 차단 뒤 정확한 중단 지문의 명시적 확인과 새 측정 필수. 실행 중 모델 중단·15초 감시는 이 명령의 보장 범위 밖
+
+Windows Codex에서 [명령·사용량 검사](../../tests/results/runs/20260919T082740-2745afbd4d3d.md)
+66개 통과, POSIX 전용 4개 제외. [CLI 단위 시험](../../tests/results/runs/20260919T083543-4aa35fb79366.md)
+462개 통과, 별도 실행 환경 1개 제외. 합성 입력의 명령 결과와 상태 보존 증거이며 실제 호스트 실행·다른 운영체제 증명 제외.
