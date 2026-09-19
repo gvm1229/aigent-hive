@@ -23,7 +23,7 @@ USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset [--confirm-session-disable] [--confirm-reset <halt-digest>] --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-reset <halt-digest>] --output json
     hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
 ";
 
@@ -60,6 +60,7 @@ struct SessionArguments {
     host: Option<String>,
     action: SessionAction,
     confirm_disable: bool,
+    confirm_reset_guard_disable: bool,
     confirm_reset: Option<String>,
 }
 
@@ -417,6 +418,8 @@ enum SessionAction {
     Disable,
     Toggle,
     AcknowledgeReset,
+    EnableResetGuard,
+    DisableResetGuard,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -427,6 +430,8 @@ struct SessionControl {
     session_id_digest: String,
     process_id: u32,
     guard_enabled: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    reset_guard_disabled: bool,
     revision: u64,
 }
 
@@ -926,9 +931,11 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         "disable" => SessionAction::Disable,
         "toggle" => SessionAction::Toggle,
         "acknowledge-reset" => SessionAction::AcknowledgeReset,
+        "enable-reset-guard" => SessionAction::EnableResetGuard,
+        "disable-reset-guard" => SessionAction::DisableResetGuard,
         _ => {
             return Err(AdapterError::Input(
-                "--action must be enable, disable, toggle, or acknowledge-reset".to_owned(),
+                "--action must be enable, disable, toggle, acknowledge-reset, enable-reset-guard, or disable-reset-guard".to_owned(),
             ));
         }
     };
@@ -942,6 +949,19 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         ));
     }
     let confirm_reset = optional(&options, "--confirm-reset").map(str::to_owned);
+    let confirm_reset_guard_disable = options
+        .iter()
+        .any(|(option, _)| *option == "--confirm-reset-guard-disable");
+    if (action == SessionAction::DisableResetGuard) != confirm_reset_guard_disable
+        || (matches!(
+            action,
+            SessionAction::EnableResetGuard | SessionAction::DisableResetGuard
+        ) && confirm_disable)
+    {
+        return Err(AdapterError::Input(
+            "disable-reset-guard requires only --confirm-reset-guard-disable; other actions cannot use this confirmation".to_owned(),
+        ));
+    }
     if (action == SessionAction::AcknowledgeReset) != confirm_reset.is_some()
         || confirm_reset
             .as_deref()
@@ -959,6 +979,7 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         host: parse_optional_host(&options)?,
         action,
         confirm_disable,
+        confirm_reset_guard_disable,
         confirm_reset,
     })
 }
@@ -972,7 +993,10 @@ fn parse_key_value_options<'a>(
     let mut index = 0;
     while index < arguments.len() {
         let option = arguments[index].as_str();
-        if option == "--confirm-session-disable" {
+        if matches!(
+            option,
+            "--confirm-session-disable" | "--confirm-reset-guard-disable"
+        ) {
             if !allow_confirmation {
                 return Err(AdapterError::Input(format!("unknown option: {option}")));
             }
@@ -1164,7 +1188,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
-            "quota_reset_guard_enabled": config.quota_reset_guard_enabled,
+            "quota_reset_guard_enabled": effective_reset_enabled(&loaded, config.quota_reset_guard_enabled),
+            "quota_reset_guard_installed_enabled": config.quota_reset_guard_enabled,
             "quota_reset_guard_monitoring": false,
             "quota_reset_guard_monitoring_reason": "host-bound periodic interruption is unsupported",
             "session_override": override_state_name,
@@ -1264,9 +1289,13 @@ fn enforce_captured(
             &config,
             &binding,
             arguments.account_digest.as_deref(),
-            halt.marker
-                .as_ref()
-                .map_or(&[], |marker| marker.snapshots.as_slice()),
+            if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
+                halt.marker
+                    .as_ref()
+                    .map_or(&[], |marker| marker.snapshots.as_slice())
+            } else {
+                &[]
+            },
         );
         let refreshed = read_effective_config(
             &target,
@@ -1288,6 +1317,11 @@ fn enforce_captured(
     }
     trace.normalized.clone_from(&observation.normalized);
     trace.policy_digest.clone_from(&policy_digest);
+    // A reset-only opt-out may not authorize a measurement after its binding changed.
+    let refreshed_control = load_control(runtime, &binding)?;
+    if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
+        return Ok(policy_changed_result(&binding, &config));
+    }
     let Some(decision) = observation.decision else {
         let mut result = allowed_result(&binding, &config, &observation);
         if let Some(data) = result
@@ -1346,7 +1380,13 @@ fn enforce_captured(
                 .as_mut()
                 .and_then(serde_json::Value::as_object_mut)
             {
-                data.insert("quota_reset_guard_enabled".to_owned(), json!(true));
+                data.insert(
+                    "quota_reset_guard_enabled".to_owned(),
+                    json!(effective_reset_enabled(
+                        &loaded,
+                        config.quota_reset_guard_enabled
+                    )),
+                );
                 data.insert(
                     "quota_reset_guard_baseline_updated".to_owned(),
                     json!(changed),
@@ -2083,6 +2123,7 @@ fn acknowledge_reset(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn control_session(arguments: &SessionArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let config = read_effective_config(
@@ -2106,6 +2147,38 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
     );
     let loaded = load_control(runtime, &binding)?;
     let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
+    let reset_action = matches!(
+        arguments.action,
+        SessionAction::EnableResetGuard | SessionAction::DisableResetGuard
+    );
+    if reset_action {
+        if !currently_enabled {
+            return Err(AdapterError::Safety(
+                "enable the usage safeguard before changing reset-only protection".to_owned(),
+            ));
+        }
+        if arguments.action == SessionAction::DisableResetGuard {
+            if !arguments.confirm_reset_guard_disable {
+                return Err(AdapterError::Input(
+                    "reset-only disable requires --confirm-reset-guard-disable".to_owned(),
+                ));
+            }
+            let halt = load_halt(runtime, &binding)?;
+            if halt.state == OverrideState::Damaged
+                || halt
+                    .marker
+                    .as_ref()
+                    .is_some_and(|marker| marker.decision == "usage-reset")
+            {
+                return Err(AdapterError::Safety("acknowledge the pending reset or repair the damaged halt before reset-only disable".to_owned()));
+            }
+        } else if !config.quota_reset_guard_enabled {
+            return Err(AdapterError::Safety(
+                "the installed reset guard is disabled; a session override cannot enable it"
+                    .to_owned(),
+            ));
+        }
+    }
     if arguments.action == SessionAction::AcknowledgeReset {
         if !currently_enabled {
             return Err(AdapterError::Safety(
@@ -2118,6 +2191,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         SessionAction::Enable | SessionAction::AcknowledgeReset => true,
         SessionAction::Disable => false,
         SessionAction::Toggle => !currently_enabled,
+        SessionAction::EnableResetGuard | SessionAction::DisableResetGuard => currently_enabled,
     };
     if desired_enabled && !config.guard_enabled {
         return Err(AdapterError::Safety(
@@ -2142,6 +2216,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         session_id_digest: binding.session_digest.clone(),
         process_id: binding.process_id,
         guard_enabled: desired_enabled,
+        reset_guard_disabled: match arguments.action {
+            SessionAction::EnableResetGuard => false,
+            SessionAction::DisableResetGuard => true,
+            _ => loaded.control.as_ref().is_some_and(|control| {
+                loaded.state == OverrideState::Current && control.reset_guard_disabled
+            }),
+        },
         revision,
     };
     let desired_bytes = serde_json::to_vec(&desired)
@@ -2150,7 +2231,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
     let changed = runtime.publish_runtime(&loaded.relative, &loaded.snapshot, &desired_bytes)?;
-    let code = if desired_enabled {
+    let code = if reset_action {
+        if desired.reset_guard_disabled {
+            "hive.usage-reset-guard-disabled"
+        } else {
+            "hive.usage-reset-guard-enabled"
+        }
+    } else if desired_enabled {
         "hive.usage-session-enabled"
     } else {
         "hive.usage-session-disabled"
@@ -2162,7 +2249,9 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         status: "success",
         exit_code: 0,
         code,
-        message: if desired_enabled {
+        message: if reset_action {
+            "reset-only protection changed for this binding; threshold protection remains enabled and fresh enforce is required".to_owned()
+        } else if desired_enabled {
             "usage safeguard is enabled for the current session binding".to_owned()
         } else {
             "usage safeguard is disabled only for the current session binding".to_owned()
@@ -2176,6 +2265,9 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         next_action: None,
         data: Some(json!({
             "guard_enabled": desired_enabled,
+            "quota_reset_guard_enabled": config.quota_reset_guard_enabled && !desired.reset_guard_disabled,
+            "session_recheck_required": reset_action,
+            "authorizes_dispatch": false,
             "session_override": "current",
             "host_scope": binding.host_scope,
             "session_id_digest": binding.session_digest,
@@ -2803,6 +2895,13 @@ fn is_sha256_digest(value: &str) -> bool {
     })
 }
 
+fn effective_reset_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
+    installed_enabled
+        && !loaded.control.as_ref().is_some_and(|control| {
+            loaded.state == OverrideState::Current && control.reset_guard_disabled
+        })
+}
+
 fn effective_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
     if !installed_enabled {
         return false;
@@ -3009,6 +3108,7 @@ mod tests {
             host: Some("claude".to_owned()),
             action: SessionAction::Disable,
             confirm_disable: true,
+            confirm_reset_guard_disable: false,
             confirm_reset: None,
         })
         .expect("disable");
@@ -3162,6 +3262,7 @@ mod tests {
                         .to_owned(),
                 process_id: 1,
                 guard_enabled: true,
+                reset_guard_disabled: false,
                 revision: 1,
             }),
             state: OverrideState::Current,
@@ -3429,6 +3530,7 @@ usage_guard:
                 host: Some("codex".to_owned()),
                 action: SessionAction::Disable,
                 confirm_disable: true,
+                confirm_reset_guard_disable: false,
                 confirm_reset: None,
             })
             .is_err());
@@ -3469,6 +3571,7 @@ usage_guard:
             host: Some("codex".to_owned()),
             action: SessionAction::Disable,
             confirm_disable: true,
+            confirm_reset_guard_disable: false,
             confirm_reset: None,
         })
         .expect("exact target session control");
