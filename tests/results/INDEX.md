@@ -659,3 +659,5 @@
 | [passed](runs/20260920T130240-6249f574f68b.md) | 진단 명령의 Windows 경로 선택 누락 재현과 보완 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T130349-b91376fcbb1c.md) | 승인된 Windows 경로 보완 진단 정의 적용 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T130558-269452fd4759.md) | 경로 보완 진단 최종 결과와 정의 복원 | 05d4f8c79b8008d498c7008595e98023ee715ae0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T131317-a6897e108198.md) | 승인된 동일 진단으로 CLI·앱 비교 시험 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T131353-928518b3cbdc.md) | Antigravity 새 대화 지식 조회 시험의 읽기 전용 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
