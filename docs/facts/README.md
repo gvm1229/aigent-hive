@@ -30,6 +30,7 @@
 | 파일 훅과 셸 쓰기 경계 | [en](en/native-hook-shell-boundary.md) | [ko](ko/native-hook-shell-boundary.md) |
 | Antigravity 파일 훅 실제 수용 | [en](en/antigravity-file-hook-acceptance.md) | [ko](ko/antigravity-file-hook-acceptance.md) |
 | PowerShell 훅 종료 상태 | [en](en/powershell-hook-exit-status.md) | [ko](ko/powershell-hook-exit-status.md) |
+| Codex 훅 오류 실제 관측 | [en](en/codex-native-error-observation.md) | [ko](ko/codex-native-error-observation.md) |
 | 과거 지식과 현재 원본 | [en](en/knowledge-source-freshness.md) | [ko](ko/knowledge-source-freshness.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
