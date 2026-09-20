@@ -6,7 +6,7 @@
 > 소유 항목: `HK-004`
 
 - [ ] [HK-004] 수정에 사용하지 않은 보류 평가 자료로 기준선과 비교, 위반·오탐·시간·문맥 비용 측정
-  - state: awaiting-external-evidence; depends: HK-003; owner: 실제 호스트 비교; reason: 기존 형식의 실제 여섯 사례 비교 완료·새 형식의 독립 평가와 실패 조건 수용 대기
+  - state: awaiting-external-evidence; depends: HK-003; owner: 실제 호스트 비교; reason: 형식 3의 새 여섯 사례 비교 완료·추가 실패 조건과 전체 비용 수용 대기
 
 ## 수용 조건
 
