@@ -95,14 +95,16 @@ class VectorRuntimeAcceptance(unittest.TestCase):
                 runner.digest(alias)
 
     def test_unverified_native_handles_are_only_closed_never_terminated(self):
-        for mode in ("inspection-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
+        for mode in ("inspection-error","inspection-exit","inspection-wait-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
             observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)
             observer.api = Mock()
             observer.api.OpenProcess.return_value = 71
             observer.children = Mock(side_effect=[{42}, set() if mode == "changed-parent" else {42}])
             observer.live = Mock(side_effect=[True, False] if mode == "exited-child" else None, return_value=True)
             observer.image = Mock(return_value="approved-python")
-            if mode == "inspection-error": observer.image.side_effect = OSError("image lookup")
+            if mode.startswith("inspection-"):
+                observer.image.side_effect = OSError("image lookup")
+                observer.api.WaitForSingleObject.return_value = {"inspection-error":258,"inspection-exit":0,"inspection-wait-error":0xFFFFFFFF}[mode]
             observer.memory = Mock(return_value=1 if mode == "low-memory" else 256*1024*1024)
             parent = Mock(pid=12)
             parent.poll.side_effect = [None,1] if mode == "exited-parent" else None
@@ -111,7 +113,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             staging.is_file.return_value = mode != "missing-stage"
             staging.is_symlink.return_value = False
             with self.subTest(mode=mode), patch.object(runner.os.path,"samefile",return_value=mode != "wrong-image"):
-                if mode == "inspection-error":
+                if mode in ("inspection-error","inspection-wait-error"):
                     with self.assertRaises(OSError):
                         observer.capture(parent,"approved-python",staging)
                 else:
@@ -124,6 +126,8 @@ class VectorRuntimeAcceptance(unittest.TestCase):
                 if mode == "valid": observer.api.CloseHandle.assert_not_called()
                 else: observer.api.CloseHandle.assert_called_once_with(71)
                 observer.api.TerminateProcess.assert_not_called()
+                if mode.startswith("inspection-"):
+                    observer.api.WaitForSingleObject.assert_called_once_with(71,100)
 
     def test_native_parent_inventory_closes_snapshot_and_reports_api_errors(self):
         from types import SimpleNamespace

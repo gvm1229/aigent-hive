@@ -249,7 +249,10 @@ class WindowsChildObserver:
                 transferred = True
                 return result
             except OSError:
-                if not self.live(candidate):
+                # During process teardown Windows can deny image/memory queries before
+                # the held handle becomes signaled. Only proven exit permits a skip;
+                # a still-live or uninspectable handle remains a qualification failure.
+                if self.api.WaitForSingleObject(candidate,100) == 0:
                     continue
                 raise
             finally:

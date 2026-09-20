@@ -701,3 +701,6 @@
 | [passed](runs/20260920T204756-d7897e87e5d6.md) | 선택형 검색 실패 진단의 원문 비노출과 상태 보존 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T204757-5fe8d6eb4bd4.md) | 개발 검증: uv.EXE | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T204936-53b948ecdc53.md) | 격리 합성 자료의 보조 프로그램 진단 실제 실행 | b5e00bdf688a0ae06e1b14dc04881d5ffbf078fc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205040-32126f694419.md) | Windows 종료 직전 자식 이미지 조회 경합 관측 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205107-de0d18c87364.md) | 개발 검증: uv.EXE | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205130-e7a95052dc21.md) | Windows 종료 경합의 수정 전후 동일 관측 비교 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
