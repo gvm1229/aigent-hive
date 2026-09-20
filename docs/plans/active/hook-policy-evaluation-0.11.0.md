@@ -34,3 +34,5 @@
 - 실제 앱 기준선 비교와 미로드·시간 초과·중단 재개는 미실행. 이 결과만으로 `HK-004` 완료 승격 제외
 
 - [후속 비용·적용 범위](../../research/host-acceptance-final-queue-2026-09-20.md): Windows의 정확한 등록 명령 90개 호출 측정. 실제 앱 비용·미노출 모델 토큰과 별도 범위
+
+- 2026-09-20 사용자 결정: 현재 실제 비교는 Codex·Antigravity. Claude는 [후속 목표](../backlog/claude-host-acceptance.md)로 이전, 기존 세 형식의 직접 시험 보존
