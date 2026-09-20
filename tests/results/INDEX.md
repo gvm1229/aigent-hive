@@ -708,3 +708,4 @@
 | [passed](runs/20260920T205749-f729e1d93044.md) | 개발 검증: uv.EXE | df38bd03f74fd36a170c2735f2a0e898b9e516a9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T210047-e5db157f28b6.md) | Windows 관측 수정 뒤 공개 시험판 최종 세 운영체제 수용 | d703ffea59eb46e338a29437aadc63dc80600008 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T210828-a7f59de22f8d.md) | RFR-001 공개 수용·통합·34개 선행 근거의 최종 결합 | 6296726906d4b24f82243c4fafae43dbf8f3245f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T211023-48770e0a7764.md) | 개발 검증: uv.EXE | fe9ef44d4a3a7dce85b6adb8d330fd9f71da163b | Windows-11-10.0.26200-SP0 |
