@@ -10,7 +10,7 @@ tags: [architecture, refactor, version]
 aliases: []
 sources:
   - "repo:docs/architecture/policy-rule-inventory.md#sha256:77bd57357ba6cb08f84c1ee8908d8859514bd114951faf6abc92b67d7ef30920"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:3bb46e15dfa2752a7dd13e8ecd1f3255ff7ea6532625533a2527d2c7357aeb1a"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:b1275f18e9ae09620ff1864ef619b7f9a7db9e07c01199cf1baeee2932d7ec8a"
 links: [artifact-boundaries, knowledge-source-freshness, orchestration-ownership]
 reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"
 status: active
@@ -24,4 +24,4 @@ status: active
 - 승인 7개: 실패 분류·결과 합산·실제 진단·보류 평가·고정 문맥 재사용·개선 후보 검토·문맥 유효성
 - 후보 검토 `HK-005`, 나머지 기존 `HK-*`·`RFK-002` 소유
 - 소스 브랜치 검사·파일 훅 변환·명시적 등록·실행 후보 검토 구현
-- 실제 수용: Codex·Antigravity, Claude는 후속 목표; 안정판·사용자 설치 별도 승인
+- 실제 수용: Codex·Antigravity, Claude·상시 감시·자동 중단은 후속 목표; 안정판·사용자 설치 별도 승인
