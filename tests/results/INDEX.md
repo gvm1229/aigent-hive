@@ -635,3 +635,4 @@
 | [failed](runs/20260919T192807-b64643c8d3ab.md) | 형식 2의 실제 보호 편집 실패 관측 검토 | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T195354-188e74697434.md) | 형식 3의 한글 대상과 표준입력 전달 확인 | 5be287b6fd2490e874707fe5fbebe57fa284fdef | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260919T195640-1830f54e0861.md) | 형식 3 훅 보완의 필수 CI 확인 | 5be287b6fd2490e874707fe5fbebe57fa284fdef | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T024742-e0896e1b318e.md) | 승인된 형식 3을 기존 Codex 격리 대상에 적용 | 832a6986c359e0b34754483a920b220172098193 | Windows-11-10.0.26200-SP0 |
