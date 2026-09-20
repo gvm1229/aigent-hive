@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "policy-holdout-0.11.0-set-1",
+  "frozen_against_commit": "f28681d4",
+  "hosts": [
+    "codex",
+    "claude",
+    "antigravity"
+  ],
+  "cases": [
+    {
+      "id": "HO-001",
+      "operation": "file",
+      "path": "src/보고서 draft.md",
+      "expect": "permission-neutral",
+      "purpose": "일반 유니코드·공백 파일"
+    },
+    {
+      "id": "HO-002",
+      "operation": "file",
+      "path": ".hive/configuration/user-note.toml",
+      "expect": "permission-neutral",
+      "purpose": "보호 경로와 비슷한 사용자 경로"
+    },
+    {
+      "id": "HO-003",
+      "operation": "file",
+      "path": "archive/.hive/runtime/note.json",
+      "expect": "permission-neutral",
+      "purpose": "하위 폴더의 별도 이름 공간"
+    },
+    {
+      "id": "HO-004",
+      "operation": "file",
+      "path": ".hive/runtime/dispatch-authorizations/held-out.json",
+      "expect": "deny",
+      "purpose": "실행 허가 기록 보호"
+    },
+    {
+      "id": "HO-005",
+      "operation": "file",
+      "path": ".hive/config/../config/user-setup.yml",
+      "expect": "deny",
+      "purpose": "정규화 뒤 보호 경로"
+    },
+    {
+      "id": "HO-006",
+      "operation": "file",
+      "path": ".hive/backups/복원 proof.json",
+      "expect": "deny",
+      "purpose": "백업 근거 보호"
+    },
+    {
+      "id": "HO-007",
+      "operation": "malformed",
+      "raw": "{\"tool_input\": [",
+      "expect": "deny",
+      "purpose": "닫히지 않은 구조"
+    },
+    {
+      "id": "HO-008",
+      "operation": "stop",
+      "raw": "PRIVATE-HOLDOUT-DO-NOT-ECHO",
+      "expect": "neutral-stop",
+      "purpose": "종료 시 입력 무시·재개 없음"
+    },
+    {
+      "id": "HO-009",
+      "operation": "shell",
+      "command": "echo synthetic-only",
+      "expect": "permission-neutral",
+      "purpose": "분류 범위 밖 셸의 권한 유지; 보호 효과 증명 제외"
+    }
+  ],
+  "rules": {
+    "scope": "CLI wire responses only; live host efficacy and instruction-only baseline not measured",
+    "policy": "Freeze before execution. If used to tune implementation, retire this set into regressions and create a new holdout set.",
+    "target": "synthetic disposable target under tests/work; no host installation",
+    "forbidden_output": "PRIVATE-HOLDOUT-DO-NOT-ECHO"
+  }
+}

@@ -1,53 +1,67 @@
 # 현재 상태
 
-- 작업 branch: `develop`; stable source branch: `main`
-- 제품 버전: `0.10.3`
-- 현재 공개 stable: `0.10.3`
-- 완료 작업: 소스·harness 지침 품질 개선 `INS102-*` 6/6, 전역 사용자 갱신 `GUU102-*` 10/10
-- 출시 상태: Stable `0.10.3` 공개·독립 검증 완료
-- 활성 계획: [PLAN.md](../plans/PLAN.md)
-- 개선 계획: [instruction-quality-0.10.2.md](../plans/active/instruction-quality-0.10.2.md)
-- 전역 갱신 계획: [global-user-update-0.10.2.md](../plans/active/global-user-update-0.10.2.md)
-- 출시 계획: [release-0.10.2.md](../plans/active/release-0.10.2.md)
-- 결정: [ADR-0022](../decisions/ADR-0022-global-user-update.md)
+- 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
+- 개발 목표: `0.11.0-test.1`; 공개 안정판: `0.10.3`
+- 제품 버전: `0.11.0`
+- 승인 범위: 미출시 `0.10.4`를 계승하는 전체 구현, 기존 기능 유지와 Codex 우선 검증
+- 추가 결정: 세션·양수 프로세스 ID 없는 자동 재개 거부; 원본 없는 이식 지식은 과거 조회 유지와 현재성 미검증 표시
+- [실제 호스트 수용](../research/native-host-qualification-0.11.0.md): 지원하는 파일 검사와 실패·미지원 경계 확인, 두 호스트 비교·자료 복원 완료. 전체 도구·오류 상황의 상시 보호 보장 제외
+- 정본: [계획](../plans/PLAN.md), [결정](../decisions/ADR-0023-foundation-refactor.md)
 
-## 권한과 범위
+## 생성된 현재 항목
 
-- 2026-09-12: [사용량 복구 실행 계획](../plans/active/usage-recovery-0.10.2.md)의 `0.10.3` 안정판 공개 완료; 표식 재측정·같은 위치 교체의 공개 시험·실제 설치 수용
-- 사용자 보정: 별도 `v2` 저장소 제안 폐기, 같은 위치의 옛 파일 교체·제거. 모든 Hive 프로젝트·소스 공통 적용; `AI_Learning` 전용 해결 금지
-- `UGR103-*`: 10/10. 실제 사용자 설치 `0.10.3-test.1`, `AI_Learning`의 형식 1·이전 프로세스 표식 재측정 제거, 소스 작업 허용, 다른 등록 프로젝트 기준 보존 확인
-- 안정판 구독자 안내: `docs/releases/0.10.3.subscriber.ko.md`, 승인 digest `sha256:bbb0cc20655adb4e08fcbb9bcff6e1c837bec2a3905a69a2b8991b41d60381a6` 등록·게시 완료
+<!-- HIVE:PLAN-STATE:START -->
+- 구현 목표: `0.11.0`
+- 현재 등록 항목: 34/35 완료
 
-- 이번 안정판 승인 범위의 게시·실제 사용자 루트 설치 갱신 완료
-- 과거 project/user base·외부 파일·사용자 선택 보존
-- 전역 사용량 보호: 유지보수자가 지정한 남은 사용량 `2%`
+- `agent-owned`: `RFR-001`
+- `awaiting-user-authority`: 없음
+- `awaiting-external-evidence`: 없음
+- `blocked`: 없음
+<!-- HIVE:PLAN-STATE:END -->
 
-## `0.10.3` 안정판 증거
+## 구현과 근거
 
-- `main` 통합 commit: `8afe730759325bc003475f81545da7afc88cfb18`; 안정판 후보 `34640191785` 성공
-- 최초 게시 `34678212448`은 macOS 보조 npm 패키지의 태그 전파 지연으로 중단. 같은 후보의 복구 게시 `34678404622` 성공
-- npm `aigent-hive@0.10.3`와 `latest=0.10.3`, GitHub 정식 Release·annotated tag `v0.10.3`을 독립 확인
-- 이 Windows Codex 설치: `0.10.3-test.1`에서 `0.10.3` 갱신과 `hive --version` 확인; 이전 `AI_Learning` 경로 부재로 안정판 재실행 미수행
+- 계획 파서·버전별 ID·완료 근거·출시 검사 결합, 기존 과거 완료와 현재 집계 분리
+- `0.11.0` 메타데이터·`v0.10.3`의 정확한 동결 기준본 추가, 이전 기준본 바이트 보존
+- 지식 저장·조회 책임 분리와 반환 정본 검사. 원본 부재는 `historical-unverified`, 확인된 변조·내용 변경은 거부; 조회의 자동 복구 없음
+- 자동 재개·반복 작업 준비의 공통 사용량·세션 검사. 허가 직전 정책·제어·중단 지문 재확인, 같은 관측 재사용
+- 사용자·프로젝트 파일 처리 분리, 공통 준비·비덮어쓰기 적용·복구 연결. 갱신 백업·복구 준비도 같은 함수 사용
+- 훅의 세 호스트 형식·프로젝트별 등록·철회·진단·복구 구현. 실행별 개선 후보·반례·명시적 검토와 세션 결합 종료 안내; 자동 정책 변경 없음
+- [규칙 목록](../architecture/policy-rule-inventory.md), [호스트 상태표](../research/host-contract-matrix-0.11.0.md), [전후 비교](../research/refactor-baseline-0.11.0.md)
+- `7445f519`: 현재 작업의 초기화 감지만 제외·복원. 잔여량 하한 보호와 이미 발생한 초기화 중단 유지, 별도 세션으로 제외 권한 이전 금지
+- [2026-09-20 실제 검증](../research/host-acceptance-resume-2026-09-20.md): 새 Codex 작업의 합성 결정 조회·후속 파일 작성과 두 번째 요청의 재조회 확인. 파일 훅의 실제 결과는 아래 별도 기록, [수동 취소 후 같은 작업 재개](../research/codex-native-cancellation-2026-09-20.md) 확인
 
-## 개선 작업
+## 검증 상태
 
-- Quota Reset Guard `RB104-001–003` 구현: 같은 측정 범위의 잔량 증가를 `hive.usage-reset`으로 차단하고,
-  기준 관측을 같은 런타임 표식에 저장. 15초 감시·진행 중 추론 중단·현재 작업 opt-out은 검증된 host API가
-  없어 `RB104-004`에 남음.
+- [Windows Rust 전체](../../tests/results/runs/20260919T192546-3d9fa21840b4.md): 941개 통과·4개 제외, 형식·Clippy 통과. 제외: 선택형 검색 환경 1개·대규모 기밀 자료 1개·SSD 별도 성능 시험 2개
+- [Windows Python 전체](../../tests/results/runs/20260919T192646-002ae3023009.md): 930개 중 887개 통과·43개 제외. 문서 117·보안 98·계약 474·통합 82·배포 116개 통과
+- 제외: POSIX 전용 권한·FIFO·프로세스, Windows 링크 권한 등 실행 조건. 해당 환경과 실제 호스트 차단의 증명 제외
+- 지식 22개 질문의 근거·순서 유지, 반복 저장·조회·비밀값 거부의 불필요한 쓰기 0건. 교대 p95 +8.95%, 질문별 11개는 10% 초과
+- 큰 자료의 release 검색 엔진은 기존 50,000개 수용 기준 통과. 실제 앱·최신 CLI 전체 성능과 별도 범위
+- 고정 지침 일반 경로 21.68%·지식 경로 20.03% 바이트 감소. 모델 토큰·품질·질문 횟수의 증명 제외
+- 실행 8개 비교: 7개 결과 유지, 세션 없는 자동 호출 1개는 승인된 입력 거부. 파일 보존·센서 호출 수 별도 확인
+- Source Wiki 202개 문서의 최신 출처·색인 검사: 오류 0개·경고 0개
 
-- 모호한 일반 요청의 작업 권한 유지와 명시적 프롬프트 작성 경로 분리
-- 현재 Skill 참조·기본 stable 채널·공유 지식 색인·종료 hook 규칙 정합화
-- 사용자 설정 진입 문서와 작업별 참조 분리, Rust·정적 호스트 투영에 동반 자료 포함
-- 인증 실패의 읽기 전용 진단 우선, 전체 제거·재설치의 별도 권한 유지
-- 독립 문서 기반 행동 평가와 관련 시험 완료. 실제 장시간 호스트 성공률 증명은 제외
-- 완료 수치는 개선 계획의 검증된 체크리스트 기준
+## 실제 호스트와 권한
 
-## 전역 갱신과 출시
+- [수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 두 호스트의 정상·검사기 부재·오류·설정 손상·지침 단독 비교 확인. Codex 미신뢰·자식 범위 확인. 정의·실행 파일·합성 자료 복원 완료
+- `verified-workflow`는 소스 계획 경로 적용. 연결된 초기화·검증 영수증이 없어 활성 실행 주장 없음
 
-- `GUU102-*` 10건과 로컬 출시 검증 `REL102-001–002` 완료
-- `REL102-003–006`은 `0.10.2-test.3` 후보·게시·세 운영체제 공개 수용과 source·제품 digest 결합 완료
-- `REL102-007` stable 문서·구독자 안내 digest 승인 완료
-- `REL102-008–009` 완료: PR `#54`의 `main` 통합, 후보 `34190329196`, 최종 게시 `34200601474`
-- npm 여섯 package의 `0.10.2`·`latest`·무결성 값과 GitHub 정식 Release·annotated tag·공개 자산 독립 확인 완료
-- 기존 출시 종료 시 남은 항목: 0건. 현재 계획 작성 범위의 남은 작업: 0건; 제품 복구는 후속 `UGR102-*` 10건으로 별도 관리
-- 이전 출시 증거와 조사 기록: [이전 상태](../archive/state/0.10.2-before-instruction-closeout.md)
+- Windows Codex에서 기존 정의 신뢰 후 일반 3개 허용·보호 3개 거부 확인. 지침 단독 조건에서는 같은 보호 편집 3개 성공. 지정된 합성 요청만의 비교
+- 검사기 부재 시 보호 편집 허용 발견. 형식 2 보완 뒤에도 실제 앱에서 실패했고, 바깥 PowerShell의 변수 해석 문제 재현. 형식 3의 cmd·PowerShell 회귀 14개와 Windows Codex 정상·검사기 부재의 실제 파일 차단 확인
+- `tests/work/codex-policy-acceptance-1/`에 승인된 형식 3 적용 완료. 이전 실행 파일·실패 기록 보존, 정의 복원 뒤 새 작업에서도 실제 파일 차단 확인, 다른 호스트·시간 초과는 미검증
+- Claude 실제 수용과 15초 상시 감시·진행 중 자동 중단은 사용자 승인 후속 범위. Codex·Antigravity의 기본 수동 취소·재개는 별도 근거로 확인
+- [세 운영체제 CI](https://github.com/gvm1229/aigent-hive/actions/runs/35465250818) 통과: Linux Rust 976개·4개 제외, macOS 관련 모듈 730개·1개 제외, Windows 관련 모듈 704개·1개 제외
+- Linux Python 930개 중 921개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T195640-1830f54e0861.md)에 보존
+- [초안 PR #60](https://github.com/gvm1229/aigent-hive/pull/60)의 제품 코드 `5be287b6`에서 필수 CI 통과. 번호 시험판 미게시, 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
+
+- 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용 근거 확보. 전체 계획·공개 시험판 수용 완료는 RFR-001의 별도 판정
+- 이번 후속 변경은 Markdown 근거 정리만 포함. 관련 문서 검사로 확인하며 제품 불변인 자동 CI 재실행은 별도 비동기 진행 가능
+
+## 이전 근거
+
+- [구현 전 상태](../archive/state/0.11.0-before-plan-generation.md), [ID 대응표](../plans/refactor-id-mapping.md)
+- 소스 브랜치 검사와 초기 연구: [기존 근거](../research/host-policy-hooks-2026-09-18.md)
+
+- 2026-09-21 사용자 범위 결정: 15초 상시 감시·진행 중 자동 중단만 [후속 목표](../plans/backlog/periodic-usage-interruption.md) 이전. 현재 작업 제어·명시적 재개는 새 Windows 회귀 61개 통과·Unix/POSIX 조건 3개 제외로 확인

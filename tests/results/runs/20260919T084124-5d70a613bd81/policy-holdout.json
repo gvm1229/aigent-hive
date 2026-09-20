@@ -1,0 +1,1203 @@
+{
+  "schema_version": 1,
+  "fixture_digest": "sha256:96f7c40f94a8177e9b42072725ce2efc6aa696ac5aad5b002b21ba51b14d5d87",
+  "binary_digest": "sha256:e9202b7dd69c52eb59440db065dc1ddadee8cc7e285bd13ca5ab85f00ceaed57",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "source_commit": "7c99a4967c384bbfee7875d1890d49d1a1f42d25",
+  "rows": [
+    {
+      "host": "codex",
+      "case": "HO-001",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        327.2563999926206,
+        8.57259999611415,
+        8.427599997958168,
+        7.959100010339171,
+        7.969599973876029
+      ],
+      "median_ms": 8.427599997958168,
+      "input_bytes": 268,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-002",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.143999992171302,
+        7.925699988845736,
+        8.129800000460818,
+        8.003399998415262,
+        8.258899993961677
+      ],
+      "median_ms": 8.129800000460818,
+      "input_bytes": 271,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-003",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.413100003963336,
+        8.265700016636401,
+        8.014699997147545,
+        8.110599999781698,
+        7.927699974970892
+      ],
+      "median_ms": 8.110599999781698,
+      "input_bytes": 268,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-004",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.715400006622076,
+        8.455100003629923,
+        8.087800000794232,
+        8.193100016796961,
+        8.220199990319088
+      ],
+      "median_ms": 8.220199990319088,
+      "input_bytes": 288,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-005",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.292799990158528,
+        8.10300000011921,
+        8.361599990166724,
+        8.448399981716648,
+        8.159799996064976
+      ],
+      "median_ms": 8.292799990158528,
+      "input_bytes": 274,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-006",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.11920000705868,
+        8.315099985338748,
+        8.22429999243468,
+        8.4021000075154,
+        7.989300007466227
+      ],
+      "median_ms": 8.22429999243468,
+      "input_bytes": 274,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-007",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        7.412100007059053,
+        9.828300011577085,
+        7.4588000134099275,
+        7.725900009972975,
+        7.5527000008150935
+      ],
+      "median_ms": 7.5527000008150935,
+      "input_bytes": 16,
+      "output_bytes": 136,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-008",
+      "expected": "neutral-stop",
+      "observed": [
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.55459997546859,
+        7.424599985824898,
+        7.61550001334399,
+        7.438000000547618,
+        8.340100001078099
+      ],
+      "median_ms": 7.61550001334399,
+      "input_bytes": 27,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "codex",
+      "case": "HO-009",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": false,
+      "samples_ms": [
+        7.998099987162277,
+        8.086100016953424,
+        7.9270999995060265,
+        7.871299982070923,
+        8.08510000933893
+      ],
+      "median_ms": 7.998099987162277,
+      "input_bytes": 208,
+      "output_bytes": 188,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-001",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        10.984399996232241,
+        8.510599989676848,
+        8.55180001235567,
+        8.565299998736009,
+        9.692099993117154
+      ],
+      "median_ms": 8.565299998736009,
+      "input_bytes": 239,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-002",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.669799979543313,
+        17.895700002554804,
+        9.075000009033829,
+        8.820799994282424,
+        8.588299999246374
+      ],
+      "median_ms": 8.820799994282424,
+      "input_bytes": 242,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-003",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        10.648499999660999,
+        8.744199993088841,
+        8.980700018582866,
+        8.672500000102445,
+        8.925700007239357
+      ],
+      "median_ms": 8.925700007239357,
+      "input_bytes": 239,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-004",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.777799987001345,
+        9.277999983169138,
+        9.029300010297447,
+        9.060700016561896,
+        9.174700011499226
+      ],
+      "median_ms": 9.060700016561896,
+      "input_bytes": 259,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-005",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        9.447800024645403,
+        8.992500021122396,
+        9.118399990256876,
+        8.977199991932139,
+        9.218300023349002
+      ],
+      "median_ms": 9.118399990256876,
+      "input_bytes": 245,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-006",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        9.587100008502603,
+        9.185500006424263,
+        12.046699994243681,
+        8.975999982794747,
+        8.924800000386313
+      ],
+      "median_ms": 9.185500006424263,
+      "input_bytes": 245,
+      "output_bytes": 192,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-007",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.410700014792383,
+        8.381199993891641,
+        8.263700001407415,
+        8.31640002434142,
+        8.491799992043525
+      ],
+      "median_ms": 8.381199993891641,
+      "input_bytes": 16,
+      "output_bytes": 136,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-008",
+      "expected": "neutral-stop",
+      "observed": [
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        10.159599973121658,
+        8.316499995999038,
+        8.407300018006936,
+        7.83759998739697,
+        7.890500011853874
+      ],
+      "median_ms": 8.316499995999038,
+      "input_bytes": 27,
+      "output_bytes": 3,
+      "calls": 5
+    },
+    {
+      "host": "claude",
+      "case": "HO-009",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": false,
+      "samples_ms": [
+        8.127600012812763,
+        8.23619999573566,
+        8.5413999913726,
+        8.557300025131553,
+        8.490400010487065
+      ],
+      "median_ms": 8.490400010487065,
+      "input_bytes": 200,
+      "output_bytes": 188,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-001",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        10.783299978356808,
+        9.372899978188798,
+        8.311500016134232,
+        8.717999997315928,
+        8.049299998674542
+      ],
+      "median_ms": 8.717999997315928,
+      "input_bytes": 235,
+      "output_bytes": 92,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-002",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.315999992191792,
+        9.300499979872257,
+        8.325399976456538,
+        8.276500011561438,
+        8.222000004025176
+      ],
+      "median_ms": 8.315999992191792,
+      "input_bytes": 238,
+      "output_bytes": 92,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-003",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ],
+        [
+          0,
+          "permission-neutral",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.270899998024106,
+        8.194299996830523,
+        8.386300003621727,
+        7.976099994266406,
+        8.292000013170764
+      ],
+      "median_ms": 8.270899998024106,
+      "input_bytes": 235,
+      "output_bytes": 92,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-004",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.195700007490814,
+        8.334799989825115,
+        8.241000003181398,
+        8.144599996739998,
+        8.256700006313622
+      ],
+      "median_ms": 8.241000003181398,
+      "input_bytes": 255,
+      "output_bytes": 112,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-005",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.051699987845495,
+        8.295300009194762,
+        8.358499995665625,
+        10.61280001886189,
+        8.155099989380687
+      ],
+      "median_ms": 8.295300009194762,
+      "input_bytes": 241,
+      "output_bytes": 112,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-006",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.217099995817989,
+        8.139199984725565,
+        7.887599989771843,
+        7.964999997057021,
+        7.939700008137152
+      ],
+      "median_ms": 7.964999997057021,
+      "input_bytes": 241,
+      "output_bytes": 112,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-007",
+      "expected": "deny",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        7.644600002095103,
+        7.442900008754805,
+        7.334199995966628,
+        7.325299986405298,
+        7.540599995991215
+      ],
+      "median_ms": 7.442900008754805,
+      "input_bytes": 16,
+      "output_bytes": 56,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-008",
+      "expected": "neutral-stop",
+      "observed": [
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ],
+        [
+          0,
+          "neutral-stop",
+          true
+        ]
+      ],
+      "passed": true,
+      "samples_ms": [
+        8.997500000987202,
+        7.210400013718754,
+        7.287899992661551,
+        7.189199997810647,
+        7.19319999916479
+      ],
+      "median_ms": 7.210400013718754,
+      "input_bytes": 27,
+      "output_bytes": 21,
+      "calls": 5
+    },
+    {
+      "host": "antigravity",
+      "case": "HO-009",
+      "expected": "permission-neutral",
+      "observed": [
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ],
+        [
+          0,
+          "deny",
+          true
+        ]
+      ],
+      "passed": false,
+      "samples_ms": [
+        7.644099998287857,
+        7.80069999746047,
+        7.771300006425008,
+        7.498799997847527,
+        7.9212000127881765
+      ],
+      "median_ms": 7.771300006425008,
+      "input_bytes": 194,
+      "output_bytes": 108,
+      "calls": 5
+    }
+  ],
+  "target_unchanged": true,
+  "passed": 24,
+  "total": 27,
+  "live_host_status": "unverified",
+  "instruction_only_baseline": "not-run",
+  "limit": "CLI processes only; host load, trust, tool execution, timeout handling, cancellation and model compliance not measured"
+}

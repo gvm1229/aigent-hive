@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -19,6 +20,7 @@ SPEC.loader.exec_module(MODULE)
 
 class StableSkillLedgerContract(unittest.TestCase):
     def setUp(self) -> None:
+        self.target = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
         self.ledger = ROOT / "harness/release/stable-skill-ledger.yml"
         self.historical = ROOT / "harness/skills/historical-builtins.yml"
         self.npm = [
@@ -33,6 +35,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             "0.10.0",
             "0.10.1",
             "0.10.2",
+            "0.10.3",
         ]
         self.github = [
             {"tagName": "v0.9.0", "isPrerelease": False},
@@ -45,23 +48,28 @@ class StableSkillLedgerContract(unittest.TestCase):
             {"tagName": "v0.10.0", "isPrerelease": False},
             {"tagName": "v0.10.1", "isPrerelease": False},
             {"tagName": "v0.10.2", "isPrerelease": False},
+            {"tagName": "v0.10.3", "isPrerelease": False},
         ]
 
     def test_public_stable_union_and_target_match_current_ledger(self) -> None:
-        result = MODULE.verify(self.ledger, self.historical, "0.10.3", self.npm, self.github)
-        self.assertEqual(result["stable_versions"][-1], "0.10.3")
+        result = MODULE.verify(self.ledger, self.historical, self.target, self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], self.target)
 
     def test_current_target_entry_is_available_for_stable_publication(self) -> None:
         historical = MODULE.yaml.safe_load(self.historical.read_text(encoding="utf-8"))
-        self.assertNotIn("0.10.3", {entry["version"] for entry in historical["releases"]})
-        result = MODULE.verify(self.ledger, self.historical, "0.10.3", self.npm, self.github)
-        self.assertEqual(result["stable_versions"][-1], "0.10.3")
+        self.assertNotIn(self.target, {entry["version"] for entry in historical["releases"]})
+        result = MODULE.verify(self.ledger, self.historical, self.target, self.npm, self.github)
+        self.assertEqual(result["stable_versions"][-1], self.target)
 
-    def test_missing_future_target_entry_blocks_stable_publication(self) -> None:
-        with self.assertRaisesRegex(
-            ValueError, "differs from published stable union|unknown historical release"
-        ):
-            MODULE.verify(self.ledger, self.historical, "0.11.0", self.npm, self.github)
+    def test_missing_current_target_entry_blocks_stable_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "ledger.yml"
+            value = MODULE.yaml.safe_load(self.ledger.read_text(encoding="utf-8"))
+            value["stable_releases"] = [entry for entry in value["stable_releases"]
+                                        if entry["version"] != self.target]
+            ledger.write_text(MODULE.yaml.safe_dump(value), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "differs from published stable union"):
+                MODULE.verify(ledger, self.historical, self.target, self.npm, self.github)
 
     def test_no_change_epoch_must_have_identical_skill_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -72,7 +80,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             )
             ledger.write_text(text, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "different Skill bytes"):
-                MODULE.verify(ledger, self.historical, "0.10.3", self.npm, self.github)
+                MODULE.verify(ledger, self.historical, self.target, self.npm, self.github)
 
 
 if __name__ == "__main__":

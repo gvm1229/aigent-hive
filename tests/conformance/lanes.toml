@@ -6,6 +6,8 @@ owner = "documentation"
 contract = "human documentation, local verification command, and developer-install guidance"
 release_gate = true
 modules = [
+  "tests.conformance.documentation.test_branch_policy",
+  "tests.conformance.documentation.test_plan_state",
   "tests.conformance.documentation.test_dev_check",
   "tests.conformance.documentation.test_dev_install_script",
   "tests.conformance.documentation.test_docs_wiki",
@@ -53,6 +55,7 @@ modules = [
   "tests.conformance.contracts.test_vector_parent",
   "tests.conformance.contracts.test_vector_onboarding",
   "tests.conformance.contracts.test_action_result_contracts",
+  "tests.conformance.contracts.test_native_policy_hooks",
   "tests.conformance.contracts.test_hive_skills",
   "tests.conformance.contracts.test_host_capabilities",
   "tests.conformance.contracts.test_knowledge_schemas",

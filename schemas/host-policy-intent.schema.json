@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/host-policy-intent.schema.json",
+  "title": "Approved project-local native hook configuration intent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "host", "target_digest", "policy_digest", "prior_policy_digest", "operation", "before_digest", "after_digest", "before", "after", "created_containers", "created_config", "config_mode", "approval_digest"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "host": {"enum": ["codex", "claude", "antigravity"]},
+    "target_digest": {"$ref": "#/$defs/digest"},
+    "policy_digest": {"$ref": "#/$defs/digest"},
+    "prior_policy_digest": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "command_format": {"enum": [1, 2, 3]},
+    "prior_command_format": {"enum": [1, 2, 3]},
+    "review_run": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
+    "prior_review_run": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
+    "operation": {"enum": ["install", "remove"]},
+    "before_digest": {"$ref": "#/$defs/snapshot"},
+    "after_digest": {"$ref": "#/$defs/snapshot"},
+    "before": {"$ref": "#/$defs/entries"},
+    "after": {"$ref": "#/$defs/entries"},
+    "created_containers": {"type": "array", "maxItems": 4, "uniqueItems": true, "items": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string", "maxLength": 64}}},
+    "created_config": {"type": "boolean"},
+    "config_mode": {"type": ["integer", "null"], "minimum": 0, "maximum": 4095},
+    "approval_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "snapshot": {"type": "string", "pattern": "^(absent|sha256:[0-9a-f]{64})$"},
+    "entries": {
+      "type": "array", "maxItems": 3,
+      "items": {"type": "object", "additionalProperties": false, "required": ["path", "value"], "properties": {
+        "path": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string", "maxLength": 64}},
+        "value": {"type": "object", "maxProperties": 4}
+      }}
+    }
+  }
+}

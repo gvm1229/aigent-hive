@@ -1,16 +1,11 @@
 {
   "schema_version": 1,
-  "product_version": "0.10.3",
-  "package_version": "0.10.3-test.1",
+  "product_version": "0.11.0",
+  "package_version": "0.11.0-test.1",
   "plan_ids": [
-    "UGR103-001",
-    "UGR103-002",
-    "UGR103-003",
-    "UGR103-004",
-    "UGR103-005",
-    "UGR103-006",
-    "UGR103-007",
-    "UGR103-008"
+    "HK-002",
+    "RFK-002",
+    "RFT-001"
   ],
-  "product_tree_sha256": "sha256:4b4764a406425115d0cea2f66ef0da50973f1539394e917bf22e19d644b13e9d"
+  "product_tree_sha256": "sha256:0477d44413c6d24b2c9cacb624a2ac67d65e8527d2a239ef34aa66d6d5338beb"
 }

@@ -23,7 +23,7 @@ USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-reset <halt-digest>] --output json
     hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
 ";
 
@@ -60,6 +60,8 @@ struct SessionArguments {
     host: Option<String>,
     action: SessionAction,
     confirm_disable: bool,
+    confirm_reset_guard_disable: bool,
+    confirm_reset: Option<String>,
 }
 
 #[derive(Debug)]
@@ -82,6 +84,8 @@ struct ParsedBinding {
     process_id: u32,
 }
 
+// Independent persisted policy switches, not mutually exclusive execution states.
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct InstalledUsageConfig {
     pub(crate) project_name: String,
     pub(crate) project_identity: String,
@@ -127,6 +131,224 @@ struct TurnObservation {
     remaining_percent: Option<f64>,
     next_action: Option<String>,
     snapshots: Vec<hive_core::usage_guard::UsageSnapshot>,
+    normalized: Option<usage::NormalizedSnapshot>,
+}
+
+#[derive(Default)]
+struct EnforcementTrace {
+    normalized: Option<usage::NormalizedSnapshot>,
+    policy_digest: String,
+    control_digest: String,
+    halt_digest: String,
+}
+
+/// One in-memory observation shared with dispatch qualification; never a stored permission cache.
+pub(crate) struct DispatchPreflight {
+    pub(crate) result: ActionResult,
+    arguments: EnforceArguments,
+    trace: EnforcementTrace,
+}
+
+impl DispatchPreflight {
+    pub(crate) fn snapshot(&self) -> Option<&usage::NormalizedSnapshot> {
+        self.trace.normalized.as_ref()
+    }
+
+    pub(crate) fn binding_digest(&self) -> String {
+        dispatch_binding_digest(
+            self.arguments.host.as_deref(),
+            &self.arguments.binding,
+            &self.trace,
+        )
+    }
+}
+
+fn dispatch_binding_digest(
+    host: Option<&str>,
+    binding: &ParsedBinding,
+    trace: &EnforcementTrace,
+) -> String {
+    sha256_digest(
+        json!([
+            "hive.dispatch-session.v1",
+            host,
+            sha256_digest(binding.session_id.as_bytes()),
+            binding.process_id,
+            trace.policy_digest,
+            trace.control_digest,
+            trace.halt_digest
+        ])
+        .to_string()
+        .as_bytes(),
+    )
+}
+
+/// Revalidate persisted session authority without another sensor call or runtime mutation.
+pub(crate) fn current_dispatch_binding(
+    target: &PinnedTarget,
+    host: &str,
+    session_id: &str,
+    process_id: u32,
+    user_root: Option<&Path>,
+) -> Result<String, AdapterError> {
+    let config = read_effective_config(target, user_root, Some(host))?;
+    if !config.guard_enabled || config.primary_host != host || process_id == 0 {
+        return Err(AdapterError::OwnerBlocked(
+            "usage guard is disabled or bound to another host".to_owned(),
+        ));
+    }
+    let parsed = ParsedBinding {
+        session_id: session_id.to_owned(),
+        process_id,
+    };
+    let binding = bind_session(&parsed, host);
+    let control = load_control(target, &binding)?;
+    if matches!(control.state, OverrideState::Stale | OverrideState::Damaged)
+        || !effective_enabled(&control, config.guard_enabled)
+    {
+        return Err(AdapterError::OwnerBlocked(
+            "usage session control is stale, disabled, or incorrectly bound".to_owned(),
+        ));
+    }
+    let halt = load_halt(target, &binding)?;
+    if matches!(halt.state, OverrideState::Stale | OverrideState::Damaged)
+        || halt
+            .marker
+            .as_ref()
+            .is_some_and(|marker| marker.decision != "observed")
+    {
+        return Err(AdapterError::OwnerBlocked(
+            "usage session is halted and cannot authorize loop preparation".to_owned(),
+        ));
+    }
+    target.verify_current()?;
+    Ok(dispatch_binding_digest(
+        Some(host),
+        &parsed,
+        &EnforcementTrace {
+            normalized: None,
+            policy_digest: effective_policy_digest(&config)?,
+            control_digest: runtime_digest(control.snapshot.bytes()),
+            halt_digest: runtime_digest(halt.snapshot.bytes()),
+        },
+    ))
+}
+
+fn runtime_digest(bytes: Option<&[u8]>) -> String {
+    bytes.map_or_else(|| "absent".to_owned(), sha256_digest)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn dispatch_preflight(
+    target: &Path,
+    host: &str,
+    session: &str,
+    process: u32,
+    user_root: Option<&Path>,
+    run_id: &str,
+    account: Option<&str>,
+    mut validate_observation: impl FnMut(&usage::NormalizedSnapshot) -> Result<(), AdapterError>,
+) -> Result<DispatchPreflight, AdapterError> {
+    let _consumer = PinnedTarget::open(target)?;
+    if process == 0
+        || session.is_empty()
+        || session.len() > 256
+        || session.chars().any(char::is_control)
+    {
+        return Err(AdapterError::Input(
+            "automatic dispatch requires an exact host session and positive process id".to_owned(),
+        ));
+    }
+    let arguments = EnforceArguments {
+        target: target.to_path_buf(),
+        binding: ParsedBinding {
+            session_id: session.to_owned(),
+            process_id: process,
+        },
+        account_digest: account.map(str::to_owned),
+        user_root: user_root.map(Path::to_path_buf),
+        host: Some(host.to_owned()),
+        run_id: Some(run_id.to_owned()),
+    };
+    let mut trace = EnforcementTrace::default();
+    let result = enforce_captured(&arguments, &mut trace, &mut validate_observation)?;
+    if result.exit_code == 0
+        && !matches!(
+            result.code,
+            "hive.usage-allowed" | "hive.usage-session-bypassed"
+        )
+    {
+        return Err(AdapterError::Safety(
+            "automatic dispatch requires configured current usage protection".to_owned(),
+        ));
+    }
+    Ok(DispatchPreflight {
+        result,
+        arguments,
+        trace,
+    })
+}
+
+/// Reread mutable policy and session records immediately before an authorization is published.
+pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result<(), AdapterError> {
+    if preflight.result.exit_code != 0 {
+        return Err(AdapterError::Safety(
+            "blocked preflight cannot authorize dispatch".to_owned(),
+        ));
+    }
+    let args = &preflight.arguments;
+    let target = PinnedTarget::open(&args.target)?;
+    let config = read_effective_config(&target, args.user_root.as_deref(), args.host.as_deref())?;
+    let global = open_global_runtime(&config, args.user_root.as_deref())?;
+    let runtime = global.as_ref().unwrap_or(&target);
+    let binding = bind_runtime_session(
+        &args.binding,
+        &config.primary_host,
+        &target,
+        global.is_some(),
+    );
+    let control = load_control(runtime, &binding)?;
+    if effective_policy_digest(&config)? != preflight.trace.policy_digest
+        || runtime_digest(control.snapshot.bytes()) != preflight.trace.control_digest
+    {
+        return Err(AdapterError::Conflict(
+            "usage policy or session control changed before dispatch authorization".to_owned(),
+        ));
+    }
+    if effective_enabled(&control, config.guard_enabled) {
+        let halt = load_halt(runtime, &binding)?;
+        if runtime_digest(halt.snapshot.bytes()) != preflight.trace.halt_digest {
+            return Err(AdapterError::Conflict(
+                "usage halt changed before dispatch authorization".to_owned(),
+            ));
+        }
+        let snapshot = preflight.snapshot().ok_or_else(|| {
+            AdapterError::Safety("enforced dispatch lacks a fresh sensor observation".to_owned())
+        })?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .ok()
+            .and_then(|duration| i64::try_from(duration.as_secs()).ok())
+            .ok_or_else(|| AdapterError::Safety("dispatch clock is invalid".to_owned()))?;
+        let policy = UsagePolicy::new(
+            &snapshot.sensor_id,
+            &snapshot.sensor_version,
+            &snapshot.provider,
+            &snapshot.account_digest,
+        )
+        .with_stop_remaining_percent(config.threshold)
+        .map_err(|_| AdapterError::Safety("dispatch usage policy is invalid".to_owned()))?;
+        if !matches!(
+            evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now),
+            UsageDecision::Allow(_)
+        ) {
+            return Err(AdapterError::Safety(
+                "usage observation no longer permits dispatch".to_owned(),
+            ));
+        }
+    }
+    target.verify_current()?;
+    runtime.verify_current()
 }
 
 #[derive(Default)]
@@ -195,6 +417,9 @@ enum SessionAction {
     Enable,
     Disable,
     Toggle,
+    AcknowledgeReset,
+    EnableResetGuard,
+    DisableResetGuard,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -205,6 +430,8 @@ struct SessionControl {
     session_id_digest: String,
     process_id: u32,
     guard_enabled: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    reset_guard_disabled: bool,
     revision: u64,
 }
 
@@ -695,6 +922,7 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
             "--user-root",
             "--host",
             "--action",
+            "--confirm-reset",
         ],
         true,
     )?;
@@ -702,9 +930,12 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         "enable" => SessionAction::Enable,
         "disable" => SessionAction::Disable,
         "toggle" => SessionAction::Toggle,
+        "acknowledge-reset" => SessionAction::AcknowledgeReset,
+        "enable-reset-guard" => SessionAction::EnableResetGuard,
+        "disable-reset-guard" => SessionAction::DisableResetGuard,
         _ => {
             return Err(AdapterError::Input(
-                "--action must be enable, disable, or toggle".to_owned(),
+                "--action must be enable, disable, toggle, acknowledge-reset, enable-reset-guard, or disable-reset-guard".to_owned(),
             ));
         }
     };
@@ -717,6 +948,30 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
                 .to_owned(),
         ));
     }
+    let confirm_reset = optional(&options, "--confirm-reset").map(str::to_owned);
+    let confirm_reset_guard_disable = options
+        .iter()
+        .any(|(option, _)| *option == "--confirm-reset-guard-disable");
+    if (action == SessionAction::DisableResetGuard) != confirm_reset_guard_disable
+        || (matches!(
+            action,
+            SessionAction::EnableResetGuard | SessionAction::DisableResetGuard
+        ) && confirm_disable)
+    {
+        return Err(AdapterError::Input(
+            "disable-reset-guard requires only --confirm-reset-guard-disable; other actions cannot use this confirmation".to_owned(),
+        ));
+    }
+    if (action == SessionAction::AcknowledgeReset) != confirm_reset.is_some()
+        || confirm_reset
+            .as_deref()
+            .is_some_and(|digest| !is_sha256_digest(digest))
+        || (action == SessionAction::AcknowledgeReset && confirm_disable)
+    {
+        return Err(AdapterError::Input(
+            "acknowledge-reset requires only the exact --confirm-reset halt digest".to_owned(),
+        ));
+    }
     Ok(SessionArguments {
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
@@ -724,6 +979,8 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         host: parse_optional_host(&options)?,
         action,
         confirm_disable,
+        confirm_reset_guard_disable,
+        confirm_reset,
     })
 }
 
@@ -736,7 +993,10 @@ fn parse_key_value_options<'a>(
     let mut index = 0;
     while index < arguments.len() {
         let option = arguments[index].as_str();
-        if option == "--confirm-session-disable" {
+        if matches!(
+            option,
+            "--confirm-session-disable" | "--confirm-reset-guard-disable"
+        ) {
             if !allow_confirmation {
                 return Err(AdapterError::Input(format!("unknown option: {option}")));
             }
@@ -833,6 +1093,7 @@ fn optional<'a>(options: &[(&'a str, &'a str)], name: &str) -> Option<&'a str> {
         .find_map(|(option, value)| (*option == name).then_some(*value))
 }
 
+#[allow(clippy::too_many_lines)]
 fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let config = read_effective_config(
@@ -862,14 +1123,21 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         .as_ref()
         .and_then(|marker| marker.policy_digest.as_deref())
         == Some(policy_digest.as_str());
-    let halted = guard_enabled
-        && current_halt
-        && current_policy
+    let pending_reset = config.quota_reset_guard_enabled
         && halt
             .marker
             .as_ref()
-            .is_some_and(|marker| marker.decision != "observed");
+            .is_some_and(|marker| marker.decision == "usage-reset");
+    let halted = guard_enabled
+        && (pending_reset
+            || (current_halt
+                && current_policy
+                && halt
+                    .marker
+                    .as_ref()
+                    .is_some_and(|marker| marker.decision != "observed")));
     let recheck_required = guard_enabled
+        && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
     let mut evidence = vec![Evidence {
         kind: "file",
@@ -904,8 +1172,10 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         } else if recheck_required {
             "the usage threshold changed; run enforce for this session without disabling the safeguard"
                 .to_owned()
+        } else if halted && pending_reset {
+            "the quota reset requires explicit acknowledgement followed by fresh enforce".to_owned()
         } else if halted {
-            "the current session remains halted until an explicit session disable".to_owned()
+            "run enforce to recheck current usage without disabling the safeguard".to_owned()
         } else {
             "installed usage safeguard status is available".to_owned()
         },
@@ -918,12 +1188,14 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
-            "quota_reset_guard_enabled": config.quota_reset_guard_enabled,
+            "quota_reset_guard_enabled": effective_reset_enabled(&loaded, config.quota_reset_guard_enabled),
+            "quota_reset_guard_installed_enabled": config.quota_reset_guard_enabled,
             "quota_reset_guard_monitoring": false,
             "quota_reset_guard_monitoring_reason": "host-bound periodic interruption is unsupported",
             "session_override": override_state_name,
             "halt_marker": override_name(halt.state),
             "halt_decision": halt.marker.as_ref().map(|marker| marker.decision.as_str()),
+            "halt_digest": halt.bytes.as_deref().map(sha256_digest),
             "policy_digest": policy_digest,
             "halt_policy_digest": halt.marker.as_ref().and_then(|marker| marker.policy_digest.as_deref()),
             "session_recheck_required": recheck_required,
@@ -933,8 +1205,16 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     })
 }
 
-#[allow(clippy::too_many_lines)]
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
+    enforce_captured(arguments, &mut EnforcementTrace::default(), &mut |_| Ok(()))
+}
+
+#[allow(clippy::too_many_lines)]
+fn enforce_captured(
+    arguments: &EnforceArguments,
+    trace: &mut EnforcementTrace,
+    validate_observation: &mut impl FnMut(&usage::NormalizedSnapshot) -> Result<(), AdapterError>,
+) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let mut config = read_effective_config(
         &target,
@@ -954,6 +1234,9 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     );
     let mut policy_digest = effective_policy_digest(&config)?;
     let loaded = load_control(runtime, &binding)?;
+    trace.policy_digest.clone_from(&policy_digest);
+    trace.control_digest = runtime_digest(loaded.snapshot.bytes());
+    "absent".clone_into(&mut trace.halt_digest);
     if !effective_enabled(&loaded, config.guard_enabled) {
         return Ok(ActionResult {
             schema_version: 1,
@@ -983,11 +1266,20 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         });
     }
 
-    // A halt records a past observation, not permission to reuse that observation forever.
-    // In particular, a process restart must remeasure instead of asking the user to disable the
-    // safeguard. The exact snapshot remains the compare-and-swap input for the later removal or
-    // replacement.
+    // Ordinary halts need fresh observations. A reset records an unacknowledged user decision.
+    // Process restarts do not clear a pending reset. Ordinary halts remeasure without disabling
+    // protection. The exact snapshot remains the compare-and-swap input for later replacement.
     let halt = load_halt(runtime, &binding)?;
+
+    trace.halt_digest = runtime_digest(halt.snapshot.bytes());
+    if config.quota_reset_guard_enabled
+        && halt
+            .marker
+            .as_ref()
+            .is_some_and(|marker| marker.decision == "usage-reset")
+    {
+        return Ok(halted_result(&binding, &halt, false));
+    }
 
     let mut attempts = 0_u8;
     let observation = loop {
@@ -997,9 +1289,13 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             &config,
             &binding,
             arguments.account_digest.as_deref(),
-            halt.marker
-                .as_ref()
-                .map_or(&[], |marker| marker.snapshots.as_slice()),
+            if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
+                halt.marker
+                    .as_ref()
+                    .map_or(&[], |marker| marker.snapshots.as_slice())
+            } else {
+                &[]
+            },
         );
         let refreshed = read_effective_config(
             &target,
@@ -1016,6 +1312,16 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         config = refreshed;
         policy_digest = refreshed_digest;
     };
+    if let Some(snapshot) = &observation.normalized {
+        validate_observation(snapshot)?;
+    }
+    trace.normalized.clone_from(&observation.normalized);
+    trace.policy_digest.clone_from(&policy_digest);
+    // A reset-only opt-out may not authorize a measurement after its binding changed.
+    let refreshed_control = load_control(runtime, &binding)?;
+    if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
+        return Ok(policy_changed_result(&binding, &config));
+    }
     let Some(decision) = observation.decision else {
         let mut result = allowed_result(&binding, &config, &observation);
         if let Some(data) = result
@@ -1064,6 +1370,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 .chain(std::iter::once(b'\n'))
                 .collect::<Vec<_>>();
             let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
+            trace.halt_digest = sha256_digest(&desired);
             result.changed_paths = changed
                 .then(|| portable_relative_path(&halt.relative))
                 .into_iter()
@@ -1073,7 +1380,13 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 .as_mut()
                 .and_then(serde_json::Value::as_object_mut)
             {
-                data.insert("quota_reset_guard_enabled".to_owned(), json!(true));
+                data.insert(
+                    "quota_reset_guard_enabled".to_owned(),
+                    json!(effective_reset_enabled(
+                        &loaded,
+                        config.quota_reset_guard_enabled
+                    )),
+                );
                 data.insert(
                     "quota_reset_guard_baseline_updated".to_owned(),
                     json!(changed),
@@ -1081,6 +1394,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             }
         } else if halt.state != OverrideState::Absent {
             let changed = runtime.remove_runtime(&halt.relative, &halt.snapshot)?;
+            "absent".clone_into(&mut trace.halt_digest);
             result.changed_paths = changed
                 .then(|| portable_relative_path(&halt.relative))
                 .into_iter()
@@ -1321,6 +1635,7 @@ fn observe_usage(
             remaining_percent: None,
             next_action,
             snapshots: Vec::new(),
+            normalized: None,
         };
     };
     let core_snapshots = snapshot.core_snapshots();
@@ -1353,6 +1668,7 @@ fn observe_usage(
         remaining_percent,
         next_action: None,
         snapshots: core_snapshots,
+        normalized: Some(snapshot),
     }
 }
 
@@ -1504,24 +1820,6 @@ fn read_claude_capture_snapshot(
     })
 }
 
-pub(crate) fn read_claude_capture_for_session(
-    target: &PinnedTarget,
-    session_id: &str,
-    sampled_at: SystemTime,
-) -> Result<usage::NormalizedSnapshot, usage::SensorError> {
-    if session_id.is_empty() || session_id.len() > 256 || session_id.chars().any(char::is_control) {
-        return Err(usage::SensorError::WrongSession);
-    }
-    let binding = bind_session(
-        &ParsedBinding {
-            session_id: session_id.to_owned(),
-            process_id: 1,
-        },
-        "claude",
-    );
-    read_claude_capture_snapshot(target, &binding, sampled_at)
-}
-
 fn allowed_result(
     binding: &SessionBinding,
     config: &InstalledUsageConfig,
@@ -1562,7 +1860,9 @@ fn allowed_result(
     }
 }
 
-fn effective_policy_digest(config: &InstalledUsageConfig) -> Result<String, AdapterError> {
+pub(crate) fn effective_policy_digest(
+    config: &InstalledUsageConfig,
+) -> Result<String, AdapterError> {
     let target_class = match config.target_class {
         UsageTargetClass::Project => "project",
         UsageTargetClass::Source => "source",
@@ -1662,6 +1962,7 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
             "decision": marker.decision,
+            "reset_acknowledgement_digest": (marker.decision == "usage-reset").then(|| halt.bytes.as_deref().map(sha256_digest)).flatten(),
             "selected_window": marker.selected_window,
             "threshold_remaining_percent": marker.threshold_remaining_percent,
             "policy_digest": marker.policy_digest,
@@ -1769,6 +2070,60 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
     })
 }
 
+fn acknowledge_reset(
+    runtime: &PinnedTarget,
+    binding: &SessionBinding,
+    confirmation: Option<&str>,
+) -> Result<ActionResult, AdapterError> {
+    let halt = load_halt(runtime, binding)?;
+    let mut marker = halt
+        .marker
+        .clone()
+        .filter(|marker| marker.decision == "usage-reset")
+        .ok_or_else(|| {
+            AdapterError::Safety("no pending quota reset for this session".to_owned())
+        })?;
+    if halt.bytes.as_deref().map(sha256_digest).as_deref() != confirmation {
+        return Err(AdapterError::Safety(
+            "reset confirmation differs from the current halt".to_owned(),
+        ));
+    }
+    // Keep the post-reset baseline. Acknowledgement neither disables the threshold guard nor
+    // claims fresh usage; the caller must run enforce again before doing work.
+    "observed".clone_into(&mut marker.decision);
+    marker.process_id = binding.process_id;
+    marker.revision = marker
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| AdapterError::Safety("usage revision exhausted".to_owned()))?;
+    let bytes =
+        serde_json::to_vec(&marker).map_err(|error| AdapterError::Internal(error.to_string()))?;
+    let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &bytes)?;
+    let locator = portable_relative_path(&halt.relative);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "ControlUsageSession",
+        status: "success",
+        exit_code: 0,
+        code: "hive.usage-reset-acknowledged",
+        message:
+            "quota reset acknowledged; fresh enforce is required and the safeguard remains enabled"
+                .to_owned(),
+        changed_paths: changed.then(|| locator.clone()).into_iter().collect(),
+        evidence: vec![Evidence {
+            kind: "file",
+            locator,
+            digest: sha256_digest(&bytes),
+        }],
+        next_action: None,
+        data: Some(
+            json!({"guard_enabled":true,"session_recheck_required":true,"authorizes_dispatch":false,
+            "host_scope":binding.host_scope,"session_id_digest":binding.session_digest,"process_id":binding.process_id}),
+        ),
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 fn control_session(arguments: &SessionArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let config = read_effective_config(
@@ -1792,10 +2147,51 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
     );
     let loaded = load_control(runtime, &binding)?;
     let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
+    let reset_action = matches!(
+        arguments.action,
+        SessionAction::EnableResetGuard | SessionAction::DisableResetGuard
+    );
+    if reset_action {
+        if !currently_enabled {
+            return Err(AdapterError::Safety(
+                "enable the usage safeguard before changing reset-only protection".to_owned(),
+            ));
+        }
+        if arguments.action == SessionAction::DisableResetGuard {
+            if !arguments.confirm_reset_guard_disable {
+                return Err(AdapterError::Input(
+                    "reset-only disable requires --confirm-reset-guard-disable".to_owned(),
+                ));
+            }
+            let halt = load_halt(runtime, &binding)?;
+            if halt.state == OverrideState::Damaged
+                || halt
+                    .marker
+                    .as_ref()
+                    .is_some_and(|marker| marker.decision == "usage-reset")
+            {
+                return Err(AdapterError::Safety("acknowledge the pending reset or repair the damaged halt before reset-only disable".to_owned()));
+            }
+        } else if !config.quota_reset_guard_enabled {
+            return Err(AdapterError::Safety(
+                "the installed reset guard is disabled; a session override cannot enable it"
+                    .to_owned(),
+            ));
+        }
+    }
+    if arguments.action == SessionAction::AcknowledgeReset {
+        if !currently_enabled {
+            return Err(AdapterError::Safety(
+                "enable the usage safeguard before acknowledging a reset".to_owned(),
+            ));
+        }
+        return acknowledge_reset(runtime, &binding, arguments.confirm_reset.as_deref());
+    }
     let desired_enabled = match arguments.action {
-        SessionAction::Enable => true,
+        SessionAction::Enable | SessionAction::AcknowledgeReset => true,
         SessionAction::Disable => false,
         SessionAction::Toggle => !currently_enabled,
+        SessionAction::EnableResetGuard | SessionAction::DisableResetGuard => currently_enabled,
     };
     if desired_enabled && !config.guard_enabled {
         return Err(AdapterError::Safety(
@@ -1820,6 +2216,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         session_id_digest: binding.session_digest.clone(),
         process_id: binding.process_id,
         guard_enabled: desired_enabled,
+        reset_guard_disabled: match arguments.action {
+            SessionAction::EnableResetGuard => false,
+            SessionAction::DisableResetGuard => true,
+            _ => loaded.control.as_ref().is_some_and(|control| {
+                loaded.state == OverrideState::Current && control.reset_guard_disabled
+            }),
+        },
         revision,
     };
     let desired_bytes = serde_json::to_vec(&desired)
@@ -1828,7 +2231,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
     let changed = runtime.publish_runtime(&loaded.relative, &loaded.snapshot, &desired_bytes)?;
-    let code = if desired_enabled {
+    let code = if reset_action {
+        if desired.reset_guard_disabled {
+            "hive.usage-reset-guard-disabled"
+        } else {
+            "hive.usage-reset-guard-enabled"
+        }
+    } else if desired_enabled {
         "hive.usage-session-enabled"
     } else {
         "hive.usage-session-disabled"
@@ -1840,7 +2249,9 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         status: "success",
         exit_code: 0,
         code,
-        message: if desired_enabled {
+        message: if reset_action {
+            "reset-only protection changed for this binding; threshold protection remains enabled and fresh enforce is required".to_owned()
+        } else if desired_enabled {
             "usage safeguard is enabled for the current session binding".to_owned()
         } else {
             "usage safeguard is disabled only for the current session binding".to_owned()
@@ -1854,6 +2265,9 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         next_action: None,
         data: Some(json!({
             "guard_enabled": desired_enabled,
+            "quota_reset_guard_enabled": config.quota_reset_guard_enabled && !desired.reset_guard_disabled,
+            "session_recheck_required": reset_action,
+            "authorizes_dispatch": false,
             "session_override": "current",
             "host_scope": binding.host_scope,
             "session_id_digest": binding.session_digest,
@@ -1877,7 +2291,7 @@ pub(crate) fn read_installed_config(
 /// Resolve one policy for a configured Hive project or the Hive source workspace. Other folders
 /// are deliberately inactive even when global preferences exist.
 #[allow(clippy::too_many_lines)]
-fn read_effective_config(
+pub(crate) fn read_effective_config(
     target: &PinnedTarget,
     user_root: Option<&Path>,
     requested_host: Option<&str>,
@@ -2481,6 +2895,13 @@ fn is_sha256_digest(value: &str) -> bool {
     })
 }
 
+fn effective_reset_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
+    installed_enabled
+        && !loaded.control.as_ref().is_some_and(|control| {
+            loaded.state == OverrideState::Current && control.reset_guard_disabled
+        })
+}
+
 fn effective_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
     if !installed_enabled {
         return false;
@@ -2592,10 +3013,106 @@ mod tests {
     }
 
     fn temporary_target() -> tempfile::TempDir {
+        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(std::path::Path::parent)
+            .expect("workspace root")
+            .join("tests/work");
+        fs::create_dir_all(&work).expect("owned test work directory");
         tempfile::Builder::new()
             .prefix("hive-usage-control-")
-            .tempdir_in(std::env::current_dir().expect("current directory should resolve"))
+            .tempdir_in(work)
             .expect("temporary target should exist")
+    }
+
+    #[test]
+    fn dispatch_proof_reuses_one_observation_and_rejects_policy_control_or_halt_drift() {
+        let root = temporary_target();
+        let config_path = root.path().join(".hive/config/harness.toml");
+        fs::create_dir_all(config_path.parent().expect("config parent")).expect("config dir");
+        let config =
+            String::from_utf8(installed_config("claude", true, false)).expect("config text");
+        fs::write(&config_path, &config).expect("config");
+        let session = "fixture-dispatch-session";
+        let binding = binding(session);
+        let mut capture = valid_capture(&binding);
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_secs();
+        capture["received_at_unix_seconds"] = json!(now);
+        capture["received_at_unix_millis"] = json!(now * 1000);
+        capture["expires_at_unix_seconds"] = json!(now + 120);
+        capture["windows"][0]["resets_at_unix_seconds"] = json!(now + 3600);
+        let capture_path = root
+            .path()
+            .join(claude_capture_path(&binding.session_digest).expect("path"));
+        fs::create_dir_all(capture_path.parent().expect("capture parent")).expect("capture dir");
+        fs::write(
+            &capture_path,
+            serde_json::to_vec(&capture).expect("capture bytes"),
+        )
+        .expect("capture");
+        let preflight = super::dispatch_preflight(
+            root.path(),
+            "claude",
+            session,
+            1,
+            None,
+            "absent-run",
+            None,
+            |_| Ok(()),
+        );
+        // An allowing observation does not read run titles or require a notification artifact.
+        let preflight = preflight.expect("preflight");
+        assert_eq!(preflight.result.code, "hive.usage-allowed");
+        super::verify_dispatch_preflight(&preflight).expect("fresh proof");
+        fs::remove_file(&capture_path).expect("remove sensor fixture");
+        super::verify_dispatch_preflight(&preflight).expect("no second sensor read");
+        assert_eq!(
+            super::current_dispatch_binding(
+                &PinnedTarget::open(root.path()).expect("consumer"),
+                "claude",
+                session,
+                1,
+                None,
+            )
+            .expect("current observed baseline"),
+            preflight.binding_digest(),
+        );
+
+        let halt_path = root.path().join(halt_path(&binding));
+        let halt = fs::read(&halt_path).expect("halt baseline");
+        let mut changed = halt.clone();
+        changed.push(b' ');
+        fs::write(&halt_path, changed).expect("concurrent halt edit");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
+        fs::write(&halt_path, halt).expect("restore exact baseline");
+        fs::write(
+            &config_path,
+            config.replace(
+                "usage_stop_remaining_percent = 20",
+                "usage_stop_remaining_percent = 30",
+            ),
+        )
+        .expect("policy edit");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
+        fs::write(&config_path, config).expect("restore policy");
+        control_session(&SessionArguments {
+            target: root.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: session.to_owned(),
+                process_id: 1,
+            },
+            user_root: None,
+            host: Some("claude".to_owned()),
+            action: SessionAction::Disable,
+            confirm_disable: true,
+            confirm_reset_guard_disable: false,
+            confirm_reset: None,
+        })
+        .expect("disable");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
     }
 
     fn read_capture_bytes(
@@ -2745,6 +3262,7 @@ mod tests {
                         .to_owned(),
                 process_id: 1,
                 guard_enabled: true,
+                reset_guard_disabled: false,
                 revision: 1,
             }),
             state: OverrideState::Current,
@@ -3012,6 +3530,8 @@ usage_guard:
                 host: Some("codex".to_owned()),
                 action: SessionAction::Disable,
                 confirm_disable: true,
+                confirm_reset_guard_disable: false,
+                confirm_reset: None,
             })
             .is_err());
             assert!(set_threshold(&ThresholdArguments {
@@ -3051,6 +3571,8 @@ usage_guard:
             host: Some("codex".to_owned()),
             action: SessionAction::Disable,
             confirm_disable: true,
+            confirm_reset_guard_disable: false,
+            confirm_reset: None,
         })
         .expect("exact target session control");
         assert_eq!(result.code, "hive.usage-session-disabled");

@@ -15,6 +15,8 @@ Backlog 항목의 release checklist·완료율 집계 금지. 활성 계획 승�
 
 | 항목 | 상태 | 승격 조건 |
 | --- | --- | --- |
+| [Claude 실제 호스트 검증](claude-host-acceptance.md) | `ready` | 실행 환경 확보와 미래 버전의 명시적 범위 편입 |
+| [주기 감시·자동 중단](periodic-usage-interruption.md) | `blocked` | 현재 호스트의 지원 제어 경로 확보와 미래 버전 편입 |
 | [Notion Wiki backend](notion-wiki-backend.md) | `idea` | host 연결·OAuth·scope receipt의 현재 계약 확정 |
 | [작업 자동 분담](host-work-delegation.md) | `researching` | 두 host의 역할·모델·결과 확인 가능성 입증 |
 | [Platform signing](platform-signing.md) | `blocked` | 무료·지속 가능한 publisher identity 확보 |

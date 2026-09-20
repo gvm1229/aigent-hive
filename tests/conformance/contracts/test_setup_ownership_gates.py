@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 from tests.conformance.support.harness import (
+    BUILTIN_REFERENCE_PATHS,
     FIXTURE_ROOT,
     REPOSITORY_ROOT,
     Phase1CliTestCase,
@@ -45,6 +46,8 @@ BUILTIN_SKILL_NAMES = tuple(
     )
 )
 CODEX_HIVE_PROJECTION_PATHS = {
+    *{f"skills/{relative}" for relative in BUILTIN_REFERENCE_PATHS},
+    *{f"skills/{Path(relative).parent.as_posix()}" for relative in BUILTIN_REFERENCE_PATHS},
     "directives",
     "directives/00-project-harness.md",
     "directives/01-project-knowledge.md",
@@ -152,6 +155,9 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
                     b"---\nname: foreign-skill\n---\nforeign skill bytes\x00\xff\n"
                 )
 
+        foreign_reference = target / ".agents/skills/usage-guard/references/user-note.md"
+        foreign_reference.parent.mkdir(parents=True, exist_ok=True)
+        foreign_reference.write_bytes(b"foreign reference must survive exactly\n")
         before = {
             str(root): special_tree_snapshot(root)
             for root, _ in guarded_roots

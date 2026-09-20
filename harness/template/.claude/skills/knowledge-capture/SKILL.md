@@ -5,7 +5,7 @@ description: (knowledge-capture) At the end of a Wiki-enabled turn, keep one use
 
 # Capture One Knowledge Claim (`knowledge-capture`)
 
-For each eligible turn, write at most one atomic knowledge claim. Then preserve the existing explicit source-ingest path.
+For each eligible turn, write at most one atomic knowledge claim.
 
 ## Mandatory memory gate
 
@@ -49,18 +49,7 @@ For each eligible turn, write at most one atomic knowledge claim. Then preserve 
 
 ## Explicit source ingest
 
-1. Confirm the source is explicitly selected or created by the current authorized task, bounded,
-   non-confidential, and suitable for tracking.
-2. Prepare an agent-reviewed Wiki Markdown draft that follows the installed knowledge schema and
-   includes bounded outcome, criteria, and normalized provenance.
-3. Run:
-
-   ```text
-   hive knowledge ingest --target <project-root> --user-root <user-root> --source <source-file> --wiki <reviewed-wiki-draft> --output json
-   ```
-
-4. Require a schema-valid success result and report its changed paths and evidence digest.
-5. Run `hive knowledge lint --target <project-root> --user-root <user-root> --output json`.
+For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary one-fact capture does not load that procedure.
 
 ## Safety
 

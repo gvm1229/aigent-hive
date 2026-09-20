@@ -1,5 +1,7 @@
 //! Persistent canonical store for the disposable collection RAG projection.
 
+mod freshness;
+
 use crate::collection::{
     derive_collection_id, CollectionKind, CollectionRecord, CollectionRegistry,
     CollectionResolution, CollectionState, CollectionVisibility, COLLECTION_SCHEMA_VERSION,
@@ -1647,10 +1649,10 @@ impl RagStore {
                     "semantic generation is stale".to_owned(),
                 ));
             }
-            let result = crate::rag::semantic_matches_serialized(
+            let mut result = crate::rag::semantic_matches_serialized(
                 bytes, manifest, registry, request, matches,
             )?;
-            self.validate_semantic_hits(registry, &result.hits)
+            self.validate_semantic_hits(registry, &mut result.hits)
                 .map_err(|_| {
                     RagError::RepairRequired(
                         "canonical semantic citations changed or are unavailable".to_owned(),
@@ -1727,11 +1729,11 @@ impl RagStore {
         request: &RetrievalRequest,
     ) -> Result<RetrievalResult, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
-            let result = retrieve_serialized(bytes, manifest, registry, request)?;
-            self.validate_semantic_hits(registry, &result.hits)
+            let mut result = retrieve_serialized(bytes, manifest, registry, request)?;
+            self.validate_semantic_hits(registry, &mut result.hits)
                 .map_err(|_| {
                     RagError::RepairRequired(
-                        "canonical retrieval citations changed or are unavailable".to_owned(),
+                        "canonical retrieval citations or source evidence changed; explicitly review current sources and rebuild the index before reuse".to_owned(),
                     )
                 })?;
             Ok(result)
@@ -1773,8 +1775,9 @@ impl RagStore {
         expanded.byte_budget = 1024 * 1024;
         let lexical = prepared.retrieve(&expanded)?;
         let semantic = prepared.semantic_matches(&expanded, matches)?;
-        let result = crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
-        self.validate_semantic_hits(registry, &result.result.hits)
+        let mut result =
+            crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
+        self.validate_semantic_hits(registry, &mut result.result.hits)
             .map_err(|_| {
                 RagError::RepairRequired(
                     "canonical hybrid citations changed or are unavailable".to_owned(),
@@ -1859,14 +1862,17 @@ impl RagStore {
     fn validate_semantic_hits(
         &self,
         registry: &CollectionRegistry,
-        hits: &[crate::rag::RetrievalHit],
+        hits: &mut [crate::rag::RetrievalHit],
     ) -> Result<(), WikiError> {
         let by_id = registry.by_id();
-        let mut checked = BTreeSet::new();
+        let mut checked = BTreeMap::new();
         for hit in hits {
-            if !checked.insert((&hit.collection_id, &hit.item_kind, &hit.item_id)) {
+            let key = (&hit.collection_id, &hit.item_kind, &hit.item_id);
+            if let Some(freshness) = checked.get(&key) {
+                hit.source_freshness = *freshness;
                 continue;
             }
+            hit.source_freshness = None;
             let collection = by_id.get(hit.collection_id.as_str()).ok_or_else(|| {
                 WikiError::Verification("canonical collection is absent".to_owned())
             })?;
@@ -1900,6 +1906,7 @@ impl RagStore {
                         "canonical claim changed".to_owned(),
                     ));
                 }
+                hit.source_freshness = self.validate_claim_sources(registry, &claim)?;
             } else if hit.item_kind == "document" {
                 let relative = Path::new(locator)
                     .strip_prefix(WIKI_RELATIVE)
@@ -1947,6 +1954,7 @@ impl RagStore {
                     "unknown canonical item kind".to_owned(),
                 ));
             }
+            checked.insert(key, hit.source_freshness);
         }
         Ok(())
     }
@@ -6014,6 +6022,102 @@ mod tests {
     }
 
     #[test]
+    fn checked_scan_retrieval_detects_missed_edits_without_writes() {
+        let (temporary, store) = store();
+        let scanned = tempfile::tempdir().expect("source root");
+        let path = scanned.path().join("README.md");
+        std::fs::write(&path, b"reviewed evidence\n").expect("evidence");
+        let second = scanned.path().join("z-second.md");
+        std::fs::write(&second, b"second evidence\n").expect("second evidence");
+        let inventory = scan_inventory(&[
+            ("README.md", b"reviewed evidence\n"),
+            ("z-second.md", b"second evidence\n"),
+        ]);
+        let mut claim = reviewed_scan_claim(
+            "freshness",
+            "The project uses freshness validation.",
+            "README.md",
+            &inventory,
+        );
+        claim.evidence.extend(
+            reviewed_scan_claim("second", "Second source.", "z-second.md", &inventory).evidence,
+        );
+        let review = validate_claims(&inventory, &[claim]).expect("review");
+        let collection = store
+            .register_collection(registration(scanned.path(), "freshness"))
+            .expect("collection")
+            .collection;
+        store
+            .apply_reviewed_claims(&collection.collection_id, &review)
+            .expect("apply");
+        let request = RetrievalRequest {
+            scope: crate::rag::RetrievalScope::Collection(collection.collection_id.clone()),
+            current_collection_id: Some(collection.collection_id),
+            query: "freshness".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let initial = store.checked_retrieve(&request).expect("fresh result");
+        assert_eq!(initial.hits.len(), 1);
+        let protected = [
+            initial.hits[0]
+                .locator
+                .split('#')
+                .next()
+                .expect("claim path"),
+            SHARED_INDEX_RELATIVE,
+            RAG_MANIFEST_RELATIVE,
+            COLLECTION_REGISTRY_RELATIVE,
+        ];
+        let before = protected
+            .iter()
+            .map(|relative| std::fs::read(temporary.path().join(relative)).expect("before"))
+            .collect::<Vec<_>>();
+        std::fs::write(scanned.path().join("unrelated.rs"), b"unrelated change")
+            .expect("unrelated edit");
+        assert_eq!(
+            store.checked_retrieve(&request).expect("unrelated").hits,
+            initial.hits
+        );
+        std::fs::write(&path, b"changed code or policy").expect("missed edit event");
+        assert!(store.checked_retrieve(&request).is_err());
+        std::fs::write(&path, b"reviewed evidence\n").expect("same content restored");
+        assert!(store.checked_retrieve(&request).is_ok());
+        let moved = scanned.path().join("renamed.md");
+        std::fs::rename(&path, &moved).expect("rename");
+        let unavailable = store.checked_retrieve(&request).expect("historical memory");
+        assert!(unavailable
+            .hits
+            .iter()
+            .all(|hit| hit.source_freshness
+                == Some(crate::rag::SourceFreshness::HistoricalUnverified)));
+        std::fs::write(&second, b"changed second evidence\n").expect("changed evidence");
+        assert!(
+            store.checked_retrieve(&request).is_err(),
+            "missing evidence must not hide a later source mismatch"
+        );
+        std::fs::write(&second, b"second evidence\n").expect("restore second evidence");
+        std::fs::remove_file(&moved).expect("delete");
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("deleted source history")
+                .hits,
+            unavailable.hits
+        );
+        let after = protected
+            .iter()
+            .map(|relative| std::fs::read(temporary.path().join(relative)).expect("after"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            before, after,
+            "retrieval must not repair canonical or derived state"
+        );
+    }
+
+    #[test]
     fn reviewed_scan_claims_are_central_and_never_mutate_scanned_root() {
         let (temporary, store) = store();
         let scanned = tempfile::tempdir().expect("scanned root");
@@ -6368,6 +6472,8 @@ mod tests {
     fn scan_apply_auto_promotes_safe_general_claims_and_invalidates_their_derivatives() {
         let (_temporary, store) = store();
         let scanned = tempfile::tempdir().expect("scanned root");
+        let evidence = scanned.path().join("README.md");
+        std::fs::write(&evidence, b"promotion evidence\n").expect("evidence");
         let inventory = scan_inventory(&[("README.md", b"promotion evidence\n")]);
         let mut reviewed = reviewed_scan_claim(
             "automatic-decision",
@@ -6391,6 +6497,26 @@ mod tests {
             .expect("automatic promotion");
         assert_eq!(promoted.source_claims.len(), 1);
         assert_eq!(promoted.promoted_claims.len(), 1);
+        let request = RetrievalRequest {
+            scope: crate::rag::RetrievalScope::Global,
+            current_collection_id: None,
+            query: "automatic promotion".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("fresh promotion")
+                .hits
+                .len(),
+            1
+        );
+        std::fs::write(&evidence, b"new source decision").expect("source edit");
+        assert!(store.checked_retrieve(&request).is_err());
+        std::fs::write(&evidence, b"promotion evidence\n").expect("restore source");
         assert_eq!(
             promoted.promoted_claims[0].collection_id,
             USER_ROOT_COLLECTION_ID

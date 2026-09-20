@@ -21,6 +21,18 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 프로젝트 전체 정책 검사 설계 | [en](en/project-policy-enforcement.md) | [ko](ko/project-policy-enforcement.md) |
+| 소스 브랜치 이름 규칙 | [en](en/branch-naming-policy.md) | [ko](ko/branch-naming-policy.md) |
+| `0.11.0` 기반 구조 리팩터링 | [en](en/foundation-refactor.md) | [ko](ko/foundation-refactor.md) |
+| 호스트 훅 검사기 실행 실패 | [en](en/native-hook-launcher-failure.md) | [ko](ko/native-hook-launcher-failure.md) |
+| Codex 파일 훅 실제 수용 | [en](en/codex-file-hook-acceptance.md) | [ko](ko/codex-file-hook-acceptance.md) |
+| Codex 수동 중지·재개 | [en](en/codex-native-cancellation.md) | [ko](ko/codex-native-cancellation.md) |
+| 파일 훅과 셸 쓰기 경계 | [en](en/native-hook-shell-boundary.md) | [ko](ko/native-hook-shell-boundary.md) |
+| Antigravity 파일 훅 실제 수용 | [en](en/antigravity-file-hook-acceptance.md) | [ko](ko/antigravity-file-hook-acceptance.md) |
+| PowerShell 훅 종료 상태 | [en](en/powershell-hook-exit-status.md) | [ko](ko/powershell-hook-exit-status.md) |
+| Codex 훅 오류 실제 관측 | [en](en/codex-native-error-observation.md) | [ko](ko/codex-native-error-observation.md) |
+| 네이티브 파일 훅 수용 범위 | [en](en/native-host-qualified-scope.md) | [ko](ko/native-host-qualified-scope.md) |
+| 과거 지식과 현재 원본 | [en](en/knowledge-source-freshness.md) | [ko](ko/knowledge-source-freshness.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
 | Supported host | [en](en/supported-hosts.md) | [ko](ko/supported-hosts.md) |
@@ -78,6 +90,7 @@
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Automatic numbered-test release gate | [en](en/automatic-test-release-gate.md) | [ko](ko/automatic-test-release-gate.md) |
 | Installed usage guard | [en](en/installed-usage-guard.md) | [ko](ko/installed-usage-guard.md) |
+| 현재 작업의 초기화 감지 제어 | [en](en/quota-reset-session-control.md) | [ko](ko/quota-reset-session-control.md) |
 | Judge verification | [en](en/judge-verification.md) | [ko](ko/judge-verification.md) |
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
 | `0.10.3` usage guard recovery stable release | [en](en/v0-10-3-usage-recovery-release.md) | [ko](ko/v0-10-3-usage-recovery-release.md) |

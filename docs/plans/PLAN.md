@@ -1,14 +1,27 @@
 # Aigent Hive 활성 계획
 
-> Revision: 332
-> 기준일: 2026-09-12
-> Product version: `0.10.3`
+> Revision: 350
+> 기준일: 2026-09-20
+> Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: `0.10.3` 안정판 공개·독립 확인 완료
-> 첫 공개 시험: `0.10.3-test.1`
-> 결정: [`ADR-0022`](../decisions/ADR-0022-global-user-update.md)
+> 현재 단계: `0.11.0` 초기화 감지 제외 구현·실제 지식 연결 검증, 호스트 수용 진행
+> 첫 공개 시험: `0.11.0-test.1`; 현재 제품 파일의 버전: `0.11.0`
+> 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
-## 목표
+## 현재 요청과 경계
+
+- 현재 요청: 승인된 전체 구현 계획 실행. 안정판 권한·실제 사용자 설치 경계 유지
+- 브랜치: `refactor/hive-foundations`, 기준 `develop@87b84f42`
+- 확정: 기존 기능·명령 유지, 핵심 지식 흐름 우선, Codex 검증 후 다른 호스트 확대
+- 목표: 지식 이어 가기·호스트 검증·코드 중심 안전 검사·공통 파일 처리·상태 단일 정본
+- [총괄 계획](active/refactor-foundations.md)의 21개 구현 항목. 계획 작성 완료와 제품 구현 완료의 별도 판정
+- 버전 결정: 미출시 `0.10.4` 변경을 `0.11.0`으로 계승, 별도 `0.10.4` 출시 제외. 제품 파일의 번호 변경은 `RFB-001` 구현 단계
+- `RB104-004`: 작업별 제어·명시적 재개 유지. 사용자 승인으로 15초 상시 감시·진행 중 자동 중단만 [버전 미정 후속 목표](backlog/periodic-usage-interruption.md)로 이전
+- 사용자 승인 범위 변경: `RFH-003`·`HK-003`·`HK-004`의 Claude 실제 검증과 해당 `RFR-001` 의존 범위를 `0.11.0`에서 제외. [후속 목표](backlog/claude-host-acceptance.md)의 버전은 사용자 결정 전 미정; 기존 구현·증거 보존
+- 안정판 권한은 후속 버전별 명시 승인 필요
+- 전체 적용 분석: [정책 검사와 훅의 책임](../research/project-policy-enforcement-2026-09-18.md). 승인 제안은 기존 기준 보강과 `HK-005` 추가, 완료 항목 증가 없음
+
+## 기존 출시 목표와 보존 근거
 
 - 모든 Hive 프로젝트·소스의 옛 `halt.json`을 같은 위치에서 교체·제거하는 공통 복구, 추가 영구 상태 파일 0건: `UGR103-*`
 
@@ -19,7 +32,7 @@
 - npm 설치는 실행 파일만 제공하고 최초 전역 초기화는 `hive update`가 담당
 - `0.10.3-test.1` 세 운영체제 공개 수용 뒤 stable `0.10.3` 공개
 
-## 완료 조건
+## 기존 출시 완료 조건
 
 - `0.9.5–0.10.1` 인증된 전역 사용자 설치의 자동 이관·검증
 - 질문 없는 갱신은 자동 완료, 질문 있는 갱신은 `setup-required` 차단과 답변 뒤 자동 재개
@@ -34,36 +47,55 @@
 
 ## Completion index
 
+<!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 전역 사용자 갱신 | 10 | 0 | 100% |
-| 지침 품질 개선 | 6 | 0 | 100% |
-| `0.10.2` 공개 시험·안정판 승격 | 9 | 0 | 100% |
-| `0.10.3` 사용량 보호 기존 설치 복구 | 10 | 0 | 100% |
-| **합계** | **35** | **0** | **100%** |
+| 브랜치 규칙 강제·호스트 조사 | 5 | 0 | 100.0% |
+| 호스트 정책 훅 제품 계획 | 3 | 0 | 100.0% |
+| 호스트 훅 독립 평가 | 1 | 0 | 100.0% |
+| 작업 후 개선 후보·사람 검토 | 1 | 0 | 100.0% |
+| 공통 기준·실행 순서·통합 수용 | 2 | 1 | 66.7% |
+| 지식 흐름·실제 호스트 검증 | 6 | 0 | 100.0% |
+| 안전 검사·설치·복구 | 8 | 0 | 100.0% |
+| Markdown 정본·집계 생성 | 4 | 0 | 100.0% |
+| 미출시 `0.10.4`에서 계승한 사용량 보호 | 4 | 0 | 100.0% |
+| **현재 범위 합계** | **34** | **1** | **97.1%** |
+<!-- HIVE:PLAN-STATE:END -->
 
 ## Required load order
 
 1. 설치 product usage guard
 2. `docs/plans/PLAN.md`
 3. `docs/state/CURRENT.md`
-4. [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md)
-5. [`release-0.10.2.md`](active/release-0.10.2.md)
-6. 직접 관련 architecture·decision·guide
+4. [리팩터링 총괄](active/refactor-foundations.md)
+5. 현재 항목의 상세 계획과 [ADR-0023](../decisions/ADR-0023-foundation-refactor.md)
+6. 직접 관련 코드·시험·기존 결정
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md) | `UGR103-*` | 기존 표식 교체·모든 Hive 대상의 공통 복구 |
-| [quota-reset-guard-0.10.4.md](active/quota-reset-guard-0.10.4.md) | `RB104-*` | 초기화된 사용량 감지·자동 실행 차단 |
-| [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md) | `INS102-*` | 소스·harness 지침 품질 |
-| [`global-user-update-0.10.2.md`](active/global-user-update-0.10.2.md) | `GUU102-*` | 전역 사용자 설치·질문 대기·자동 재개 |
-| [`release-0.10.2.md`](active/release-0.10.2.md) | `REL102-*` | 공개 시험·세 운영체제 수용·stable 공개 |
+| [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
+| [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-001–003` | 호스트 정책 훅 제품 계획 |
+| [hook-policy-evaluation-0.11.0.md](active/hook-policy-evaluation-0.11.0.md) | `HK-004` | 호스트 훅 독립 평가 |
+| [hook-review-candidates-0.11.0.md](active/hook-review-candidates-0.11.0.md) | `HK-005` | 작업 후 개선 후보·사람 검토 |
+| [refactor-foundations.md](active/refactor-foundations.md) | `RFB-*`, `RFR-*` | 공통 기준·실행 순서·통합 수용 |
+| [refactor-context-hosts.md](active/refactor-context-hosts.md) | `RFK-*`, `RFH-*` | 지식 흐름·실제 호스트 검증 |
+| [refactor-policy-transactions.md](active/refactor-policy-transactions.md) | `RFP-*`, `RFT-*` | 안전 검사·설치·복구 |
+| [refactor-plan-state.md](active/refactor-plan-state.md) | `RFS-*` | Markdown 정본·집계 생성 |
+| [quota-reset-guard-0.11.0.md](active/quota-reset-guard-0.11.0.md) | `RB104-*` | 미출시 `0.10.4`에서 계승한 사용량 보호 |
 
 ## 실행 순서
 
-현재 활성 완료 항목: 0건. Stable 공개 뒤 제품 변경: 다음 patch version과 해당 version의 `-test.1`부터 새 수용
+리팩터링: 기준 보존 → `RFS-001–004` → `RFB-001–002` → `RFK-001`·`RFH-001` → 안전·지식 개선 → 설치 분리 → 호스트 확대·상태 이관 → `RFR-001`. 상세 선행 조건은 [총괄 계획](active/refactor-foundations.md) 참조.
+
+훅 상세 순서: `HK-001` 실패 분류·결과 합산 → `HK-002` 변환·진단·전달 → `HK-003` 실제 수용 → `HK-004` 보류 평가. `HK-005`는 `HK-001`과 기존 실행 결과 계약 뒤 구현, `RFK-002`는 문맥 유효성 소유.
+
+현재 요청의 종료 조건: 범위 내 안전한 구현·검증 완료. 실제 호스트 승인·외부 증거가 필요한 항목은 소유자와 한계를 명시하고 독립 구현 지속.
+
+### 이전 출시의 실행 순서
+
+기존 안정판 공개 완료 기록 보존. 공개된 안정판에 새 시험판 추가 금지; 후속 제품 버전은 현재 사용자 선택으로 확정.
 
 1. `GUU102-001–004`: version·호환성·질문 catalog·전역 transaction
 2. `GUU102-005–007`: setup-required 투영·답변·자동 재개·같은 버전 복구
@@ -77,3 +109,14 @@
 - `0.10.0` 완료 계획: 기존 `docs/plans/active/*-0.10.0.md` 기록
 - 버전 비종속 후보: [`backlog/README.md`](backlog/README.md)
 - 완료·대체 기록: [`../archive/README.md`](../archive/README.md)
+
+- [리팩터링 ID 대응표](refactor-id-mapping.md): 현재 ID 정합화, 과거 조사 기록 보존
+
+## 이전 출시 완료 기록
+
+현재 0.11.0 집계에서 제외, 기존 체크 표시와 증거 보존.
+
+- [usage-recovery-0.10.2.md](active/usage-recovery-0.10.2.md)
+- [instruction-quality-0.10.2.md](active/instruction-quality-0.10.2.md)
+- [global-user-update-0.10.2.md](active/global-user-update-0.10.2.md)
+- [release-0.10.2.md](active/release-0.10.2.md)

@@ -62,6 +62,7 @@ current catalog.
 | [ADR-0018](decisions/ADR-0018-notion-wiki-backend.md) | Notion Wiki backend |
 | [ADR-0019](decisions/ADR-0019-hive-native-iterative-execution.md) | Hive-native 반복 실행 소유권 |
 | [ADR-0020](decisions/ADR-0020-0.10.0-product-scope.md) | `0.10.0` 최종 제품 범위 |
+| [ADR-0023](decisions/ADR-0023-foundation-refactor.md) | 기존 기능 유지·핵심 흐름 우선 리팩터링 |
 
 ## Guides
 
@@ -86,6 +87,7 @@ current catalog.
 | 문서 | 설명 |
 | --- | --- |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
+| [`0.11.0` 개발 초안](releases/0.11.0.md) | 리팩터링·호스트 정책의 구현 중 범위, 미게시 |
 | [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
 | [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
 | [`0.9.3`](releases/0.9.3.md) | 프로젝트 간 지식 접근·자동 공유 정식 출시 |
@@ -96,9 +98,16 @@ current catalog.
 
 ## Research
 
+- [리팩터링 측정 기준](research/refactor-baseline-0.11.0.md): 기존 CLI·지식 평가·지침 크기
+- [호스트 연결 확인 범위](research/host-contract-matrix-0.11.0.md): 설치 버전·공식 규약·실제 실행의 구분
+- [정책 규칙과 최종 검사 위치](architecture/policy-rule-inventory.md): `HK-001`, `RFP-001`의 범위와 한계
+
 | 문서 | 설명 |
 | --- | --- |
 | [Research 안내](research/README.md) | Dated external research MOC |
+| [프로젝트 전체 정책 검사](research/project-policy-enforcement-2026-09-18.md) | 규칙별 강제 지점·훅 한계·최소 재설계 |
+| [호스트 정책 훅 조사](research/host-policy-hooks-2026-09-18.md) | 세 호스트 공식 계약·실제 강제 경계·0.11.0 설계 |
+| [브랜치 이름 규칙 조사](research/branch-naming-audit-2026-09-18.md) | 금지 접두사 생성 원인·검사 누락·수정 제안 |
 | [Codex app-server usage](research/codex-app-server-usage-sensor.md) | Codex native sensor |
 | [Claude usage](research/claude-code-native-usage-sensor.md) | Claude status-line sensor |
 | [Antigravity usage](research/antigravity-native-usage-sensor.md) | Antigravity native surface |
@@ -145,7 +154,13 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | 문서 | 설명 |
 | --- | --- |
 | [Plan 안내](plans/README.md) | Plan structure |
+| [계획 상태 검사](guides/plan-state.md) | 단일 파서·생성 구간·출시 근거 연결 |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
+| [기반 구조 리팩터링](plans/active/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
+| [작업 후 개선 후보 검토](plans/active/hook-review-candidates-0.11.0.md) | 승인 제안의 후보·사람 검토·자동 수정 방지 |
+| [지식·호스트 리팩터링](plans/active/refactor-context-hosts.md) | 지식 이어 가기·Codex 우선 수용 |
+| [안전·설치 리팩터링](plans/active/refactor-policy-transactions.md) | 코드 검사·파일 변경 책임 분리 |
+| [계획·상태 리팩터링](plans/active/refactor-plan-state.md) | Markdown 정본 기반 집계 생성 |
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
 | [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |

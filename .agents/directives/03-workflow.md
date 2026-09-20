@@ -19,9 +19,8 @@ Maintain two default long-lived branches:
 - `develop` — ongoing integration and ordinary development; ordinary fast-forward direct pushes
   are allowed
 
-Create `staging` only when an explicit release plan needs a separate pre-production branch and the
-user authorizes it. A created `staging` branch must use a strict ruleset with pull requests,
-required status checks, deletion protection, and non-fast-forward protection.
+Use `release/staging` only with explicit user approval and a release-plan need. Require PRs,
+status checks, deletion protection, and non-fast-forward protection.
 
 Bootstrap rules:
 
@@ -43,6 +42,7 @@ After bootstrap:
 - An authorized non-default branch name must start with its work class: `feature/`, `fix/`,
   `release/`, `docs/`, `test/`, `refactor/`, `build/`, or `chore/`. Do not prefix a branch with
   an agent, model, assistant, or person name. Use the narrowest truthful work class.
+- Use `scripts/branch-policy.py` for authorized branch creation and rename; see the guide below.
 
 ## Temporary Worktree and Clone Lifecycle
 
@@ -260,7 +260,7 @@ Verify that the message has the intended scope and contains no co-author trailer
 - Do not rewrite an existing commit solely to apply current commit-splitting policy unless the user
   explicitly requests that history change.
 - When explicitly authorized, use `--force-with-lease`, never plain `--force`.
-- Never delete `main`, `develop`, or an active release `staging` branch.
+- Never delete `main`, `develop`, or an active `release/staging` branch.
 - Do not push secrets, runtime state, caches, SQLite files, generated release output, or active-session manifests.
 
 ## Completion Boundary

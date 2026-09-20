@@ -857,6 +857,22 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
                     f"built-in Skill projection bytes changed: {name}"
                 )
             expected_projection_entries = {"SKILL.md"}
+            reference_source = source_path.parent / "references"
+            if reference_source.is_dir():
+                expected_projection_entries.add("references")
+                reference_target = projection_path.parent / "references"
+                source_entries = {path.relative_to(reference_source): path
+                                  for path in reference_source.rglob("*")}
+                target_entries = {path.relative_to(reference_target): path
+                                  for path in reference_target.rglob("*")}
+                if source_entries.keys() != target_entries.keys():
+                    raise AssertionError(f"built-in Skill reference inventory differs: {name}")
+                for relative, source in source_entries.items():
+                    target = target_entries[relative]
+                    if source.is_symlink() or target.is_symlink() or source.is_dir() != target.is_dir():
+                        raise AssertionError(f"built-in Skill reference type differs: {name}/{relative}")
+                    if source.is_file() and source.read_bytes() != target.read_bytes():
+                        raise AssertionError(f"built-in Skill reference bytes differ: {name}/{relative}")
             if projection_root == ".agents":
                 metadata_source = (
                     REPOSITORY_ROOT

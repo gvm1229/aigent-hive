@@ -49,12 +49,38 @@ fn main() {
     println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_RELEASE_DATE");
     println!("cargo:rustc-env=HIVE_PACKAGE_RELEASE_DATE={package_release_date}");
     write_historical_user_plugin_tables(&manifest_dir);
+    let mut policy = Sha256::new();
+    for relative in [
+        "src/policy/native.rs",
+        "src/policy/configure.rs",
+        "src/main.rs",
+        "src/run.rs",
+        "src/run/policy_review.rs",
+        "../hive-core/src/run.rs",
+        "../../schemas/host-policy-intent.schema.json",
+        "../../schemas/policy-review.schema.json",
+        "../../schemas/run-status.schema.json",
+        "../hive-core/src/policy.rs",
+        "../hive-core/src/lib.rs",
+    ] {
+        let path = manifest_dir.join(relative);
+        println!("cargo:rerun-if-changed={}", path.display());
+        policy.update(relative.as_bytes());
+        policy.update([0]);
+        policy.update(fs::read(path).expect("native policy source is readable"));
+    }
+    let mut digest = String::from("sha256:");
+    for byte in policy.finalize() {
+        write!(digest, "{byte:02x}").expect("format policy digest");
+    }
+    println!("cargo:rustc-env=HIVE_NATIVE_POLICY_DIGEST={digest}");
 }
 
 fn write_historical_user_plugin_tables(manifest_dir: &Path) {
     let mut releases = Vec::new();
     for version in [
-        "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1",
+        "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2",
+        "0.10.3",
     ] {
         let base = manifest_dir.join(format!(
             "../../harness/user-bases/{version}/plugins/aigent-hive"

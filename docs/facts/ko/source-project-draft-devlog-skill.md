@@ -11,9 +11,9 @@ aliases: ["draft-devlog"]
 sources:
   - "repo:.agents/skills/draft-devlog/SKILL.md#sha256:aeab2ab8f8745790c13283a82e1e85ed07c74bc05d3a2be52d4e7ed3cb284e64"
   - "repo:.agents/skills/draft-devlog/scripts/portfolio_mcp.py#sha256:8562b9628443dbf4e366f31f9de83da1501480969ff4121a05c5a20e3a72dd0c"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:9f234ef3fede8030ab6ad57fa4b560a71f30f468622c4e4ad56b83864d0e05ce"
 links: [source-development, source-project-update-summary-skill]
-reviewed_revision: "git:f1c89f0998447f3bc53fbe0560521874efc65323"
+reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
 ---
 

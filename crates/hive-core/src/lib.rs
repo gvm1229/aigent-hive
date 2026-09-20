@@ -8,12 +8,14 @@ use std::path::{Component, Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 pub mod custom_agent;
+pub mod file_ops;
 pub mod judge;
 pub mod judge_auth;
 pub mod korean;
 pub mod loop_graph;
 pub mod native_workflow;
 pub mod orchestration;
+pub mod policy;
 pub mod role;
 pub mod run;
 pub mod usage_guard;
@@ -341,6 +343,19 @@ pub fn is_hive_directive_projection_path(path: &Path) -> bool {
 
 fn is_hive_skill_projection_portable(path: &str) -> bool {
     let parts = path.split('/').collect::<Vec<_>>();
+    if parts.len() == 5
+        && matches!(parts[0], ".agents" | ".claude")
+        && parts[1] == "skills"
+        && parts[3] == "references"
+    {
+        return matches!(
+            (parts[2], parts[4]),
+            ("usage-guard", "control.md" | "sensors.md")
+                | ("knowledge-recall", "confidential.md")
+                | ("knowledge-capture", "ingest.md")
+                | ("run-checkpoint", "policy-review.md")
+        );
+    }
     (parts.len() == 4
         && matches!(parts[0], ".agents" | ".claude")
         && parts[1] == "skills"
@@ -383,6 +398,18 @@ fn valid_directive_projection_name(name: &str) -> bool {
 /// Returns [`TargetGuardError::SymlinkAncestor`] for the first symlink found.
 pub fn ensure_no_symlink_ancestors(target: &Path, relative: &Path) -> Result<(), TargetGuardError> {
     validate_project_relative(relative)?;
+    ensure_no_symlink_ancestors_validated(target, relative)
+}
+
+/// Inspect a host-owned edit target without granting Hive ownership of its namespace.
+///
+/// This read-only hook check may observe foreign host files. Hive mutation callers
+/// must still use their narrower namespace and ownership validation.
+///
+/// # Errors
+/// Rejects unsafe lexical paths and existing symlink components.
+pub fn inspect_host_edit_path(target: &Path, relative: &Path) -> Result<(), TargetGuardError> {
+    let _ = validate_relative_lexical(relative)?;
     ensure_no_symlink_ancestors_validated(target, relative)
 }
 

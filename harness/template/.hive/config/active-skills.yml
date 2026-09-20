@@ -57,7 +57,7 @@ skills:
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:9e86075240574d1e589329ae724c97fac32dab2e2d367b7d878bd84e69d4b483
+  content_digest: sha256:5fce1cb75770b24fc3e38fa434eb4afc3feb5975a1bfc83002541190374489dd
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -89,7 +89,7 @@ skills:
   consent_digest: null
 - name: knowledge-recall
   source_type: built-in
-  content_digest: sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267
+  content_digest: sha256:15980e7d0b06bf6d7f9d8f44dd006fb5e916925656c90bc4f79cbbfb4ba57f82
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -188,7 +188,7 @@ skills:
   consent_digest: null
 - name: run-checkpoint
   source_type: built-in
-  content_digest: sha256:4cded991dfcf13ff09d5ad28f88e014091b0412cd35f6c531f4224208224ba9c
+  content_digest: sha256:2892a1d16f2795a0a2629c5d9082410d29205b0b9f46a41707d3cf40e764f655
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -206,7 +206,7 @@ skills:
   consent_digest: null
 - name: run-resume
   source_type: built-in
-  content_digest: sha256:aeb1e246783741d2d2879ac1618f1ae970079f9725db4849b164eb97c23bc345
+  content_digest: sha256:106c44df121b382a306e6725a31ceccb038915eb007b27b438ec587022895d40
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -234,7 +234,7 @@ skills:
   consent_digest: null
 - name: usage-guard
   source_type: built-in
-  content_digest: sha256:e7b998e61d40abed13f618a259254566fa65a9b5a85f6d737476d464d2c1af79
+  content_digest: sha256:7f7e3b9add1ad700d032c2cd0f8a5251ecfdbccf9fa44161dfbb626cb9683cac
   side_effect_class: project-write
   capabilities:
   - filesystem-read

@@ -203,6 +203,9 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(jobs["rust"]["runs-on"], "ubuntu-latest")
         self.assertEqual(jobs["conformance"]["runs-on"], "ubuntu-latest")
         self.assertEqual(jobs["platform-smoke"]["strategy"]["matrix"]["os"], ["macos-latest", "windows-latest"])
+        platform_commands = "\n".join(step.get("run", "") for step in jobs["platform-smoke"]["steps"])
+        for crate in ("hive-core", "hive-render", "hive-update", "hive-cli"):
+            self.assertIn(f"-p {crate}", platform_commands)
         self.assertEqual(
             jobs["protected-merge-gate"]["needs"],
             ["changes", "documentation", "rust", "conformance", "copier", "platform-smoke", "transfer-consume"],

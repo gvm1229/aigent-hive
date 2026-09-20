@@ -11,6 +11,8 @@ use std::fmt::{self, Display, Formatter};
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 
+pub mod hook_config;
+
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
 const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
@@ -613,9 +615,9 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 17] = [
+    const SUPPORTED: [&str; 18] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
-        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2",
+        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -1375,6 +1377,37 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
                 bytes.to_vec(),
             );
         }
+    }
+    let resources: &[(&str, &[u8])] = match name {
+        "usage-guard" => &[
+            (
+                "references/control.md",
+                include_bytes!("../../../harness/skills/usage-guard/references/control.md"),
+            ),
+            (
+                "references/sensors.md",
+                include_bytes!("../../../harness/skills/usage-guard/references/sensors.md"),
+            ),
+        ],
+        "knowledge-recall" => &[(
+            "references/confidential.md",
+            include_bytes!("../../../harness/skills/knowledge-recall/references/confidential.md"),
+        )],
+        "knowledge-capture" => &[(
+            "references/ingest.md",
+            include_bytes!("../../../harness/skills/knowledge-capture/references/ingest.md"),
+        )],
+        "run-checkpoint" => &[(
+            "references/policy-review.md",
+            include_bytes!("../../../harness/skills/run-checkpoint/references/policy-review.md"),
+        )],
+        _ => &[],
+    };
+    for (relative, bytes) in resources {
+        files.insert(
+            format!("{}/{name}/{relative}", host.skill_root()),
+            bytes.to_vec(),
+        );
     }
 }
 
@@ -2903,7 +2936,7 @@ description: Inspect one local file without changing it.
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
             assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 28 } else { 55 };
+            let expected_file_count = if host == Host::Claude { 33 } else { 60 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2954,6 +2987,8 @@ description: Inspect one local file without changing it.
             ".agents/skills/product-update/agents/openai.yaml",
             ".agents/skills/usage-guard/SKILL.md",
             ".agents/skills/usage-guard/agents/openai.yaml",
+            ".agents/skills/usage-guard/references/control.md",
+            ".agents/skills/usage-guard/references/sensors.md",
             ".hive/config/active-skills.yml",
         ]);
         assert_eq!(
@@ -3291,6 +3326,7 @@ description: Inspect one local file without changing it.
             ("0.10.0", 28),
             ("0.10.1", 28),
             ("0.10.2", 28),
+            ("0.10.3", 28),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");

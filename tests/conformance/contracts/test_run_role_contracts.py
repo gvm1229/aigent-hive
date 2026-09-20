@@ -300,6 +300,23 @@ class Phase4Contracts(unittest.TestCase):
             b"foreign OMC namespace bytes\n",
         )
 
+    def assert_only_new_guard_marker(self, target, before, payload):
+        """A shared guard refusal may add its sanitized halt, never edit prior or foreign bytes."""
+        after = snapshot_tree(target)
+        for path, value in before.items():
+            self.assertEqual(after[path], value)
+        added_files = [path for path in after.keys() - before.keys() if after[path][0] == "file"]
+        self.assertEqual(len(added_files), 1)
+        marker = added_files[0]
+        self.assertRegex(marker, r"^\.hive/runtime/usage-guard/sessions/[0-9a-f]{64}/halt\.json$")
+        self.assertEqual(payload["changed_paths"], [marker])
+        for path in after.keys() - before.keys():
+            if after[path][0] == "directory":
+                self.assertTrue(marker.startswith(path + "/"), path)
+        stored = json.loads((target / marker).read_text(encoding="utf-8"))
+        self.assertEqual(stored["decision"], "usage-unknown")
+        self.assertEqual(stored["snapshots"], [])
+
     def ensure_handoff(self, target: Path) -> dict[str, Any]:
         process, payload = self.run_cli(
             "role",
@@ -385,6 +402,8 @@ class Phase4Contracts(unittest.TestCase):
         dispatch_intent: str | None = None,
         account_digest: str | None = None,
         session_id: str | None = None,
+        process_id: int | None = None,
+        user_root: Path | None = None,
         role_id: str | None = None,
         threshold: int | None = None,
         extra_environment: dict[str, str] | None = None,
@@ -406,8 +425,13 @@ class Phase4Contracts(unittest.TestCase):
             arguments.extend(["--dispatch-intent", dispatch_intent])
         if account_digest is not None:
             arguments.extend(["--account-digest", account_digest])
+        if dispatch_intent == "automatic":
+            session_id = session_id or "fixture-session"
+            arguments.extend(["--process-id", str(4242 if process_id is None else process_id)])
         if session_id is not None:
             arguments.extend(["--session-id", session_id])
+        if user_root is not None:
+            arguments.extend(["--user-root", user_root])
         if role_id is not None:
             arguments.extend(["--role", role_id])
         elif dispatch_intent == "automatic":
@@ -1514,7 +1538,10 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(usage_guard["role_id"], "reviewer")
         self.assertEqual(usage_guard["history"], "absent")
         self.assertNotIn(RAW_USAGE_ACCOUNT, resumed.stdout)
-        self.assertEqual(len(resume_payload["changed_paths"]), 2)
+        self.assertEqual(len(resume_payload["changed_paths"]), 3)
+        self.assertRegex(usage_guard["session_guard_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(usage_guard["session_id_digest"], digest_bytes(b"fixture-session"))
+        self.assertEqual(usage_guard["process_id"], 4242)
         for changed in resume_payload["changed_paths"]:
             self.assertTrue(changed.startswith(".hive/runtime/"), changed)
             self.assertNotIn(
@@ -1768,7 +1795,7 @@ class Phase4Contracts(unittest.TestCase):
                     "unknown",
                 )
                 self.assertFalse(sensor_log.exists())
-                self.assertEqual(snapshot_tree(target), before)
+                self.assert_only_new_guard_marker(target, before, resume_payload)
 
     def test_claude_automatic_resume_allowlisted_errors_fallback_once(
         self,
@@ -1883,7 +1910,7 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(resume_payload["code"], "hive.usage-unknown")
         self.assertEqual(resume_payload["data"]["dispatch_briefs"], [])
         self.assertFalse(sensor_log.exists())
-        self.assertEqual(snapshot_tree(target), before)
+        self.assert_only_new_guard_marker(target, before, resume_payload)
 
     def test_automatic_resume_rejects_installed_and_pinned_host_mismatch_before_sensor(
         self,
@@ -1973,18 +2000,11 @@ class Phase4Contracts(unittest.TestCase):
                 self.assertNotIn(RAW_USAGE_ACCOUNT, resumed.stdout)
                 after = snapshot_tree(target)
                 if case == "missing":
-                    self.assertEqual(after, before)
+                    self.assert_only_new_guard_marker(target, before, resume_payload)
                 else:
-                    self.assertEqual(
-                        resume_payload["changed_paths"],
-                        [
-                            next(
-                                path
-                                for path in after
-                                if path.startswith(".hive/runtime/usage-history/")
-                            )
-                        ],
-                    )
+                    self.assertEqual(len(resume_payload["changed_paths"]), 2)
+                    self.assertTrue(any(path.startswith(".hive/runtime/usage-history/") for path in resume_payload["changed_paths"]))
+                    self.assertTrue(any(path.startswith(".hive/runtime/usage-guard/sessions/") and path.endswith("/halt.json") for path in resume_payload["changed_paths"]))
                     for path, value in before.items():
                         self.assertEqual(after[path], value)
 
@@ -2106,6 +2126,82 @@ class Phase4Contracts(unittest.TestCase):
                 self.assertEqual(resume_payload["changed_paths"], [])
                 self.assertEqual(snapshot_tree(target), before)
 
+    def test_automatic_resume_requires_session_and_process_without_read_or_write(self) -> None:
+        before = snapshot_tree(self.target)
+        for binding in ([], ["--session-id", "fixture-session"], ["--process-id", "4242"],
+                        ["--session-id", "fixture-session", "--process-id", "0"]):
+            process, payload = self.run_cli("run", "resume", "--target", self.target,
+                "--run", "demo", "--capabilities", CAPABILITIES["codex-omx"],
+                "--dispatch-intent", "automatic", "--account-digest", USAGE_ACCOUNT_DIGEST,
+                "--role", "reviewer", *binding, "--output", "json")
+            self.assertEqual(process.returncode, 2, payload)
+            self.assertEqual(payload["changed_paths"], [])
+            self.assertEqual(snapshot_tree(self.target), before)
+
+    def test_session_reset_blocks_automatic_resume_until_exact_acknowledgement(self) -> None:
+        target = self.fresh_target("bound-reset")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(target, self.checkpoint_request(state="executing", continuation={
+            "session_binding_digest":digest_bytes(b"fixture-session"),"max_retry_attempts":3,
+            "attempts_used":0,"cancel_requested":False}), CAPABILITIES["codex-omx"], "bound-reset")
+        self.assert_success(process,payload)
+        sensor_log = self.work / "bound-reset.log"
+        args = ["usage","enforce","--target",target,"--session-id","fixture-session",
+                "--process-id","4242","--account-digest",USAGE_ACCOUNT_DIGEST,"--output","json"]
+        low, _ = self.run_cli(*args,extra_environment=self.fake_codexbar_environment("threshold",log=sensor_log))
+        self.assertEqual(low.returncode,3)
+        reset, reset_payload = self.run_cli(*args,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
+        self.assertEqual(reset.returncode,3)
+        self.assertEqual(reset_payload["code"],"hive.usage-reset")
+        before = snapshot_tree(target)
+        calls = sensor_log.read_bytes()
+        stopped, stopped_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
+        self.assertEqual(stopped.returncode,3)
+        self.assertEqual(stopped_payload["code"],"hive.usage-reset")
+        self.assertEqual(stopped_payload["data"]["dispatch_briefs"],[])
+        self.assertEqual(stopped_payload["changed_paths"],[])
+        self.assertEqual(snapshot_tree(target),before)
+        self.assertEqual(sensor_log.read_bytes(),calls)
+        other, other_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,session_id="another-session")
+        self.assertEqual(other.returncode,3)
+        self.assertEqual(other_payload["changed_paths"],[])
+        self.assertEqual(snapshot_tree(target),before)
+        ack, ack_payload = self.run_cli("usage","session","--target",target,"--session-id","fixture-session",
+            "--process-id","4242","--action","acknowledge-reset","--confirm-reset",
+            reset_payload["data"]["reset_acknowledgement_digest"],"--output","json")
+        self.assert_success(ack,ack_payload)
+        resumed, resumed_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
+        self.assert_success(resumed,resumed_payload)
+        self.assertEqual(resumed_payload["data"]["usage_guard"]["outcome"],"authorized")
+        self.assertEqual(len(sensor_log.read_bytes().splitlines())-len(calls.splitlines()),2)
+        receipt = next(target.glob(".hive/runtime/dispatch-authorizations/*.json"))
+        record = json.loads(receipt.read_text(encoding="utf-8"))
+        self.assertEqual(record["schema_version"],2)
+        self.assertEqual(record["session_guard_digest"],resumed_payload["data"]["usage_guard"]["session_guard_digest"])
+        self.assertNotIn("fixture-session",receipt.read_text(encoding="utf-8"))
+
+    def test_automatic_resume_uses_the_shared_global_threshold_when_bound(self) -> None:
+        target = self.fresh_target("bound-global-threshold")
+        self.ensure_handoff(target)
+        process,payload = self.checkpoint(target,self.checkpoint_request(state="executing"),CAPABILITIES["codex-omx"],"bound-global-threshold")
+        self.assert_success(process,payload)
+        config = self.setup_user_root / ".hive/config/user-setup.yml"
+        original = yaml.safe_load(config.read_text(encoding="utf-8"))
+        original["usage_guard"]["stop_remaining_percent"] = 60
+        config.write_text(yaml.safe_dump(original),encoding="utf-8")
+        before = config.read_bytes()
+        process,payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,user_root=self.setup_user_root,
+            extra_environment=self.fake_codexbar_environment("allow"))
+        self.assertEqual(process.returncode,3)
+        self.assertEqual(payload["code"],"hive.usage-limited")
+        self.assertEqual(payload["data"]["usage_guard"]["configured_threshold_percent"],60)
+        self.assertEqual(payload["data"]["dispatch_briefs"],[])
+        self.assertEqual(config.read_bytes(),before)
+
     def test_automatic_history_rejects_regressions_and_tampering(self) -> None:
         reset_at = "2026-07-25T00:00:00Z"
         for case in ("remaining-increase", "measurement-regression"):
@@ -2152,12 +2248,31 @@ class Phase4Contracts(unittest.TestCase):
                     },
                 )
                 self.assertEqual(second.returncode, 3, second_payload)
-                self.assertEqual(second_payload["code"], "hive.usage-unknown")
+                self.assertEqual(second_payload["code"], "hive.usage-reset" if case == "remaining-increase" else "hive.usage-unknown")
                 self.assertEqual(
                     second_payload["data"]["usage_guard"]["history"],
                     "available",
                 )
                 self.assertEqual(second_payload["data"]["dispatch_briefs"], [])
+                if case == "remaining-increase":
+                    acknowledgement = second_payload["data"]["usage_guard"]["preflight"]["reset_acknowledgement_digest"]
+                    acknowledged, acknowledged_payload = self.run_cli(
+                        "usage", "session", "--target", str(target), "--host", "codex",
+                        "--session-id", "fixture-session", "--process-id", "4242",
+                        "--action", "acknowledge-reset", "--confirm-reset", acknowledgement,
+                        "--output", "json",
+                    )
+                    self.assert_success(acknowledged, acknowledged_payload)
+                    resumed, resumed_payload = self.resume(
+                        target, CAPABILITIES["codex-omx"], dispatch_intent="automatic",
+                        account_digest=USAGE_ACCOUNT_DIGEST,
+                        extra_environment={
+                            **self.fake_codexbar_environment(case),
+                            "FAKE_CODEXBAR_RESET_AT": reset_at,
+                        },
+                    )
+                    self.assert_success(resumed, resumed_payload)
+                    self.assertEqual(len(resumed_payload["data"]["dispatch_briefs"]), 1)
 
         for corruption in ("tampered", "symlink"):
             if corruption == "symlink" and os.name == "nt":
