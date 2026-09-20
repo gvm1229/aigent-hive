@@ -57,7 +57,7 @@
 - [PR #60](https://github.com/gvm1229/aigent-hive/pull/60) develop 통합 `0090c097`, 정확한 머리 커밋 CI 통과. 0.11.0-test.1 시험판 게시 완료. 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
 
 - 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용 근거 확보. 전체 계획·공개 시험판 수용 완료는 RFR-001의 별도 판정
-- [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): Linux 통과, Windows 자식 프로그램 조회·macOS 소스 벡터 생성 실패. RFR-001의 현재 작업 소유, 공개 수용 정본은 이전 성공 버전 유지
+- [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): 첫 실행의 Windows·macOS 실패 뒤 세 운영체제 재검증 통과, 0.11.0-test.1 수용 기록. macOS 최초 원인 미확정, Windows 시험 도구 수정의 최종 검증과 RFR-001 정리는 현재 작업 소유
 
 ## 이전 근거
 
