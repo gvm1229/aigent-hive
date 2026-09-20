@@ -672,3 +672,20 @@
 | [passed](runs/20260920T191135-46879bc5d23f.md) | Antigravity 오류 관측 진단의 정의·직접 확인 준비 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T191336-1990405340dd.md) | 승인된 Antigravity 오류 진단 적용과 시험 자료 준비 | 3dbc19b544066ab1d3167b0694c2cedc5fae5b91 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T191620-bbc1cc4d285d.md) | Antigravity 최초 오류 진단의 도구 입력 실패 분리 | f06f080f92045f0b00395ff0b36569866134ad3f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191927-e3952c489322.md) | Antigravity 보완 오류 진단의 실제 편집 확인과 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192058-be42f8f5873e.md) | Antigravity 검사기 부재의 실제 UI 수용 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192219-9448d7ae8856.md) | Antigravity 검사기 부재의 실제 차단 확인과 실행 파일 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192301-a437a8912c8c.md) | Antigravity 동일 보류 자료의 두 조건 비교 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192617-c9ad09966616.md) | Antigravity 훅 적용 비교 확인과 기준선 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192800-8090aa333878.md) | Antigravity 지침 단독 비교 확인과 원본 정의 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193042-64fd10a8df9f.md) | Antigravity 정의 복원 뒤 실제 거부와 전체 기준 바이트 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193258-34411dcce67c.md) | 두 호스트의 손상 설정 입력 시험 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193419-51fa2bb986eb.md) | Codex 손상 훅 설정의 실제 편집과 복원 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193456-f907b73a3869.md) | Antigravity 손상 설정의 실제 편집과 두 호스트 원본 복원 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193729-05f9f88a57f0.md) | 개발 검증: uv.EXE | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194046-f2502c6ff755.md) | Codex 자식 작업의 파일 훅 범위 시험 자료 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194228-ba252e30e11c.md) | Codex 미신뢰 정의의 무실행 검증 후보 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194426-0ef7742567a5.md) | Codex 네이티브 자식의 실제 파일 훅 범위 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194454-0dacc28e0aea.md) | 승인된 미신뢰 후보 적용과 관측 기준 저장 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194529-6782586a0ba9.md) | Codex 미신뢰 진단 무실행과 기존 보호 유지 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194903-f1d1796c07ac.md) | 호스트 수용 근거의 판정·지문·복원 정합성 검사 | a2576ac7fa4fba7e59121d576e0d0b099814811a | Windows-11-10.0.26200-SP0 |

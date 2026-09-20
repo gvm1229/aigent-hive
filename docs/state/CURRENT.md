@@ -5,18 +5,18 @@
 - 제품 버전: `0.11.0`
 - 승인 범위: 미출시 `0.10.4`를 계승하는 전체 구현, 기존 기능 유지와 Codex 우선 검증
 - 추가 결정: 세션·양수 프로세스 ID 없는 자동 재개 거부; 원본 없는 이식 지식은 과거 조회 유지와 현재성 미검증 표시
-- 실제 Codex 검증 재개: 격리 새 작업의 지식 연결 확인. 형식 3 신뢰 후 정상·검사기 부재·정의 복원 뒤 실제 차단 확인
+- [실제 호스트 수용](../research/native-host-qualification-0.11.0.md): 지원하는 파일 검사와 실패·미지원 경계 확인, 두 호스트 비교·자료 복원 완료. 전체 도구·오류 상황의 상시 보호 보장 제외
 - 정본: [계획](../plans/PLAN.md), [결정](../decisions/ADR-0023-foundation-refactor.md)
 
 ## 생성된 현재 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 32/35 완료
+- 현재 등록 항목: 34/35 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `RFR-001`
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `HK-003`, `HK-004`, `RFR-001`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -45,18 +45,18 @@
 
 ## 실제 호스트와 권한
 
-- [남은 수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 승인된 Claude·Antigravity 격리 정의 적용 완료, Antigravity 일반 허용·보호 거부 보고와 바이트 대조 완료, 사용자 확인 환경은 Windows Antigravity IDE 2.5.5·Gemini Flash 3.8 Medium. Claude 실제 검증은 사용자 결정으로 0.11.0에서 제외·버전 미정 후속 목표 이전. Codex 셸의 보호 경로 변경 가능 확인·시험 자료 복원, 등록 명령의 비용 측정 완료. 추가 오류 진단은 차단 확인용 사례도 편집돼 결과 불확정. 경로 보완·신뢰 후에도 불확정, 재시험 종료와 원본 정의 복원 완료. 직접 CLI는 훅 종료 1 뒤 편집 성공. 바깥 PowerShell의 종료 2→1 변환 재현, 실행 표식으로 여섯 진단 호출 확인. JSON 거부만 차단, 나머지 오류 사례 편집 진행. Codex 진단 정의·파일 복원 완료, Antigravity 오류 진단은 JSON 거부 확인, 나머지 다섯 건의 빈 편집 입력을 보완해 결과 대기. Antigravity 새 대화·후속 답변 대조와 사용자 수동 취소·재개 보고 확인, RFH-003 완료
+- [수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 두 호스트의 정상·검사기 부재·오류·설정 손상·지침 단독 비교 확인. Codex 미신뢰·자식 범위 확인. 정의·실행 파일·합성 자료 복원 완료
 - `verified-workflow`는 소스 계획 경로 적용. 연결된 초기화·검증 영수증이 없어 활성 실행 주장 없음
 
 - Windows Codex에서 기존 정의 신뢰 후 일반 3개 허용·보호 3개 거부 확인. 지침 단독 조건에서는 같은 보호 편집 3개 성공. 지정된 합성 요청만의 비교
 - 검사기 부재 시 보호 편집 허용 발견. 형식 2 보완 뒤에도 실제 앱에서 실패했고, 바깥 PowerShell의 변수 해석 문제 재현. 형식 3의 cmd·PowerShell 회귀 14개와 Windows Codex 정상·검사기 부재의 실제 파일 차단 확인
 - `tests/work/codex-policy-acceptance-1/`에 승인된 형식 3 적용 완료. 이전 실행 파일·실패 기록 보존, 정의 복원 뒤 새 작업에서도 실제 파일 차단 확인, 다른 호스트·시간 초과는 미검증
-- Claude·Antigravity 실제 수용, 15초 감시·진행 중 추론 중단은 미검증. 수동 버튼 시험의 `interrupted`와 같은 작업 후속 실행의 `completed` 확인. 앞선 메시지 시험은 협조적 종료로 구분
+- Claude 실제 수용과 15초 상시 감시·진행 중 자동 중단은 사용자 승인 후속 범위. Codex·Antigravity의 기본 수동 취소·재개는 별도 근거로 확인
 - [세 운영체제 CI](https://github.com/gvm1229/aigent-hive/actions/runs/35465250818) 통과: Linux Rust 976개·4개 제외, macOS 관련 모듈 730개·1개 제외, Windows 관련 모듈 704개·1개 제외
 - Linux Python 930개 중 921개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T195640-1830f54e0861.md)에 보존
 - [초안 PR #60](https://github.com/gvm1229/aigent-hive/pull/60)의 제품 코드 `5be287b6`에서 필수 CI 통과. 번호 시험판 미게시, 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
 
-- 후속 코드의 로컬 전체 회귀·필수 CI 통과, 형식 3 적용 확인. 확인한 파일·수동 취소 조건 외 호스트 수용·자동 중단·감시가 남아 전체 계획·시험판 수용 완료 주장 없음
+- 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용 근거 확보. 전체 계획·공개 시험판 수용 완료는 RFR-001의 별도 판정
 - 이번 후속 변경은 Markdown 근거 정리만 포함. 관련 문서 검사로 확인하며 제품 불변인 자동 CI 재실행은 별도 비동기 진행 가능
 
 ## 이전 근거

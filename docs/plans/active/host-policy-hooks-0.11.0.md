@@ -4,7 +4,7 @@
 > Scope: product
 
 > 소유 항목: `HK-001–003`
-> 상태: 공통 판정·변환·등록 완료, 실제 호스트 수용 진행
+> 상태: 구현·지원 범위 수용 완료, 훅 미로드·외부 오류의 보호 보장 제외
 > 목적: 규칙 전달과 실제 변경 차단의 분리, 세 호스트의 검증된 기능만 사용
 > 조사: [공식 계약·로컬 증거·설계](../../research/host-policy-hooks-2026-09-18.md)
 > 전체 적용 분석: [규칙 20개 영역과 최종 검사 지점](../../research/project-policy-enforcement-2026-09-18.md)
@@ -15,8 +15,8 @@
   - state: complete; depends: RFS-001; evidence: repo:tests/results/runs/20260918T180744-a37939738810.md#sha256:3389135dac4100ef6b640c66f74f295d053747a9ff691f79482d28f0f026184a
 - [x] [HK-002] 세 호스트 변환·설치·철회, 실제 적용 상태 진단과 고정 규칙·동적 상태 분리 구현
   - state: complete; depends: HK-001,RFH-001; evidence: repo:tests/results/runs/20260919T192041-e2bc1eb319ea.md#sha256:df60991c84d328e05839a55a26f0ff2c5796aab963088ecf85050ae60fd84fe5
-- [ ] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
-  - state: awaiting-external-evidence; depends: HK-002,RFH-002,RFH-003; owner: 실제 호스트; reason: 승인된 Antigravity 오류 진단의 IDE 실행 결과 대기
+- [x] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
+  - state: complete; depends: HK-002,RFH-002,RFH-003; evidence: repo:docs/research/native-host-qualification-0.11.0.md#sha256:16e1a415e894e0502f46715f63d14d9b662f4c7c1fc445aecd0677e3e50f4aa2
 
 ## 고정 설계 조건
 
