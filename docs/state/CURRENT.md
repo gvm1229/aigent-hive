@@ -46,7 +46,7 @@
 
 ## 실제 호스트와 권한
 
-- [남은 수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 승인된 Claude·Antigravity 격리 정의 적용 완료, Antigravity 일반 허용·보호 거부 보고와 바이트 대조 완료, 사용자 확인 환경은 Windows Antigravity IDE 2.5.5·Gemini Flash 3.8 Medium. Claude는 사용자 요청으로 당분간 검증 보류. Codex 셸의 보호 경로 변경 가능 확인·시험 자료 복원, 등록 명령의 비용 측정 완료. 추가 오류 진단은 차단 확인용 사례도 편집돼 결과 불확정. 원본 복원 뒤 Windows 경로 보완 후보를 별도 승인받아 적용, 새 명령 신뢰 대기
+- [남은 수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 승인된 Claude·Antigravity 격리 정의 적용 완료, Antigravity 일반 허용·보호 거부 보고와 바이트 대조 완료, 사용자 확인 환경은 Windows Antigravity IDE 2.5.5·Gemini Flash 3.8 Medium. Claude는 사용자 요청으로 당분간 검증 보류. Codex 셸의 보호 경로 변경 가능 확인·시험 자료 복원, 등록 명령의 비용 측정 완료. 추가 오류 진단은 차단 확인용 사례도 편집돼 결과 불확정. 경로 보완·신뢰 후에도 불확정, 재시험 종료와 원본 정의 복원 완료. 다음 조건은 훅별 실제 실행 증거
 - `verified-workflow`는 소스 계획 경로 적용. 연결된 초기화·검증 영수증이 없어 활성 실행 주장 없음
 
 - Windows Codex에서 기존 정의 신뢰 후 일반 3개 허용·보호 3개 거부 확인. 지침 단독 조건에서는 같은 보호 편집 3개 성공. 지정된 합성 요청만의 비교
