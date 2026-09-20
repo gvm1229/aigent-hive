@@ -16,7 +16,7 @@
 - [x] [HK-002] 세 호스트 변환·설치·철회, 실제 적용 상태 진단과 고정 규칙·동적 상태 분리 구현
   - state: complete; depends: HK-001,RFH-001; evidence: repo:tests/results/runs/20260919T192041-e2bc1eb319ea.md#sha256:df60991c84d328e05839a55a26f0ff2c5796aab963088ecf85050ae60fd84fe5
 - [ ] [HK-003] 실제 호스트·버전·운영체제별 로드·허용·거부·오류·시간 초과·자식 실행 범위 수용
-  - state: awaiting-user-authority; depends: HK-002,RFH-002,RFH-003; owner: 사용자; reason: Antigravity 오류 관측 진단 정의의 적용 승인 대기
+  - state: awaiting-external-evidence; depends: HK-002,RFH-002,RFH-003; owner: 실제 호스트; reason: 승인된 Antigravity 오류 진단의 IDE 실행 결과 대기
 
 ## 고정 설계 조건
 
