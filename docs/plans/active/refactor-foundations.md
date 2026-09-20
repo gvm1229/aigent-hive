@@ -3,7 +3,7 @@
 > Plan version: 0.11.0
 > Scope: release
 
-> 상태: 구현·검증 진행
+> 상태: 승인 범위의 구현·검증 완료
 > 소유 항목: `RFB-001`, `RFB-002`, `RFR-001`
 > 기준 코드: `87b84f42`; 제품 버전: `0.11.0`; 첫 공개 시험: `0.11.0-test.1`
 > 결정: [ADR-0023](../../decisions/ADR-0023-foundation-refactor.md)
@@ -12,7 +12,7 @@
 
 - 최초 요청: 새 브랜치와 구현 계획. 후속 소스 브랜치 검사 구현·호스트 훅 조사는 `BR-*`, 제품 훅은 `HK-*`로 분리
 - 확정 방향: 기존 기능·명령 유지, 지식 저장·조회·새 대화에서 이어 가기부터 개선
-- 실제 앱 검증: Codex 우선, 이후 Claude Code·Antigravity 확대
+- 실제 앱 검증: Codex 우선, Antigravity 수용 완료. Claude Code 실제 검증은 승인된 후속 범위
 - 목표: 같은 설명의 반복 감소, 필요한 지식의 정확한 회수, 안전 규칙과 파일 변경 처리의 단일 책임
 - 브랜치: `refactor/hive-foundations`; 기존 `develop` 변경과 과거 출시 기록 보존
 - 버전 결정: 미출시 `0.10.4` 변경을 그대로 계승하는 `0.11.0`, 별도 `0.10.4` 출시 제외
@@ -48,8 +48,8 @@
   - state: complete; depends: RFS-002; evidence: repo:tests/results/runs/20260918T175340-186b7bfd41f8.md#sha256:f413ef7f1e4112d91d42f32edfa4798cf7d6f0ea01d5c99e224c89f8223be90c
 - [x] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: complete; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
-- [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
-  - state: agent-owned; depends: BR-001,BR-002,BR-003,BR-004,BR-005,HK-001,HK-002,HK-003,HK-004,HK-005,RFB-001,RFB-002,RFK-001,RFK-002,RFK-003,RFH-001,RFH-002,RFH-003,RFP-001,RFP-002,RFP-003,RFP-004,RFT-001,RFT-002,RFT-003,RFT-004,RFS-001,RFS-002,RFS-003,RFS-004,RB104-001,RB104-002,RB104-003,RB104-004; owner: 현재 작업; reason: 확정한 지원 범위의 통합 검사와 공개 시험 조건 연결
+- [x] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
+  - state: complete; depends: BR-001,BR-002,BR-003,BR-004,BR-005,HK-001,HK-002,HK-003,HK-004,HK-005,RFB-001,RFB-002,RFK-001,RFK-002,RFK-003,RFH-001,RFH-002,RFH-003,RFP-001,RFP-002,RFP-003,RFP-004,RFT-001,RFT-002,RFT-003,RFT-004,RFS-001,RFS-002,RFS-003,RFS-004,RB104-001,RB104-002,RB104-003,RB104-004; evidence: repo:tests/results/runs/20260920T210828-a7f59de22f8d.md#sha256:35a9bdf7a682d4cc899f3aeaabbb411a21944c90b9c9226a429524bffc51d055
 
 ## 측정과 판정
 
