@@ -671,3 +671,4 @@
 | [passed](runs/20260920T190935-ea2a51ed1c04.md) | 실제 관측 진단의 조건별 파일 결과와 복원 확인 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T191135-46879bc5d23f.md) | Antigravity 오류 관측 진단의 정의·직접 확인 준비 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T191336-1990405340dd.md) | 승인된 Antigravity 오류 진단 적용과 시험 자료 준비 | 3dbc19b544066ab1d3167b0694c2cedc5fae5b91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191620-bbc1cc4d285d.md) | Antigravity 최초 오류 진단의 도구 입력 실패 분리 | f06f080f92045f0b00395ff0b36569866134ad3f | Windows-11-10.0.26200-SP0 |
