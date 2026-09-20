@@ -28,6 +28,7 @@
 | Codex 파일 훅 실제 수용 | [en](en/codex-file-hook-acceptance.md) | [ko](ko/codex-file-hook-acceptance.md) |
 | Codex 수동 중지·재개 | [en](en/codex-native-cancellation.md) | [ko](ko/codex-native-cancellation.md) |
 | 파일 훅과 셸 쓰기 경계 | [en](en/native-hook-shell-boundary.md) | [ko](ko/native-hook-shell-boundary.md) |
+| Antigravity 파일 훅 실제 수용 | [en](en/antigravity-file-hook-acceptance.md) | [ko](ko/antigravity-file-hook-acceptance.md) |
 | 과거 지식과 현재 원본 | [en](en/knowledge-source-freshness.md) | [ko](ko/knowledge-source-freshness.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
