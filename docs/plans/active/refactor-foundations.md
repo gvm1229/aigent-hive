@@ -88,3 +88,5 @@
 - [브랜치 강제·호스트 조사](branch-enforcement-0.11.0.md): 소스 도구 완료 범위
 - [호스트 정책 훅](host-policy-hooks-0.11.0.md): `HK-001–004`
 - [작업 후 개선 후보 검토](hook-review-candidates-0.11.0.md): `HK-005`, `HK-001`과 기존 실행 결과 계약 뒤 구현
+
+- [RFR-001 통합·공개 시험 절차](../../research/refactor-release-qualification-0.11.0.md): 제품 지문·완료 ID에 결합한 0.11.0-test.1, develop 통합 뒤 후보·게시·공개 수용 별도 확인
