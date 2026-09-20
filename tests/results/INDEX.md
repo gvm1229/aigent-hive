@@ -661,3 +661,10 @@
 | [passed](runs/20260920T130558-269452fd4759.md) | 경로 보완 진단 최종 결과와 정의 복원 | 05d4f8c79b8008d498c7008595e98023ee715ae0 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T131317-a6897e108198.md) | 승인된 동일 진단으로 CLI·앱 비교 시험 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T131353-928518b3cbdc.md) | Antigravity 새 대화 지식 조회 시험의 읽기 전용 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190259-cd7bc18dd829.md) | 수동 CLI 실패 결과 확인과 원본 복원 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190436-c7e51bf64bfa.md) | 실행 표식이 있는 네이티브 진단 준비와 제한 모드 검증 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190500-9123781755ba.md) | 바깥 PowerShell의 종료 코드 변환 재현 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190522-d9bc88952dfe.md) | 관측 진단의 정확한 등록 명령과 바깥 셸별 종료 확인 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190559-d8e508a57f26.md) | Antigravity 수동 취소와 같은 대화 재개 안내 준비 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190612-789938b4cc78.md) | 승인된 실행 관측 진단 적용 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190647-c582875b9e02.md) | Antigravity 새 대화의 사용자 결과와 기존 합성 근거 대조 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
