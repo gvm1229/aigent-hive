@@ -689,3 +689,5 @@
 | [passed](runs/20260920T194454-0dacc28e0aea.md) | 승인된 미신뢰 후보 적용과 관측 기준 저장 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T194529-6782586a0ba9.md) | Codex 미신뢰 진단 무실행과 기존 보호 유지 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T194903-f1d1796c07ac.md) | 호스트 수용 근거의 판정·지문·복원 정합성 검사 | a2576ac7fa4fba7e59121d576e0d0b099814811a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T195358-9e5cae03468d.md) | 0.11.0-test.1 제품 변경과 완료 계획에 결합한 공개 시험 준비 | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T195402-7348223c2b4f.md) | 개발 검증: uv.EXE | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
