@@ -691,3 +691,18 @@
 | [passed](runs/20260920T194903-f1d1796c07ac.md) | 호스트 수용 근거의 판정·지문·복원 정합성 검사 | a2576ac7fa4fba7e59121d576e0d0b099814811a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T195358-9e5cae03468d.md) | 0.11.0-test.1 제품 변경과 완료 계획에 결합한 공개 시험 준비 | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T195402-7348223c2b4f.md) | 개발 검증: uv.EXE | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T202132-42449f903f06.md) | 정확한 공개 시험 후보의 메타데이터·출처 검증 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T202845-7223f6d7e5ea.md) | 정확한 공개 npm 시험판의 격리 설치와 버전 확인 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T203035-8486651dec6d.md) | 공개 시험 바이너리의 동일 정책 결합과 실제 호스트 준비 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T203855-24c39e07b5bd.md) | 실패한 공개 패키지 수용의 운영체제별 증거 수집 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204152-2c18e5ccc376.md) | 공개 시험판의 두 실제 호스트 파일 차단 확인과 원본 복원 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204535-27528ddf3b0c.md) | 공개 Windows 선택형 검색 실패 원인 재현 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260920T204742-09caf86b7e2b.md) | 개발 검증: uv.EXE | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204756-d7897e87e5d6.md) | 선택형 검색 실패 진단의 원문 비노출과 상태 보존 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204757-5fe8d6eb4bd4.md) | 개발 검증: uv.EXE | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204936-53b948ecdc53.md) | 격리 합성 자료의 보조 프로그램 진단 실제 실행 | b5e00bdf688a0ae06e1b14dc04881d5ffbf078fc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205040-32126f694419.md) | Windows 종료 직전 자식 이미지 조회 경합 관측 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205107-de0d18c87364.md) | 개발 검증: uv.EXE | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205130-e7a95052dc21.md) | Windows 종료 경합의 수정 전후 동일 관측 비교 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205549-c0555316b729.md) | 진단 보강 뒤 공개 시험판 세 운영체제 수용 기록 수집 | df38bd03f74fd36a170c2735f2a0e898b9e516a9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205749-f729e1d93044.md) | 개발 검증: uv.EXE | df38bd03f74fd36a170c2735f2a0e898b9e516a9 | Windows-11-10.0.26200-SP0 |

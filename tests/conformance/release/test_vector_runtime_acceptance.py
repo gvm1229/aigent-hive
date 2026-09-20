@@ -32,6 +32,54 @@ class VectorRuntimeAcceptance(unittest.TestCase):
                 self.setUpClass()
             self.assertTrue((fresh / "tests/work").is_dir())
 
+    def test_diagnostic_replay_keeps_failure_private_and_control_unchanged(self):
+        import sqlite3
+        from contextlib import closing
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as temporary:
+            source = Path(temporary).resolve()
+            root = source / ".agents/work/vector/runtimes" / ("1" * 64)
+            root.mkdir(parents=True)
+            (root.parent.parent / "scopes").mkdir()
+            (root / "vector_helper.py").write_bytes((ROOT / "crates/hive-cli/src/vector_helper.py").read_bytes())
+            control = source / ".agents/work/vector-control/runtime.json"
+            control.parent.mkdir()
+            control.write_text(json.dumps({"current":{"id":root.name,"python":str(TEST_EXECUTABLE),
+                                                      "contract_digest":"sha256:" + "2"*64}}))
+            index = source / ".agents/work/source-wiki/index.sqlite3"
+            index.parent.mkdir()
+            with closing(sqlite3.connect(index)) as connection:
+                connection.executescript("CREATE TABLE pages(path,content_hash,title,body,language); CREATE TABLE meta(key,value);")
+                connection.executemany("INSERT INTO pages VALUES (?,?,?,?,?)",
+                                       [(str(i),"sha256:"+"3"*64,"Synthetic title","private input", "en") for i in range(81)])
+                connection.execute("INSERT INTO meta VALUES (?,?)", ("logical_digest","sha256:"+"4"*64))
+                connection.commit()
+            before = runner.snapshot([control,index])
+            process = Mock(returncode=10)
+            process.communicate.return_value = (b'{"status":"error","error_type":"MemoryError","message":"private error"}',b'private stderr')
+            with patch.object(runner.subprocess,"Popen",return_value=process) as execute, \
+                 patch.dict(runner.os.environ,{"SECRET_PROBE":"private environment"}):
+                result = runner.diagnose_source_worker(source)
+            self.assertEqual(result["error_type"],"MemoryError")
+            self.assertEqual(result["exit_code"],10)
+            self.assertFalse(result["success_json"])
+            self.assertNotIn("private",json.dumps(result))
+            self.assertNotIn("SECRET_PROBE",execute.call_args.kwargs["env"])
+            self.assertEqual(runner.snapshot([control,index]),before)
+            self.assertEqual(len(json.loads(process.communicate.call_args.args[0])["chunks"]),81)
+            self.assertEqual(process.communicate.call_args.kwargs["timeout"],90)
+            with self.assertRaises(FileExistsError):
+                runner.diagnose_source_worker(source)
+
+    def test_native_image_failure_preserves_numeric_error_without_private_details(self):
+        from types import SimpleNamespace
+        observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)
+        observer.c = SimpleNamespace(create_unicode_buffer=lambda _:None, byref=lambda x:x, get_last_error=lambda:31)
+        observer.w = SimpleNamespace(DWORD=lambda x:x)
+        observer.api = Mock()
+        observer.api.QueryFullProcessImageNameW.return_value = False
+        with self.assertRaisesRegex(OSError,r"image \(Win32 31\)"):
+            observer.image(71)
+
     def test_evidence_digest_still_rejects_a_linked_binary(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as temporary:
             binary = Path(temporary) / "binary"
@@ -47,14 +95,16 @@ class VectorRuntimeAcceptance(unittest.TestCase):
                 runner.digest(alias)
 
     def test_unverified_native_handles_are_only_closed_never_terminated(self):
-        for mode in ("inspection-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
+        for mode in ("inspection-error","inspection-exit","inspection-wait-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
             observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)
             observer.api = Mock()
             observer.api.OpenProcess.return_value = 71
             observer.children = Mock(side_effect=[{42}, set() if mode == "changed-parent" else {42}])
             observer.live = Mock(side_effect=[True, False] if mode == "exited-child" else None, return_value=True)
             observer.image = Mock(return_value="approved-python")
-            if mode == "inspection-error": observer.image.side_effect = OSError("image lookup")
+            if mode.startswith("inspection-"):
+                observer.image.side_effect = OSError("image lookup")
+                observer.api.WaitForSingleObject.return_value = {"inspection-error":258,"inspection-exit":0,"inspection-wait-error":0xFFFFFFFF}[mode]
             observer.memory = Mock(return_value=1 if mode == "low-memory" else 256*1024*1024)
             parent = Mock(pid=12)
             parent.poll.side_effect = [None,1] if mode == "exited-parent" else None
@@ -63,7 +113,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             staging.is_file.return_value = mode != "missing-stage"
             staging.is_symlink.return_value = False
             with self.subTest(mode=mode), patch.object(runner.os.path,"samefile",return_value=mode != "wrong-image"):
-                if mode == "inspection-error":
+                if mode in ("inspection-error","inspection-wait-error"):
                     with self.assertRaises(OSError):
                         observer.capture(parent,"approved-python",staging)
                 else:
@@ -76,6 +126,8 @@ class VectorRuntimeAcceptance(unittest.TestCase):
                 if mode == "valid": observer.api.CloseHandle.assert_not_called()
                 else: observer.api.CloseHandle.assert_called_once_with(71)
                 observer.api.TerminateProcess.assert_not_called()
+                if mode.startswith("inspection-"):
+                    observer.api.WaitForSingleObject.assert_called_once_with(71,100)
 
     def test_native_parent_inventory_closes_snapshot_and_reports_api_errors(self):
         from types import SimpleNamespace

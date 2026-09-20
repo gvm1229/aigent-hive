@@ -11,7 +11,7 @@ aliases: ["numbered public test gate"]
 sources:
   - "repo:.agents/directives/03-workflow.md#sha256:fc79be9eea10702b0770715b5fe154e41a2e707557171be3819d493ad5a85ed5"
   - "repo:.github/workflows/release.yml#sha256:0b800d9f74b331f34aad1507b57129fb319fdf49934815026c6352c6aa91a5d7"
-  - "repo:docs/public-test-product.json#sha256:49618a685025c503a181eb64adf966b8eac0bf9e379d3ae0c83589964b946259"
+  - "repo:docs/public-test-product.json#sha256:ccd8e45ca273394ba2ae37c22055efa0c8ab10c658753d94f8de56550d63f684"
   - "repo:scripts/check-test-release-gate.py#sha256:75a37fd28d2aaf302c7079088b54c4cedb4060bd4497f4aa9219198ff024ce95"
 links: [source-development, v0-9-full-release]
 reviewed_revision: "git:dd63333a702a7a89585d101d2b9d043ebd0987d8"

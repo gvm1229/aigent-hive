@@ -54,10 +54,10 @@
 - Claude 실제 수용과 15초 상시 감시·진행 중 자동 중단은 사용자 승인 후속 범위. Codex·Antigravity의 기본 수동 취소·재개는 별도 근거로 확인
 - [세 운영체제 CI](https://github.com/gvm1229/aigent-hive/actions/runs/35465250818) 통과: Linux Rust 976개·4개 제외, macOS 관련 모듈 730개·1개 제외, Windows 관련 모듈 704개·1개 제외
 - Linux Python 930개 중 921개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T195640-1830f54e0861.md)에 보존
-- [초안 PR #60](https://github.com/gvm1229/aigent-hive/pull/60)의 제품 코드 `5be287b6`에서 필수 CI 통과. 번호 시험판 미게시, 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
+- [PR #60](https://github.com/gvm1229/aigent-hive/pull/60) develop 통합 `0090c097`, 정확한 머리 커밋 CI 통과. 0.11.0-test.1 시험판 게시 완료. 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
 
 - 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용 근거 확보. 전체 계획·공개 시험판 수용 완료는 RFR-001의 별도 판정
-- 이번 후속 변경은 Markdown 근거 정리만 포함. 관련 문서 검사로 확인하며 제품 불변인 자동 CI 재실행은 별도 비동기 진행 가능
+- [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): 첫 실행의 Windows·macOS 실패 뒤 세 운영체제 재검증 통과, 0.11.0-test.1 수용 기록. macOS 최초 원인 미확정, Windows 시험 도구 수정의 최종 검증과 RFR-001 정리는 현재 작업 소유
 
 ## 이전 근거
 
