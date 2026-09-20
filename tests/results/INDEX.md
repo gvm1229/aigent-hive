@@ -653,3 +653,8 @@
 | [passed](runs/20260920T084942-3a65aa4e1dd5.md) | 정확한 등록 명령의 오류 입력과 전달 바이트·명령 비용 측정 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T085044-ac02155460ab.md) | Codex 오류·시간 초과의 정확한 진단 정의 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T085105-5139c634e7d8.md) | 추가 진단 명령의 종료 코드·시간 제한 직접 검사 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T125801-8874ef0cdf3a.md) | 승인된 Codex 진단 정의 적용과 Antigravity 결과 대조 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130040-fd161b516053.md) | 기존 작업의 진단 시험 결과와 새 작업 재검사 준비 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130159-af018295ebfd.md) | 새 Codex 작업의 진단 결과와 원본 정의 복원 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130240-6249f574f68b.md) | 진단 명령의 Windows 경로 선택 누락 재현과 보완 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130349-b91376fcbb1c.md) | 승인된 Windows 경로 보완 진단 정의 적용 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
