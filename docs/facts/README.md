@@ -25,6 +25,7 @@
 | 소스 브랜치 이름 규칙 | [en](en/branch-naming-policy.md) | [ko](ko/branch-naming-policy.md) |
 | `0.11.0` 기반 구조 리팩터링 | [en](en/foundation-refactor.md) | [ko](ko/foundation-refactor.md) |
 | 호스트 훅 검사기 실행 실패 | [en](en/native-hook-launcher-failure.md) | [ko](ko/native-hook-launcher-failure.md) |
+| Codex 파일 훅 실제 수용 | [en](en/codex-file-hook-acceptance.md) | [ko](ko/codex-file-hook-acceptance.md) |
 | 과거 지식과 현재 원본 | [en](en/knowledge-source-freshness.md) | [ko](ko/knowledge-source-freshness.md) |
 | Product purpose | [en](en/product-purpose.md) | [ko](ko/product-purpose.md) |
 | Product non-goal | [en](en/product-non-goals.md) | [ko](ko/product-non-goals.md) |
