@@ -12,11 +12,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 30/35 완료
+- 현재 등록 항목: 31/35 완료
 
 - `agent-owned`: 없음
-- `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `HK-003`, `HK-004`, `RFR-001`, `RFH-003`, `RB104-004`
+- `awaiting-user-authority`: `HK-003`
+- `awaiting-external-evidence`: `HK-004`, `RFR-001`, `RB104-004`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -46,7 +46,7 @@
 
 ## 실제 호스트와 권한
 
-- [남은 수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 승인된 Claude·Antigravity 격리 정의 적용 완료, Antigravity 일반 허용·보호 거부 보고와 바이트 대조 완료, 사용자 확인 환경은 Windows Antigravity IDE 2.5.5·Gemini Flash 3.8 Medium. Claude 실제 검증은 사용자 결정으로 0.11.0에서 제외·버전 미정 후속 목표 이전. Codex 셸의 보호 경로 변경 가능 확인·시험 자료 복원, 등록 명령의 비용 측정 완료. 추가 오류 진단은 차단 확인용 사례도 편집돼 결과 불확정. 경로 보완·신뢰 후에도 불확정, 재시험 종료와 원본 정의 복원 완료. 직접 CLI는 훅 종료 1 뒤 편집 성공. 바깥 PowerShell의 종료 2→1 변환 재현, 실행 표식을 남기는 새 진단 승인·적용 후 신뢰 대기. Antigravity 새 대화·후속 답변 대조 완료, 수동 취소·재개 결과 대기
+- [남은 수용 실행 기록](../research/host-acceptance-final-queue-2026-09-20.md): 승인된 Claude·Antigravity 격리 정의 적용 완료, Antigravity 일반 허용·보호 거부 보고와 바이트 대조 완료, 사용자 확인 환경은 Windows Antigravity IDE 2.5.5·Gemini Flash 3.8 Medium. Claude 실제 검증은 사용자 결정으로 0.11.0에서 제외·버전 미정 후속 목표 이전. Codex 셸의 보호 경로 변경 가능 확인·시험 자료 복원, 등록 명령의 비용 측정 완료. 추가 오류 진단은 차단 확인용 사례도 편집돼 결과 불확정. 경로 보완·신뢰 후에도 불확정, 재시험 종료와 원본 정의 복원 완료. 직접 CLI는 훅 종료 1 뒤 편집 성공. 바깥 PowerShell의 종료 2→1 변환 재현, 실행 표식으로 여섯 진단 호출 확인. JSON 거부만 차단, 나머지 오류 사례 편집 진행. 진단 정의·파일 복원 완료. Antigravity 새 대화·후속 답변 대조와 사용자 수동 취소·재개 보고 확인, RFH-003 완료
 - `verified-workflow`는 소스 계획 경로 적용. 연결된 초기화·검증 영수증이 없어 활성 실행 주장 없음
 
 - Windows Codex에서 기존 정의 신뢰 후 일반 3개 허용·보호 3개 거부 확인. 지침 단독 조건에서는 같은 보호 편집 3개 성공. 지정된 합성 요청만의 비교

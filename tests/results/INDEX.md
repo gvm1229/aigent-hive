@@ -668,3 +668,5 @@
 | [passed](runs/20260920T190559-d8e508a57f26.md) | Antigravity 수동 취소와 같은 대화 재개 안내 준비 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T190612-789938b4cc78.md) | 승인된 실행 관측 진단 적용 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T190647-c582875b9e02.md) | Antigravity 새 대화의 사용자 결과와 기존 합성 근거 대조 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190935-ea2a51ed1c04.md) | 실제 관측 진단의 조건별 파일 결과와 복원 확인 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191135-46879bc5d23f.md) | Antigravity 오류 관측 진단의 정의·직접 확인 준비 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |

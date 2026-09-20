@@ -62,8 +62,8 @@
   - state: complete; depends: RFB-002; evidence: repo:docs/research/host-contract-matrix-0.11.0.md#sha256:7be7c8421f6ba3f66c32cc78d61aa402b096de9b96f164f023e3c518fc6b34f6
 - [x] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
   - state: complete; depends: RFH-001,RFK-003,HK-002; evidence: repo:docs/research/codex-native-cancellation-2026-09-20.md#sha256:e227bccdcf6da8693275ab7a6c3f074404c0c94e3a20c06c12895eb5eb8bc49d
-- [ ] [RFH-003] 동일 자료로 Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
-  - state: awaiting-external-evidence; depends: RFH-002; owner: 실제 호스트 수용; reason: Antigravity 파일·새 대화 연결 확인, 수동 취소·재개 결과 대기
+- [x] [RFH-003] 동일 자료로 Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
+  - state: complete; depends: RFH-002; evidence: repo:docs/research/antigravity-basic-acceptance-2026-09-21.md#sha256:80180df537bf95b3cddb49cce1e848f2a44b37c363a9eca451caa3c54e818b03
 
 상태표 필드: 작업 종류, 호스트·버전, 운영체제, 호출 방법, 대상·세션 결합, 중복 요청 처리, 완료 확인, 취소 확인, 복구, 근거 위치, `verified|unsupported|unverified`.
 
@@ -87,6 +87,6 @@
 ## 완료 증거
 
 - 모든 결과에 코드 지문·자료 지문·실행 호스트·운영체제·실제 실행 여부·실패 이유·증명 범위 기록
-- Windows Codex의 새 대화 지식 연결·파일 훅 확인. 수동 취소·같은 작업 재개 확인. 다른 호스트·자동 중단은 미검증
+- Windows Codex의 새 대화 지식 연결·파일 훅 확인. 수동 취소·같은 작업 재개 확인. 자동 중단은 미검증
 
 - Claude 실제 검증: 사용자 승인으로 [후속 목표](../backlog/claude-host-acceptance.md) 이전
