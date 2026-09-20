@@ -63,7 +63,7 @@
 - [x] [RFH-002] Windows Codex의 승인된 격리 대상에서 지식 저장→새 대화 조회→작업 연결과 지원되는 실행·완료·취소·재개 실측
   - state: complete; depends: RFH-001,RFK-003,HK-002; evidence: repo:docs/research/codex-native-cancellation-2026-09-20.md#sha256:e227bccdcf6da8693275ab7a6c3f074404c0c94e3a20c06c12895eb5eb8bc49d
 - [ ] [RFH-003] 동일 자료로 Claude Code·Antigravity 확대 검증, 모사 시험과 실제 호스트 근거를 별도 표시
-  - state: awaiting-external-evidence; depends: RFH-002; owner: 실제 호스트 수용; reason: Codex 수용 이후 다른 호스트의 실제 작업 증거 필요
+  - state: awaiting-external-evidence; depends: RFH-002; owner: 실제 호스트 수용; reason: 두 호스트 격리 정의 적용 완료·해당 앱 검토와 실제 실행 증거 대기
 
 상태표 필드: 작업 종류, 호스트·버전, 운영체제, 호출 방법, 대상·세션 결합, 중복 요청 처리, 완료 확인, 취소 확인, 복구, 근거 위치, `verified|unsupported|unverified`.
 

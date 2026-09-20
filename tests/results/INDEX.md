@@ -644,3 +644,12 @@
 | [passed](runs/20260920T031646-16b198c9784d.md) | 형식 3 새 평가 사례의 실제 효과 확인과 기준선 준비 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T031956-d390dfb20948.md) | 형식 3 지침 단독 기준선 확인과 승인 정의 복원 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T032424-50b59f9580a7.md) | 정의 복원 후 실제 파일 차단 재확인과 시험 자료 원복 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084615-eba9b06dd761.md) | 다른 호스트의 정확한 정의 재검사와 검토 자료 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084704-c89bb0a7721f.md) | 실제 Codex 셸 도구의 파일 훅 범위 시험 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084728-b3a832eb4748.md) | 승인된 Claude·Antigravity 격리 훅 정의 적용 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084743-7e741284a754.md) | Codex 셸 범위 시험의 변경 확인과 정확한 복원 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084815-a450381a863e.md) | 두 실제 호스트의 독립 파일 시험 자료 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260920T084932-939efa9b28d2.md) | 정확한 등록 명령의 오류 입력과 전달 바이트·명령 비용 측정 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084942-3a65aa4e1dd5.md) | 정확한 등록 명령의 오류 입력과 전달 바이트·명령 비용 측정 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T085044-ac02155460ab.md) | Codex 오류·시간 초과의 정확한 진단 정의 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T085105-5139c634e7d8.md) | 추가 진단 명령의 종료 코드·시간 제한 직접 검사 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
