@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| Windows 종료 중 관측 경계 | [en](en/windows-process-observation.md) | [ko](ko/windows-process-observation.md) |
 | 프로젝트 전체 정책 검사 설계 | [en](en/project-policy-enforcement.md) | [ko](ko/project-policy-enforcement.md) |
 | 소스 브랜치 이름 규칙 | [en](en/branch-naming-policy.md) | [ko](ko/branch-naming-policy.md) |
 | `0.11.0` 기반 구조 리팩터링 | [en](en/foundation-refactor.md) | [ko](ko/foundation-refactor.md) |

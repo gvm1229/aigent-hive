@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 34/35 완료
+- 현재 등록 항목: 35/35 완료
 
-- `agent-owned`: `RFR-001`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -41,7 +41,7 @@
 - 큰 자료의 release 검색 엔진은 기존 50,000개 수용 기준 통과. 실제 앱·최신 CLI 전체 성능과 별도 범위
 - 고정 지침 일반 경로 21.68%·지식 경로 20.03% 바이트 감소. 모델 토큰·품질·질문 횟수의 증명 제외
 - 실행 8개 비교: 7개 결과 유지, 세션 없는 자동 호출 1개는 승인된 입력 거부. 파일 보존·센서 호출 수 별도 확인
-- Source Wiki 202개 문서의 최신 출처·색인 검사: 오류 0개·경고 0개
+- Source Wiki 204개 문서의 최신 출처·색인 검사: 오류 0개·경고 0개
 
 ## 실제 호스트와 권한
 
@@ -50,14 +50,14 @@
 
 - Windows Codex에서 기존 정의 신뢰 후 일반 3개 허용·보호 3개 거부 확인. 지침 단독 조건에서는 같은 보호 편집 3개 성공. 지정된 합성 요청만의 비교
 - 검사기 부재 시 보호 편집 허용 발견. 형식 2 보완 뒤에도 실제 앱에서 실패했고, 바깥 PowerShell의 변수 해석 문제 재현. 형식 3의 cmd·PowerShell 회귀 14개와 Windows Codex 정상·검사기 부재의 실제 파일 차단 확인
-- `tests/work/codex-policy-acceptance-1/`에 승인된 형식 3 적용 완료. 이전 실행 파일·실패 기록 보존, 정의 복원 뒤 새 작업에서도 실제 파일 차단 확인, 다른 호스트·시간 초과는 미검증
+- `tests/work/codex-policy-acceptance-1/`에 승인된 형식 3 적용 완료. 이전 실행 파일·실패 기록 보존, 정의 복원 뒤 새 작업에서도 실제 파일 차단 확인, 다른 호스트·시간 초과의 현재 판정은 위 최종 수용 기록 참조
 - Claude 실제 수용과 15초 상시 감시·진행 중 자동 중단은 사용자 승인 후속 범위. Codex·Antigravity의 기본 수동 취소·재개는 별도 근거로 확인
 - [세 운영체제 CI](https://github.com/gvm1229/aigent-hive/actions/runs/35465250818) 통과: Linux Rust 976개·4개 제외, macOS 관련 모듈 730개·1개 제외, Windows 관련 모듈 704개·1개 제외
 - Linux Python 930개 중 921개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T195640-1830f54e0861.md)에 보존
 - [PR #60](https://github.com/gvm1229/aigent-hive/pull/60) develop 통합 `0090c097`, 정확한 머리 커밋 CI 통과. 0.11.0-test.1 시험판 게시 완료. 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
 
-- 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용 근거 확보. 전체 계획·공개 시험판 수용 완료는 RFR-001의 별도 판정
-- [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): 첫 실행의 Windows·macOS 실패 뒤 세 운영체제 재검증 통과, 0.11.0-test.1 수용 기록. macOS 최초 원인 미확정, Windows 시험 도구 수정의 최종 검증과 RFR-001 정리는 현재 작업 소유
+- 제품 전체 회귀·필수 CI와 지원 범위의 실제 수용·공개 시험판 확인 완료. RFR-001을 포함한 승인 범위 35개 완료
+- [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): 첫 실행의 Windows·macOS 실패 뒤 두 차례 세 운영체제 수용 통과. Windows 관측 경합 수정·필수 CI·develop 통합 완료. macOS 최초 원인 미확정 기록 보존
 
 ## 이전 근거
 
@@ -65,3 +65,5 @@
 - 소스 브랜치 검사와 초기 연구: [기존 근거](../research/host-policy-hooks-2026-09-18.md)
 
 - 2026-09-21 사용자 범위 결정: 15초 상시 감시·진행 중 자동 중단만 [후속 목표](../plans/backlog/periodic-usage-interruption.md) 이전. 현재 작업 제어·명시적 재개는 새 Windows 회귀 61개 통과·Unix/POSIX 조건 3개 제외로 확인
+
+- [최종 완료 검사](../../tests/results/runs/20260920T210828-a7f59de22f8d.md): 선행 34개 근거·제품 지문·공개 수용·PR #61 통합 확인. 현재 사용자 수동 장애 없음; 안정판은 별도 승인 범위
