@@ -14,7 +14,7 @@ sources:
   - "repo:crates/hive-wiki/src/rag.rs#sha256:798862245bd04b6f69f1317e499a2de5616a01eaa06c4eff02ea1858d68210fa"
   - "repo:crates/hive-wiki/src/store.rs#sha256:8cc43d6115ca841cdb540c9cabc0a943b5931f760728481f1a97767005902e84"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:15980e7d0b06bf6d7f9d8f44dd006fb5e916925656c90bc4f79cbbfb4ba57f82"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673"
   - "repo:harness/skills/knowledge-scan/SKILL.md#sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
 reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"

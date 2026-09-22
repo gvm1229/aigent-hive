@@ -11,7 +11,7 @@ aliases: ["사용자 수행 단계", "할 일 인계"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:7679dd5603fdfa1104b0017e9fe7c7acb6a81f9e4095233ccddf3db01a325af8"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:27a80d0856d5f69ed2670eb441068950a42b207d592d9ba892542aa56c99bffc"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
 links: [language-consistency, source-development]
 reviewed_revision: "git:4afd5ba4483d98f63ae42c065837f9b010506657"
 status: active

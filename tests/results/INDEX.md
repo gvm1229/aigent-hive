@@ -709,3 +709,19 @@
 | [passed](runs/20260920T210047-e5db157f28b6.md) | Windows 관측 수정 뒤 공개 시험판 최종 세 운영체제 수용 | d703ffea59eb46e338a29437aadc63dc80600008 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T210828-a7f59de22f8d.md) | RFR-001 공개 수용·통합·34개 선행 근거의 최종 결합 | 6296726906d4b24f82243c4fafae43dbf8f3245f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260920T211023-48770e0a7764.md) | 개발 검증: uv.EXE | fe9ef44d4a3a7dce85b6adb8d330fd9f71da163b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T210945-55efaf86e2a0.md) | PDC 생성기 변경 Rust 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211041-c7c2c21e1307.md) | PDC 협업 지침 이관과 보존 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211203-03eade7c63f9.md) | PDC 지침과 투영 계약 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211304-cdda71444729.md) | PDC 사용자 수정된 관리 절과 외부 바이트 이관 검증 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211358-162acf2878d4.md) | PDC 변경된 관리 절 이관 및 직접 관련 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211636-dcd60dc1c744.md) | PDC 실제 호스트 합성 자료 준비 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211724-2c327f436a86.md) | PDC Codex 미설치 협업 실제 편집 수용 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211752-c09dae1e3faa.md) | PDC 최종 생성기 Rust 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211901-12c89fa96633.md) | PDC Codex 미설치 실제 수용 환경 인자 수정 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211944-07a73ae5db2a.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211948-e9ae7afa5674.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211957-07e868057f2d.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212110-e21c4bc681db.md) | 개발 검증: uv.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212115-e3d8e53e167b.md) | Python conformance: documentation, security, contract, integration, release | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T212327-1041207f606f.md) | PDC 문서 도달성과 현재 출처 지문 정합화 | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T212328-f2d094d87538.md) | Python conformance: documentation | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |

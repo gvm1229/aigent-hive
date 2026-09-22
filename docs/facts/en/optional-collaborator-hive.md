@@ -9,7 +9,7 @@ summary: "0.11.0 includes generator changes and verification before example-proj
 tags: [collaboration, directives, version]
 aliases: []
 sources:
-  - "repo:docs/plans/active/project-directives-collaboration-0.11.0.md#sha256:910ba889f836e4a7e90623b81d09e7293222c02d021cd5fd2b03d1671bba3696"
+  - "repo:docs/plans/active/project-directives-collaboration-0.11.0.md#sha256:22e02921911e14594b707fe0c9919d23dbf300a070087aaf8a8541f5ceb87afe"
 links: [foundation-refactor]
 reviewed_revision: "git:dd4e2773e98d7acb13fa0dc77ad11167faaf23fb"
 status: active

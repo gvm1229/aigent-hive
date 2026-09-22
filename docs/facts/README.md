@@ -124,6 +124,8 @@
 | v0.9 Skill suite | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |
 | v0.9 full release | [en](en/v0-9-full-release.md) | [ko](ko/v0-9-full-release.md) |
 
+| 협업자의 Hive 설치 선택권 | [en](en/optional-collaborator-hive.md) | [ko](ko/optional-collaborator-hive.md) |
+
 ## 정본 관계
 
 Fact: current source·ADR·architecture의 reviewed retrieval projection.

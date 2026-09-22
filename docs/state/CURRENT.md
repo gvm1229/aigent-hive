@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 34/38 완료
+- 현재 등록 항목: 35/38 완료
 
-- `agent-owned`: `RFR-001`, `PDC-001`, `PDC-002`, `PDC-003`
+- `agent-owned`: `RFR-001`, `PDC-002`, `PDC-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
