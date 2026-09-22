@@ -9,7 +9,7 @@ summary: "0.11.0 생성기 개선과 검증 후 예시 프로젝트 수정 계�
 tags: [collaboration, directives, version]
 aliases: []
 sources:
-  - "repo:docs/plans/active/project-directives-collaboration-0.11.0.md#sha256:22e02921911e14594b707fe0c9919d23dbf300a070087aaf8a8541f5ceb87afe"
+  - "repo:docs/plans/active/project-directives-collaboration-0.11.0.md#sha256:f76fdbbd83d6e67c2502b928cfb2d0d0d3a1c51d48a76ee877589bce9ac37765"
 links: [foundation-refactor]
 reviewed_revision: "git:dd4e2773e98d7acb13fa0dc77ad11167faaf23fb"
 status: active
@@ -22,4 +22,4 @@ status: active
 - 보호 실패의 미설치 오분류 금지, 사용자·외부 파일 보존
 - RFR-001 재개, 다음 공개 시험 0.11.0-test.2
 - 예시 프로젝트 읽기 전용, 제품 검증 후 수정된 Hive로 해당 프로젝트 수정 계획 수립
-- 범위 문서 반영 완료, 구현·행동 수용 미검증
+- 생성기 구현·Windows 실제 AI의 제한된 사례 확인, 운영체제별·공개 수용 대기
