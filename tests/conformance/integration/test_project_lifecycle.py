@@ -30,6 +30,12 @@ PRODUCT_VERSION = tomllib.loads(
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
     def test_collaborator_directives_upgrade_preserves_foreign_bytes_and_recovers(self) -> None:
+        self._check_collaborator_directives_upgrade(inject_failure=True)
+
+    def test_public_collaborator_upgrade_preserves_foreign_bytes(self) -> None:
+        self._check_collaborator_directives_upgrade(inject_failure=False)
+
+    def _check_collaborator_directives_upgrade(self, *, inject_failure: bool) -> None:
         fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.0"
         manifest = json.loads((fixtures / "manifest.json").read_bytes())
         for host in ("codex", "claude", "antigravity"):
@@ -76,12 +82,15 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
                     process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
                     self.assertEqual(process.returncode, 0, result)
                     self.assertEqual(active_snapshot(), original)
-                failed, result = self.invoke(
-                    "project", "upgrade", "--target", str(target), "--apply",
-                    environment={"HIVE_PROJECT_UPGRADE_FAIL_AFTER": "1"},
-                )
-                self.assertNotEqual(failed.returncode, 0, result)
-                self.assertEqual(active_snapshot(), original)
+                # Fault injection is deliberately unavailable in signed release binaries.
+                # The public path still checks preview, ownership, activation and idempotence.
+                if inject_failure:
+                    failed, result = self.invoke(
+                        "project", "upgrade", "--target", str(target), "--apply",
+                        environment={"HIVE_PROJECT_UPGRADE_FAIL_AFTER": "1"},
+                    )
+                    self.assertNotEqual(failed.returncode, 0, result)
+                    self.assertEqual(active_snapshot(), original)
                 for mode in ("--apply", "--validate"):
                     process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
                     self.assertEqual(process.returncode, 0, result)
