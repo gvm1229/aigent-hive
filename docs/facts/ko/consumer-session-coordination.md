@@ -15,7 +15,7 @@ sources:
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:harness/directives/03-session-coordination.md#sha256:fa55787d9e513f891a8a56c689740bd3fafa417b87904b1bcdc11843d1776925"
   - "repo:harness/skills/project-setup/SKILL.md#sha256:aef70c66a054607e84288fa44f5fefca3c089515d41cb0c06934498ebbf31ca1"
-  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:cf02599d640ad47999ee51af26bdce0d7d19b44f740e984b8cac9943592a7e01"
+  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:a8ec0f4d84d14abb4251e227f4cfbeea282af8a262afb3a490a7805423be840d"
 links: [knowledge-preservation, project-onboarding]
 reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
