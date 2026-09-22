@@ -29,6 +29,77 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_collaborator_directives_upgrade_preserves_foreign_bytes_and_recovers(self) -> None:
+        fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.0"
+        manifest = json.loads((fixtures / "manifest.json").read_bytes())
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.work_root / f"collaborator-upgrade-{host}"
+                source = fixtures / f"{host}.zip"
+                self.assertEqual(
+                    "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+                    manifest["hosts"][host],
+                )
+                with ZipFile(source) as archive:
+                    for member in archive.infolist():
+                        self.assertFalse(Path(member.filename).is_absolute())
+                        self.assertNotIn("..", Path(member.filename).parts)
+                    archive.extractall(target)
+                agents = target / "AGENTS.md"
+                before_agents = agents.read_bytes()
+                original_rule = b"- Before an automated edit, reserve exact paths through the session coordination directive."
+                self.assertIn(original_rule, before_agents)
+                locally_changed = before_agents.replace(
+                    original_rule,
+                    b"- Before any automated edit, always require Hive even when it is unavailable.",
+                )
+                prefix, block = before_agents.split(b"<!-- AIGENT-HIVE:START -->", 1)
+                _, suffix = block.split(b"<!-- AIGENT-HIVE:END -->", 1)
+                foreign = b"\r\n<!-- framework-owned -->\r\nKeep framework instructions.\r\n"
+                agents.write_bytes(locally_changed + foreign)
+                directive = target / ".agents/directives/00-project-harness.md"
+                local_note = b"\n- Team-local note: run the existing project tests.\n"
+                directive.write_bytes(directive.read_bytes() + local_note)
+                user_rule = target / ".agents/directives/05-user-rules.md"
+                user_rule.write_bytes(b"# Team rules\r\nRun project tests.\r\n")
+                other_config = target / ".other-tool-settings.json"
+                other_config.write_bytes(b'{"enabled":true,"owner":"collaborator"}\r\n')
+
+                def active_snapshot():
+                    return {
+                        path: value for path, value in snapshot_tree(target).items()
+                        if not path.startswith((".hive/backups", ".hive/runtime"))
+                    }
+
+                original = active_snapshot()
+                for mode in ("--scan", "--dry-run"):
+                    process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                    self.assertEqual(process.returncode, 0, result)
+                    self.assertEqual(active_snapshot(), original)
+                failed, result = self.invoke(
+                    "project", "upgrade", "--target", str(target), "--apply",
+                    environment={"HIVE_PROJECT_UPGRADE_FAIL_AFTER": "1"},
+                )
+                self.assertNotEqual(failed.returncode, 0, result)
+                self.assertEqual(active_snapshot(), original)
+                for mode in ("--apply", "--validate"):
+                    process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                    self.assertEqual(process.returncode, 0, result)
+                updated = agents.read_bytes()
+                self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:START -->", 1)[0], prefix)
+                self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:END -->", 1)[1], suffix + foreign)
+                self.assertIn(b"Hive installation is optional for collaborators", updated)
+                self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated)
+                self.assertNotIn(b"always require Hive even when it is unavailable", updated)
+                behavior = (target / ".agents/directives/00-project-harness.md").read_bytes()
+                self.assertEqual(behavior, (REPOSITORY_ROOT / "harness/directives/00-project-harness.md").read_bytes() + local_note)
+                self.assertEqual(user_rule.read_bytes(), b"# Team rules\r\nRun project tests.\r\n")
+                self.assertEqual(other_config.read_bytes(), b'{"enabled":true,"owner":"collaborator"}\r\n')
+                upgraded = active_snapshot()
+                process, result = self.invoke("project", "upgrade", "--target", str(target), "--apply")
+                self.assertEqual(process.returncode, 0, result)
+                self.assertEqual(active_snapshot(), upgraded)
+
     def test_published_test2_project_upgrades_without_a_same_version_lockout(self) -> None:
         self._check_same_product_test_upgrade("0.10.0-test.2")
 

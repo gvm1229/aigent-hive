@@ -3,6 +3,10 @@
 Load this directive before a Korean response, Korean document change, release summary, CLI message,
 or explicit Korean rewriting task.
 
+Apply the availability gate in `00-project-harness.md` for consumer projects. In ordinary
+collaboration mode, use drafting and self-review below without `hive korean` commands or
+command-backed rewriting. Keep the original draft when unsure; do not claim CLI verification.
+
 ## Automatic output path
 
 1. Draft in natural Korean. Keep English only for names, commands, identifiers, paths, schema keys,

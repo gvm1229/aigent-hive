@@ -3,6 +3,34 @@
 Owns material-work planning, continuation, closure, host execution, and stable publication authority.
 Knowledge, upgrade, and concurrent-edit procedures belong to the numbered sibling directives.
 
+## Hive availability gate
+
+- Apply this gate before any Hive command or command-backed Skill, including memory, session
+  coordination, Korean inspection, and workflow execution. Reuse the result within this task
+  unless local availability changes. Project files alone never prove local activation.
+- Resolve `hive` through the active host's normal command lookup (`Get-Command hive` on
+  PowerShell or `command -v hive` on POSIX). Do not install, download, initialize, or search
+  another person's paths to make lookup succeed. Do not copy a creator's user-root path.
+- With no executable and no current Hive-bound run or locally approved Hive protection, use
+  ordinary collaboration mode: continue common project rules, normal edits, planning, and tests
+  through the user's existing tools. Skip Hive commands and command-backed Skills. Existing
+  Markdown may be read as documents, not claimed as a Hive search, capture, or validation.
+- A present executable without this collaborator's own initialized Hive setup is setup-required,
+  not ready and not an execution failure. Ordinary work remains available when no active Hive
+  contract requires protection. Mention setup only when a requested Hive feature needs it;
+  never make installation or initialization a condition of ordinary collaboration.
+- Use Hive-enabled mode only with a working executable and this host's existing local setup.
+  Let the owning command validate its configuration and authority. Never treat a version string
+  or the project's recorded primary host as proof of setup, capability, or consent.
+- A failed command, inaccessible executable, malformed setup, unknown state, usage halt, or
+  missing checker for a locally approved protection is an error or protected stop, not evidence
+  of non-installation. Stop the affected protected action and report the reason. Do not switch
+  modes to retry a denied action, disable a hook, erase state, or bypass an existing bound run.
+- Respect the collaborator's current host and other tools. Keep foreign settings unchanged;
+  do not activate Hive hooks, switch orchestration owners, or import global preferences merely
+  because the repository contains Hive files. If classification is uncertain, pause only the
+  Hive-dependent or protected action; unrelated safe work may continue.
+
 ## Work and planning
 
 - English responses use ASD-STE100 Simplified Technical English. In Korean, Translate meaning rather than English word order.
@@ -50,6 +78,9 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 
 ## Host and Skill boundary
 
+- This section governs Hive-enabled workflows only. Ordinary collaborators keep their existing
+  tools and orchestration owner, including already active OMX/OMC, without Hive invoking,
+  installing, configuring, or migrating them.
 - Start a new run with verified host-native capabilities. Do not select or invoke OMX/OMC for
   new work. Preserve existing external owner pins as historical provenance without migration.
 - The host owns model, subagent, and Judge launches. Hive prepares declarative envelopes and typed

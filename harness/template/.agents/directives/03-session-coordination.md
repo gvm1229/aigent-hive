@@ -1,5 +1,8 @@
 # Consumer session coordination
 
+- Apply the availability gate in `00-project-harness.md` first. Ordinary collaboration uses
+  the existing host's edit coordination without invoking `hive session` or claiming a Hive
+  reservation. A failed reservation in Hive-enabled mode remains a stop for the affected edit.
 - This directive coordinates Hive-aware automated edits within one consumer project. It cannot control direct user edits, external editors, or hosts that do not invoke `hive session`; never claim otherwise.
 - Before an automated edit, run `hive session begin --target <project-root> --host codex|claude|antigravity --session-id <exact-host-session-id> --process-id <exact-host-process-id> --path <project-relative-path> [--path <project-relative-path>]... --output json`.
 - `begin` canonicalizes every requested relative path, writes one ephemeral Markdown manifest at `.hive/runtime/active-sessions/<host>-<session-id>.md`, and rejects overlap with a live manifest from another host session. A parent path overlaps every descendant; identical and ancestor paths overlap.

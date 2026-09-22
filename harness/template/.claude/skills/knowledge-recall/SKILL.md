@@ -7,6 +7,11 @@ description: (knowledge-recall) Before a knowledge-dependent question or task, f
 
 Run one required memory lookup, then continue the owning task route.
 
+In a consumer project, apply `.agents/directives/00-project-harness.md`'s availability gate
+before this command-backed workflow. Ordinary collaboration skips it without installing Hive;
+existing Markdown remains readable without claiming a Hive retrieval. Installed errors are not
+non-installation. Source-workspace and already activated user-level contracts remain unchanged.
+
 ## Workflow
 
 1. Skip retrieval for usage-guard control, setup-required state, Wiki disabled, pure

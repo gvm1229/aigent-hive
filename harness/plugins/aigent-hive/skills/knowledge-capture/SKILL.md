@@ -7,6 +7,11 @@ description: (knowledge-capture) At the end of a Wiki-enabled turn, keep one use
 
 For each eligible turn, write at most one atomic knowledge claim.
 
+In a consumer project, apply `.agents/directives/00-project-harness.md`'s availability gate
+before this command-backed workflow. Ordinary collaboration skips capture and leaves canonical
+knowledge unchanged; never imitate a successful write manually. Installed errors are not
+non-installation. Source-workspace and already activated user-level contracts remain unchanged.
+
 ## Mandatory memory gate
 
 1. When Wiki is enabled, review every user turn and completed task before the final response.

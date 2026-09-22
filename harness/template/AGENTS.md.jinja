@@ -14,6 +14,9 @@ Resolution evidence: `{{ capability_resolution.evidence_digest }}`
 
 ## Entry rules
 
+- Hive installation is optional for collaborators. Before any Hive command or command-backed
+  Skill, apply the availability gate in `.agents/directives/00-project-harness.md`.
+  Checked-in Hive files describe the project; they do not activate Hive on another computer.
 - Read canonical configuration from `.hive/config/harness.toml`.
 - Use the selected interface language for questions and responses unless the user explicitly
   requests another language for the current response. Prompt language is a separate current-request
@@ -26,7 +29,8 @@ Resolution evidence: `{{ capability_resolution.evidence_digest }}`
 
 ## Conditional routes
 
-Load only the matching contract:
+Load only the matching contract. In ordinary collaboration mode, keep common project rules,
+planning, editing discipline, and tests; skip Hive command-backed routes below:
 
 | Work | Contract |
 | --- | --- |
@@ -38,11 +42,12 @@ Load only the matching contract:
 
 - For code edits or documentation restructuring, consult `.hive/directives/00-editing-discipline.md`.
   Reuse unchanged guidance within the task. Its `# CLAUDE.md` heading is original text, not host scope.
-- Before an automated edit, reserve exact paths through the session coordination directive.
-- Immediately before automatic dispatch, run the installed session-bound `hive usage enforce`
-  contract. Exit `0` is only preflight; dispatch still requires one authorized `hive run resume`
+- In Hive-enabled mode, require exact path reservations before automated edits through the session
+  coordination directive. Ordinary collaboration does not claim a Hive reservation.
+- In Hive-enabled mode, require the installed session-bound `hive usage enforce` contract
+  immediately before automatic dispatch. Exit `0` is only preflight; dispatch still requires one authorized `hive run resume`
   brief. A current-session disable bypasses sensing but never authorizes dispatch.
-- On a Wiki-enabled turn, route one bounded lookup before knowledge-dependent work and the
+- In Hive-enabled mode, require one bounded lookup on a Wiki-enabled turn before knowledge-dependent work and the
   agent-reviewed memory gate before final response. Wiki disabled means no knowledge mutation.
 - Optional Skills and hooks require exact capability and digest approval. Unsupported capability
   remains unsupported; no silent runtime switch or fallback orchestration.
