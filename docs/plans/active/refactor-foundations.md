@@ -3,7 +3,7 @@
 > Plan version: 0.11.0
 > Scope: release
 
-> 상태: 승인 범위의 구현·검증 완료
+> 상태: 기존 범위 검증 보존, 협업 지침 추가 후 통합 검증 재개
 > 소유 항목: `RFB-001`, `RFB-002`, `RFR-001`
 > 기준 코드: `87b84f42`; 제품 버전: `0.11.0`; 첫 공개 시험: `0.11.0-test.1`
 > 결정: [ADR-0023](../../decisions/ADR-0023-foundation-refactor.md)
@@ -48,8 +48,8 @@
   - state: complete; depends: RFS-002; evidence: repo:tests/results/runs/20260918T175340-186b7bfd41f8.md#sha256:f413ef7f1e4112d91d42f32edfa4798cf7d6f0ea01d5c99e224c89f8223be90c
 - [x] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: complete; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
-- [x] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
-  - state: complete; depends: BR-001,BR-002,BR-003,BR-004,BR-005,HK-001,HK-002,HK-003,HK-004,HK-005,RFB-001,RFB-002,RFK-001,RFK-002,RFK-003,RFH-001,RFH-002,RFH-003,RFP-001,RFP-002,RFP-003,RFP-004,RFT-001,RFT-002,RFT-003,RFT-004,RFS-001,RFS-002,RFS-003,RFS-004,RB104-001,RB104-002,RB104-003,RB104-004; evidence: repo:tests/results/runs/20260920T210828-a7f59de22f8d.md#sha256:35a9bdf7a682d4cc899f3aeaabbb411a21944c90b9c9226a429524bffc51d055
+- [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
+  - state: agent-owned; depends: BR-001,BR-002,BR-003,BR-004,BR-005,HK-001,HK-002,HK-003,HK-004,HK-005,RFB-001,RFB-002,RFK-001,RFK-002,RFK-003,RFH-001,RFH-002,RFH-003,RFP-001,RFP-002,RFP-003,RFP-004,RFT-001,RFT-002,RFT-003,RFT-004,RFS-001,RFS-002,RFS-003,RFS-004,RB104-001,RB104-002,RB104-003,RB104-004,PDC-001,PDC-002,PDC-003
 
 ## 측정과 판정
 
@@ -68,7 +68,7 @@
 - 시험 산출물: 기존 `scripts/test-artifacts.py`로 등록, 검토 전 삭제 제외
 - 첫 커밋: 문서 계획. 후속 구현: 상태 규약 → 상태 도구 → 지식 → 정책 → 지침 → 설치 분리 → 공통 처리 → 복구 순서의 독립 커밋
 - `RFR-001`: 구현 승인 후 전체 제품 검증. 번호 공개 시험은 목표 버전·새 제품 바이트·실제 수용 준비를 갖춘 뒤 `develop` 통합 기준으로 진행
-- `0.11.0` 집계: 리팩터링 21개·`RB104-*` 4개·완료된 소스 `BR-*` 5개·제품 `HK-*` 5개. `RB104-004` 미완료 상태에서 전체 완료·안정판 수용 주장 금지
+- 집계: 기존 35개와 `PDC-*` 3개. RFR-001 재개, 미완료 항목이 있는 동안 전체 완료·안정판 수용 주장 금지
 - 안정판 `main` 통합·태그·게시·실제 설치: 해당 버전의 별도 명시 승인 필요
 
 ## 위험과 되돌리기
@@ -90,3 +90,9 @@
 - [작업 후 개선 후보 검토](hook-review-candidates-0.11.0.md): `HK-005`, `HK-001`과 기존 실행 결과 계약 뒤 구현
 
 - [RFR-001 통합·공개 시험 절차](../../research/refactor-release-qualification-0.11.0.md): 제품 지문·완료 ID에 결합한 0.11.0-test.1, develop 통합 뒤 후보·게시·공개 수용 별도 확인
+
+## 협업 지침 추가 수용
+
+- [PDC-001–003](project-directives-collaboration-0.11.0.md) 구현·검증 후 RFR-001 재수용, 다음 공개 시험 `0.11.0-test.2`
+- 이전 RFR 근거 `tests/results/runs/20260920T210828-a7f59de22f8d.md` 보존. 새 변경의 증명 제외
+- 예시 프로젝트 읽기 전용, 제품 검증 후 해당 프로젝트 수정 계획 수립
