@@ -729,3 +729,5 @@
 | [failed](runs/20260922T212459-5b1cf86ac1c7.md) | Python conformance: documentation, security, contract, integration, release | 1cdff4c59124c595efdf40df586b158c61338adf | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T213618-7c85c8b92147.md) | PDC 조건부 지침 문구와 현재 스킬 증명 회귀 | 1cdff4c59124c595efdf40df586b158c61338adf | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T213839-f040916e128b.md) | PDC 공개 수용 작업 정의 검증 | ae5b6f73077f6df69dec9a29b4e1404dfba9dc47 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T214102-f819790c64ed.md) | PDC 최종 전체 Python 회귀 | 3b0f06a64e179c70c82e5523fbfeb6f764b6a0e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T214104-6137833969d6.md) | Python conformance: documentation, security, contract, integration, release | 3b0f06a64e179c70c82e5523fbfeb6f764b6a0e6 | Windows-11-10.0.26200-SP0 |
