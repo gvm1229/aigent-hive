@@ -166,7 +166,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     / "usage-guard/SKILL.md"
                 ).read_text(encoding="utf-8")
                 self.assertIn("hive usage enforce", agents)
-                self.assertIn("Immediately before automatic dispatch", agents)
+                self.assertIn("immediately before automatic dispatch", agents.lower())
+                self.assertIn("In Hive-enabled mode, require the installed session-bound", agents)
+                self.assertIn("Hive installation is optional for collaborators", agents)
                 self.assertIn("authorized `hive run resume`", agents)
                 self.assertIn("never authorizes dispatch", agents)
                 for required in (
