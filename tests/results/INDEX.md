@@ -734,3 +734,5 @@
 | [passed](runs/20260922T214233-42bf293fe06b.md) | PDC 최종 전체 Python 회귀 재검증 | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T214234-15143d334301.md) | Python conformance: documentation, security, contract, integration, release | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T215754-3c978882ac49.md) | PDC 개발 실패 주입과 공개 빌드 갱신 수용 경로 분리 | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T223030-2b0e7fecfd9c.md) | PDC 공개 시험판의 격리된 로컬 설치 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T223142-75534473ad69.md) | PDC 실제 공개 Windows 패키지의 생성 갱신 보존 거부 수용 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |

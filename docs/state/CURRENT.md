@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
-- 개발 목표: `0.11.0-test.2`; 공개 안정판: `0.10.3`
+- 공개 수용 완료: `0.11.0-test.2`; 공개 안정판: `0.10.3`
 - 제품 버전: `0.11.0`
 - 승인 범위: 미출시 `0.10.4`를 계승하는 전체 구현, 기존 기능 유지와 Codex 우선 검증
 - 추가 결정: 세션·양수 프로세스 ID 없는 자동 재개 거부; 원본 없는 이식 지식은 과거 조회 유지와 현재성 미검증 표시
@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 35/38 완료
+- 현재 등록 항목: 38/38 완료
 
-- `agent-owned`: `RFR-001`, `PDC-002`, `PDC-003`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -56,7 +56,7 @@
 - Linux Python 930개 중 921개 통과·9개 제외. 세 방향의 운영체제 간 지식 이전도 통과. 제외 사유·코드 지문·증명 한계는 [CI 근거](../../tests/results/runs/20260919T195640-1830f54e0861.md)에 보존
 - [PR #60](https://github.com/gvm1229/aigent-hive/pull/60) develop 통합 `0090c097`, 정확한 머리 커밋 CI 통과. 0.11.0-test.1 시험판 게시 완료. 안정판 통합·태그·게시·실설치는 `0.11.0` 별도 명시 승인 필요
 
-- 이전 test.1 범위 35개 수용 근거 보존. 협업 지침 추가 범위의 구현·회귀·공개 수용은 미실행, RFR-001 재개
+- 이전 test.1 근거 보존. 협업 지침 포함 38개 기준과 test.2 공개 수용 완료
 - [공개 수용과 원인 조사](../research/refactor-release-qualification-0.11.0.md): 첫 실행의 Windows·macOS 실패 뒤 두 차례 세 운영체제 수용 통과. Windows 관측 경합 수정·필수 CI·develop 통합 완료. macOS 최초 원인 미확정 기록 보존
 
 ## 이전 근거
@@ -72,6 +72,6 @@
 
 - [PDC-001–003](../plans/active/project-directives-collaboration-0.11.0.md): 협업자 설치 선택권을 보장하는 생성기·행동 검증·기존 설치 갱신
 - Windows Codex에서 예시 프로젝트 지침 읽기 전용 확인: 설치 여부 분기 없는 Hive 명령 요구, 사용자 규칙·외부 블록과 공존
-- 확인 범위: 파일 내용. 미설치 협업자의 실제 작업·다른 운영체제·수정된 제품 동작은 미검증
-- 다음 순서: PDC 구현·검증 → RFR-001과 test.2 공개 수용 → 수정된 Hive로 예시 프로젝트 수정 계획
-- 현재 요청: 1~5단계 자율 구현·검증·수정 계획 작성. 예시 프로젝트 읽기 전용, 6단계 실제 적용 금지
+- [검증](../research/project-directives-collaboration-0.11.0.md): Windows 실제 AI 8조건·세 운영체제 공개 패키지 수용 완료, 모든 도구 조합 보장 제외
+- [예시 수정 계획](../research/example-project-hive-repair-0.11.0.md) 독립 검토 통과, 6단계 실제 적용 미실행
+- 현재 요청의 1~5단계 완료. 예시 프로젝트 읽기 전용 유지, 안정판·실제 설치는 별도 권한
