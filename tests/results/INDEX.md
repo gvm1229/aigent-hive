@@ -796,3 +796,4 @@
 | [passed](runs/20260923T040856-d5791cfd29fa.md) | APC-001–002 모든 공개 안정판의 범위·갱신·복구 구현 확인 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T042114-c7c1ac392152.md) | APC 새 필수 복구 작업 반영 후 배포 규약 재검증 | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T042116-27d7a64129f5.md) | Python conformance: release | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T051632-62617e897e26.md) | APC-003–004 공개 검증과 무손실 브랜치 통합 완료 확인 | 4c70291742b0856063acb218aebe27b85138cca5 | Windows-11-10.0.26200-SP0 |
