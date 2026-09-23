@@ -53,8 +53,22 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
             process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
             self.assertEqual(process.returncode, 0, result)
             self.assertEqual(snapshot_tree(target), original)
-        for mode in ("--apply", "--validate"):
-            process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+        paths = result["changed_paths"]
+        self.assertIn(".agents/directives/00-project-harness.md", paths)
+        identity = ["--target", str(target), "--host", "codex", "--session-id", "refresh-upgrade"]
+        reservations = ["--process-id", str(os.getpid())]
+        for path in paths:
+            reservations.extend(["--path", path])
+        process, result = self.invoke("session", "begin", *identity, *reservations)
+        self.assertEqual(process.returncode, 0, result)
+        try:
+            process, result = self.invoke("session", "check", *identity, *reservations)
+            self.assertEqual(process.returncode, 0, result)
+            for mode in ("--apply", "--validate"):
+                process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                self.assertEqual(process.returncode, 0, result)
+        finally:
+            process, result = self.invoke("session", "close", *identity)
             self.assertEqual(process.returncode, 0, result)
         after = tomllib.loads(harness_path.read_text(encoding="utf-8"))
         self.assertEqual(after["harness_version"], PRODUCT_VERSION)
@@ -1148,6 +1162,43 @@ else:
         self.assertEqual(rejected.returncode, 2, rejected.stderr)
         self.assertEqual(result["code"], "hive.session-host-owned-namespace")
         self.assertEqual(snapshot_tree(target), before)
+
+    def test_shared_directive_reservations_preserve_files_and_reject_foreign_paths(self) -> None:
+        target = self.setup_project("directive-reservations")
+        rule = target / ".agents/directives/05-team.md"
+        rule.write_bytes(b"# User-owned team rule\r\n")
+        paths = [".agents/directives/00-project-harness.md", ".agents/directives/05-team.md"]
+        before_files = {path: (target / path).read_bytes() for path in paths}
+        for host in ("codex", "claude", "antigravity"):
+            identity = ["--target", str(target), "--host", host, "--session-id", "directive-owner"]
+            reservations = ["--process-id", str(os.getpid())]
+            for path in paths:
+                reservations.extend(["--path", path])
+            process, result = self.invoke("session", "begin", *identity, *reservations)
+            self.assertEqual(process.returncode, 0, result)
+            try:
+                process, result = self.invoke("session", "check", *identity, *reservations)
+                self.assertEqual(process.returncode, 0, result)
+                snapshot = snapshot_tree(target)
+                process, result = self.invoke(
+                    "session", "begin", "--target", str(target), "--host", "codex",
+                    "--session-id", "conflicting-directive", "--process-id", str(os.getpid()),
+                    "--path", paths[0],
+                )
+                self.assertEqual(process.returncode, 3, result)
+                self.assertEqual(snapshot_tree(target), snapshot)
+                self.assertEqual({path: (target / path).read_bytes() for path in paths}, before_files)
+            finally:
+                process, result = self.invoke("session", "close", *identity)
+                self.assertEqual(process.returncode, 0, result)
+        original = snapshot_tree(target)
+        for path in (".agents/directives", ".agents/config.toml", ".claude/directives/rule.md", ".agents/directives/../config.md"):
+            process, result = self.invoke(
+                "session", "begin", "--target", str(target), "--host", "codex",
+                "--session-id", "invalid-directive", "--process-id", str(os.getpid()), "--path", path,
+            )
+            self.assertNotEqual(process.returncode, 0, result)
+            self.assertEqual(snapshot_tree(target), original)
 
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")
