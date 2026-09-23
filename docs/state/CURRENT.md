@@ -1,6 +1,6 @@
 # 현재 상태
 
-- [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.3 설치·스킬 발견 확인. 실제 구버전 갱신의 실행 주체 판정 오류 수정 후 test.4 검증 예정. 예시 적용 전
+- [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.3 설치·스킬 발견 확인. 기준본 인증 복구, 지침 경로 예약 보완 중. 미공개 test.4 취소, test.5 검증 후 예시 적용
 
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
 - 공개 수용 완료: `0.11.0-test.2`; 공개 안정판: `0.10.3`
@@ -14,7 +14,7 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 40/42 완료
+- 현재 등록 항목: 41/43 완료
 
 - `agent-owned`: `PRF-002`, `PRF-003`
 - `awaiting-user-authority`: 없음

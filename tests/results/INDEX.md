@@ -763,3 +763,8 @@
 | [passed](runs/20260923T012148-29a3e5a2083c.md) | PRF-004 프로젝트 갱신 전체 통합 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T012158-5e9d234a3d53.md) | PRF-004 과거 기준본 수정 전체 Rust 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T012437-694112453010.md) | PRF-004 과거 배포 기준본과 공개 수용 구성 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012740-52f5a750001e.md) | PRF-004 정식 구버전 기준본 인증 복구 검증 종합 | 7bc0e63b5295cf790e79c74951af3edc7f4c4a5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T013853-24a1861b03d4.md) | PRF-005 지침 예약 경로·기록·기존 호스트 경계 검사 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014032-86ef0e800646.md) | PRF-005 실제 갱신과 예약 연결·충돌·외부 경로 거부 검사 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014339-16d5cf835879.md) | PRF-005 예약 연결 수정 전체 Rust 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014350-c1300017446d.md) | PRF-005 예약 연결과 프로젝트 전체 갱신 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
