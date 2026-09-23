@@ -3050,6 +3050,12 @@ description: Inspect one local file without changing it.
                 assert!(text.contains("preview-only"));
                 assert!(text.contains("not apply"));
                 if host != Host::Claude {
+                    if language == DescriptorLanguage::En {
+                        assert_eq!(
+                            user.files[&skill_metadata_path(host, "project-refresh")],
+                            embedded_skill_metadata("project-refresh").unwrap()
+                        );
+                    }
                     let metadata: serde_yaml::Value = serde_yaml::from_slice(
                         &user.files[&skill_metadata_path(host, "project-refresh")],
                     )
