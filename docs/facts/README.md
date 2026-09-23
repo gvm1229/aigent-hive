@@ -79,6 +79,7 @@
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
 | Skill routing | [en](en/skill-routing.md) | [ko](ko/skill-routing.md) |
+| Project refresh routing | [en](en/project-refresh-routing.md) | [ko](ko/project-refresh-routing.md) |
 | Public Skill identity | [en](en/public-skill-identity.md) | [ko](ko/public-skill-identity.md) |
 | Ship commit granularity | [en](en/ship-commit-granularity.md) | [ko](ko/ship-commit-granularity.md) |
 | Model-routed custom subagent | [en](en/model-routed-custom-subagents.md) | [ko](ko/model-routed-custom-subagents.md) |
