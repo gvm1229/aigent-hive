@@ -14,7 +14,7 @@ sources:
   - "repo:crates/hive-render/src/lib.rs#sha256:87415202d29e198529a2d39fa256b33ded6ec41c0e34a45bb6d252e0393e74c2"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
-  - "repo:scripts/check-project-base-coverage.py#sha256:64a600db11df5f74b3d9da8f676329dbcab65a722b5399ffc03b7c0df2d1fd22"
+  - "repo:scripts/check-project-base-coverage.py#sha256:6c90b2a4b1f84507f56a80ed540f6e97c9938b6f91a7ab087cc8347c8cfadf26"
 links: [projection-upgrade-purge, update-transaction, version-policy]
 reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
 status: active
