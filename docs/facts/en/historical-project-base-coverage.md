@@ -17,7 +17,7 @@ sources:
   - "repo:scripts/check-project-base-coverage.py#sha256:6c90b2a4b1f84507f56a80ed540f6e97c9938b6f91a7ab087cc8347c8cfadf26"
   - "repo:scripts/qualify-project-predecessors.py#sha256:c4e75d248a201b433c01423436645e32920543d58360dbd2b098f9fc3d909278"
 links: [projection-upgrade-purge, update-transaction, version-policy]
-reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
+reviewed_revision: "git:4c70291742b0856063acb218aebe27b85138cca5"
 status: active
 ---
 
