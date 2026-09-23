@@ -789,7 +789,10 @@
 | [passed](runs/20260923T040125-221f8557a2f1.md) | APC 전체 Rust 회귀 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260923T040210-8e7244ec8720.md) | APC 전체 Python 규약 검사 재시작 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260923T040211-fb4ba2409b9b.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260923T040415-f5c806531535.md) | APC 출처 갱신 후 전체 Python 규약 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260923T040416-aa7c5b98796d.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040415-f5c806531535.md) | APC 출처 갱신 후 전체 Python 규약 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040416-aa7c5b98796d.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T040537-3f2e2481cea6.md) | APC 버전 직접 확인과 전체 안정판 최종 복구 검사 | 277981548af21c09d02c18db3b3b783e0e9a2085 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T040802-4de3481d9408.md) | APC 현재 공개 시험판의 전체 안정판 직접 갱신 검사 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040856-d5791cfd29fa.md) | APC-001–002 모든 공개 안정판의 범위·갱신·복구 구현 확인 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042114-c7c1ac392152.md) | APC 새 필수 복구 작업 반영 후 배포 규약 재검증 | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042116-27d7a64129f5.md) | Python conformance: release | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
