@@ -396,6 +396,7 @@ class Phase6StaticContracts(unittest.TestCase):
             {
                 "public-stable-docs",
                 "test-release-gate",
+                "predecessor-recovery",
                 "unix",
                 "windows",
                 "npm-umbrella",
