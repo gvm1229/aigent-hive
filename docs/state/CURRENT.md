@@ -1,5 +1,7 @@
 # 현재 상태
 
+- [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 공개 안정판 전체 갱신·보존·복구 검사와 출시 누락 차단 구현, 전체 검증 뒤 브랜치 통합·정리
+
 - [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.6 공개 수용·실제 스킬 자연어 갱신 확인. 예시 적용·보존·develop PR 통합 완료
 
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
@@ -14,9 +16,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 44/48 완료
+- 현재 등록 항목: 46/48 완료
 
-- `agent-owned`: `APC-001`, `APC-002`, `APC-003`, `APC-004`
+- `agent-owned`: `APC-003`, `APC-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

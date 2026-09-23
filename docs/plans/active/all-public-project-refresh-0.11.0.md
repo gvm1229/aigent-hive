@@ -12,16 +12,18 @@
 
 ## 완료 기준
 
-- [ ] [APC-001] 모든 공개 이전 버전의 자동 열거와 누락 차단
-  - state: agent-owned
-- [ ] [APC-002] 버전별 실제 갱신·보존·실패 복구와 지속 검사 연결
-  - state: agent-owned; depends: APC-001
+- [x] [APC-001] 모든 공개 이전 버전의 자동 열거와 누락 차단
+  - state: complete; evidence: repo:tests/results/runs/20260923T040856-d5791cfd29fa.md#sha256:274243f9e83d6b4be05fa44e9cc6acb253eb9c0143284d6821d3d32095772cfc
+- [x] [APC-002] 버전별 실제 갱신·보존·실패 복구와 지속 검사 연결
+  - state: complete; depends: APC-001; evidence: repo:tests/results/runs/20260923T040856-d5791cfd29fa.md#sha256:274243f9e83d6b4be05fa44e9cc6acb253eb9c0143284d6821d3d32095772cfc
 - [ ] [APC-003] 전체 회귀·독립 검증과 공개 산출물 검사
   - state: agent-owned; depends: APC-002
 - [ ] [APC-004] 작업·커밋 손실 없는 develop 통합과 로컬·원격 브랜치 정리
   - state: agent-owned; depends: APC-003
 
 ## 검증 경계
+
+- [검증 설계와 범위](../../research/all-public-project-refresh-0.11.0.md)
 
 - 검사한 운영체제·실행 파일·출발 버전·실행 단계와 실패·제외 사유를 결과에 기록
 - 전체 공개 안정판 목록은 태그에서 도출. 범위 축소·누락·필수 기준본 부재는 통과 금지
