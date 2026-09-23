@@ -30,16 +30,31 @@ PRODUCT_VERSION = tomllib.loads(
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
     def test_public_0103_native_owner_with_available_detection_upgrades(self) -> None:
+        self._check_public_0103_upgrade(crlf=False, local_note=False)
+
+    def test_public_0103_crlf_marker_refreshes_rules_and_preserves_local_text(self) -> None:
+        for local_note in (False, True):
+            with self.subTest(local_note=local_note):
+                self._check_public_0103_upgrade(crlf=True, local_note=local_note)
+
+    def _check_public_0103_upgrade(self, *, crlf: bool, local_note: bool) -> None:
         fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.3"
         manifest = json.loads((fixtures / "manifest.json").read_bytes())
         archive_path = fixtures / manifest["archive"]
         self.assertEqual(hashlib.sha256(archive_path.read_bytes()).hexdigest(), manifest["sha256"])
-        target = self.work_root / "published-0103-native-available"
+        suffix = f"-crlf-{local_note}" if crlf else ""
+        target = self.work_root / f"published-0103-native-available{suffix}"
         with ZipFile(archive_path) as archive:
             for member in archive.infolist():
                 self.assertFalse(Path(member.filename).is_absolute())
                 self.assertNotIn("..", Path(member.filename).parts)
             archive.extractall(target)
+        agents_path = target / "AGENTS.md"
+        note = b"Team-local note: keep repository conventions.\r\n\r\n"
+        if crlf:
+            agents_path.write_bytes(agents_path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        if local_note:
+            agents_path.write_bytes(agents_path.read_bytes().replace(b"## Entry rules\r\n", note + b"## Entry rules\r\n"))
         formatter = target / ".prettierignore"
         foreign_formatter = b"# Team format rule\r\nvendor-output/\r\n"
         formatter.write_bytes(foreign_formatter + formatter.read_bytes())
@@ -72,6 +87,13 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
             self.assertEqual(process.returncode, 0, result)
         after = tomllib.loads(harness_path.read_text(encoding="utf-8"))
         self.assertEqual(after["harness_version"], PRODUCT_VERSION)
+        updated_agents = agents_path.read_bytes()
+        self.assertIn(b"Hive installation is optional for collaborators", updated_agents)
+        self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated_agents)
+        self.assertNotIn(b"- Before an automated edit, reserve exact paths", updated_agents)
+        self.assertIn(b"## Hive availability gate", (target / ".agents/directives/00-project-harness.md").read_bytes())
+        if local_note:
+            self.assertIn(note, updated_agents)
         for key in ("external_capability_detection", "resolved_owner"):
             self.assertEqual(after[key], before[key])
         self.assertEqual((target / "team-note.txt").read_bytes(), original["team-note.txt"][1])
@@ -80,7 +102,7 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
             (target / "AGENTS.md").read_bytes().split(b"<!-- AIGENT-HIVE:START -->")[0],
             original["AGENTS.md"][1].split(b"<!-- AIGENT-HIVE:START -->")[0],
         )
-        tampered = self.work_root / "published-0103-wrong-owner"
+        tampered = self.work_root / f"published-0103-wrong-owner{suffix}"
         with ZipFile(archive_path) as archive:
             archive.extractall(tampered)
         config = tampered / ".hive/config/harness.toml"

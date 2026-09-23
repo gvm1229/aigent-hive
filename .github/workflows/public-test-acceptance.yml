@@ -151,6 +151,7 @@ jobs:
             --command python -m unittest -v \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_collaborator_upgrade_preserves_foreign_bytes \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0103_native_owner_with_available_detection_upgrades \
+            tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0103_crlf_marker_refreshes_rules_and_preserves_local_text \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_project_setup_projects_portable_harness_for_every_host \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_missing_or_tampered_base_and_source_root_fail_without_mutation
       - name: Qualify Korean core, preservation, update, and rollback
