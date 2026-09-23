@@ -19,12 +19,12 @@
   - 전역 선택 스킬의 자연어 호출 허용, 프로젝트 사본의 기존 명시 호출 정책 보존
   - 프로젝트 갱신 요청·미리보기 요청과 일반 질문·일반 개발·전역 설치 요청 구분
   - 사용 가능 여부 검사, 사용자 명령 입력 불필요, 미리보기 전용 요청의 무변경 보장
-- [ ] [PRF-002] 공개 시험판과 설치된 스킬의 실제 호스트 발견·자연어 요청 검증
-  - state: agent-owned; depends: PRF-001,PRF-004,PRF-005,PRF-006
+- [x] [PRF-002] 공개 시험판과 설치된 스킬의 실제 호스트 발견·자연어 요청 검증
+  - state: complete; depends: PRF-001,PRF-004,PRF-005,PRF-006; evidence: repo:tests/results/runs/20260923T025703-d217e6ef6293.md#sha256:ec72ffdeb09ad84862ffadb0533eeca8d16f235789210e69777d892be0075a73
   - 선택 설치·내용 지문·언어별 설명과 자연어 선택 증거 확인
   - Windows Codex 실제 작업과 결정적 배포 검사를 구분, 재시작 필요 시 정확한 경계 기록
-- [ ] [PRF-003] 갱신 스킬과 6단계 계획을 통한 실제 예시 프로젝트 수정
-  - state: agent-owned; depends: PRF-002
+- [x] [PRF-003] 갱신 스킬과 6단계 계획을 통한 실제 예시 프로젝트 수정
+  - state: complete; depends: PRF-002; evidence: repo:tests/results/runs/20260923T032437-67076a40fbcb.md#sha256:0056ff0d514d10e2ec670db8d4827ef8996bffc5e8e8835fb7710f4903ed7181
   - 현재 사용자 변경 재확인, 인증된 기준본·미리보기·백업·적용·검사
   - 사용자 지침·외부 블록·앱 작업 보존, 프로젝트 Git 절차와 원래 작업 폴더 반영 확인
 - [x] [PRF-004] 정식 0.10.3 생성 결과의 과거 기준본 인증과 갱신 복구
