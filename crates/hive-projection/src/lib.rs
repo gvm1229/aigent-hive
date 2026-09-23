@@ -1285,9 +1285,9 @@ fn localized_skill_text(
         ),
         "project-refresh" => (
             "Upgrade project",
-            "Upgrade Hive-generated project guidance while preserving local edits.",
+            "Preview or update this project's Hive guidance on request, preserving local edits. Not global installation or application updates.",
             "프로젝트 업그레이드",
-            "Hive가 생성한 프로젝트 지침과 Skill을 충돌 보존 방식으로 올립니다.",
+            "프로젝트의 Hive 지침을 갱신하거나 변경 내용을 미리 확인합니다. 사용자 수정 보존. 전역 설치·앱 갱신 제외.",
         ),
         "project-transition" => (
             "Migrate project",
@@ -3025,6 +3025,55 @@ description: Inspect one local file without changing it.
                 expected_implicit,
                 "{name} user metadata policy"
             );
+        }
+    }
+
+    #[test]
+    fn project_refresh_user_discovery_preserves_project_explicit_boundary() {
+        let selected = vec!["product-update".to_owned(), "project-refresh".to_owned()];
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            for language in [DescriptorLanguage::En, DescriptorLanguage::Ko] {
+                let user = compile_user_projection_localized(host, &selected, &[], language)
+                    .expect("selected user refresh");
+                let path = skill_path(host, "project-refresh");
+                let body = &user.files[&path];
+                assert_eq!(
+                    user.active_skills
+                        .skills
+                        .iter()
+                        .find(|skill| skill.name == "project-refresh")
+                        .unwrap()
+                        .content_digest,
+                    sha256_digest(body)
+                );
+                let text = std::str::from_utf8(body).unwrap();
+                assert!(text.contains("preview-only"));
+                assert!(text.contains("not apply"));
+                if host != Host::Claude {
+                    let metadata: serde_yaml::Value = serde_yaml::from_slice(
+                        &user.files[&skill_metadata_path(host, "project-refresh")],
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        metadata["policy"]["allow_implicit_invocation"].as_bool(),
+                        Some(true)
+                    );
+                    let project = compile_project_projection(host, &selected, &[]).unwrap();
+                    let metadata: serde_yaml::Value = serde_yaml::from_slice(
+                        &project.files[&skill_metadata_path(host, "project-refresh")],
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        metadata["policy"]["allow_implicit_invocation"].as_bool(),
+                        Some(false)
+                    );
+                }
+            }
+            let unselected =
+                compile_user_projection(host, &["quick-answer".to_owned()], &[]).unwrap();
+            assert!(!unselected
+                .files
+                .contains_key(&skill_path(host, "project-refresh")));
         }
     }
 

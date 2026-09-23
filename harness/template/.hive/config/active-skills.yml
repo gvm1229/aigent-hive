@@ -140,7 +140,7 @@ skills:
   consent_digest: null
 - name: project-refresh
   source_type: built-in
-  content_digest: sha256:acb330569b20bdfe3aa993ade2a07e0142e1fe5f981074b5bb506f647e8e97c6
+  content_digest: sha256:a57ee4091e263610e736a9c554b3042c6f959699f30d59c0029fd03bc7369115
   side_effect_class: project-write
   capabilities:
   - filesystem-read
