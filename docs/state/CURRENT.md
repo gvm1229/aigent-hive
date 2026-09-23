@@ -1,5 +1,7 @@
 # 현재 상태
 
+- [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 공개 안정판 전체 갱신·보존·복구 검사와 출시 누락 차단 구현, 전체 검증 뒤 브랜치 통합·정리
+
 - [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.6 공개 수용·실제 스킬 자연어 갱신 확인. 예시 적용·보존·develop PR 통합 완료
 
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
@@ -14,9 +16,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 44/44 완료
+- 현재 등록 항목: 46/48 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `APC-003`, `APC-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -73,7 +75,5 @@
 ## 협업 지침 추가 범위
 
 - [PDC-001–003](../plans/active/project-directives-collaboration-0.11.0.md): 협업자 설치 선택권을 보장하는 생성기·행동 검증·기존 설치 갱신
-- Windows Codex에서 예시 프로젝트 지침 읽기 전용 확인: 설치 여부 분기 없는 Hive 명령 요구, 사용자 규칙·외부 블록과 공존
 - [검증](../research/project-directives-collaboration-0.11.0.md): Windows 실제 AI 8조건·세 운영체제 공개 패키지 수용 완료, 모든 도구 조합 보장 제외
-- [예시 수정 계획](../research/example-project-hive-repair-0.11.0.md) 독립 검토 통과, 6단계 실제 적용 미실행
-- 이전 1~5단계 완료. 후속 설치·예시 적용 권한은 PRF 계획, 안정판은 별도 승인
+- [예시 수정](../research/example-project-hive-repair-0.11.0.md): PRF 검증 후 6단계 적용·보존·PR 통합 완료. 안정판은 별도 승인

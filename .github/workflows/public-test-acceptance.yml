@@ -150,6 +150,7 @@ jobs:
           python scripts/test-artifacts.py run --purpose "공개 협업 지침 갱신 $PLATFORM_PACKAGE" \
             --command python -m unittest -v \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_collaborator_upgrade_preserves_foreign_bytes \
+            tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_all_stable_predecessors_preserve_and_upgrade \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0103_native_owner_with_available_detection_upgrades \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0103_crlf_marker_refreshes_rules_and_preserves_local_text \
             tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_project_setup_projects_portable_harness_for_every_host \

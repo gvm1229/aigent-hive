@@ -6,6 +6,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import importlib.util
 from pathlib import Path
 
 
@@ -14,6 +15,39 @@ CHECKER = ROOT / "scripts/check-project-base-coverage.py"
 
 
 class ProjectBaseCoverageContract(unittest.TestCase):
+    def test_candidate_and_public_acceptance_require_all_predecessors(self) -> None:
+        import yaml
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
+        jobs = workflow["jobs"]
+        for platform in ("unix", "windows"):
+            self.assertEqual(jobs[platform]["needs"], "predecessor-recovery")
+            self.assertIn("scripts/qualify-project-predecessors.py", str(jobs[platform]["steps"]))
+        self.assertIn("--failure-tests", str(jobs["predecessor-recovery"]["steps"]))
+        public = (ROOT / ".github/workflows/public-test-acceptance.yml").read_text(encoding="utf-8")
+        self.assertIn("test_public_all_stable_predecessors_preserve_and_upgrade", public)
+
+    def test_missing_duplicate_future_and_cross_major_sources_fail_closed(self) -> None:
+        spec = importlib.util.spec_from_file_location("coverage_checker", CHECKER)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        sources = ["0.9.1", "0.9.2", "0.10.3", "0.12.0"]
+        route = {"route_id": "all", "kind": "cross-major", "from_min": "0.9.1",
+                 "from_max": "0.12.0", "to_version": "1.0.0"}
+        table = {"target_version": "1.0.0", "routes": [route]}
+        checker.validate_complete_routes(table, sources)
+        with self.assertRaises(ValueError):
+            checker.validate_complete_routes({**table, "routes": [{k: v for k, v in route.items() if k != "to_version"}]}, sources)
+        for change in ({"from_min": "0.9.2"}, {"from_max": "0.10.3"},
+                       {"to_version": "0.12.0"}, {"kind": "same-major"},
+                       {"from_max": "1.0.0"}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                checker.validate_complete_routes({**table, "routes": [{**route, **change}]}, sources)
+        with self.assertRaises(ValueError):
+            checker.validate_complete_routes({**table, "routes": [route, route]}, sources)
+        with self.assertRaises(ValueError):
+            checker.validate_complete_routes({**table, "routes": [
+                {**route, "from_max": "0.9.1"}, {**route, "from_min": "0.10.3"}]}, sources)
+
     def run_checker(self, table: dict[str, object]) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
@@ -42,6 +76,7 @@ class ProjectBaseCoverageContract(unittest.TestCase):
                         "kind": "same-major",
                         "from_min": "0.9.1",
                         "from_max": "0.9.4",
+                        "to_version": "0.9.5",
                     }
                 ],
             }
@@ -65,6 +100,7 @@ class ProjectBaseCoverageContract(unittest.TestCase):
                         "kind": "same-major",
                         "from_min": "0.1.0",
                         "from_max": "0.9.4",
+                        "to_version": "0.9.5",
                     }
                 ],
             }

@@ -143,7 +143,22 @@ fn write_historical_project_base(target: &Path, version: &str) {
 
 #[test]
 fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_foreign_bytes() {
-    for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0"] {
+    let registry: serde_yaml::Value =
+        serde_yaml::from_str(include_str!("../../../harness/project-bases/registry.yml"))
+            .expect("historical registry");
+    let parse = |value: &str| {
+        value
+            .split('.')
+            .map(|part| part.parse::<u64>().expect("version component"))
+            .collect::<Vec<_>>()
+    };
+    let current = parse(env!("CARGO_PKG_VERSION"));
+    for release in registry["releases"].as_sequence().expect("release list") {
+        let version = release["version"].as_str().expect("release version");
+        let parsed = parse(version);
+        if parsed < vec![0, 9, 1] || parsed >= current {
+            continue;
+        }
         let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir_all(&target).expect("consumer directory");

@@ -781,3 +781,18 @@
 | [passed](runs/20260923T024950-250a3c2592d7.md) | 공개 test.6 실제 스킬 검증용 예시 형식 합성 자료 준비 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T025703-d217e6ef6293.md) | PRF-002 공개 test.6 설치·발견·자연어 갱신 완료 확인 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T032437-67076a40fbcb.md) | PRF-003 실제 소비자 갱신·보존·Git 통합 최종 확인 | 3aca9a78e2403293acaa0113555c8ca25855555b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035552-a7e6305926fe.md) | APC 공식 과거 안정판의 합성 프로젝트 생성 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035728-85a0d231399f.md) | APC 전체 이전 버전 복구 시험용 CLI 빌드 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T035750-f8864c197f0d.md) | APC 공개 안정판 전체 갱신과 실패 복구 검증 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035845-e1328d857de2.md) | APC 공식 안정판 전체 갱신과 복구 재검증 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040040-cecae4df217b.md) | APC 동적 과거 버전 Rust 갱신 시험 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040125-221f8557a2f1.md) | APC 전체 Rust 회귀 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040210-8e7244ec8720.md) | APC 전체 Python 규약 검사 재시작 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040211-fb4ba2409b9b.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040415-f5c806531535.md) | APC 출처 갱신 후 전체 Python 규약 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040416-aa7c5b98796d.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040537-3f2e2481cea6.md) | APC 버전 직접 확인과 전체 안정판 최종 복구 검사 | 277981548af21c09d02c18db3b3b783e0e9a2085 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040802-4de3481d9408.md) | APC 현재 공개 시험판의 전체 안정판 직접 갱신 검사 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040856-d5791cfd29fa.md) | APC-001–002 모든 공개 안정판의 범위·갱신·복구 구현 확인 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042114-c7c1ac392152.md) | APC 새 필수 복구 작업 반영 후 배포 규약 재검증 | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042116-27d7a64129f5.md) | Python conformance: release | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |

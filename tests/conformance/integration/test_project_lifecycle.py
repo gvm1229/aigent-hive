@@ -8,6 +8,7 @@ import os
 import stat
 import subprocess
 import tomllib
+import importlib.util
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -29,6 +30,20 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_all_public_stable_predecessors_preserve_and_recover(self) -> None:
+        self._qualify_all_public_stable_predecessors(failure_tests=True)
+
+    def test_public_all_stable_predecessors_preserve_and_upgrade(self) -> None:
+        self._qualify_all_public_stable_predecessors(failure_tests=False)
+
+    def _qualify_all_public_stable_predecessors(self, *, failure_tests: bool) -> None:
+        path = REPOSITORY_ROOT / "scripts/qualify-project-predecessors.py"
+        spec = importlib.util.spec_from_file_location("predecessor_qualification", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        report = module.qualify(self.hive_binary, self.work_root / "predecessors", PRODUCT_VERSION, failure_tests)
+        self.assertEqual([row["source_version"] for row in report["results"]], report["required_sources"])
+
     def test_public_0103_native_owner_with_available_detection_upgrades(self) -> None:
         self._check_public_0103_upgrade(crlf=False, local_note=False)
 
