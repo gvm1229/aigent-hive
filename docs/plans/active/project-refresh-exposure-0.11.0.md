@@ -27,8 +27,8 @@
   - state: agent-owned; depends: PRF-002
   - 현재 사용자 변경 재확인, 인증된 기준본·미리보기·백업·적용·검사
   - 사용자 지침·외부 블록·앱 작업 보존, 프로젝트 Git 절차와 원래 작업 폴더 반영 확인
-- [ ] [PRF-004] 정식 0.10.3 생성 결과의 과거 기준본 인증과 갱신 복구
-  - state: agent-owned; depends: PRF-001
+- [x] [PRF-004] 정식 0.10.3 생성 결과의 과거 기준본 인증과 갱신 복구
+  - state: complete; depends: PRF-001; evidence: repo:tests/results/runs/20260923T012740-52f5a750001e.md#sha256:1b4a5bcf8ae7f7425f9840ba14c0b6b74c814c79de7505ab7f02776cf8320b79
   - 실제 0.10.3 CLI로 생성한 합성 자료의 `available`·`host-native` 조합 재현
   - 버전별 실행 주체 규칙 구분, 이전 기준본 바이트 보존, 위조·잘못된 조합의 무변경 거부 유지
   - 0.10.1 이후 실제 생성된 `.prettierignore`를 과거 기준본 목록에 포함, 불완전한 목록 허용으로 우회 금지

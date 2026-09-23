@@ -746,6 +746,20 @@
 | [failed](runs/20260923T002216-eb4a2f7b544c.md) | Python conformance: documentation, security, contract, integration, release | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T003235-7e4c6d435456.md) | PRF 생성 설명문 수정 후 두 생성기 전체 일치 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T003340-b5c0442d9cae.md) | PRF 최종 설명문과 투영 회귀 전체 Rust 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260923T003526-9ded0993e05b.md) | Python conformance: integration | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003526-9ded0993e05b.md) | Python conformance: integration | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260923T003611-cb2f70bedde4.md) | PRF 실제 발견 검증용 구버전 합성 프로젝트 준비 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T003628-23bed7c7162f.md) | PRF 구버전 합성 프로젝트 준비 재검사 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003639-95372cf4ed50.md) | Python conformance: release | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T004113-af7672586d6f.md) | PRF-001 갱신 스킬 구현과 설치 투영 검증 종합 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T010323-7feec2441025.md) | PRF Windows 등록 패키지 무결성과 설치·갱신 검증 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T010351-850306964c76.md) | PRF Windows 등록 패키지 버전 표기 확인과 설치·갱신 재검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T010643-1634e9b2874e.md) | PRF 설치된 스킬의 자연어 미리보기 실제 Codex 검증 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011340-ad0783c80f79.md) | PRF-004 과거 버전별 실행 주체 판정 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T011402-649c9a819d2c.md) | PRF-004 버전별 실행 주체 판정 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011627-52d8c6d61953.md) | PRF-004 공개 test.3의 0.10.3 갱신 오류 재현 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011649-77b0fdcc8a8a.md) | PRF-004 실제 0.10.3 생성 자료 갱신·보존·위조 거부 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011856-b2f26fcbd1b7.md) | PRF-004 과거 파일 목록 복구 후 정식 0.10.3 생성 자료 갱신 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012000-e32517ba8878.md) | PRF-004 과거 사용량 비활성 문구 복원 후 정식 생성 자료 갱신 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012148-29a3e5a2083c.md) | PRF-004 프로젝트 갱신 전체 통합 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012158-5e9d234a3d53.md) | PRF-004 과거 기준본 수정 전체 Rust 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012437-694112453010.md) | PRF-004 과거 배포 기준본과 공개 수용 구성 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |

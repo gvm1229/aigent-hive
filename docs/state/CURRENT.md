@@ -14,9 +14,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 39/42 완료
+- 현재 등록 항목: 40/42 완료
 
-- `agent-owned`: `PRF-002`, `PRF-003`, `PRF-004`
+- `agent-owned`: `PRF-002`, `PRF-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
