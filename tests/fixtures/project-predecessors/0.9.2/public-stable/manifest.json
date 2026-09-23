@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "product_version": "0.9.2",
+  "archive": "codex-native.zip",
+  "sha256": "3d5a64de24535e1509d98410ac29bd0417156ac3f9ae008d246b46227a0767ca",
+  "file_count": 55,
+  "generation": "Official public stable Windows CLI; synthetic setup only",
+  "source_asset": "https://github.com/gvm1229/aigent-hive/releases/download/v0.9.2/aigent-hive-0.9.2-x86_64-pc-windows-msvc.zip",
+  "source_asset_sha256": "9cd5754953886a23a173ea5ea743214122cd146c2f1f5468cc2d6d8e92607a41",
+  "source_binary_sha256": "d1e45b9e7d644f6f60f7bc6a2f659c49b83ef15cf1f6ca502ab71ab876908259",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}
