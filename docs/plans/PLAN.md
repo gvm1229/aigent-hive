@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 359
+> Revision: 360
 > 기준일: 2026-09-23
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
@@ -80,6 +80,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [project-refresh-exposure-0.11.0.md](active/project-refresh-exposure-0.11.0.md) | `PRF-001–006` | 갱신 스킬 노출·검증·실제 적용 |
+| [all-public-project-refresh-0.11.0.md](active/all-public-project-refresh-0.11.0.md) | `APC-001–004` | 모든 공개 버전 갱신 검증·브랜치 통합 |
 | [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
 | [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-001–003` | 호스트 정책 훅 제품 계획 |
 | [hook-policy-evaluation-0.11.0.md](active/hook-policy-evaluation-0.11.0.md) | `HK-004` | 호스트 훅 독립 평가 |
