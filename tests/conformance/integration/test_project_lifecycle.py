@@ -29,6 +29,53 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_public_0103_native_owner_with_available_detection_upgrades(self) -> None:
+        fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.3"
+        manifest = json.loads((fixtures / "manifest.json").read_bytes())
+        archive_path = fixtures / manifest["archive"]
+        self.assertEqual(hashlib.sha256(archive_path.read_bytes()).hexdigest(), manifest["sha256"])
+        target = self.work_root / "published-0103-native-available"
+        with ZipFile(archive_path) as archive:
+            for member in archive.infolist():
+                self.assertFalse(Path(member.filename).is_absolute())
+                self.assertNotIn("..", Path(member.filename).parts)
+            archive.extractall(target)
+        formatter = target / ".prettierignore"
+        foreign_formatter = b"# Team format rule\r\nvendor-output/\r\n"
+        formatter.write_bytes(foreign_formatter + formatter.read_bytes())
+        original = snapshot_tree(target)
+        harness_path = target / ".hive/config/harness.toml"
+        before = tomllib.loads(harness_path.read_text(encoding="utf-8"))
+        self.assertEqual(before["harness_version"], "0.10.3")
+        self.assertEqual(before["external_capability_detection"], "available")
+        self.assertEqual(before["resolved_owner"], "host-native")
+        for mode in ("--scan", "--dry-run"):
+            process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+            self.assertEqual(process.returncode, 0, result)
+            self.assertEqual(snapshot_tree(target), original)
+        for mode in ("--apply", "--validate"):
+            process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+            self.assertEqual(process.returncode, 0, result)
+        after = tomllib.loads(harness_path.read_text(encoding="utf-8"))
+        self.assertEqual(after["harness_version"], PRODUCT_VERSION)
+        for key in ("external_capability_detection", "resolved_owner"):
+            self.assertEqual(after[key], before[key])
+        self.assertEqual((target / "team-note.txt").read_bytes(), original["team-note.txt"][1])
+        self.assertTrue(formatter.read_bytes().startswith(foreign_formatter))
+        self.assertEqual(
+            (target / "AGENTS.md").read_bytes().split(b"<!-- AIGENT-HIVE:START -->")[0],
+            original["AGENTS.md"][1].split(b"<!-- AIGENT-HIVE:START -->")[0],
+        )
+        tampered = self.work_root / "published-0103-wrong-owner"
+        with ZipFile(archive_path) as archive:
+            archive.extractall(tampered)
+        config = tampered / ".hive/config/harness.toml"
+        config.write_bytes(config.read_bytes().replace(b'resolved_owner = "host-native"', b'resolved_owner = "omc"'))
+        before_rejection = snapshot_tree(tampered)
+        process, _ = self.invoke("project", "upgrade", "--target", str(tampered), "--scan")
+        self.assertNotEqual(process.returncode, 0)
+        self.assertEqual(snapshot_tree(tampered), before_rejection)
+
     def test_collaborator_directives_upgrade_preserves_foreign_bytes_and_recovers(self) -> None:
         self._check_collaborator_directives_upgrade(inject_failure=True)
 

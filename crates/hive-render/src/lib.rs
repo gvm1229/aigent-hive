@@ -1770,6 +1770,25 @@ fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
 
+fn historical_owner_matches_detection(
+    version: &str,
+    host: &str,
+    detection: &str,
+    owner: &str,
+) -> bool {
+    match detection {
+        "available" => {
+            let native_default =
+                parse_release_version(version).is_some_and(|version| version >= (0, 9, 0));
+            (host == "codex" && owner == "omx")
+                || (host == "claude" && owner == "omc")
+                || (native_default && matches!(host, "codex" | "claude") && owner == "host-native")
+        }
+        "absent" | "incompatible" | "unknown" => owner == "host-native",
+        _ => false,
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8_or_0_9(
     target_dir: &Dir,
@@ -1856,14 +1875,12 @@ fn frozen_project_base_0_8_or_0_9(
         ),
         ("expedited", "global-inherited") | ("custom", "project-custom")
     );
-    let owner_matches_detection = match resolution.detection.as_str() {
-        "available" => {
-            (harness.primary_host == "codex" && resolution.resolved_owner == "omx")
-                || (harness.primary_host == "claude" && resolution.resolved_owner == "omc")
-        }
-        "absent" | "incompatible" | "unknown" => resolution.resolved_owner == "host-native",
-        _ => false,
-    };
+    let owner_matches_detection = historical_owner_matches_detection(
+        version,
+        &harness.primary_host,
+        &resolution.detection,
+        &resolution.resolved_owner,
+    );
     let inputs_match = answers.schema_version == 1
         && harness.schema_version == 1
         && harness.harness_version == version
@@ -1945,7 +1962,7 @@ fn frozen_project_base_0_8_or_0_9(
     for &(name, content) in directives {
         files.insert(format!(".agents/directives/{name}"), content.to_vec());
     }
-    if matches!(version, "0.9.3" | "0.9.4" | "0.9.5" | "0.10.0") {
+    if parse_release_version(version).is_some_and(|version| version >= (0, 9, 3)) {
         files.insert(
             ".prettierignore".to_owned(),
             FORMATTER_IGNORE.as_bytes().to_vec(),
@@ -2054,6 +2071,8 @@ fn frozen_project_base_0_8_or_0_9(
             .map(|line| {
                 if line.starts_with("- Immediately before each new automatic dispatch") {
                     "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
+                } else if line.starts_with("- Immediately before automatic dispatch") {
+                    "- Usage guard: disabled by installed preference. Do not invoke a sensor automatically; automatic resume still requires one authorized dispatch brief."
                 } else {
                     line
                 }
@@ -6293,20 +6312,21 @@ mod tests {
         default_discord_message_fields, derive_resolution, encode_role,
         execute_release_update_for_target_in, execute_release_update_in, execute_setup,
         execute_setup_with_post_apply, expected_external_runtime,
-        historical_project_upgrade_candidate_in, hook_descriptor_bytes, installed_tree_digest,
-        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
-        open_target_capability, parse_role, prepare_projection_transition,
-        project_upgrade_candidate_in, render_agents_marker, render_project_base,
-        render_setup_answers, render_tree, render_tree_with_preferences, render_yaml_projection,
-        replace_capability_file_impl, require_operational_update_preferences,
-        resolve_effective_project_preferences, resolve_project_skill_selection,
-        shared_marker_foreign_digest, update_path_is_owned, valid_digest, valid_role_id,
-        valid_timestamp, validate_hook_approvals, validate_owned_paths, validate_skill_approvals,
-        ActivationFault, ActiveSkills, CapabilityEvidence, CapabilityResolution,
-        ExactProjectionMutation, GlobalProjectPreferences, HookApproval, HookAuthorization,
-        ProjectSkillSelection, ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile,
-        RoleSeed, SetupAnswers, SetupMode, SetupRequest, SkillApproval,
-        ValidatedProjectionOwnership, FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
+        historical_owner_matches_detection, historical_project_upgrade_candidate_in,
+        hook_descriptor_bytes, installed_tree_digest, load_answers, load_resolution,
+        merge_shared_marker, mutate_exact_projection_claimed, open_target_capability, parse_role,
+        prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
+        render_project_base, render_setup_answers, render_tree, render_tree_with_preferences,
+        render_yaml_projection, replace_capability_file_impl,
+        require_operational_update_preferences, resolve_effective_project_preferences,
+        resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
+        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
+        validate_owned_paths, validate_skill_approvals, ActivationFault, ActiveSkills,
+        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation,
+        GlobalProjectPreferences, HookApproval, HookAuthorization, ProjectSkillSelection,
+        ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers,
+        SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
+        FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
     use serde_json::Value as JsonValue;
@@ -8138,6 +8158,48 @@ mod tests {
             .get_mut("Stop")
             .expect("Stop claim")["support"] = JsonValue::String("best-effort".to_owned());
         assert!(validate_hook_approvals(std::slice::from_ref(&hook), &best_effort).is_err());
+    }
+
+    #[test]
+    fn historical_owner_validation_respects_the_v09_native_default() {
+        for version in ["0.8.0", "0.9.0", "0.9.5", "0.10.3"] {
+            for (host, external) in [("codex", "omx"), ("claude", "omc")] {
+                assert!(historical_owner_matches_detection(
+                    version,
+                    host,
+                    "available",
+                    external
+                ));
+                assert_eq!(
+                    historical_owner_matches_detection(version, host, "available", "host-native"),
+                    version != "0.8.0"
+                );
+                for detection in ["absent", "incompatible", "unknown"] {
+                    assert!(historical_owner_matches_detection(
+                        version,
+                        host,
+                        detection,
+                        "host-native"
+                    ));
+                    assert!(!historical_owner_matches_detection(
+                        version, host, detection, external
+                    ));
+                }
+            }
+            for (host, owner) in [
+                ("codex", "omc"),
+                ("claude", "omx"),
+                ("antigravity", "host-native"),
+                ("codex", "invalid"),
+            ] {
+                assert!(!historical_owner_matches_detection(
+                    version,
+                    host,
+                    "available",
+                    owner
+                ));
+            }
+        }
     }
 
     #[test]
