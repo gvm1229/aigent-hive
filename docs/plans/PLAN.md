@@ -1,16 +1,16 @@
 # Aigent Hive 활성 계획
 
-> Revision: 355
+> Revision: 356
 > 기준일: 2026-09-23
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: 갱신 스킬 구현 완료·test.3 설치 검증 준비
-> 공개 수용 완료: `0.11.0-test.2`; 추가 제품 변경 시 다음 시험 `0.11.0-test.3`
+> 현재 단계: test.3 실제 사용에서 발견한 구버전 갱신 오류 수정
+> 공개 수용 완료: `0.11.0-test.2`; test.3 공개·오류 발견, 다음 시험 `0.11.0-test.4`
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 요청과 경계
 
-- 후속 승인: `PRF-001–003` 스킬 자연어 접근성·설치 검증 후 실제 예시 프로젝트 6단계 적용. 기존 읽기 전용 경계는 이 순서 안에서 해제
+- 후속 승인: `PRF-001–004` 스킬 접근성·구버전 갱신 검증 후 실제 예시 6단계 적용
 
 - 이전 요청 완료: `PDC-001–003`·test.2 수용·예시 수정 계획
 - 브랜치: `refactor/hive-foundations`, 기준 `develop@87b84f42`
@@ -52,7 +52,7 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 갱신 스킬 노출·검증·실제 적용 | 1 | 2 | 33.3% |
+| 갱신 스킬 노출·검증·실제 적용 | 1 | 3 | 25.0% |
 | 브랜치 규칙 강제·호스트 조사 | 5 | 0 | 100.0% |
 | 호스트 정책 훅 제품 계획 | 3 | 0 | 100.0% |
 | 호스트 훅 독립 평가 | 1 | 0 | 100.0% |
@@ -63,7 +63,7 @@
 | Markdown 정본·집계 생성 | 4 | 0 | 100.0% |
 | 협업자 설치 선택권·프로젝트 지침 | 3 | 0 | 100.0% |
 | 미출시 `0.10.4`에서 계승한 사용량 보호 | 4 | 0 | 100.0% |
-| **현재 범위 합계** | **39** | **2** | **95.1%** |
+| **현재 범위 합계** | **39** | **3** | **92.9%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Required load order
@@ -79,7 +79,7 @@
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [project-refresh-exposure-0.11.0.md](active/project-refresh-exposure-0.11.0.md) | `PRF-001–003` | 갱신 스킬 노출·검증·실제 적용 |
+| [project-refresh-exposure-0.11.0.md](active/project-refresh-exposure-0.11.0.md) | `PRF-001–004` | 갱신 스킬 노출·검증·실제 적용 |
 | [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
 | [host-policy-hooks-0.11.0.md](active/host-policy-hooks-0.11.0.md) | `HK-001–003` | 호스트 정책 훅 제품 계획 |
 | [hook-policy-evaluation-0.11.0.md](active/hook-policy-evaluation-0.11.0.md) | `HK-004` | 호스트 훅 독립 평가 |
@@ -97,7 +97,7 @@
 
 훅 상세 순서: `HK-001` 실패 분류·결과 합산 → `HK-002` 변환·진단·전달 → `HK-003` 실제 수용 → `HK-004` 보류 평가. `HK-005`는 `HK-001`과 기존 실행 결과 계약 뒤 구현, `RFK-002`는 문맥 유효성 소유.
 
-현재 순서: `PRF-001` → `PRF-002` → `PRF-003` 실제 예시 적용. 이전 1~5단계 완료 근거는 PDC 계획 보존.
+현재 순서: `PRF-001` → `PRF-004` → `PRF-002` → `PRF-003` 실제 예시 적용. 이전 근거는 PDC 계획 보존.
 
 ### 이전 출시의 실행 순서
 
