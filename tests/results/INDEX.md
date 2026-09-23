@@ -780,3 +780,4 @@
 | [passed](runs/20260923T024730-eae399631364.md) | PRF 최종 공개 test.6 Windows 설치·기준본·예약·줄끝 갱신 검증 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T024950-250a3c2592d7.md) | 공개 test.6 실제 스킬 검증용 예시 형식 합성 자료 준비 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T025703-d217e6ef6293.md) | PRF-002 공개 test.6 설치·발견·자연어 갱신 완료 확인 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T032437-67076a40fbcb.md) | PRF-003 실제 소비자 갱신·보존·Git 통합 최종 확인 | 3aca9a78e2403293acaa0113555c8ca25855555b | Windows-11-10.0.26200-SP0 |
