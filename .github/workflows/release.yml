@@ -121,10 +121,40 @@ jobs:
             --package-version "$PACKAGE_VERSION" \
             --output json
 
+  predecessor-recovery:
+    name: Every public stable predecessor recovery
+    needs: test-release-gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c
+        with:
+          toolchain: stable
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Require complete source coverage and interrupted recovery
+        env:
+          PRODUCT_VERSION: ${{ inputs.product_version }}
+        run: |
+          python -m pip install --disable-pip-version-check PyYAML==6.0.2
+          python scripts/check-project-base-coverage.py --migration-table "harness/release/$PRODUCT_VERSION/migration-table.json" --output predecessor-coverage.json
+          cargo build --locked --bin hive
+          python scripts/qualify-project-predecessors.py --hive target/debug/hive --target-version "$PRODUCT_VERSION" --work "$RUNNER_TEMP/predecessor-recovery" --failure-tests --receipt predecessor-recovery.json
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-predecessor-recovery
+          path: |
+            predecessor-coverage.json
+            predecessor-recovery.json
+          if-no-files-found: error
+
   unix:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
-    needs: test-release-gate
+    needs: predecessor-recovery
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -269,6 +299,12 @@ jobs:
           "$binary" doctor | grep -F "aigent-hive $PRODUCT_VERSION"
       - name: Package native archive and npm platform package
         run: |
+          python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
+          python3 scripts/qualify-project-predecessors.py \
+            --hive "target/$TARGET/release/hive" --target-version "$PRODUCT_VERSION" \
+            --work "$RUNNER_TEMP/project-predecessors" --receipt "project-predecessors-$TARGET.json"
+      - name: Assemble native archive and npm platform package
+        run: |
           package="aigent-hive-$PRODUCT_VERSION-$TARGET"
           mkdir "$package"
           cp "target/$TARGET/release/hive" "$package/hive"
@@ -314,12 +350,13 @@ jobs:
             aigent-hive-${{ matrix.platform_package }}-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.attestation.jsonl
             source-graph-${{ matrix.target }}.json
+            project-predecessors-${{ matrix.target }}.json
           if-no-files-found: error
 
   windows:
     name: Windows x86_64
     runs-on: windows-2025
-    needs: test-release-gate
+    needs: predecessor-recovery
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -393,6 +430,12 @@ jobs:
       - name: Verify architecture and package native archive
         shell: pwsh
         run: |
+          python -m pip install --disable-pip-version-check PyYAML==6.0.2
+          python scripts/qualify-project-predecessors.py --hive "target/$env:TARGET/release/hive.exe" --target-version "$env:PRODUCT_VERSION" --work "$env:RUNNER_TEMP/project-predecessors" --receipt "project-predecessors-$env:TARGET.json"
+          if ($LASTEXITCODE -ne 0) { throw "public predecessor qualification failed" }
+      - name: Inspect architecture and assemble native archive
+        shell: pwsh
+        run: |
           $binary = "target\$env:TARGET\release\hive.exe"
           $bytes = [IO.File]::ReadAllBytes($binary)
           $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
@@ -462,6 +505,7 @@ jobs:
             aigent-hive-win32-x64-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.attestation.jsonl
             source-graph-x86_64-pc-windows-msvc.json
+            project-predecessors-x86_64-pc-windows-msvc.json
           if-no-files-found: error
 
   npm-umbrella:

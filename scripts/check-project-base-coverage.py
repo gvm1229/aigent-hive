@@ -149,6 +149,37 @@ def tagged_sources() -> list[str]:
     return sorted(releases, key=version)
 
 
+def required_sources(target: str) -> list[str]:
+    """The support floor never advances with the current release's declared routes."""
+    return [release for release in tagged_sources()
+            if FULL_BASE_MINIMUM <= version(release) < version(target)]
+
+
+def validate_complete_routes(table: dict[str, object], sources: list[str]) -> None:
+    target = version(table["target_version"])
+    owners: dict[str, list[str]] = {source: [] for source in sources}
+    for route in table["routes"]:
+        lower, upper = version(route["from_min"]), version(route["from_max"])
+        if lower < FULL_BASE_MINIMUM:
+            raise ValueError("migration declares a source without a full project base")
+        if lower > upper or upper >= target:
+            raise ValueError("migration range must precede the target")
+        if route.get("to_version", table["target_version"]) != table["target_version"]:
+            raise ValueError("migration route target mismatch")
+        if route.get("kind") not in ("same-major", "cross-major"):
+            raise ValueError("unsupported migration route kind")
+        for source in sources:
+            if lower <= version(source) <= upper:
+                same_major = version(source)[0] == target[0]
+                if same_major != (route["kind"] == "same-major"):
+                    raise ValueError("migration route major kind mismatch")
+                owners[source].append(route["route_id"])
+    missing = [source for source, routes in owners.items() if not routes]
+    duplicates = [source for source, routes in owners.items() if len(routes) > 1]
+    if missing or duplicates:
+        raise ValueError(f"incomplete public predecessor coverage: missing={missing}, duplicate={duplicates}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--migration-table", type=Path, required=True)
@@ -160,11 +191,10 @@ def main() -> int:
         raise ValueError("invalid migration table")
     target = version(table["target_version"])
     registry, published_snapshots = compatibility_registry()
-    sources = tagged_sources()
+    sources = required_sources(table["target_version"])
+    validate_complete_routes(table, sources)
     coverage: list[dict[str, object]] = []
     for route in table["routes"]:
-        if route.get("kind") != "same-major":
-            continue
         lower = version(route["from_min"])
         upper = version(route["from_max"])
         if lower < FULL_BASE_MINIMUM:
@@ -172,7 +202,7 @@ def main() -> int:
         selected = [
             release
             for release in sources
-            if version(release)[0] == target[0] and lower <= version(release) <= upper
+            if lower <= version(release) <= upper
         ]
         if not selected:
             raise ValueError(f"same-major migration has no tagged source: {route.get('route_id')}")
@@ -207,6 +237,7 @@ def main() -> int:
     report = {
         "schema_version": 1,
         "target_version": table["target_version"],
+        "required_sources": sources,
         "coverage": coverage,
     }
     canonical = json.dumps(report, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8")
