@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "product_version": "0.11.0",
-  "package_version": "0.11.0-test.5",
+  "package_version": "0.11.0-test.6",
   "plan_ids": [
-    "PRF-005"
+    "PRF-006"
   ],
-  "product_tree_sha256": "sha256:e11dbed7295a8f5c72d770c58b4d74264f16b38c80853b16f23d0e0bb0ccece3"
+  "product_tree_sha256": "sha256:1d84f8c47676e73e30da0f7ef25b09c85de55da665b542cf348b967621118a53"
 }
