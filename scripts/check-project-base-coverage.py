@@ -164,7 +164,7 @@ def validate_complete_routes(table: dict[str, object], sources: list[str]) -> No
             raise ValueError("migration declares a source without a full project base")
         if lower > upper or upper >= target:
             raise ValueError("migration range must precede the target")
-        if route.get("to_version", table["target_version"]) != table["target_version"]:
+        if route.get("to_version") != table["target_version"]:
             raise ValueError("migration route target mismatch")
         if route.get("kind") not in ("same-major", "cross-major"):
             raise ValueError("unsupported migration route kind")

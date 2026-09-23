@@ -35,6 +35,8 @@ class ProjectBaseCoverageContract(unittest.TestCase):
                  "from_max": "0.12.0", "to_version": "1.0.0"}
         table = {"target_version": "1.0.0", "routes": [route]}
         checker.validate_complete_routes(table, sources)
+        with self.assertRaises(ValueError):
+            checker.validate_complete_routes({**table, "routes": [{k: v for k, v in route.items() if k != "to_version"}]}, sources)
         for change in ({"from_min": "0.9.2"}, {"from_max": "0.10.3"},
                        {"to_version": "0.12.0"}, {"kind": "same-major"},
                        {"from_max": "1.0.0"}):
@@ -74,6 +76,7 @@ class ProjectBaseCoverageContract(unittest.TestCase):
                         "kind": "same-major",
                         "from_min": "0.9.1",
                         "from_max": "0.9.4",
+                        "to_version": "0.9.5",
                     }
                 ],
             }
@@ -97,6 +100,7 @@ class ProjectBaseCoverageContract(unittest.TestCase):
                         "kind": "same-major",
                         "from_min": "0.1.0",
                         "from_max": "0.9.4",
+                        "to_version": "0.9.5",
                     }
                 ],
             }
