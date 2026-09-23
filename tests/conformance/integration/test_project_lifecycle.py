@@ -636,6 +636,19 @@ else:
         self.assertEqual(applied.returncode, 0, applied.stderr)
         self.assertEqual(applied_result["code"], "hive.user-setup-complete")
         self.assertEqual(applied_result["data"]["setup_state"], "operational")
+        refresh_copies = [
+            user_root / ".agents/skills/project-refresh",
+            user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/project-refresh",
+        ]
+        for refresh in refresh_copies:
+            self.assertTrue((refresh / "SKILL.md").is_file())
+            self.assertTrue(
+                read_yaml(refresh / "agents/openai.yaml")["policy"]["allow_implicit_invocation"]
+            )
+        self.assertEqual(
+            (refresh_copies[0] / "SKILL.md").read_bytes(),
+            (refresh_copies[1] / "SKILL.md").read_bytes(),
+        )
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
         self.assertTrue(
