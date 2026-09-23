@@ -1,5 +1,7 @@
 # 현재 상태
 
+- 후속 진행: `PRF-001–003` 갱신 스킬 자연어 선택·설치 검증 후 실제 예시 6단계 적용 승인. 상세 [계획](../plans/active/project-refresh-exposure-0.11.0.md)
+
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
 - 공개 수용 완료: `0.11.0-test.2`; 공개 안정판: `0.10.3`
 - 제품 버전: `0.11.0`
@@ -12,9 +14,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 38/38 완료
+- 현재 등록 항목: 38/41 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `PRF-001`, `PRF-002`, `PRF-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
