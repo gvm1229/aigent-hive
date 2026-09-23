@@ -20,6 +20,10 @@ Use only for an installed consumer project.
 - Apply the project's `00-project-harness.md` availability gate before commands. Missing local
   Hive or setup blocks only the requested Hive upgrade, not ordinary collaboration. Do not
   install Hive, alter global settings, or substitute hand-written generated files implicitly.
+- Older projects may lack that gate. Resolve `hive` with the current host's normal command
+  lookup and use this collaborator's existing local setup; project files or a version string
+  alone do not prove readiness. Let the command validate authority. An execution error,
+  malformed setup, or an existing protected stop is not non-installation and must not be bypassed.
 - Resolve the project and verified executable, inspect Git changes and Hive ownership, and
   preserve unrelated edits. Never select a different release or install it without authority.
 
