@@ -11,7 +11,7 @@ aliases: []
 sources:
   - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:ae98a6a0eac8e6ee53954df0f0162721c25fd4ebea8eff09240948e673c5746e"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:f4e54c62c5596aad775198d47f5c5b3b3813a81434cd9ebfbf387702f93200cc"
   - "repo:schemas/knowledge-retrieval-result.schema.json#sha256:6d8499cf211d663d928c3fa1a31a0e375e6c970736414a1298f1b42180953ac9"
 links: [foundation-refactor, knowledge-portability-scan]
 reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"
