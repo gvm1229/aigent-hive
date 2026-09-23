@@ -16,10 +16,10 @@
   - state: complete; evidence: repo:tests/results/runs/20260923T040856-d5791cfd29fa.md#sha256:274243f9e83d6b4be05fa44e9cc6acb253eb9c0143284d6821d3d32095772cfc
 - [x] [APC-002] 버전별 실제 갱신·보존·실패 복구와 지속 검사 연결
   - state: complete; depends: APC-001; evidence: repo:tests/results/runs/20260923T040856-d5791cfd29fa.md#sha256:274243f9e83d6b4be05fa44e9cc6acb253eb9c0143284d6821d3d32095772cfc
-- [ ] [APC-003] 전체 회귀·독립 검증과 공개 산출물 검사
-  - state: agent-owned; depends: APC-002
-- [ ] [APC-004] 작업·커밋 손실 없는 develop 통합과 로컬·원격 브랜치 정리
-  - state: agent-owned; depends: APC-003
+- [x] [APC-003] 전체 회귀·독립 검증과 공개 산출물 검사
+  - state: complete; depends: APC-002; evidence: repo:tests/results/runs/20260923T051632-62617e897e26.md#sha256:a510616eb948906f3029eb859b6d97bcf3f8e1435adbcc02585be30255c7208c
+- [x] [APC-004] 작업·커밋 손실 없는 develop 통합과 로컬·원격 브랜치 정리
+  - state: complete; depends: APC-003; evidence: repo:tests/results/runs/20260923T051632-62617e897e26.md#sha256:a510616eb948906f3029eb859b6d97bcf3f8e1435adbcc02585be30255c7208c
 
 ## 검증 경계
 
