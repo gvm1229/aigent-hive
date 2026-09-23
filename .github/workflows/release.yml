@@ -297,7 +297,10 @@ jobs:
           esac
           test "$("$binary" --version)" = "$expected_version"
           "$binary" doctor | grep -F "aigent-hive $PRODUCT_VERSION"
-      - name: Package native archive and npm platform package
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Qualify every public stable predecessor
         run: |
           python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
           python3 scripts/qualify-project-predecessors.py \
@@ -427,7 +430,10 @@ jobs:
           --target .
           --output "source-graph-$env:TARGET.json"
           --require-graphify-preview
-      - name: Verify architecture and package native archive
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Qualify every public stable predecessor on Windows
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check PyYAML==6.0.2
