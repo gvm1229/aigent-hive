@@ -736,3 +736,16 @@
 | [passed](runs/20260922T215754-3c978882ac49.md) | PDC 개발 실패 주입과 공개 빌드 갱신 수용 경로 분리 | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T223030-2b0e7fecfd9c.md) | PDC 공개 시험판의 격리된 로컬 설치 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260922T223142-75534473ad69.md) | PDC 실제 공개 Windows 패키지의 생성 갱신 보존 거부 수용 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T225315-82c9b926cfcf.md) | PDC-002·003 실제 반응과 세 운영체제 공개 협업 검사 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T230722-8dd3e769ac5b.md) | RFR-001 및 5단계 공개 수용·수정 계획 완료 확인 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001519-21ce6616f612.md) | PRF 갱신 스킬 전역 발견과 프로젝트 호출 경계 검사 | 60358a28f107e36c1cd235d7d599b87e551dce75 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001630-a765507f2537.md) | PRF 제품 변경 전체 Rust 회귀 검사 | 976d96ae8ba72aa09304129e3db1f32675ed1d8f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T001728-abbe2eb0d4ba.md) | Python conformance: documentation, security, contract, integration, release | 541de1bec1a9252b9cc697658dbbae7707e96c92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001922-b391fe040898.md) | PRF 설치 투영과 기존 프로젝트 갱신 검사 | 541de1bec1a9252b9cc697658dbbae7707e96c92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T002037-0d598d7bcce4.md) | PRF 최종 제품 Rust 전체 회귀 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T002216-eb4a2f7b544c.md) | Python conformance: documentation, security, contract, integration, release | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003235-7e4c6d435456.md) | PRF 생성 설명문 수정 후 두 생성기 전체 일치 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003340-b5c0442d9cae.md) | PRF 최종 설명문과 투영 회귀 전체 Rust 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260923T003526-9ded0993e05b.md) | Python conformance: integration | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T003611-cb2f70bedde4.md) | PRF 실제 발견 검증용 구버전 합성 프로젝트 준비 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003628-23bed7c7162f.md) | PRF 구버전 합성 프로젝트 준비 재검사 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |

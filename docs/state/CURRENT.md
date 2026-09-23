@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 후속 진행: `PRF-001–003` 갱신 스킬 자연어 선택·설치 검증 후 실제 예시 6단계 적용 승인. 상세 [계획](../plans/active/project-refresh-exposure-0.11.0.md)
+- [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): 갱신 스킬 구현·로컬 검증 완료. test.3 설치·자연어 호출 검증 후 승인된 예시 6단계 적용 예정
 
 - 작업 브랜치: `refactor/hive-foundations`; 통합: `develop`; 안정판: `main`
 - 공개 수용 완료: `0.11.0-test.2`; 공개 안정판: `0.10.3`
@@ -14,9 +14,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 38/41 완료
+- 현재 등록 항목: 39/41 완료
 
-- `agent-owned`: `PRF-001`, `PRF-002`, `PRF-003`
+- `agent-owned`: `PRF-002`, `PRF-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -76,4 +76,4 @@
 - Windows Codex에서 예시 프로젝트 지침 읽기 전용 확인: 설치 여부 분기 없는 Hive 명령 요구, 사용자 규칙·외부 블록과 공존
 - [검증](../research/project-directives-collaboration-0.11.0.md): Windows 실제 AI 8조건·세 운영체제 공개 패키지 수용 완료, 모든 도구 조합 보장 제외
 - [예시 수정 계획](../research/example-project-hive-repair-0.11.0.md) 독립 검토 통과, 6단계 실제 적용 미실행
-- 현재 요청의 1~5단계 완료. 예시 프로젝트 읽기 전용 유지, 안정판·실제 설치는 별도 권한
+- 이전 1~5단계 완료. 후속 설치·예시 적용 권한은 PRF 계획, 안정판은 별도 승인
