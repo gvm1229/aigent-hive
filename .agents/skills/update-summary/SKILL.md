@@ -43,6 +43,10 @@ the banner or summary.
 
 ## End-user relevance
 
+- Apply the [release-note audience rules](../../directives/08-human-documentation-style.md#release-notes-and-update-announcements), including conversational patch-note previews. The reader may be a developer but does not know Hive's internals.
+- Draft the user outcome first, then attach only the limits needed to use or choose it. Do not use engineering work such as broader tests or authenticated historical bases as the headline; explain the update experience those changes support.
+- Check the heading and first explanation without the supporting evidence beside them. If the reader needs Hive implementation knowledge to understand the improvement, rewrite them before delivery.
+
 - Include a change only when it changes the installed product, installation or update experience, user workflow, safety protection, or user-facing understanding of a usable feature.
 - Exclude GitHub Release language order or formatting, CI and test procedures, release verification records, repository plans, source documentation, internal catalog or projection work, and contributor workflows unless the change directly alters a subscriber action or outcome.
 - In particular, do not report an English-first and Korean-second GitHub Release description format. It is a publication detail for developers and contributors, not a subscriber improvement.
