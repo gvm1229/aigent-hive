@@ -14,9 +14,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 44/44 완료
+- 현재 등록 항목: 44/48 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `APC-001`, `APC-002`, `APC-003`, `APC-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
