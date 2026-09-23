@@ -768,3 +768,11 @@
 | [passed](runs/20260923T014032-86ef0e800646.md) | PRF-005 실제 갱신과 예약 연결·충돌·외부 경로 거부 검사 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T014339-16d5cf835879.md) | PRF-005 예약 연결 수정 전체 Rust 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T014350-c1300017446d.md) | PRF-005 예약 연결과 프로젝트 전체 갱신 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014832-909b7a34c38d.md) | PRF-005 지침 예약과 실제 스킬 전체 갱신 연결 검증 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T020014-0b666c7d4a87.md) | 예시와 같은 Windows 줄끝 형식의 갱신 동작 확인 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T020108-6d9a99660714.md) | 예시에서 관측한 AGENTS 전용 CRLF와 정본 설정을 결합한 갱신 확인 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021112-503aeacef626.md) | PRF-006 Hive 지침 줄끝 정렬과 로컬 바이트 보존 검사 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021229-4891709a7f64.md) | PRF-006 실제 Windows 표시 블록의 신규 규칙·사용자 메모·전체 갱신 검사 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021506-4739e12dba9a.md) | PRF-006 실제 스킬용 Windows 표시 블록 자료 준비 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021601-e5d226645ea7.md) | PRF-006 줄끝 병합 수정 전체 Rust 회귀 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021614-d5cef2ff14f8.md) | PRF-006 Windows 표시 블록 포함 프로젝트 전체 갱신 회귀 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
