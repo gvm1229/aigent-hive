@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 361
+> Revision: 362
 > 기준일: 2026-09-23
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
@@ -9,6 +9,8 @@
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 요청과 경계
+
+- [패치 노트 표현 개선](../research/patch-note-audience.md): 사용자 경험 중심 작성 지침과 0.11.0 안내 정리
 
 - 후속 승인: `PRF-001–006` 스킬 접근성·구버전 갱신 검증 후 실제 예시 6단계 적용
 
