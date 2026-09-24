@@ -125,7 +125,10 @@ literal exception.
   helps the reader find, use, or choose the feature, and explain its purpose in ordinary words.
 - Internal restructuring or more tests are not user benefits by themselves. Omit those entries
   when no verified change in the user's experience follows; retain the evidence in source records.
-- Keep material compatibility, cost, consent, failure, and support limits in plain language near
+- Failed qualification runs, retries, raw errors, and investigation belong in maintainer evidence.
+  Do not include them anywhere in public release notes or Discord copy, including verification
+  sections and footnotes. If positive evidence is missing, omit the unsupported product claim.
+- Keep material compatibility, cost, consent, and support limits in plain language near
   the relevant benefit. Separate release status and verification evidence from feature highlights.
 - Before delivery, ask whether a person unfamiliar with Hive's design understands why to update
   from the heading and first explanation alone. Rewrite any entry that still needs internal context.
