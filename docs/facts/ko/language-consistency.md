@@ -10,7 +10,7 @@ tags: [communication, documentation, harness, language]
 aliases: ["언어 일관성", "영어 통제 언어", "한국어 응답"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:7679dd5603fdfa1104b0017e9fe7c7acb6a81f9e4095233ccddf3db01a325af8"
-  - "repo:.agents/directives/08-human-documentation-style.md#sha256:cbf25afb23f5e326533902174eb649d1870b2912bda56731b414707f3359433a"
+  - "repo:.agents/directives/08-human-documentation-style.md#sha256:3d21140b2faf1f2ab6873617c2606819511b0ef2731f45b8d159ec8ae18b9925"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:e1e23470bdd37528700da00641cedef9e510c525863c991c9d189ab761e9bde1"
   - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:1aefece59d56d610227b64cfcfff8c634e47202f8e224916b248a8e8ecd9de51"
   - "repo:harness/skills/prompt-refine/SKILL.md#sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed"
