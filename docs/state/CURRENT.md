@@ -1,6 +1,7 @@
 # 현재 상태
 
-- [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 공개 안정판 9개의 갱신·복구와 test.7 공개 수용 완료. 로컬·원격 main·develop만 유지, 모든 기존 커밋 보존
+- [지침 복구안](../plans/directive-context-recovery-0.11.0.md): 조사 완료·구현 전
+- [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 안정판 9개 갱신·복구와 test.7 수용 완료. main·develop만 유지, 커밋 보존
 
 - [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.6 공개 수용·실제 스킬 자연어 갱신 확인. 예시 적용·보존·develop PR 통합 완료
 
