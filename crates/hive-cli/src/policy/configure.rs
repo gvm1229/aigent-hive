@@ -358,9 +358,15 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
         intent.context_digest.as_deref(),
     )?;
     if intent.created_containers.iter().any(|path| {
+        // This optional Codex container can outlive multiple context-disable updates.
+        // It only authorizes pruning an empty owned container, never a hook definition.
+        let historical_child_container =
+            host == "codex" && path.as_slice() == ["hooks", "SubagentStart"];
         !allowed
             .iter()
+            .chain(before.iter())
             .any(|entry| !path.is_empty() && entry.path.starts_with(path))
+            && !historical_child_container
     }) {
         return Err("hook container ownership escaped its namespace".to_owned());
     }

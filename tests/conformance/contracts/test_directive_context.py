@@ -135,6 +135,65 @@ paths = ["tests"]
         self.configure("remove", removal["approval_digest"])
         self.assertEqual(config.read_bytes(), original)
 
+    def test_context_hooks_can_be_reapplied_after_removal(self):
+        directory = self.target / ".codex"
+        directory.mkdir()
+        config = directory / "hooks.json"
+        foreign = b'{ "foreign": { "keep": 17 } }\n'
+        config.write_bytes(foreign)
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        removal = self.configure("remove")["data"]["preview"]
+        self.configure("remove", removal["approval_digest"])
+        self.assertEqual(config.read_bytes(), foreign)
+        self.configure("status")
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        self.assertEqual(json.loads(config.read_bytes())["foreign"], {"keep": 17})
+        removal = self.configure("remove")["data"]["preview"]
+        self.configure("remove", removal["approval_digest"])
+        self.assertEqual(config.read_bytes(), foreign)
+
+    def test_context_disable_updates_keep_removal_and_reapply_available(self):
+        directory = self.target / ".codex"
+        directory.mkdir()
+        config = directory / "hooks.json"
+        foreign = b'{ "foreign": { "keep": 17 } }\n'
+        config.write_bytes(foreign)
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        self.spec.unlink()
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        self.configure("status")
+        removal = self.configure("remove")["data"]["preview"]
+        self.configure("remove", removal["approval_digest"])
+        self.assertEqual(config.read_bytes(), foreign)
+        self.configure("status")
+        self.write_spec()
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        removal = self.configure("remove")["data"]["preview"]
+        self.configure("remove", removal["approval_digest"])
+        self.assertEqual(config.read_bytes(), foreign)
+
+    def test_historical_container_allowance_rejects_other_namespaces(self):
+        preview = self.configure()["data"]["preview"]
+        self.configure("apply", preview["approval_digest"])
+        receipt = self.target / ".hive/config/host-policy-hooks/codex.json"
+        original = receipt.read_bytes()
+        for path in (["foreign", "SubagentStart"], ["hooks", "SubagentStart", "foreign"],
+                     ["hooks", "OtherEvent"]):
+            intent = json.loads(original)
+            intent["created_containers"][-1] = path
+            receipt.write_text(json.dumps(intent), encoding="utf-8")
+            before = snapshot_tree(self.target)
+            result = self.configure("status", expected=3)
+            expected_message = "schema" if len(path) > 2 else "container ownership"
+            self.assertIn(expected_message, result["message"])
+            self.assertEqual(snapshot_tree(self.target), before)
+        receipt.write_bytes(original)
+
     def test_missing_context_invalid_paths_ranges_and_budget_are_not_approved(self):
         pinned = digest(self.spec.read_bytes())
         self.spec.unlink()
