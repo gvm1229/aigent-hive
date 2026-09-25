@@ -14,7 +14,7 @@ An implementer follows the saved owning step/dependencies/evidence, not the plan
 | --- | --- |
 | Create/materially revise a plan | [Handoff contract](references/planning-contract.md) |
 | Start/resume implementation | [Reconcile](references/plan-reconciliation.md) |
-| Material fact capture or knowledge/document restructuring | [Knowledge/preservation](references/knowledge-and-preservation.md) |
+| Finish material source work; capture/restructure knowledge | [Knowledge/preservation](references/knowledge-and-preservation.md) |
 | Close a bound Hive run | [Closure](references/run-closure.md) |
 | Stable readiness | [Stable gate](references/stable-plan-gate.md) |
 
