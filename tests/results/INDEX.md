@@ -797,3 +797,7 @@
 | [passed](runs/20260923T042114-c7c1ac392152.md) | APC 새 필수 복구 작업 반영 후 배포 규약 재검증 | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T042116-27d7a64129f5.md) | Python conformance: release | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260923T051632-62617e897e26.md) | APC-003–004 공개 검증과 무손실 브랜치 통합 완료 확인 | 4c70291742b0856063acb218aebe27b85138cca5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T091851-1df674af9513.md) | 지침 복구와 기존 훅 계약 검증 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T091914-de7c2f8ebab5.md) | 지침 복구 변경의 전체 Rust 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T091953-61872958baed.md) | 지침 복구 변경의 전체 Python 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T091954-fe5f867941d7.md) | Python conformance: documentation, security, contract, integration, release | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |

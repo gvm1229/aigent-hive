@@ -9,7 +9,7 @@ summary: "선택한 전역 프로젝트 갱신 스킬의 자연어 요청 지원
 tags: [project, routing, skill]
 aliases: ["project-refresh"]
 sources:
-  - "repo:harness/skills/project-refresh/SKILL.md#sha256:786458e784a68b2ef7b7f1dc409ff36b4aea62b3419fe69551417175cee29429"
+  - "repo:harness/skills/project-refresh/SKILL.md#sha256:31cf73d71c42e548978b4e80dcc24820546e40f8e1d39cabb5eaaa4eaa78a1ff"
   - "repo:harness/skills/project-refresh/agents/openai.yaml#sha256:b2563a605a8a14b629efb04dc36c7f4b4e4c556f91b5ea9c6cdb454bc92fccf8"
 links: [project-onboarding, skill-routing]
 reviewed_revision: "git:797e5ab579f20268eeff489d1cc7cdbd023a188b"

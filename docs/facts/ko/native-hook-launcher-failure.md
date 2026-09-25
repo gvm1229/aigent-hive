@@ -9,8 +9,8 @@ summary: "검사기 실행 실패의 명시적 거부와 호스트 로드·시�
 tags: [hooks, policy, safety]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/policy/configure.rs#sha256:a521523071519565372ab6fda45ad740370f5432105fe79e6b29705df6892a74"
-  - "repo:schemas/host-policy-intent.schema.json#sha256:b30adb13c9ce498e943b516e0d10baa2316e9570527960b89e6367ca112c22a7"
+  - "repo:crates/hive-cli/src/policy/configure.rs#sha256:4ffac98a1064f68ed15796c5b1b1893f55fc3ea2bb7bf859851f5f29b384de68"
+  - "repo:schemas/host-policy-intent.schema.json#sha256:a37b3e5297c0c460402edd87322b1a1c00c12e39a80ef1877abdc94bdf6b7dda"
   - "repo:tests/conformance/contracts/test_native_policy_hooks.py#sha256:f1365fbdc97d0b4f8e1b18b9dde043a83f609272f48edd485d598301ed04b7bb"
 links: [foundation-refactor, project-policy-enforcement]
 reviewed_revision: "git:a7359c38fc5510b5d5d34e77217900482f76e712"

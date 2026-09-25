@@ -21,4 +21,3 @@
   the relevant benefit. Separate release status and verification evidence from feature highlights.
 - Before delivery, ask whether a person unfamiliar with Hive's design understands why to update
   from the heading and first explanation alone. Rewrite any entry that still needs internal context.
-

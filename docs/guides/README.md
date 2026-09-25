@@ -4,6 +4,7 @@
 
 | 문서 | 용도 |
 | --- | --- |
+| [압축 뒤 지침 복구](directive-context-recovery.md) | 핵심 복원·작업별 안내·선택 설정과 철회 |
 | [Development](development.md) | Source dependency·build·test |
 | [Test lanes](test-lanes.md) | Python test 대장·lane·fixture 경계 |
 | [선택형 의미 검색](vector-search.md) | FTS·벡터 선택, 동의·생성·조회·복구 |
