@@ -10,7 +10,7 @@ tags: [communication, guidance, projection]
 aliases: ["구체적 예시", "쉬운 말 설명"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:7679dd5603fdfa1104b0017e9fe7c7acb6a81f9e4095233ccddf3db01a325af8"
-  - "repo:.agents/directives/08-human-documentation-style.md#sha256:3d21140b2faf1f2ab6873617c2606819511b0ef2731f45b8d159ec8ae18b9925"
+  - "repo:.agents/directives/08-human-documentation-style.md#sha256:a7d7be0b68e105683cebae6d584a07148aad3750540c8dd258ade1dfd02ccc9d"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
   - "repo:docs/guidance-schema.md#sha256:eae385d284f448a27a5243d8e7846aa69d9568e0849d3457147fb814229416ad"
   - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
