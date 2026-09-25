@@ -1,5 +1,6 @@
 //! Explicit project-local hook configuration. Presence never proves host activation.
 
+use super::directive_context;
 use crate::run::PinnedTarget;
 use crate::user_install::replace_host_policy_file;
 use crate::{emit_action_result, ActionResult};
@@ -50,6 +51,10 @@ struct Intent {
     review_run: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     prior_review_run: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    context_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    prior_context_digest: Option<String>,
     operation: String,
     before_digest: String,
     after_digest: String,
@@ -90,6 +95,7 @@ fn command(
     policy: &str,
     review_run: Option<&str>,
     command_format: u8,
+    context_digest: Option<&str>,
 ) -> Result<String, String> {
     if !matches!(command_format, 1 | 2 | COMMAND_FORMAT) {
         return Err("unsupported native hook command format".to_owned());
@@ -112,6 +118,14 @@ fn command(
     if event == "Stop" {
         if let Some(run) = review_run {
             args.extend(["--review-run", run]);
+        }
+    }
+    if let Some(digest) = context_digest {
+        if !valid_digest(digest) {
+            return Err("invalid context digest".to_owned());
+        }
+        if event != "Stop" {
+            args.extend(["--expected-context", digest]);
         }
     }
     if args.iter().any(|arg| arg.contains(['\r', '\n', '\0'])) {
@@ -190,6 +204,7 @@ fn entries(
     policy: &str,
     review_run: Option<&str>,
     command_format: u8,
+    context_digest: Option<&str>,
 ) -> Result<Vec<Entry>, String> {
     if review_run.is_some_and(|run| {
         run.is_empty()
@@ -217,7 +232,7 @@ fn entries(
         .iter()
         .map(|event| {
             let handler =
-                json!({"type":"command","command":command(host,event,target,policy,review_run,command_format)?,"timeout":10});
+                json!({"type":"command","command":command(host,event,target,policy,review_run,command_format,context_digest)?,"timeout":10});
             let value = if *event == "PreToolUse" {
                 json!({"matcher":matcher,"hooks":[handler]})
             } else if host == "antigravity" {
@@ -300,6 +315,7 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
             &intent.policy_digest,
             intent.review_run.as_deref(),
             intent.command_format,
+            intent.context_digest.as_deref(),
         )?
     } else {
         Vec::new()
@@ -311,8 +327,12 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
             policy,
             intent.prior_review_run.as_deref(),
             intent.prior_command_format.unwrap_or(1),
+            intent.prior_context_digest.as_deref(),
         )?,
-        None if intent.prior_review_run.is_none() && intent.prior_command_format.is_none() => {
+        None if intent.prior_review_run.is_none()
+            && intent.prior_command_format.is_none()
+            && intent.prior_context_digest.is_none() =>
+        {
             Vec::new()
         }
         _ => return Err("invalid prior policy digest".to_owned()),
@@ -326,6 +346,7 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
         &intent.policy_digest,
         intent.review_run.as_deref(),
         intent.command_format,
+        intent.context_digest.as_deref(),
     )?;
     if intent.created_containers.iter().any(|path| {
         !allowed
@@ -416,6 +437,11 @@ fn plan(
     if operation == "remove" && installed.is_none() {
         return Err("no owned native hook installation to remove".to_owned());
     }
+    let context = if operation == "install" && host != "antigravity" {
+        directive_context::load(target)?
+    } else {
+        None
+    };
     let policy = env!("HIVE_NATIVE_POLICY_DIGEST").to_owned();
     let after = if operation == "install" {
         entries(
@@ -424,6 +450,7 @@ fn plan(
             &policy,
             review_run,
             COMMAND_FORMAT,
+            context.as_ref().map(|context| context.digest.as_str()),
         )?
     } else {
         Vec::new()
@@ -454,6 +481,8 @@ fn plan(
         prior_command_format: installed.map(|prior| prior.command_format),
         review_run: review_run.map(str::to_owned),
         prior_review_run: installed.and_then(|prior| prior.review_run.clone()),
+        context_digest: context.as_ref().map(|context| context.digest.clone()),
+        prior_context_digest: installed.and_then(|prior| prior.context_digest.clone()),
         operation: operation.to_owned(),
         before_digest: digest(config.as_deref()),
         after_digest: String::new(),
@@ -535,6 +564,8 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
     };
     let planned = plan(&target, host, operation, review_run)?;
     let data = json!({"preview":planned.intent,"config_path":planned.config_path,"receipt_path":planned.receipt_path,
+        "context_recovery": if host=="antigravity" {"unsupported"} else {"requires-live-host-qualification"},
+        "directive_context":if operation=="install" && host != "antigravity" { directive_context::load(&target)?.map(|context| context.preview()) } else {None},
         "host_loaded":"unverified","actual_effect":"unverified","authorizes_model_execution":false});
     if action == "preview" || (action == "remove" && confirmation.is_none()) {
         return Ok(result("hive.policy-hooks-preview", data, Vec::new()));
@@ -602,6 +633,9 @@ fn replay(
         || (action == "apply" && intent.policy_digest != env!("HIVE_NATIVE_POLICY_DIGEST"))
         || (action == "apply" && intent.command_format != COMMAND_FORMAT)
         || (action == "apply" && intent.review_run.as_deref() != review_run)
+        || (action == "apply"
+            && intent.context_digest
+                != directive_context::load(target)?.map(|context| context.digest))
     {
         return Ok(None);
     }
@@ -724,6 +758,9 @@ fn inspect_or_recover(
         "operating_system":std::env::consts::OS,"policy_digest":intent.policy_digest,"target_digest":intent.target_digest,
         "current_policy_digest":env!("HIVE_NATIVE_POLICY_DIGEST"),"receipt_present":true,
         "review_run":intent.review_run,
+        "context_digest":intent.context_digest,
+        "context_current": if intent.context_digest.is_some() { Some(directive_context::load(target)
+            .is_ok_and(|context| context.map(|context| context.digest)==intent.context_digest)) } else { None },
         "configuration_state":if configured{"configured"}else{"not-configured-or-pending"},
         "observed_config_digest":digest(observed.as_deref()),"approved_config_digest":intent.after_digest,
         "configured":configured,"policy_current":intent.policy_digest==env!("HIVE_NATIVE_POLICY_DIGEST") && intent.command_format==COMMAND_FORMAT,

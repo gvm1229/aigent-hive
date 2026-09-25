@@ -1,6 +1,7 @@
 //! Native host protocol adapter for deterministic file-edit preflight.
 //! Shell, terminal continuation and MCP effects remain outside this classifier.
 
+use super::directive_context::{self, Context};
 use hive_core::policy::{evaluate, Binding, Decision, Evaluation, Requirement, RuleResult};
 use hive_core::sha256_digest;
 use serde_json::{json, Value};
@@ -9,7 +10,6 @@ use std::path::Path;
 use std::process::ExitCode;
 
 const LIMIT: u64 = 1024 * 1024;
-const CONTEXT: &str = "Hive policy: preserve owned state through Hive commands; recheck current evidence before mutations. Hook delivery does not prove compliance. Shell, terminal continuation and MCP effects require their own mutation-boundary checks.";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Host {
@@ -40,10 +40,10 @@ fn deny(host: Host, reason: &str) -> Value {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json [--expected-policy <digest>] [--review-run <id>]\nNative file-edit policy and optional session-bound review notice; registration and host trust are separate.");
+        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json [--expected-policy <digest>] [--review-run <id>] [--expected-context <digest>]\nNative file-edit policy and optional session-bound review notice; registration and host trust are separate.");
         return ExitCode::SUCCESS;
     }
-    if !matches!(args.len(), 7 | 9 | 11)
+    if !matches!(args.len(), 7 | 9 | 11 | 13)
         || args[0] != "--host"
         || args[2] != "--event"
         || args[4] != "--target"
@@ -58,10 +58,14 @@ pub(super) fn run(args: &[String]) -> ExitCode {
     };
     let mut expected_policy = None;
     let mut review_run = None;
+    let mut expected_context = None;
     for pair in args[7..].as_chunks::<2>().0 {
         match pair[0].as_str() {
             "--expected-policy" if expected_policy.is_none() => {
                 expected_policy = Some(pair[1].as_str());
+            }
+            "--expected-context" if expected_context.is_none() => {
+                expected_context = Some(pair[1].as_str());
             }
             "--review-run" if review_run.is_none() && args[3] == "Stop" => {
                 review_run = Some(pair[1].as_str());
@@ -115,13 +119,45 @@ pub(super) fn run(args: &[String]) -> ExitCode {
         Ok(payload) if args[3] == "Stop" => {
             review_notice(host, Path::new(&args[5]), review_run, &payload)
         }
-        Ok(payload) => respond(host, &args[3], Path::new(&args[5]), &payload),
+        Ok(payload) => respond_approved(
+            host,
+            &args[3],
+            Path::new(&args[5]),
+            &payload,
+            expected_context,
+        ),
         Err(reason) if args[3] == "PreToolUse" => deny(host, reason),
         Err(_) => json!({}),
     };
     println!("{output}");
     // Exit 0 carries native JSON denial. Hive's legacy exit 3 is never forwarded.
     ExitCode::SUCCESS
+}
+
+fn respond_approved(
+    host: Host,
+    event: &str,
+    target: &Path,
+    payload: &Value,
+    expected_context: Option<&str>,
+) -> Value {
+    let context = expected_context
+        .map(|expected| {
+            let target = crate::run::PinnedTarget::open_policy_configuration(target)
+                .map_err(|_| "directive context target unavailable".to_owned())?;
+            let context = directive_context::load_runtime(&target)?
+                .ok_or("approved directive context missing")?;
+            if context.digest != expected {
+                return Err("directive context changed; preview and approve it again".to_owned());
+            }
+            Ok(context)
+        })
+        .transpose();
+    match context {
+                Ok(context) => respond_context(host, event, target, payload, context.as_ref()),
+                Err(_) if event == "PreToolUse" => deny(host, "approved directive context unavailable or changed; repair or explicitly reapprove the context before file edits"),
+                Err(_) => context_output(host, "Hive directive recovery unavailable: review the approved context sources and hook preview. Do not treat missing context as permission."),
+            }
 }
 
 fn review_notice(host: Host, target: &Path, run: Option<&str>, payload: &Value) -> Value {
@@ -220,39 +256,79 @@ fn patch_paths(patch: &str) -> Result<Vec<String>, &'static str> {
     Ok(targets)
 }
 
+#[cfg(test)]
 fn respond(host: Host, event: &str, target: &Path, payload: &Value) -> Value {
+    respond_context(host, event, target, payload, None)
+}
+
+fn context_output(host: Host, text: &str) -> Value {
+    if host == Host::Antigravity {
+        json!({"injectSteps":[{"ephemeralMessage":text}]})
+    } else {
+        json!({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":text}})
+    }
+}
+
+fn respond_context(
+    host: Host,
+    event: &str,
+    target: &Path,
+    payload: &Value,
+    context: Option<&Context>,
+) -> Value {
     if (host == Host::Antigravity && event == "PreInvocation")
         || (host != Host::Antigravity && event == "SessionStart")
     {
-        return match host {
-            Host::Antigravity if payload["invocationNum"].as_u64() == Some(0) => {
-                json!({"injectSteps":[{"ephemeralMessage":CONTEXT}]})
-            }
-            Host::Antigravity => json!({}),
-            _ => {
-                json!({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":CONTEXT}})
-            }
-        };
+        // No parent-session or policy-hash cache: every compact event restores again.
+        if host == Host::Antigravity && payload["invocationNum"].as_u64() != Some(0) {
+            return json!({});
+        }
+        if host != Host::Antigravity
+            && (payload["hook_event_name"]
+                .as_str()
+                .is_some_and(|name| name != "SessionStart")
+                || payload["source"].as_str().is_some_and(|source| {
+                    !matches!(source, "startup" | "resume" | "compact" | "clear")
+                }))
+        {
+            return json!({});
+        }
+        return context_output(
+            host,
+            &context.map_or_else(|| directive_context::CORE.to_owned(), Context::restore),
+        );
     }
+
     if event != "PreToolUse" {
         return json!({});
     }
-    let checked = check_files(host, target, payload);
+    let checked = check_files(host, target, payload, context);
     match checked {
         // Antigravity requires a decision. "allow" grants tool permission; "ask" retains its
         // native permission review and respects prior Always Allow settings instead.
-        Ok(Decision::Allow) if host == Host::Antigravity => json!({"decision":"ask",
+        Ok((Decision::Allow, _)) if host == Host::Antigravity => json!({"decision":"ask",
             "reason":"Hive file checks passed; host permission review still applies"}),
-        Ok(Decision::Allow) => json!({}), // Never override another host permission decision.
+        Ok((Decision::Allow, paths)) => {
+            let detail = context.map_or_else(String::new, |context| context.edit(&paths));
+            if detail.is_empty() { json!({}) } else {
+                // Additional context does not grant permission or override another guard.
+                json!({"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":detail}})
+            }
+        },
         Ok(_) => deny(
             host,
-            "Hive protected state requires a Hive-owned command; direct file mutation refused",
+            "Approved protected paths require their authorized mutation workflow; direct file mutation refused",
         ),
         Err(reason) => deny(host, reason),
     }
 }
 
-fn check_files(host: Host, target: &Path, payload: &Value) -> Result<Decision, &'static str> {
+fn check_files(
+    host: Host,
+    target: &Path,
+    payload: &Value,
+    context: Option<&Context>,
+) -> Result<(Decision, Vec<String>), &'static str> {
     let target = target
         .canonicalize()
         .map_err(|_| "policy target unavailable")?;
@@ -265,6 +341,7 @@ fn check_files(host: Host, target: &Path, payload: &Value) -> Result<Decision, &
         target_digest: sha256_digest(target.to_string_lossy().as_bytes()),
     };
     let mut decision = Decision::Allow;
+    let mut checked_paths = Vec::new();
     for path in paths(host, payload)? {
         let absolute = if Path::new(&path).is_absolute() {
             std::path::PathBuf::from(&path)
@@ -288,9 +365,16 @@ fn check_files(host: Host, target: &Path, payload: &Value) -> Result<Decision, &
             .ok_or("file target is outside the registered policy scope")?;
         hive_core::inspect_host_edit_path(&target, &relative)
             .map_err(|_| "native file target has an unsafe path ancestor")?;
-        if crate::is_protected_hive_path(&relative) {
+        if crate::is_protected_hive_path(&relative)
+            || relative == Path::new(".agents/policy-context.toml")
+            || relative.starts_with(".agents/policy-hooks/")
+            || context.is_some_and(|context| {
+                context.protects(&relative.to_string_lossy().replace('\\', "/"))
+            })
+        {
             decision = Decision::Deny;
         }
+        checked_paths.push(relative.to_string_lossy().replace('\\', "/"));
     }
     let rule_id = "hive-owned-state".to_owned();
     let request = Evaluation {
@@ -308,7 +392,7 @@ fn check_files(host: Host, target: &Path, payload: &Value) -> Result<Decision, &
             evidence_digest: None,
         }],
     };
-    Ok(evaluate(&request).decision)
+    Ok((evaluate(&request).decision, checked_paths))
 }
 
 #[cfg(test)]

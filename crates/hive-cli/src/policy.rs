@@ -1,6 +1,7 @@
 //! Read-only policy evaluation. Native hook translation is a separate surface.
 
 mod configure;
+mod directive_context;
 mod native;
 
 use crate::{emit_action_result, ActionResult};

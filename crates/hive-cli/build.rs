@@ -53,6 +53,7 @@ fn main() {
     for relative in [
         "src/policy/native.rs",
         "src/policy/configure.rs",
+        "src/policy/directive_context.rs",
         "src/main.rs",
         "src/run.rs",
         "src/run/policy_review.rs",
