@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
   "product_version": "0.11.0",
-  "package_version": "0.11.0-test.7",
+  "package_version": "0.11.0-test.8",
   "plan_ids": [
-    "APC-001",
-    "APC-002"
+    "DCR-001",
+    "DCR-002",
+    "DCR-003",
+    "DCR-004"
   ],
-  "product_tree_sha256": "sha256:3b2258f57dc05eb372b6e3c5609b39bd366b95195160f85cf257697e02ce560c"
+  "product_tree_sha256": "sha256:fe34b0cc45ff0a3c68130e194603c137fbeec94dbbd911925feab3852d454508"
 }
