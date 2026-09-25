@@ -58,8 +58,9 @@ paths = ["tests"]
         args = [str(self.hive_binary), "policy", "hook", "--host", host,
                 "--event", event, "--target", str(self.target), "--stdin-json",
                 "--expected-context", pinned or digest(self.spec.read_bytes())]
-        result = subprocess.run(args, input=json.dumps(payload or {
-            "hook_event_name": event, "source": "compact", "session_id": "shared-parent", "turn_id": "same-turn"}),
+        payload = payload or {"hook_event_name": event, "source": "compact", "session_id": "shared-parent", "turn_id": "same-turn"}
+        payload.setdefault("cwd", str(self.target))
+        result = subprocess.run(args, input=json.dumps(payload),
             capture_output=True, text=True, encoding="utf-8", timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
@@ -170,7 +171,7 @@ paths = ["tests"]
         command = next(item["value"]["hooks"][0]["command"]
                        for item in preview["preview"]["after"] if item["path"][-1] == "SessionStart")
         result = subprocess.run(command, shell=True,
-            input='{"hook_event_name":"SessionStart","source":"compact"}',
+            input=json.dumps({"hook_event_name":"SessionStart","source":"compact","cwd":str(self.target)}),
             capture_output=True, text=True, encoding="utf-8", timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Reply in Korean.", json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"])
@@ -182,6 +183,7 @@ paths = ["tests"]
                 "*** Begin Patch\n*** Update File: src/a\n*** Move to: locked/a\n@@\n-a\n+b\n*** End Patch"}}
         self.assertEqual(self.invoke("PreToolUse", payload)["hookSpecificOutput"]["permissionDecision"], "deny")
         if os.name == "nt":
+            self.assertEqual(self.edit("locked./a")["hookSpecificOutput"]["permissionDecision"], "deny")
             self.assertEqual(self.edit("LOCKED/a")["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_symlink_source_is_never_promoted(self):
@@ -195,3 +197,23 @@ paths = ["tests"]
             self.skipTest(f"host cannot create symlink: {type(error).__name__}")
         self.configure(expected=3)
         self.assertNotIn("Reply in Korean.", self.invoke()["hookSpecificOutput"]["additionalContext"])
+
+    def test_child_context_restores_without_parent_dedup_and_outside_cwd_is_inert(self):
+        for child in ("one", "two", "one"):
+            output = self.invoke("SubagentStart", {"hook_event_name":"SubagentStart", "session_id":"shared-parent", "agent_id":child})["hookSpecificOutput"]
+            self.assertEqual(output["hookEventName"], "SubagentStart")
+            self.assertIn("Reply in Korean.", output["additionalContext"])
+        self.assertEqual(self.invoke(payload={"hook_event_name":"SessionStart", "source":"compact", "cwd":str(self.work_root)}), {})
+        preview = self.configure()["data"]["preview"]
+        self.assertEqual(len(preview["after"]), 4)
+        for entry in preview["after"]:
+            handler = entry["value"]["hooks"][0]
+            if entry["path"][-1] == "Stop": self.assertNotIn("additionalContextLimit", handler)
+            else: self.assertEqual(handler["additionalContextLimit"], 0)
+
+    def test_changed_policy_has_an_explicit_recovery_notice(self):
+        result = subprocess.run([str(self.hive_binary), "policy", "hook", "--host", "codex",
+            "--event", "SessionStart", "--target", str(self.target), "--stdin-json",
+            "--expected-policy", "sha256:" + "0" * 64], input="{}", capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("policy changed", json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"])

@@ -40,7 +40,7 @@ fn deny(host: Host, reason: &str) -> Value {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|PreInvocation|Stop --target <dir> --stdin-json [--expected-policy <digest>] [--review-run <id>] [--expected-context <digest>]\nNative file-edit policy and optional session-bound review notice; registration and host trust are separate.");
+        println!("hive policy hook --host codex|claude|antigravity --event PreToolUse|SessionStart|SubagentStart|PreInvocation|Stop --target <dir> --stdin-json [--expected-policy <digest>] [--review-run <id>] [--expected-context <digest>]\nNative file-edit policy and optional session-bound review notice; registration and host trust are separate.");
         return ExitCode::SUCCESS;
     }
     if !matches!(args.len(), 7 | 9 | 11 | 13)
@@ -94,6 +94,8 @@ pub(super) fn run(args: &[String]) -> ExitCode {
                 host,
                 "registered policy changed; preview and approve the updated hook definition",
             )
+        } else if matches!(args[3].as_str(), "SessionStart" | "SubagentStart") {
+            context_output(host, &args[3], "Hive policy changed: preview and approve the updated hooks before relying on directive recovery.")
         } else {
             json!({})
         };
@@ -141,6 +143,18 @@ fn respond_approved(
     payload: &Value,
     expected_context: Option<&str>,
 ) -> Value {
+    // Target selection comes from the approved command. Cwd only narrows delivery;
+    // it never grants authority or redirects source reads to another repository.
+    if expected_context.is_some() && matches!(event, "SessionStart" | "SubagentStart") {
+        let in_scope = payload["cwd"]
+            .as_str()
+            .and_then(|cwd| Path::new(cwd).canonicalize().ok())
+            .zip(target.canonicalize().ok())
+            .is_some_and(|(cwd, root)| cwd.starts_with(root));
+        if !in_scope {
+            return json!({});
+        }
+    }
     let context = expected_context
         .map(|expected| {
             let target = crate::run::PinnedTarget::open_policy_configuration(target)
@@ -156,7 +170,7 @@ fn respond_approved(
     match context {
                 Ok(context) => respond_context(host, event, target, payload, context.as_ref()),
                 Err(_) if event == "PreToolUse" => deny(host, "approved directive context unavailable or changed; repair or explicitly reapprove the context before file edits"),
-                Err(_) => context_output(host, "Hive directive recovery unavailable: review the approved context sources and hook preview. Do not treat missing context as permission."),
+                Err(_) => context_output(host, event, "Hive directive recovery unavailable: review the approved context sources and hook preview. Do not treat missing context as permission."),
             }
 }
 
@@ -261,11 +275,11 @@ fn respond(host: Host, event: &str, target: &Path, payload: &Value) -> Value {
     respond_context(host, event, target, payload, None)
 }
 
-fn context_output(host: Host, text: &str) -> Value {
+fn context_output(host: Host, event: &str, text: &str) -> Value {
     if host == Host::Antigravity {
         json!({"injectSteps":[{"ephemeralMessage":text}]})
     } else {
-        json!({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":text}})
+        json!({"hookSpecificOutput":{"hookEventName":event,"additionalContext":text}})
     }
 }
 
@@ -277,7 +291,7 @@ fn respond_context(
     context: Option<&Context>,
 ) -> Value {
     if (host == Host::Antigravity && event == "PreInvocation")
-        || (host != Host::Antigravity && event == "SessionStart")
+        || (host != Host::Antigravity && matches!(event, "SessionStart" | "SubagentStart"))
     {
         // No parent-session or policy-hash cache: every compact event restores again.
         if host == Host::Antigravity && payload["invocationNum"].as_u64() != Some(0) {
@@ -286,7 +300,7 @@ fn respond_context(
         if host != Host::Antigravity
             && (payload["hook_event_name"]
                 .as_str()
-                .is_some_and(|name| name != "SessionStart")
+                .is_some_and(|name| name != event)
                 || payload["source"].as_str().is_some_and(|source| {
                     !matches!(source, "startup" | "resume" | "compact" | "clear")
                 }))
@@ -295,6 +309,7 @@ fn respond_context(
         }
         return context_output(
             host,
+            event,
             &context.map_or_else(|| directive_context::CORE.to_owned(), Context::restore),
         );
     }
@@ -365,8 +380,14 @@ fn check_files(
             .ok_or("file target is outside the registered policy scope")?;
         hive_core::inspect_host_edit_path(&target, &relative)
             .map_err(|_| "native file target has an unsafe path ancestor")?;
+        #[cfg(windows)]
+        if relative
+            .components()
+            .any(|part| part.as_os_str().to_string_lossy().ends_with(['.', ' ']))
+        {
+            return Err("ambiguous Windows file target");
+        }
         if crate::is_protected_hive_path(&relative)
-            || relative == Path::new(".agents/policy-context.toml")
             || relative.starts_with(".agents/policy-hooks/")
             || context.is_some_and(|context| {
                 context.protects(&relative.to_string_lossy().replace('\\', "/"))

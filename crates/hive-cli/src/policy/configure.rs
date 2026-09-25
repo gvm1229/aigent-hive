@@ -73,6 +73,7 @@ struct Plan {
     config: Option<Vec<u8>>,
     receipt: Option<Vec<u8>>,
     desired: Option<Vec<u8>>,
+    context_preview: Option<Value>,
 }
 
 fn digest(bytes: Option<&[u8]>) -> String {
@@ -228,11 +229,19 @@ fn entries(
         ),
         _ => return Err("unsupported hook host".to_owned()),
     };
-    ["PreToolUse", start, "Stop"]
-        .iter()
+    let mut events = vec!["PreToolUse", start, "Stop"];
+    if host == "codex" && context_digest.is_some() {
+        events.push("SubagentStart");
+    }
+    events.iter()
         .map(|event| {
-            let handler =
+            let mut handler =
                 json!({"type":"command","command":command(host,event,target,policy,review_run,command_format,context_digest)?,"timeout":10});
+            if host == "codex" && context_digest.is_some() && *event != "Stop" {
+                // The product caps every context string at 4096 bytes. Keep Codex from
+                // replacing approved text with its default head-and-tail preview.
+                handler["additionalContextLimit"] = json!(0);
+            }
             let value = if *event == "PreToolUse" {
                 json!({"matcher":matcher,"hooks":[handler]})
             } else if host == "antigravity" {
@@ -304,7 +313,7 @@ fn validate_intent(intent: &Intent, host: &str, target: &Path) -> Result<(), Str
         || !valid_digest(&intent.approval_digest)
         || (intent.before_digest != "absent" && !valid_digest(&intent.before_digest))
         || (intent.after_digest != "absent" && !valid_digest(&intent.after_digest))
-        || intent.created_containers.len() > 4
+        || intent.created_containers.len() > 5
     {
         return Err("hook intent binding is invalid".to_owned());
     }
@@ -507,6 +516,7 @@ fn plan(
         config,
         receipt,
         desired,
+        context_preview: context.as_ref().map(directive_context::Context::preview),
     })
 }
 
@@ -565,7 +575,7 @@ fn configure(args: &[String]) -> Result<ActionResult, String> {
     let planned = plan(&target, host, operation, review_run)?;
     let data = json!({"preview":planned.intent,"config_path":planned.config_path,"receipt_path":planned.receipt_path,
         "context_recovery": if host=="antigravity" {"unsupported"} else {"requires-live-host-qualification"},
-        "directive_context":if operation=="install" && host != "antigravity" { directive_context::load(&target)?.map(|context| context.preview()) } else {None},
+        "directive_context":planned.context_preview,
         "host_loaded":"unverified","actual_effect":"unverified","authorizes_model_execution":false});
     if action == "preview" || (action == "remove" && confirmation.is_none()) {
         return Ok(result("hive.policy-hooks-preview", data, Vec::new()));
@@ -829,4 +839,34 @@ fn observe(args: &[String]) -> Option<std::collections::BTreeMap<String, String>
             ))
         })
         .collect()
+}
+
+#[cfg(test)]
+mod context_tests {
+    use super::*;
+
+    #[test]
+    fn displayed_context_uses_the_same_snapshot_as_approved_commands() {
+        let root = tempfile::tempdir().expect("root");
+        std::fs::create_dir_all(root.path().join(".hive/config")).expect("config");
+        std::fs::write(
+            root.path().join(".hive/config/harness.toml"),
+            "schema_version = 1\nresolved_owner = \"host-native\"\n",
+        )
+        .expect("harness");
+        let text = "Preserve existing user changes.\n";
+        std::fs::write(root.path().join("AGENTS.md"), text).expect("source");
+        let spec = format!("schema_version = 1\n[[rules]]\nid = \"core\"\nsource = \"AGENTS.md\"\nfirst_line = 1\nlast_line = 1\ndigest = \"{}\"\non = \"restore\"\n", sha256_digest(text.as_bytes()));
+        std::fs::write(root.path().join(".hive-context.toml"), spec).expect("spec");
+        let target = PinnedTarget::open_policy_configuration(root.path()).expect("target");
+        let planned = plan(&target, "codex", "install", None).expect("plan");
+        std::fs::write(root.path().join("AGENTS.md"), "Unreviewed replacement").expect("race");
+        let preview = planned.context_preview.expect("snapshot");
+        assert!(preview["restore"].as_str().expect("text").contains(text));
+        assert_eq!(
+            preview["digest"].as_str(),
+            planned.intent.context_digest.as_deref()
+        );
+        assert!(directive_context::load(&target).is_err());
+    }
 }
