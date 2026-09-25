@@ -9,7 +9,8 @@ summary: "Plans default to canonical Markdown and session references stay concis
 tags: [documentation, plan, state]
 aliases: ["Markdown plan authority"]
 sources:
-  - "repo:.agents/directives/04-documentation-state.md#sha256:2626e090a19b45a88bc586c0292870dbf6136de40e3aa32359af2f617ead90a3"
+  - "repo:.agents/directives/04-documentation-state.md#sha256:8b4ab599048ee698e44869ef8c2d270c45e527873238993f2964ea0aee65456b"
+  - "repo:.agents/directives/references/planning-contract.md#sha256:4136a403ed93af42bed844f30e7ed48309ab9ed535c3deb91b1d264dab2fda33"
   - "repo:docs/plans/README.md#sha256:85944730779c8686d4f436fe735f8e65b0ee34f8e5dee048103a8e85cd3f508a"
   - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
 links: [automated-user-handoff, source-development]

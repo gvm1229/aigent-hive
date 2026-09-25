@@ -56,3 +56,12 @@
 | Source `AGENTS.md` | 8KiB 이하 |
 | 소비자 `AGENTS.md` Hive block | baseline 13,856 bytes 대비 50% 이상 축소 |
 | Source `.agents/directives/*.md` 합계 | baseline 66,849 bytes 대비 25% 이상 축소 |
+
+## 단계별 읽기와 계획 인계
+
+- 상위 지침은 적용 조건과 공통 경계, references는 해당 작업 절차 소유. 링크의 재귀적 일괄 로드 금지
+- 계획 작성: [인계 계약](../../.agents/directives/references/planning-contract.md). 구현자: 현재 소유 단계·선행 조건·검증만 확인, 계획 작성 설명의 반복 로드 제외
+- Git·출시·작업 복제본, 지식·실행 종료, 문체 예시·설치/삭제는 각 조건에서만 참조
+- [읽기 목록과 상한](../../.agents/directives/read-budgets.json)은 검사기용 자료. 에이전트가 매번 읽을 추가 지침은 아닌 구분
+- 바이트 수는 선언된 파일 묶음 전체로 계산. 참조 저장량도 별도 집계, 실제 과금 토큰·모델 추론 비용과 구분
+- 비파괴 소스 문서/검사기 변경은 관련 문서·정적 계약·검사기 시험으로 검증. 제품·설치·서명·소유권 강제·출시 권한·배포 흐름은 기존 제품/출시 검증 유지

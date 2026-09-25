@@ -1,5 +1,7 @@
 # Research index
 
+- [계획 인계와 지침 읽기 개선](planning-directive-efficiency-2026-09-25.md)
+
 - [0.11.0 지침 복구 구현 검증](directive-context-implementation-0.11.0.md)
 
 - [반복 압축 뒤 지침 복구와 훅 활용 조사](directive-context-hooks-2026-09-25.md)

@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 365
+> Revision: 366
 > 기준일: 2026-09-25
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
@@ -10,9 +10,8 @@
 
 ## 현재 요청과 경계
 
-- [반복 압축 뒤 지침 복구](directive-context-recovery-0.11.0.md): 구현·test.8 수용 완료, 실제 앱 시험 승인 대기
+- [계획·지침 개선](active/planning-directive-efficiency.md): 소스 전용 작업. 기존 훅 시험 승인 대기 유지
 
-- 후속 승인: `PRF-001–006` 스킬 접근성·구버전 갱신 검증 후 실제 예시 6단계 적용
 
 - 브랜치: `develop`; 초기 기준 `develop@87b84f42`, 작업 이력 통합 완료
 - 확정: 기존 기능·명령 유지, 핵심 지식 흐름 우선, Codex 검증 후 다른 호스트 확대
@@ -54,6 +53,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 지침 복구 | 5 | 1 | 83.3% |
+| 계획 인계·지침 비용 | 0 | 3 | 0.0% |
 | 갱신 스킬 노출·검증·실제 적용 | 6 | 0 | 100.0% |
 | 모든 공개 버전 갱신 검증·브랜치 통합 | 4 | 0 | 100.0% |
 | 브랜치 규칙 강제·호스트 조사 | 5 | 0 | 100.0% |
@@ -66,7 +66,7 @@
 | Markdown 정본·집계 생성 | 4 | 0 | 100.0% |
 | 협업자 설치 선택권·프로젝트 지침 | 3 | 0 | 100.0% |
 | 미출시 `0.10.4`에서 계승한 사용량 보호 | 4 | 0 | 100.0% |
-| **현재 범위 합계** | **52** | **2** | **96.3%** |
+| **현재 범위 합계** | **52** | **5** | **91.2%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Required load order
@@ -84,6 +84,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [directive-context-recovery-0.11.0.md](active/directive-context-recovery-0.11.0.md) | `DCR-*` | 지침 복구 |
+| [planning-directive-efficiency.md](active/planning-directive-efficiency.md) | `PDO-*` | 계획 인계·지침 비용 |
 | [project-refresh-exposure-0.11.0.md](active/project-refresh-exposure-0.11.0.md) | `PRF-001–006` | 갱신 스킬 노출·검증·실제 적용 |
 | [all-public-project-refresh-0.11.0.md](active/all-public-project-refresh-0.11.0.md) | `APC-001–004` | 모든 공개 버전 갱신 검증·브랜치 통합 |
 | [branch-enforcement-0.11.0.md](active/branch-enforcement-0.11.0.md) | `BR-*` | 브랜치 규칙 강제·호스트 조사 |
@@ -103,7 +104,7 @@
 
 훅 상세 순서: `HK-001` 실패 분류·결과 합산 → `HK-002` 변환·진단·전달 → `HK-003` 실제 수용 → `HK-004` 보류 평가. `HK-005`는 `HK-001`과 기존 실행 결과 계약 뒤 구현, `RFK-002`는 문맥 유효성 소유.
 
-현재 순서: `DCR-001–006` → `RFR-001`. 기존 수용 근거 보존.
+현재 순서: `PDO-001–003`. `DCR-006`·`RFR-001` 승인 대기 유지.
 
 ### 이전 출시의 실행 순서
 

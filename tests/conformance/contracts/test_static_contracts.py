@@ -14,6 +14,8 @@ import yaml
 from PIL import Image
 
 
+from tests.conformance.support.directives import directive_text
+
 ROOT = Path(__file__).resolve().parents[3]
 SKILLS = ROOT / "harness/skills"
 PLUGIN_SKILLS = ROOT / "harness/plugins/aigent-hive/skills"
@@ -122,10 +124,8 @@ class Phase3SchemaContract(unittest.TestCase):
 
 class Phase3SkillSourceContract(unittest.TestCase):
     def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
-        workflow = (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8")
-        coordination = (ROOT / ".agents/directives/06-session-coordination.md").read_text(
-            encoding="utf-8"
-        )
+        workflow = directive_text(".agents/directives/03-workflow.md")
+        coordination = directive_text(".agents/directives/06-session-coordination.md")
         normalized = " ".join(workflow.split())
         self.assertIn("one primary worktree", normalized)
         self.assertIn("convenience", normalized)
@@ -137,12 +137,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("## Temporary Worktrees", coordination)
 
     def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:
-        source_behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(
-            encoding="utf-8"
-        )
-        source_style = (ROOT / ".agents/directives/08-human-documentation-style.md").read_text(
-            encoding="utf-8"
-        )
+        source_behavior = directive_text(".agents/directives/01-behavior.md")
+        source_style = directive_text(".agents/directives/08-human-documentation-style.md")
         project_base = (
             ROOT / "harness/project-bases/0.9.0/AGENTS.md.template"
         ).read_text(encoding="utf-8")
@@ -221,38 +217,33 @@ class Phase3SkillSourceContract(unittest.TestCase):
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")
         self.assertIn("no separate tracked Skill inventory", " ".join(agents.split()))
-        self.assertIn("source-project-only", (ROOT / ".agents/directives/02-architecture.md").read_text(encoding="utf-8"))
+        self.assertIn("source-project-only", directive_text(".agents/directives/02-architecture.md"))
         self.assertIn("Source 규칙", ownership)
 
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
-        behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
+        behavior = directive_text(".agents/directives/01-behavior.md")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("Use `prompt-refine` for explicit prompt-authoring requests", behavior)
+        self.assertIn("Prompt-refine is for explicit prompt", behavior)
         self.assertNotIn("Automatically load installed `aigent-hive:prompt-refine`", behavior)
         self.assertIn("Source Wiki lookup", behavior)
         self.assertIn("hive source-wiki query --target", agents)
-        self.assertIn("session-bound `hive usage enforce`", agents)
+        self.assertIn("First source action: [installed usage guard]", agents)
         self.assertIn("07-installed-usage-guard.md", agents)
 
     def test_source_binds_unspecified_development_to_the_active_version(self) -> None:
-        behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
+        behavior = directive_text(".agents/directives/01-behavior.md")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(
             encoding="utf-8"
         )
-        normalized = " ".join(behavior.split())
-        for required in (
-            "An exact version named by the maintainer in the current request overrides",
-            "product version and next numbered public test in `docs/plans/PLAN.md`",
-            "Do not move or suggest the work to a later version",
-            "post-test acceptance reset in `03-workflow.md`",
-        ):
+        normalized = " ".join(agents.split())
+        for required in ("active version and next numbered public test", "unless the current user names another", "Never invent a later destination"):
             self.assertIn(required, normalized)
-        self.assertIn("Never invent or suggest a later version as the default destination", agents)
+        self.assertIn("03` owns post-test resets", behavior)
         self.assertIn("언어·활성 version·continuation", ownership)
 
     def test_every_change_reaches_develop_before_main(self) -> None:
-        workflow = (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8")
+        workflow = directive_text(".agents/directives/03-workflow.md")
         guide = (ROOT / "docs/guides/branching-rules.md").read_text(encoding="utf-8")
         self.assertIn("merges to `develop` first", workflow)
         self.assertIn("every `main` pull request has `develop` as its head", workflow)
@@ -260,9 +251,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("`main` 대상 Pull Request의 head는 항상 `develop`", guide)
 
     def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
-        behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
-        state = (ROOT / ".agents/directives/04-documentation-state.md").read_text(encoding="utf-8")
-        session = (ROOT / ".agents/directives/06-session-coordination.md").read_text(encoding="utf-8")
+        behavior = directive_text(".agents/directives/01-behavior.md")
+        state = directive_text(".agents/directives/04-documentation-state.md")
+        session = directive_text(".agents/directives/06-session-coordination.md")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         fixture = json.loads(
             (ROOT / "tests/fixtures/run/agent-autonomous-continuation.json").read_text(
@@ -272,20 +263,20 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for required in (
             "all todos",
             "until completion",
-            "A progress report that identifies a remaining agent-owned action must not end the task.",
+            "a progress report, failure or node stop is not",
             "awaiting-user-authority",
             "awaiting-external-evidence",
         ):
-            self.assertIn(required, behavior)
+            self.assertIn(required, " ".join(behavior.lower().split()))
         self.assertIn("Final Response Closure Gate", state)
         self.assertIn("Continue execution when any `agent-owned` item remains", state)
         self.assertIn("Remaining Agent-Owned Actions", session)
         self.assertIn("active manifest", session)
-        self.assertIn("Before marking a whole Goal or task `blocked`", behavior)
-        self.assertIn("Abort continued work only when an exact blocker requires user manual action", behavior)
-        self.assertIn("Codex must be\n  restarted", behavior)
-        self.assertIn("Stable release authority", " ".join(behavior.split()))
-        self.assertIn("Stable `tag`, protected `main` integration", agents)
+        self.assertIn("zero independent agent-owned criteria", " ".join(behavior.split()))
+        self.assertIn("Stop only for user cancel/interrupt, exact user-owned manual action", behavior)
+        self.assertIn("Codex restart", behavior)
+        self.assertIn("Stable authority is version-specific", behavior)
+        self.assertIn("Stable tags, protected main integration", agents)
         self.assertEqual(fixture["terminal_instruction"], "Proceed until all todos are complete.")
         self.assertEqual(fixture["expected_state_before_actions"], "active")
         self.assertEqual(

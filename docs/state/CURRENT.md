@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 52/54 완료
+- 현재 등록 항목: 52/57 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `PDO-001`, `PDO-002`, `PDO-003`
 - `awaiting-user-authority`: `DCR-006`, `RFR-001`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 
 
+from tests.conformance.support.directives import directive_text
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -16,7 +18,7 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
         text = re.sub(
             r"\s+",
             " ",
-            (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8"),
+            directive_text(".agents/directives/03-workflow.md"),
         )
         for required in (
             "Never publish or install a stable version as exploratory",
@@ -31,9 +33,7 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
         text = re.sub(
             r"\s+",
             " ",
-            (ROOT / ".agents/directives/04-documentation-state.md").read_text(
-                encoding="utf-8"
-            ),
+            directive_text(".agents/directives/04-documentation-state.md"),
         )
         for required in (
             "stable publication blocked while any active in-scope checklist item is incomplete",
@@ -88,7 +88,7 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
         directive = re.sub(
             r"\s+",
             " ",
-            (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8"),
+            directive_text(".agents/directives/03-workflow.md"),
         )
         candidate = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         publication = (ROOT / ".github/workflows/release-publish.yml").read_text(

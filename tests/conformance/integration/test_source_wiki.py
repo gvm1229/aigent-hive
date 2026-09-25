@@ -15,6 +15,8 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
 
+from tests.conformance.support.directives import directive_text
+
 ROOT = Path(__file__).resolve().parents[3]
 ACTION_SCHEMA = json.loads(
     (ROOT / "schemas/action-result.schema.json").read_text(encoding="utf-8")
@@ -948,9 +950,7 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_material_source_task_autocapture_contract_is_durable(self) -> None:
         source_manifest = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        documentation_directive = (
-            ROOT / ".agents/directives/04-documentation-state.md"
-        ).read_text(encoding="utf-8")
+        documentation_directive = directive_text(".agents/directives/04-documentation-state.md")
         decision = (
             ROOT / "docs/decisions/ADR-0011-source-wiki-independence.md"
         ).read_text(encoding="utf-8")

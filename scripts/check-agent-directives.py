@@ -59,6 +59,77 @@ def duplicate_findings(paths: tuple[Path, ...]) -> list[dict[str, object]]:
     ]
 
 
+def check_read_budgets(root: Path) -> tuple[dict[str, object], list[dict[str, object]]]:
+    """Measure declared complete phase read sets, including conditional references."""
+    metrics, failures = {}, []
+    try:
+        budget = root / ".agents/directives/read-budgets.json"
+        if (not budget.is_file() or any(p.is_symlink() for p in
+                (root, root / ".agents", root / ".agents/directives", budget))):
+            raise ValueError("missing or linked budget definition")
+        with budget.open("rb") as stream:
+            raw = stream.read(65537)
+        if len(raw) > 65536:
+            raise ValueError("oversized read budget")
+        data = json.loads(raw)
+        if data["schema_version"] != 1 or set(data["scenarios"]) != {
+            "startup", "code-edit", "source-maintenance", "plan-authoring", "release"
+        }:
+            raise ValueError("invalid scenarios")
+        for name, scenario in data["scenarios"].items():
+            files = scenario["files"]
+            baseline, maximum = scenario["baseline_bytes"], scenario["max_bytes"]
+            if (not isinstance(files, list) or not 1 <= len(files) <= 64
+                    or len(set(files)) != len(files) or "AGENTS.md" not in files
+                    or type(baseline) is not int or type(maximum) is not int
+                    or not 0 < maximum <= baseline):
+                raise ValueError("invalid budget bounds")
+            required = {"AGENTS.md", ROUTER_TARGETS[1], ROUTER_TARGETS[7]}
+            if name != "startup":
+                required.update(ROUTER_TARGETS[i] for i in (0, 3, 4, 5, 6, 8))
+                required.update(".agents/directives/references/" + item for item in
+                                ("git-commits.md", "knowledge-and-preservation.md", "session-manifest.md"))
+            phase_references = {
+                "startup": (),
+                "code-edit": ("verification.md", "plan-reconciliation.md"),
+                "source-maintenance": ("documentation-verification.md", "plan-reconciliation.md"),
+                "plan-authoring": ("documentation-verification.md", "planning-contract.md"),
+                "release": ("verification.md", "plan-reconciliation.md", "git-branches.md",
+                            "ci-and-candidates.md", "release-qualification.md", "stable-plan-gate.md",
+                            "update-and-removal.md", "release-notes.md"),
+            }
+            required.update(".agents/directives/references/" + item for item in phase_references[name])
+            if name == "release":
+                required.add(ROUTER_TARGETS[2])
+            if not required.issubset(files):
+                raise ValueError("required phase reference omitted")
+            total = 0
+            for relative in files:
+                if (not isinstance(relative, str) or "\\" in relative or ":" in relative
+                        or any(part in ("", ".", "..") for part in relative.split("/"))
+                        or not (relative == "AGENTS.md" or relative.startswith(".agents/directives/"))
+                        or not relative.endswith(".md")):
+                    raise ValueError("unsafe read path")
+                path = root / relative
+                current = root
+                linked = root.is_symlink()
+                for part in relative.split("/"):
+                    current /= part
+                    linked = linked or current.is_symlink()
+                if not path.is_file() or linked:
+                    raise ValueError("missing or linked directive")
+                path.resolve().relative_to(root.resolve())
+                total += path.stat().st_size
+            metrics[name] = {"read_bytes": total, "baseline_bytes": baseline,
+                             "max_bytes": maximum,
+                             "reduction_percent": round((1 - total / baseline) * 100, 1)}
+            if total > maximum:
+                failures.append({"code": "phase-read-budget", "scenario": name, "actual": total})
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        failures.append({"code": "invalid-read-budget", "reason": str(error)})
+    return metrics, failures
+
+
 def run() -> dict[str, object]:
     failures: list[dict[str, object]] = []
     source_agents = ROOT / "AGENTS.md"
@@ -77,6 +148,14 @@ def run() -> dict[str, object]:
         failures.append({"code": "source-agents-size", "actual": metrics["source_agents_bytes"]})
     if source_bytes > SOURCE_BASELINE * 0.75:
         failures.append({"code": "source-directive-budget", "actual": source_bytes})
+    read_sets, read_failures = check_read_budgets(ROOT)
+    failures.extend(read_failures)
+    reference_bytes = sum(path.stat().st_size for path in
+                          (ROOT / ".agents/directives/references").rglob("*.md"))
+    metrics.update(source_reference_bytes=reference_bytes,
+                   source_total_bytes=source_bytes + reference_bytes,
+                   reading_scenarios=read_sets,
+                   measurement="UTF-8 file bytes; excludes plans, chat, tools and model reasoning")
     if metrics["consumer_router_bytes"] > CONSUMER_BASELINE * 0.5:
         failures.append({"code": "consumer-router-budget", "actual": metrics["consumer_router_bytes"]})
 

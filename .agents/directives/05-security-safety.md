@@ -21,21 +21,5 @@ This directive governs filesystem mutation, setup, update, releases, and externa
 - Project-local host configuration remains foreign-owned by default. The only exception is an exact Hive-namespaced data-integrity hook projection when the host-native hook surface is supported, no explicit external compatibility owner is active, the user has approved the displayed events/capabilities/paths/digest, and the ownership manifest authorizes a non-clobbering structured merge.
 - If external orchestration later becomes available, Hive-owned fallback hooks must remain inert until a consented reconfigure removes only Hive-owned entries; foreign entries and bytes stay untouched.
 
-## Update Safety
-
-- Verify release identity, compatibility, and content hashes before staging.
-- Perform a dry run and create a recoverable backup before an update.
-- Keep backups for at most seven days.
-- Do not include backups or SQLite files in Git.
-- Use an atomic activation boundary; on conflict or failed validation, leave the active installation unchanged.
-- Never combine update with garbage collection or knowledge deletion.
-
-## Destructive Operations
-
-- Resolve exact targets before deletion.
-- Documentation simplification, consolidation, or README streamlining is not deletion authority.
-- Move valid knowledge and verify its tracked replacement locator before removing the original.
-- Deleting deprecated, incorrect, or superseded active knowledge is allowed only through the
-  documented current-truth policy.
-- Hard history erasure, branch deletion, force-push, release deletion, and key rotation require explicit user authority.
-- Report what was removed and whether Git history or a time-limited backup can recover it.
+For installation/update, file or knowledge removal, recursive moves/deletion, history erasure,
+release deletion or key rotation, read [update/removal safety](references/update-and-removal.md) first.

@@ -10,7 +10,7 @@ tags: [architecture, refactor, version]
 aliases: []
 sources:
   - "repo:docs/architecture/policy-rule-inventory.md#sha256:77bd57357ba6cb08f84c1ee8908d8859514bd114951faf6abc92b67d7ef30920"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:894919913703c2959487ce2699a10b339a9934945f05240e997f076143ed738e"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:b7c7305b2d0740c52bc48d09d8c20c6bf624731b5b00e708d2354b016eb6745b"
 links: [artifact-boundaries, knowledge-source-freshness, orchestration-ownership]
 reviewed_revision: "git:dd4e2773e98d7acb13fa0dc77ad11167faaf23fb"
 status: active

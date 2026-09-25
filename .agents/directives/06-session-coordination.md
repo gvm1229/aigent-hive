@@ -7,39 +7,10 @@ commit, and worktree lifecycle rules belong to `03-workflow.md`.
 
 Before editing tracked files, create or resume `.agents/work/active-sessions/<session-id>.md` with:
 
-```markdown
-# Active Session: <session-id>
+[the manifest fields](references/session-manifest.md). Load the template when creating a manifest;
+reuse the existing record for updates.
 
-- Agent: <host or agent>
-- Branch: <branch>
-- Status: active | awaiting-user-authority | awaiting-external-evidence | blocked | complete
-- Task: <summary>
-- Started: <ISO-8601>
-- Last updated: <ISO-8601>
-
-## Remaining Agent-Owned Actions
-- <action or none>
-
-## Closure Evidence
-- <evidence, owner, or none>
-
-## Intended Edit Paths
-- <project-relative path>
-
-## Currently Edited Paths
-- <project-relative path or none>
-
-## Temporary Worktrees
-- <absolute path | ref | purpose | removal boundary | status>
-
-## Notes / Blockers
-- <note or none>
-
-## Commit Concerns
-- <id>: <intent> | paths: <exact paths> | status: <state> | verification: <check>
-```
-
-The manifest is ignored runtime coordination state, never canonical project memory or a commit.
+The manifest is ignored runtime state, never canonical knowledge or a commit.
 
 ## Conflict check
 

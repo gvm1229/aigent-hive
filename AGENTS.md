@@ -1,79 +1,60 @@
-# AGENTS.md
+# Aigent Hive source
 
-Canonical entrypoint for Aigent Hive source development. `CLAUDE.md` and `GEMINI.md` redirect here.
-Repository directives live under `.agents/`; shipping consumer sources live under `harness/`.
-
-## Project
-
-- Product: Rust CLI and provider-neutral local agent harness
-- Runtime: subscription-authenticated hosts; no model-provider API or provider credential path
-- Canonical state: Markdown for knowledge, plans, roles, and runs; typed YAML/TOML for setup authority
-- SQLite: disposable derived index
-- Human documentation: concise Korean; agent directives: English
+Canonical entrypoint; `CLAUDE.md` and `GEMINI.md` redirect here. Rust CLI and provider-neutral
+local harness. Agent directives are English; human documentation is concise Korean.
 
 ## Always-on boundaries
 
-- Treat this repository as Hive source, never as a consumer project.
-- Keep source, release bundles, and installed consumer harnesses separate.
-- Preserve user-authored and third-party bytes outside declared Hive paths and marker blocks.
-- Use host-owned model and subagent execution. Hive owns deterministic state, envelopes, receipts,
-  validation, migration, and rollback; it never calls provider APIs or stores provider credentials.
-- Stable `tag`, protected `main` integration, publication, and installation require the
-  maintainer's current, version-specific approval. `release`, `ship`, `continue`, and `all todos`
-  authorize at most implementation, verification, and numbered public tests.
-- After a stable release, new product bytes use a newer version and its `-test.1`; never add a test to the published stable version.
-- Resolve development work against the active `docs/plans/PLAN.md` product version and its next
-  numbered public test unless the maintainer names a different version in the current request.
-  Never invent or suggest a later version as the default destination.
-- Abort continued work only for an exact user-owned manual blocker, a required Codex restart, or
-  completed criteria. Every other failure remains agent-owned work.
-- Preserve historical `harness/project-bases/` and `harness/user-bases/` bytes.
-- Verify completion claims with fresh evidence.
-- Branch names: only `main`, `develop`, or an approved work-class prefix such as
-  `refactor/`; never `codex/` or another agent-name prefix. Run
-  `python scripts/branch-policy.py check <name>` before branch creation or rename.
+- This is Hive source, never a consumer project. Keep source, release bundles and installed
+  harnesses separate. Use `tests/work/` for disposable consumers; no consumer `.hive/` or host
+  projections in this root. Preserve historical `harness/project-bases/` and `harness/user-bases/`.
+- Preserve user/third-party bytes outside declared Hive paths and exact marker blocks.
+- Hosts own subscription-authenticated models/subagents; no provider API calls or credentials.
+  Hive runtime ownership is specified in 02.
+- Canonical Markdown and typed YAML/TOML; SQLite is disposable. Data ownership: 02.
+- Stable tags, protected main integration, publication and installation need current version-specific
+  maintainer approval. Release/ship/continue/all todos authorize at most implementation, verification
+  and numbered public tests. New product bytes after stable require a newer version and its test.1.
+- Use [PLAN](docs/plans/PLAN.md)'s active version and next numbered public test for product work,
+  unless the current user names another.
+  Never invent a later destination. Stop continued work only for a user-owned manual blocker,
+  required Codex restart, completed criteria or user interruption; otherwise continue safe work.
+- Verify completion with fresh evidence. Work on develop; branch exceptions need explicit authority.
+  Before branch creation/rename run `python scripts/branch-policy.py check <name>`.
+  Only main, develop or approved work-class prefixes; never agent-name prefixes such as codex/.
 
-## Entry sequence
+## Read by phase
 
-1. For a source task, run the installed session-bound `hive usage enforce` contract from
-   [`.agents/directives/07-installed-usage-guard.md`](.agents/directives/07-installed-usage-guard.md).
-2. For code edits or documentation restructuring, consult
-   [`.agents/directives/00-editing-discipline.md`](.agents/directives/00-editing-discipline.md).
-   Reuse unchanged guidance within the task; do not reload unrelated procedures for each edit.
-3. Load only the directive rows that match the task.
+First source action: [installed usage guard](.agents/directives/07-installed-usage-guard.md).
+Then read only matching rows. Linked references are conditional, not a recursive reading list.
+Reuse unchanged material within a phase. Recover necessary rules after compaction; do not confuse
+unchanged files with instructions still present in context. Bare directive filenames refer to `.agents/directives/`; other unlinked paths are repo-relative.
 
-| Task | Directive |
+| When | Owner |
 | --- | --- |
-| Response, prompt routing, continuation, final status | [`01-behavior.md`](.agents/directives/01-behavior.md) |
-| Runtime, orchestration, artifact, or Skill architecture | [`02-architecture.md`](.agents/directives/02-architecture.md) |
-| Branch, commit, push, worktree, CI, test or stable release | [`03-workflow.md`](.agents/directives/03-workflow.md) |
-| Plan, state, Wiki, fact, archive or backlog | [`04-documentation-state.md`](.agents/directives/04-documentation-state.md) |
-| Setup, update, filesystem mutation, external tool or credential-adjacent work | [`05-security-safety.md`](.agents/directives/05-security-safety.md) |
-| Concurrent automated edits or session manifest | [`06-session-coordination.md`](.agents/directives/06-session-coordination.md) |
-| Usage threshold or session control | [`07-installed-usage-guard.md`](.agents/directives/07-installed-usage-guard.md) |
-| Human-readable project document | [`08-human-documentation-style.md`](.agents/directives/08-human-documentation-style.md) |
+| Response/continuation | [01](.agents/directives/01-behavior.md) |
+| Code/docs restructuring | [00](.agents/directives/00-editing-discipline.md) |
+| Architecture/Skill boundaries | [02](.agents/directives/02-architecture.md) |
+| Git/check selection | [03](.agents/directives/03-workflow.md) |
+| Plan/state/knowledge/closure | [04](.agents/directives/04-documentation-state.md) |
+| Filesystem/external tools | [05](.agents/directives/05-security-safety.md) |
+| Edit reservations/concurrency | [06](.agents/directives/06-session-coordination.md) |
+| Usage controls | [07](.agents/directives/07-installed-usage-guard.md) |
+| Human document | [08](.agents/directives/08-human-documentation-style.md) |
 
-Source Wiki lookup is target-specific. For this root, use `hive source-wiki query --target
-<source-root>`; never pass the source root to consumer `hive knowledge retrieve`.
+For source knowledge use `hive source-wiki query --target <source-root>`, never consumer
+`hive knowledge retrieve` at this root. An implementation plan carries decisions,
+ordered file/symbol changes and verification; its implementer reads the owning step, not every
+planning reference. See [handoff contract](.agents/directives/references/planning-contract.md)
+when authoring or revising a plan.
 
-## Canonical navigation
+## Navigation and shipping
 
-- Documentation: [`docs/00-home.md`](docs/00-home.md), [`docs/01-index.md`](docs/01-index.md)
-- Plan and handoff: [`docs/plans/PLAN.md`](docs/plans/PLAN.md), [`docs/state/CURRENT.md`](docs/state/CURRENT.md)
-- Architecture and decisions: [`docs/architecture/`](docs/architecture/), [`docs/decisions/`](docs/decisions/)
-- Git rules: [`docs/guides/branching-rules.md`](docs/guides/branching-rules.md), [`docs/guides/commit-rules.md`](docs/guides/commit-rules.md)
-- Atomic facts: [`docs/facts/README.md`](docs/facts/README.md)
+[Home](docs/00-home.md) · [Index](docs/01-index.md) · [Current](docs/state/CURRENT.md) ·
+[Architecture](docs/architecture/) · [Decisions](docs/decisions/) · [Facts](docs/facts/README.md) ·
+[Branches](docs/guides/branching-rules.md) · [Commits](docs/guides/commit-rules.md).
 
-## Shipping boundary
-
-| Surface | Source purpose | Consumer shipping |
-| --- | --- | --- |
-| `AGENTS.md`, `.agents/` | Develop Hive | Never |
-| `harness/` | Canonical consumer templates, directives and Skills | Rendered projection |
-| `crates/` | Product implementation | Compiled artifacts |
-| `docs/`, `tests/fixtures/` | Source documentation and synthetic evidence | Never |
-
-Use disposable consumer targets only under `tests/work/`. Do not create consumer `.hive/` or
-consumer host projections in the source root. The explicit maintainer-authorized nonshipping
-source-project Skills are `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/`;
-there is no separate tracked Skill inventory beyond these explicit exceptions.
+`AGENTS.md`, `.agents/`, `docs/` and `tests/fixtures/` never ship to consumers.
+`harness/` owns canonical consumer templates/directives/Skills; `crates/` compiles product artifacts.
+Only `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/` are explicitly authorized
+nonshipping source-project Skills; no separate tracked Skill inventory beyond these exceptions.

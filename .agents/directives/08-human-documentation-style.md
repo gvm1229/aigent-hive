@@ -1,125 +1,42 @@
-# 08. Human Documentation Style Directive
+# 08. Human documentation
 
-Use concise Korean for human-readable project documents unless the user explicitly requests
-another language for that document. AI directives under `.agents/directives/` stay in English.
+Human project documents use concise Korean unless explicitly requested otherwise. AI directives
+remain English. English uses ASD-STE100 Simplified Technical English: direct, short sentences,
+clear pronouns, one idea each; no idioms or filler. Preserve requested/exact quotations.
 
 ## Korean style
 
-- Use one base language per passage. Preserve English proper names, commands, identifiers, paths,
-  schema keys, exact UI text, and terms without a clear Korean equivalent. Apply the mixed-language
-  rules below to ordinary prose.
-- English uses ASD-STE100 Simplified Technical English: short direct sentences, concrete verbs,
-  one point each, clear pronouns, no idioms or filler. Preserve exact quotations and requested text.
-- Prefer short headings, bullets, tables, and checklists over long prose.
-- Prefer noun phrases or concise verb-noun endings such as `추가`, `정리`, `검증`, `확인`,
-  `보강`, `제거`, and `적용`.
-- Do not end authored explanatory Korean prose with a declarative or conversational sentence
-  form. This prohibition applies regardless of the verb stem or tense. Forms such as `~다`,
-  `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`,
-  `~됩니다`, and `~해요` are examples, not an exhaustive allowlist.
-- Do not mechanically replace a prohibited ending with `~함`, `~됐음`, `~했음`, or `~않음`
-  when a shorter semantic noun phrase is available. Rewrite the whole sentence or clause.
-- Remove filler that does not help the reader act, remember, or verify.
-
-## Korean mixed-language prohibitions
-
-- Do not use English to make an ordinary Korean sentence look technical, concise, or expert.
-- Avoid mixed Korean-English compounds and English words joined directly to Korean grammar.
-- Do not add an English parenthetical after a clear Korean term unless the reader must use that
-  exact literal in an action, command, search, selection, or distinction.
-- Translate meaning rather than English word order.
-
-| Avoid | Use |
-| --- | --- |
-| `benign한 source claim ID가 credential로 오인되던 문제를 제거했고` | `비밀 값으로 오인되던 일반 원본 지식 항목 식별자 문제 제거` |
-| `safe한 default 적용` | `안전한 기본값 적용` |
-| `global setting을 update` | `전역 설정 갱신` |
-| `fallback으로 처리` | `대체 경로 처리` |
-| `사용자 설정(user configuration) 확인` | `사용자 설정 확인` |
+- Prefer short headings, lists, tables and semantic noun phrases: 추가, 검증, 확인, 적용.
+  Remove filler. No authored declarative/conversational endings, regardless of stem or tense.
+- Do not mechanically replace endings with attached ㅁ/음 forms. Rewrite the clause to a natural
+  concise noun phrase; ordinary lexical nouns are not prohibited.
+- One base language. Preserve proper names, commands, identifiers, paths, schema keys, exact UI
+  text and terms without a clear Korean equivalent. Avoid mixed Korean-English compounds and
+  English used merely to look technical. Translate meaning rather than English word order.
+  Add English parentheticals only when the exact literal is needed for an action or distinction.
 
 ## Exact bad and good examples
 
-Every `Avoid` entry is prohibited authored prose. Use its paired form or an equally concise noun
-phrase. The prohibition is not limited to these examples.
-
-| Avoid | Use |
-| --- | --- |
-| `남은 blocker와 solution을 정리.` | `남은 장애 요인과 해결 방법 정리` |
-| `release candidate의 clean install 검증.` | `출시 후보의 깨끗한 환경 설치 검증` |
-| `Aigent Hive는 provider-neutral 로컬 agent harness다.` | `Aigent Hive: provider-neutral 로컬 agent harness` |
-| `Product version은 0.7.0이다.` | `Product version: 0.7.0` |
-| `Release 계약이 구현됐다.` | `Release 계약 구현 완료` |
-| `API key를 요청하거나 저장하지 않는다.` | `API key 요청·저장 없음` |
-| `이 기능을 사용합니다.` | `기능 사용` |
-| `다음 단계에서 검증해요.` | `다음 단계: 검증` |
-| `검증이 필요합니다.` | `검증 필요` |
-| `업데이트가 완료되었습니다.` | `업데이트 완료` |
-| `Release 계약이 구현됐음.` | `Release 계약 구현 완료` |
-| `API key를 요청하거나 저장하지 않음.` | `API key 요청·저장 없음` |
-
-Authored Markdown callouts and blockquotes follow the same rule:
-
-```text
-Avoid: > 현재 상태는 0.7.0이다.
-Use:   > 현재 상태: 0.7.0
-```
-
-Blockquote syntax alone never makes text an exact quotation. Preserve a narrative-form sentence
-only when it is an exact external quotation, exact UI prompt, protocol sample, fixture payload,
-or another byte-sensitive literal. Automated checks must bind each literal exception to its
-path, line, reason, and exact line digest. Surrounding explanation still follows this directive.
-
-Mechanical clause nounization is also prohibited. Do not disguise a sentence by replacing its
-ending with `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean
-forms, state labels followed by a copula, and possibility clauses. Ordinary lexical nouns such
-as `마음`, `걸음`, `이름`, `여름`, and `구름` are not mechanical nounizations.
-
-| Avoid | Use |
-| --- | --- |
-| `Status는 INDETERMINATE다.` | `Status: INDETERMINATE` |
-| `문서를 읽음.` | `문서 확인` |
-| `작업이 끝남.` | `작업 완료` |
-| `연결이 닫힘.` | `연결 종료` |
-| `설정 값을 가짐.` | `설정 값 보유` |
-| `정책을 따름.` | `정책 준수` |
-| `compile됨.` | `compile 완료` |
-| `검증할 수 있음.` | `검증 가능` |
-| `검증할 수 없음.` | `검증 불가` |
-
-Conversational imperative endings are also prohibited in authored explanation. Forms such as
-standalone `~줘` and attached `~해` are examples, not a finite phrase list. Exact user-prompt or
-UI-prompt samples may retain them only through the same path, line, reason, and exact-digest
-literal exception.
-
-| Avoid | Use |
-| --- | --- |
-| `문서를 보여 줘.` | `문서 확인 요청` |
-| `기능을 사용해.` | `기능 사용 요청` |
+Read [exact examples](references/korean-style-examples.md) only for uncertain wording, style-rule
+changes or a checker finding. They cover stems, imperatives, mixed wording and literal exceptions;
+examples are not a finite allowlist. All authored paragraphs, headings, tables, captions, callouts
+and blockquotes follow the rule. Quote syntax alone is not an exemption: exact external quotations,
+UI prompts, protocol samples, fixtures and other byte-sensitive literals require the checker's
+path, line, reason and exact-digest exception. Surrounding prose still follows this directive.
 
 ## Reader-first explanation
 
-- Apply [01-behavior.md#explanation-policy](01-behavior.md#explanation-policy) to every explanatory
-  passage, including guides, teaching notes, reports, and externally addressed writing. Document
-  formatting never substitutes for explaining the terms and causal connections in plain language.
-- Prefer current truth over chronological investigation notes.
-- For teaching notes and handoffs, prefer clarity over maximum brevity.
+Apply [the explanation policy](01-behavior.md#explanation-policy). Prefer current truth over
+chronology; teaching/handoffs favor clarity over extreme brevity. Preserve commands, identifiers,
+versions, digests, ownership, security invariants and literal bytes when rewriting. Review the full
+prose span; a remaining unapproved ending or stale exception is incomplete work.
 
 ## Release notes and update announcements
 
-For release notes, Discord copy, and conversational release previews, apply
-[the release-note audience rules](references/release-notes.md).
-
-## Completion gate
-
-- Review the full authored prose span, not only the final suffix.
-- Confirm that headings, paragraphs, list items, table cells, captions, callouts, and authored
-  blockquotes contain no unapproved narrative-form ending.
-- Confirm that a rewrite preserves commands, identifiers, versions, digests, ownership,
-  security invariants, and exact literals.
-- Treat any remaining unapproved narrative ending or stale literal exception as incomplete work.
+For release notes, Discord copy and conversational release previews, apply
+[release-note audience rules](references/release-notes.md).
 
 ## Scope
 
-Apply this style to `README.md`, `docs/`, changelogs, findings, handoffs, implementation notes,
-and other files intended for human readers. Do not rewrite code, schemas, exact protocol text, or
-external-audience documents that explicitly require another language.
+Applies to README, docs, changelogs, findings, handoffs and other human-facing text. Do not rewrite
+code, schemas or exact protocol text; respect an explicit external-audience language requirement.
