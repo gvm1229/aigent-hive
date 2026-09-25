@@ -11,12 +11,12 @@
 
 ## 실행 기준
 
-- [ ] [PDO-001] 구현 인계용 계획 계약과 작성 양식
-  - state: agent-owned; owner: agent; reason: 작성·검증 진행
-- [ ] [PDO-002] 작업별 지침 읽기 경로와 비용 검사
-  - state: agent-owned; owner: agent; reason: 구조 분리·보존 대조 진행
-- [ ] [PDO-003] 읽기량 측정·지식·문서 검증과 인계
-  - state: agent-owned; depends: PDO-001,PDO-002; owner: agent; reason: 최종 정합화 진행
+- [x] [PDO-001] 구현 인계용 계획 계약과 작성 양식
+  - state: complete; evidence: repo:docs/research/planning-directive-efficiency-2026-09-25.md#sha256:16f1809a1a8405ec41384b5c594d7ced264d8bb7b27364091a0e06b52332d32c
+- [x] [PDO-002] 작업별 지침 읽기 경로와 비용 검사
+  - state: complete; evidence: repo:docs/research/planning-directive-efficiency-2026-09-25.md#sha256:16f1809a1a8405ec41384b5c594d7ced264d8bb7b27364091a0e06b52332d32c
+- [x] [PDO-003] 읽기량 측정·지식·문서 검증과 인계
+  - state: complete; evidence: repo:docs/research/planning-directive-efficiency-2026-09-25.md#sha256:16f1809a1a8405ec41384b5c594d7ced264d8bb7b27364091a0e06b52332d32c
 
 ## 구현자가 따를 순서
 

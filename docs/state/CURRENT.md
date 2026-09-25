@@ -1,6 +1,6 @@
 # 현재 상태
 
-- [지침 복구안](../plans/directive-context-recovery-0.11.0.md): test.8 수용·앱 시험 승인 대기
+- [계획·지침](../plans/active/planning-directive-efficiency.md): PDO 완료, 기존 앱 시험 승인 대기
 - [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 안정판 9개 갱신·복구와 test.7 수용 완료. main·develop만 유지, 커밋 보존
 
 - [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.6 공개 수용·실제 스킬 자연어 갱신 확인. 예시 적용·보존·develop PR 통합 완료
@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 52/57 완료
+- 현재 등록 항목: 55/57 완료
 
-- `agent-owned`: `PDO-001`, `PDO-002`, `PDO-003`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: `DCR-006`, `RFR-001`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
