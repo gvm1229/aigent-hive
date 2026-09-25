@@ -56,3 +56,13 @@ Merge contract:
 - existing run owner pins are canonical run state: preserve every 0.8.x OMX/OMC owner and every v0.9 host-native or explicitly selected external owner; never migrate an owner as a projection side effect
 
 Do not edit `.omx/`, `.omc/`, provider credentials, or foreign paths.
+
+## Existing directive recovery
+
+If the project has a user-owned `.hive-context.toml`, preserve it during projection upgrades.
+After validation, inspect `hive policy hooks status --host <host> --target <project> --output json`.
+A changed policy or selected excerpt requires the optional directive recovery flow in project-setup:
+review the canonical text and exact preview before updating pins or hook registration. Never silently
+accept a new digest, broaden protected paths, or claim compaction adherence from installation alone.
+A guidance refresh does not implicitly authorize new hooks. Missing hooks do not prevent ordinary
+project development for collaborators without Hive.
