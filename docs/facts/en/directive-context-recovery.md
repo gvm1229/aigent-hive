@@ -9,7 +9,7 @@ summary: "Selective recovery and mutation checks are the proposed response to re
 tags: [context, hooks, policy]
 aliases: []
 sources:
-  - "repo:docs/plans/directive-context-recovery-0.11.0.md#sha256:6854b75f36c91d6ccb2fb8e71bfcd7ca0fbebaaa2281418fb790d26a63afc9ff"
+  - "repo:docs/plans/directive-context-recovery-0.11.0.md#sha256:6edc5cb533cc96ed52f0f02b38380a01569dfd6690f97c5c2c5944e26e7ca904"
 links: [project-policy-enforcement]
 reviewed_revision: "git:7539f44b947b1fe0c90ea3d5c083022c99c9e341"
 status: active

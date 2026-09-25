@@ -1,6 +1,6 @@
 # 현재 상태
 
-- [지침 복구안](../plans/directive-context-recovery-0.11.0.md): 조사 완료·구현 전
+- [지침 복구안](../plans/directive-context-recovery-0.11.0.md): 구현 승인·test.8 대기
 - [APC 계획](../plans/active/all-public-project-refresh-0.11.0.md): 안정판 9개 갱신·복구와 test.7 수용 완료. main·develop만 유지, 커밋 보존
 
 - [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md): test.6 공개 수용·실제 스킬 자연어 갱신 확인. 예시 적용·보존·develop PR 통합 완료
@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 48/48 완료
+- 현재 등록 항목: 47/54 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `DCR-001`, `DCR-002`, `DCR-003`, `DCR-004`, `DCR-005`, `DCR-006`, `RFR-001`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

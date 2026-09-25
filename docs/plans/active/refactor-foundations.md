@@ -48,8 +48,8 @@
   - state: complete; depends: RFS-002; evidence: repo:tests/results/runs/20260918T175340-186b7bfd41f8.md#sha256:f413ef7f1e4112d91d42f32edfa4798cf7d6f0ea01d5c99e224c89f8223be90c
 - [x] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: complete; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
-- [x] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
-  - state: complete; depends: BR-001,BR-002,BR-003,BR-004,BR-005,HK-001,HK-002,HK-003,HK-004,HK-005,RFB-001,RFB-002,RFK-001,RFK-002,RFK-003,RFH-001,RFH-002,RFH-003,RFP-001,RFP-002,RFP-003,RFP-004,RFT-001,RFT-002,RFT-003,RFT-004,RFS-001,RFS-002,RFS-003,RFS-004,RB104-001,RB104-002,RB104-003,RB104-004,PDC-001,PDC-002,PDC-003; evidence: repo:tests/results/runs/20260922T230722-8dd3e769ac5b.md#sha256:6871604d270bc09a076a4d22229cf989d13a6ab2ee1721025da4de39f9346d01
+- [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
+  - state: agent-owned; depends: DCR-001,DCR-002,DCR-003,DCR-004,DCR-005,DCR-006; owner: agent; reason: 제품 변경 뒤 test.8 재수용
 
 ## 측정과 판정
 
