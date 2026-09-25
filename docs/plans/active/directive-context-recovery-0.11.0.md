@@ -10,17 +10,17 @@
 ## 기준
 
 - [x] [DCR-001] 승인된 Markdown 구절 선택·내용 지문·경로·출력 상한 검증, 원문 전체 반복·추가 모델 호출 제외
-  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:2899db595a32918f3304179153123c0503b213de04be6b2f33e5e89f322320e1
+  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [x] [DCR-002] Codex 시작·재개·매 압축 복원, 부모 세션 공유·같은 턴 재압축의 누락 방지
-  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:2899db595a32918f3304179153123c0503b213de04be6b2f33e5e89f322320e1
+  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [x] [DCR-003] 경로별 상세 안내·명시적 파일 보호와 기존 변경 검사 결합, 정상 범위 최소 출력
-  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:2899db595a32918f3304179153123c0503b213de04be6b2f33e5e89f322320e1
+  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [x] [DCR-004] 미리보기·정확한 승인·갱신·철회·구버전 설정 보존과 스킬 안내
-  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:2899db595a32918f3304179153123c0503b213de04be6b2f33e5e89f322320e1
+  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [x] [DCR-005] 반복 0·1·3·5·10회와 손상·변조·예산·우회 경계 시험, 비용·의미 준수의 증거 분리
-  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:2899db595a32918f3304179153123c0503b213de04be6b2f33e5e89f322320e1
+  - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [ ] [DCR-006] 전체 회귀·test.8·실제 반복 압축의 의미 준수와 모델 사용량 수용
-  - state: agent-owned; owner: agent; reason: 구현·검증 진행
+  - state: awaiting-user-authority; owner: maintainer; reason: 실제 훅 임시 활성화와 새 Codex 검증 대화 승인 대기
 
 ## 구현 선택
 
@@ -34,3 +34,5 @@
 
 - Windows CLI 훅 계약 26개: 25개 통과, 심볼릭 링크 생성 권한이 없는 1개 제외
 - 설정·전달·차단의 프로그램 검증. 실제 호스트 압축·모델 준수의 증명은 별도
+
+- test.8 공개 실행 파일의 세 운영체제별 새 훅 계약 각각 26개 통과. 실제 Codex 반복 압축·의미 준수·모델 사용량만 별도 승인 후 확인

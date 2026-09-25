@@ -60,3 +60,22 @@
 - 반복 5회·강화 10회 뒤 실제 언어·사용자 수정 보존·승인 경계·현재 작업 준수와 모델 사용량 비교
 - CLI 입력 재생이나 지침 암송만으로 실제 준수 통과 판정 금지
 - 시험판·운영체제별 산출물 수용과 실제 호스트 수용은 별도 기록. 안정판 승인·전역 설치·예시 프로젝트 변경 제외
+
+## 공개 시험판 수용
+
+- [정확한 제품 커밋 CI](https://github.com/gvm1229/aigent-hive/actions/runs/36120562980)와 [최종 검사 절차 CI](https://github.com/gvm1229/aigent-hive/actions/runs/36122144539) 통과
+- [후보](https://github.com/gvm1229/aigent-hive/actions/runs/36120562717), [게시](https://github.com/gvm1229/aigent-hive/actions/runs/36122418779), [공개 수용](https://github.com/gvm1229/aigent-hive/actions/runs/36123198461) 통과
+- 공개 버전 `0.11.0-test.8`, 소스 `983135554cfb12a18dca48babd579dfac993e2da`, 제품 지문 `sha256:fe34b0cc45ff0a3c68130e194603c137fbeec94dbbd911925feab3852d454508`
+- GitHub 시험판과 npm test 일치, latest `0.10.3` 유지. 안정판·전역 설치·Discord 전송 없음
+- 공개 실행 파일의 새 훅 계약: Windows Server 2025 x64·macOS 15.7.9 arm64·Linux glibc 호스트의 musl x64에서 각각 26개 전부 통과
+- [공개 계약 기록 20260925T101807-90319487f894](../../tests/results/runs/20260925T101807-90319487f894.md)
+- [공개 계약 기록 20260925T101815-c8a0f1172cf7](../../tests/results/runs/20260925T101815-c8a0f1172cf7.md)
+- [공개 계약 기록 20260925T101844-2cf14b91409b](../../tests/results/runs/20260925T101844-2cf14b91409b.md)
+- [로컬 Windows 11 공개 실행 파일](../../tests/results/runs/20260925T101039-af58391772ab.md): 25개 통과·심볼릭 링크 권한 부재 1개 제외. CI Windows의 해당 사례 통과와 로컬 권한 부재는 별도 판정
+- 앱의 실제 실행 파일 `0.155.0-alpha.16.4`에서 생성한 공개 프로토콜에 SubagentStart·additionalContextLimit·thread/compact/start 선언 확인. 전역 CLI `0.155.1`과 구분, 실제 훅 실행·모델 준수의 증명 제외
+
+## 유지보수 기록
+
+- 최초 게시의 npm 채널 전파 확인 실패 뒤 같은 후보·같은 바이트의 복구 게시 성공. 공개 패키지 변경·안정판 태그 변경 없음
+- 공개 검사 단계 추가 뒤 기존 지식의 원본 지문 불일치 수정. 최종 관련 문서 검사와 CI 통과
+- 실제 앱 설정은 미변경. 현재 저장소의 임시 활성화·새 검증 대화·시험 뒤 철회를 위한 미리보기 준비, 사용자 승인 대기

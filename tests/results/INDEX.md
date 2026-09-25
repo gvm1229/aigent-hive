@@ -805,3 +805,7 @@
 | [passed](runs/20260925T092457-b057d4446057.md) | Python conformance: documentation, security, contract, integration, release | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T094207-137ebc825bc3.md) | 압축 복구의 승인 일치와 하위 문맥 최종 계약 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T094249-9b5ca064d39b.md) | 지침 복구 최종 전체 Rust 회귀 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T101039-af58391772ab.md) | 공개 test.8 Windows 지침 복구 계약 | 1d36069531a894895a3517a2937666069cfe346e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T101807-90319487f894.md) | 공개 지침 복구 계약 linux-x64 | 1d36069531a894895a3517a2937666069cfe346e | Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 |
+| [passed](runs/20260925T101815-c8a0f1172cf7.md) | 공개 지침 복구 계약 darwin-arm64 | 1d36069531a894895a3517a2937666069cfe346e | macOS-15.7.9-arm64-arm-64bit-Mach-O |
+| [passed](runs/20260925T101844-2cf14b91409b.md) | 공개 지침 복구 계약 win32-x64 | 1d36069531a894895a3517a2937666069cfe346e | Windows-2025Server-10.0.26100-SP0 |

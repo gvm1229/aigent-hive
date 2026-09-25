@@ -1,16 +1,16 @@
 # Aigent Hive 활성 계획
 
-> Revision: 364
+> Revision: 365
 > 기준일: 2026-09-25
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: 지침 복구 구현·test.8 검증
-> 공개 수용 완료: `0.11.0-test.7`; test.3 수용 보류, 미공개 test.4·5 취소
+> 현재 단계: test.8 수용·실제 압축 시험 승인 대기
+> 공개 수용 완료: `0.11.0-test.8`; test.3 수용 보류, 미공개 test.4·5 취소
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 요청과 경계
 
-- [반복 압축 뒤 지침 복구](directive-context-recovery-0.11.0.md): 0.11.0 구현 승인, test.8 수용 대기
+- [반복 압축 뒤 지침 복구](directive-context-recovery-0.11.0.md): 구현·test.8 수용 완료, 실제 앱 시험 승인 대기
 
 - 후속 승인: `PRF-001–006` 스킬 접근성·구버전 갱신 검증 후 실제 예시 6단계 적용
 
