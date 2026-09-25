@@ -99,6 +99,13 @@ jobs:
           binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify directive recovery using the exact public binary
+        shell: bash
+        run: |
+          python scripts/test-artifacts.py run --purpose "공개 지침 복구 계약 $PLATFORM_PACKAGE" \
+            --command python -m unittest -v \
+            tests.conformance.contracts.test_directive_context \
+            tests.conformance.contracts.test_native_policy_hooks
       - name: Qualify public binary simple-explanation guidance
         shell: bash
         run: |
