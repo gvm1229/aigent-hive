@@ -17,6 +17,7 @@ current catalog.
 | [한국어 README](readme/README.ko.md) | 간결한 한국어 입구 |
 | [License](licensing.md) | Apache-2.0 적용 범위 |
 | [Guidance schema](guidance-schema.md) | Consumer shared marker contract |
+| [사용자 경험 개선 후보](research/hive-user-experience-tips-2026-09-26.md) | 별도 조사 작업의 소스 비교·후속 후보 |
 
 ## Architecture
 
