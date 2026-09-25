@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.0`
-- 현재 등록 항목: 51/54 완료
+- 현재 등록 항목: 52/54 완료
 
-- `agent-owned`: `DCR-005`, `DCR-006`, `RFR-001`
+- `agent-owned`: `DCR-006`, `RFR-001`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

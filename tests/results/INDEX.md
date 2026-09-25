@@ -801,3 +801,7 @@
 | [passed](runs/20260925T091914-de7c2f8ebab5.md) | 지침 복구 변경의 전체 Rust 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260925T091953-61872958baed.md) | 지침 복구 변경의 전체 Python 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260925T091954-fe5f867941d7.md) | Python conformance: documentation, security, contract, integration, release | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T092456-953df08b0c5c.md) | 지침 복구 최종 전체 Python 회귀 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T092457-b057d4446057.md) | Python conformance: documentation, security, contract, integration, release | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T094207-137ebc825bc3.md) | 압축 복구의 승인 일치와 하위 문맥 최종 계약 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T094249-9b5ca064d39b.md) | 지침 복구 최종 전체 Rust 회귀 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |

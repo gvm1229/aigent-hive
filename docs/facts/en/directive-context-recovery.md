@@ -9,7 +9,7 @@ summary: "Approved excerpt recovery is implemented; live compaction adherence re
 tags: [context, hooks, policy]
 aliases: []
 sources:
-  - "repo:docs/guides/directive-context-recovery.md#sha256:53c7c389d0fb7d20c61597bdb1388aa4c89c30f2871754eb51f835e9f424a8ee"
+  - "repo:docs/guides/directive-context-recovery.md#sha256:20a1f22a3570c4dd8ad993c0ae04fee31ebcbc43646f90c72811501d30ea0438"
 links: [project-policy-enforcement]
 reviewed_revision: "git:7539f44b947b1fe0c90ea3d5c083022c99c9e341"
 status: active
