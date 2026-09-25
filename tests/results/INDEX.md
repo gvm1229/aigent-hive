@@ -809,3 +809,27 @@
 | [passed](runs/20260925T101807-90319487f894.md) | 공개 지침 복구 계약 linux-x64 | 1d36069531a894895a3517a2937666069cfe346e | Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 |
 | [passed](runs/20260925T101815-c8a0f1172cf7.md) | 공개 지침 복구 계약 darwin-arm64 | 1d36069531a894895a3517a2937666069cfe346e | macOS-15.7.9-arm64-arm-64bit-Mach-O |
 | [passed](runs/20260925T101844-2cf14b91409b.md) | 공개 지침 복구 계약 win32-x64 | 1d36069531a894895a3517a2937666069cfe346e | Windows-2025Server-10.0.26100-SP0 |
+| [passed](runs/20260925T172145-64c5254ac60c.md) | 실제 1회 압축 후 정상·보호 파일 시험 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181354-4f0865f90619.md) | 자동 압축 계측용 합성 자료 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T181711-5b1aebe7e5d6.md) | test.8 지침 훅 철회 뒤 재등록 회귀 재현 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181803-1dbbe3223733.md) | 지침 훅 철회 기록 검증 수정 빌드 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181840-cc599e8f8fa9.md) | 훅 철회 재등록 수정 후 지침 복구 계약 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181900-2b476a8cb458.md) | 철회 기록 수정 후 기존 훅 안전 경계 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181917-d2fe5391606b.md) | 훅 설정 검증 Rust 회귀 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T182015-c03f085dbcce.md) | 훅 설정 원문 스냅샷 Rust 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T182053-eaf2eaba2ee9.md) | 수정 실행 파일의 격리된 실제 훅 시험 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215029-1d760a16cc30.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215038-2c5d424013bb.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215052-05d001773f0b.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215208-748326b4ec6a.md) | 개발 검증: uv.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215213-9308ea48f9e2.md) | Python conformance: documentation, security, contract, integration, release | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215228-039393f72c7d.md) | 문맥 해제 뒤 훅 철회 재발 경로 수정 빌드 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215328-ac2cd2b48b22.md) | 문맥 해제 이력과 금지된 소유 경로 회귀 확인 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215447-f7c2db4f183c.md) | 철회와 문맥 해제 및 외부 위치 거부 회귀 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215538-2cd94557b554.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215541-090194080789.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215547-f2ecb9a24361.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260925T215657-29026331f670.md) | 개발 검증: uv.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260925T215659-13be3123a90e.md) | Python conformance: documentation, security, contract, integration, release | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T220029-910208470803.md) | 공식 호스트 연결의 기본 파일 도구 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T220158-4f8421a190fa.md) | 현재 권한 프로필의 합성 절대 경로 편집 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |

@@ -1,17 +1,16 @@
 # Aigent Hive 활성 계획
 
-> Revision: 366
-> 기준일: 2026-09-25
+> Revision: 367
+> 기준일: 2026-09-26
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: test.8 수용·실제 압축 시험 승인 대기
+> 현재 단계: test.9 준비
 > 공개 수용 완료: `0.11.0-test.8`; test.3 수용 보류, 미공개 test.4·5 취소
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 
 ## 현재 요청과 경계
 
-- [계획·지침 개선](active/planning-directive-efficiency.md): PDO 완료. 기존 훅 시험 승인 대기 유지
-
+- [계획·지침 개선](active/planning-directive-efficiency.md): PDO 완료. 수동 시험·철회 완료
 
 - 브랜치: `develop`; 초기 기준 `develop@87b84f42`, 작업 이력 통합 완료
 - 확정: 기존 기능·명령 유지, 핵심 지식 흐름 우선, Codex 검증 후 다른 호스트 확대
@@ -80,7 +79,6 @@
 
 ## Active fragments
 
-
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [directive-context-recovery-0.11.0.md](active/directive-context-recovery-0.11.0.md) | `DCR-*` | 지침 복구 |
@@ -104,7 +102,7 @@
 
 훅 상세 순서: `HK-001` 실패 분류·결과 합산 → `HK-002` 변환·진단·전달 → `HK-003` 실제 수용 → `HK-004` 보류 평가. `HK-005`는 `HK-001`과 기존 실행 결과 계약 뒤 구현, `RFK-002`는 문맥 유효성 소유.
 
-`PDO-001–003` 완료. 다음: `DCR-006`·`RFR-001` 승인 대기.
+`PDO-001–003` 완료. 다음: `DCR-006`·`RFR-001` 계측 대기.
 
 ### 이전 출시의 실행 순서
 

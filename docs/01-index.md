@@ -18,6 +18,7 @@ current catalog.
 | [License](licensing.md) | Apache-2.0 적용 범위 |
 | [Guidance schema](guidance-schema.md) | Consumer shared marker contract |
 | [사용자 경험 개선 후보](research/hive-user-experience-tips-2026-09-26.md) | 별도 조사 작업의 소스 비교·후속 후보 |
+| [0.11.0 출시 준비](plans/0.11.0-stable-readiness.md) | 수정 검증·다음 공개 시험·최종 준비 판정 |
 
 ## Architecture
 
