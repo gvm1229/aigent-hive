@@ -18,4 +18,4 @@ status: active
 
 # Session-Bound Reset-Only Control
 
-The request to resolve remaining 0.11.0 criteria added disable-reset-guard and enable-reset-guard. Disable requires its own confirmation and exact host/session/process binding. It preserves global policy, threshold and unknown-usage blocks, and cannot clear a pending reset. Both actions require fresh enforce; new bindings inherit no opt-out. Windows CLI regressions verify these boundaries. Periodic monitoring and active host interruption remain unverified.
+Reset detection is enabled by default. Increased usage blocks new automatic work at the next check until the user acknowledges the reset and a fresh check allows continuation. This is not continuous monitoring or interruption of running work. The 0.11.0 disable-reset-guard and enable-reset-guard actions use exact host/session/process binding. Disabling reset detection requires confirmation, preserves threshold and unknown-usage blocks, and cannot clear a pending reset. Both actions require fresh enforce; new bindings inherit no opt-out. Windows CLI regressions verify these boundaries.
