@@ -1,0 +1,41 @@
+{
+  "name": "Hive branch naming",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "~ALL"
+      ],
+      "exclude": [
+        "refs/heads/main",
+        "refs/heads/develop",
+        "refs/heads/feature/*",
+        "refs/heads/feature/**/*",
+        "refs/heads/fix/*",
+        "refs/heads/fix/**/*",
+        "refs/heads/release/*",
+        "refs/heads/release/**/*",
+        "refs/heads/docs/*",
+        "refs/heads/docs/**/*",
+        "refs/heads/test/*",
+        "refs/heads/test/**/*",
+        "refs/heads/refactor/*",
+        "refs/heads/refactor/**/*",
+        "refs/heads/build/*",
+        "refs/heads/build/**/*",
+        "refs/heads/chore/*",
+        "refs/heads/chore/**/*"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "creation"
+    },
+    {
+      "type": "update"
+    }
+  ]
+}

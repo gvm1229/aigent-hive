@@ -177,9 +177,13 @@ def main(arguments: Sequence[str] | None = None) -> int:
                     "pre-push does not accept targeted arguments; "
                     "use rust or python mode."
                 )
+            subprocess.run(
+                [sys.executable, str(ROOT / "scripts/branch-policy.py"), "current"],
+                cwd=ROOT, check=True,
+            )
             run_rust(())
             run_python(())
-    except DevCheckError as error:
+    except (DevCheckError, subprocess.CalledProcessError) as error:
         print(f"dev-check: {error}", file=sys.stderr)
         return 2
     return 0

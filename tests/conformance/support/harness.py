@@ -19,6 +19,14 @@ EXPECTED_ROOT = FIXTURE_ROOT / "expected"
 ACTION_RESULT_SCHEMA = json.loads(
     (REPOSITORY_ROOT / "schemas/action-result.schema.json").read_text(encoding="utf-8")
 )
+# Exact shipped companion inventory; never treat a whole references directory as owned.
+BUILTIN_REFERENCE_PATHS = (
+    "knowledge-capture/references/ingest.md",
+    "knowledge-recall/references/confidential.md",
+    "run-checkpoint/references/policy-review.md",
+    "usage-guard/references/control.md",
+    "usage-guard/references/sensors.md",
+)
 FRESH_HOOK_CAPABILITIES_PATH = Path(
     ".hive/runtime/current-capability-resolution.json"
 )

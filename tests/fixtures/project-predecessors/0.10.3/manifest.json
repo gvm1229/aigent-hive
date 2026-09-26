@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "product_version": "0.10.3",
+  "generation": "Official installed aigent-hive@0.10.3 setup CLI; synthetic user setup and repository capability fixture only",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "scenario": "available external detection with host-native owner; no external runtime invoked",
+  "archive": "codex-native-available.zip",
+  "sha256": "e56547a76cb4aed201aa7353a9643cc179a5cdc759459bccfbe660da293053e0",
+  "file_count": 69
+}

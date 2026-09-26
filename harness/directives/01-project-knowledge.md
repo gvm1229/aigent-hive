@@ -1,5 +1,8 @@
 # Project knowledge boundary
 
+- Apply the availability gate in `00-project-harness.md` first. Ordinary collaboration skips
+  Hive lookup, capture, indexing, and lint; leave canonical knowledge unchanged. Read existing
+  Markdown only as project documents and never claim a CLI operation succeeded.
 - Keep project canonical knowledge under `.hive/knowledge/{Raw,Wiki,Schema}`.
 - Use the configured user-root shared SQLite index as a disposable projection. A project-local
   `.hive/index/hive.sqlite3` belongs only to historical compatibility, not current setup.

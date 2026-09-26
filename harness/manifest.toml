@@ -162,6 +162,56 @@ pattern = ".claude/skills/*/SKILL.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
+[[paths]]
+pattern = ".agents/skills/usage-guard/references/control.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/usage-guard/references/sensors.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/knowledge-recall/references/confidential.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/knowledge-capture/references/ingest.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/usage-guard/references/control.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/usage-guard/references/sensors.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-recall/references/confidential.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-capture/references/ingest.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/run-checkpoint/references/policy-review.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/run-checkpoint/references/policy-review.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
 [[forbidden_paths]]
 pattern = ".omx/**"
 

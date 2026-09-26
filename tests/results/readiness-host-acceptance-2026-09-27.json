@@ -1,0 +1,92 @@
+{
+  "status": "product-evidence-passed",
+  "models": [
+    "gpt-6-astra"
+  ],
+  "fixed_task_scores": [
+    {
+      "normal_change": true,
+      "user_content": true,
+      "protected_unchanged": true,
+      "language": true,
+      "completion_fields": true
+    },
+    {
+      "normal_change": true,
+      "user_content": true,
+      "protected_unchanged": true,
+      "language": true,
+      "completion_fields": true
+    },
+    {
+      "normal_change": true,
+      "user_content": true,
+      "protected_unchanged": true,
+      "language": true,
+      "completion_fields": true
+    }
+  ],
+  "native_resume_checks": 3,
+  "native_children": 3,
+  "completed_parent_and_child_turns": 4,
+  "child_files": [
+    {
+      "name": "child-1.json",
+      "sha256": "c01540491f39b6ce84bb98fc2bf00a9ef52f646771fbcc9faf1496495e80cc8c"
+    },
+    {
+      "name": "child-2.json",
+      "sha256": "c01540491f39b6ce84bb98fc2bf00a9ef52f646771fbcc9faf1496495e80cc8c"
+    },
+    {
+      "name": "child-3.json",
+      "sha256": "c01540491f39b6ce84bb98fc2bf00a9ef52f646771fbcc9faf1496495e80cc8c"
+    }
+  ],
+  "first_input_tokens": {
+    "none": 23518,
+    "full": 25757,
+    "selected": 24044
+  },
+  "new_guidance_tokens": {
+    "full": 2239,
+    "selected": 526
+  },
+  "new_guidance_reduction": 0.7650736936132202,
+  "runner_status": "failed after final completed turn: measurement budget exceeded",
+  "reported_input_used": 1137263,
+  "budget": 1000000,
+  "budget_overrun": 137263,
+  "limits": [
+    "one fixed task per restoration condition, not universal adherence",
+    "token deltas are not billing savings",
+    "old collector lacks new subAgentActivity detail; native hook events, four completed turns, distinct usage contexts and exact files verified",
+    "offline verification does not change failed runner receipts"
+  ],
+  "schema_version": 1,
+  "host": "Windows 11 / Codex 0.158.0-alpha.2",
+  "public_package": "0.11.0-test.9",
+  "latency": {
+    "host": "Windows 11; generated PowerShell launcher, public test.9",
+    "samples_per_condition": 30,
+    "warmups_per_condition": 5,
+    "p95_ms": {
+      "without_context": 194.55119999838644,
+      "with_context": 194.75469999815687
+    },
+    "p95_increase_percent": 0.10459971450811345,
+    "all_normal_results_empty": true,
+    "model_calls": 0,
+    "actual_files_changed": false,
+    "passed": true,
+    "limit": "native command latency only, not model or app end-to-end latency"
+  },
+  "cleanup": {
+    "diagnostic_hook_definition_removed": true,
+    "original_state": "absent",
+    "removed_sha256": "sha256:90d94c33c3981daa80f213d4014650ae473057e29b97f6b550bdb4eea665b9f7",
+    "source_root_hook_absent": true,
+    "source_context_absent": true,
+    "global_trust_settings_modified": false
+  }
+}

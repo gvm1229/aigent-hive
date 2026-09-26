@@ -23,6 +23,7 @@ class PublicStableDocsTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
+        manifest = json.loads((ROOT / "docs/public-stable-release.json").read_text(encoding="utf-8"))
         for relative in (
             "README.md",
             "docs/public-stable-release.json",
@@ -30,7 +31,7 @@ class PublicStableDocsTest(unittest.TestCase):
             "docs/hive-install-guide.ko.html",
             "docs/overview/product.md",
             "docs/01-index.md",
-            "docs/releases/0.10.3.md",
+            manifest["release_notes"],
         ):
             source = ROOT / relative
             destination = root / relative
@@ -58,7 +59,10 @@ class PublicStableDocsTest(unittest.TestCase):
         self.assertEqual(result["exit_code"], 1)
         self.assertIn("prerelease-exposure", {item["code"] for item in result["failures"]})
 
-        readme.write_text(readme.read_text(encoding="utf-8").replace("version=0.10.3", "version=0.10.2"), encoding="utf-8")
+        manifest = json.loads((root / "docs/public-stable-release.json").read_text(encoding="utf-8"))
+        current = f"version={manifest['stable_version']}"
+        previous = f"version={manifest['previous_stable_version']}"
+        readme.write_text(readme.read_text(encoding="utf-8").replace(current, previous), encoding="utf-8")
         result = self.run_check(root)
         self.assertIn("stable-marker", {item["code"] for item in result["failures"]})
 

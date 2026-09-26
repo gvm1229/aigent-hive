@@ -6,11 +6,11 @@
 
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::judge::verify_authenticated_loop_quorum;
+use crate::run::{authorization_record_digest, DispatchAuthorizationRecord};
 use crate::run::{
     parse_options, portable_relative_path, read_explicit_file, required, run_path, AdapterError,
     FileSnapshot, PinnedTarget,
 };
-use crate::usage_control::read_installed_config;
 use cap_fs_ext::DirExt;
 use hive_core::loop_graph::{
     validate_loop_transition, CapabilitySupportLevel, EvidenceKind, EvidenceResult,
@@ -38,7 +38,6 @@ const MAX_TOTAL_GRAPH_CHAIN_BYTES: usize = 32 * 1024 * 1024;
 const MAX_PREPARED_BYTES: usize = 128 * 1024;
 const MAX_GRAPH_REVISIONS: u64 = 4096;
 const CAPABILITY_MAX_AGE_SECONDS: u64 = 60;
-const USAGE_CONTROL_PATH_BYTES: usize = 16 * 1024;
 
 const LOOP_USAGE: &str = "\
 Manage a durable prepare-only loop graph.
@@ -162,6 +161,8 @@ struct UsageAuthorizationEnvelope {
     dispatch_authorization_locator: String,
     dispatch_authorization_digest: String,
     usage_evidence_digest: String,
+    #[serde(default)]
+    user_root: Option<PathBuf>,
     session_id: String,
     session_id_digest: String,
     process_id: u32,
@@ -217,48 +218,6 @@ struct PreparedDispatchRecord {
     capability_resolution_digest: String,
     capability_resolution_file_digest: String,
     run_status_digest: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-struct DispatchAuthorizationRecord {
-    schema_version: u32,
-    authorization_id: String,
-    run_id: String,
-    status_revision: u64,
-    role_id: String,
-    brief_digest: String,
-    usage_evidence_digest: String,
-    state: String,
-    record_digest: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct UsageSessionControl {
-    schema_version: u32,
-    host_scope: String,
-    session_id_digest: String,
-    process_id: u32,
-    guard_enabled: bool,
-    revision: u64,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct UsageHaltMarker {
-    schema_version: u32,
-    host_scope: String,
-    session_id_digest: String,
-    process_id: u32,
-    decision: String,
-    selected_window: String,
-    threshold_remaining_percent: u8,
-    #[serde(default)]
-    policy_digest: Option<String>,
-    measured_at: u64,
-    evidence_digest: String,
-    revision: u64,
 }
 
 struct LoadedGraphChain {
@@ -1644,7 +1603,7 @@ fn authenticate_prepared_attempt(
         )
         .into());
     }
-    verify_usage_session_state(target, &envelope, &capability)?;
+    let session_guard_digest = verify_usage_session_state(target, &envelope, &capability)?;
 
     let (status, status_bytes) = load_dispatch_status(target, historical, &selected, &capability)?;
     if sha256_digest(&status_bytes) != record.run_status_digest {
@@ -1667,6 +1626,7 @@ fn authenticate_prepared_attempt(
         &status,
         &selected,
         &envelope,
+        &session_guard_digest,
     )?;
     if authorization_digest != record.dispatch_authorization_digest {
         return Err(AdapterError::Verification(
@@ -1982,86 +1942,28 @@ fn session_scope_digest(host_scope: &str, session_id: &str) -> String {
     sha256_digest(&material)
 }
 
-fn usage_session_root(session_id_digest: &str) -> Result<PathBuf, LoopCliError> {
-    require_digest(session_id_digest, "usage session digest")?;
-    let hex = session_id_digest
-        .strip_prefix("sha256:")
-        .expect("validated digest has a prefix");
-    Ok(Path::new(".hive/runtime/usage-guard/sessions").join(hex))
-}
-
 fn verify_usage_session_state(
     target: &PinnedTarget,
     envelope: &UsageAuthorizationEnvelope,
     capability: &CapabilityResolution,
-) -> Result<(), LoopCliError> {
-    let config = read_installed_config(target)?;
-    let capability_host = serde_json::to_value(capability.host)
+) -> Result<String, LoopCliError> {
+    let host = serde_json::to_value(capability.host)
         .ok()
         .and_then(|value| value.as_str().map(str::to_owned))
         .ok_or_else(|| AdapterError::Internal("cannot encode capability host".to_owned()))?;
-    if !config.guard_enabled || config.primary_host != capability_host {
-        return Err(AdapterError::OwnerBlocked(
-            "installed usage guard is disabled or bound to another host".to_owned(),
-        )
-        .into());
-    }
-    let expected_session = session_scope_digest(&config.primary_host, &envelope.session_id);
-    if envelope.session_id_digest != expected_session {
+    if envelope.session_id_digest != session_scope_digest(&host, &envelope.session_id) {
         return Err(AdapterError::Verification(
             "usage authorization session binding is invalid".to_owned(),
         )
         .into());
     }
-    let root = usage_session_root(&expected_session)?;
-    let control_path = root.join("control.json");
-    if let Some(bytes) = target.read_optional(&control_path, USAGE_CONTROL_PATH_BYTES)? {
-        let control: UsageSessionControl = parse_json(&bytes, "usage session control")?;
-        if control.schema_version != 1
-            || control.revision == 0
-            || control.host_scope != config.primary_host
-            || control.session_id_digest != expected_session
-            || control.process_id != envelope.process_id
-            || !control.guard_enabled
-        {
-            return Err(AdapterError::OwnerBlocked(
-                "usage session control is stale, disabled, or incorrectly bound".to_owned(),
-            )
-            .into());
-        }
-    }
-    let halt_path = root.join("halt.json");
-    if let Some(bytes) = target.read_optional(&halt_path, USAGE_CONTROL_PATH_BYTES)? {
-        let halt: UsageHaltMarker = parse_json(&bytes, "usage halt marker")?;
-        if !matches!(halt.schema_version, 1 | 2)
-            || halt.revision == 0
-            || halt.host_scope != config.primary_host
-            || halt.session_id_digest != expected_session
-            || halt.process_id != envelope.process_id
-            || !matches!(halt.decision.as_str(), "halted" | "usage-unknown")
-            || !matches!(
-                halt.selected_window.as_str(),
-                "session" | "weekly" | "multiple" | "unknown"
-            )
-            || !(1..=99).contains(&halt.threshold_remaining_percent)
-            || halt
-                .policy_digest
-                .as_deref()
-                .is_some_and(|digest| require_digest(digest, "usage policy digest").is_err())
-            || (halt.schema_version == 2 && halt.policy_digest.is_none())
-            || halt.measured_at == 0
-            || require_digest(&halt.evidence_digest, "usage halt evidence digest").is_err()
-        {
-            return Err(
-                AdapterError::Safety("usage halt marker is malformed or stale".to_owned()).into(),
-            );
-        }
-        return Err(AdapterError::OwnerBlocked(
-            "usage session is halted and cannot authorize loop preparation".to_owned(),
-        )
-        .into());
-    }
-    Ok(())
+    Ok(crate::usage_control::current_dispatch_binding(
+        target,
+        &host,
+        &envelope.session_id,
+        envelope.process_id,
+        envelope.user_root.as_deref(),
+    )?)
 }
 
 fn dispatch_authorization_path(
@@ -2097,24 +1999,6 @@ fn dispatch_authorization_path(
     Ok(path)
 }
 
-fn authorization_record_digest(
-    record: &DispatchAuthorizationRecord,
-) -> Result<String, LoopCliError> {
-    let payload = json!({
-        "schema_version": record.schema_version,
-        "authorization_id": record.authorization_id,
-        "run_id": record.run_id,
-        "status_revision": record.status_revision,
-        "role_id": record.role_id,
-        "brief_digest": record.brief_digest,
-        "usage_evidence_digest": record.usage_evidence_digest,
-        "state": record.state,
-    });
-    let bytes = serde_json_canonicalizer::to_vec(&payload)
-        .map_err(|error| AdapterError::Internal(error.to_string()))?;
-    Ok(sha256_digest(&bytes))
-}
-
 fn verify_dispatch_authorization(
     target: &PinnedTarget,
     current: &LoopGraphDocument,
@@ -2123,7 +2007,7 @@ fn verify_dispatch_authorization(
     envelope: &UsageAuthorizationEnvelope,
     capability: &CapabilityResolution,
 ) -> Result<String, LoopCliError> {
-    verify_usage_session_state(target, envelope, capability)?;
+    let session_guard_digest = verify_usage_session_state(target, envelope, capability)?;
     let expected_id = format!("sha256:{}", envelope.evidence_id);
     let relative =
         dispatch_authorization_path(&envelope.dispatch_authorization_locator, &expected_id)?;
@@ -2135,6 +2019,7 @@ fn verify_dispatch_authorization(
         status,
         selected,
         envelope,
+        &session_guard_digest,
     )
 }
 
@@ -2145,6 +2030,7 @@ fn authenticate_dispatch_authorization_record(
     status: &RunStatusDocument,
     selected: &SelectedDispatch,
     envelope: &UsageAuthorizationEnvelope,
+    session_guard_digest: &str,
 ) -> Result<String, LoopCliError> {
     let expected_id = format!("sha256:{}", envelope.evidence_id);
     let file_digest = sha256_digest(bytes);
@@ -2165,7 +2051,15 @@ fn authenticate_dispatch_authorization_record(
         },
         |role| role == record.role_id,
     );
-    if record.schema_version != 1
+    let valid_session = match (
+        record.schema_version,
+        record.session_guard_digest.as_deref(),
+    ) {
+        (1, None) => true,
+        (2, Some(digest)) => digest == session_guard_digest,
+        _ => false,
+    };
+    if !valid_session
         || record.authorization_id != expected_id
         || record.run_id != current.graph().run_id
         || record.status_revision != status.status().revision
@@ -2717,6 +2611,16 @@ mod tests {
         kind: LoopDispatchKind,
         brief_digest: &str,
     ) -> LoopGraphDocument {
+        usage_checkpoint_version(fixture, kind, brief_digest, 2)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn usage_checkpoint_version(
+        fixture: &Fixture,
+        kind: LoopDispatchKind,
+        brief_digest: &str,
+        schema_version: u32,
+    ) -> LoopGraphDocument {
         let initial_digest = fixture.initial.canonical_digest().expect("initial digest");
         let authorization_binding = json!({
             "run_id": RUN_ID,
@@ -2736,13 +2640,23 @@ mod tests {
             format!(".hive/runtime/dispatch-authorizations/{evidence_id}.json");
         let usage_evidence_digest = digest("usage-observation");
         let mut authorization = DispatchAuthorizationRecord {
-            schema_version: 1,
+            schema_version,
             authorization_id,
             run_id: RUN_ID.to_owned(),
             status_revision: 1,
             role_id: "exec-a".to_owned(),
             brief_digest: brief_digest.to_owned(),
             usage_evidence_digest: usage_evidence_digest.clone(),
+            session_guard_digest: (schema_version == 2).then(|| {
+                crate::usage_control::current_dispatch_binding(
+                    &PinnedTarget::open(&fixture.target).expect("target"),
+                    "antigravity",
+                    "loop-session",
+                    4242,
+                    None,
+                )
+                .expect("session binding")
+            }),
             state: "issued".to_owned(),
             record_digest: String::new(),
         };
@@ -3174,6 +3088,44 @@ mod tests {
     }
 
     #[test]
+    fn legacy_authorization_remains_readable() {
+        let fixture = fixture(CapabilitySupportLevel::Supported);
+        initialize_fixture(&fixture);
+        let brief = digest("legacy-brief");
+        let current = usage_checkpoint_version(&fixture, LoopDispatchKind::Node, &brief, 1);
+        let request = prepare_request(&fixture, &current, &brief);
+        assert!(prepare((fixture.target.clone(), request)).is_ok());
+    }
+
+    #[test]
+    fn session_bound_authorization_rejects_policy_and_control_drift() {
+        for drift in ["policy", "control"] {
+            let fixture = fixture(CapabilitySupportLevel::Supported);
+            initialize_fixture(&fixture);
+            let brief = digest("v2-brief");
+            let current = usage_checkpoint(&fixture, LoopDispatchKind::Node, &brief);
+            if drift == "policy" {
+                let path = fixture.target.join(".hive/config/harness.toml");
+                let text = fs::read_to_string(&path).expect("config");
+                fs::write(path, text.replace("percent = 60", "percent = 61"))
+                    .expect("policy drift");
+            } else {
+                let path = fixture_usage_session_root(&fixture).join("control.json");
+                let mut value: serde_json::Value =
+                    serde_json::from_slice(&fs::read(&path).expect("control")).expect("json");
+                value["revision"] = json!(2);
+                fs::write(path, serde_json::to_vec(&value).expect("bytes")).expect("control drift");
+            }
+            let request = prepare_request(&fixture, &current, &brief);
+            assert!(
+                prepare((fixture.target.clone(), request)).is_err(),
+                "{drift}"
+            );
+            assert!(!fixture_prepared_path(&fixture, &brief).exists());
+        }
+    }
+
+    #[test]
     fn usage_halt_blocks_prepare_without_mutation() {
         let fixture = fixture(CapabilitySupportLevel::Supported);
         initialize_fixture(&fixture);
@@ -3212,6 +3164,7 @@ mod tests {
         let capability =
             CapabilityResolution::parse_json(&capability_bytes).expect("capability resolution");
         let envelope = UsageAuthorizationEnvelope {
+            user_root: None,
             schema_version: 1,
             evidence_id: "usage-a".to_owned(),
             run_id: RUN_ID.to_owned(),

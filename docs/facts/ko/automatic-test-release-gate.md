@@ -9,12 +9,12 @@ summary: "완료된 승인 제품 milestone의 시험판 자동 게시·수용, 
 tags: [automation, product, release]
 aliases: ["번호 공개 시험 gate"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:8d3afcb2e885232dcb7e7775d55d0b48477358ddbc0266ff4a48de80af34e9fc"
-  - "repo:.github/workflows/release.yml#sha256:0b800d9f74b331f34aad1507b57129fb319fdf49934815026c6352c6aa91a5d7"
-  - "repo:docs/public-test-product.json#sha256:49618a685025c503a181eb64adf966b8eac0bf9e379d3ae0c83589964b946259"
-  - "repo:scripts/check-test-release-gate.py#sha256:0a7210197e8f84665d089c0e6bad0ea2f88b7f858ce1f65a25532307e36b4007"
+  - "repo:.agents/directives/references/ci-and-candidates.md#sha256:0de7ded9fe08a1e1e2ff78c4653c3781a8b492b59e6f9498ed07f89a5a56c18a"
+  - "repo:.github/workflows/release.yml#sha256:993bf1709b27d5f6f5c18df46dab392fbb44570ecb3fcc9e0c4bd321fc5dc664"
+  - "repo:docs/public-test-product.json#sha256:5c8c2bf9f0e1b3d5134ee61ba4d8312ec2deaec369bf13e45d56384d97640dd2"
+  - "repo:scripts/check-test-release-gate.py#sha256:75a37fd28d2aaf302c7079088b54c4cedb4060bd4497f4aa9219198ff024ce95"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:97928e522edbad00c2fc5c137f246c15fcad06a5"
+reviewed_revision: "git:dd63333a702a7a89585d101d2b9d043ebd0987d8"
 status: active
 ---
 

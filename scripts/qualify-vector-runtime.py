@@ -7,6 +7,7 @@ The ordinary conformance suite tests this runner without downloading models.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -14,6 +15,7 @@ from pathlib import Path
 import platform
 import signal
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -211,7 +213,8 @@ class WindowsChildObserver:
     def image(self, handle):
         value, length = self.c.create_unicode_buffer(32768), self.w.DWORD(32768)
         if not self.api.QueryFullProcessImageNameW(handle,0,value,self.c.byref(length)):
-            raise OSError("cannot inspect native child image")
+            code = self.c.get_last_error()
+            raise OSError(f"cannot inspect native child image (Win32 {code})")
         return value.value
 
     def memory(self, handle):
@@ -246,7 +249,10 @@ class WindowsChildObserver:
                 transferred = True
                 return result
             except OSError:
-                if not self.live(candidate):
+                # During process teardown Windows can deny image/memory queries before
+                # the held handle becomes signaled. Only proven exit permits a skip;
+                # a still-live or uninspectable handle remains a qualification failure.
+                if self.api.WaitForSingleObject(candidate,100) == 0:
                     continue
                 raise
             finally:
@@ -258,6 +264,54 @@ class WindowsChildObserver:
 def require_live_windows_child(api, handle):
     if api.WaitForSingleObject(handle, 0) != 258:  # WAIT_TIMEOUT: still running.
         raise RuntimeError("native child already exited; cancellation is inconclusive")
+
+
+def diagnose_source_worker(source: Path) -> dict:
+    """One synthetic replay, never acceptance or a retry of the failed CLI operation."""
+    control = json.loads((source / ".agents/work/vector-control/runtime.json").read_text("utf-8"))["current"]
+    root = source / ".agents/work/vector/runtimes" / control["id"]
+    helper = root / "vector_helper.py"
+    if digest(helper) != digest(ROOT / "crates/hive-cli/src/vector_helper.py"):
+        raise ValueError("diagnostic requires the unchanged qualified helper")
+    index = source / ".agents/work/source-wiki/index.sqlite3"
+    with closing(sqlite3.connect(index.as_uri() + "?mode=ro", uri=True)) as connection:
+        rows = connection.execute("SELECT path,content_hash,title,body FROM pages WHERE language='en' ORDER BY path").fetchall()
+        manifest = connection.execute("SELECT value FROM meta WHERE key='logical_digest'").fetchone()[0]
+    if len(rows) != 81:
+        raise ValueError("diagnostic requires the frozen 81-page source fixture")
+    scopes = root.parent.parent / "scopes"
+    identity = hashlib.sha256(b"qualification-worker-diagnostic").hexdigest()
+    scope = scopes / identity
+    scope.mkdir()  # Refuse reuse; the failed CLI's staging and control remain untouched.
+    request = {"schema_version":1, "action":"build", "runtime":str(root),
+               "database":str(scope / "staging.sqlite3"), "expected_database_digest":None,
+               "chunks":[dict(zip(("chunk_id","digest","title","text"), row)) for row in rows],
+               "contract_digest":control["contract_digest"], "manifest_digest":manifest,
+               "workers":1, "max_seconds":1}
+    environment = {key:os.environ[key] for key in ("SYSTEMROOT","WINDIR","COMSPEC","LANG","LC_ALL") if key in os.environ}
+    environment.update({key:str(root / "tmp") for key in ("TEMP","TMP","TMPDIR")})
+    guard = (ROOT / "crates/hive-cli/src/vector_parent.py").read_text("utf-8")
+    code = guard + f"\n_hive_bind_parent({os.getpid()})\n_hive_run_verified_file({str(helper)!r}, {digest(helper)!r})"
+    process = subprocess.Popen([control["python"],"-I","-S","-B","-c",code],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=environment)
+    try:
+        stdout, stderr = process.communicate(json.dumps(request).encode("utf-8"), timeout=90)
+    except subprocess.TimeoutExpired:
+        stop_cli_tree(process)
+        process.communicate(timeout=10)
+        return {"status":"timeout", "limit":"diagnostic only; original qualification remains failed"}
+    try:
+        value = json.loads(stdout)
+    except (ValueError, UnicodeDecodeError):
+        value = {}
+    names = {"Exception","MemoryError","ValueError","RuntimeError","ImportError","ModuleNotFoundError",
+             "OperationalError","FileNotFoundError","PermissionError","KeyError","TypeError","AttributeError",
+             "IndexError","OSError","DatabaseError","IntegrityError","OverflowError","Fail","InvalidArgument",
+             "NoSuchFile","RuntimeException","InvalidProtobuf","NotImplemented","AssertionError","SystemError"}
+    return {"exit_code":process.returncode, "success_json":value.get("status") == "success",
+            "error_type":value.get("error_type") if value.get("error_type") in names else "unknown",
+            "stdout_bytes":len(stdout), "stderr_bytes":len(stderr), "helper_sha256":digest(helper),
+            "limit":"diagnostic only; original qualification remains failed"}
 
 
 def cleanup_windows_cancellation(parent, handle, api, record, save):
@@ -589,7 +643,15 @@ class Qualification:
         python = str(Path(sys.executable).resolve())
         preview = self.call("source-wiki", "vector", "preview", *scope, "--python", python)
         enabled = self.call("source-wiki", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
-        built, resumed = self.source_rebuild(scope)
+        try:
+            built, resumed = self.source_rebuild(scope)
+        except Exception:
+            try:
+                self.report["source_worker_diagnostic"] = diagnose_source_worker(source)
+            except Exception as error:
+                self.report["source_worker_diagnostic"] = {"status":"unavailable", "error_type":type(error).__name__}
+            self.save()
+            raise
         assert built["complete"] and built["chunks"] == 81
         assert self.call("source-wiki", "vector", "status", *scope)["index_ready"]
         found = self.call(*query)

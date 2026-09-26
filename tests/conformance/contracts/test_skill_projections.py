@@ -166,7 +166,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     / "usage-guard/SKILL.md"
                 ).read_text(encoding="utf-8")
                 self.assertIn("hive usage enforce", agents)
-                self.assertIn("Immediately before automatic dispatch", agents)
+                self.assertIn("immediately before automatic dispatch", agents.lower())
+                self.assertIn("In Hive-enabled mode, require the installed session-bound", agents)
+                self.assertIn("Hive installation is optional for collaborators", agents)
                 self.assertIn("authorized `hive run resume`", agents)
                 self.assertIn("never authorizes dispatch", agents)
                 for required in (
@@ -188,7 +190,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 self.assertNotIn("start a watcher", agents)
                 self.assertIn(
                     "illustrative rather than a finite phrase",
-                    skill,
+                    (self.discovery_root(target, host) / "usage-guard/references/control.md").read_text(encoding="utf-8"),
                 )
 
     def test_catalog_only_skills_are_not_discoverable(self) -> None:

@@ -19,6 +19,9 @@ KNOWLEDGE_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "knowledge.rs"
 LOOP_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "loop_engineering.rs"
 
 EXPECTED_ACTIONS = {
+    "EvaluatePolicy",
+    "ConfigurePolicyHooks",
+    "ReviewPolicyCandidate",
     "UnknownAction",
     "SetupHarness",
     "SetupHiveUser",
@@ -226,6 +229,19 @@ class LoopActionResultCliTests(unittest.TestCase):
             schema,
             format_checker=FormatChecker(),
         )
+
+    def test_policy_review_route_rejects_source_with_schema_valid_no_write_result(self) -> None:
+        process = subprocess.run(
+            [str(self.hive_binary), "run", "policy-review", "list", "--target", str(ROOT),
+             "--run", "synthetic-review", "--output", "json"],
+            cwd=ROOT, check=False, capture_output=True, text=True,
+        )
+        result = json.loads(process.stdout)
+        self.validator.validate(result)
+        self.assertEqual(result["action"], "ReviewPolicyCandidate")
+        self.assertNotEqual(process.returncode, 0)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertFalse((ROOT / ".hive/runs/synthetic-review").exists())
 
     def test_every_loop_action_emits_a_complete_schema_valid_result(self) -> None:
         for arguments, expected_action in LOOP_COMMAND_ACTIONS.items():

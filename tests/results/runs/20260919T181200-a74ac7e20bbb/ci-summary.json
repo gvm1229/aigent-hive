@@ -1,0 +1,27 @@
+{
+  "databaseId": 35459853827,
+  "headSha": "83ac6eb8f2ea6811187bb459bfb746a5b571849e",
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/gvm1229/aigent-hive/actions/runs/35459853827",
+  "jobs": {
+    "Classify tracked change risk": "success",
+    "Rust (Linux full)": "success",
+    "Transfer producer (macos-latest)": "success",
+    "Contract and Copier conformance": "success",
+    "Platform smoke (macos-latest)": "success",
+    "Platform smoke (windows-latest)": "success",
+    "Conformance (Linux · integration)": "success",
+    "Transfer producer (windows-latest)": "success",
+    "Conformance (Linux · contract)": "success",
+    "Conformance (Linux · release)": "success",
+    "Conformance (Linux · security)": "success",
+    "Conformance (Linux · documentation)": "success",
+    "Documentation-only conformance": "skipped",
+    "Transfer windows-latest to ubuntu-latest": "success",
+    "Transfer macos-latest to windows-latest": "success",
+    "Transfer windows-latest to macos-latest": "success",
+    "Protected merge gate": "success"
+  },
+  "limits": "Code and cross-OS data-transfer qualification only; no native AI-host hooks, cancellation, quota reset, or periodic interruption acceptance."
+}

@@ -172,6 +172,18 @@ fn three_way_merge_with_policy(
     if let Some(outcome) = resolve_trivial_merge(base, local, incoming) {
         return Ok(outcome);
     }
+    if policy == MergePolicy::HiveDirective {
+        if let (Some(local), Some(incoming)) = (local, incoming) {
+            if same_text_line_endings(base, local) {
+                return Ok(MergeOutcome {
+                    bytes: Some(incoming.to_vec()),
+                    disposition: MergeDisposition::IncomingReplace,
+                    omitted_incoming_hunks: 0,
+                    local_priority: false,
+                });
+            }
+        }
+    }
     let Some(local) = local else {
         return Ok(MergeOutcome {
             bytes: None,
@@ -277,8 +289,24 @@ fn merge_changed_text(
     let base_lines = lines(base_text);
     let local_lines = lines(local_text);
     let incoming_lines = lines(incoming_text);
-    let mut local_edits = diff_edits(&base_lines, &local_lines, true, path)?;
-    let incoming_edits = diff_edits(&base_lines, &incoming_lines, false, path)?;
+    let directive_alignment = policy == MergePolicy::HiveDirective;
+    let mut preserved_base_lines = base_lines.clone();
+    let mut local_edits = diff_edits(
+        &base_lines,
+        &local_lines,
+        true,
+        path,
+        directive_alignment,
+        Some(&mut preserved_base_lines),
+    )?;
+    let incoming_edits = diff_edits(
+        &base_lines,
+        &incoming_lines,
+        false,
+        path,
+        directive_alignment,
+        None,
+    )?;
     let mut omitted = 0;
     for incoming_edit in incoming_edits {
         let overlaps = local_edits
@@ -310,20 +338,28 @@ fn merge_changed_text(
         }
     }
     local_edits.sort_by_key(|edit| (edit.start, edit.end, !edit.local));
-    let local_priority = local_edits.iter().any(|edit| edit.local);
+    let mut local_priority = local_edits.iter().any(|edit| edit.local);
     let mut merged = String::new();
     let mut cursor = 0;
     for edit in local_edits {
-        for line in &base_lines[cursor..edit.start] {
-            merged.push_str(line);
+        for (base_line, local_line) in base_lines[cursor..edit.start]
+            .iter()
+            .zip(&preserved_base_lines[cursor..edit.start])
+        {
+            local_priority |= base_line != local_line;
+            merged.push_str(local_line);
         }
         for line in edit.replacement {
             merged.push_str(&line);
         }
         cursor = edit.end;
     }
-    for line in &base_lines[cursor..] {
-        merged.push_str(line);
+    for (base_line, local_line) in base_lines[cursor..]
+        .iter()
+        .zip(&preserved_base_lines[cursor..])
+    {
+        local_priority |= base_line != local_line;
+        merged.push_str(local_line);
     }
     validate_typed_merge_result(path, base, local, incoming, merged.as_bytes())?;
     Ok(MergeOutcome {
@@ -389,11 +425,31 @@ fn lines(text: &str) -> Vec<String> {
     }
 }
 
+fn line_key(line: &[u8]) -> (&[u8], bool) {
+    match line.strip_suffix(b"\n") {
+        Some(content) => (content.strip_suffix(b"\r").unwrap_or(content), true),
+        None => (line, false),
+    }
+}
+
+fn same_text_line_endings(left: &[u8], right: &[u8]) -> bool {
+    left.split_inclusive(|byte| *byte == b'\n')
+        .map(line_key)
+        .eq(right.split_inclusive(|byte| *byte == b'\n').map(line_key))
+}
+
+fn same_line(left: &str, right: &str, directive_alignment: bool) -> bool {
+    left == right
+        || (directive_alignment && line_key(left.as_bytes()) == line_key(right.as_bytes()))
+}
+
 fn diff_edits(
     base: &[String],
     variant: &[String],
     local: bool,
     path: &Path,
+    directive_alignment: bool,
+    mut preserved_base: Option<&mut [String]>,
 ) -> Result<Vec<Edit>, UpdateError> {
     let rows = base.len().saturating_add(1);
     let columns = variant.len().saturating_add(1);
@@ -410,18 +466,25 @@ fn diff_edits(
     let index = |row: usize, column: usize| row * columns + column;
     for row in (0..base.len()).rev() {
         for column in (0..variant.len()).rev() {
-            lcs[index(row, column)] = if base[row] == variant[column] {
-                lcs[index(row + 1, column + 1)] + 1
-            } else {
-                lcs[index(row + 1, column)].max(lcs[index(row, column + 1)])
-            };
+            lcs[index(row, column)] =
+                if same_line(&base[row], &variant[column], directive_alignment) {
+                    lcs[index(row + 1, column + 1)] + 1
+                } else {
+                    lcs[index(row + 1, column)].max(lcs[index(row, column + 1)])
+                };
         }
     }
     let mut edits = Vec::new();
     let mut row = 0;
     let mut column = 0;
     while row < base.len() || column < variant.len() {
-        if row < base.len() && column < variant.len() && base[row] == variant[column] {
+        if row < base.len()
+            && column < variant.len()
+            && same_line(&base[row], &variant[column], directive_alignment)
+        {
+            if let Some(preserved) = preserved_base.as_deref_mut() {
+                preserved[row].clone_from(&variant[column]);
+            }
             row += 1;
             column += 1;
             continue;
@@ -429,7 +492,10 @@ fn diff_edits(
         let start = row;
         let mut replacement = Vec::new();
         while row < base.len() || column < variant.len() {
-            if row < base.len() && column < variant.len() && base[row] == variant[column] {
+            if row < base.len()
+                && column < variant.len()
+                && same_line(&base[row], &variant[column], directive_alignment)
+            {
                 break;
             }
             if column < variant.len()
@@ -745,6 +811,122 @@ fn typed_compatibility_conflict(path: &Path, location: &str, reason: &str) -> Up
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn directive_crlf_only_local_keeps_new_insertions() {
+        let base = b"# Hive\nold rule\n";
+        let local = b"# Hive\r\nold rule\r\n";
+        let incoming = b"# Hive\nnew rule\nold rule\n";
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(result.bytes.as_deref(), Some(incoming.as_slice()));
+        assert_eq!(result.omitted_incoming_hunks, 0);
+        assert!(!result.local_priority);
+        let generic = three_way_merge(
+            Path::new("SKILL.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(generic.bytes.as_deref(), Some(local.as_slice()));
+        assert_eq!(generic.omitted_incoming_hunks, 1);
+    }
+
+    #[test]
+    fn directive_crlf_alignment_preserves_mixed_local_bytes_and_final_newline_choice() {
+        let base = b"# Hive\nanchor\nend\n";
+        let local = b"# Hive\r\nuser note\r\nanchor\nend";
+        let incoming = b"# Hive\nnew rule\nanchor\nend\n";
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(
+            result.bytes.as_deref(),
+            Some(b"# Hive\r\nuser note\r\nnew rule\nanchor\nend".as_slice())
+        );
+        assert!(result.local_priority);
+        let unchanged = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(base),
+        )
+        .unwrap();
+        assert_eq!(unchanged.bytes.as_deref(), Some(local.as_slice()));
+    }
+
+    #[test]
+    fn directive_crlf_safety_replacement_retains_local_note() {
+        let base = b"# Hive\n- Never bypass ownership.\nfooter\n";
+        let local = b"# Hive\r\n- Allow bypass.\r\n- User note.\r\nfooter\r\n";
+        let incoming = b"# Hive\n- Never bypass ownership without proof.\nfooter\n";
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(
+            result.bytes.as_deref(),
+            Some(
+                b"# Hive\r\n- Never bypass ownership without proof.\n- User note.\r\nfooter\r\n"
+                    .as_slice()
+            )
+        );
+        assert_eq!(result.omitted_incoming_hunks, 0);
+    }
+
+    #[test]
+    fn directive_crlf_alignment_handles_duplicate_lines_without_moving_user_text() {
+        let base = b"same\nsame\nend\n";
+        let local = b"same\r\nuser note\r\nsame\nend\r\n";
+        let incoming = b"same\nsame\nnew rule\nend\n";
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(
+            result.bytes.as_deref(),
+            Some(b"same\r\nuser note\r\nsame\nnew rule\nend\r\n".as_slice())
+        );
+    }
+
+    #[test]
+    fn directive_line_ending_equivalence_does_not_remove_spaces_or_bare_cr() {
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(b"a\nb\n"),
+            Some(b"a \r\nb\r\n"),
+            Some(b"a\nb\nnew\n"),
+        )
+        .unwrap();
+        assert_eq!(
+            result.bytes.as_deref(),
+            Some(b"a \r\nb\r\nnew\n".as_slice())
+        );
+        let result = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(b"a"),
+            Some(b"a\r"),
+            Some(b"a\nnew\n"),
+        )
+        .unwrap();
+        assert_eq!(result.bytes.as_deref(), Some(b"a\r".as_slice()));
+    }
 
     #[test]
     fn unmodified_local_uses_incoming_exactly() {

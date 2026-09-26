@@ -9,15 +9,15 @@ summary: "직접 사용자 편집 통제 주장 없이 작은 경로 점유로 �
 tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d5e36f5d1cb6080fa7952b1cf4354e7d54f0df12bc0799d758ced53d7f083b84"
-  - "repo:crates/hive-cli/src/session.rs#sha256:affa286cb1b1d23c2de042061af7092a89a137f1a1a5fa5762cc92bd5897e7af"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:08d4aa0959ccc377a3f96a4c6f37df6f71c1473a271b406f7eb3b214f860cf0c"
+  - "repo:crates/hive-cli/src/session.rs#sha256:a41fd95ca2576269d347b4635afa064dc9dc53a70d96434daef1eb819e0fbf19"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:9f234ef3fede8030ab6ad57fa4b560a71f30f468622c4e4ad56b83864d0e05ce"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
-  - "repo:harness/directives/03-session-coordination.md#sha256:06736ffa5a1619bc238a39ecad068ae85b2136a8e33ccb0829badf932d8c19f3"
-  - "repo:harness/skills/project-setup/SKILL.md#sha256:aef70c66a054607e84288fa44f5fefca3c089515d41cb0c06934498ebbf31ca1"
-  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:fc626751405c437f8340a18465b60b7c8897fa560796fe37f8f1d82d287b52c9"
+  - "repo:harness/directives/03-session-coordination.md#sha256:bdef62f4f837e3c0c84a794a9f4c7bca1b8947a92b5b3ea66ff8314bb2c7dfec"
+  - "repo:harness/skills/project-setup/SKILL.md#sha256:a13ed7be45b3ee507f77517df44200513242ed54dc97e2137433eb8cefbaa428"
+  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:d6dfa03cb07c6614de21c11144490424f191c6f0f77403e08e48a95fd185e4e0"
 links: [knowledge-preservation, project-onboarding]
-reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
+reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
 ---
 

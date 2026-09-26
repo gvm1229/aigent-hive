@@ -1,5 +1,8 @@
 # Project harness upgrade
 
+- Apply the availability gate in `00-project-harness.md` first. Without ready local Hive,
+  leave the harness unchanged and report the prerequisite only for a requested upgrade.
+  Ordinary collaboration never triggers setup or upgrade.
 - Use `hive project upgrade --scan` before changing a release-generated directive or Skill.
 - Authenticate the exact base recorded by the installed projection state.
 - Replace an unmodified local file exactly with incoming bytes.

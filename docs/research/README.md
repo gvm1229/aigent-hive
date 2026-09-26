@@ -1,5 +1,11 @@
 # Research index
 
+- [계획 인계와 지침 읽기 개선](planning-directive-efficiency-2026-09-25.md)
+
+- [0.11.0 지침 복구 구현 검증](directive-context-implementation-0.11.0.md)
+
+- [반복 압축 뒤 지침 복구와 훅 활용 조사](directive-context-hooks-2026-09-25.md)
+
 - [0.10.2 사용량 보호 재발 원인·과거 수정·복구 수용 조건](usage-guard-recurrence-0.10.2.md)
 
 현재 계획에 영향을 준 외부 근거:

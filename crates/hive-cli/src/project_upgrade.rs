@@ -954,6 +954,16 @@ fn apply_with_failure_after(
     let mut applied = Vec::new();
     let result = (|| {
         for (index, path) in plan.changed_paths.iter().enumerate() {
+            #[cfg(debug_assertions)]
+            if std::env::var("HIVE_PROJECT_UPGRADE_INTERRUPT_AFTER")
+                .ok()
+                .and_then(|value| value.parse::<usize>().ok())
+                == Some(index)
+            {
+                // Test a real interrupted process: leave the authenticated journal and
+                // backups for the next invocation, without the normal error rollback.
+                std::process::exit(86);
+            }
             if fail_after == Some(index) {
                 return Err(UpdateError::Internal(
                     "injected project upgrade activation failure".to_owned(),

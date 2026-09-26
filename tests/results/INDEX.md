@@ -368,3 +368,476 @@
 | [failed](runs/20260909T201420-a60b82f5efb1.md) | 0.10.3 전체 Python 적합성 검증 | 47bfc4688c601eb48dd359b0ff44b359672436e9 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260909T202613-ecf5607e543f.md) | 0.10.3 전체 Python 최종 재검증 | 7ead19c96746d8aca122a2ccf8130eb642b5e94b | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260909T204703-438b97274e95.md) | 0.10.3 전체 Python 통과 재검증 | c4181fb07c739b13d7f63afa17cbc0ed67e11eaa | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260912T064110-f4dfb68b267f.md) | Python conformance: documentation | 84d22552f3dbff083e2e40c807ed113dbaa3b780 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260912T151728-671db64d2c06.md) | Quota Reset Guard 이름 변경 검증 | 23670b61faf3c49d351309c4a54a7dbccba05ab3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T170652-7ee425e6a210.md) | 브랜치 정책 실제 Git 참조·게시 회귀 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T170813-98d9eb4629d9.md) | 브랜치 이름 변경 우회·커밋·게시 차단 회귀 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T170913-96fa464d00be.md) | 브랜치 정책 최종 회귀와 Windows Git 자료 격리 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260917T171108-7b497ed5e0d6.md) | 브랜치 정책·지침·검사 목록 최종 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T171208-0454614c7d60.md) | 브랜치 검사와 지침 크기 회귀 마감 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T171316-ab0d5a8ff6a5.md) | PR 출처 누락 거부와 최종 브랜치 정책 검증 | f98d1e556f642297366137db50efbe581dd6f1e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T172309-79ba73cc62c6.md) | 브랜치 전환 뒤 훅 검사기 보존과 정확한 이전 훅 이관 | 4ea8657a4ec2a06aac1d2162554f7a35fe08e36b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260917T172438-13bc33261979.md) | Git 신규 준비 단계 호환성과 정책 최종 검증 | 64864cd76406b123f87b1fe569e96bb9f793efe9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T162209-c59e434dbe15.md) | 0.11.0 리팩터링 전 기준 Hive 바이너리 빌드 | 39e5369569f9b3187a729b001073e8596074d2f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T162812-e2ef267e307d.md) | 리팩터링 전 바이너리·CLI 결과·시작 비용 기준 보존 | 555b3cf82149c39369371ba18dae805061474edf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T162923-2d7dc6069533.md) | 기준 바이너리 보존과 7개 CLI 경로 반복 측정 | 555b3cf82149c39369371ba18dae805061474edf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T163442-112d3fc3ee02.md) | 계획 공통 파서·생성기 거부 및 멱등 회귀 | a06ed47af908a7168579001cbe3c21c12593f565 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T163542-e64c26c4d744.md) | 활성 계획·제품 범위·후보 커밋에 결합한 공개 시험 검사 | a06ed47af908a7168579001cbe3c21c12593f565 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T164022-1065e14ef4f2.md) | 기존 0.10.4 변경을 포함한 Rust 전체 기준 회귀 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T164407-d8b3ab9c84cd.md) | 실제 활성 계획과 생성 상태·출시 공통 계약 수용 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T164622-1e3a1fa4d256.md) | 계획 생성의 부분 실패 복구와 변경된 시험 근거 거부 | 7750b56cc73b19ffe35111098504d148367bfb2f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T165700-7ed8d6d54929.md) | 0.11.0 정책 결과 합산·실패 분류 core 회귀 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T165843-abdfee684f21.md) | 개발 검증: cargo.EXE | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170026-5c3ee34aa414.md) | 개발 검증: cargo.EXE | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170322-f16647765d32.md) | 0.11.0 정책 CLI 읽기 전용 연결과 core 계약 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T170846-89ad923eba33.md) | 0.10.3 정확한 기준본과 0.11.0 호환 빌드 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T170919-96c787f04ca7.md) | 새 동결 기준본 경로 정렬과 호환 빌드 재검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171040-add8a7681f3f.md) | 0.11.0에서 모든 과거 설치 기준본의 실제 호환 회귀 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171227-50fc2520a6ad.md) | 0.10.3 이력 범위·직접 갱신·동결 투영 재검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171245-c0e485b13901.md) | 확장된 공개 이력 목록의 0.11.0 호환성 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171536-f388ed9e0cdf.md) | 0.11.0 제품 버전·날짜와 CLI 별칭 일치 검증 | b595c1ee08e6a3ae5b9af1203bd517da5eeba18e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T171647-301001daff59.md) | 개발 검증: cargo.EXE | 51c0fb88365127aa62b02ae548d0a220894d78bb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T171825-6269a163ec1c.md) | 개발 검증: cargo.EXE | 51c0fb88365127aa62b02ae548d0a220894d78bb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T172044-7ad357fd7cfa.md) | 0.11.0 출시 메타데이터 전체 일치 검사 | ccc68f6e99d5ab92192c8898754016f0a7245dc8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T172332-5fb45b220014.md) | 계승된 사용량 지침·투영과 스키마 회귀 | 819dd6c0d4b43ccf9edbcd3c0de8222a78de8b63 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173002-1cb680c96f8d.md) | 개발 검증: uv.EXE | 819dd6c0d4b43ccf9edbcd3c0de8222a78de8b63 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173211-8f6954125afd.md) | 개발 검증: cargo.EXE | 6d3aa4a451fe231783ec49e44ba888d131a7aef7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T173343-edc5753cd038.md) | 개발 검증: cargo.EXE | 6d3aa4a451fe231783ec49e44ba888d131a7aef7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173410-f629ddc39916.md) | 개발 검증: cargo.EXE | 6d3aa4a451fe231783ec49e44ba888d131a7aef7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T173637-ae6fce625a00.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173655-58f1bc3ceb53.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173734-f39f7a817eb0.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173741-611e41c32669.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T173804-b9b1009ee8e8.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T173825-a6ff5eed1e76.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173857-f6346f63fcd1.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T173938-7aff67c85e3c.md) | 개발 검증: cargo.EXE | fdbc1a0b4c0549b844dcaf6c55946da5042fc930 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T174203-0a7cd7c74e74.md) | 개발 검증: cargo.EXE | 2a1c8ea63d223e019561b8da0d0a6a4736e5508b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T174226-4db33da21ce3.md) | 개발 검증: cargo.EXE | 2a1c8ea63d223e019561b8da0d0a6a4736e5508b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T174255-bd980357aa83.md) | 개발 검증: cargo.EXE | 2a1c8ea63d223e019561b8da0d0a6a4736e5508b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T174435-380e9e506fad.md) | 개발 검증: cargo.EXE | 2a1c8ea63d223e019561b8da0d0a6a4736e5508b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T174916-e933587a642b.md) | 개발 검증: cargo.EXE | 5bd30ba5829302a5e13e42e7375694b107a9fb44 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T175014-676c41443552.md) | 개발 검증: cargo.EXE | 5bd30ba5829302a5e13e42e7375694b107a9fb44 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T175034-f0092372c8a4.md) | 개발 검증: cargo.EXE | 5bd30ba5829302a5e13e42e7375694b107a9fb44 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T175243-2a277ba0bd5c.md) | 개발 검증: cargo.EXE | 5bd30ba5829302a5e13e42e7375694b107a9fb44 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T175340-186b7bfd41f8.md) | 개발 검증: cargo.EXE | 9d6aafdebbd323a3eafdeef52b5968a4076ee543 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T175424-351253030f01.md) | 개발 검증: uv.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T175813-93db354a1002.md) | 개발 검증: cargo.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T180031-a9ccf1b02335.md) | 개발 검증: cargo.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T180046-0a1afd0528a0.md) | 개발 검증: cargo.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T180114-07e65b5ed614.md) | 개발 검증: cargo.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T180252-d6c9d0326671.md) | 개발 검증: uv.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T180318-552fe05ddcbf.md) | 개발 검증: cargo.EXE | bbe2be84bb6d9fde6445d760537f63e9b514e913 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T180744-a37939738810.md) | 개발 검증: cargo.EXE | 6f2396d767ce1e801ef6dee8c9269da7c2137207 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T181401-d8aebdb56f90.md) | 개발 검증: cargo.EXE | c0c1264526c7f6e784ef0ea5dc2bb134ad28a79a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T181906-e1e49c0dd1f1.md) | 개발 검증: cargo.EXE | c0c1264526c7f6e784ef0ea5dc2bb134ad28a79a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T182316-158e6ebd225e.md) | 개발 검증: uv.EXE | b6cb400dce470e96dc31ead31fa8253121e01c92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T182918-46d011a18c39.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T183242-f4f642572929.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T183419-da22ee53caa4.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T184015-9b66dc07b795.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T184621-8f1eb6980355.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T184841-5ca3ad650b94.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T184943-8752966b11bc.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T185424-186ad6c23953.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T190505-b6896f201a5a.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T191111-b6c5d77bb20c.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T191401-43023b46a8b5.md) | 개발 검증: uv.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T192435-2b1780d9511f.md) | 개발 검증: cargo.EXE | 132867bcb49a29cdadd1b7a76e17f076b6fb72de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T193129-dbd1401c6095.md) | 호스트 정책 등록의 출시 목록 정합성 | 92c7c772b0b4785b4915304f87b52a52f78760a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T193223-752d5c8d7e23.md) | 개발 검증: cargo.EXE | 92c7c772b0b4785b4915304f87b52a52f78760a3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T193952-14fc95db27b5.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194213-0a437c6b7125.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194230-30a6f99b2b78.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194337-78cd47a1a77d.md) | 개발 검증: cargo.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260918T194530-ded3dec3980b.md) | 개발 검증: uv.EXE | efdbaeb727b58b3f1495986359f60af200decc1b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T194833-9c4ef8633307.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260918T194930-1de790e7c8ea.md) | 개발 검증: uv.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051056-72f6640ab571.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051319-f8e2cdd1cdfa.md) | 개발 검증: cargo.EXE | da6763636c7f3c2f55f038cec98a84f08801975d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051652-97f2b559cee1.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051811-eaed61c90220.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T051851-8dfa875f9291.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051915-ad0f4c8234e5.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T051940-0f18c8960cd0.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052025-ef7a98bb6272.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052037-f55d8bddf6bb.md) | 개발 검증: cargo.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052051-1aa19aaa6ca3.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052144-7300e8843dfb.md) | 개발 검증: uv.EXE | d8a226ce5bf923041909a2d8b86fb6818cf045b6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052231-4f585bc8bb92.md) | 정책 후보 검토와 지침 참조의 출시 목록 검사 | 9c288fe2b9e3cb88e3e4c1e0ca54ebb99d27eb4b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052508-4b34ca16c7c5.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052542-7f8867819ab5.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052700-196fb74d8558.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T052857-8f53d8ee09ff.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052916-5fd124249784.md) | 개발 검증: cargo.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T052928-e80b522a654f.md) | 개발 검증: uv.EXE | 6613e465158158402ff7b0157db2c59a08e712b9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T053227-5fb662be3b1e.md) | 개발 검증: cargo.EXE | 4afd5ba4483d98f63ae42c065837f9b010506657 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T053739-554f9f2a6983.md) | 변경 전후 실행 파일의 고정 지식 조회 비교 | 153cc537b290a3153aa37e0a666d4281b9c6d937 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054030-25d24499525d.md) | 실행 순서를 교대한 동일 지식 조회 지연 재측정 | 53d30cd76253f28deade9a7e3734dff483fc1ce5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054249-6814127966c2.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054309-33e4e13074a5.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054323-4147d662c40d.md) | 중복 검사 비용 축소 뒤 고정 지식 조회 재비교 | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054447-4a9e232489b0.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054521-0f14088c8b42.md) | 개발 검증: cargo.EXE | 84460cd0f3c2326b65e2113a37f137aa279d3a87 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T054656-9b4165cadab7.md) | 대표 프로젝트 설정의 변경 전후 파일·결과 비교 | 80b26734ebd9cccba01a8d2aff72d78d3cb1c06c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055035-b3ba7530612d.md) | release 빌드의 50000개 지식 조회 성능 수용 | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055303-a2e688188a5e.md) | 개발 검증: cargo.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T055319-b2f24c8d67e3.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T055335-bf0c4f5f5f6d.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055402-839901f02c26.md) | 개발 검증: uv.EXE | e02f3ca46f2235a2f03e7a3c750653ab1bcd0841 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055847-2f53de7904e0.md) | 개발 검증: uv.EXE | bae90c3e3ae09c770763d07dff687aef2265788b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T055926-0ec7921da0ae.md) | 개발 검증: cargo.EXE | bae90c3e3ae09c770763d07dff687aef2265788b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060123-cc827933a573.md) | 보존 CLI의 같은 기기 시작 비용 재측정 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060145-6430c92f8f5b.md) | 현재 CLI의 같은 기기 시작 비용 비교 | 8f0432f7522ca8dd9295313f12e09f7c48230977 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060650-331c65f5dbc9.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T060857-b7ac1e0676c3.md) | 개발 검증: uv.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T061036-b2cc802fcc7e.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061054-bddf5cb57a2a.md) | 개발 검증: cargo.EXE | 81561be3c0f1ade644f508ab74362086d9a57e02 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061249-0a00ec34f319.md) | 개발 검증: cargo.EXE | c28e2b07bf761ccd1a00db03e847355e384e8ba6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061711-9c3ee7bd5b45.md) | 개발 검증: uv.EXE | c28e2b07bf761ccd1a00db03e847355e384e8ba6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T061917-9ff7c9b2a5a8.md) | 세션 결합 검토 알림의 출시 목록 검사 | bd7fc621d1a41baa91807f9f6a19cf1f1b878fec | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T062417-1fae55865d03.md) | 개발 검증: uv.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T062505-eefd6fbc352d.md) | 개발 검증: cargo.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T062627-18b326f0d2ed.md) | 개발 검증: cargo.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T062652-f6c8fcb53f3a.md) | 개발 검증: cargo.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T062737-48df0b111c42.md) | 개발 검증: uv.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T062843-d3eac89742a7.md) | 개발 검증: cargo.EXE | 89673e6d8879d532866be87ab5afd968d138baa2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T064815-fd3e60b88395.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T065114-bb1d5328cbc0.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T065218-da8d679597a0.md) | 개발 검증: uv.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T065919-d8ce4e36e474.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T070022-d35ee2c6a035.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T070303-0eabe512f6aa.md) | 개발 검증: uv.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T070745-2e5624c6efb3.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T082602-55e565ee1759.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T082649-ab8ef4d69a52.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T082710-c0777ac6f36d.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T082740-2745afbd4d3d.md) | 개발 검증: uv.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T082829-e3c02c48c14e.md) | 개발 검증: cargo.EXE | 2801adce498a8d8f35c880cd6b5bd583aaabddd7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T082953-afe341eaa368.md) | 개발 검증: uv.EXE | 465debfe4bbd91647f05fd3c0319528473b7e315 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T083322-78f90c18a9f2.md) | 개발 검증: cargo.EXE | 720e322c8ff4af883fae60a498cd10f8dda1df34 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T083441-60883cc33467.md) | 개발 검증: cargo.EXE | 720e322c8ff4af883fae60a498cd10f8dda1df34 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T083527-9dcc448b7490.md) | 개발 검증: cargo.EXE | 720e322c8ff4af883fae60a498cd10f8dda1df34 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T083543-4aa35fb79366.md) | 개발 검증: cargo.EXE | 720e322c8ff4af883fae60a498cd10f8dda1df34 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T084124-5d70a613bd81.md) | 고정된 훅 보류 자료의 Windows CLI 응답·비용 평가 | 7c99a4967c384bbfee7875d1890d49d1a1f42d25 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T084247-5ab0766d1cdd.md) | 개발 검증: uv.EXE | 0340f8a26d14ebcc134c14e421d605f8022912f8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T084250-de6d4f24a5fd.md) | Python conformance: documentation, security, contract, integration, release | 0340f8a26d14ebcc134c14e421d605f8022912f8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T084414-193bc1c0a180.md) | 개발 검증: uv.EXE | 0340f8a26d14ebcc134c14e421d605f8022912f8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T084503-04af8f3aa6f4.md) | 개발 검증: uv.EXE | bace21fb59f5bf5d3d66bd3cdc6926cd21bb195e | Windows-11-10.0.26200-SP0 |
+| [interrupted](runs/20260919T084609-248045187838.md) | 개발 검증: uv.EXE | 0c468766053990e3080de9bb1b255fba5c2a9060 | Windows-11-10.0.26200-SP0 |
+| [interrupted](runs/20260919T084611-6f631987b379.md) | Python conformance: documentation, security, contract, integration, release | 0c468766053990e3080de9bb1b255fba5c2a9060 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T084905-2d4111a46a7b.md) | Codex 실제 훅 검증용 격리 폴더와 미적용 설정 준비 | 0c468766053990e3080de9bb1b255fba5c2a9060 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T084953-4dcb93d0e401.md) | 격리 시험 대상의 명시적 호스트 소유권과 읽기 전용 훅 미리 보기 | 0c468766053990e3080de9bb1b255fba5c2a9060 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T085529-080da7fd0945.md) | 개발 검증: uv.EXE | 0c468766053990e3080de9bb1b255fba5c2a9060 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T085840-891a734b2ef9.md) | 개발 검증: cargo.EXE | 5a5f752285b5f03bd2613a39af5eac5f42bc39de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T085916-74a7e457ebba.md) | 개발 검증: cargo.EXE | 5a5f752285b5f03bd2613a39af5eac5f42bc39de | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T085959-fa3935a9eaa1.md) | 승인된 Codex 격리 대상의 기준선 보존·복원과 정책 훅 등록 | 3cbfc0c10665c869499293e0008392f53c2fa0c9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090048-42ece749eaf9.md) | 승인된 격리 폴더의 Codex 정책 훅 등록 | 3cbfc0c10665c869499293e0008392f53c2fa0c9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090154-47e0f5a5bd0c.md) | 개발 검증: uv.EXE | 3cbfc0c10665c869499293e0008392f53c2fa0c9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090503-297ad97f64db.md) | 개발 검증: cargo.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090506-36e011310d46.md) | 개발 검증: cargo.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090517-19fad210004a.md) | 개발 검증: cargo.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T090551-7e11819b212d.md) | Windows Codex 실제 작업의 보호 파일 차단 실패 기록 | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T090653-7e9da7318625.md) | 개발 검증: uv.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T090656-d2a741c0444a.md) | Python conformance: documentation, security, contract, integration, release | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T090748-1327714bcbd1.md) | 등록된 Windows 훅 명령의 표준입력·응답 계약 확인 | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T091500-ae46aecdce24.md) | 고정 실행 사례의 변경 전후 결과·쓰기·센서 호출 비교 | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T092149-644d709cbce7.md) | 개발 검증: uv.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T092442-ba3d12fcbdcc.md) | 개발 검증: uv.EXE | 465515ba6c530a16cc9a4ef58a8e9648fa37d87b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093040-476c2fed17a6.md) | 개발 검증: cargo.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093150-0191af3eefae.md) | 개발 검증: cargo.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093244-06ee23e85c42.md) | 개발 검증: uv.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T093335-8ac926376f1a.md) | 개발 검증: uv.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093412-c8e0056d6537.md) | 개발 검증: cargo.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093454-23af41e8f73b.md) | 개발 검증: uv.EXE | a9f31f693432b1c9629c29b0d8a2774b30d14c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093649-f7ee5a0991e2.md) | 개발 검증: uv.EXE | 5aa8879ed3c4ceb1fed811b51a575c1c5b09481a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093730-7bc7da5a860f.md) | 개발 검증: uv.EXE | 79e43dbaeba12a6a03cf0b3056cec5d51ba7c726 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093853-d37adc3e4341.md) | 개발 검증: uv.EXE | cca06e0c616ab96aa680cc6736f8234dff2e62ef | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T093925-cac876221b1c.md) | 개발 검증: uv.EXE | bbf5cdcb16435c0caa238de18a4213864fb761b3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T094252-cd5de58152a7.md) | 배포 가능한 실행기로 재현한 전후 명령 행동 비교 | 9fc8bec49b26b2c27b48e8f653bdfe6a14420a6e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T094435-b4bfa56effab.md) | 최종 지식 CLI의 고정 자료·중복 기록·읽기 전용·지연 비교 | e675eedd2643876de44af6d1a6f11cd8e075857d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T094637-ae30b3341c11.md) | 최종 지식 조회의 실행 순서 교대 재측정 | e675eedd2643876de44af6d1a6f11cd8e075857d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T094949-6f2091a22ea4.md) | 최종 CLI 시작 비용의 동일 기기·동일 빌드 방식 비교 | e675eedd2643876de44af6d1a6f11cd8e075857d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T095156-604480d477d2.md) | 개발 검증: uv.EXE | e675eedd2643876de44af6d1a6f11cd8e075857d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T095946-d88c42bafd08.md) | 개발 검증: uv.EXE | 1cdebf8aef9dde963f5aa88a36042186fbf37e80 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T100057-609c820b90dd.md) | 개발 검증: uv.EXE | 20c9167a31cbc8ce1aabc47c8127d9c93f47e20c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T100436-b636c11cd6a7.md) | 개발 검증: cargo.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T100442-bffe150977b2.md) | 개발 검증: cargo.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T100500-c2b7b13891e7.md) | 개발 검증: cargo.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T100623-8582b9c1619d.md) | 개발 검증: uv.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T100627-4f6408f4b86b.md) | Python conformance: documentation, security, contract, integration, release | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T102247-e6bbe7f3df33.md) | 개발 검증: uv.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T102418-2632164c7ece.md) | 개발 검증: uv.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T102713-26fbe3980c44.md) | 개발 검증: uv.EXE | 3477c0d16f34760d2ed1dc877d8e27be1161dffc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T103557-032d0db7fe59.md) | 개발 검증: uv.EXE | c6b54c63d91561d2b2a57bf8edb4931cbda76d6b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T104036-b3b2ca2647ce.md) | 개발 검증: uv.EXE | fff9c811046fbda988da3ba4f4ca93aae631cf6b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T104248-84869b806c5c.md) | 개발 검증: uv.EXE | fff9c811046fbda988da3ba4f4ca93aae631cf6b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T105233-7c3afed95123.md) | 개발 검증: cargo.EXE | fa12c7729c39711c3be67848b1e428a748ca73d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T105252-6237f7cf210a.md) | 개발 검증: uv.EXE | fa12c7729c39711c3be67848b1e428a748ca73d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T111250-b3b407ccb780.md) | GitHub CI의 세 운영체제 실행 결과 확인 | 4ea17dc24f2755c06f6a3d789b3076e971be3c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T111631-8a39ba62ee83.md) | 개발 검증: uv.EXE | 4ea17dc24f2755c06f6a3d789b3076e971be3c1c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T172539-2802e6b04f0f.md) | 실제 호스트 수용용 현재 제품 빌드 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T172610-61b680cda5b9.md) | 새 Codex 작업의 지식 조회용 격리 자료 준비 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T172955-799546381676.md) | Windows Codex 새 작업의 실제 조회와 후속 파일 독립 확인 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T173008-7e221f47a315.md) | 격리 자료의 빈 Wiki 디렉터리 보완 후 실제 지식 연결 재검증 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173028-d530c967ecef.md) | 격리 기본 디렉터리 보완 후 Codex 지식 연결의 정본·색인 확인 | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T173450-571d43562b9a.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173458-c73e7f709c73.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173530-c308ee78545b.md) | 개발 검증: uv.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173556-764ba944fab0.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173641-6d88edaa00ec.md) | 개발 검증: uv.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173711-90fc39c9ff0b.md) | 개발 검증: cargo.EXE | decd54a16542fde759fa59b91378f298497016f7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T173850-2ea56c146a97.md) | 개발 검증: uv.EXE | 7445f519202377d37228a63ae1258f0b3e558a07 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174055-5e4c8c6eb634.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174058-e469a6377e56.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174105-3d8aaddbbf81.md) | 개발 검증: cargo.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T174213-4b369f1e83d6.md) | 개발 검증: uv.EXE | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T174217-2b768b5636d0.md) | Python conformance: documentation, security, contract, integration, release | 72bd93df896956e10c30013db3bc9232b7a4a3ca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174436-6e01db8aef0c.md) | 개발 검증: uv.EXE | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T174439-c94228c3a950.md) | Python conformance: documentation, security, contract, integration, release | e6f649db584a6c7f4d02f9548d1746efc9d3b8f1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T181200-a74ac7e20bbb.md) | 초기화 감지 제외의 세 운영체제 CI 근거 확인 | 83ac6eb8f2ea6811187bb459bfb746a5b571849e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T183420-8f8d8ce55b96.md) | 신뢰된 Codex 훅의 고정 파일 사례 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T183747-291a80a45066.md) | 신뢰 훅 여섯 사례의 파일 효과 확인과 지침 단독 비교 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184011-b6f6de3fb75d.md) | 지침 단독 여섯 사례 확인과 승인 훅 정의 복원 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184108-5843e350579a.md) | Codex 훅 실행 파일 부재의 격리 실패 조건 준비 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T184323-f82cad853d4f.md) | 검사기 부재에서 보호 편집 허용 확인과 동결 실행 파일 복원 | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184629-4e654cb2faab.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T184810-302170d306e4.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T184947-b84b238e2f83.md) | 개발 검증: cargo.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T185038-00f34a5beb00.md) | 개발 검증: uv.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T185203-a094b30fb1c8.md) | 개발 검증: cargo.EXE | 14af0ba7ff138fd29225ea32a775abc081e33d4a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T185337-e53f80cde20d.md) | 실행 실패 차단을 보완한 Codex 정의의 적용 미리 보기 | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T185832-fbaf318eec31.md) | 개발 검증: uv.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190101-88e80825ff35.md) | 개발 검증: uv.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T190154-c98730427d10.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190240-f689b66167ce.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190251-4e162e5e1e72.md) | 기존 실행 위치에서 새 훅 정의 미리 보기와 동결 바이너리 원복 | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190441-9123f810aa62.md) | 개발 검증: cargo.EXE | 3d9eb9f4855621b7dcd95a68de3088ea3da4de96 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190656-eb0f04f2b875.md) | 사용자 승인 지문에 결합한 검사 실패 차단 정의 적용 | 80779cb0da9104108c3e5349d6493cd726e9077d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190939-63ca8d2bd80e.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190942-834cb6982235.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T190944-a1e83372d5b5.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191045-6d6bcaa90e5c.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191049-8e73deda47e1.md) | Python conformance: documentation, security, contract, integration, release | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191241-b78544199943.md) | 등록된 Windows 훅 명령의 바깥 셸별 해석 비교 | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T191518-75a9b125cca6.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191559-5e1d1bc9db87.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T191814-ddc198cc501a.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192041-e2bc1eb319ea.md) | 개발 검증: uv.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192130-b3e52c73dc1e.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192228-8cbae82b8a8c.md) | 바깥 셸 해석을 차단한 훅 정의 미리 보기와 이전 바이너리 원복 | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192344-7bb8a6ba0e7a.md) | 개발 검증: cargo.EXE | bf41884f793620f9058fa20e1efbaa59cabd2776 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192538-90cafabdfc8c.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192541-c14a2af5068a.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192546-3d9fa21840b4.md) | 개발 검증: cargo.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192643-1cefab299173.md) | 개발 검증: uv.EXE | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T192646-002ae3023009.md) | Python conformance: documentation, security, contract, integration, release | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260919T192807-b64643c8d3ab.md) | 형식 2의 실제 보호 편집 실패 관측 검토 | 278ee0afa021162a9c3888d09682edbe5d1626d0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T195354-188e74697434.md) | 형식 3의 한글 대상과 표준입력 전달 확인 | 5be287b6fd2490e874707fe5fbebe57fa284fdef | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260919T195640-1830f54e0861.md) | 형식 3 훅 보완의 필수 CI 확인 | 5be287b6fd2490e874707fe5fbebe57fa284fdef | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T024742-e0896e1b318e.md) | 승인된 형식 3을 기존 Codex 격리 대상에 적용 | 832a6986c359e0b34754483a920b220172098193 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T030026-f21c1a19c74c.md) | 형식 3 실제 호스트 시험의 기준 바이트 보존 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T030341-ee67c1f8f88f.md) | 형식 3 정상·보호 편집 확인과 검사기 부재 조건 준비 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T030607-c02090c781e6.md) | 형식 3의 검사기 부재 거부 확인과 실행 파일 복원 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T031140-ee63d889f870.md) | 호스트 후속 메시지의 대기 종료와 취소 상태 구분 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T031448-2716765c30ab.md) | 형식 3 구현 고정 뒤 새 실제 평가 자료 동결 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T031646-16b198c9784d.md) | 형식 3 새 평가 사례의 실제 효과 확인과 기준선 준비 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T031956-d390dfb20948.md) | 형식 3 지침 단독 기준선 확인과 승인 정의 복원 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T032424-50b59f9580a7.md) | 정의 복원 후 실제 파일 차단 재확인과 시험 자료 원복 | 5f8a4313ac052ef94a39f1573d339702f3e42f91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084615-eba9b06dd761.md) | 다른 호스트의 정확한 정의 재검사와 검토 자료 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084704-c89bb0a7721f.md) | 실제 Codex 셸 도구의 파일 훅 범위 시험 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084728-b3a832eb4748.md) | 승인된 Claude·Antigravity 격리 훅 정의 적용 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084743-7e741284a754.md) | Codex 셸 범위 시험의 변경 확인과 정확한 복원 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084815-a450381a863e.md) | 두 실제 호스트의 독립 파일 시험 자료 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260920T084932-939efa9b28d2.md) | 정확한 등록 명령의 오류 입력과 전달 바이트·명령 비용 측정 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T084942-3a65aa4e1dd5.md) | 정확한 등록 명령의 오류 입력과 전달 바이트·명령 비용 측정 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T085044-ac02155460ab.md) | Codex 오류·시간 초과의 정확한 진단 정의 준비 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T085105-5139c634e7d8.md) | 추가 진단 명령의 종료 코드·시간 제한 직접 검사 | 2637ce78dfea9e6f6775a5450055ac7eac96e2f2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T125801-8874ef0cdf3a.md) | 승인된 Codex 진단 정의 적용과 Antigravity 결과 대조 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130040-fd161b516053.md) | 기존 작업의 진단 시험 결과와 새 작업 재검사 준비 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130159-af018295ebfd.md) | 새 Codex 작업의 진단 결과와 원본 정의 복원 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130240-6249f574f68b.md) | 진단 명령의 Windows 경로 선택 누락 재현과 보완 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130349-b91376fcbb1c.md) | 승인된 Windows 경로 보완 진단 정의 적용 | 44d0a1a0630618548274774c906cde2ab02fc3de | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T130558-269452fd4759.md) | 경로 보완 진단 최종 결과와 정의 복원 | 05d4f8c79b8008d498c7008595e98023ee715ae0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T131317-a6897e108198.md) | 승인된 동일 진단으로 CLI·앱 비교 시험 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T131353-928518b3cbdc.md) | Antigravity 새 대화 지식 조회 시험의 읽기 전용 준비 | 1fa95282bc427e06256d49514680bef97449c114 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190259-cd7bc18dd829.md) | 수동 CLI 실패 결과 확인과 원본 복원 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190436-c7e51bf64bfa.md) | 실행 표식이 있는 네이티브 진단 준비와 제한 모드 검증 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190500-9123781755ba.md) | 바깥 PowerShell의 종료 코드 변환 재현 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190522-d9bc88952dfe.md) | 관측 진단의 정확한 등록 명령과 바깥 셸별 종료 확인 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190559-d8e508a57f26.md) | Antigravity 수동 취소와 같은 대화 재개 안내 준비 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190612-789938b4cc78.md) | 승인된 실행 관측 진단 적용 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190647-c582875b9e02.md) | Antigravity 새 대화의 사용자 결과와 기존 합성 근거 대조 | 068c74a3c046a8f633d96180ffbc91c65de584ed | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T190935-ea2a51ed1c04.md) | 실제 관측 진단의 조건별 파일 결과와 복원 확인 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191135-46879bc5d23f.md) | Antigravity 오류 관측 진단의 정의·직접 확인 준비 | 5e23e392df2f16e1c4a59fe02c95af7f4597c4d5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191336-1990405340dd.md) | 승인된 Antigravity 오류 진단 적용과 시험 자료 준비 | 3dbc19b544066ab1d3167b0694c2cedc5fae5b91 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191620-bbc1cc4d285d.md) | Antigravity 최초 오류 진단의 도구 입력 실패 분리 | f06f080f92045f0b00395ff0b36569866134ad3f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T191927-e3952c489322.md) | Antigravity 보완 오류 진단의 실제 편집 확인과 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192058-be42f8f5873e.md) | Antigravity 검사기 부재의 실제 UI 수용 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192219-9448d7ae8856.md) | Antigravity 검사기 부재의 실제 차단 확인과 실행 파일 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192301-a437a8912c8c.md) | Antigravity 동일 보류 자료의 두 조건 비교 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192617-c9ad09966616.md) | Antigravity 훅 적용 비교 확인과 기준선 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T192800-8090aa333878.md) | Antigravity 지침 단독 비교 확인과 원본 정의 복원 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193042-64fd10a8df9f.md) | Antigravity 정의 복원 뒤 실제 거부와 전체 기준 바이트 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193258-34411dcce67c.md) | 두 호스트의 손상 설정 입력 시험 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193419-51fa2bb986eb.md) | Codex 손상 훅 설정의 실제 편집과 복원 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193456-f907b73a3869.md) | Antigravity 손상 설정의 실제 편집과 두 호스트 원본 복원 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T193729-05f9f88a57f0.md) | 개발 검증: uv.EXE | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194046-f2502c6ff755.md) | Codex 자식 작업의 파일 훅 범위 시험 자료 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194228-ba252e30e11c.md) | Codex 미신뢰 정의의 무실행 검증 후보 준비 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194426-0ef7742567a5.md) | Codex 네이티브 자식의 실제 파일 훅 범위 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194454-0dacc28e0aea.md) | 승인된 미신뢰 후보 적용과 관측 기준 저장 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194529-6782586a0ba9.md) | Codex 미신뢰 진단 무실행과 기존 보호 유지 확인 | d8c0983696f396a27bca02df59178add2492c00d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T194903-f1d1796c07ac.md) | 호스트 수용 근거의 판정·지문·복원 정합성 검사 | a2576ac7fa4fba7e59121d576e0d0b099814811a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T195358-9e5cae03468d.md) | 0.11.0-test.1 제품 변경과 완료 계획에 결합한 공개 시험 준비 | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T195402-7348223c2b4f.md) | 개발 검증: uv.EXE | 10f900d06332cd602a351ed30a54bdb719e6d411 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T202132-42449f903f06.md) | 정확한 공개 시험 후보의 메타데이터·출처 검증 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T202845-7223f6d7e5ea.md) | 정확한 공개 npm 시험판의 격리 설치와 버전 확인 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T203035-8486651dec6d.md) | 공개 시험 바이너리의 동일 정책 결합과 실제 호스트 준비 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T203855-24c39e07b5bd.md) | 실패한 공개 패키지 수용의 운영체제별 증거 수집 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204152-2c18e5ccc376.md) | 공개 시험판의 두 실제 호스트 파일 차단 확인과 원본 복원 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204535-27528ddf3b0c.md) | 공개 Windows 선택형 검색 실패 원인 재현 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260920T204742-09caf86b7e2b.md) | 개발 검증: uv.EXE | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204756-d7897e87e5d6.md) | 선택형 검색 실패 진단의 원문 비노출과 상태 보존 | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204757-5fe8d6eb4bd4.md) | 개발 검증: uv.EXE | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T204936-53b948ecdc53.md) | 격리 합성 자료의 보조 프로그램 진단 실제 실행 | b5e00bdf688a0ae06e1b14dc04881d5ffbf078fc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205040-32126f694419.md) | Windows 종료 직전 자식 이미지 조회 경합 관측 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205107-de0d18c87364.md) | 개발 검증: uv.EXE | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205130-e7a95052dc21.md) | Windows 종료 경합의 수정 전후 동일 관측 비교 | ae84c94fe3059a1b4561abb8c1d1972aee8004b0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205549-c0555316b729.md) | 진단 보강 뒤 공개 시험판 세 운영체제 수용 기록 수집 | df38bd03f74fd36a170c2735f2a0e898b9e516a9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T205749-f729e1d93044.md) | 개발 검증: uv.EXE | df38bd03f74fd36a170c2735f2a0e898b9e516a9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T210047-e5db157f28b6.md) | Windows 관측 수정 뒤 공개 시험판 최종 세 운영체제 수용 | d703ffea59eb46e338a29437aadc63dc80600008 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T210828-a7f59de22f8d.md) | RFR-001 공개 수용·통합·34개 선행 근거의 최종 결합 | 6296726906d4b24f82243c4fafae43dbf8f3245f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260920T211023-48770e0a7764.md) | 개발 검증: uv.EXE | fe9ef44d4a3a7dce85b6adb8d330fd9f71da163b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T210945-55efaf86e2a0.md) | PDC 생성기 변경 Rust 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211041-c7c2c21e1307.md) | PDC 협업 지침 이관과 보존 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211203-03eade7c63f9.md) | PDC 지침과 투영 계약 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211304-cdda71444729.md) | PDC 사용자 수정된 관리 절과 외부 바이트 이관 검증 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211358-162acf2878d4.md) | PDC 변경된 관리 절 이관 및 직접 관련 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211636-dcd60dc1c744.md) | PDC 실제 호스트 합성 자료 준비 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211724-2c327f436a86.md) | PDC Codex 미설치 협업 실제 편집 수용 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211752-c09dae1e3faa.md) | PDC 최종 생성기 Rust 회귀 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T211901-12c89fa96633.md) | PDC Codex 미설치 실제 수용 환경 인자 수정 | 7483aa24a32b2eeee7cfe31a5daffe6e7af62719 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211944-07a73ae5db2a.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211948-e9ae7afa5674.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T211957-07e868057f2d.md) | 개발 검증: cargo.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212110-e21c4bc681db.md) | 개발 검증: uv.EXE | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212115-e3d8e53e167b.md) | Python conformance: documentation, security, contract, integration, release | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T212327-1041207f606f.md) | PDC 문서 도달성과 현재 출처 지문 정합화 | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T212328-f2d094d87538.md) | Python conformance: documentation | b5cf8afc1f10de4ef8dd92b9f98c7dc990720afe | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212458-37376b6db6fc.md) | PDC 전체 Python 회귀 | 1cdff4c59124c595efdf40df586b158c61338adf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T212459-5b1cf86ac1c7.md) | Python conformance: documentation, security, contract, integration, release | 1cdff4c59124c595efdf40df586b158c61338adf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T213618-7c85c8b92147.md) | PDC 조건부 지침 문구와 현재 스킬 증명 회귀 | 1cdff4c59124c595efdf40df586b158c61338adf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T213839-f040916e128b.md) | PDC 공개 수용 작업 정의 검증 | ae5b6f73077f6df69dec9a29b4e1404dfba9dc47 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T214102-f819790c64ed.md) | PDC 최종 전체 Python 회귀 | 3b0f06a64e179c70c82e5523fbfeb6f764b6a0e6 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260922T214104-6137833969d6.md) | Python conformance: documentation, security, contract, integration, release | 3b0f06a64e179c70c82e5523fbfeb6f764b6a0e6 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T214233-42bf293fe06b.md) | PDC 최종 전체 Python 회귀 재검증 | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T214234-15143d334301.md) | Python conformance: documentation, security, contract, integration, release | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T215754-3c978882ac49.md) | PDC 개발 실패 주입과 공개 빌드 갱신 수용 경로 분리 | b97da0c6bd46fb972f18a3950bf96825cf87ade7 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T223030-2b0e7fecfd9c.md) | PDC 공개 시험판의 격리된 로컬 설치 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T223142-75534473ad69.md) | PDC 실제 공개 Windows 패키지의 생성 갱신 보존 거부 수용 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T225315-82c9b926cfcf.md) | PDC-002·003 실제 반응과 세 운영체제 공개 협업 검사 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260922T230722-8dd3e769ac5b.md) | RFR-001 및 5단계 공개 수용·수정 계획 완료 확인 | e3740e783d1bff6b4d38affdc00434bc20eff47b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001519-21ce6616f612.md) | PRF 갱신 스킬 전역 발견과 프로젝트 호출 경계 검사 | 60358a28f107e36c1cd235d7d599b87e551dce75 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001630-a765507f2537.md) | PRF 제품 변경 전체 Rust 회귀 검사 | 976d96ae8ba72aa09304129e3db1f32675ed1d8f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T001728-abbe2eb0d4ba.md) | Python conformance: documentation, security, contract, integration, release | 541de1bec1a9252b9cc697658dbbae7707e96c92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T001922-b391fe040898.md) | PRF 설치 투영과 기존 프로젝트 갱신 검사 | 541de1bec1a9252b9cc697658dbbae7707e96c92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T002037-0d598d7bcce4.md) | PRF 최종 제품 Rust 전체 회귀 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T002216-eb4a2f7b544c.md) | Python conformance: documentation, security, contract, integration, release | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003235-7e4c6d435456.md) | PRF 생성 설명문 수정 후 두 생성기 전체 일치 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003340-b5c0442d9cae.md) | PRF 최종 설명문과 투영 회귀 전체 Rust 검사 | 8775e4ab68325cedfca90872b1ecdb13c01f59e9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003526-9ded0993e05b.md) | Python conformance: integration | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T003611-cb2f70bedde4.md) | PRF 실제 발견 검증용 구버전 합성 프로젝트 준비 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003628-23bed7c7162f.md) | PRF 구버전 합성 프로젝트 준비 재검사 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T003639-95372cf4ed50.md) | Python conformance: release | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T004113-af7672586d6f.md) | PRF-001 갱신 스킬 구현과 설치 투영 검증 종합 | e1e69c2272c67edead59da0c11cea643bf5e5f77 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T010323-7feec2441025.md) | PRF Windows 등록 패키지 무결성과 설치·갱신 검증 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T010351-850306964c76.md) | PRF Windows 등록 패키지 버전 표기 확인과 설치·갱신 재검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T010643-1634e9b2874e.md) | PRF 설치된 스킬의 자연어 미리보기 실제 Codex 검증 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011340-ad0783c80f79.md) | PRF-004 과거 버전별 실행 주체 판정 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T011402-649c9a819d2c.md) | PRF-004 버전별 실행 주체 판정 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011627-52d8c6d61953.md) | PRF-004 공개 test.3의 0.10.3 갱신 오류 재현 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011649-77b0fdcc8a8a.md) | PRF-004 실제 0.10.3 생성 자료 갱신·보존·위조 거부 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T011856-b2f26fcbd1b7.md) | PRF-004 과거 파일 목록 복구 후 정식 0.10.3 생성 자료 갱신 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012000-e32517ba8878.md) | PRF-004 과거 사용량 비활성 문구 복원 후 정식 생성 자료 갱신 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012148-29a3e5a2083c.md) | PRF-004 프로젝트 갱신 전체 통합 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012158-5e9d234a3d53.md) | PRF-004 과거 기준본 수정 전체 Rust 회귀 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012437-694112453010.md) | PRF-004 과거 배포 기준본과 공개 수용 구성 검사 | 2d07a9b207f005a445cb149bda6a41bb1112c29b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T012740-52f5a750001e.md) | PRF-004 정식 구버전 기준본 인증 복구 검증 종합 | 7bc0e63b5295cf790e79c74951af3edc7f4c4a5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T013853-24a1861b03d4.md) | PRF-005 지침 예약 경로·기록·기존 호스트 경계 검사 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014032-86ef0e800646.md) | PRF-005 실제 갱신과 예약 연결·충돌·외부 경로 거부 검사 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014339-16d5cf835879.md) | PRF-005 예약 연결 수정 전체 Rust 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014350-c1300017446d.md) | PRF-005 예약 연결과 프로젝트 전체 갱신 회귀 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T014832-909b7a34c38d.md) | PRF-005 지침 예약과 실제 스킬 전체 갱신 연결 검증 | 69920c51cac4e6ff0cf329f46eea232a2b7385a2 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T020014-0b666c7d4a87.md) | 예시와 같은 Windows 줄끝 형식의 갱신 동작 확인 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T020108-6d9a99660714.md) | 예시에서 관측한 AGENTS 전용 CRLF와 정본 설정을 결합한 갱신 확인 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021112-503aeacef626.md) | PRF-006 Hive 지침 줄끝 정렬과 로컬 바이트 보존 검사 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021229-4891709a7f64.md) | PRF-006 실제 Windows 표시 블록의 신규 규칙·사용자 메모·전체 갱신 검사 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021506-4739e12dba9a.md) | PRF-006 실제 스킬용 Windows 표시 블록 자료 준비 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021601-e5d226645ea7.md) | PRF-006 줄끝 병합 수정 전체 Rust 회귀 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021614-d5cef2ff14f8.md) | PRF-006 Windows 표시 블록 포함 프로젝트 전체 갱신 회귀 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T021945-a49d732d0555.md) | PRF-006 Windows 표시 블록 신규 지침 반영과 실제 스킬 검증 | 6419a2e3610d791dfe472c35f1fcc68319c32b5a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T024730-eae399631364.md) | PRF 최종 공개 test.6 Windows 설치·기준본·예약·줄끝 갱신 검증 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T024950-250a3c2592d7.md) | 공개 test.6 실제 스킬 검증용 예시 형식 합성 자료 준비 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T025703-d217e6ef6293.md) | PRF-002 공개 test.6 설치·발견·자연어 갱신 완료 확인 | 797e5ab579f20268eeff489d1cc7cdbd023a188b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T032437-67076a40fbcb.md) | PRF-003 실제 소비자 갱신·보존·Git 통합 최종 확인 | 3aca9a78e2403293acaa0113555c8ca25855555b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035552-a7e6305926fe.md) | APC 공식 과거 안정판의 합성 프로젝트 생성 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035728-85a0d231399f.md) | APC 전체 이전 버전 복구 시험용 CLI 빌드 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T035750-f8864c197f0d.md) | APC 공개 안정판 전체 갱신과 실패 복구 검증 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T035845-e1328d857de2.md) | APC 공식 안정판 전체 갱신과 복구 재검증 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040040-cecae4df217b.md) | APC 동적 과거 버전 Rust 갱신 시험 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040125-221f8557a2f1.md) | APC 전체 Rust 회귀 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040210-8e7244ec8720.md) | APC 전체 Python 규약 검사 재시작 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040211-fb4ba2409b9b.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040415-f5c806531535.md) | APC 출처 갱신 후 전체 Python 규약 검사 | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260923T040416-aa7c5b98796d.md) | Python conformance: documentation, security, contract, integration, release | e8d26bacd2b128684c05ad49fd6010a67a2a26ba | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040537-3f2e2481cea6.md) | APC 버전 직접 확인과 전체 안정판 최종 복구 검사 | 277981548af21c09d02c18db3b3b783e0e9a2085 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040802-4de3481d9408.md) | APC 현재 공개 시험판의 전체 안정판 직접 갱신 검사 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T040856-d5791cfd29fa.md) | APC-001–002 모든 공개 안정판의 범위·갱신·복구 구현 확인 | 0ad3cd0edfcb5a7c38d103e5a7b31264cbad9d25 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042114-c7c1ac392152.md) | APC 새 필수 복구 작업 반영 후 배포 규약 재검증 | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T042116-27d7a64129f5.md) | Python conformance: release | 51d4b7abd64dc28dc7b2efe681b66769dd252a42 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260923T051632-62617e897e26.md) | APC-003–004 공개 검증과 무손실 브랜치 통합 완료 확인 | 4c70291742b0856063acb218aebe27b85138cca5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T091851-1df674af9513.md) | 지침 복구와 기존 훅 계약 검증 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T091914-de7c2f8ebab5.md) | 지침 복구 변경의 전체 Rust 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T091953-61872958baed.md) | 지침 복구 변경의 전체 Python 회귀 | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T091954-fe5f867941d7.md) | Python conformance: documentation, security, contract, integration, release | 4e823aa5176183e6a02a2c1babb341aa305ebea1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T092456-953df08b0c5c.md) | 지침 복구 최종 전체 Python 회귀 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T092457-b057d4446057.md) | Python conformance: documentation, security, contract, integration, release | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T094207-137ebc825bc3.md) | 압축 복구의 승인 일치와 하위 문맥 최종 계약 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T094249-9b5ca064d39b.md) | 지침 복구 최종 전체 Rust 회귀 | b71c09881a1e935102d01b7a27a4498fd2255500 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T101039-af58391772ab.md) | 공개 test.8 Windows 지침 복구 계약 | 1d36069531a894895a3517a2937666069cfe346e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T101807-90319487f894.md) | 공개 지침 복구 계약 linux-x64 | 1d36069531a894895a3517a2937666069cfe346e | Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 |
+| [passed](runs/20260925T101815-c8a0f1172cf7.md) | 공개 지침 복구 계약 darwin-arm64 | 1d36069531a894895a3517a2937666069cfe346e | macOS-15.7.9-arm64-arm-64bit-Mach-O |
+| [passed](runs/20260925T101844-2cf14b91409b.md) | 공개 지침 복구 계약 win32-x64 | 1d36069531a894895a3517a2937666069cfe346e | Windows-2025Server-10.0.26100-SP0 |
+| [passed](runs/20260925T172145-64c5254ac60c.md) | 실제 1회 압축 후 정상·보호 파일 시험 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181354-4f0865f90619.md) | 자동 압축 계측용 합성 자료 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T181711-5b1aebe7e5d6.md) | test.8 지침 훅 철회 뒤 재등록 회귀 재현 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181803-1dbbe3223733.md) | 지침 훅 철회 기록 검증 수정 빌드 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181840-cc599e8f8fa9.md) | 훅 철회 재등록 수정 후 지침 복구 계약 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181900-2b476a8cb458.md) | 철회 기록 수정 후 기존 훅 안전 경계 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T181917-d2fe5391606b.md) | 훅 설정 검증 Rust 회귀 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T182015-c03f085dbcce.md) | 훅 설정 원문 스냅샷 Rust 검사 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T182053-eaf2eaba2ee9.md) | 수정 실행 파일의 격리된 실제 훅 시험 준비 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215029-1d760a16cc30.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215038-2c5d424013bb.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215052-05d001773f0b.md) | 개발 검증: cargo.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215208-748326b4ec6a.md) | 개발 검증: uv.EXE | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215213-9308ea48f9e2.md) | Python conformance: documentation, security, contract, integration, release | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215228-039393f72c7d.md) | 문맥 해제 뒤 훅 철회 재발 경로 수정 빌드 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T215328-ac2cd2b48b22.md) | 문맥 해제 이력과 금지된 소유 경로 회귀 확인 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215447-f7c2db4f183c.md) | 철회와 문맥 해제 및 외부 위치 거부 회귀 | b90d51eb7d60c5f5f6b555d329cfef7800330c60 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215538-2cd94557b554.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215541-090194080789.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215547-f2ecb9a24361.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215657-29026331f670.md) | 개발 검증: uv.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215659-13be3123a90e.md) | Python conformance: documentation, security, contract, integration, release | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T220029-910208470803.md) | 공식 호스트 연결의 기본 파일 도구 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T220158-4f8421a190fa.md) | 현재 권한 프로필의 합성 절대 경로 편집 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T223613-1a8a0f1a8a89.md) | 0.11.0-test.9 공개 Windows 실행 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T223954-50eb3ef7d9f6.md) | 조회 반영 뒤 test.9 공개 Windows 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T224037-f25d5ef80fb2.md) | test.9 공개 Windows 실행 파일의 훅 계약 수용 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T123946-f6a11e9c3ea7.md) | test.9 실제 호스트 비교용 고정 시험 정의 준비 | b24caeacdd369fefad8d3c61270a43cd0a921d91 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T145225-ac381ff88dee.md) | test.9 신뢰된 실제 호스트의 세 조건과 재개·하위 작업 수용 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T145406-8417fe21f7bc.md) | 관측 입력량에 맞춘 동일 세 조건의 실제 압축 수용 재시험 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T150433-d0a98d924a40.md) | 실제 호스트 사건·파일·토큰의 독립 오프라인 판정 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T151414-de7845da20d4.md) | 공개 test.9 정상 편집 훅의 문맥 복구 추가 지연 비교 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |

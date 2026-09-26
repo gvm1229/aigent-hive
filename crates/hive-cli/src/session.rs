@@ -2,7 +2,10 @@ use cap_fs_ext::OpenOptionsFollowExt;
 use cap_primitives::fs::FollowSymlinks;
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
-use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
+use hive_core::{
+    ensure_consumer_target, is_hive_directive_projection_path, sha256_digest,
+    validate_hive_directive_projection_relative, validate_project_relative,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -247,6 +250,11 @@ fn normalize_path(value: &str) -> Result<String, String> {
     let path = Path::new(value);
     let portable = value.replace('\\', "/");
     if is_host_owned_skill_path(&portable) {
+        return Ok(portable);
+    }
+    if is_hive_directive_projection_path(Path::new(&portable)) {
+        validate_hive_directive_projection_relative(Path::new(&portable))
+            .map_err(|error| error.to_string())?;
         return Ok(portable);
     }
     validate_project_relative(path).map_err(|error| error.to_string())?;
@@ -877,13 +885,41 @@ mod tests {
             host: "codex".to_owned(),
             session_id: "session-1".to_owned(),
             process_id: 42,
-            paths: vec!["AGENTS.md".to_owned(), "src/lib.rs".to_owned()],
+            paths: vec![
+                ".agents/directives/00-project-harness.md".to_owned(),
+                "AGENTS.md".to_owned(),
+                "src/lib.rs".to_owned(),
+            ],
         };
         let rendered = render_manifest(&manifest).expect("render");
         assert_eq!(
             parse_manifest(&rendered).expect("parse").paths,
             manifest.paths
         );
+    }
+
+    #[test]
+    fn directive_reservations_accept_only_exact_safe_markdown_paths() {
+        for path in [
+            ".agents/directives/00-project-harness.md",
+            ".agents/directives/05-team.md",
+            ".agents\\directives\\00-project-harness.md",
+        ] {
+            assert_eq!(normalize_path(path).unwrap(), path.replace('\\', "/"));
+        }
+        for path in [
+            ".agents",
+            ".agents/directives",
+            ".agents/directives/nested/rule.md",
+            ".agents/config.toml",
+            ".claude/directives/rule.md",
+            ".agents/directives/../config.md",
+            "/.agents/directives/rule.md",
+            ".agents/directives/rule:extra.md",
+            ".agents/directives/rule.txt",
+        ] {
+            assert!(normalize_path(path).is_err(), "{path}");
+        }
     }
 
     #[test]

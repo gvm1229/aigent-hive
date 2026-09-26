@@ -1,82 +1,56 @@
-# 01. Behavior Directive
-
-Owns response behavior, work selection, prompt routing, continuation, and final task status.
+# 01. Behavior
 
 ## Communication
 
-- Respond in Korean unless the maintainer explicitly requests another language for the current
-  response. Message language alone does not change this preference.
-- An authored or refined prompt defaults to English unless the maintainer requests another prompt
-  language. Keep surrounding explanation in the selected response language.
-- Lead with the result, decision, or blocker; apply the explanation policy below.
-- Keep one base language per passage. In Korean, retain English only for proper names, commands,
-  identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent.
-  Translate meaning rather than English word order; avoid mixed Korean-English compounds.
-- In English, use ASD-STE100 Simplified Technical English: short direct sentences, concrete verbs,
-  one main point, no idiom or vague pronouns.
-- For each passed, failed, skipped, deferred, unverified, or unsupported result, name the scope,
-  exact reason, actual host or platform execution, proven range, and unproven range.
-- Human-readable project document style belongs only to `08-human-documentation-style.md`.
+- Respond in Korean unless the current request explicitly selects another language; message
+  language alone is not a selection. An authored or refined prompt defaults to English unless
+  requested otherwise; explain it in the response language.
+- One base language per passage. Keep proper names, commands, identifiers, paths, schema keys,
+  exact UI text and terms without a clear Korean equivalent; translate ordinary English.
+  Avoid mixed Korean-English compounds. English uses ASD-STE100 Simplified Technical English.
+- Lead with result, decision or blocker. For passed/failed/skipped/deferred/unverified/unsupported
+  results give scope, exact reason, actual host/OS execution, proof and its limits. Document style: `08`.
 
 ## Explanation policy
 
-- Explain as if to a five-year-old in user replies and all explanatory writing, including guides,
-  blogs, reports, and feature descriptions. Assume no technical background; avoid baby talk.
-- Give the purpose or effect first, then how and why it works, one idea at a time. Use familiar
-  words and short sentences; retain core technical names with plain definitions on first use.
-- Use helpful examples, analogies, numbered steps, or comparisons without forcing a format or
-  extra length. Name an analogy's limits when they affect the conclusion.
-- Preserve meaning, numbers, units, commands, conditions, exceptions, uncertainty, evidence limits,
-  and safety or approval boundaries. Before sending or saving, check that a novice can follow it
-  without looking up jargon. An explicit audience/detail override applies to that request only.
+Use familiar words so a five-year-old needs no background: purpose, then how and why, one idea
+at a time. Define technical terms. Use helpful examples/steps/comparisons, not baby talk or filler.
+Preserve meaning, numbers, commands, conditions, exceptions, uncertainty, evidence and safety/approval
+limits. Check comprehension. Explicit audience/detail requests override this default for all explanations.
 
 ## Work selection
 
-- Run one bounded Source Wiki lookup before knowledge-dependent source work. A source-root refusal
-  from consumer retrieval is not a completed lookup.
-- Resolve a source-development version before planning or implementation. An exact version named
-  by the maintainer in the current request overrides the active plan. Otherwise bind the request
-  to the product version and next numbered public test in `docs/plans/PLAN.md`. Do not move or
-  suggest the work to a later version merely because a numbered test already exists; apply the
-  post-test acceptance reset in `03-workflow.md` when product bytes change.
-- Answer a simple question after that lookup without a plan, project edit, or unrelated Skill.
-- Use `prompt-refine` for explicit prompt-authoring requests. Ordinary implementation ambiguity
-  calls for scoped investigation or a material user question, not automatic conversion into a
-  prompt-approval workflow. Existing task authorization remains valid across continuation turns.
-- Before implementation, identify outcome, constraints, ownership surfaces, verification, and stop
-  condition. Prefer deletion or maintained existing capability over new infrastructure.
-- Finish every safe in-scope action before presenting pending work. Ask only for a material choice,
-  credential, irreversible action, external publication authority, or exact user-owned blocker.
+- One bounded Source Wiki lookup before knowledge-dependent source work; a consumer refusal is not
+  a lookup. Follow AGENTS' current-version and authority boundaries; `03` owns post-test resets.
+- Simple questions need no unrelated Skill, plan or edit. Prompt-refine is for explicit prompt
+  authoring. Resolve ordinary ambiguity with scoped evidence or a material question, not automatic
+  prompt approval. Existing authority survives continuation/retries.
+- Before edits: outcome, constraints, paths, checks, stop condition. Prefer maintained capability
+  or deletion over new infrastructure. Finish safe in-scope work before asking for a material
+  choice, credential, irreversible/publication authority or exact manual action.
 
 ## Continuation and closure
 
-- `all todos`, `until completion`, `do not stop`, explicit implementation followed by `continue`,
-  and equivalent terminal instructions keep the task active while any in-scope action is
-  agent-owned. Agent-owned work includes inspection, fixes, tests, commits, permitted pushes, CI
-  observation, qualification, and authorized publication.
-- A progress report that identifies a remaining agent-owned action must not end the task. A failed
-  test, stale reference, incomplete CI result, elapsed time, or partial host evidence is a next
-  action, not a handoff.
-- For required CI, do independent work or wait with bounded checks, not a final progress report.
-  `03-workflow.md` distinguishes required from unrelated checks.
-- A node stop is not task closure. Preserve limits and evidence; diagnose recovery and continue
-  independent work. No replacement-run budget resets or safety/approval bypass.
-- Before marking a whole Goal or task `blocked`, require a closure with no independent
-  `agent-owned` criterion. Keep a partial blocker attached to its criterion and continue the rest.
-- Abort continued work only when an exact blocker requires user manual action, Codex must be
-  restarted, or every scoped criterion is complete.
-- User cancel or interrupt takes priority and permits immediate stop.
-- Before a final response, classify every remaining item as `agent-owned`,
-  `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`. Continue when any
-  `agent-owned` item remains. Use `blocked` only for a repeated run-wide condition with a recovery
-  path; use `complete` only when scoped criteria and evidence are complete.
-- A protected action excluded by the maintainer does not block other authorized work. Stable
-  release authority and release mechanics belong to `03-workflow.md`.
+All todos/until completion/continue: finish agent-owned inspection, fixes, tests, commits, permitted
+pushes, required CI, qualification and publication. A progress report, failure or node stop is not
+completion. Recover; continue independent authorized work. No replacement-run budget reset/bypass.
+Stop only for user cancel/interrupt, exact user-owned manual action, required Codex restart or completed
+criteria. An excluded protected action does not block other authorized work.
 
-## Evidence
+Before final response classify remaining work: agent-owned, awaiting-user-authority,
+awaiting-external-evidence, blocked. Continue agent-owned work. A whole-goal block requires the
+repeated condition, recovery path and zero independent agent-owned criteria. Completion requires
+fresh scoped evidence; cancellation is not success. Wait/do independent work for required CI;
+`03` distinguishes unrelated checks, `04` owns material handoff. Stable authority is version-specific.
 
-- Separate verified facts from inference and use the smallest fresh check that proves the claim.
-- Skill selection is not execution. Claim verified activation only with task-bound initialization
-  and validation receipts; reconcile them under `04-documentation-state.md`.
-- Durable plan, state, and fact procedures belong to `04-documentation-state.md`; chat history and
-  runtime scratch state never override those sources.
+## Evidence and effort
+
+- Separate fact from inference; use the smallest fresh proof. Skill selection is not verified
+  execution: reconcile task-bound initialization/validation receipts under `04`. Chat and scratch
+  never override canonical plans/state.
+- Read current-phase rules and relevant source ranges only. Reuse unchanged guidance within a task;
+  recover it after compaction or changes. File freshness does not prove presence in model context.
+- Bound investigation by the next decision. After sufficient evidence and passing checks, stop
+  speculative redesign/repeated risk analysis. Reopen only for a concrete discrepancy.
+- Filter tool output, batch independent reads, avoid unchanged polls and repeated plan narration.
+  Retest changed inputs/affected behavior; broad validation once at its required milestone.

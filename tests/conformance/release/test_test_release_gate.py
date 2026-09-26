@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import runpy
 import subprocess
 import tempfile
@@ -22,7 +23,7 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         (self.root / "crates/app").mkdir(parents=True)
         (self.root / "docs/plans/active").mkdir(parents=True)
         (self.root / "crates/app/main.rs").write_text("fn main() {}\n", encoding="utf-8")
-        (self.root / "docs/plans/active/work.md").write_text("- [x] [APP10-001] done\n", encoding="utf-8")
+        self.make_plan()
         subprocess.run(["git", "add", "."], cwd=self.root, check=True)
         subprocess.run(["git", "commit", "-qm", "base"], cwd=self.root, check=True)
         self.module = runpy.run_path(str(SCRIPT))
@@ -45,6 +46,19 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.intent = self.root / "docs/test-release-intent.json"
         self.module["read_intent"].__globals__["INTENT"] = self.intent
 
+    def make_plan(self, version="0.10.1", scope="product"):
+        evidence = self.root / "docs/evidence.md"
+        evidence.write_text("Reviewed synthetic fixture evidence\n", encoding="utf-8")
+        digest = hashlib.sha256(evidence.read_bytes()).hexdigest()
+        (self.root / "docs/plans/PLAN.md").write_text(
+            f"> Product version: {version}\n\n## Active fragments\n\n"
+            "| Fragment | Checklist | 범위 |\n| --- | --- | --- |\n"
+            "| [work](active/work.md) | APP10-* | Product |\n", encoding="utf-8")
+        (self.root / "docs/plans/active/work.md").write_text(
+            f"> Plan version: {version}\n> Scope: {scope}\n\n"
+            "- [x] [APP10-001] done\n"
+            f"  - state: complete; evidence: repo:docs/evidence.md#sha256:{digest}\n", encoding="utf-8")
+
     def commit(self, path: str, text: str) -> None:
         target = self.root / path
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -62,10 +76,35 @@ class AutomaticTestReleaseGate(unittest.TestCase):
         self.assertEqual(result["product_paths"], ["crates/app/main.rs"])
 
     def test_next_patch_product_can_start_at_test_one_from_the_accepted_baseline(self) -> None:
+        self.make_plan(version="0.10.2")
         self.commit("crates/app/main.rs", "fn main() { println!(\"next patch\"); }\n")
         result = self.module["verify"]("0.10.2", "0.10.2-test.1", "APP10-001", "HEAD")
         self.assertEqual(result["status"], "authorized")
         self.assertEqual(result["base_package_version"], "0.10.0-test.11")
+
+    def test_unregistered_historical_completion_is_not_release_authority(self):
+        self.commit("docs/plans/active/old.md", "- [x] [OLD10-001] historical completion\n")
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        with self.assertRaisesRegex(self.module["GateError"], "absent"):
+            self.verify("OLD10-001")
+
+    def test_source_only_criterion_is_not_product_authority(self):
+        self.make_plan(scope="source")
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        with self.assertRaisesRegex(self.module["GateError"], "source-only"):
+            self.verify()
+
+    def test_uncommitted_plan_edit_is_not_bound_to_candidate(self):
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        p = self.root / "docs/plans/active/work.md"
+        p.write_text(p.read_text(encoding="utf-8") + "uncommitted claim\n", encoding="utf-8")
+        with self.assertRaisesRegex(self.module["GateError"], "candidate commit"):
+            self.verify()
+
+    def test_candidate_version_must_match_active_plan(self):
+        self.commit("crates/app/main.rs", "fn main() { println!(\"new\"); }\n")
+        with self.assertRaisesRegex(self.module["GateError"], "active plan"):
+            self.module["verify"]("0.10.2", "0.10.2-test.1", "APP10-001", "HEAD")
 
     def test_older_product_cannot_reuse_a_newer_accepted_baseline(self) -> None:
         registry = self.module["read_registry"].__globals__["REGISTRY"]

@@ -1,0 +1,20 @@
+{
+  "actual_host_execution": false,
+  "rows": [
+    {
+      "path": "src/normal.txt",
+      "expected": "neutral",
+      "actual": "neutral",
+      "exit_code": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "path": ".hive/config/harness.toml",
+      "expected": "deny",
+      "actual": "deny",
+      "exit_code": 0,
+      "stderr_bytes": 0
+    }
+  ],
+  "scope": "exact command launched through Windows shell; no model, hook trust or host invocation proof"
+}

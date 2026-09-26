@@ -8,6 +8,7 @@ import os
 import stat
 import subprocess
 import tomllib
+import importlib.util
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -29,6 +30,183 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_all_public_stable_predecessors_preserve_and_recover(self) -> None:
+        self._qualify_all_public_stable_predecessors(failure_tests=True)
+
+    def test_public_all_stable_predecessors_preserve_and_upgrade(self) -> None:
+        self._qualify_all_public_stable_predecessors(failure_tests=False)
+
+    def _qualify_all_public_stable_predecessors(self, *, failure_tests: bool) -> None:
+        path = REPOSITORY_ROOT / "scripts/qualify-project-predecessors.py"
+        spec = importlib.util.spec_from_file_location("predecessor_qualification", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        report = module.qualify(self.hive_binary, self.work_root / "predecessors", PRODUCT_VERSION, failure_tests)
+        self.assertEqual([row["source_version"] for row in report["results"]], report["required_sources"])
+
+    def test_public_0103_native_owner_with_available_detection_upgrades(self) -> None:
+        self._check_public_0103_upgrade(crlf=False, local_note=False)
+
+    def test_public_0103_crlf_marker_refreshes_rules_and_preserves_local_text(self) -> None:
+        for local_note in (False, True):
+            with self.subTest(local_note=local_note):
+                self._check_public_0103_upgrade(crlf=True, local_note=local_note)
+
+    def _check_public_0103_upgrade(self, *, crlf: bool, local_note: bool) -> None:
+        fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.3"
+        manifest = json.loads((fixtures / "manifest.json").read_bytes())
+        archive_path = fixtures / manifest["archive"]
+        self.assertEqual(hashlib.sha256(archive_path.read_bytes()).hexdigest(), manifest["sha256"])
+        suffix = f"-crlf-{local_note}" if crlf else ""
+        target = self.work_root / f"published-0103-native-available{suffix}"
+        with ZipFile(archive_path) as archive:
+            for member in archive.infolist():
+                self.assertFalse(Path(member.filename).is_absolute())
+                self.assertNotIn("..", Path(member.filename).parts)
+            archive.extractall(target)
+        agents_path = target / "AGENTS.md"
+        note = b"Team-local note: keep repository conventions.\r\n\r\n"
+        if crlf:
+            agents_path.write_bytes(agents_path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        if local_note:
+            agents_path.write_bytes(agents_path.read_bytes().replace(b"## Entry rules\r\n", note + b"## Entry rules\r\n"))
+        formatter = target / ".prettierignore"
+        foreign_formatter = b"# Team format rule\r\nvendor-output/\r\n"
+        formatter.write_bytes(foreign_formatter + formatter.read_bytes())
+        original = snapshot_tree(target)
+        harness_path = target / ".hive/config/harness.toml"
+        before = tomllib.loads(harness_path.read_text(encoding="utf-8"))
+        self.assertEqual(before["harness_version"], "0.10.3")
+        self.assertEqual(before["external_capability_detection"], "available")
+        self.assertEqual(before["resolved_owner"], "host-native")
+        for mode in ("--scan", "--dry-run"):
+            process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+            self.assertEqual(process.returncode, 0, result)
+            self.assertEqual(snapshot_tree(target), original)
+        paths = result["changed_paths"]
+        self.assertIn(".agents/directives/00-project-harness.md", paths)
+        identity = ["--target", str(target), "--host", "codex", "--session-id", "refresh-upgrade"]
+        reservations = ["--process-id", str(os.getpid())]
+        for path in paths:
+            reservations.extend(["--path", path])
+        process, result = self.invoke("session", "begin", *identity, *reservations)
+        self.assertEqual(process.returncode, 0, result)
+        try:
+            process, result = self.invoke("session", "check", *identity, *reservations)
+            self.assertEqual(process.returncode, 0, result)
+            for mode in ("--apply", "--validate"):
+                process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                self.assertEqual(process.returncode, 0, result)
+        finally:
+            process, result = self.invoke("session", "close", *identity)
+            self.assertEqual(process.returncode, 0, result)
+        after = tomllib.loads(harness_path.read_text(encoding="utf-8"))
+        self.assertEqual(after["harness_version"], PRODUCT_VERSION)
+        updated_agents = agents_path.read_bytes()
+        self.assertIn(b"Hive installation is optional for collaborators", updated_agents)
+        self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated_agents)
+        self.assertNotIn(b"- Before an automated edit, reserve exact paths", updated_agents)
+        self.assertIn(b"## Hive availability gate", (target / ".agents/directives/00-project-harness.md").read_bytes())
+        if local_note:
+            self.assertIn(note, updated_agents)
+        for key in ("external_capability_detection", "resolved_owner"):
+            self.assertEqual(after[key], before[key])
+        self.assertEqual((target / "team-note.txt").read_bytes(), original["team-note.txt"][1])
+        self.assertTrue(formatter.read_bytes().startswith(foreign_formatter))
+        self.assertEqual(
+            (target / "AGENTS.md").read_bytes().split(b"<!-- AIGENT-HIVE:START -->")[0],
+            original["AGENTS.md"][1].split(b"<!-- AIGENT-HIVE:START -->")[0],
+        )
+        tampered = self.work_root / f"published-0103-wrong-owner{suffix}"
+        with ZipFile(archive_path) as archive:
+            archive.extractall(tampered)
+        config = tampered / ".hive/config/harness.toml"
+        config.write_bytes(config.read_bytes().replace(b'resolved_owner = "host-native"', b'resolved_owner = "omc"'))
+        before_rejection = snapshot_tree(tampered)
+        process, _ = self.invoke("project", "upgrade", "--target", str(tampered), "--scan")
+        self.assertNotEqual(process.returncode, 0)
+        self.assertEqual(snapshot_tree(tampered), before_rejection)
+
+    def test_collaborator_directives_upgrade_preserves_foreign_bytes_and_recovers(self) -> None:
+        self._check_collaborator_directives_upgrade(inject_failure=True)
+
+    def test_public_collaborator_upgrade_preserves_foreign_bytes(self) -> None:
+        self._check_collaborator_directives_upgrade(inject_failure=False)
+
+    def _check_collaborator_directives_upgrade(self, *, inject_failure: bool) -> None:
+        fixtures = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.0"
+        manifest = json.loads((fixtures / "manifest.json").read_bytes())
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.work_root / f"collaborator-upgrade-{host}"
+                source = fixtures / f"{host}.zip"
+                self.assertEqual(
+                    "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+                    manifest["hosts"][host],
+                )
+                with ZipFile(source) as archive:
+                    for member in archive.infolist():
+                        self.assertFalse(Path(member.filename).is_absolute())
+                        self.assertNotIn("..", Path(member.filename).parts)
+                    archive.extractall(target)
+                agents = target / "AGENTS.md"
+                before_agents = agents.read_bytes()
+                original_rule = b"- Before an automated edit, reserve exact paths through the session coordination directive."
+                self.assertIn(original_rule, before_agents)
+                locally_changed = before_agents.replace(
+                    original_rule,
+                    b"- Before any automated edit, always require Hive even when it is unavailable.",
+                )
+                prefix, block = before_agents.split(b"<!-- AIGENT-HIVE:START -->", 1)
+                _, suffix = block.split(b"<!-- AIGENT-HIVE:END -->", 1)
+                foreign = b"\r\n<!-- framework-owned -->\r\nKeep framework instructions.\r\n"
+                agents.write_bytes(locally_changed + foreign)
+                directive = target / ".agents/directives/00-project-harness.md"
+                local_note = b"\n- Team-local note: run the existing project tests.\n"
+                directive.write_bytes(directive.read_bytes() + local_note)
+                user_rule = target / ".agents/directives/05-user-rules.md"
+                user_rule.write_bytes(b"# Team rules\r\nRun project tests.\r\n")
+                other_config = target / ".other-tool-settings.json"
+                other_config.write_bytes(b'{"enabled":true,"owner":"collaborator"}\r\n')
+
+                def active_snapshot():
+                    return {
+                        path: value for path, value in snapshot_tree(target).items()
+                        if not path.startswith((".hive/backups", ".hive/runtime"))
+                    }
+
+                original = active_snapshot()
+                for mode in ("--scan", "--dry-run"):
+                    process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                    self.assertEqual(process.returncode, 0, result)
+                    self.assertEqual(active_snapshot(), original)
+                # Fault injection is deliberately unavailable in signed release binaries.
+                # The public path still checks preview, ownership, activation and idempotence.
+                if inject_failure:
+                    failed, result = self.invoke(
+                        "project", "upgrade", "--target", str(target), "--apply",
+                        environment={"HIVE_PROJECT_UPGRADE_FAIL_AFTER": "1"},
+                    )
+                    self.assertNotEqual(failed.returncode, 0, result)
+                    self.assertEqual(active_snapshot(), original)
+                for mode in ("--apply", "--validate"):
+                    process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                    self.assertEqual(process.returncode, 0, result)
+                updated = agents.read_bytes()
+                self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:START -->", 1)[0], prefix)
+                self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:END -->", 1)[1], suffix + foreign)
+                self.assertIn(b"Hive installation is optional for collaborators", updated)
+                self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated)
+                self.assertNotIn(b"always require Hive even when it is unavailable", updated)
+                behavior = (target / ".agents/directives/00-project-harness.md").read_bytes()
+                self.assertEqual(behavior, (REPOSITORY_ROOT / "harness/directives/00-project-harness.md").read_bytes() + local_note)
+                self.assertEqual(user_rule.read_bytes(), b"# Team rules\r\nRun project tests.\r\n")
+                self.assertEqual(other_config.read_bytes(), b'{"enabled":true,"owner":"collaborator"}\r\n')
+                upgraded = active_snapshot()
+                process, result = self.invoke("project", "upgrade", "--target", str(target), "--apply")
+                self.assertEqual(process.returncode, 0, result)
+                self.assertEqual(active_snapshot(), upgraded)
+
     def test_published_test2_project_upgrades_without_a_same_version_lockout(self) -> None:
         self._check_same_product_test_upgrade("0.10.0-test.2")
 
@@ -556,6 +734,19 @@ else:
         self.assertEqual(applied.returncode, 0, applied.stderr)
         self.assertEqual(applied_result["code"], "hive.user-setup-complete")
         self.assertEqual(applied_result["data"]["setup_state"], "operational")
+        refresh_copies = [
+            user_root / ".agents/skills/project-refresh",
+            user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/project-refresh",
+        ]
+        for refresh in refresh_copies:
+            self.assertTrue((refresh / "SKILL.md").is_file())
+            self.assertTrue(
+                read_yaml(refresh / "agents/openai.yaml")["policy"]["allow_implicit_invocation"]
+            )
+        self.assertEqual(
+            (refresh_copies[0] / "SKILL.md").read_bytes(),
+            (refresh_copies[1] / "SKILL.md").read_bytes(),
+        )
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
         self.assertTrue(
@@ -1008,6 +1199,43 @@ else:
         self.assertEqual(rejected.returncode, 2, rejected.stderr)
         self.assertEqual(result["code"], "hive.session-host-owned-namespace")
         self.assertEqual(snapshot_tree(target), before)
+
+    def test_shared_directive_reservations_preserve_files_and_reject_foreign_paths(self) -> None:
+        target = self.setup_project("directive-reservations")
+        rule = target / ".agents/directives/05-team.md"
+        rule.write_bytes(b"# User-owned team rule\r\n")
+        paths = [".agents/directives/00-project-harness.md", ".agents/directives/05-team.md"]
+        before_files = {path: (target / path).read_bytes() for path in paths}
+        for host in ("codex", "claude", "antigravity"):
+            identity = ["--target", str(target), "--host", host, "--session-id", "directive-owner"]
+            reservations = ["--process-id", str(os.getpid())]
+            for path in paths:
+                reservations.extend(["--path", path])
+            process, result = self.invoke("session", "begin", *identity, *reservations)
+            self.assertEqual(process.returncode, 0, result)
+            try:
+                process, result = self.invoke("session", "check", *identity, *reservations)
+                self.assertEqual(process.returncode, 0, result)
+                snapshot = snapshot_tree(target)
+                process, result = self.invoke(
+                    "session", "begin", "--target", str(target), "--host", "codex",
+                    "--session-id", "conflicting-directive", "--process-id", str(os.getpid()),
+                    "--path", paths[0],
+                )
+                self.assertEqual(process.returncode, 3, result)
+                self.assertEqual(snapshot_tree(target), snapshot)
+                self.assertEqual({path: (target / path).read_bytes() for path in paths}, before_files)
+            finally:
+                process, result = self.invoke("session", "close", *identity)
+                self.assertEqual(process.returncode, 0, result)
+        original = snapshot_tree(target)
+        for path in (".agents/directives", ".agents/config.toml", ".claude/directives/rule.md", ".agents/directives/../config.md"):
+            process, result = self.invoke(
+                "session", "begin", "--target", str(target), "--host", "codex",
+                "--session-id", "invalid-directive", "--process-id", str(os.getpid()), "--path", path,
+            )
+            self.assertNotEqual(process.returncode, 0, result)
+            self.assertEqual(snapshot_tree(target), original)
 
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")

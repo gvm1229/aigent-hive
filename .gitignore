@@ -17,6 +17,8 @@ __pycache__/
 /.codex/
 /.claude/
 /.agents/work/
+/.agents/policy-hooks/
+/.agents/hooks.json
 
 # Local credentials and signing material
 .env

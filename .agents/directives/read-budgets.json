@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "baseline_revision": "0ca942bf0319f292e1d81ed1d44ac5c60342642b",
+  "unit": "UTF-8 bytes, not model tokens",
+  "scenarios": {
+    "startup": {
+      "baseline_bytes": 13518,
+      "max_bytes": 10464,
+      "files": [
+        "AGENTS.md",
+        ".agents/directives/01-behavior.md",
+        ".agents/directives/07-installed-usage-guard.md"
+      ]
+    },
+    "code-edit": {
+      "baseline_bytes": 50813,
+      "max_bytes": 30487,
+      "files": [
+        "AGENTS.md",
+        ".agents/directives/00-editing-discipline.md",
+        ".agents/directives/01-behavior.md",
+        ".agents/directives/03-workflow.md",
+        ".agents/directives/04-documentation-state.md",
+        ".agents/directives/05-security-safety.md",
+        ".agents/directives/06-session-coordination.md",
+        ".agents/directives/07-installed-usage-guard.md",
+        ".agents/directives/08-human-documentation-style.md",
+        ".agents/directives/references/git-commits.md",
+        ".agents/directives/references/verification.md",
+        ".agents/directives/references/knowledge-and-preservation.md",
+        ".agents/directives/references/plan-reconciliation.md",
+        ".agents/directives/references/session-manifest.md"
+      ]
+    },
+    "source-maintenance": {
+      "baseline_bytes": 50813,
+      "max_bytes": 30487,
+      "files": [
+        "AGENTS.md",
+        ".agents/directives/00-editing-discipline.md",
+        ".agents/directives/01-behavior.md",
+        ".agents/directives/03-workflow.md",
+        ".agents/directives/04-documentation-state.md",
+        ".agents/directives/05-security-safety.md",
+        ".agents/directives/06-session-coordination.md",
+        ".agents/directives/07-installed-usage-guard.md",
+        ".agents/directives/08-human-documentation-style.md",
+        ".agents/directives/references/git-commits.md",
+        ".agents/directives/references/documentation-verification.md",
+        ".agents/directives/references/knowledge-and-preservation.md",
+        ".agents/directives/references/plan-reconciliation.md",
+        ".agents/directives/references/session-manifest.md"
+      ]
+    },
+    "plan-authoring": {
+      "baseline_bytes": 50813,
+      "max_bytes": 34260,
+      "files": [
+        "AGENTS.md",
+        ".agents/directives/00-editing-discipline.md",
+        ".agents/directives/01-behavior.md",
+        ".agents/directives/03-workflow.md",
+        ".agents/directives/04-documentation-state.md",
+        ".agents/directives/05-security-safety.md",
+        ".agents/directives/06-session-coordination.md",
+        ".agents/directives/07-installed-usage-guard.md",
+        ".agents/directives/08-human-documentation-style.md",
+        ".agents/directives/references/git-commits.md",
+        ".agents/directives/references/documentation-verification.md",
+        ".agents/directives/references/knowledge-and-preservation.md",
+        ".agents/directives/references/planning-contract.md",
+        ".agents/directives/references/session-manifest.md"
+      ]
+    },
+    "release": {
+      "baseline_bytes": 55325,
+      "max_bytes": 45508,
+      "files": [
+        "AGENTS.md",
+        ".agents/directives/00-editing-discipline.md",
+        ".agents/directives/01-behavior.md",
+        ".agents/directives/03-workflow.md",
+        ".agents/directives/04-documentation-state.md",
+        ".agents/directives/05-security-safety.md",
+        ".agents/directives/06-session-coordination.md",
+        ".agents/directives/07-installed-usage-guard.md",
+        ".agents/directives/08-human-documentation-style.md",
+        ".agents/directives/references/git-commits.md",
+        ".agents/directives/references/verification.md",
+        ".agents/directives/references/knowledge-and-preservation.md",
+        ".agents/directives/references/plan-reconciliation.md",
+        ".agents/directives/references/session-manifest.md",
+        ".agents/directives/02-architecture.md",
+        ".agents/directives/references/git-branches.md",
+        ".agents/directives/references/ci-and-candidates.md",
+        ".agents/directives/references/release-qualification.md",
+        ".agents/directives/references/stable-plan-gate.md",
+        ".agents/directives/references/update-and-removal.md",
+        ".agents/directives/references/release-notes.md"
+      ]
+    }
+  }
+}

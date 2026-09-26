@@ -107,3 +107,5 @@
 | `docs/plans/stages/10-completion-resume.md` | [보존본](plans/foundations/stages/10-completion-resume.md) | `sha256:252559ab920d5f5b87f7825d97f5bf1df53319a4f5be4091ad7b5e0955612106` | [현재 탐색](../01-index.md) |
 | `docs/plans/stages/11-update-migration.md` | [보존본](plans/foundations/stages/11-update-migration.md) | `sha256:cb7f43bb3997b2ffeb2a5b713f98e3f8c6e803932cc6209468b240766a7fa02d` | [현재 탐색](../01-index.md) |
 | `docs/state/CURRENT.md` | [보존본](state/0.9.5-closeout.md) | `sha256:994194104c364ca994e99b50a71e24f72a221eebe9d2ebc7cab6654eb18cffb3` | [현재 탐색](../state/CURRENT.md) |
+
+| `docs/state/CURRENT.md` — 0.11.0 구현·생성 구간 도입 전 기록 | [보존본](state/0.11.0-before-plan-generation.md) | `sha256:95e772edea2c708149e62fcbe861b43b97467d46965c15933b8fdbc326d690d9` | [현재 상태](../state/CURRENT.md) |

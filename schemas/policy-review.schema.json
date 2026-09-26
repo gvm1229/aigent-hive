@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/policy-review.schema.json",
+  "title": "Bounded run policy review, never mutation authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scope_digest", "host", "host_version_digest", "operating_system", "candidates"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "scope_digest": {"$ref": "#/$defs/digest"},
+    "host": {"enum": ["codex", "claude", "antigravity"]},
+    "host_version_digest": {"$ref": "#/$defs/digest"},
+    "operating_system": {"enum": ["windows", "linux", "macos"]},
+    "candidates": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/candidate"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "failureClass": {"enum": ["missing-rule", "non-compliance", "harmful-rule", "tool-environment", "insufficient-evidence"]},
+    "evidence": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/digest"}},
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rule", "policy_digest", "proposed_class", "revised_class", "supporting_evaluations", "counter_evaluations", "state"],
+      "properties": {
+        "id": {"$ref": "#/$defs/digest"},
+        "rule": {"enum": ["source-branch", "commit-concern", "fresh-verification", "active-plan", "task-closure", "source-consumer", "hive-owned-state", "concurrent-edit", "update-recovery", "historical-bytes", "canonical-freshness", "knowledge-scope", "reviewed-memory", "usage-preflight", "exact-authority", "release-authority", "host-owned-model", "language-quality", "intent-routing", "cancel-resume"]},
+        "policy_digest": {"$ref": "#/$defs/digest"},
+        "proposed_class": {"$ref": "#/$defs/failureClass"},
+        "revised_class": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/failureClass"}]},
+        "supporting_evaluations": {"allOf": [{"$ref": "#/$defs/evidence"}, {"minItems": 1}]},
+        "counter_evaluations": {"$ref": "#/$defs/evidence"},
+        "state": {"enum": ["pending", "accepted", "revised", "rejected", "cancelled"]}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "revised"}}}, "then": {"properties": {"revised_class": {"$ref": "#/$defs/failureClass"}}}, "else": {"properties": {"revised_class": {"type": "null"}}}}]
+    }
+  }
+}

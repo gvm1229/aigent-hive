@@ -15,7 +15,7 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 2. Extract only verified improvements that an end user can notice, use, avoid, or understand differently. Exclude future candidates, internal investigation notes, unshipped changes, and developer- or contributor-only work.
 3. Write a Korean Markdown title in this form: `# Aigent Hive v<current> 업데이트 내역:`.
 4. Write one concise Korean main bullet per change, with practical examples and relevant limits in a nested list. Lead with the feature addition or improvement and its benefit; place setup choices and costs below it.
-5. Measure the exact final Unicode character count after normalizing line endings to `\n` and trimming outer whitespace, as the delivery tool does. If it is at most 2,000 characters, do not summarize, shorten, or rephrase it because of length. If it exceeds 2,000, automatically revise and recount until it fits; never stop just to ask the maintainer how to handle the limit. Remove repetition and internal detail first, shorten overlapping examples next, and combine child bullets only when their meaning stays clear. Preserve the title, every distinct user-facing change, feature classification and core technical names, verified numbers, material costs, user choices, compatibility or safety limits, and uncertainty. Never truncate text mechanically, hide a feature, drop a warning, split the payload, or weaken factual accuracy to fit.
+5. Measure the exact final Unicode character count after normalizing line endings to `\n` and trimming outer whitespace, as the delivery tool does. If it is at most 2,000 characters, do not summarize, shorten, or rephrase it because of length. If it exceeds 2,000, automatically revise and recount until it fits; never stop just to ask the maintainer how to handle the limit. Remove repetition and internal detail first, shorten overlapping examples next, and combine child bullets only when their meaning stays clear. Preserve the title, every distinct user-facing change, feature classification and core technical names, verified numbers, material costs, user choices, and compatibility or safety limits. Never truncate text mechanically, hide a feature, drop a warning, split the payload, or weaken factual accuracy to fit.
 6. Compare only the baseline and target identified above. Do not describe a review draft as a released stable version, rebuild an artifact, publish a release, or change product harness files.
 7. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
 8. Before stable approval, that path may hold review or wording-approved copy. State its unissued status in the accompanying response or project state, outside the sendable payload. Wording approval never authorizes release or delivery; do not describe unverified work as released.
@@ -43,6 +43,10 @@ the banner or summary.
 
 ## End-user relevance
 
+- Apply the [release-note audience rules](../../directives/08-human-documentation-style.md#release-notes-and-update-announcements), including conversational patch-note previews. The reader may be a developer but does not know Hive's internals.
+- Draft the user outcome first, then attach only the limits needed to use or choose it. Do not use engineering work such as broader tests or authenticated historical bases as the headline; explain the update experience those changes support.
+- Check the heading and first explanation without the supporting evidence beside them. If the reader needs Hive implementation knowledge to understand the improvement, rewrite them before delivery.
+
 - Include a change only when it changes the installed product, installation or update experience, user workflow, safety protection, or user-facing understanding of a usable feature.
 - Exclude GitHub Release language order or formatting, CI and test procedures, release verification records, repository plans, source documentation, internal catalog or projection work, and contributor workflows unless the change directly alters a subscriber action or outcome.
 - In particular, do not report an English-first and Korean-second GitHub Release description format. It is a publication detail for developers and contributors, not a subscriber improvement.
@@ -55,7 +59,7 @@ the banner or summary.
 - Every bullet must state the subscriber benefit or changed capability; do not expose implementation, process, or publication details as an improvement.
 - Do not place the banner image or a webhook URL in the subscriber summary file.
 - Preserve security boundaries. Describe blocked secrets or credentials only as a safety outcome; never include a secret-shaped example or value.
-- State uncertainty when release evidence is missing or contradictory instead of inferring a claim.
+- Keep failed tests, retries, crashes, and their investigation in maintainer records. Never place them in release notes or Discord copy. Omit a claim without positive verification, while retaining any material supported-host or setup limit a subscriber needs.
 
 ## Scope boundary
 

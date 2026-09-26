@@ -223,7 +223,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
         with:
           toolchain: stable
-      - run: python scripts/test-artifacts.py run --purpose '플랫폼 Hive CLI 단위 시험' --path target/debug --command cargo test -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
 
   transfer-produce:
     name: Transfer producer (${{ matrix.os }})

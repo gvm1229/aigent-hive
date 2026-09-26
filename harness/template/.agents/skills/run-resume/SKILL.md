@@ -16,11 +16,13 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
 2. Obtain a fresh normalized capability-resolution JSON from the active host adapter. Do not inspect `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
 3. Choose one explicit dispatch intent:
    - Manual recovery is the default and does not claim usage enforcement.
-   - Automatic continuation requires the configured account digest and exactly one active role.
-     The CLI reads the installed `.hive/config/harness.toml` threshold. Omit `--threshold`, or
-     pass only the identical configured value; a caller cannot lower or replace it. Never pass
-     or expose a raw account identity.
-4. Run exactly one bounded read.
+   - Automatic continuation requires the exact current host session ID, positive process ID,
+     and one active role. Obtain the binding from the host; never invent or transfer it.
+     Supply the user root so the CLI applies the shared global/project policy. Supply an
+     exposed account digest, or omit it only for one unambiguous sensed account. Omit
+     `--threshold`, or pass the identical effective value; never expose a raw account identity.
+4. Run exactly one recovery command. Automatic mode performs the shared usage preflight itself;
+   do not precede it with a second `usage enforce` sample for the same dispatch.
 
    Manual:
 
@@ -31,7 +33,7 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
    Automatic:
 
    ```text
-   hive run resume --target <project-root> --run <run-id> --capabilities <fresh-capability-resolution.json> --dispatch-intent automatic --account-digest <sha256:...> --role <active-role-id> [--threshold <installed-identical-value>] --output json
+   hive run resume --target <project-root> --run <run-id> --capabilities <fresh-capability-resolution.json> --dispatch-intent automatic --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--account-digest <sha256:...>] --role <active-role-id> [--threshold <installed-identical-value>] --output json
    ```
 
 5. Require a schema-valid result bound to the exact PLAN, STATUS revision, active role documents, shared role handoff entries, evidence bytes, immutable owner evidence, and requested dispatch intent.
@@ -47,7 +49,7 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
    - Treat `outcome=already_issued` as a replay/retry refusal with zero briefs. Do not dispatch
      from it or from a previously captured result.
    - If the account digest or trustworthy fresh sensor evidence is absent, or the result is
-     `hive.usage-unknown` or `hive.usage-limited`, return recovery data with zero briefs and
+     `hive.usage-unknown`, `hive.usage-limited`, or `hive.usage-reset`, return recovery data with zero briefs and
      do not dispatch.
    - For `unsupported` or `unverified`, stop on exit code `4`; no dispatch brief is authorized.
    - For `blocked` or `usage-limited`, return recovery data and the resume condition without dispatch.
@@ -60,7 +62,8 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
 - Keep the simple-question path isolated; do not load this Skill for self-contained quick-answers.
 - Never write STATUS.md, PLAN.md, role files, handoffs, evidence, configuration, or foreign
   runtime bytes. Automatic mode may atomically write only bounded, sanitized
-  `.hive/runtime/usage-history/*.json` and `.hive/runtime/dispatch-authorizations/*.json`;
+  `.hive/runtime/usage-guard/` halt state, `.hive/runtime/usage-history/*.json`, and
+  `.hive/runtime/dispatch-authorizations/*.json`;
   manual mode writes nothing.
 - Never create a plan, Ralph loop, team workflow, retry loop, subagent, model call, provider API request, or runtime process.
 - Never perform automatic continuation from manual output or from automatic output lacking an authorized usage guard.

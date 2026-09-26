@@ -1,7 +1,7 @@
 # 07. Installed Product Usage Guard Directive
 
-This directive applies the installed product usage policy while developing Aigent Hive. The
-repository owns no second sensor, threshold file, watcher, or halt implementation.
+Use the installed usage policy for Hive source work. No separate source sensor, threshold,
+watcher, or halt implementation.
 
 ## Target classification
 
@@ -25,9 +25,10 @@ repository owns no second sensor, threshold file, watcher, or halt implementatio
    hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
    ```
 
-5. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks source work. While blocked,
-   permit only exact guard control, consented fallback, or one same-binding `enforce` after a
-   changed threshold. Continue only on fresh `hive.usage-allowed`, never by disabling the session.
+5. Exit `3`, limited, unknown, or reset blocks work. Allow only exact guard control, consented
+   fallback, or one same-binding `enforce` after threshold change or explicit reset acknowledgement.
+   Acknowledgement requires installed-command support; never reconstruct state. Continue only
+   on fresh `hive.usage-allowed`, never by session disable.
 
 Do not repeat the preflight before each tool, mutation, push, or final response. Do not start a
 background watcher. The installed marker and exact binding remain authoritative; a new session

@@ -27,6 +27,7 @@ Record state only. Execution and continuation remain owned by the run's pinned o
 
 7. Accept only a schema-valid success result. An identical retry is a no-op; a lost revision, changed owner evidence, unsafe path, missing role handoff, or evidence digest mismatch is a stop condition.
 8. Report the committed revision, state, next action, changed path, and evidence digests.
+9. When this run contains reviewed policy-checker evidence or the user requests policy review, read [policy review](references/policy-review.md). A Stop notice is only a review reminder; it never changes completion, rules, or execution authority.
 
 ## Boundaries
 

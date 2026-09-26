@@ -77,6 +77,13 @@ releases:
     migration_id: same-major-render-v1
     project_base_digest: sha256:44a29110e1317bf1667593c381d070f5ea1bc5ff77e7335f7ce768b2255deda3
     user_projection_digest: sha256:afd329afb3e96efdcbee01fa6407b118987dd7d46081a384b44a2da46b4dd210
+  - version: 0.10.3
+    compatibility_epoch: 0.10.3
+    renderer: frozen_project_base_0_10_3
+    state_schema: project-v1
+    migration_id: same-major-render-v1
+    project_base_digest: sha256:5e62b556adad824805c4b7e4609941d6bee056e09877df7ab9c469f8b0a55e51
+    user_projection_digest: sha256:322cde60b258d1028ac79c9ee4e4e25be9726ed2552a87c57dc933ca19335dfd
 published_snapshots:
   - version: 0.10.0-test.2
     source_version: 0.10.0

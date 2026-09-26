@@ -29,6 +29,7 @@ mod knowledge_scan;
 mod korean;
 mod loop_engineering;
 mod orchestration;
+mod policy;
 mod project_upgrade;
 mod report;
 mod role;
@@ -73,6 +74,7 @@ USAGE:
     hive prompt validate --request <input.json> --result <result.json> --output json
     hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
+    hive policy evaluate --input <json> --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
@@ -84,7 +86,7 @@ USAGE:
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <1..99>]] --output json
     hive run closure --target <dir> --run <run-id> --output json
     hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
@@ -229,6 +231,7 @@ fn main() -> ExitCode {
         Some("route") => run_route(&arguments[1..]),
         Some("prompt") => run_prompt(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
+        Some("policy") => policy::run(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
@@ -1810,13 +1813,20 @@ fn protect_hive_owned_state(target: &Path, input: &HookInput) -> Result<HookResu
 }
 
 fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, RenderError> {
+    let relative = observed_hook_relative(target, value);
+    if let Some(relative) = &relative {
+        validate_project_relative(relative).map_err(|error| {
+            RenderError::Input(format!("unsafe hook input path {value}: {error}"))
+        })?;
+    }
+    Ok(relative)
+}
+
+fn observed_hook_relative(target: &Path, value: &str) -> Option<PathBuf> {
     let path = PathBuf::from(value);
     #[cfg(windows)]
     let relative = if path.is_absolute() {
-        match windows_target_relative(target, &path) {
-            Some(relative) => relative,
-            None => return Ok(None),
-        }
+        windows_target_relative(target, &path)?
     } else {
         path
     };
@@ -1824,14 +1834,12 @@ fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, Re
     let relative = if path.is_absolute() {
         match path.strip_prefix(target) {
             Ok(relative) => relative.to_path_buf(),
-            Err(_) => return Ok(None),
+            Err(_) => return None,
         }
     } else {
         path
     };
-    validate_project_relative(&relative)
-        .map_err(|error| RenderError::Input(format!("unsafe hook input path {value}: {error}")))?;
-    Ok(Some(relative))
+    Some(relative)
 }
 
 #[cfg(windows)]
@@ -1881,23 +1889,37 @@ fn windows_portable_path(path: &Path) -> Option<String> {
 }
 
 fn is_protected_hive_path(path: &Path) -> bool {
+    #[cfg(windows)]
+    let folded = path.to_string_lossy().to_ascii_lowercase();
+    #[cfg(windows)]
+    let path = Path::new(&folded);
     [
         ".hive/.gitignore",
         ".hive/LICENSE-AIGENT-HIVE.txt",
         ".hive/README.md",
         ".hive/setup-answers.yml",
+        ".hive/directives/00-editing-discipline.md",
     ]
     .iter()
-    .any(|owned| path == Path::new(owned))
-        || [
-            ".hive/config",
-            ".hive/hooks",
-            ".hive/knowledge",
-            ".hive/team",
-            ".hive/runs",
-        ]
-        .iter()
-        .any(|prefix| path == Path::new(prefix) || path.starts_with(prefix))
+    .any(|owned| {
+        #[cfg(windows)]
+        let matches_owned = path == Path::new(&owned.to_ascii_lowercase());
+        #[cfg(not(windows))]
+        let matches_owned = path == Path::new(owned);
+        matches_owned
+    }) || [
+        ".hive/config",
+        ".hive/hooks",
+        ".hive/knowledge",
+        ".hive/team",
+        ".hive/runs",
+        ".hive/index",
+        ".hive/backups",
+        ".hive/runtime",
+        ".hive/language-packs",
+    ]
+    .iter()
+    .any(|prefix| path == Path::new(prefix) || path.starts_with(prefix))
 }
 
 fn update_integrity_guard(input: &HookInput) -> Result<HookResult, RenderError> {
@@ -2193,6 +2215,40 @@ mod tests {
             "aigent-hive-cli-{name}-{}-{nonce}",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn file_guard_covers_manifest_owned_hive_state_without_claiming_foreign_paths() {
+        let manifest: toml::Value =
+            toml::from_str(include_str!("../../../harness/manifest.toml")).expect("manifest");
+        for entry in manifest["paths"].as_array().expect("paths") {
+            let pattern = entry["pattern"].as_str().expect("path pattern");
+            if !pattern.starts_with(".hive/") {
+                continue;
+            }
+            let path = pattern.strip_suffix("/**").map_or_else(
+                || pattern.to_owned(),
+                |prefix| format!("{prefix}/fixture.txt"),
+            );
+            assert!(
+                !path.contains('*'),
+                "review newly introduced manifest pattern: {pattern}"
+            );
+            assert!(
+                super::is_protected_hive_path(Path::new(&path)),
+                "unprotected manifest state: {pattern}"
+            );
+        }
+        for foreign in [
+            "src/.hive/runtime/log.json",
+            ".hive/runtime-notes.txt",
+            ".claude/user-owned-note.md",
+        ] {
+            assert!(
+                !super::is_protected_hive_path(Path::new(foreign)),
+                "foreign path: {foreign}"
+            );
+        }
     }
 
     #[test]

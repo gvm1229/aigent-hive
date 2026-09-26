@@ -12,11 +12,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.plan_state import PLAN_ID, PlanError, load_plan
+
 REGISTRY = ROOT / "docs/public-test-product.json"
 STABLE_REGISTRY = ROOT / "docs/public-stable-release.json"
 INTENT = ROOT / "docs/test-release-intent.json"
 STABLE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
-PLAN_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
 PRODUCT_PREFIXES = ("crates/", "harness/", "schemas/", "packaging/", "vendor/", "LICENSES/")
 PRODUCT_FILES = {
     "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "copier.yml", "LICENSE", "REUSE.toml",
@@ -32,7 +35,8 @@ class GateError(ValueError):
 
 def git(*arguments: str) -> str:
     result = subprocess.run(
-        ["git", *arguments], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30
+        ["git", *arguments], cwd=ROOT, check=False, capture_output=True, text=True,
+        encoding="utf-8", timeout=30
     )
     if result.returncode != 0:
         raise GateError("required Git evidence is unavailable")
@@ -77,10 +81,10 @@ def changed_product_paths(base: str, head: str) -> list[str]:
 
 
 def checked_plan_ids() -> set[str]:
-    checked: set[str] = set()
-    for path in (ROOT / "docs/plans/active").glob("*.md"):
-        checked.update(re.findall(r"^- \[x\] \[([A-Z][A-Z0-9]*-[0-9]{3})\]", path.read_text(encoding="utf-8"), re.MULTILINE))
-    return checked
+    try:
+        return load_plan(ROOT).completed_product_ids()
+    except (PlanError, OSError) as error:
+        raise GateError(str(error)) from error
 
 
 def read_registry() -> dict[str, object]:
@@ -136,9 +140,6 @@ def verify(product_version: str, package_version: str, plan_ids: str | None, hea
         raise GateError("one or more unique implementation plan IDs are required")
     if any(item.startswith("REL") for item in requested):
         raise GateError("release mechanics cannot authorize product changes")
-    missing = sorted(set(requested) - checked_plan_ids())
-    if missing:
-        raise GateError("product change plan IDs are absent or incomplete: " + ",".join(missing))
     registry = read_registry()
     stable_version = read_stable_version()
     if version_key(product_version) <= version_key(stable_version):
@@ -146,6 +147,21 @@ def verify(product_version: str, package_version: str, plan_ids: str | None, hea
     accepted_product_version = registry["product_version"]
     if not isinstance(accepted_product_version, str) or version_key(product_version) < version_key(accepted_product_version):
         raise GateError("candidate product version is older than the accepted public-test baseline")
+    try:
+        plan = load_plan(ROOT)
+    except (PlanError, OSError) as error:
+        raise GateError(str(error)) from error
+    if plan.version != product_version:
+        raise GateError("candidate product version differs from the active plan")
+    missing = sorted(set(requested) - plan.completed_product_ids())
+    if missing:
+        raise GateError("product change plan IDs are absent, incomplete, or source-only: " + ",".join(missing))
+    head = git("rev-parse", "--verify", "--end-of-options", f"{head}^{{commit}}").strip()
+    for path, payload in plan.inputs.items():
+        relative = path.relative_to(ROOT).as_posix()
+        # Compare canonical text: Git may normalize checkout line endings.
+        if git("show", f"{head}:{relative}").replace("\r\n", "\n") != payload.decode("utf-8").replace("\r\n", "\n"):
+            raise GateError(f"plan evidence is not bound to candidate commit: {relative}")
     base = str(registry["accepted_source_commit"])
     prior_digest = product_digest(base)
     if prior_digest != registry["product_tree_sha256"]:

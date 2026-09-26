@@ -445,8 +445,9 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hive-cli"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
+ "base64",
  "cap-fs-ext",
  "cap-primitives",
  "cap-std",
@@ -471,8 +472,10 @@ dependencies = [
 
 [[package]]
 name = "hive-core"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "ed25519-dalek",
  "jsonschema",
  "regex",
@@ -480,12 +483,13 @@ dependencies = [
  "serde_json",
  "serde_json_canonicalizer",
  "sha2",
+ "tempfile",
  "yaml_serde",
 ]
 
 [[package]]
 name = "hive-projection"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "hive-core",
  "serde",
@@ -496,7 +500,7 @@ dependencies = [
 
 [[package]]
 name = "hive-render"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -514,7 +518,7 @@ dependencies = [
 
 [[package]]
 name = "hive-update"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -533,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "hive-wiki"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",

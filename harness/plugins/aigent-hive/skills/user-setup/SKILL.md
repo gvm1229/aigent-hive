@@ -46,3 +46,10 @@ outer task; return control to the already authorized workflow.
 - Never activate an optional third-party Skill through this workflow.
 - Never install CodexBar without exact current-action consent.
 - Never commit or push unless the user explicitly requests that Git operation.
+
+## Project directive recovery boundary
+
+User setup does not install project compaction hooks. For an explicitly identified project's
+instruction recovery request, use project-setup's optional directive recovery flow after finishing
+any authorized user setup. Existing project hooks whose policy digest changes need a fresh exact
+project preview and approval; do not rewrite their pins as a global setup side effect.

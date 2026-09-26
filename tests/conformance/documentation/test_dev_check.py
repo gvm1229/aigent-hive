@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -184,6 +185,7 @@ class DevCheckTest(unittest.TestCase):
         with (
             mock.patch.object(MODULE, "run_rust") as run_rust,
             mock.patch.object(MODULE, "run_python") as run_python,
+            mock.patch.object(MODULE.subprocess, "run") as branch_check,
         ):
             self.assertEqual(
                 MODULE.main(["rust", "--", "test", "-p", "hive-core"]),
@@ -194,8 +196,20 @@ class DevCheckTest(unittest.TestCase):
 
             run_rust.reset_mock()
             self.assertEqual(MODULE.main(["pre-push"]), 0)
+            self.assertIn("branch-policy.py", branch_check.call_args.args[0][1])
+            self.assertEqual(branch_check.call_args.args[0][-1], "current")
             run_rust.assert_called_once_with(())
             run_python.assert_called_once_with(())
+
+    def test_pre_push_rejects_branch_before_expensive_checks(self) -> None:
+        with (
+            mock.patch.object(MODULE.subprocess, "run", side_effect=subprocess.CalledProcessError(1, "branch-policy")),
+            mock.patch.object(MODULE, "run_rust") as rust,
+            mock.patch.object(MODULE, "run_python") as python,
+        ):
+            self.assertEqual(MODULE.main(["pre-push"]), 2)
+            rust.assert_not_called()
+            python.assert_not_called()
 
     def test_missing_tool_error_is_actionable(self) -> None:
         with (

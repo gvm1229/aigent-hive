@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "scope": "synthetic CLI behavior, not model behavior or host execution",
+  "rows": {
+    "before": [
+      {
+        "case": "manual",
+        "exit_code": 0,
+        "code": "hive.run-resume-prepared",
+        "brief_count": 1,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "blocked",
+        "exit_code": 3,
+        "code": "hive.run-resume-blocked",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "cancelled",
+        "exit_code": 0,
+        "code": "hive.run-recovery-loaded",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "automatic-allow",
+        "exit_code": 0,
+        "code": "hive.run-resume-prepared",
+        "brief_count": 1,
+        "new_files": [
+          ".hive/runtime/dispatch-authorizations/b39b456146d82c0f69abfd630dbe290fce818353fe53fde57d3c0e3918e2a1b4.json",
+          ".hive/runtime/usage-history/cb6ac017233d37126456167f53a167429af84c4444a818d1da20e2d73d5e94a4.json"
+        ],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 2
+      },
+      {
+        "case": "automatic-replay",
+        "exit_code": 3,
+        "code": "hive.usage-unknown",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "automatic-limit",
+        "exit_code": 3,
+        "code": "hive.usage-limited",
+        "brief_count": 0,
+        "new_files": [
+          ".hive/runtime/usage-history/cb6ac017233d37126456167f53a167429af84c4444a818d1da20e2d73d5e94a4.json"
+        ],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 2
+      },
+      {
+        "case": "missing-session",
+        "exit_code": 0,
+        "code": "hive.run-resume-prepared",
+        "brief_count": 1,
+        "new_files": [
+          ".hive/runtime/dispatch-authorizations/b39b456146d82c0f69abfd630dbe290fce818353fe53fde57d3c0e3918e2a1b4.json",
+          ".hive/runtime/usage-history/cb6ac017233d37126456167f53a167429af84c4444a818d1da20e2d73d5e94a4.json"
+        ],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 2
+      },
+      {
+        "case": "simple-question",
+        "exit_code": 0,
+        "code": "hive.routing-resolved",
+        "route": {
+          "load_skill_bodies": [
+            "quick-answer"
+          ],
+          "logical_action": "AnswerSimpleQuestion",
+          "mode": null,
+          "next_action": null,
+          "provided_by": "hive",
+          "route": "simple-question",
+          "schema_version": 1,
+          "selected_skill": "quick-answer"
+        },
+        "sensor_calls": 0
+      }
+    ],
+    "after": [
+      {
+        "case": "manual",
+        "exit_code": 0,
+        "code": "hive.run-resume-prepared",
+        "brief_count": 1,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "blocked",
+        "exit_code": 3,
+        "code": "hive.run-resume-blocked",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "cancelled",
+        "exit_code": 0,
+        "code": "hive.run-recovery-loaded",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "automatic-allow",
+        "exit_code": 0,
+        "code": "hive.run-resume-prepared",
+        "brief_count": 1,
+        "new_files": [
+          ".hive/runtime/dispatch-authorizations/b39b456146d82c0f69abfd630dbe290fce818353fe53fde57d3c0e3918e2a1b4.json",
+          ".hive/runtime/usage-guard/sessions/268a4645c9887fd2b61613dc859cacb3eee36ef6cbfae3d6bd5f2526e197c047/halt.json",
+          ".hive/runtime/usage-history/cb6ac017233d37126456167f53a167429af84c4444a818d1da20e2d73d5e94a4.json"
+        ],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 2
+      },
+      {
+        "case": "automatic-replay",
+        "exit_code": 3,
+        "code": "hive.usage-unknown",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "automatic-limit",
+        "exit_code": 3,
+        "code": "hive.usage-limited",
+        "brief_count": 0,
+        "new_files": [
+          ".hive/runtime/usage-guard/sessions/268a4645c9887fd2b61613dc859cacb3eee36ef6cbfae3d6bd5f2526e197c047/halt.json",
+          ".hive/runtime/usage-history/cb6ac017233d37126456167f53a167429af84c4444a818d1da20e2d73d5e94a4.json"
+        ],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 2
+      },
+      {
+        "case": "missing-session",
+        "exit_code": 2,
+        "code": "hive.invalid-input",
+        "brief_count": 0,
+        "new_files": [],
+        "existing_bytes_preserved": true,
+        "sensor_calls": 0
+      },
+      {
+        "case": "simple-question",
+        "exit_code": 0,
+        "code": "hive.routing-resolved",
+        "route": {
+          "load_skill_bodies": [
+            "quick-answer"
+          ],
+          "logical_action": "AnswerSimpleQuestion",
+          "mode": null,
+          "next_action": null,
+          "provided_by": "hive",
+          "route": "simple-question",
+          "schema_version": 1,
+          "selected_skill": "quick-answer"
+        },
+        "sensor_calls": 0
+      }
+    ]
+  },
+  "binary_digests": {
+    "before": "ad00d81566ec89f2e6a01b86ef6dcc8b38c7230538292b499ba94e1a8e7de499",
+    "after": "32dfa6c37b7219615a3641af805301769b1f7b6f3fdeb4af1c1a03b0b31b9415"
+  },
+  "preserved_result_cases": 7,
+  "approved_compatibility_exception": "missing-session automatic calls reject before sampling or writing; current automatic input adds required positive PID",
+  "runtime_difference": "current allowed/limited automatic preflight records bounded shared session halt/observation state"
+}

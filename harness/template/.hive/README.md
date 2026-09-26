@@ -4,6 +4,12 @@ Files under this `.hive/` directory and exact Aigent Hive marker blocks generate
 
 This license applies only to Aigent Hive-provided material. It does not change the license of the consumer project's own source, documentation, configuration, or data.
 
+Collaborators do not need to install Hive for ordinary development. Follow the availability
+gate in `.agents/directives/00-project-harness.md` before the command-backed procedures below.
+Without local Hive activation, keep common project rules and use existing development tools;
+do not claim Hive coordination or knowledge updates. An existing protection failure is not
+permission to bypass it. Installation, global setup, and other tools' settings remain personal.
+
 Canonical project knowledge lives under `.hive/knowledge/`. Markdown and YAML are
 tracked source; `.hive/index/hive.sqlite3` is disposable and can be rebuilt with:
 

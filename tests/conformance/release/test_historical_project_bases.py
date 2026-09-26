@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import subprocess
 import unittest
+
+import yaml
 from pathlib import Path
 
 
@@ -42,6 +44,19 @@ def source_paths(version: str) -> dict[str, Path]:
 
 
 class HistoricalProjectBaseContract(unittest.TestCase):
+    def test_latest_frozen_base_checkout_preserves_stored_bytes(self) -> None:
+        registry = yaml.safe_load((ROOT / "harness/project-bases/registry.yml").read_text(encoding="utf-8"))
+        version = registry["releases"][-1]["version"]
+        for family in ("project-bases", "user-bases"):
+            prefix = f"harness/{family}/{version}"
+            paths = subprocess.check_output(["git", "ls-files", "--", prefix], cwd=ROOT, text=True).splitlines()
+            self.assertTrue(paths, prefix)
+            for path in paths:
+                with self.subTest(path=path):
+                    stored = subprocess.check_output(["git", "cat-file", "blob", f"HEAD:{path}"], cwd=ROOT)
+                    checkout = subprocess.check_output(["git", "cat-file", "--filters", f"HEAD:{path}"], cwd=ROOT)
+                    self.assertEqual(checkout, stored, "checkout filters must not rewrite frozen evidence")
+
     def test_test4_vector_skill_deltas_match_the_exact_published_source(self) -> None:
         for name in ("knowledge-recall", "knowledge-maintain"):
             actual = (ROOT / "harness/project-bases/0.10.0-test.4/skills" / name / "SKILL.md").read_bytes()
