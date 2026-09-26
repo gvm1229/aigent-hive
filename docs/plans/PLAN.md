@@ -4,7 +4,7 @@
 > 기준일: 2026-09-26
 > Product version: `0.11.0`
 > 공개 Stable: `0.10.3`
-> 현재 단계: 호스트 비교
+> 현재 단계: 신뢰 대기
 > 공개 수용 완료: `0.11.0-test.9`; test.3 수용 보류, 미공개 test.4·5 취소
 > 결정: [ADR-0023](../decisions/ADR-0023-foundation-refactor.md), [기존 ADR-0022](../decisions/ADR-0022-global-user-update.md)
 

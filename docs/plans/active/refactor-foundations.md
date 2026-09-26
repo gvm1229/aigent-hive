@@ -49,7 +49,7 @@
 - [x] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: complete; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
 - [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
-  - state: agent-owned; depends: DCR-006; reason: test.9 공개 수용 완료, DCR-006 실제 호스트 비교 근거 필요
+  - state: awaiting-user-authority; depends: DCR-006; owner: maintainer; reason: test.9 공개 수용 완료, 고정 실제 호스트 시험의 새 훅 4개 신뢰 대기
 
 ## 측정과 판정
 

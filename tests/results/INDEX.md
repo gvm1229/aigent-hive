@@ -836,3 +836,4 @@
 | [failed](runs/20260925T223613-1a8a0f1a8a89.md) | 0.11.0-test.9 공개 Windows 실행 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T223954-50eb3ef7d9f6.md) | 조회 반영 뒤 test.9 공개 Windows 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T224037-f25d5ef80fb2.md) | test.9 공개 Windows 실행 파일의 훅 계약 수용 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T123946-f6a11e9c3ea7.md) | test.9 실제 호스트 비교용 고정 시험 정의 준비 | b24caeacdd369fefad8d3c61270a43cd0a921d91 | Windows-11-10.0.26200-SP0 |

@@ -20,7 +20,7 @@
 - [x] [DCR-005] 반복 0·1·3·5·10회와 손상·변조·예산·우회 경계 시험, 비용·의미 준수의 증거 분리
   - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [ ] [DCR-006] 전체 회귀·test.9·실제 반복 압축의 의미 준수와 모델 사용량 수용
-  - state: agent-owned; reason: test.9 공개 수용 완료, 세 조건 의미 비교·재개·하위 작업·새 안내 토큰 근거 필요
+  - state: awaiting-user-authority; owner: maintainer; reason: test.9 공개 수용 완료, tests/work/readiness-host-acceptance의 비교·재개·하위 작업 시험 훅 4개 신뢰 대기
 
 ## 구현 선택
 
