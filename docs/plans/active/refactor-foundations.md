@@ -48,8 +48,8 @@
   - state: complete; depends: RFS-002; evidence: repo:tests/results/runs/20260918T175340-186b7bfd41f8.md#sha256:f413ef7f1e4112d91d42f32edfa4798cf7d6f0ea01d5c99e224c89f8223be90c
 - [x] [RFB-002] 기준 코드의 CLI·파일 변경 목록·출력·성능·지침 크기 기록과 호환성 비교 자료 확보
   - state: complete; evidence: repo:tests/results/runs/20260919T054656-9b4165cadab7.md#sha256:3c781628869eb4c2ac89db00841305e4ccf4a9b7485cb65f62272ea3bd86c88c
-- [ ] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
-  - state: awaiting-user-authority; depends: DCR-006; owner: maintainer; reason: test.9 공개 수용 완료, 고정 실제 호스트 시험의 새 훅 4개 신뢰 대기
+- [x] [RFR-001] 나머지 리팩터링 기준의 근거 연결, 전체 회귀와 운영체제별 파일 변경 수용, 후속 공개 시험 조건 정합화
+  - state: complete; depends: DCR-006; evidence: repo:docs/research/0.11.0-test9-qualification.md#sha256:a2866f12daf03e438b220264686b045d82f41a4fb7a793cfb3781cd62d6a03c4
 
 ## 측정과 판정
 

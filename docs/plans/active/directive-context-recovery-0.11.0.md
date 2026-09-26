@@ -19,8 +19,8 @@
   - state: complete; evidence: repo:tests/results/runs/20260925T215447-f7c2db4f183c.md#sha256:ce0e26feed4eca13cff58142ea42a09f6c15751b7dd0b2251677e3f84c5c7500
 - [x] [DCR-005] 반복 0·1·3·5·10회와 손상·변조·예산·우회 경계 시험, 비용·의미 준수의 증거 분리
   - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
-- [ ] [DCR-006] 전체 회귀·test.9·실제 반복 압축의 의미 준수와 모델 사용량 수용
-  - state: awaiting-user-authority; owner: maintainer; reason: test.9 공개 수용 완료, tests/work/readiness-host-acceptance의 비교·재개·하위 작업 시험 훅 4개 신뢰 대기
+- [x] [DCR-006] 전체 회귀·test.9·실제 반복 압축의 의미 준수와 모델 사용량 수용
+  - state: complete; evidence: repo:docs/research/directive-context-host-acceptance-2026-09-27.md#sha256:aca52c206a312d7b612acea527e6789c3fd6e88b12c52652eb989c7936a58017
 
 ## 구현 선택
 
@@ -47,3 +47,5 @@
 - 다음: 지원된 호스트 실행·계측 경로로 위 근거 확보 후 DCR-006/RFR-001 최종 판정. 추가 수동 압축 요청 없음, 안정판 완료 주장 제외
 
 - [추가 계측 결과](../../research/directive-context-instrumented-tests-2026-09-26.md): 한 턴 자동 압축 3회·토큰 관측 확인, 재등록 결함 수정과 관련 검사 27개 통과·1개 제외. 신뢰 후 Hive 자동 복원·문구 비용 비교·철회 완료. 수정 제품의 추가 출시 검증 필요
+
+- [최종 실제 호스트 판정](../../research/directive-context-host-acceptance-2026-09-27.md): 세 조건 각 5개 기준·재개 3회·하위 작업 3개 확인. 새 안내 입력 76.5% 감소·명령 p95 증가 0.10%. 예산 초과 실행은 실패로 보존하고 관측 자료를 독립 판정, 보편적 준수·과금 절감 보장 제외
