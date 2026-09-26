@@ -3,7 +3,7 @@
 > Plan version: 0.11.0
 > Scope: product
 
-- 제품: `0.11.0`, 다음 공개 수용: `0.11.0-test.9`
+- 제품: `0.11.0`, 공개 패키지 수용: `0.11.0-test.9`
 - 근거: [상세 구현안](../directive-context-recovery-0.11.0.md), [공식 조사](../../research/directive-context-hooks-2026-09-25.md)
 - 사용자 승인: 2026-09-25 제품 구현. 설치·안정판 공개의 별도 승인 경계 유지
 
@@ -20,7 +20,7 @@
 - [x] [DCR-005] 반복 0·1·3·5·10회와 손상·변조·예산·우회 경계 시험, 비용·의미 준수의 증거 분리
   - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [ ] [DCR-006] 전체 회귀·test.9·실제 반복 압축의 의미 준수와 모델 사용량 수용
-  - state: agent-owned; reason: 실제 계측 완료, 수정 코드의 전체 회귀와 다음 공개 시험 수용 필요
+  - state: agent-owned; reason: test.9 공개 수용 완료, 세 조건 의미 비교·재개·하위 작업·새 안내 토큰 근거 필요
 
 ## 구현 선택
 

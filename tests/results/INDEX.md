@@ -829,7 +829,10 @@
 | [passed](runs/20260925T215538-2cd94557b554.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T215541-090194080789.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T215547-f2ecb9a24361.md) | 개발 검증: cargo.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260925T215657-29026331f670.md) | 개발 검증: uv.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260925T215659-13be3123a90e.md) | Python conformance: documentation, security, contract, integration, release | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215657-29026331f670.md) | 개발 검증: uv.EXE | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T215659-13be3123a90e.md) | Python conformance: documentation, security, contract, integration, release | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T220029-910208470803.md) | 공식 호스트 연결의 기본 파일 도구 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260925T220158-4f8421a190fa.md) | 현재 권한 프로필의 합성 절대 경로 편집 지원 확인 | 2b7e5f78b30fbb7343eb4d1e62e987b992b175b5 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260925T223613-1a8a0f1a8a89.md) | 0.11.0-test.9 공개 Windows 실행 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T223954-50eb3ef7d9f6.md) | 조회 반영 뒤 test.9 공개 Windows 파일 격리 설치 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260925T224037-f25d5ef80fb2.md) | test.9 공개 Windows 실행 파일의 훅 계약 수용 | 5be6e2957b62f52ca1f41ee7bb802c44d5aeb810 | Windows-11-10.0.26200-SP0 |
