@@ -6,24 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.10.3-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.11.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.10.3 release-date=2026-09-10 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.0 release-date=2026-09-27 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.10.3` is the current public release.
+Stable `0.11.0` is the current public release.
 
 ## Install the current stable release
 
-`0.10.3` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.11.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.10.3
+npm install -g aigent-hive@0.11.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.10.3 (released 2026-09-10)
+AIgent Hive v0.11.0 (released 2026-09-27)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.10.3/install.sh | sh
+  https://unpkg.com/aigent-hive@0.11.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.10.3/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.11.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.10.3/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.11.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -76,7 +76,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.10.3. The stable install guidance is
+Install the current stable release 0.11.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -94,27 +94,28 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.10.3
+## What changed in 0.11.0
 
-- `hive update` now reconciles authenticated global user settings and selected-host projections even when the executable is already current.
-- A first npm installation selects one or more hosts through `hive update`; npm itself still installs executable packages only.
-- Newly introduced global questions pause ordinary Hive work until answered, then resume the same digest-bound update automatically.
-- Exact `0.9.5` through `0.10.1` user installations can migrate directly while foreign, modified, and project files stay outside the transaction.
-- Prompt-authoring requests and implementation requests route separately, while scoped investigation keeps already authorized work moving.
+- Optional Hooks check supported AI file edits before they happen and block direct edits to files you choose to protect. Verified file-edit coverage is Windows Codex and Antigravity; terminal commands are outside this check.
+- In Codex, you can preview and select key instructions to repeat after a long conversation is summarized. Turning this reminder off and on keeps other tool settings intact; it does not guarantee every instruction is followed.
+- Collaborators without Hive can keep using their tools in the same project. If you use Hive, your selected protections remain available.
+- Ask for a project guidance update in ordinary language, or preview the changes first. Projects set up with any public stable version since 0.9.1 can update while retaining valid settings and personal additions; numbered tests and every possible configuration are outside this guarantee.
+- Automatic continuation checks the current conversation and running program before resuming. When the next usage check detects a quota reset, new automatic work stops until you acknowledge it; running work is not interrupted in real time. You can turn reset detection off or on for this conversation while low-usage protection remains active.
+- Transferred knowledge stays readable without its original files and is marked when its current accuracy cannot be verified. Existing commands and stored knowledge remain available after updating.
 
 ## Supported targets
 
-| Platform | Native target | 0.10.3 evidence |
+| Platform | Native target | 0.11.0 evidence |
 | --- | --- | --- |
-| macOS Apple Silicon | `aarch64-apple-darwin` | Public stable install acceptance |
+| macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
 | Linux x86_64 | `x86_64-unknown-linux-musl` | Native candidate qualification |
 | Linux arm64 | `aarch64-unknown-linux-musl` | Native candidate qualification |
-| Windows x86_64 | `x86_64-pc-windows-msvc` | Public stable install acceptance |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Public numbered-test acceptance |
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.10.3` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.11.0` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 

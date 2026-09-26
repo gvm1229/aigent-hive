@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stable_version": "0.10.3",
-  "release_date": "2026-09-10",
-  "previous_stable_version": "0.10.2",
-  "release_notes": "docs/releases/0.10.3.md",
+  "stable_version": "0.11.0",
+  "release_date": "2026-09-27",
+  "previous_stable_version": "0.10.3",
+  "release_notes": "docs/releases/0.11.0.md",
   "public_surfaces": [
     "README.md",
     "docs/readme/README.ko.md",
@@ -12,35 +12,85 @@
     "docs/01-index.md"
   ],
   "coverage": {
-    "USAGE103-01": {
+    "SCOPE-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
     },
-    "USAGE103-02": {
+    "SCOPE-07": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
     },
-    "USAGE103-03": {
+    "SCOPE-04": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
     },
-    "COMPAT103-01": {
+    "SCOPE-05": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
     },
-    "COMPAT103-02": {
+    "SCOPE-06": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
     },
-    "COMPAT103-03": {
+    "COMPAT-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0103"
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-02": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-03": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-04": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-05": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-06": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-07": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-08": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-09": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-11": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
+    },
+    "COMPAT-12": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0110"
     }
   }
 }
