@@ -20,7 +20,7 @@
 - [x] [DCR-005] 반복 0·1·3·5·10회와 손상·변조·예산·우회 경계 시험, 비용·의미 준수의 증거 분리
   - state: complete; evidence: repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e
 - [x] [DCR-006] 전체 회귀·test.9·실제 반복 압축의 의미 준수와 모델 사용량 수용
-  - state: complete; evidence: repo:docs/research/directive-context-host-acceptance-2026-09-27.md#sha256:aca52c206a312d7b612acea527e6789c3fd6e88b12c52652eb989c7936a58017
+  - state: complete; evidence: repo:docs/research/directive-context-host-acceptance-2026-09-27.md#sha256:9e433e57177676226e524b87ad4a35a7764f379555f2ea794d0f1522999fbd53
 
 ## 구현 선택
 
