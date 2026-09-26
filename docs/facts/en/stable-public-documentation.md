@@ -11,8 +11,8 @@ aliases: ["public stable docs"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:e664105a2734fc5ec7c35f93ddc5ce0362ad5e391ae881c63e326a8c25866bca"
   - "repo:.github/workflows/release.yml#sha256:993bf1709b27d5f6f5c18df46dab392fbb44570ecb3fcc9e0c4bd321fc5dc664"
-  - "repo:README.md#sha256:ba515cb5d9ee4f825305a99d0807b19bf608cb792eb768644776e3c0b4522735"
-  - "repo:docs/public-stable-release.json#sha256:d084bc14870482ec5d33fce97b63f5db6ed67efc88bc38325bd06e167076d658"
+  - "repo:README.md#sha256:ef0e22aa026b267338f193ae7a9ebe5ff341609a9f10410f21d0dbb54fe7f853"
+  - "repo:docs/public-stable-release.json#sha256:4afe5f0576ee7b6cf52338d94c3534336f5d79d6941abd9ad7acc4e578c03882"
   - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
 links: [product-purpose, release-verification]
 reviewed_revision: "git:8a45250106590f065df639132298b840940a3a35"
