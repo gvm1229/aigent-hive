@@ -388,6 +388,7 @@
 
   <div class="glance">
     <table aria-label="Aigent Hive 한눈에 보기">
+      <tr><th>현재 안정판</th><td>0.11.0</td></tr>
       <tr><th>지원 host</th><td>Codex · Claude Code · Gemini Antigravity</td></tr>
       <tr><th>정본</th><td>Markdown · YAML · TOML, SQLite는 재생성 가능한 파생 색인</td></tr>
       <tr><th>보안 경계</th><td>Model-provider API key 요청·저장 없음, provider API 직접 호출 없음</td></tr>
@@ -431,8 +432,8 @@
         <article class="card">
           <div class="feature-label"><span class="feature-icon">🧭</span><span class="tag">CLEAR SCOPE</span></div>
           <h3><strong>전역 선호</strong>와 project 규칙의 분리</h3>
-          <p>개인 전역 선호와 repository별 규칙을 별도의 승인·소유권 경계로 구분해 <strong>홈 폴더 오염과 범위 혼동</strong>을 예방</p>
-          <div class="use-case"><b>💡 사용 사례</b><p>개인적으로 한국어를 쓰더라도 해외 오픈소스 repository의 영어 기여 규칙은 해당 project 안에서만 유지</p></div>
+          <p>개인 전역 선호와 저장소별 규칙을 구분해 <strong>범위 혼동을 예방</strong>. 같은 프로젝트의 팀원은 Hive를 설치하지 않고 기존 도구로 작업 가능</p>
+          <div class="use-case"><b>💡 사용 사례</b><p>내 Hive 보호 설정은 유지하면서, Hive가 없는 팀원과도 같은 저장소에서 협업</p></div>
         </article>
         <article class="card">
           <div class="feature-label"><span class="feature-icon">🐝</span><span class="tag">DURABLE WIKI</span></div>
@@ -453,16 +454,28 @@
           <div class="use-case"><b>💡 사용 사례</b><p>긴 리팩터링 도중 창을 닫아도 다음 session이 남은 검증과 결정 근거를 읽고 안전한 다음 단계부터 재개</p></div>
         </article>
         <article class="card">
+          <div class="feature-label"><span class="feature-icon">📌</span><span class="tag">CONTEXT RECOVERY</span></div>
+          <h3><strong>긴 대화 뒤에도</strong> 핵심 지침 다시 알림</h3>
+          <p>Codex가 대화를 요약한 뒤 미리 선택한 핵심 지침을 다시 전달. 켜기 전 <strong>전달할 문구를 확인</strong>할 수 있으며 모든 지침의 준수를 보장하지는 않음</p>
+          <div class="use-case"><b>💡 사용 사례</b><p>긴 작업 중 대화가 요약되어도 파일 보호와 작업 범위에 필요한 문구를 다시 확인</p></div>
+        </article>
+        <article class="card">
+          <div class="feature-label"><span class="feature-icon">🪝</span><span class="tag">HOOK PROTECTION</span></div>
+          <h3><strong>Hook으로</strong> 중요한 파일 보호</h3>
+          <p>선택해서 켠 Hook이 지원되는 AI 파일 편집 직전에 검사해 지정한 파일의 직접 변경을 차단. 확인된 범위는 <strong>Windows Codex·Antigravity</strong>의 AI 파일 편집이며 터미널 명령은 제외</p>
+          <div class="use-case"><b>💡 사용 사례</b><p>AI가 보호 대상으로 정한 설정 파일을 바로 고치려 하면 편집 전 차단</p></div>
+        </article>
+        <article class="card">
           <div class="feature-label"><span class="feature-icon">🛡️</span><span class="tag">USAGE SAFETY</span></div>
-          <h3><strong>자동 실행 직전</strong>의 사용량 보호</h3>
-          <p>새 automatic dispatch 직전에 session 사용량과 설정된 중지선을 확인하고, 제한 도달 시 <strong>다음 자동 실행만</strong> 차단</p>
-          <div class="use-case"><b>💡 사용 사례</b><p>장시간 반복 작업이 구독 한도에 가까워지면 다음 작업을 조용히 멈춰, 중요한 대화에 남은 사용량을 보존</p></div>
+          <h3><strong>사용량 리셋과 부족</strong>을 확인하는 보호</h3>
+          <p>다음 사용량 점검에서 한도 리셋이나 설정한 중지선 도달을 확인하면 <strong>새 자동 작업을 차단</strong>. 진행 중인 작업의 실시간 중단은 제외</p>
+          <div class="use-case"><b>💡 사용 사례</b><p>사용량이 새로 채워지면 다음 자동 작업을 멈추고 확인을 요청. 현재 대화에서 리셋 감지만 끄더라도 사용량 부족 보호는 유지</p></div>
         </article>
         <article class="card">
           <div class="feature-label"><span class="feature-icon">🔒</span><span class="tag">SAFE CHANGE</span></div>
-          <h3><strong>내 파일을 존중하는</strong> 설치·update</h3>
-          <p>Hive 소유 경로만 대상으로 dry-run, exact write preview, digest, backup, atomic activation과 recovery를 적용해 <strong>사용자 작성 파일을 보존</strong></p>
-          <div class="use-case"><b>💡 사용 사례</b><p>기존 AGENTS.md에 개인 규칙이 있어도 Hive marker block 밖의 내용은 그대로 두고, 변경 전 정확한 쓰기 미리 보기를 제공</p></div>
+          <h3><strong>말로 요청하는</strong> 프로젝트 지침 갱신</h3>
+          <p>바뀔 내용을 먼저 확인하거나 말로 최신 Hive 지침 적용 요청 가능. <strong>0.9.1 이후 공개 안정판</strong>으로 설정한 프로젝트의 정상 설정과 직접 작성한 내용 보존</p>
+          <div class="use-case"><b>💡 사용 사례</b><p>옛 Hive 지침을 쓰는 프로젝트에서도 내 규칙을 남긴 채 최신 지침으로 갱신</p></div>
         </article>
         <article class="card">
           <div class="feature-label"><span class="feature-icon">🔔</span><span class="tag">OPTIONAL SIGNAL</span></div>
@@ -492,7 +505,7 @@
             <td data-label="사용 예시">설치 수정 전 “projection upgrade” 관련 결정만 찾아 현재 호환성 규칙을 확인</td>
           </tr>
           <tr>
-            <td data-label="Skill"><code>(knowledge-import)</code><span class="skill-name">선택한 저장소의 지식 검토</span></td>
+            <td data-label="Skill"><code>(knowledge-scan)</code><span class="skill-name">선택한 저장소의 지식 검토</span></td>
             <td data-label="언제 사용하나요?">사용자가 지정한 repository나 폴더에서 재사용할 지식을 검토해 가져오고 싶을 때</td>
             <td data-label="작업 범위">tracked-first 목록, digest-bound 검토, 명시적 apply로 해당 source의 collection을 만듦</td>
             <td data-label="안전 경계">비밀 값, credential, binary, generated file, runtime data, 외부 경로는 제외하고 source는 변경하지 않음</td>
@@ -546,7 +559,7 @@
       <div class="section-head"><span class="section-number">04</span><h2>작동 흐름</h2></div>
       <div class="flow" aria-label="Aigent Hive 기본 작동 흐름">
         <article><b>STEP 1</b><strong>CLI 설치</strong><span>Stable package 설치와 version 확인</span></article>
-        <article><b>STEP 2</b><strong>Host 연결</strong><span>Codex·Claude·Antigravity 중 현재 host 활성화</span></article>
+        <article><b>STEP 2</b><strong>Host 선택</strong><span><code>hive update</code>에서 사용할 host와 전역 설치 준비</span></article>
         <article><b>STEP 3</b><strong>전역 설정</strong><span>언어·Wiki·Skill·update 선호 구성</span></article>
         <article><b>STEP 4</b><strong>Project 설정</strong><span>Exact preview 뒤 repository 범위만 변경</span></article>
         <article><b>STEP 5</b><strong>기억·검증</strong><span>작업과 지식을 이어 쓰고 안전하게 update</span></article>
@@ -558,7 +571,7 @@
 
     <footer>
       <span>Aigent Hive · Core Features</span>
-      <span>Provider-neutral · Local-first · Credential-free</span>
+      <span>Stable 0.11.0 · Provider-neutral · Local-first</span>
     </footer>
   </main>
 </body>

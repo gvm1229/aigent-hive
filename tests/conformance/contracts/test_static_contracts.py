@@ -74,8 +74,14 @@ class Phase3SchemaContract(unittest.TestCase):
 
         core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
         self.assertIn("grid-template-columns: minmax(0, 1fr);", core)
-        self.assertEqual(core.count('<article class="card">'), 8)
-        self.assertEqual(core.count('<div class="use-case">'), 8)
+        self.assertEqual(core.count('<article class="card">'), 10)
+        self.assertEqual(core.count('<div class="use-case">'), 10)
+        self.assertIn("Hook으로", core)
+        self.assertIn("긴 대화 뒤에도", core)
+
+        install = (ROOT / "docs/hive-install-guide.ko.html").read_text(encoding="utf-8")
+        self.assertIn("hive update</code>", install)
+        self.assertNotIn("hive install --scope user", install)
 
     def test_public_core_features_compares_knowledge_skills_and_keeps_print_heading_with_content(self) -> None:
         core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
@@ -84,11 +90,12 @@ class Phase3SchemaContract(unittest.TestCase):
         for skill in (
             "knowledge-capture",
             "knowledge-recall",
-            "knowledge-import",
+            "knowledge-scan",
             "knowledge-promote",
             "knowledge-maintain",
         ):
             self.assertIn(f"<code>({skill})</code>", core)
+        self.assertNotIn("<code>(knowledge-import)</code>", core)
         self.assertIn(".section-head { break-after: avoid-page; }", core)
         self.assertIn(".knowledge-comparison { break-inside: auto; }", core)
 
