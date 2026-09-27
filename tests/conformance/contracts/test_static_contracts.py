@@ -98,6 +98,7 @@ class Phase3SchemaContract(unittest.TestCase):
         self.assertNotIn("<code>(knowledge-import)</code>", core)
         self.assertIn(".section-head { break-after: avoid-page; }", core)
         self.assertIn(".knowledge-comparison { break-inside: auto; }", core)
+        self.assertIn(".knowledge-comparison caption { break-after: avoid-page; }", core)
 
     def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
         plugin_root = ROOT / "harness/plugins/aigent-hive"
