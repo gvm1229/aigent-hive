@@ -11,7 +11,7 @@ aliases: [".hivekb transfer", "knowledge export import"]
 sources:
   - "repo:README.md#sha256:ef0e22aa026b267338f193ae7a9ebe5ff341609a9f10410f21d0dbb54fe7f853"
   - "repo:docs/archive/plans/releases/0.9.5/knowledge-bundle-portability-0.9.5.md#sha256:78721fbbaf589353a17fdee534e5c86f1406283cf546eb32acd9996e84adb3c3"
-  - "repo:docs/hive-install-guide.ko.html#sha256:38402a9ff0c4c096698f6da4c74b5c872cf9c5d81d4ffde5f008a07ec9ca65b1"
+  - "repo:docs/hive-install-guide.ko.html#sha256:805c77883f8d7956df2023cbc5dd9fd94bd770473464f3f0e916136c889f27b5"
 links: [knowledge-portability-scan, knowledge-storage]
 reviewed_revision: "git:1b755a995d91739d758830210d93cdc012e9e61b"
 status: active

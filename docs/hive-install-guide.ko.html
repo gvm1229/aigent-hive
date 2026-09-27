@@ -346,7 +346,7 @@
     <section id="before">
       <div class="section-head"><span class="section-number">00</span><h2>시작 전 준비</h2></div>
       <div class="callout">
-        <p><strong>가장 간단한 경로:</strong> Node.js·npm 확인 → stable package 설치 → 현재 host 활성화 → 전역 설정 → project 설정</p>
+        <p><strong>가장 간단한 경로:</strong> Node.js·npm 확인 → 안정판 설치 → <code>hive update</code>로 호스트 선택·전역 준비 → 호스트에서 선호 설정 → 필요할 때 프로젝트 설정</p>
       </div>
       <p>아래 명령으로 Node.js와 npm 확인. 둘 중 하나라도 인식되지 않으면 공식 Node.js LTS 설치 뒤 새 terminal에서 다시 확인.</p>
       <div class="code">
@@ -383,25 +383,17 @@ npm --version</code></pre>
 
         <article class="step">
           <div>
-            <h3>사용할 host에 Hive 연결</h3>
-            <p>한 host는 <code>--host</code>, 여러 host는 쉼표 구분 <code>--hosts</code> 또는 반복 <code>--host</code>로 지정. <code>--hosts</code> 값의 쉼표 앞뒤 공백 허용. 공백 포함 시 전체 값을 따옴표로 묶고 빈 항목은 금지. 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
+            <h3>전역 Hive 준비와 호스트 선택</h3>
+            <p>대화형 터미널에서 <code>hive update</code> 실행. 첫 설치라면 안내에 따라 사용할 호스트 하나 이상 선택. 기존 설치라면 저장된 호스트의 Hive 소유 설정을 갱신·확인. 이 단계에서 프로젝트 파일은 변경하지 않음.</p>
             <div class="code">
-              <span class="label">HOST 한 개 · CODEX 예시</span>
-              <pre><code>hive install --scope user --host codex --apply --output json</code></pre>
+              <span class="label">대화형 터미널</span>
+              <pre><code>hive update</code></pre>
             </div>
-            <div class="code">
-              <span class="label">HOST 여러 개 · 쉼표와 공백 예시</span>
-              <pre><code>hive install --scope user --hosts "codex, claude" --apply --output json</code></pre>
-            </div>
-            <div class="code">
-              <span class="label">HOST 여러 개 · 반복 FLAG 예시</span>
-              <pre><code>hive install --scope user --host codex --host claude --apply --output json</code></pre>
-            </div>
-            <p>복수 host apply 전 전체 dry-run 점검. 이후 입력 순서대로 활성화하며, 실패 시 완료·실패 host와 변경 경로를 JSON으로 보고. 각 host CLI의 설치·로그인 완료 상태 필요.</p>
+            <p>선택할 호스트 프로그램의 설치·로그인 완료 필요. 사용자가 다른 도구로 작업하는 팀원에게 Hive 설치를 요구하지 않아도 됨.</p>
             <div class="host-grid">
-              <div class="host"><strong>Codex</strong><code>--host codex</code></div>
-              <div class="host"><strong>Claude Code</strong><code>--host claude</code></div>
-              <div class="host"><strong>Gemini Antigravity</strong><code>--host antigravity</code></div>
+              <div class="host"><strong>Codex</strong><code>codex</code></div>
+              <div class="host"><strong>Claude Code</strong><code>claude</code></div>
+              <div class="host"><strong>Gemini Antigravity</strong><code>antigravity</code></div>
             </div>
           </div>
         </article>
@@ -409,7 +401,7 @@ npm --version</code></pre>
         <article class="step">
           <div>
             <h3>전역 선호 설정</h3>
-            <p>연결한 host를 열고 아래 요청 입력. 현재 project를 검사하지 않고 사용자 범위만 설정.</p>
+            <p>선택한 호스트를 열고 아래 요청 입력. 새 전역 선택 질문이 나오면 답한 뒤 Hive가 준비를 이어감. 현재 프로젝트는 검사하지 않고 사용자 범위만 설정.</p>
             <div class="code">
               <span class="label">HOST 대화창</span>
               <pre><code>이 host의 전역 Aigent Hive 환경을 설정하거나 다시 설정해 줘.
@@ -421,8 +413,8 @@ npm --version</code></pre>
 
         <article class="step">
           <div>
-            <h3>Project 한 개 설정</h3>
-            <p>대상 repository를 host에서 연 뒤 아래 요청 입력. Exact write preview 확인 뒤 project 범위만 변경.</p>
+            <h3>필요할 때 프로젝트 설정</h3>
+            <p>대상 저장소를 호스트에서 연 뒤 아래 요청 입력. 정확한 쓰기 미리 보기를 확인하고 해당 프로젝트만 변경. Hive가 없는 팀원은 기존 도구 그대로 사용 가능.</p>
             <div class="code">
               <span class="label">PROJECT 대화창</span>
               <pre><code>이 project의 로컬 Aigent Hive harness를 설정해 줘.
@@ -472,13 +464,13 @@ npm --version</code></pre>
 
     <section id="update">
       <div class="section-head"><span class="section-number">03</span><h2>Update</h2></div>
-      <p>새 version 확인과 설치 제안. Hive가 설명과 확인 없이 update를 자동 설치하는 경로 없음.</p>
+      <p><code>hive update</code>는 새 버전을 확인하고, 실행 파일이 최신이어도 저장된 호스트의 Hive 소유 전역 설정을 갱신·검증. 새 실행 파일 설치가 필요하면 변경 내용을 설명하고 확인 요청. 거절하거나 대화형 입력이 없으면 설치 변경 없음.</p>
       <div class="code">
         <span class="label">TERMINAL</span>
         <pre><code>hive update</code></pre>
       </div>
       <div class="callout plain">
-        <p><strong>안전 원칙:</strong> 거절·입력 종료·비대화형 실행에서는 설치 변경 0건. 기존 install owner와 exact update 내용 확인 뒤에만 진행.</p>
+        <p><strong>프로젝트 지침 갱신:</strong> 설치 갱신과 별개. Hive 지침을 바꾸려는 프로젝트에서 “Hive 지침을 최신으로 갱신해 줘”라고 요청하거나 변경 내용만 먼저 확인 가능. 직접 작성한 내용 보존.</p>
       </div>
     </section>
 
