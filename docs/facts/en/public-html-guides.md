@@ -11,8 +11,10 @@ aliases: ["Hive core features guide", "Hive quick install guide"]
 sources:
   - "repo:docs/archive/plans/foundations/public-html-guides.md#sha256:983c430ae31f6a9913554a5e646b1eb8f989b52e5d71cd994f1529fdf756918c"
   - "repo:docs/guides/public-html-design-principles.md#sha256:fad1cc025bcc709cb98ffa0a066146fcc7d2d9c775b30eed1e74df1d0a348ea8"
-  - "repo:docs/hive-core-features.ko.html#sha256:37fbd126bc08f2b86f4981fe858c80c7d162b0742cda0594fbe2bb0e1ebcc348"
+  - "repo:docs/hive-core-features.ko.html#sha256:03e8838551f3a6d3189ffcc1f66b00bb1f86940cff7f09e60e028b47be916d6c"
+  - "repo:docs/hive-core-features.ko.pdf#sha256:8d115b6827d16082271171b8edc851886fa33d768c6045225e968faecfce1731"
   - "repo:docs/hive-install-guide.ko.html#sha256:805c77883f8d7956df2023cbc5dd9fd94bd770473464f3f0e916136c889f27b5"
+  - "repo:docs/hive-install-guide.ko.pdf#sha256:2bbc4878ce612ad28927bc64eff75488b0b8fb89f8c2d6bfc670d345514a71a8"
 links: [global-onboarding, product-purpose]
 reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"
 status: active
@@ -26,4 +28,5 @@ resources. The feature page covers optional Hooks, selected instruction recovery
 collaboration without Hive, and reset stops at the next usage check. Its knowledge table names
 `knowledge-capture`, `knowledge-recall`, `knowledge-scan`, `knowledge-promote`, and
 `knowledge-maintain`. The install page guides npm or direct installation, interactive `hive update`
-for host selection, global setup, optional project setup, and knowledge transfer.
+for host selection, global setup, optional project setup, and knowledge transfer. Matching PDFs are
+Chrome printouts checked with 144 dpi page renders (9 and 7 pages).
