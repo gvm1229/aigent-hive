@@ -1,9 +1,12 @@
 {
   "schema_version": 1,
-  "product_version": "0.11.0",
-  "package_version": "0.11.0-test.9",
+  "product_version": "0.11.1",
+  "package_version": "0.11.1-test.1",
   "plan_ids": [
-    "DCR-004"
+    "SDP-001",
+    "SDP-002",
+    "SDP-003",
+    "SDP-004"
   ],
-  "product_tree_sha256": "sha256:2e5aea1463f91ab4e60e19bac5c914512b3d621677f39a5bdc1fb6a7f8ff4698"
+  "product_tree_sha256": "sha256:3a6d045a067390e82a2a0053b02c8ec9ef44153022242d765118e72e8c65e11b"
 }
