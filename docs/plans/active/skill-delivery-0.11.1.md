@@ -20,8 +20,8 @@
   - state: complete; depends: SDP-001; evidence: repo:tests/results/runs/20260929T202401-55370a195d9d.md#sha256:c51cedc5d15733bc85a23036179d9870c77ce476c9c8ff57cb41cd4d9ff9e39b
 - [x] [SDP-003] 프로젝트 설정·갱신의 제공 출처와 자동 정리
   - state: complete; depends: SDP-002; evidence: repo:tests/results/runs/20260929T204752-0fe5ef9afbee.md#sha256:32ffc55bdcbf78116322a8fd4952b081416a5796ec935e3a0f9ab13c07bb40ca
-- [ ] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
-  - state: agent-owned; depends: SDP-002,SDP-003; owner: Codex; reason: 동작 검증
+- [x] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
+  - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:a0c11749de2ea1730ebc5847702782299d4e7878f019aa70680c03648a7148fa
 - [ ] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
   - state: agent-owned; depends: SDP-004; owner: Codex; reason: 시험 자료와 호스트 증거 준비
 

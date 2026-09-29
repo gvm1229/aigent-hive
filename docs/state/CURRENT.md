@@ -11,9 +11,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 3/5 완료
+- 현재 등록 항목: 4/5 완료
 
-- `agent-owned`: `SDP-004`, `SDP-005`
+- `agent-owned`: `SDP-005`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
