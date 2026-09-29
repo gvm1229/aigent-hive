@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| Codex 스킬 제공·자동 정리 | [en](en/codex-skill-delivery.md) | [ko](ko/codex-skill-delivery.md) |
 | 구현 계획 인계 | [en](en/implementation-plan-handoff.md) | [ko](ko/implementation-plan-handoff.md) |
 | 반복 압축 뒤 지침 복구 | [en](en/directive-context-recovery.md) | [ko](ko/directive-context-recovery.md) |
 | Windows 종료 중 관측 경계 | [en](en/windows-process-observation.md) | [ko](ko/windows-process-observation.md) |

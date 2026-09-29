@@ -10,11 +10,11 @@ tags: [installation, migration, projection, update]
 aliases: ["갱신 뒤 투영 refresh"]
 sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:c32316f67b6846b57cfd654b4abd8a518c74244cb6be1a9981e135190e203a07"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:e1e23470bdd37528700da00641cedef9e510c525863c991c9d189ab761e9bde1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:74e1947063fa479fd0e267683e1ca73621e03a1fd86b05ca544d9ff64b23a242"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:877821f19b0a373dda8202589d1c2eee892eca0c3b0026bc4b15556307307600"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:4afd5ba4483d98f63ae42c065837f9b010506657"
+reviewed_revision: "git:fc288bed8f925b89bfd0ed67b808cfdd0722a70b"
 status: active
 ---
 

@@ -188,3 +188,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [연속 실행 hook 조사](research/host-neutral-continuation-hooks-0.10-feasibility-2026-08-22.md) | 세 host 가능성 검토 |
 | [`0.10.1` harness·usage 수정](plans/active/harness-upgrade-0.10.1.md) | 일반 migration·threshold recheck |
 | [`0.10.1` 공개 시험](plans/active/release-0.10.1.md) | `test.1` 공개 수용 |
+| [0.11.1 스킬 제공·자동 정리](plans/active/skill-delivery-0.11.1.md) | Codex 중복 제거·수정 보존 |
+| [0.11.1 출시 기록](releases/0.11.1.md) | 호환 수정·시험 준비 |
+| [0.10.2 전역 갱신](plans/active/global-user-update-0.10.2.md) | 이전 구현·검증 보존 |
+| [0.10.2 지침 품질](plans/active/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
+| [0.10.2 출시](plans/active/release-0.10.2.md) | 이전 출시 검증 보존 |

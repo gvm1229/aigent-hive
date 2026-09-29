@@ -9,12 +9,12 @@ summary: "Source local dev binary의 active executable 임시 교체와 internal
 tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
-  - "repo:crates/hive-cli/build.rs#sha256:fd4fe508be6d9abb3a412a3163544a154802d335ca92f23f28783096026752da"
-  - "repo:crates/hive-cli/src/main.rs#sha256:ca5d0af23e3719732dec1a6d3a38dcde959a7dfa1426ef7f7be9edc2623b0a4d"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b57e2ac894503cf91d6efc41940284e79cc11e2ca70f6718d5b88926a917ec67"
+  - "repo:crates/hive-cli/build.rs#sha256:04e5216889a3c73df8650cd63cd9f5086096a71bf723a97caf704cf99850c10c"
+  - "repo:crates/hive-cli/src/main.rs#sha256:307073fd99899e1aab9aa14bfc92d0fadc1051816763525dd02ab505619424b6"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:74e1947063fa479fd0e267683e1ca73621e03a1fd86b05ca544d9ff64b23a242"
   - "repo:scripts/dev-install.sh#sha256:675d29e359a127a994d3b7904d3c842b3dafd884b8e28659a0d2b21ef3fc2a79"
 links: [interactive-binary-update, source-development, version-policy]
-reviewed_revision: "git:0340f8a26d14ebcc134c14e421d605f8022912f8"
+reviewed_revision: "git:fc288bed8f925b89bfd0ed67b808cfdd0722a70b"
 status: active
 ---
 
