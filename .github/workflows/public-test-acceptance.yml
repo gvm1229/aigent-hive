@@ -99,6 +99,13 @@ jobs:
           binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify Skill delivery using the exact public binary
+        shell: bash
+        run: |
+          python scripts/qualify-skill-delivery-public-test.py \
+            --binary "$HIVE_BIN" --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --output "$RUNNER_TEMP/skill-delivery-public.json"
       - name: Qualify directive recovery using the exact public binary
         shell: bash
         run: |
