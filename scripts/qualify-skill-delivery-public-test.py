@@ -116,7 +116,8 @@ def main() -> None:
             return value
 
         version = subprocess.check_output([str(binary), "--version"], text=True).strip()
-        assert args.package_version in version, version
+        display_version = args.package_version.replace("-test.", "-test #")
+        assert f"AIgent Hive v{display_version} " in version, version
         config = {
             "schema_version": 1, "interface_language": "en", "wiki": {"enabled": False, "language": "both"},
             "profile": {"contexts": ["web-developer"]}, "persona": {"id": "balanced"}, "selected_hosts": ["codex"],
