@@ -9,6 +9,7 @@ _exclude:
   # Global setup is installed into the user's host directory, never a project.
   - ".agents/skills/user-setup"
   - ".claude/skills/user-setup"
+  - "{% if primary_host != 'codex' %}.hive/config/skill-providers.json{% endif %}"
   # Claude project projection carries Skill bodies only, matching the Rust renderer.
   - ".claude/skills/*/agents"
   # The Discord onboarding guide belongs to the user-level installation.
