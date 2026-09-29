@@ -841,3 +841,73 @@
 | [failed](runs/20260926T145406-8417fe21f7bc.md) | 관측 입력량에 맞춘 동일 세 조건의 실제 압축 수용 재시험 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260926T150433-d0a98d924a40.md) | 실제 호스트 사건·파일·토큰의 독립 오프라인 판정 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260926T151414-de7845da20d4.md) | 공개 test.9 정상 편집 훅의 문맥 복구 추가 지연 비교 | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T152345-3a6ad983a2df.md) | 개발 검증: uv.EXE | adc54409a6018f4cbbea2da5b94587fc23deabbb | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T200613-2652b42943d8.md) | 개발 검증: uv.EXE | e61f6a0d68f311ed8f9340f705f63a7f6eedc301 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T200656-8f652916e83c.md) | 개발 검증: uv.EXE | e61f6a0d68f311ed8f9340f705f63a7f6eedc301 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T200731-df8532743b1c.md) | 개발 검증: uv.EXE | e61f6a0d68f311ed8f9340f705f63a7f6eedc301 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T201256-d6b41d5f71f5.md) | 개발 검증: uv.EXE | 11b08d3998969a5a13127f33d0e6515662ab2cbb | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T201307-a3f1e2414cd6.md) | Python conformance: documentation | 11b08d3998969a5a13127f33d0e6515662ab2cbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T201411-c79fcd8fcd73.md) | Python conformance: documentation | 11b08d3998969a5a13127f33d0e6515662ab2cbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T201634-9bed6be5aec3.md) | Python conformance: release | 908cce8379055387026c3079340157cded7b4f13 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T210244-288474d4498e.md) | 개발 검증: uv.EXE | 2e09a216c6deb01ecaf93ec8dc862839397e9a5e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260926T210259-6262c64ee242.md) | 개발 검증: uv.EXE | 2e09a216c6deb01ecaf93ec8dc862839397e9a5e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260926T210320-930eb315a944.md) | 개발 검증: uv.EXE | 2e09a216c6deb01ecaf93ec8dc862839397e9a5e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260927T072919-ada3af135bef.md) | 개발 검증: uv.EXE | e2c7f9deb78a0f9469565f45c6a9ac3f7bae1ca5 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260927T073030-38ad1fd42f45.md) | 개발 검증: uv.EXE | e2c7f9deb78a0f9469565f45c6a9ac3f7bae1ca5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260927T073051-6c1fe168b46c.md) | 개발 검증: uv.EXE | e2c7f9deb78a0f9469565f45c6a9ac3f7bae1ca5 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260927T075905-ee86c864b07b.md) | 개발 검증: uv.EXE | 771c84fe74b0fe74e66ad8853d9d0120dbed60e3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T191938-d4bf32d83184.md) | 0.11.1 사용자 자동 정리 컴파일 확인 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T192545-c0a544e0dd7f.md) | 0.11.1 스킬 제공 연결 컴파일 확인 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T192610-8564058a3261.md) | 0.11.1 스킬 제공 컴파일 오류 수정 확인 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T192631-9e568fc54513.md) | 0.11.1 스킬 제공 연결 빌드 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T192714-355889a156b5.md) | 0.11.1 사용자 자동 정리 관련 회귀 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T193403-b396fc03c541.md) | 0.11.1 스킬 제공과 보존 회귀 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T193526-8b5bb5e2000c.md) | 0.11.1 설치·프로젝트 제공 회귀 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T193707-e56d20a452eb.md) | 0.11.1 설치·프로젝트 제공 행동 검증 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T193929-107473e10a6d.md) | 0.11.1 스킬 투영과 설정 정적 계약 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T193940-5712467331fe.md) | 0.11.1 프로젝트 스킬 제공 동작 검사 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260929T194041-5d63e393a785.md) | 개발 검증: uv.EXE | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T194135-f9ea0ef3b1ea.md) | 0.11.1 Rust 스킬 선택 규약 검증 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T194408-1a64e0a8c890.md) | 0.11.1 자동 정리·복원 통합 시험 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T194506-77cf9c8fb67d.md) | 0.11.1 자동 정리 갱신 영수증 확인 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T194727-bb83c6b77943.md) | 0.11.1 전체 Rust 회귀 검사 | 9c2003075e9087e111f2a1b3cbe738e689ef8ecf | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T195119-6c32a5791c1c.md) | 0.11.1 버전 표시와 과거 설치 갱신 검증 | 5369191c5892747525d7b2d5133bea1f1a1d3385 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T195336-e1c4907ebee9.md) | 0.11.1 Clippy 코드 품질 검사 | eb548c6545cb15f8fe3632ac5538ea69f6200c6f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T195849-5f183b9aa461.md) | 0.11.1 Clippy 보완 검사 | eb548c6545cb15f8fe3632ac5538ea69f6200c6f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T200104-1b941e1ed219.md) | 0.11.1 Clippy 최종 검사 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T200235-1a14cfba9acf.md) | 0.11.1 삭제 원본 인증과 자동 정리 회귀 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T200346-d0188560d9d0.md) | 0.11.1 삭제 원본 인증 코드 검사 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T200609-326a9b36926c.md) | 0.11.1 전체 Rust 최종 회귀 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T201014-84b8e334d5f5.md) | 0.11.1 서명 갱신 자료 지문 검증 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T201513-cd6f7256e757.md) | 0.11.1 이전 안정판 공개 형식 보존 검증 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T201610-2bc2650e091a.md) | 0.11.1 수정 버전 서명 갱신 검증 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T201707-3d6b214aa39e.md) | 0.11.1 기존 공개 규약을 유지하는 수정 갱신 검사 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T202401-55370a195d9d.md) | 0.11.1 마지막 전체 Rust 검증 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T202833-60af96177712.md) | 0.11.1 Python 검사에 사용할 실행 파일 고정 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T202902-685582aa1b16.md) | 0.11.1 전체 Python 회귀 검사 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T202904-8ca7a4bfd15c.md) | Python conformance: documentation, security, contract, integration, release | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T203430-8fb7d283cd3d.md) | 0.11.1 스킬 투영·설정 관련 Python 회귀 | 4a6893dcc67ec3e57be41069083701055324cf4d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T203720-6c35b8a04f2b.md) | 0.11.1 구현 완료 코드 검사 | 6dbc50fa09ce131a7c949888a7a75d0dde2fa199 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T204212-2c566b5fd1a0.md) | 0.11.1 문서 연결과 정본 지문 검증 | fc288bed8f925b89bfd0ed67b808cfdd0722a70b | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T204310-0f7acc7fc69b.md) | 0.11.1 정본 문서 검증 완료 | fc288bed8f925b89bfd0ed67b808cfdd0722a70b | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T204359-bcc58837a06e.md) | 0.11.1 전체 Python 수용 검사 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T204401-07f3356a8969.md) | Python conformance: documentation, security, contract, integration, release | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T204632-3a7220e0efa8.md) | 0.11.1 공개 실행 파일 자동 정리 시험 준비 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T204731-9cbabc0a4539.md) | 0.11.1 공개 정리 시험의 등록 모의 검증 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T204752-0fe5ef9afbee.md) | 0.11.1 공개 정리·복원 시험 예행 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T205039-cbbdac7defb5.md) | 0.11.1 Copier 제공 기록 일치 검사 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T205303-6f1743032b9d.md) | 0.11.1 Copier 기록과 Rust 제공 일치 재검증 | 4d4a39af8e8c9d7fb6a1674b2a0a47b49fd3b973 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T205733-21e6c115d758.md) | 0.11.1 Source Wiki 검색 고정 자료 검증 | af8701b0ee9440a411a2f1701c643c28839ec4e8 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T205958-ca0a96a17176.md) | 0.11.1 확정 소스 전체 Python 검증 | f9d1f4905d4517e2e37aab914540dd88b911fbd1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T210000-83e139e93b9a.md) | Python conformance: documentation, security, contract, integration, release | f9d1f4905d4517e2e37aab914540dd88b911fbd1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T211836-590e4c1d1ba5.md) | 기존 0.11.0 실행 파일의 합성 갱신 기준 생성 | f6c16999596894a7d5747064c1eba3226076e553 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T211942-8604ccfe9fd8.md) | 0.11.1 기존 버전 기준과 프로젝트 갱신 재검증 | f6c16999596894a7d5747064c1eba3226076e553 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T212434-77f200f392f6.md) | 0.11.0 실제 생성 부속 자료 인증 보완 | f6c16999596894a7d5747064c1eba3226076e553 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T212612-da8e0d869cca.md) | 실제 0.11.0 부속 자료 포함 이전 갱신 검증 | f6c16999596894a7d5747064c1eba3226076e553 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T212937-89080317fe9d.md) | 0.11.0 원본 부속 자료의 독립 렌더 검증 | f6c16999596894a7d5747064c1eba3226076e553 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T213104-212c25e8fd89.md) | 0.11.1 최종 Rust 전체 회귀 | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T213332-73a88073d2d8.md) | 0.11.1 통합 검사 최종 수용 | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T213333-0b65887b7d95.md) | Python conformance: integration | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260929T213836-f108e7b83a31.md) | Python conformance: release | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T214329-dbcbd3de609d.md) | Python conformance: release | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260929T214934-591df84543c4.md) | 0.11.1 공개 후보 전 코드 최종 검사 | 94fa2196febf288556780c7f68e6f752f15a6415 | Windows-11-10.0.26200-SP0 |
