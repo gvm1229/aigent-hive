@@ -360,6 +360,7 @@ struct RegularTree {
 }
 
 struct UserPlan {
+    deferred_projection: crate::user_setup::AppliedProjection,
     files: BTreeMap<PathBuf, PlannedFile>,
     retired_files: BTreeMap<PathBuf, RetiredFile>,
     changed_paths: Vec<String>,
@@ -1094,6 +1095,103 @@ pub(crate) fn validate_configured_host(
         resolved_skills,
         UserMode::Validate,
     )
+}
+
+/// Read no host cache or configuration. Native structured registration and the
+/// authenticated installed source inventory must both verify before delivery.
+pub(crate) fn validated_codex_plugin_files(
+    user_root: &Path,
+) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
+    let root = open_user_root_for_setup(user_root)?;
+    let (config, skills) = crate::user_setup::resolved_operational_skills(&root)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "global Hive setup is missing".to_owned())?;
+    if !config
+        .selected_hosts
+        .contains(&crate::user_setup::SelectedHost::Codex)
+    {
+        return Err("Codex is not a selected Hive host".to_owned());
+    }
+    validate_configured_host(
+        user_root,
+        crate::user_setup::SelectedHost::Codex,
+        &config,
+        &skills,
+    )?;
+    let language = match config.interface_language {
+        crate::user_setup::InterfaceLanguage::Ko => DescriptorLanguage::Ko,
+        crate::user_setup::InterfaceLanguage::En => DescriptorLanguage::En,
+    };
+    let projection =
+        compile_user_projection_localized(ProjectionHost::Codex, &skills, &[], language)
+            .map_err(|error| error.to_string())?;
+    Ok(projection
+        .files
+        .into_iter()
+        .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        .collect())
+}
+
+pub(crate) fn authentic_historical_user_skill(
+    version: &str,
+    relative: &Path,
+    bytes: &[u8],
+) -> bool {
+    let path = relative.to_string_lossy().replace('\\', "/");
+    let Some(rest) = path.strip_prefix(".agents/skills/") else {
+        return false;
+    };
+    let Some((name, suffix)) = rest.split_once('/') else {
+        return false;
+    };
+    let artifact = format!("skills/{rest}");
+    if version == env!("CARGO_PKG_VERSION")
+        && [DescriptorLanguage::En, DescriptorLanguage::Ko]
+            .into_iter()
+            .any(|language| {
+                compile_user_projection_localized(
+                    ProjectionHost::Codex,
+                    &[name.to_owned()],
+                    &[],
+                    language,
+                )
+                .is_ok_and(|projection| {
+                    projection
+                        .files
+                        .get(&path)
+                        .is_some_and(|expected| expected == bytes)
+                })
+            })
+    {
+        return true;
+    }
+    HISTORICAL_USER_SKILL_CONTENTS
+        .iter()
+        .filter(|(release, _)| *release == version || version == env!("CARGO_PKG_VERSION"))
+        .filter_map(|(_, files)| {
+            files
+                .iter()
+                .find(|(path, _)| *path == artifact)
+                .map(|(_, bytes)| *bytes)
+        })
+        .any(|source| {
+            source == bytes
+                || (Path::new(suffix)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+                    && String::from_utf8_lossy(source)
+                        .replace("\r\n", "\n")
+                        .replace('\n', "\r\n")
+                        .as_bytes()
+                        == bytes)
+                || [DescriptorLanguage::En, DescriptorLanguage::Ko]
+                    .into_iter()
+                    .any(|language| {
+                        hive_projection::localized_builtin_artifact(name, suffix, source, language)
+                            .is_ok_and(|expected| expected == bytes)
+                    })
+        })
 }
 
 fn configured_host(
@@ -1995,6 +2093,7 @@ fn execute_preserving_reinstall(
     Ok(reinstalled)
 }
 
+#[allow(clippy::too_many_lines)]
 fn execute_apply(
     operation: UserOperation,
     arguments: &UserArguments,
@@ -2046,16 +2145,18 @@ fn execute_apply(
         }
     })
     .and_then(|()| {
-        crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
-            |error| {
-                InstallError::Verification(format!(
-                    "saved user preferences could not be restored after installation: {}",
-                    error.message()
-                ))
-            },
-        )
-    })
-    .and_then(|_| validate_applied_bytes(arguments));
+        let mut refreshed = build_plan(arguments)?;
+        refreshed
+            .changed_paths
+            .retain(|path| !refreshed.deferred_projection.changed_paths.contains(path));
+        if refreshed.changed_paths.is_empty() {
+            Ok(refreshed)
+        } else {
+            Err(InstallError::Verification(
+                "user host files failed post-activation byte validation".to_owned(),
+            ))
+        }
+    });
     let mut refreshed = activated.map_err(|primary| {
         rollback_after_failure(
             arguments,
@@ -2068,17 +2169,75 @@ fn execute_apply(
     if let Some(host_version) = host_version.as_deref() {
         bind_host_version(&mut refreshed, host_version);
     }
-    remove_transaction_journal(arguments, &transaction.journal_relative).map_err(|primary| {
+    if arguments.setup_override.is_none() {
+        let selected = match arguments.host {
+            UserHost::Codex => crate::user_setup::SelectedHost::Codex,
+            UserHost::Claude => crate::user_setup::SelectedHost::Claude,
+            UserHost::Antigravity => crate::user_setup::SelectedHost::Antigravity,
+        };
+        let current = crate::user_setup::plan_saved_projection_after_host_install(
+            &arguments.root_cap,
+            selected,
+        )
+        .map_err(|error| {
+            rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                InstallError::Conflict(error.message().to_owned()),
+            )
+        })?;
+        if current.changes != plan.deferred_projection.changes {
+            return Err(rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                InstallError::Conflict(
+                    "user Skill inventory changed after the cleanup preview".to_owned(),
+                ),
+            ));
+        }
+    }
+    let projection = crate::user_setup::apply_planned_user_projection(
+        &arguments.root_cap,
+        &plan.deferred_projection,
+    )
+    .map_err(|error| {
         rollback_after_failure(
             arguments,
             &mut transaction,
             host_executable.as_ref(),
             runner,
-            primary,
+            InstallError::Verification(format!("user Skill refresh failed: {}", error.message())),
         )
     })?;
+    validate_applied_bytes(arguments)
+        .and_then(|_| remove_transaction_journal(arguments, &transaction.journal_relative))
+        .map_err(|primary| {
+            let rollback =
+                crate::user_setup::rollback_user_projection(&arguments.root_cap, &projection);
+            let primary = match rollback {
+                Err(error) => InstallError::Verification(format!(
+                    "{}; user projection rollback failed: {error}",
+                    primary.message()
+                )),
+                Ok(()) => primary,
+            };
+            rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                primary,
+            )
+        })?;
     refreshed.changed_paths = applied_changed_paths;
-    Ok(success_result(
+    refreshed.changed_paths.extend(projection.changed_paths);
+    refreshed.changed_paths.sort();
+    refreshed.changed_paths.dedup();
+    let mut result = success_result(
         operation,
         arguments,
         &refreshed,
@@ -2091,7 +2250,11 @@ fn execute_apply(
             UserOperation::Update => "user-scope Hive update completed",
         },
         Some(&portable(&transaction.backup_relative)),
-    ))
+    );
+    if let Some(data) = result.data.as_mut() {
+        data["user_projection"] = json!({"paths": projection.reports});
+    }
+    Ok(result)
 }
 
 fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
@@ -2421,16 +2584,38 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
             ownership: "user-install-manifest",
         },
     );
-    let expected_before = snapshot_operation_paths(&arguments.root_cap, &files, &retired_files)?;
+    let selected_host = match arguments.host {
+        UserHost::Codex => crate::user_setup::SelectedHost::Codex,
+        UserHost::Claude => crate::user_setup::SelectedHost::Claude,
+        UserHost::Antigravity => crate::user_setup::SelectedHost::Antigravity,
+    };
+    let deferred_projection = if arguments.setup_override.is_some() {
+        crate::user_setup::AppliedProjection::default()
+    } else {
+        crate::user_setup::plan_saved_projection_after_host_install(
+            &arguments.root_cap,
+            selected_host,
+        )
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?
+    };
+    let mut expected_before =
+        snapshot_operation_paths(&arguments.root_cap, &files, &retired_files)?;
+    for change in &deferred_projection.changes {
+        expected_before.insert(change.path.clone(), change.before.clone());
+    }
     let expected_permissions =
         snapshot_operation_permissions(&arguments.root_cap, &expected_before, &retired_files)?;
-    let changed_paths = changed_paths(
+    let mut changed_paths = changed_paths(
         &expected_before,
         &arguments.root_cap,
         &files,
         &retired_files,
     )?;
+    changed_paths.extend(deferred_projection.changed_paths.clone());
+    changed_paths.sort();
+    changed_paths.dedup();
     Ok(UserPlan {
+        deferred_projection,
         files,
         retired_files,
         changed_paths,
@@ -4302,15 +4487,39 @@ fn apply_plan(
             installed_digest: plan
                 .files
                 .get(relative)
-                .map(|planned| sha256_digest(&planned.bytes)),
+                .map(|planned| sha256_digest(&planned.bytes))
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_deref())
+                        .map(sha256_digest)
+                }),
             installed_executable: plan
                 .files
                 .get(relative)
-                .map(|planned| installed_file_permissions(planned.executable).executable),
+                .map(|planned| installed_file_permissions(planned.executable).executable)
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_ref())
+                        .map(|_| false)
+                }),
             installed_unix_mode: plan
                 .files
                 .get(relative)
-                .and_then(|planned| installed_file_permissions(planned.executable).unix_mode),
+                .and_then(|planned| installed_file_permissions(planned.executable).unix_mode)
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_ref())
+                        .and_then(|_| installed_file_permissions(false).unix_mode)
+                }),
             executable: permissions.executable,
             unix_mode: permissions.unix_mode,
         });
@@ -4363,6 +4572,14 @@ fn apply_plan(
         persist_backup(arguments, &backup_relative, &backup)?;
     }
     for (relative, existing, permissions) in &snapshots {
+        if plan
+            .deferred_projection
+            .changes
+            .iter()
+            .any(|change| change.path == *relative)
+        {
+            continue;
+        }
         let expected = existing.as_deref();
         let expected_permissions = existing.as_ref().map(|_| *permissions);
         let result = if let Some(file) = plan.files.get(relative) {
@@ -4442,7 +4659,7 @@ fn apply_plan(
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
     let mut snapshots = Vec::with_capacity(plan.files.len() + plan.retired_files.len());
-    for relative in plan.files.keys().chain(plan.retired_files.keys()) {
+    for relative in plan.expected_before.keys() {
         validate_relative(relative)?;
         let existing = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
         let permissions = existing
@@ -7406,8 +7623,7 @@ mod tests {
 
     fn seed_test19_retired_empty_agent_dirs(root: &Path) -> Vec<PathBuf> {
         let projection_manifest: serde_json::Value = serde_json::from_slice(
-            &fs::read(root.join(".hive/install/user-projection.json"))
-                .expect("user projection manifest"),
+            &fs::read(root.join(".hive/install/codex.json")).expect("user projection manifest"),
         )
         .expect("user projection manifest JSON");
         let projected_plugin_agents = projection_manifest["entries"]
@@ -7423,8 +7639,10 @@ mod tests {
             "the all-Skill installation must project plugin agent metadata"
         );
         let projected_plugin_agent_count = projected_plugin_agents.len();
+        let generic_projection_present = root.join(".agents/skills/user-setup/SKILL.md").is_file();
         let mut retired_empty_agents = projected_plugin_agents
             .iter()
+            .filter(|_| generic_projection_present)
             .filter_map(|relative| {
                 relative
                     .components()
@@ -7440,7 +7658,7 @@ mod tests {
         retired_empty_agents.extend(projected_plugin_agents);
         assert_eq!(
             retired_empty_agents.len(),
-            projected_plugin_agent_count * 2,
+            projected_plugin_agent_count * if generic_projection_present { 2 } else { 1 },
             "each projected agent metadata file must have both retired empty-directory shapes"
         );
         for relative in &retired_empty_agents {
@@ -11203,6 +11421,101 @@ mod tests {
             sha256_digest(
                 &fs::read(temporary.path().join(&evidence.locator)).expect("backup manifest")
             )
+        );
+    }
+
+    fn seed_old_common_skill_projection(root: &Path) {
+        write_operational_setup(root, &["codex"]);
+        let cap = open_user_root(root).unwrap();
+        let (_, selected) = crate::user_setup::resolved_operational_skills(&cap)
+            .unwrap()
+            .unwrap();
+        let projection = compile_user_projection_localized(
+            ProjectionHost::Codex,
+            &selected,
+            &[],
+            DescriptorLanguage::En,
+        )
+        .unwrap();
+        let mut entries = Vec::new();
+        let mut bases = Vec::new();
+        for (path, bytes) in projection
+            .files
+            .into_iter()
+            .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        {
+            let file = root.join(&path);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, &bytes).unwrap();
+            entries.push(json!({"path":path,"digest":sha256_digest(&bytes)}));
+            bases.push(json!({"path":path,"digest":sha256_digest(&bytes),"content":String::from_utf8(bytes).unwrap()}));
+        }
+        let config = fs::read(root.join(".hive/config/user-setup.yml")).unwrap();
+        fs::create_dir_all(root.join(".hive/install")).unwrap();
+        fs::write(root.join(".hive/install/user-projection.json"), json_line(&json!({
+            "schema_version":2,"product_version":"0.11.0","package_version":"0.11.0","setup_digest":sha256_digest(&config),"entries":entries,"base_entries":bases
+        })).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn user_update_automatically_cleans_exact_common_skills_after_plugin_activation() {
+        let temporary = tempdir().unwrap();
+        seed_old_common_skill_projection(temporary.path());
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let result = execute(UserOperation::Update, &arguments, &runner).unwrap();
+        assert!(!temporary
+            .path()
+            .join(".agents/skills/user-setup/SKILL.md")
+            .exists());
+        assert!(temporary
+            .path()
+            .join(".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md")
+            .is_file());
+        assert!(result
+            .changed_paths
+            .iter()
+            .any(|path| path == ".agents/skills/user-setup/SKILL.md"));
+        let backup = result.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        assert!(temporary
+            .path()
+            .join(backup)
+            .join("files/.agents/skills/user-setup/SKILL.md")
+            .is_file());
+        assert!(execute(UserOperation::Update, &arguments, &runner)
+            .unwrap()
+            .changed_paths
+            .is_empty());
+    }
+
+    #[test]
+    fn failed_plugin_activation_preserves_all_common_skill_resources() {
+        let temporary = tempdir().unwrap();
+        seed_old_common_skill_projection(temporary.path());
+        let original =
+            fs::read(temporary.path().join(".agents/skills/user-setup/SKILL.md")).unwrap();
+        let resource = fs::read(
+            temporary
+                .path()
+                .join(".agents/skills/user-setup/references/workflow.md"),
+        )
+        .unwrap();
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::FailAfterPluginMutation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        assert!(execute(UserOperation::Update, &arguments, &runner).is_err());
+        assert_eq!(
+            fs::read(temporary.path().join(".agents/skills/user-setup/SKILL.md")).unwrap(),
+            original
+        );
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(".agents/skills/user-setup/references/workflow.md")
+            )
+            .unwrap(),
+            resource
         );
     }
 }

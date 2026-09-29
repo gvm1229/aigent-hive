@@ -52,6 +52,11 @@ ownership = "hive-generated-config"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".hive/config/skill-providers.json"
+ownership = "hive-generated-config"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".hive/config/capability-resolution.yml"
 ownership = "hive-generated-config"
 source = "read-only-capability-probe"

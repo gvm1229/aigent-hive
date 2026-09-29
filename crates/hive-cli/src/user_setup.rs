@@ -470,20 +470,24 @@ struct UserProjectionBaseEntry {
     content: String,
 }
 
-struct AppliedProjection {
-    changes: Vec<ProjectionChange>,
-    changed_paths: Vec<String>,
-    reports: Vec<UserProjectionPathReport>,
+#[derive(Default, Clone)]
+pub(crate) struct AppliedProjection {
+    pub(crate) changes: Vec<ProjectionChange>,
+    pub(crate) changed_paths: Vec<String>,
+    pub(crate) reports: Vec<UserProjectionPathReport>,
 }
 
-struct ProjectionChange {
-    path: PathBuf,
-    before: Option<Vec<u8>>,
-    after: Option<Vec<u8>>,
+#[derive(Clone, Eq, PartialEq)]
+pub(crate) struct ProjectionChange {
+    pub(crate) path: PathBuf,
+    pub(crate) before: Option<Vec<u8>>,
+    pub(crate) after: Option<Vec<u8>>,
 }
 
-#[derive(Debug, Serialize)]
-struct UserProjectionPathReport {
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct UserProjectionPathReport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
     path: String,
     base_digest: Option<String>,
     local_digest: Option<String>,
@@ -1468,8 +1472,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
             ))
         }
         SetupMode::Apply => {
-            let projection =
-                apply_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
+            let projection = AppliedProjection::default();
             let mut host_changed_paths = Vec::new();
             let mut activated_hosts = Vec::new();
             for host in &config.selected_hosts {
@@ -1505,6 +1508,17 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                     }
                 }
             }
+            let projection =
+                apply_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)
+                    .map_err(|primary| {
+                        match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
+                            Ok(()) => primary,
+                            Err(error) => SetupError::Conflict(format!(
+                                "{}; host rollback failed: {error}",
+                                primary.message()
+                            )),
+                        }
+                    })?;
             if changed {
                 if let Err(primary) = super::user_install::replace_user_setup_file(
                     &arguments.root_cap,
@@ -2447,7 +2461,7 @@ fn plan_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
-    let files = user_projection_files(config, resolved_skills)?;
+    let mut files = user_projection_files(config, resolved_skills)?;
     let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
     let prior_bytes =
         super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
@@ -2457,6 +2471,71 @@ fn plan_user_projection(
         .map(parse_projection_manifest)
         .transpose()?;
     let mut base_files = projection_base_files(root, prior.as_ref())?;
+    // A changed resource keeps the entire local Skill usable. Its original
+    // bytes remain in the ownership ledger; it is never adopted as Hive input.
+    let mut retained = BTreeMap::new();
+    if config.selected_hosts.contains(&SelectedHost::Codex) {
+        let mut skill_paths: BTreeMap<std::ffi::OsString, BTreeSet<PathBuf>> = BTreeMap::new();
+        for path in base_files
+            .keys()
+            .filter(|path| path.starts_with(".agents/skills/"))
+        {
+            if let Some(name) = path.components().nth(2) {
+                skill_paths
+                    .entry(name.as_os_str().to_owned())
+                    .or_default()
+                    .insert(path.clone());
+            }
+        }
+        for (name, paths) in &skill_paths {
+            if hive_render::skill_delivery::has_extra_files(
+                root,
+                &Path::new(".agents/skills").join(name),
+                paths,
+            )
+            .map_err(|error| SetupError::Conflict(error.to_string()))?
+            {
+                retained.insert(name.clone(), "unowned-resource");
+            }
+        }
+        for (path, base) in &base_files {
+            if path.starts_with(".agents/skills/") {
+                let verified = prior.as_ref().is_some_and(|manifest| {
+                    super::user_install::authentic_historical_user_skill(
+                        &manifest.product_version,
+                        path,
+                        base,
+                    )
+                });
+                if !verified {
+                    if let Some(name) = path.components().nth(2) {
+                        retained.insert(name.as_os_str().to_owned(), "unverified-original");
+                    }
+                }
+                let local =
+                    super::user_install::read_user_setup_file(root, path, MAX_USER_SETUP_BYTES)
+                        .map_err(SetupError::Conflict)?;
+                if local.as_ref().is_some_and(|bytes| bytes != base) {
+                    if let Some(name) = path.components().nth(2) {
+                        retained
+                            .entry(name.as_os_str().to_owned())
+                            .or_insert("modified-resource");
+                    }
+                }
+            }
+        }
+        for (path, base) in &base_files {
+            if path.starts_with(".agents/skills/")
+                && path.components().nth(2).is_some_and(|name| {
+                    retained
+                        .get(name.as_os_str())
+                        .is_some_and(|reason| *reason != "unverified-original")
+                })
+            {
+                files.insert(path.clone(), base.clone());
+            }
+        }
+    }
     let retired_files = authenticated_retired_user_skill_files(root)?;
     base_files.extend(retired_files.clone());
     let mut prior_owned_paths = prior
@@ -2473,14 +2552,63 @@ fn plan_user_projection(
 
     let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
     paths.extend(files.keys().cloned());
+    let unverified = retained
+        .iter()
+        .filter(|(_, reason)| **reason == "unverified-original")
+        .map(|(name, _)| name.clone())
+        .collect::<BTreeSet<_>>();
+    if config.selected_hosts.contains(&SelectedHost::Codex) {
+        for name in resolved_skills {
+            let path = Path::new(".agents/skills").join(name).join("SKILL.md");
+            if !prior_owned_paths.contains(&path)
+                && super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+                    .map_err(SetupError::Conflict)?
+                    .is_some()
+            {
+                retained.insert(std::ffi::OsString::from(name), "unowned-projection");
+            }
+        }
+    }
     let mut planned = AppliedProjection {
         changes: Vec::new(),
         changed_paths: Vec::new(),
         reports: Vec::new(),
     };
+    for (name, reason) in retained {
+        planned.reports.push(UserProjectionPathReport {
+            path: portable(&Path::new(".agents/skills").join(name)),
+            reason: Some(reason.to_owned()),
+            base_digest: None,
+            local_digest: None,
+            incoming_digest: None,
+            final_digest: None,
+            disposition: MergeDisposition::LocalPreserved,
+            omitted_incoming_hunks: 0,
+            local_priority: true,
+        });
+    }
     for path in paths {
         let before = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
+        if path.starts_with(".agents/skills/")
+            && path
+                .components()
+                .nth(2)
+                .is_some_and(|name| unverified.contains(name.as_os_str()))
+        {
+            planned.reports.push(UserProjectionPathReport {
+                path: portable(&path),
+                reason: Some("unverified-original".to_owned()),
+                base_digest: None,
+                local_digest: before.as_deref().map(sha256_digest),
+                incoming_digest: None,
+                final_digest: before.as_deref().map(sha256_digest),
+                disposition: MergeDisposition::LocalPreserved,
+                omitted_incoming_hunks: 0,
+                local_priority: true,
+            });
+            continue;
+        }
         let base = base_files.get(&path);
         let incoming = files.get(&path);
         if prior.is_some()
@@ -2517,6 +2645,7 @@ fn plan_user_projection(
         .map_err(|error| SetupError::Conflict(error.to_string()))?;
         let after = merged.bytes;
         planned.reports.push(UserProjectionPathReport {
+            reason: None,
             path: portable(&path),
             base_digest: base.map(|bytes| sha256_digest(bytes)),
             local_digest: before.as_deref().map(sha256_digest),
@@ -2597,6 +2726,18 @@ fn user_projection_files(
     config: &UserSetupConfig,
     resolved_skills: &[String],
 ) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    user_projection_files_with_local_skills(
+        config,
+        resolved_skills,
+        !config.selected_hosts.contains(&SelectedHost::Codex),
+    )
+}
+
+fn user_projection_files_with_local_skills(
+    config: &UserSetupConfig,
+    resolved_skills: &[String],
+    include_skills: bool,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
     let mut files = BTreeMap::<PathBuf, Vec<u8>>::new();
     let projection = compile_user_projection_localized(
         ProjectionHost::Codex,
@@ -2606,7 +2747,7 @@ fn user_projection_files(
     )
     .map_err(|error| SetupError::Internal(error.to_string()))?;
     for (path, bytes) in projection.files {
-        if path.starts_with(".agents/skills/") {
+        if path.starts_with(".agents/skills/") && include_skills {
             files.insert(PathBuf::from(path), bytes);
         } else if path == ".hive/config/active-skills.yml" {
             files.insert(PathBuf::from(".hive/config/user-active-skills.yml"), bytes);
@@ -2623,10 +2764,12 @@ fn legacy_070_projection_files(
     config: &UserSetupConfig,
     resolved_skills: &[String],
 ) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
-    Ok(user_projection_files(config, resolved_skills)?
-        .into_iter()
-        .filter(|(path, _)| !path.ends_with("agents/openai.yaml"))
-        .collect())
+    Ok(
+        user_projection_files_with_local_skills(config, resolved_skills, true)?
+            .into_iter()
+            .filter(|(path, _)| !path.ends_with("agents/openai.yaml"))
+            .collect(),
+    )
 }
 
 fn render_projection_manifest(
@@ -2800,7 +2943,7 @@ fn legacy_test3_projection_base(
     let catalog = parse_and_validate_catalog()
         .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
     let skills = resolve_skills(&config, &catalog)?;
-    let mut base = user_projection_files(&config, &skills)?;
+    let mut base = user_projection_files_with_local_skills(&config, &skills, true)?;
     base.insert(
         PathBuf::from(".agents/skills/user-setup/SKILL.md"),
         USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec(),
@@ -2829,11 +2972,19 @@ fn apply_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
+    let planned = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
+    apply_planned_user_projection(root, &planned)
+}
+
+pub(crate) fn apply_planned_user_projection(
+    root: &Dir,
+    planned: &AppliedProjection,
+) -> Result<AppliedProjection, SetupError> {
     let AppliedProjection {
         changes,
         changed_paths,
         reports,
-    } = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
+    } = planned.clone();
     let mut applied = AppliedProjection {
         changes: Vec::new(),
         changed_paths,
@@ -2885,14 +3036,10 @@ fn apply_user_projection(
 /// the validated preferences but removed the projection files. This is an
 /// internal reinstall path: it never asks for preferences and refuses to
 /// replace a path that cannot be proven Hive-owned.
-pub(crate) fn restore_saved_projection_after_uninstall(root: &Dir) -> Result<bool, SetupError> {
-    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
-    if super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
-        .map_err(SetupError::Conflict)?
-        .is_some()
-    {
-        return Ok(false);
-    }
+pub(crate) fn plan_saved_projection_after_host_install(
+    root: &Dir,
+    host: SelectedHost,
+) -> Result<AppliedProjection, SetupError> {
     let Some(setup_bytes) = super::user_install::read_user_setup_file(
         root,
         Path::new(USER_SETUP_RELATIVE),
@@ -2900,13 +3047,15 @@ pub(crate) fn restore_saved_projection_after_uninstall(root: &Dir) -> Result<boo
     )
     .map_err(SetupError::Conflict)?
     else {
-        return Ok(false);
+        return Ok(AppliedProjection::default());
     };
     let Some((config, resolved_skills)) = resolved_operational_skills(root)? else {
-        return Ok(false);
+        return Ok(AppliedProjection::default());
     };
-    let projection = apply_user_projection(root, &config, &resolved_skills, &setup_bytes)?;
-    Ok(!projection.changed_paths.is_empty())
+    if config.selected_hosts.contains(&SelectedHost::Codex) && host != SelectedHost::Codex {
+        return Ok(AppliedProjection::default());
+    }
+    plan_user_projection(root, &config, &resolved_skills, &setup_bytes)
 }
 
 fn validate_user_projection(
@@ -2919,7 +3068,12 @@ fn validate_user_projection(
     let mut drifted_paths = planned
         .reports
         .iter()
-        .filter(|report| report.local_digest != report.incoming_digest)
+        .filter(|report| {
+            report.local_digest != report.incoming_digest
+                && !(config.selected_hosts.contains(&SelectedHost::Codex)
+                    && report.path.starts_with(".agents/skills/")
+                    && report.local_priority)
+        })
         .map(|report| report.path.clone())
         .collect::<Vec<_>>();
     drifted_paths.extend(planned.changed_paths);
@@ -2935,7 +3089,10 @@ fn validate_user_projection(
     }
 }
 
-fn rollback_user_projection(root: &Dir, applied: &AppliedProjection) -> Result<(), String> {
+pub(crate) fn rollback_user_projection(
+    root: &Dir,
+    applied: &AppliedProjection,
+) -> Result<(), String> {
     for change in applied.changes.iter().rev() {
         super::user_install::replace_user_setup_file(
             root,
@@ -2993,7 +3150,20 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     let mut previous = None;
     for entry in &manifest.entries {
         let path = Path::new(&entry.path);
+        let allowed = matches!(
+            entry.path.as_str(),
+            ".agents/directives/00-hive-user.md"
+                | ".hive/config/user-active-skills.yml"
+                | ".agents/skills/user-setup/references/workflow.md"
+                | ".agents/skills/user-setup/references/questions.md"
+                | ".agents/skills/user-setup/references/reconfiguration.md"
+                | ".agents/skills/user-setup/references/recovery.md"
+                | ".agents/skills/user-setup/references/language.md"
+                | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+        ) || (path.starts_with(".agents/skills/")
+            && hive_core::validate_hive_skill_projection_relative(path).is_ok());
         if path.is_absolute()
+            || !allowed
             || path
                 .components()
                 .any(|component| !matches!(component, std::path::Component::Normal(_)))
@@ -3210,6 +3380,7 @@ pub(crate) struct UsageThresholdUpdate {
 /// Update only the authenticated global usage threshold while keeping the user projection
 /// manifest bound to the new canonical preferences. Project-local thresholds are intentionally
 /// outside this path.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn set_operational_usage_threshold(
     user_root: &Path,
     remaining_percent: u8,
@@ -3254,6 +3425,15 @@ pub(crate) fn set_operational_usage_threshold(
     let resolved_skills =
         resolve_skills(&config, &catalog).map_err(|error| error.message().to_owned())?;
     let desired = canonical_config(&config).map_err(|error| error.message().to_owned())?;
+    let preview = plan_user_projection(&root, &config, &resolved_skills, &desired)
+        .map_err(|error| error.message().to_owned())?;
+    if preview
+        .changes
+        .iter()
+        .any(|change| change.after.is_none() && change.path.starts_with(".agents/skills/"))
+    {
+        super::user_install::validated_codex_plugin_files(user_root)?;
+    }
     let projection = apply_user_projection(&root, &config, &resolved_skills, &desired)
         .map_err(|error| error.message().to_owned())?;
     if let Err(primary) = super::user_install::replace_user_setup_file(
@@ -3341,6 +3521,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
     selected_project_skills.sort();
     selected_project_skills.dedup();
     Ok(GlobalProjectPreferences {
+        codex_plugin_files: std::collections::BTreeMap::new(),
         interface_language: config.interface_language.as_str().to_owned(),
         wiki_enabled: config.wiki.enabled,
         wiki_backend: config.wiki.backend.as_str().to_owned(),
@@ -3711,7 +3892,8 @@ usage_guard:
         local: Vec<u8>,
     ) -> (AppliedProjection, Vec<u8>, PathBuf) {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
@@ -3769,7 +3951,8 @@ usage_guard:
     #[test]
     fn validation_keeps_modified_or_malformed_projection_fail_closed() {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let answers = canonical_config(&config).expect("answers");
@@ -3849,7 +4032,8 @@ usage_guard:
 
     #[test]
     fn user_projection_replaces_an_authenticated_vanilla_base() {
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
@@ -3880,7 +4064,8 @@ usage_guard:
 
     #[test]
     fn user_projection_merges_disjoint_local_edits_and_retains_overlaps() {
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
@@ -4022,7 +4207,8 @@ usage_guard:
     #[test]
     fn test_three_global_projection_has_an_authenticated_vanilla_upgrade_base() {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let mut old_files = user_projection_files(&config, &skills).expect("old files");
@@ -4071,7 +4257,8 @@ usage_guard:
     #[test]
     fn legacy_070_global_projection_has_an_authenticated_vanilla_upgrade_base() {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let config = valid_config();
+        let mut config = valid_config();
+        config.selected_hosts = vec![SelectedHost::Claude];
         let (skills, answers, old_file_count) =
             seed_legacy_070_projection(temporary.path(), &config);
         let root =
@@ -5125,5 +5312,137 @@ usage_guard:
             fs::read(&projection_file).expect("preserved racing projection"),
             b"racing projection\n"
         );
+    }
+
+    fn seed_codex_delivery_fixture(root: &Path) -> (UserSetupConfig, Vec<String>, Vec<u8>) {
+        let config = valid_config();
+        let skills = resolve_skills(&config, &parse_and_validate_catalog().unwrap()).unwrap();
+        let answers = canonical_config(&config).unwrap();
+        let files = user_projection_files_with_local_skills(&config, &skills, true).unwrap();
+        for (path, bytes) in &files {
+            fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
+            fs::write(root.join(path), bytes).unwrap();
+        }
+        fs::write(root.join(USER_SETUP_RELATIVE), &answers).unwrap();
+        let bytes = render_projection_manifest(&answers, &files).unwrap();
+        let mut ledger: UserProjectionManifest = serde_json::from_slice(&bytes).unwrap();
+        ledger.product_version = "0.11.0".to_owned();
+        write_projection_manifest(root, &ledger);
+        (config, skills, answers)
+    }
+
+    #[test]
+    fn codex_user_projection_retires_all_exact_resources_and_is_idempotent() {
+        let temporary = tempfile::tempdir().unwrap();
+        let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
+        let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
+        let applied = apply_user_projection(&root, &config, &skills, &answers).unwrap();
+        assert!(!temporary.path().join(".agents/skills/user-setup").exists());
+        assert!(applied
+            .changes
+            .iter()
+            .any(
+                |change| change.path.ends_with("references/workflow.md") && change.after.is_none()
+            ));
+        assert!(apply_user_projection(&root, &config, &skills, &answers)
+            .unwrap()
+            .changed_paths
+            .is_empty());
+        validate_user_projection(&root, &config, &skills, &answers).unwrap();
+    }
+
+    #[test]
+    fn codex_user_projection_preserves_the_entire_modified_or_extended_skill() {
+        for suffix in ["SKILL.md", "references/workflow.md", "custom.txt"] {
+            let temporary = tempfile::tempdir().unwrap();
+            let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
+            let changed = temporary
+                .path()
+                .join(".agents/skills/user-setup")
+                .join(suffix);
+            fs::write(&changed, b"user-owned customization\n").unwrap();
+            let root =
+                super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
+            apply_user_projection(&root, &config, &skills, &answers).unwrap();
+            assert_eq!(fs::read(changed).unwrap(), b"user-owned customization\n");
+            assert!(temporary
+                .path()
+                .join(".agents/skills/user-setup/SKILL.md")
+                .is_file());
+            assert!(temporary
+                .path()
+                .join(".agents/skills/user-setup/references/workflow.md")
+                .is_file());
+            assert!(apply_user_projection(&root, &config, &skills, &answers)
+                .unwrap()
+                .changed_paths
+                .is_empty());
+            validate_user_projection(&root, &config, &skills, &answers).unwrap();
+        }
+    }
+
+    #[test]
+    fn codex_user_projection_rejects_a_change_after_the_cleanup_preview() {
+        let temporary = tempfile::tempdir().unwrap();
+        let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
+        let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
+        let preview = plan_user_projection(&root, &config, &skills, &answers).unwrap();
+        let changed = temporary.path().join(".agents/skills/user-setup/SKILL.md");
+        fs::write(&changed, b"racing custom bytes\n").unwrap();
+        assert!(apply_planned_user_projection(&root, &preview).is_err());
+        assert_eq!(fs::read(changed).unwrap(), b"racing custom bytes\n");
+        assert!(temporary
+            .path()
+            .join(".agents/skills/user-setup/references/workflow.md")
+            .is_file());
+    }
+
+    #[test]
+    fn codex_cleanup_does_not_trust_a_self_consistent_forged_original() {
+        let temporary = tempfile::tempdir().unwrap();
+        let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
+        let path = ".agents/skills/user-setup/SKILL.md";
+        let custom = b"User-created Skill content\n";
+        fs::write(temporary.path().join(path), custom).unwrap();
+        let manifest_path = temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE);
+        let mut manifest: UserProjectionManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+        manifest
+            .entries
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap()
+            .digest = sha256_digest(custom);
+        let original = manifest
+            .base_entries
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap();
+        original.content = String::from_utf8(custom.to_vec()).unwrap();
+        original.digest = sha256_digest(custom);
+        write_projection_manifest(temporary.path(), &manifest);
+        let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
+        let result = apply_user_projection(&root, &config, &skills, &answers).unwrap();
+        assert_eq!(fs::read(temporary.path().join(path)).unwrap(), custom);
+        assert!(result
+            .reports
+            .iter()
+            .any(|report| report.reason.as_deref() == Some("unverified-original")));
+        let upgraded: UserProjectionManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+        assert!(!upgraded
+            .entries
+            .iter()
+            .any(|entry| entry.path.starts_with(".agents/skills/user-setup/")));
+        assert!(apply_user_projection(&root, &config, &skills, &answers)
+            .unwrap()
+            .changed_paths
+            .is_empty());
+    }
+
+    #[test]
+    fn user_projection_manifest_refuses_a_foreign_home_path() {
+        let manifest = schema_two_manifest(Path::new("notes.md"), b"foreign notes\n");
+        assert!(parse_projection_manifest(&serde_json::to_vec(&manifest).unwrap()).is_err());
     }
 }

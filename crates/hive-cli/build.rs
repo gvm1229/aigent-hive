@@ -96,10 +96,29 @@ fn write_historical_user_plugin_tables(manifest_dir: &Path) {
     let mut generated = String::from(
         "pub const HISTORICAL_USER_PLUGIN_RELEASES: &[(&str, &[(&str, &str)])] = &[\n",
     );
-    for (version, files) in releases {
+    for (version, files) in &releases {
         writeln!(generated, "    ({version:?}, &[").expect("write release header");
         for (relative, digest) in files {
             writeln!(generated, "        ({relative:?}, {digest:?}),").expect("write release file");
+        }
+        generated.push_str("    ]),\n");
+    }
+    generated.push_str("];\n");
+    generated.push_str("type HistoricalUserSkillContent = (&'static str, &'static [(&'static str, &'static [u8])]);\n");
+    generated
+        .push_str("pub const HISTORICAL_USER_SKILL_CONTENTS: &[HistoricalUserSkillContent] = &[\n");
+    for (version, files) in &releases {
+        writeln!(generated, "    ({version:?}, &[").expect("write content release");
+        for (relative, _) in files.iter().filter(|(path, _)| path.starts_with("skills/")) {
+            let path = manifest_dir.join(format!(
+                "../../harness/user-bases/{version}/plugins/aigent-hive/{relative}"
+            ));
+            writeln!(
+                generated,
+                "        ({relative:?}, include_bytes!({:?}).as_slice()),",
+                path.to_string_lossy()
+            )
+            .expect("write content file");
         }
         generated.push_str("    ]),\n");
     }

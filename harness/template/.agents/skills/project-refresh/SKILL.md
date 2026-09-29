@@ -29,15 +29,19 @@ Use only for an installed consumer project.
 
 ## Upgrade workflow
 
-1. Run `hive project upgrade --target <project-root> --scan --output json`.
+Resolve the authenticated user root from Hive setup; pass it to every command below.
+An update automatically removes exact Hive-owned plugin-covered copies. Preserve modified
+Skills and their resources; report their paths and remaining duplicate discovery.
+
+1. Run `hive project upgrade --target <project-root> --user-root <user-root> --scan --output json`.
 2. Report installed, base, local, and incoming digests plus every applicable change, including retired Hive Skill removal only when ownership is authenticated.
-3. For preview, run `hive project upgrade --target <project-root> --dry-run --output json`.
+3. For preview, run `hive project upgrade --target <project-root> --user-root <user-root> --dry-run --output json`.
 4. Apply only after the user requests the update:
-   `hive project upgrade --target <project-root> --apply --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --apply --output json`.
 5. Validate with
-   `hive project upgrade --target <project-root> --validate --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --validate --output json`.
 6. If an interrupted activation leaves an upgrade journal requiring recovery, run
-   `hive project upgrade --target <project-root> --recover --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --recover --output json`.
    Inspect whether recovery rolled back or completed forward. This is not an undo command for
    a successful upgrade. Stop on an unauthenticated base or unresolved ownership conflict.
 

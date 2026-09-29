@@ -88,6 +88,9 @@ fn seed_historical_project(target: &Path, version: &str) {
             &format!("source_release_version = \"{version}\""),
         );
     fs::write(&harness, historical_harness).expect("historical harness config");
+    // The historical install predates the provider ledger created by setup above.
+    fs::remove_file(target.join(hive_render::skill_delivery::PROVIDERS_PATH))
+        .expect("remove current-only provider record from the historical fixture");
 
     write_historical_project_base(target, version);
 }

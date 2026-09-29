@@ -1101,6 +1101,23 @@ fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
     Ok(text.replace(IMPLICIT, EXPLICIT).into_bytes())
 }
 
+/// Reproduce descriptor translation around unchanged authenticated Skill bytes.
+///
+/// # Errors
+/// Returns an error if the Skill has no supported descriptor or valid metadata.
+pub fn localized_builtin_artifact(
+    name: &str,
+    suffix: &str,
+    source: &[u8],
+    language: DescriptorLanguage,
+) -> Result<Vec<u8>, ProjectionError> {
+    match suffix {
+        "SKILL.md" => localized_skill_source(name, source, language),
+        "agents/openai.yaml" => localized_skill_metadata(name, source, language),
+        _ => Ok(source.to_vec()),
+    }
+}
+
 fn localized_skill_source(
     name: &str,
     source: &[u8],
