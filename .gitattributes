@@ -3,6 +3,8 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+harness/project-bases/0.11.0/skills/user-setup/scripts/resolve-hive.ps1 -text
+harness/user-bases/0.11.0/plugins/aigent-hive/skills/user-setup/scripts/resolve-hive.ps1 -text
 
 # Frozen release evidence must retain the exact tagged bytes on every host.
 harness/project-bases/0.10.2/** -text

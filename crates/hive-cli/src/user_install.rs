@@ -8655,6 +8655,7 @@ mod tests {
                 ("0.10.1", 62),
                 ("0.10.2", 68),
                 ("0.10.3", 68),
+                ("0.11.0", 73),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -8809,7 +8810,10 @@ mod tests {
                 seed_historical_09x_user_install(temporary.path(), version, host);
                 let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
                     .expect("direct stable upgrade plan");
-                if matches!(version, "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3") {
+                if matches!(
+                    version,
+                    "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3" | "0.11.0"
+                ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
                             && !path.to_string_lossy().contains("package-review")
