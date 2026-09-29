@@ -710,7 +710,7 @@ else:
             ".agents/directives/00-hive-user.md",
             preview_result["changed_paths"],
         )
-        self.assertIn(
+        self.assertNotIn(
             ".agents/skills/prompt-refine/SKILL.md",
             preview_result["changed_paths"],
         )
@@ -735,7 +735,6 @@ else:
         self.assertEqual(applied_result["code"], "hive.user-setup-complete")
         self.assertEqual(applied_result["data"]["setup_state"], "operational")
         refresh_copies = [
-            user_root / ".agents/skills/project-refresh",
             user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/project-refresh",
         ]
         for refresh in refresh_copies:
@@ -743,13 +742,10 @@ else:
             self.assertTrue(
                 read_yaml(refresh / "agents/openai.yaml")["policy"]["allow_implicit_invocation"]
             )
-        self.assertEqual(
-            (refresh_copies[0] / "SKILL.md").read_bytes(),
-            (refresh_copies[1] / "SKILL.md").read_bytes(),
-        )
+        self.assertFalse((user_root / ".agents/skills/project-refresh/SKILL.md").exists())
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
-        self.assertTrue(
+        self.assertFalse(
             (user_root / ".agents/skills/prompt-refine/SKILL.md").is_file()
         )
         self.assertTrue(
@@ -760,7 +756,7 @@ else:
             ).is_file()
         )
         self.assertTrue(
-            (user_root / ".agents/skills/usage-guard/SKILL.md").is_file()
+            (user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/SKILL.md").is_file()
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("상태: `operational`", guidance)
@@ -796,7 +792,7 @@ else:
         self.assertFalse((user_root / ".hive/index/hive.sqlite3").exists())
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue(
-            (user_root / ".agents/skills/usage-guard/SKILL.md").is_file()
+            (user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/SKILL.md").is_file()
         )
         self.assertFalse(
             (user_root / ".agents/skills/knowledge-recall/SKILL.md").exists()

@@ -1809,7 +1809,7 @@ frozen_project_base_0_9_release!(
 );
 
 frozen_project_base_0_9_release!(
-    frozen_project_base_0_11_0,
+    frozen_project_base_0_11_0_without_resources,
     "0.11.0",
     [
         "00-project-harness.md",
@@ -1849,6 +1849,26 @@ frozen_project_base_0_9_release!(
         "verified-workflow"
     ]
 );
+
+fn frozen_project_base_0_11_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_11_0_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("knowledge-capture", "ingest.md", include_bytes!("../../../harness/project-bases/0.11.0/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "confidential.md", include_bytes!("../../../harness/project-bases/0.11.0/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("run-checkpoint", "policy-review.md", include_bytes!("../../../harness/project-bases/0.11.0/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "control.md", include_bytes!("../../../harness/project-bases/0.11.0/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "sensors.md", include_bytes!("../../../harness/project-bases/0.11.0/skills/usage-guard/references/sensors.md").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/references/{suffix}"), bytes.to_vec());
+            if host == "claude" {
+                files.insert(format!(".claude/skills/{name}/references/{suffix}"), bytes.to_vec());
+            }
+        }
+    }
+    Ok(files)
+}
 
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
