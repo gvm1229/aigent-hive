@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-render/src/skill_delivery.rs#sha256:39a5ba630384bdd526f3fdec52dc51d09f9b8a9b00e7a66a5c7d2bf6fc1927ff"
   - "repo:docs/decisions/ADR-0024-codex-skill-delivery.md#sha256:a2c66b03a14bbef1564c50fcd2e541c31e1f956d3e29b9da5155a34c0ed42ffd"
 links: [global-onboarding, projection-upgrade-purge, public-skill-identity]
-reviewed_revision: "git:fc288bed8f925b89bfd0ed67b808cfdd0722a70b"
+reviewed_revision: "git:af8701b0ee9440a411a2f1701c643c28839ec4e8"
 status: active
 ---
 
