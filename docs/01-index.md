@@ -191,6 +191,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [0.11.1 스킬 제공·자동 정리](plans/active/skill-delivery-0.11.1.md) | Codex 중복 제거·수정 보존 |
 | [0.11.1 출시 기록](releases/0.11.1.md) | 호환 수정·시험 준비 |
 | [0.11.1 자동 정리 검증](research/skill-delivery-0.11.1.md) | 실행 범위·예외·남은 수용 |
+| [0.11.1 공개 시험 수용](research/skill-delivery-public-test-0.11.1.md) | 세 운영체제·공개 소스·설치 승인 인계 |
 | [0.10.2 전역 갱신](plans/active/global-user-update-0.10.2.md) | 이전 구현·검증 보존 |
 | [0.10.2 지침 품질](plans/active/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
 | [0.10.2 출시](plans/active/release-0.10.2.md) | 이전 출시 검증 보존 |

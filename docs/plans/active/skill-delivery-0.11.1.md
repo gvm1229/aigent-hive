@@ -21,9 +21,9 @@
 - [x] [SDP-003] 프로젝트 설정·갱신의 제공 출처와 자동 정리
   - state: complete; depends: SDP-002; evidence: repo:tests/results/runs/20260929T204752-0fe5ef9afbee.md#sha256:32ffc55bdcbf78116322a8fd4952b081416a5796ec935e3a0f9ab13c07bb40ca
 - [x] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
-  - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:a0c11749de2ea1730ebc5847702782299d4e7878f019aa70680c03648a7148fa
+  - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:ddd6a0c570ad81f6929700ee0c282ecb2a2df68b8bb5e1ccb5b6410c47775bc3
 - [ ] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
-  - state: agent-owned; depends: SDP-004; owner: Codex; reason: 시험 자료와 호스트 증거 준비
+  - state: awaiting-user-authority; depends: SDP-004; owner: 유지관리자; reason: 0.11.1-test.1 공개 세 OS 수용 완료, 현재 사용자 설치·Codex 재시작·실제 발견과 호출의 별도 승인 필요
 
 ## 구현 인계
 
@@ -39,3 +39,9 @@
 - 삭제 전 기존 백업과 파일 변경 경합 검사; 실패 시 복구
 - 보존으로 남은 중복의 경로·이유 보고, 숨김·사용자 파일 덮어쓰기 제외
 - 설정·재설정·갱신·검증의 같은 제공 규칙, 두 번째 갱신의 불필요한 변경 0건
+
+## 실행 인계
+
+- [공개 수용 근거](../../research/skill-delivery-public-test-0.11.1.md): 정확한 소스·후보·게시·세 OS 실행 파일 지문과 통과 범위
+- Agent 소유 작업 0건; 미완료 1건은 현재 사용자 설치의 승인과 실제 Codex 새 세션 수용
+- 승인 후 정확한 시험판 적용·사용자 자동 정리·대상 프로젝트 갱신·Codex 재시작·스킬 목록과 두 호출 방식 확인
