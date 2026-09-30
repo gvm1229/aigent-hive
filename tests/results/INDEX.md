@@ -912,3 +912,4 @@
 | [passed](runs/20260929T214329-dbcbd3de609d.md) | Python conformance: release | bb177081c93b9d196d9dc3e07acefae9908c7d0e | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260929T214934-591df84543c4.md) | 0.11.1 공개 후보 전 코드 최종 검사 | 94fa2196febf288556780c7f68e6f752f15a6415 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260929T224954-8401014156c1.md) | 시험판 표시 형식의 수용 코드 정정 확인 | 55fba2d67e1da8b53b077390d3d639c4cecd4d40 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260930T002936-04802915c822.md) | 공개 수용 등록부의 버전·소스·제품 지문 계약 확인 | 85ac823630c76d138269972d932ff52baed55f06 | Windows-11-10.0.26200-SP0 |
