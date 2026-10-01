@@ -1,0 +1,27 @@
+---
+schema_version: 1
+pair_id: claude-windows-user-install
+topic_slug: claude-windows-user-install
+language: ko
+counterpart: ../en/claude-windows-user-install.md
+title: "Claude Windows 사용자 설치"
+summary: "Claude 명령의 일반 Windows 경로 전달과 제한된 안전 오류 진단."
+tags: [claude, installation, windows]
+aliases: []
+sources:
+  - "repo:crates/hive-cli/src/usage.rs#sha256:d53779d091d848cea32a1f79a4a96ad11112f361b032758aed008fb9dbf7d9fa"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:6da6fa6180feb983e71a9be4915ff93a12cc1bfefae6016bad026f5c94b0238e"
+  - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:f7f2d78da2e843f3a75267a106251eb26af09f22773bf67ec8f7bc2cca7f8c60"
+  - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
+links: [multi-host-user-install, supported-hosts]
+reviewed_revision: "git:b3feedb374b8c3edab9ebf40f50931989b0e448e"
+status: active
+---
+
+# Claude Windows 사용자 설치
+
+Windows 확장 경로의 파일 검사 통과와 Claude 마켓플레이스 등록 거절 차이. 내부 파일 접근의 정규 경로 유지, Claude 명령 인자만 일반 경로로 변환. 등록 전 파일 기록, 실패 뒤 복구에 따른 파일 부재 가능성.
+
+명령 실행기의 제한된 오류 출력·종료 코드 수집. 고정 오류 분류와 출력 길이·지문만 표시, 원문 비노출. 소유권 불명확 중단의 외부 상태·복구 기록 보존.
+
+반복 가능한 실제 CLI 격리 시험: 일반·공백·한글 경로, 설치·검증·재설치·갱신과 외부 자료 보존. 실제 대화의 스킬 발견·모델 질문은 CLI 시험의 증명 범위 밖.

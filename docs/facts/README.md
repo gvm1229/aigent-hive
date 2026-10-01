@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| Claude Windows 사용자 설치 | [en](en/claude-windows-user-install.md) | [ko](ko/claude-windows-user-install.md) |
 | Codex 스킬 제공·자동 정리 | [en](en/codex-skill-delivery.md) | [ko](ko/codex-skill-delivery.md) |
 | 구현 계획 인계 | [en](en/implementation-plan-handoff.md) | [ko](ko/implementation-plan-handoff.md) |
 | 반복 압축 뒤 지침 복구 | [en](en/directive-context-recovery.md) | [ko](ko/directive-context-recovery.md) |
