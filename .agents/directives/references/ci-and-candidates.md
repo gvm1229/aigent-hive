@@ -23,3 +23,7 @@
   trees never create or reset a test. Batch product work until milestone verification finishes.
 - One always-run protected merge gate verifies risk-matched jobs; never require a conditionally
   skipped product job directly.
+
+- Require green CI for the exact candidate SHA. Check all failed jobs and OS-gated forms.
+  Record changed retry inputs; investigate the family after its second failure.
+  Diagnose 15-minute stalls; no unchanged retry.
