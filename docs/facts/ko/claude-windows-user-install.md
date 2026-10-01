@@ -13,6 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/user_install.rs#sha256:42f69c326667ad73522caeadec761a523074a78efcb5caf05a74185acb0fe3ce"
   - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:f7f2d78da2e843f3a75267a106251eb26af09f22773bf67ec8f7bc2cca7f8c60"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
+  - "repo:tests/results/runs/20261001T234717-11673280f355.md#sha256:72fa345ddb6e4feff83592041055cf32edb4a3bd3347cee6a5af5423328ea692"
 links: [multi-host-user-install, supported-hosts]
 reviewed_revision: "git:b3feedb374b8c3edab9ebf40f50931989b0e448e"
 status: active
@@ -25,3 +26,5 @@ Windows 확장 경로의 파일 검사 통과와 Claude 마켓플레이스 등�
 명령 실행기의 제한된 오류 출력·종료 코드 수집. 고정 오류 분류와 출력 길이·지문만 표시, 원문 비노출. 소유권 불명확 중단의 외부 상태·복구 기록 보존.
 
 반복 가능한 실제 CLI 격리 시험: 일반·공백·한글 경로, 설치·검증·재설치·갱신과 외부 자료 보존. 실제 대화의 스킬 발견·모델 질문은 CLI 시험의 증명 범위 밖.
+
+공개 `0.11.1-test.5`·Claude `2.1.163` 통과.

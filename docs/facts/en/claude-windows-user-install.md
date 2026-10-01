@@ -13,6 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/user_install.rs#sha256:42f69c326667ad73522caeadec761a523074a78efcb5caf05a74185acb0fe3ce"
   - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:f7f2d78da2e843f3a75267a106251eb26af09f22773bf67ec8f7bc2cca7f8c60"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
+  - "repo:tests/results/runs/20261001T234717-11673280f355.md#sha256:72fa345ddb6e4feff83592041055cf32edb4a3bd3347cee6a5af5423328ea692"
 links: [multi-host-user-install, supported-hosts]
 reviewed_revision: "git:b3feedb374b8c3edab9ebf40f50931989b0e448e"
 status: active
@@ -25,3 +26,5 @@ Claude marketplace registration rejects Windows verbatim paths even when validat
 Safe diagnostics retain bounded stderr, exit status, fixed classification and output sizes/digests without raw output. Ambiguous recovery preserves external state and its journal.
 
 The isolated native CLI test covers ordinary, space-containing and Korean paths, install, validation, reinstall, update and foreign data preservation. It does not prove interactive Skill discovery or model-driven questions.
+
+Public `0.11.1-test.5` passed Windows Claude `2.1.163` CLI qualification.
