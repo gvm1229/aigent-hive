@@ -313,6 +313,17 @@ elif host == "antigravity" and command == "plugin uninstall aigent-hive":
         shutil.rmtree(stage)
     state["plugin"] = False
 elif command.startswith("plugin marketplace add "):
+    if host == "claude":
+        if arguments[3].startswith(chr(92) * 2 + "?" + chr(92)):
+            print("Invalid marketplace source format. Try: owner/repo, https://..., or ./path", file=sys.stderr)
+            raise SystemExit(1)
+        source = Path(arguments[3])
+        marketplace_manifest = json.loads((source / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        assert marketplace_manifest["name"] == "aigent-hive"
+        assert marketplace_manifest["plugins"][0]["source"] == "./plugins/aigent-hive"
+        plugin_manifest = json.loads((source / "plugins/aigent-hive/.claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        assert plugin_manifest["name"] == "aigent-hive"
+        assert (source / "plugins/aigent-hive/skills/user-setup/SKILL.md").is_file()
     state["marketplace"] = True
 elif command in ("plugin add aigent-hive@aigent-hive --json", "plugin install aigent-hive@aigent-hive --scope user"):
     state["plugin"] = True
@@ -499,6 +510,23 @@ else:
             },
         )
         return path
+
+    def test_claude_user_lifecycle_accepts_a_unicode_root_with_spaces(self) -> None:
+        user_root = self.work_root / "user space 한글"
+        user_root.mkdir()
+        for action, mode in (("install", "--apply"), ("install", "--validate"),
+                             ("install", "--apply"), ("update", "--apply")):
+            process, result = self.invoke(
+                action, "--scope", "user", "--host", "claude", "--user-root", str(user_root), mode,
+                environment={"HIVE_TEST_USER_ROOT": str(user_root)},
+            )
+            self.assertEqual(process.returncode, 0, process.stderr)
+            self.assertEqual(result["status"], "success")
+        calls = [json.loads(line) for line in self.host_log.read_text("utf-8").splitlines()]
+        adds = [row for row in calls if row["argv"][:3] == ["plugin", "marketplace", "add"]]
+        self.assertEqual(len(adds), 1)
+        self.assertEqual(Path(adds[0]["argv"][3]), user_root / ".hive/marketplaces/claude")
+        self.assertFalse((user_root / ".hive/install-transactions/claude.json").exists())
 
     def test_user_install_preserves_foreign_guidance_for_all_hosts(self) -> None:
         cases = {

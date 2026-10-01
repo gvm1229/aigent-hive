@@ -16,16 +16,17 @@ use host_state::{
     codex_compensation_command, compensate_host_mutations, expected_antigravity_plugin_state,
     expected_claude_marketplace_path, expected_codex_marketplace_root,
     expected_codex_plugin_source_path, is_recoverable_dangling_codex_marketplace,
-    probe_antigravity_state, probe_antigravity_state_if_required, probe_claude_state,
-    probe_claude_state_if_required, probe_codex_state, probe_codex_state_if_required,
-    resolve_pending_host_transition, sanitized_command_diagnostic, validate_antigravity_activation,
-    validate_antigravity_prestate, validate_claude_activation, validate_claude_prestate,
-    validate_codex_activation, validate_codex_prestate, validate_installed_host,
+    normalize_host_path, probe_antigravity_state, probe_antigravity_state_if_required,
+    probe_claude_state, probe_claude_state_if_required, probe_codex_state,
+    probe_codex_state_if_required, resolve_pending_host_transition, sanitized_command_diagnostic,
+    validate_antigravity_activation, validate_antigravity_prestate, validate_claude_activation,
+    validate_claude_prestate, validate_codex_activation, validate_codex_prestate,
+    validate_installed_host,
 };
 #[cfg(test)]
 use host_state::{
-    normalize_host_path, parse_antigravity_plugin_state, parse_claude_marketplace_state,
-    parse_claude_plugin_state, parse_codex_marketplace_state, parse_codex_plugin_state,
+    parse_antigravity_plugin_state, parse_claude_marketplace_state, parse_claude_plugin_state,
+    parse_codex_marketplace_state, parse_codex_plugin_state,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -5620,6 +5621,9 @@ fn activate_host(
     let marketplace_text = marketplace.to_str().ok_or_else(|| {
         InstallError::Unsupported("marketplace path is not valid UTF-8".to_owned())
     })?;
+    let claude_marketplace =
+        (arguments.host == UserHost::Claude).then(|| normalize_host_path(marketplace_text));
+    let marketplace_text = claude_marketplace.as_deref().unwrap_or(marketplace_text);
     let command_sets = activation_commands(arguments.host, &transaction.backup, marketplace_text)?;
     for (command, mutation) in command_sets {
         if let Some(mutation) = mutation {
@@ -7325,6 +7329,31 @@ mod tests {
             }
             match command.as_str() {
                 command if command.starts_with("plugin marketplace add ") => {
+                    if self.qualified_host.lock().expect("host").as_str() == "claude" {
+                        #[cfg(windows)]
+                        assert!(
+                            !arguments[3].starts_with(r"\\?\"),
+                            "Claude marketplace registration rejects verbatim Windows paths"
+                        );
+                        let root = Path::new(arguments[3]);
+                        let marketplace: serde_json::Value = serde_json::from_slice(
+                            &fs::read(root.join(".claude-plugin/marketplace.json"))
+                                .expect("marketplace exists before registration"),
+                        )
+                        .expect("valid marketplace JSON");
+                        assert_eq!(marketplace["name"], "aigent-hive");
+                        assert_eq!(marketplace["plugins"][0]["source"], "./plugins/aigent-hive");
+                        let plugin: serde_json::Value = serde_json::from_slice(
+                            &fs::read(root.join("plugins/aigent-hive/.claude-plugin/plugin.json"))
+                                .expect("plugin exists before registration"),
+                        )
+                        .expect("valid plugin JSON");
+                        assert_eq!(plugin["name"], "aigent-hive");
+                        assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
+                        assert!(root
+                            .join("plugins/aigent-hive/skills/user-setup/SKILL.md")
+                            .is_file());
+                    }
                     if matches!(self.sabotage, HostSabotage::ForeignAfterFailedForward) {
                         *self.marketplace_installed.lock().expect("marketplace") = true;
                         return Err(SensorError::Failed);
@@ -10519,16 +10548,29 @@ mod tests {
     }
 
     #[test]
+    fn claude_install_lifecycle_accepts_spaces_and_unicode() {
+        let temporary = tempdir().expect("tempdir");
+        let root = temporary.path().join("user space 한글");
+        fs::create_dir(&root).expect("user root");
+        let runner = StatefulHostRunner::new(&root, HostSabotage::None);
+        let mut arguments = args(&root, UserHost::Claude, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("new install");
+        arguments.mode = UserMode::Validate;
+        execute(UserOperation::Install, &arguments, &runner).expect("validate");
+        arguments.mode = UserMode::Apply;
+        execute(UserOperation::Install, &arguments, &runner).expect("reinstall");
+        execute(UserOperation::Update, &arguments, &runner).expect("update");
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(!root.join(".hive/install-transactions/claude.json").exists());
+    }
+
+    #[test]
     fn claude_activation_uses_only_native_fixed_argv() {
         let temporary = tempdir().expect("tempdir");
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
         let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
         execute(UserOperation::Install, &arguments, &runner).expect("Claude install");
-        let marketplace = arguments
-            .user_root
-            .join(".hive/marketplaces/claude")
-            .to_string_lossy()
-            .into_owned();
+        let marketplace = expected_claude_marketplace_path(&arguments).expect("Claude path");
         assert_eq!(
             *runner.calls.lock().expect("calls"),
             [
