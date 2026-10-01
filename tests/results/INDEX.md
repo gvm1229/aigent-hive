@@ -943,3 +943,5 @@
 | [passed](runs/20261001T184822-ba7e44430376.md) | Rust 1.99 전체 검사 통과 확인 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T185139-c5168eabc611.md) | Rust 1.99 호환 표현의 전체 검사 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T185332-c59edc040a31.md) | Rust 1.99 수정 후 전체 Rust 회귀 | d6fc7dad92265fb6a5437ce785cd6898a4736d4f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T190405-73f9ee26d5bd.md) | 출시 검증 수정 후 전체 Python 회귀 | 06a129c25cb2e57be98913e838b20e86224b7cf9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T190406-c40b69ba3c6f.md) | Python conformance: documentation, security, contract, integration, release | 06a129c25cb2e57be98913e838b20e86224b7cf9 | Windows-11-10.0.26300-SP0 |
