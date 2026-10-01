@@ -1,11 +1,12 @@
 # Aigent Hive 활성 계획
 
-> Revision: 370
-> 기준일: 2026-09-30
+> Revision: 371
+> 기준일: 2026-10-02
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
-> 현재 단계: 공개 시험 수용 완료, 실제 사용자 설치 승인 대기
+> 현재 단계: Claude Windows 설치 수정 검증 완료, 기존 Codex 설치 승인 대기
 > 공개 시험 수용: `0.11.1-test.1`
+> 다음 시험 대상: `0.11.1-test.2`
 
 ## 현재 요청과 경계
 
@@ -22,7 +23,8 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Codex 스킬 제공·자동 정리 | 4 | 1 | 80.0% |
-| **현재 범위 합계** | **4** | **1** | **80.0%** |
+| Claude Windows 전역 설치 | 4 | 0 | 100.0% |
+| **현재 범위 합계** | **8** | **1** | **88.9%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -30,10 +32,11 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [skill-delivery-0.11.1.md](active/skill-delivery-0.11.1.md) | `SDP-001–005` | Codex 스킬 제공·자동 정리 |
+| [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
 
 ## 실행 순서
 
-`SDP-001` → `SDP-002` → `SDP-003` → `SDP-004` → `SDP-005`
+`CUI-001` → `CUI-002` → `CUI-003` → `CUI-004`; 기존 `SDP-005` 설치 승인 대기
 
 ## 보존 자료
 
