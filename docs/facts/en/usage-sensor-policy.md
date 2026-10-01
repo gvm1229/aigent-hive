@@ -10,7 +10,7 @@ tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:307073fd99899e1aab9aa14bfc92d0fadc1051816763525dd02ab505619424b6"
-  - "repo:crates/hive-cli/src/usage.rs#sha256:d53779d091d848cea32a1f79a4a96ad11112f361b032758aed008fb9dbf7d9fa"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:d15d172496becbc6623d561a8fab0729364f11bb4b9a1ce4b2c3069ff23406c3"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:b2d3c7a9a42ce53e2ab8806401efb6e7076d7550843f0a09dd7158de56eee08f"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:d9140491d9a4df81de9d22f57ea2828ff4f8aca5ea72c36e118df178b0ef077b"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
