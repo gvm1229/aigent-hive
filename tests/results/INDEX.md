@@ -931,3 +931,15 @@
 | [passed](runs/20261001T165920-6c6e38bdc900.md) | 최종 실행 파일의 실제 Claude 설치 수용 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T173737-d498334c87c2.md) | 오류 진단 커밋 전 관련 Rust 검증 | c21df71761afc5216ed33d35272225f6f19b2b1c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T173827-972f29efe1a7.md) | 현재 원본 시험 자료 버전 커밋 전 검증 | cd6a81de42c92caa37dbb9f190a0c11df5aa880c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T181141-1e97cd81c9ea.md) | 실제 Codex CLI의 격리 설치·등록 예행 검증 | 00262b98432798f27d28556a156bd7311c6442a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T182137-da1f9e8856e6.md) | 빠른 연속 설치의 독립 백업 검증 | 00262b98432798f27d28556a156bd7311c6442a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T182451-41a246798dfc.md) | 실제 Codex의 존재하는 격리 홈 설치 검증 | 00262b98432798f27d28556a156bd7311c6442a7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T182829-536ad8a3cca0.md) | Rust 1.99 전체 Clippy 오류 검증 | b9d7cb6fbe55ae1ab5c2dec810f926b561539ed0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T183143-6e6096c1dadc.md) | 새 실제 Codex 서버의 플러그인 스킬 발견 검증 | b9d7cb6fbe55ae1ab5c2dec810f926b561539ed0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T183834-4b58c30bfd7e.md) | Rust 1.99 hook 소유권 검증의 참조 경고 확인 | b9d7cb6fbe55ae1ab5c2dec810f926b561539ed0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T183938-24916fbefbc9.md) | 실제 Codex 서버의 Hive 이름공간 스킬 발견 확인 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T184245-1cef6a582ea3.md) | Rust 1.99 빈 값 시험 조건 보존 검증 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T184727-35a29371e636.md) | 새 Rust 검사기 전체 호환 최종 확인 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T184822-ba7e44430376.md) | Rust 1.99 전체 검사 통과 확인 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T185139-c5168eabc611.md) | Rust 1.99 호환 표현의 전체 검사 | 7dae269c02f582bd166e82aa43b405ae866dadcb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T185332-c59edc040a31.md) | Rust 1.99 수정 후 전체 Rust 회귀 | d6fc7dad92265fb6a5437ce785cd6898a4736d4f | Windows-11-10.0.26300-SP0 |
