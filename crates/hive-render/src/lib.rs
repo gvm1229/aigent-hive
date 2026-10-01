@@ -5423,9 +5423,9 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
             "existing fallback hook ownership cannot be verified for revocation: {error}"
         ))
     };
-    let installed_answers = read_installed_answers(target).map_err(&conflict)?;
-    let installed_resolution = read_installed_resolution(target).map_err(&conflict)?;
-    validate_resolution(&installed_answers, &installed_resolution).map_err(&conflict)?;
+    let installed_answers = read_installed_answers(target).map_err(conflict)?;
+    let installed_resolution = read_installed_resolution(target).map_err(conflict)?;
+    validate_resolution(&installed_answers, &installed_resolution).map_err(conflict)?;
     if ledger.schema_version != 1
         || ledger.detection != installed_resolution.detection
         || ledger.resolution_evidence_digest != installed_resolution.evidence_digest
@@ -5436,7 +5436,7 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
                 .to_owned(),
         ));
     }
-    validate_hook_approvals(&ledger.hooks, &installed_resolution).map_err(&conflict)?;
+    validate_hook_approvals(&ledger.hooks, &installed_resolution).map_err(conflict)?;
     if ledger_bytes != render_hook_ledger(&ledger.hooks, &installed_resolution) {
         return Err(RenderError::Conflict(
             "existing fallback hook ledger bytes do not match the installed approval contract"
@@ -5446,8 +5446,8 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
     for hook in stale_hooks {
         let relative = Path::new(&hook.path);
         let projected = read_target_required(target, relative, "fallback hook descriptor")
-            .map_err(&conflict)?;
-        let expected = hook_descriptor_bytes(hook).map_err(&conflict)?;
+            .map_err(conflict)?;
+        let expected = hook_descriptor_bytes(hook).map_err(conflict)?;
         if projected != expected || sha256_digest(&projected) != hook.content_digest {
             return Err(RenderError::Conflict(format!(
                 "fallback hook descriptor ownership cannot be verified for revocation: {}",
