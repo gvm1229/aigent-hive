@@ -261,6 +261,8 @@ struct ExecutableIdentity {
 
 #[derive(Debug)]
 pub(crate) struct CommandOutput {
+    pub(crate) stderr: Vec<u8>,
+    pub(crate) exit_code: Option<i32>,
     pub(crate) success: bool,
     pub(crate) stdout: Vec<u8>,
 }
@@ -376,8 +378,10 @@ impl CommandRunner for SystemCommandRunner {
         let stderr = receive_output(&stderr_reader, started, timeout);
         verify_executable_identity(program)?;
         let stdout = stdout?;
-        let _stderr = stderr?;
+        let stderr = stderr?;
         Ok(CommandOutput {
+            stderr,
+            exit_code: status.code(),
             success: status.success(),
             stdout,
         })
@@ -1702,8 +1706,54 @@ mod tests {
     #[cfg(not(unix))]
     fn make_executable(_path: &Path) {}
 
+    #[test]
+    fn system_runner_retains_stderr_and_exit_status_with_existing_limits() {
+        #[cfg(windows)]
+        let (program, arguments) = (
+            "cmd.exe",
+            vec![
+                "/D",
+                "/C",
+                "echo stdout-marker & echo stderr-marker 1>&2 & exit /b 7",
+            ],
+        );
+        #[cfg(not(windows))]
+        let (program, arguments) = (
+            "sh",
+            vec![
+                "-c",
+                "printf stdout-marker; printf stderr-marker >&2; exit 7",
+            ],
+        );
+        let runner = super::SystemCommandRunner;
+        let executable = runner.qualify(program).expect("qualified shell");
+        let output = runner
+            .run(
+                &executable,
+                &arguments,
+                std::time::Duration::from_secs(5),
+                1024,
+            )
+            .expect("bounded command");
+        assert!(!output.success);
+        assert_eq!(output.exit_code, Some(7));
+        assert!(String::from_utf8_lossy(&output.stdout).contains("stdout-marker"));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("stderr-marker"));
+        assert!(matches!(
+            runner.run(
+                &executable,
+                &arguments,
+                std::time::Duration::from_secs(5),
+                2
+            ),
+            Err(SensorError::OutputTooLarge)
+        ));
+    }
+
     fn success(stdout: impl Into<Vec<u8>>) -> CommandOutput {
         CommandOutput {
+            stderr: Vec::new(),
+            exit_code: None,
             success: true,
             stdout: stdout.into(),
         }

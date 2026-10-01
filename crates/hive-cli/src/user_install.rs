@@ -1,6 +1,6 @@
 mod host_state;
 use super::{emit_action_result, ActionResult, Evidence};
-use crate::usage::{CommandRunner, QualifiedExecutable, SystemCommandRunner};
+use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
 use cap_primitives::fs::FollowSymlinks;
 #[cfg(unix)]
@@ -5662,7 +5662,7 @@ fn activate_host(
             return Err(InstallError::Unsupported(format!(
                 "{} native plugin command exited unsuccessfully: {}",
                 arguments.host.as_str(),
-                sanitized_command_diagnostic(&command, &output.stdout)
+                sanitized_command_diagnostic(&command, &output)
             )));
         }
     }
@@ -5721,7 +5721,7 @@ fn execute_forward_host_transition(
         if !output.success {
             return Err(InstallError::Unsupported(format!(
                 "Codex Hive stale plugin recovery command exited unsuccessfully: {}",
-                sanitized_command_diagnostic(remove, &output.stdout)
+                sanitized_command_diagnostic(remove, &output)
             )));
         }
         observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
@@ -5759,12 +5759,12 @@ fn execute_forward_host_transition(
         Ok(output) if output.success => Err(InstallError::Verification(format!(
             "{} native plugin command did not produce its exact structured transition: {}",
             arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Ok(output) => Err(InstallError::Unsupported(format!(
             "{} native plugin command returned a non-success result and remains unresolved: {}",
             arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Err(error) => Err(InstallError::Unsupported(format!(
             "{} native plugin command `{}` failed before its exact structured transition was observed: {error}",
@@ -6824,6 +6824,8 @@ mod tests {
         ) -> Result<CommandOutput, SensorError> {
             assert_eq!(arguments, ["--version"]);
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: self.success,
                 stdout: self.stdout.clone(),
             })
@@ -6865,6 +6867,7 @@ mod tests {
         ForeignAfterFailedForward,
         ForeignAfterFailedCompensation,
         DanglingCodexMarketplace,
+        RejectClaudeMarketplaceSource,
     }
 
     struct StatefulHostRunner {
@@ -6956,6 +6959,8 @@ mod tests {
                 && *self.marketplace_installed.lock().expect("marketplace")
             {
                 return Some(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -6973,6 +6978,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&entries).expect("Claude marketplace JSON"),
                     })
@@ -6990,6 +6997,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&entries).expect("Claude plugin JSON"),
                     })
@@ -7008,6 +7017,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&json!({"marketplaces": entries}))
                             .expect("Codex marketplace JSON"),
@@ -7048,6 +7059,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&json!({
                             "installed": entries,
@@ -7092,9 +7105,12 @@ mod tests {
                 | HostSabotage::DriftBeforeLaterCompensation
                 | HostSabotage::ForeignAfterFailedForward
                 | HostSabotage::ForeignAfterFailedCompensation
-                | HostSabotage::DanglingCodexMarketplace => {}
+                | HostSabotage::DanglingCodexMarketplace
+                | HostSabotage::RejectClaudeMarketplaceSource => {}
             }
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: true,
                 stdout: Vec::new(),
             })
@@ -7105,6 +7121,8 @@ mod tests {
             if *failures > 0 {
                 *failures -= 1;
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -7112,6 +7130,8 @@ mod tests {
             let mut installed = self.plugin_installed.lock().expect("plugin");
             if !*installed {
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -7160,11 +7180,15 @@ mod tests {
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout,
                 });
             }
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: true,
                 stdout: Vec::new(),
             })
@@ -7239,6 +7263,8 @@ mod tests {
             self.calls.lock().expect("calls").push(command.clone());
             if arguments == ["--version"] {
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout: b"1.1.7\n".to_vec(),
                 });
@@ -7258,6 +7284,8 @@ mod tests {
                 }
                 let installed = *self.plugin_installed.lock().expect("plugin");
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout: if installed {
                         serde_json::to_vec(&json!({
@@ -7320,6 +7348,8 @@ mod tests {
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout,
                 });
@@ -7329,6 +7359,12 @@ mod tests {
             }
             match command.as_str() {
                 command if command.starts_with("plugin marketplace add ") => {
+                    if matches!(self.sabotage, HostSabotage::RejectClaudeMarketplaceSource) {
+                        return Ok(CommandOutput {
+                            success: false, exit_code: Some(1), stdout: Vec::new(),
+                            stderr: b"Invalid marketplace source format. Try: owner/repo, https://..., or ./path\nsecret=not-for-display".to_vec(),
+                        });
+                    }
                     if self.qualified_host.lock().expect("host").as_str() == "claude" {
                         #[cfg(windows)]
                         assert!(
@@ -7407,6 +7443,8 @@ mod tests {
                     let mut installed = self.marketplace_installed.lock().expect("marketplace");
                     if !*installed {
                         return Ok(CommandOutput {
+                            stderr: Vec::new(),
+                            exit_code: None,
                             success: false,
                             stdout: Vec::new(),
                         });
@@ -7424,6 +7462,8 @@ mod tests {
 
     fn successful_output() -> CommandOutput {
         CommandOutput {
+            stderr: Vec::new(),
+            exit_code: None,
             success: true,
             stdout: Vec::new(),
         }
@@ -10562,6 +10602,71 @@ mod tests {
         execute(UserOperation::Update, &arguments, &runner).expect("update");
         assert_eq!(runner.external_state(), (true, true));
         assert!(!root.join(".hive/install-transactions/claude.json").exists());
+    }
+
+    #[test]
+    fn claude_rejection_keeps_the_first_diagnostic_and_foreign_bytes() {
+        let temporary = tempdir().expect("tempdir");
+        let guidance = temporary.path().join(".claude/CLAUDE.md");
+        fs::create_dir_all(guidance.parent().unwrap()).unwrap();
+        fs::write(&guidance, b"foreign user instructions\n").unwrap();
+        let knowledge = temporary.path().join(".hive/knowledge/preserved.txt");
+        fs::create_dir_all(knowledge.parent().unwrap()).unwrap();
+        fs::write(&knowledge, b"user knowledge\n").unwrap();
+        write_operational_setup(temporary.path(), &["claude"]);
+        let config = temporary.path().join(".hive/config/user-setup.yml");
+        let preferences = fs::read(&config).unwrap();
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::RejectClaudeMarketplaceSource,
+        );
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("rejected source");
+        assert!(error
+            .message()
+            .contains("reason=invalid-marketplace-source"));
+        assert!(error.message().contains("exit-code=1"));
+        assert!(error
+            .message()
+            .contains("cannot be attributed during recovery"));
+        assert!(!error.message().contains("not-for-display"));
+        assert_eq!(fs::read(guidance).unwrap(), b"foreign user instructions\n");
+        assert_eq!(fs::read(knowledge).unwrap(), b"user knowledge\n");
+        assert_eq!(fs::read(config).unwrap(), preferences);
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/claude.json")
+            .exists());
+        assert_eq!(runner.external_state(), (false, false));
+    }
+
+    #[test]
+    fn host_diagnostics_classify_stderr_without_exposing_raw_output() {
+        let output = CommandOutput {
+            success: false,
+            exit_code: Some(1),
+            stdout: b"private stdout token=example-secret".to_vec(),
+            stderr: b"Invalid marketplace source format. Try: owner/repo, https://..., or ./path\nprivate stderr password=example-secret".to_vec(),
+        };
+        let diagnostic =
+            sanitized_command_diagnostic(&["plugin", "marketplace", "add", "example"], &output);
+        assert!(diagnostic.contains("exit-code=1"));
+        assert!(diagnostic.contains("reason=invalid-marketplace-source"));
+        assert!(diagnostic.contains(&sha256_digest(&output.stdout)));
+        assert!(diagnostic.contains(&sha256_digest(&output.stderr)));
+        assert!(!diagnostic.contains("example-secret"));
+        assert!(!diagnostic.contains("Invalid marketplace source format"));
+        let unknown = CommandOutput {
+            stderr: b"secret-value".to_vec(),
+            exit_code: None,
+            success: false,
+            stdout: Vec::new(),
+        };
+        let diagnostic = sanitized_command_diagnostic(&["plugin", "list"], &unknown);
+        assert!(diagnostic.contains("exit-code=unknown; reason=unclassified"));
+        assert!(!diagnostic.contains("secret-value"));
     }
 
     #[test]

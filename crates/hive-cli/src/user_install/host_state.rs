@@ -4,11 +4,11 @@ use super::{
     env, expected_host_state_after, insert_regular_tree_file, persist_backup, probe_host_snapshot,
     read_optional_regular, read_optional_regular_tree, sha256_digest, AntigravityHostState,
     AntigravityPluginState, ClaudeHostState, ClaudeMarketplaceState, ClaudePluginState,
-    CodexHostState, CodexMarketplaceState, CodexPluginState, CommandRunner, HostMutation,
-    HostStateSnapshot, HostTransitionPhase, InstallError, Path, PendingHostTransition,
-    QualifiedExecutable, RegularTree, UserArguments, UserBackupManifest, UserHost, UserPlan,
-    ANTIGRAVITY_SOURCE_RELATIVE, ANTIGRAVITY_STAGE_RELATIVE, COMMAND_OUTPUT_LIMIT, COMMAND_TIMEOUT,
-    MAX_USER_FILE_BYTES,
+    CodexHostState, CodexMarketplaceState, CodexPluginState, CommandOutput, CommandRunner,
+    HostMutation, HostStateSnapshot, HostTransitionPhase, InstallError, Path,
+    PendingHostTransition, QualifiedExecutable, RegularTree, UserArguments, UserBackupManifest,
+    UserHost, UserPlan, ANTIGRAVITY_SOURCE_RELATIVE, ANTIGRAVITY_STAGE_RELATIVE,
+    COMMAND_OUTPUT_LIMIT, COMMAND_TIMEOUT, MAX_USER_FILE_BYTES,
 };
 
 pub(super) fn codex_compensation_command(mutation: HostMutation) -> &'static [&'static str] {
@@ -75,7 +75,7 @@ pub(super) fn run_codex_probe(
     if !output.success {
         return Err(InstallError::Unsupported(format!(
             "Codex structured state probe exited unsuccessfully: {}",
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         )));
     }
     Ok(output.stdout)
@@ -139,7 +139,7 @@ pub(super) fn probe_antigravity_state(
     if !output.success {
         return Err(InstallError::Unsupported(format!(
             "Antigravity structured state probe exited unsuccessfully: {}",
-            sanitized_command_diagnostic(&command, &output.stdout)
+            sanitized_command_diagnostic(&command, &output)
         )));
     }
     parse_antigravity_plugin_state(&output.stdout).map(|plugin| AntigravityHostState { plugin })
@@ -228,7 +228,7 @@ pub(super) fn run_claude_probe(
     if !output.success {
         return Err(InstallError::Unsupported(format!(
             "Claude structured state probe exited unsuccessfully: {}",
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         )));
     }
     Ok(output.stdout)
@@ -724,12 +724,27 @@ pub(super) fn validate_antigravity_stage(
     Ok(())
 }
 
-pub(super) fn sanitized_command_diagnostic(command: &[&str], stdout: &[u8]) -> String {
+pub(super) fn sanitized_command_diagnostic(command: &[&str], output: &CommandOutput) -> String {
+    let invalid_marketplace_source = [output.stdout.as_slice(), output.stderr.as_slice()]
+        .iter()
+        .any(|bytes| {
+            String::from_utf8_lossy(bytes).contains(
+                "Invalid marketplace source format. Try: owner/repo, https://..., or ./path",
+            )
+        });
+    let reason = if invalid_marketplace_source {
+        "invalid-marketplace-source (host rejected the marketplace path format)"
+    } else {
+        "unclassified"
+    };
     format!(
-        "argv=`{}`; output-bytes={}; output-digest={}",
+        "argv=`{}`; exit-code={}; reason={reason}; output-bytes={}; output-digest={}; stderr-bytes={}; stderr-digest={}",
         command.join(" "),
-        stdout.len(),
-        sha256_digest(stdout)
+        output.exit_code.map_or_else(|| "unknown".to_owned(), |code| code.to_string()),
+        output.stdout.len(),
+        sha256_digest(&output.stdout),
+        output.stderr.len(),
+        sha256_digest(&output.stderr)
     )
 }
 
@@ -857,7 +872,7 @@ pub(super) fn resolve_pending_host_transition(
         if !output.success {
             return Err(InstallError::Unsupported(format!(
                 "Codex Hive marketplace recovery command exited unsuccessfully: {}",
-                sanitized_command_diagnostic(command, &output.stdout)
+                sanitized_command_diagnostic(command, &output)
             )));
         }
         let observed = probe_host_snapshot(arguments.host, executable, runner)?;
@@ -1256,7 +1271,7 @@ pub(super) fn reconcile_antigravity_state(
         if !output.success {
             return Err(InstallError::Internal(format!(
                 "Antigravity compensation validation returned a non-success result: {}",
-                sanitized_command_diagnostic(&validate_command, &output.stdout)
+                sanitized_command_diagnostic(&validate_command, &output)
             )));
         }
         let after = desired.clone();
@@ -1432,12 +1447,12 @@ pub(super) fn run_compensation_transition(
         Ok(output) if output.success => Err(InstallError::Internal(format!(
             "{} reconciliation command did not reach its exact structured target state: {}",
             context.arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Ok(output) => Err(InstallError::Internal(format!(
             "{} reconciliation command returned a non-success result and remains unresolved: {}",
             context.arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Err(error) => Err(InstallError::Internal(format!(
             "{} reconciliation command `{}` failed before its exact structured target state was observed: {error}",
