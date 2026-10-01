@@ -22,6 +22,9 @@
 
 ## 현재 근거
 
+- 0.11.1 정식 출시 승인, [실행 계획](../plans/0.11.1-stable-release.md)의 test.2 준비·수용 진행
+- [0.11.1 구독자 공지 초안](../releases/0.11.1.subscriber.ko.md) 문구·기존 Discord 채널 전송 승인, 정식 게시 뒤 발송 예정
+
 - [Claude Windows 설치 검증](../research/claude-user-install-0.11.1.md): 실제 격리 CLI 세 경로 통과, 전체 Rust 964개 통과·4개 제외, 전체 Python 917개 통과·44개 조건 제외
 
 - 0.11.0 Git 태그의 정확한 프로젝트·사용자 원본 보존

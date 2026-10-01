@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "product_version": "0.11.1",
-  "package_version": "0.11.1-test.1",
+  "package_version": "0.11.1-test.2",
   "plan_ids": [
-    "SDP-001",
-    "SDP-002",
-    "SDP-003",
-    "SDP-004"
+    "CUI-001",
+    "CUI-002",
+    "CUI-003",
+    "CUI-004"
   ],
-  "product_tree_sha256": "sha256:3a6d045a067390e82a2a0053b02c8ec9ef44153022242d765118e72e8c65e11b"
+  "product_tree_sha256": "sha256:b51f910b873bf094f38610cf8a4152efb724806af2482631b84a25ab830e16bf"
 }

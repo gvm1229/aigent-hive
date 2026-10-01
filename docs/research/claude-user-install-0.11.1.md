@@ -33,7 +33,7 @@
 
 - 실제 Claude CLI: `2.1.163 (Claude Code)`
 - 수정 Hive 실행 파일 지문: `sha256:a14aca66a09393c29363cf0b4d36b93a8de8be98d69be2bff362552c38da2e7c`
-- 최종 실제 CLI 시험의 실행 파일과 현재 `target/debug/hive.exe` 지문 일치
+- 최종 실제 CLI 시험 시점의 실행 파일과 `target/debug/hive.exe` 지문 일치; 후속 재빌드와 공개 파일의 별도 지문 기록
 - CUI-001–004 수용 완료, 제품 0.11.1·다음 공개 시험 대상 0.11.1-test.2 유지
 - 실제 사용자 설치·안정판 게시·보호 브랜치 통합·실제 Claude 대화 수용은 이번 구현 검증 범위 밖
 
