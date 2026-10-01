@@ -946,3 +946,4 @@
 | [passed](runs/20261001T190405-73f9ee26d5bd.md) | 출시 검증 수정 후 전체 Python 회귀 | 06a129c25cb2e57be98913e838b20e86224b7cf9 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T190406-c40b69ba3c6f.md) | Python conformance: documentation, security, contract, integration, release | 06a129c25cb2e57be98913e838b20e86224b7cf9 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T194938-8555a53f168a.md) | POSIX 전용 빈 값 조건의 Rust 호환 검증 | 9658d4e55f188c212aa2e553b6c9f18a6049785b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T202806-e7a9aad51a36.md) | POSIX 다중 줄 assertion 조건 보존 검사 | fbae60166456dfef92079593d765ba1595573e73 | Windows-11-10.0.26300-SP0 |
