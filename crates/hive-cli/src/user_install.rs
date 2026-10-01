@@ -4459,8 +4459,16 @@ fn apply_plan(
 ) -> Result<UserTransaction, InstallError> {
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
+    let mut backup_nonce = [0_u8; 16];
+    getrandom::fill(&mut backup_nonce).map_err(|error| {
+        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
+    })?;
+    let backup_nonce = backup_nonce
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
     let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}",
+        ".hive/backups/user-install/{}/{}-{}-{backup_nonce}",
         arguments.host.as_str(),
         unix_seconds()?,
         std::process::id()
@@ -10594,12 +10602,21 @@ mod tests {
         fs::create_dir(&root).expect("user root");
         let runner = StatefulHostRunner::new(&root, HostSabotage::None);
         let mut arguments = args(&root, UserHost::Claude, UserMode::Apply);
-        execute(UserOperation::Install, &arguments, &runner).expect("new install");
+        let first = execute(UserOperation::Install, &arguments, &runner).expect("new install");
+        let first_backup = first.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        let first_manifest = root.join(first_backup).join("manifest.json");
+        let original_backup = fs::read(&first_manifest).expect("first backup retained");
         arguments.mode = UserMode::Validate;
         execute(UserOperation::Install, &arguments, &runner).expect("validate");
         arguments.mode = UserMode::Apply;
-        execute(UserOperation::Install, &arguments, &runner).expect("reinstall");
-        execute(UserOperation::Update, &arguments, &runner).expect("update");
+        let second = execute(UserOperation::Install, &arguments, &runner).expect("reinstall");
+        let third = execute(UserOperation::Update, &arguments, &runner).expect("update");
+        let second_backup = second.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        let third_backup = third.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        assert_ne!(first_backup, second_backup);
+        assert_ne!(second_backup, third_backup);
+        assert_ne!(first_backup, third_backup);
+        assert_eq!(fs::read(first_manifest).unwrap(), original_backup);
         assert_eq!(runner.external_state(), (true, true));
         assert!(!root.join(".hive/install-transactions/claude.json").exists());
     }
