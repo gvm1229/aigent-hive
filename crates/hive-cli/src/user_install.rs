@@ -11600,7 +11600,7 @@ mod tests {
         let config = fs::read(root.join(".hive/config/user-setup.yml")).unwrap();
         fs::create_dir_all(root.join(".hive/install")).unwrap();
         fs::write(root.join(".hive/install/user-projection.json"), json_line(&json!({
-            "schema_version":2,"product_version":"0.11.0","package_version":"0.11.0","setup_digest":sha256_digest(&config),"entries":entries,"base_entries":bases
+            "schema_version":2,"product_version":env!("CARGO_PKG_VERSION"),"package_version":env!("CARGO_PKG_VERSION"),"setup_digest":sha256_digest(&config),"entries":entries,"base_entries":bases
         })).unwrap()).unwrap();
     }
 

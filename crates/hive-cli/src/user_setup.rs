@@ -5325,8 +5325,8 @@ usage_guard:
         }
         fs::write(root.join(USER_SETUP_RELATIVE), &answers).unwrap();
         let bytes = render_projection_manifest(&answers, &files).unwrap();
-        let mut ledger: UserProjectionManifest = serde_json::from_slice(&bytes).unwrap();
-        ledger.product_version = "0.11.0".to_owned();
+        // The fixture uses current embedded resources, not historical release bytes.
+        let ledger: UserProjectionManifest = serde_json::from_slice(&bytes).unwrap();
         write_projection_manifest(root, &ledger);
         (config, skills, answers)
     }
