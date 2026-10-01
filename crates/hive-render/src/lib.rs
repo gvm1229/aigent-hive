@@ -5445,8 +5445,8 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
     }
     for hook in stale_hooks {
         let relative = Path::new(&hook.path);
-        let projected = read_target_required(target, relative, "fallback hook descriptor")
-            .map_err(conflict)?;
+        let projected =
+            read_target_required(target, relative, "fallback hook descriptor").map_err(conflict)?;
         let expected = hook_descriptor_bytes(hook).map_err(conflict)?;
         if projected != expected || sha256_digest(&projected) != hook.content_digest {
             return Err(RenderError::Conflict(format!(
@@ -6827,7 +6827,7 @@ mod tests {
             updated.effective_preferences,
             installed.effective_preferences
         );
-        assert!(updated.changed_paths.is_empty());
+        assert_eq!(updated.changed_paths.len(), 0);
         assert_eq!(
             fs::read(target.join(".hive/config/harness.toml")).expect("harness config"),
             harness_before
@@ -7368,7 +7368,7 @@ mod tests {
             let historical = historical_project_upgrade_candidate_in(target_dir, version)
                 .expect("embedded post-0.9.0 full registry");
             assert_eq!(historical.product_version, version);
-            assert!(!historical.files.is_empty());
+            assert_ne!(historical.files.len(), 0);
             assert!(historical
                 .files
                 .iter()
@@ -9928,7 +9928,7 @@ mod tests {
         request.mode = SetupMode::Validate;
         execute_setup(&request).unwrap();
         request.mode = SetupMode::Apply;
-        assert!(execute_setup(&request).unwrap().changed_paths.is_empty());
+        assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
         request.mode = SetupMode::Validate;
         request
             .global_preferences

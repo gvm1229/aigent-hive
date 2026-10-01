@@ -2123,7 +2123,7 @@ mod tests {
         assert!(!temp.path().join(format!("{INDEX_RELATIVE}-wal")).exists());
         assert!(!temp.path().join(format!("{INDEX_RELATIVE}-shm")).exists());
         let linted = lint(temp.path()).expect("lint");
-        assert!(linted.issues.is_empty());
+        assert_eq!(linted.issues.len(), 0);
         let hits = query(temp.path(), "en", Some("boundaries"), None, 10).expect("query");
         let scored = query_with_scores(temp.path(), "en", Some("boundaries"), None, 10)
             .expect("scored query");

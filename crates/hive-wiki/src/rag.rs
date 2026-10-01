@@ -5297,15 +5297,18 @@ mod tests {
         request.scope = RetrievalScope::Global;
         request.confidential_collection_id = None;
         assert!(corpus(&request, RagVisibility::Shared).is_err());
-        assert!(retrieve_serialized(
-            &artifact.sqlite_bytes,
-            &artifact.manifest,
-            &registry,
-            &request
-        )
-        .expect("FTS")
-        .hits
-        .is_empty());
+        assert_eq!(
+            retrieve_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                &registry,
+                &request
+            )
+            .expect("FTS")
+            .hits
+            .len(),
+            0
+        );
         let hydrate = |request: &RetrievalRequest, matches: &[SemanticMatch]| {
             let direct = semantic_matches_serialized(
                 &artifact.sqlite_bytes,
@@ -5381,7 +5384,7 @@ mod tests {
         assert!(bounded.insufficient_budget);
         request.byte_budget = 1;
         let too_small = hydrate(&request, &matches).expect("UTF-8 budget");
-        assert!(too_small.hits.is_empty());
+        assert_eq!(too_small.hits.len(), 0);
         assert!(too_small.insufficient_budget);
         let mut invalid = matches[..1].to_vec();
         invalid[0].digest = format!("sha256:{}", "0".repeat(64));
@@ -5707,7 +5710,7 @@ mod tests {
             &automatic,
         )
         .expect("named retrieval without confidential approval");
-        assert!(named_without_approval.hits.is_empty());
+        assert_eq!(named_without_approval.hits.len(), 0);
         assert!(named_without_approval
             .hits
             .iter()

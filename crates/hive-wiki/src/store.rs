@@ -4975,7 +4975,7 @@ mod tests {
         let noop = store
             .register_project_atomic(project)
             .expect("idempotent atomic project registration");
-        assert!(noop.store.changed_paths.is_empty());
+        assert_eq!(noop.store.changed_paths.len(), 0);
         assert_eq!(noop.store.generation, committed.store.generation);
     }
 
@@ -6153,7 +6153,7 @@ mod tests {
         let replay = store
             .apply_reviewed_claims(&registration.collection.collection_id, &claims)
             .expect("idempotent reviewed-claim replay");
-        assert!(replay.changed_paths.is_empty());
+        assert_eq!(replay.changed_paths.len(), 0);
         assert_eq!(replay.generation, first_commit.generation);
         assert!(!scanned.path().join(".hive").exists());
         assert_eq!(
@@ -6362,7 +6362,7 @@ mod tests {
         let updated = store
             .apply_reviewed_claims(&applied.collection.collection_id, &metadata_only_update)
             .expect("metadata-only reviewed rescan");
-        assert!(!updated.changed_paths.is_empty());
+        assert_ne!(updated.changed_paths.len(), 0);
         let active = store
             .load_claims(&registry)
             .expect("updated canonical claims")
@@ -6449,10 +6449,13 @@ mod tests {
             promoted.promoted_claim.collection_id,
             USER_ROOT_COLLECTION_ID
         );
-        assert!(store
-            .preview_reviewed_scan_promotions(&collection.collection_id)
-            .expect("post-promotion preview")
-            .is_empty());
+        assert_eq!(
+            store
+                .preview_reviewed_scan_promotions(&collection.collection_id)
+                .expect("post-promotion preview")
+                .len(),
+            0
+        );
         let replay = store
             .promote_reviewed_scan_claim_atomic(
                 &collection.collection_id,
@@ -6461,7 +6464,7 @@ mod tests {
                 &request,
             )
             .expect("idempotent promotion retry");
-        assert!(replay.store.changed_paths.is_empty());
+        assert_eq!(replay.store.changed_paths.len(), 0);
         assert_eq!(
             replay.promoted_claim.claim_id,
             promoted.promoted_claim.claim_id
@@ -6535,12 +6538,15 @@ mod tests {
                 .map(|metadata| metadata.promotion_status),
             Some(ScanPromotionStatus::Promoted)
         );
-        assert!(store
-            .auto_promote_reviewed_scan_claims_atomic(&collection.collection_id)
-            .expect("automatic promotion replay")
-            .store
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            store
+                .auto_promote_reviewed_scan_claims_atomic(&collection.collection_id)
+                .expect("automatic promotion replay")
+                .store
+                .changed_paths
+                .len(),
+            0
+        );
 
         let empty = validate_claims(&inventory, &[]).expect("empty rescan");
         store
@@ -6701,7 +6707,7 @@ mod tests {
         let replay = store
             .apply_reviewed_claims(&collection_id, &after_review)
             .expect("idempotent incremental replay");
-        assert!(replay.changed_paths.is_empty());
+        assert_eq!(replay.changed_paths.len(), 0);
     }
 
     #[test]
@@ -6779,11 +6785,12 @@ mod tests {
             byte_budget: 4096,
             confidential_collection_id: None,
         };
-        assert!(
-            !retrieve_serialized(&forged.sqlite_bytes, &forged.manifest, &registry, &request,)
+        assert_ne!(
+            retrieve_serialized(&forged.sqlite_bytes, &forged.manifest, &registry, &request,)
                 .expect("forged pair is internally consistent")
                 .hits
-                .is_empty()
+                .len(),
+            0
         );
         let trust_before = std::fs::read(temporary.path().join(RAG_TRUST_RELATIVE))
             .expect("canonical trust bytes");
@@ -6809,11 +6816,14 @@ mod tests {
         );
         let repaired = store.rebuild().expect("repair from canonical sources");
         assert_eq!(repaired.generation, current.generation);
-        assert!(store
-            .retrieve(&request)
-            .expect("trusted retrieval after repair")
-            .hits
-            .is_empty());
+        assert_eq!(
+            store
+                .retrieve(&request)
+                .expect("trusted retrieval after repair")
+                .hits
+                .len(),
+            0
+        );
     }
 
     #[test]

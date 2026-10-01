@@ -125,7 +125,7 @@ mod tests {
         let result = parse_and_evaluate(&args);
         assert_eq!(result.exit_code, 2);
         assert!(!result.message.contains("secret"));
-        assert!(result.changed_paths.is_empty());
+        assert_eq!(result.changed_paths.len(), 0);
         assert!(read_request(temp.path()).is_err());
     }
 

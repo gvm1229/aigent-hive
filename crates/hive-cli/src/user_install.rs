@@ -4457,18 +4457,20 @@ fn apply_plan(
     claude_state_before: Option<ClaudeHostState>,
     antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
     let mut backup_nonce = [0_u8; 16];
     getrandom::fill(&mut backup_nonce).map_err(|error| {
         InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
     })?;
-    let backup_nonce = backup_nonce
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
+    let mut encoded_nonce = String::with_capacity(32);
+    for byte in backup_nonce {
+        encoded_nonce.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded_nonce.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
     let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}-{backup_nonce}",
+        ".hive/backups/user-install/{}/{}-{}-{encoded_nonce}",
         arguments.host.as_str(),
         unix_seconds()?,
         std::process::id()
@@ -6892,6 +6894,35 @@ mod tests {
     }
 
     impl StatefulHostRunner {
+        fn assert_claude_marketplace_source(&self, arguments: &[&str]) {
+            if self.qualified_host.lock().expect("host").as_str() != "claude" {
+                return;
+            }
+            #[cfg(windows)]
+            assert!(
+                !arguments[3].starts_with(r"\\?\"),
+                "Claude marketplace registration rejects verbatim Windows paths"
+            );
+            let root = Path::new(arguments[3]);
+            let marketplace: serde_json::Value = serde_json::from_slice(
+                &fs::read(root.join(".claude-plugin/marketplace.json"))
+                    .expect("marketplace exists before registration"),
+            )
+            .expect("valid marketplace JSON");
+            assert_eq!(marketplace["name"], "aigent-hive");
+            assert_eq!(marketplace["plugins"][0]["source"], "./plugins/aigent-hive");
+            let plugin: serde_json::Value = serde_json::from_slice(
+                &fs::read(root.join("plugins/aigent-hive/.claude-plugin/plugin.json"))
+                    .expect("plugin exists before registration"),
+            )
+            .expect("valid plugin JSON");
+            assert_eq!(plugin["name"], "aigent-hive");
+            assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
+            assert!(root
+                .join("plugins/aigent-hive/skills/user-setup/SKILL.md")
+                .is_file());
+        }
+
         fn new(root: &Path, sabotage: HostSabotage) -> Self {
             Self {
                 root: root.canonicalize().expect("canonical fake host root"),
@@ -7373,31 +7404,7 @@ mod tests {
                             stderr: b"Invalid marketplace source format. Try: owner/repo, https://..., or ./path\nsecret=not-for-display".to_vec(),
                         });
                     }
-                    if self.qualified_host.lock().expect("host").as_str() == "claude" {
-                        #[cfg(windows)]
-                        assert!(
-                            !arguments[3].starts_with(r"\\?\"),
-                            "Claude marketplace registration rejects verbatim Windows paths"
-                        );
-                        let root = Path::new(arguments[3]);
-                        let marketplace: serde_json::Value = serde_json::from_slice(
-                            &fs::read(root.join(".claude-plugin/marketplace.json"))
-                                .expect("marketplace exists before registration"),
-                        )
-                        .expect("valid marketplace JSON");
-                        assert_eq!(marketplace["name"], "aigent-hive");
-                        assert_eq!(marketplace["plugins"][0]["source"], "./plugins/aigent-hive");
-                        let plugin: serde_json::Value = serde_json::from_slice(
-                            &fs::read(root.join("plugins/aigent-hive/.claude-plugin/plugin.json"))
-                                .expect("plugin exists before registration"),
-                        )
-                        .expect("valid plugin JSON");
-                        assert_eq!(plugin["name"], "aigent-hive");
-                        assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
-                        assert!(root
-                            .join("plugins/aigent-hive/skills/user-setup/SKILL.md")
-                            .is_file());
-                    }
+                    self.assert_claude_marketplace_source(arguments);
                     if matches!(self.sabotage, HostSabotage::ForeignAfterFailedForward) {
                         *self.marketplace_installed.lock().expect("marketplace") = true;
                         return Err(SensorError::Failed);
@@ -9122,7 +9129,7 @@ mod tests {
                         .filter(|path| temporary.path().join(path).is_file())
                         .cloned()
                         .collect::<Vec<_>>();
-                    assert!(!existing.is_empty());
+                    assert_ne!(existing.len(), 0);
                     assert!(existing
                         .iter()
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
@@ -9133,7 +9140,7 @@ mod tests {
                         .filter(|path| temporary.path().join(path).is_file())
                         .cloned()
                         .collect::<Vec<_>>();
-                    assert!(!existing.is_empty());
+                    assert_ne!(existing.len(), 0);
                     assert!(existing
                         .iter()
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
@@ -11646,10 +11653,13 @@ mod tests {
             .join(backup)
             .join("files/.agents/skills/user-setup/SKILL.md")
             .is_file());
-        assert!(execute(UserOperation::Update, &arguments, &runner)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            execute(UserOperation::Update, &arguments, &runner)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
     }
 
     #[test]

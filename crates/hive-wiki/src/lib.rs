@@ -4782,7 +4782,7 @@ mod tests {
 
         let alpha = read_page(&target, "alpha").unwrap();
         assert_eq!(alpha.outgoing_links, vec!["beta"]);
-        assert!(alpha.backlinks.is_empty());
+        assert_eq!(alpha.backlinks.len(), 0);
         assert_eq!(alpha.nonreciprocal_links, vec!["beta"]);
         let beta = read_page(&target, "beta").unwrap();
         assert_eq!(beta.backlinks, vec!["alpha"]);

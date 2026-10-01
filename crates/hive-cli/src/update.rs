@@ -505,7 +505,7 @@ mod tests {
         assert_eq!(failure.status, "blocked");
         assert_eq!(failure.exit_code, 3);
         assert_eq!(failure.code, "hive.update-recovery-required");
-        assert!(failure.changed_paths.is_empty());
+        assert_eq!(failure.changed_paths.len(), 0);
     }
 
     #[test]
@@ -558,6 +558,6 @@ mod tests {
         let failure = release_failure_result(&AdapterError::Verification("tampered".to_owned()));
         assert_eq!(failure.action, "VerifyWork");
         assert_eq!(failure.code, "hive.release-verification-failed");
-        assert!(failure.changed_paths.is_empty());
+        assert_eq!(failure.changed_paths.len(), 0);
     }
 }

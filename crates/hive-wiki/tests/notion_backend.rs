@@ -178,7 +178,7 @@ fn complete_inventory_fetches_only_changed_pages_and_tombstones_remote_deletes()
         &request("rev-1", Vec::new()),
     )
     .expect("unchanged freshness preflight");
-    assert!(unchanged.changed_page_ids.is_empty());
+    assert_eq!(unchanged.changed_page_ids.len(), 0);
     assert_eq!(
         unchanged.projection.artifact.manifest,
         initial.projection.artifact.manifest
@@ -219,7 +219,7 @@ fn complete_inventory_fetches_only_changed_pages_and_tombstones_remote_deletes()
     )
     .expect("complete inventory tombstones missing pages");
     assert_eq!(deleted.tombstoned_page_ids, ["page-a"]);
-    assert!(deleted.projection.documents.is_empty());
+    assert_eq!(deleted.projection.documents.len(), 0);
 }
 
 #[test]
@@ -239,7 +239,7 @@ fn changed_page_reuses_unchanged_sqlite_chunk_rows() {
     .expect("initial two-page sync");
     let untouched_before =
         chunk_rowids_for_page(&initial.projection.artifact.sqlite_bytes, "page-b");
-    assert!(!untouched_before.is_empty());
+    assert_ne!(untouched_before.len(), 0);
 
     let changed = sync_snapshot(
         Some(&initial.projection),
@@ -371,8 +371,8 @@ fn persisted_notion_mode_keeps_only_a_revision_ledger_and_recovers_from_sqlite_l
 
     let unchanged = sync_and_publish(&store, &capability, &request("rev-1", Vec::new()), false)
         .expect("bounded unchanged preflight");
-    assert!(unchanged.sync.changed_page_ids.is_empty());
-    assert!(unchanged.store.changed_paths.is_empty());
+    assert_eq!(unchanged.sync.changed_page_ids.len(), 0);
+    assert_eq!(unchanged.store.changed_paths.len(), 0);
 
     std::fs::remove_file(root.path().join(SHARED_INDEX_RELATIVE)).expect("remove disposable index");
     assert!(sync_and_publish(&store, &capability, &request("rev-1", Vec::new()), false).is_err());

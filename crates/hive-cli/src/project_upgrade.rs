@@ -4143,17 +4143,23 @@ mod tests {
         apply(&cap, &plan).unwrap();
         assert!(!root.join(".agents/skills/prompt-refine/SKILL.md").exists());
         assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
-        assert!(prepare_with_plugin(&cap, &plugin)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            prepare_with_plugin(&cap, &plugin)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
         let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
         apply(&cap, &restore).unwrap();
         assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
-        assert!(prepare_with_plugin(&cap, &BTreeMap::new())
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            prepare_with_plugin(&cap, &BTreeMap::new())
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
     }
 
     #[test]
@@ -4183,10 +4189,13 @@ mod tests {
                 .as_str()
                 .unwrap()
                 .contains("resource"));
-            assert!(prepare_with_plugin(&cap, &plugin)
-                .unwrap()
-                .changed_paths
-                .is_empty());
+            assert_eq!(
+                prepare_with_plugin(&cap, &plugin)
+                    .unwrap()
+                    .changed_paths
+                    .len(),
+                0
+            );
         }
     }
 }

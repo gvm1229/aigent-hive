@@ -722,7 +722,7 @@ mod tests {
         let hits = query_generation(&generation, "first", 100);
         assert_eq!(hits.len(), 9);
         assert!(hits.iter().all(|edge| edge.from == "first"));
-        assert!(query_generation(&generation, "missing", 10).is_empty());
+        assert_eq!(query_generation(&generation, "missing", 10).len(), 0);
         let metadata = query_node_metadata(&generation, "first", 100);
         assert_eq!(metadata.len(), 1);
         assert!(metadata.iter().all(|node| node.locator.contains("Wiki")));
@@ -735,11 +735,11 @@ mod tests {
         inactive.frontmatter.links = vec!["first".to_owned()];
         let generation =
             build_native_generation("project", &[page("first"), inactive]).expect("generation");
-        assert!(query_generation(&generation, "inactive", 50).is_empty());
+        assert_eq!(query_generation(&generation, "inactive", 50).len(), 0);
         let mut open = page("open");
         open.frontmatter.status = "open-question".to_owned();
         let generation = build_native_generation("project", &[open]).expect("generation");
-        assert!(generation.nodes.is_empty());
+        assert_eq!(generation.nodes.len(), 0);
     }
 
     #[test]
@@ -848,10 +848,11 @@ mod tests {
                 .len(),
             2
         );
-        assert!(
+        assert_eq!(
             remove_active_generation(target.path(), "project", "native-markdown")
                 .expect("repeat")
-                .is_empty()
+                .len(),
+            0
         );
     }
 

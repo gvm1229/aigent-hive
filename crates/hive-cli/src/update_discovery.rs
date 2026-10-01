@@ -370,7 +370,7 @@ mod tests {
         .expect("retried check");
 
         assert_eq!(first.code, "hive.update-check-deferred");
-        assert!(first.changed_paths.is_empty());
+        assert_eq!(first.changed_paths.len(), 0);
         assert_eq!(second.code, "hive.update-available");
         assert_eq!(second.changed_paths, [UPDATE_CHECK_STATE_RELATIVE]);
     }
@@ -395,7 +395,7 @@ mod tests {
         .expect("throttled check");
 
         assert_eq!(throttled.code, "hive.update-check-throttled");
-        assert!(throttled.changed_paths.is_empty());
+        assert_eq!(throttled.changed_paths.len(), 0);
     }
 
     #[test]
@@ -411,7 +411,7 @@ mod tests {
         .expect("disabled check");
 
         assert_eq!(result.code, "hive.update-check-disabled");
-        assert!(result.changed_paths.is_empty());
+        assert_eq!(result.changed_paths.len(), 0);
         assert!(!temporary.path().join(UPDATE_CHECK_STATE_RELATIVE).exists());
     }
 }

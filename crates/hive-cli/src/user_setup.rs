@@ -4342,7 +4342,7 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         assert_eq!(catalog.schema_version, 1);
         assert_eq!(catalog.mandatory_skills, ["user-setup"]);
-        assert!(catalog.optional_third_party_skills.is_empty());
+        assert_eq!(catalog.optional_third_party_skills.len(), 0);
     }
 
     #[test]
@@ -4473,7 +4473,7 @@ usage_guard:
         )
         .expect("legacy profile migration");
 
-        assert!(migrated.profile.contexts.is_empty());
+        assert_eq!(migrated.profile.contexts.len(), 0);
         assert_eq!(
             migrated.profile.description.as_deref(),
             Some("웹과 게임을 함께 만듦")
@@ -5344,10 +5344,13 @@ usage_guard:
             .any(
                 |change| change.path.ends_with("references/workflow.md") && change.after.is_none()
             ));
-        assert!(apply_user_projection(&root, &config, &skills, &answers)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            apply_user_projection(&root, &config, &skills, &answers)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
         validate_user_projection(&root, &config, &skills, &answers).unwrap();
     }
 
@@ -5373,10 +5376,13 @@ usage_guard:
                 .path()
                 .join(".agents/skills/user-setup/references/workflow.md")
                 .is_file());
-            assert!(apply_user_projection(&root, &config, &skills, &answers)
-                .unwrap()
-                .changed_paths
-                .is_empty());
+            assert_eq!(
+                apply_user_projection(&root, &config, &skills, &answers)
+                    .unwrap()
+                    .changed_paths
+                    .len(),
+                0
+            );
             validate_user_projection(&root, &config, &skills, &answers).unwrap();
         }
     }
@@ -5434,10 +5440,13 @@ usage_guard:
             .entries
             .iter()
             .any(|entry| entry.path.starts_with(".agents/skills/user-setup/")));
-        assert!(apply_user_projection(&root, &config, &skills, &answers)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            apply_user_projection(&root, &config, &skills, &answers)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
     }
 
     #[test]

@@ -2704,7 +2704,7 @@ mod tests {
         assert_eq!(resolved.logical_action, LogicalAction::RunWork);
         assert!(resolved.refine_suggestion);
         assert!(resolved.selected_skill.is_none());
-        assert!(resolved.load_skill_bodies.is_empty());
+        assert_eq!(resolved.load_skill_bodies.len(), 0);
         assert!(resolved.mode.is_none());
     }
 
@@ -2751,7 +2751,7 @@ mod tests {
 
         assert_eq!(resolved.route, Route::HostNative);
         assert_eq!(resolved.workflow_route, Some(WorkflowRoute::Simple));
-        assert!(resolved.load_skill_bodies.is_empty());
+        assert_eq!(resolved.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3573,7 +3573,7 @@ description: Inspect one local file without changing it.
         let result = resolve_route(&request).expect("route");
 
         assert_eq!(result.route, Route::Direct);
-        assert!(result.load_skill_bodies.is_empty());
+        assert_eq!(result.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3602,13 +3602,13 @@ description: Inspect one local file without changing it.
         automatic.hive_candidate = Some("arbitrary-skill".to_owned());
         let automatic_decision = resolve_route(&automatic).expect("blocked automatic route");
         assert_eq!(automatic_decision.route, Route::Blocked);
-        assert!(automatic_decision.load_skill_bodies.is_empty());
+        assert_eq!(automatic_decision.load_skill_bodies.len(), 0);
 
         let mut explicit = routing_request();
         explicit.explicit_skill = Some("arbitrary-skill".to_owned());
         let explicit_decision = resolve_route(&explicit).expect("blocked explicit route");
         assert_eq!(explicit_decision.route, Route::Blocked);
-        assert!(explicit_decision.load_skill_bodies.is_empty());
+        assert_eq!(explicit_decision.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3665,7 +3665,7 @@ description: Inspect one local file without changing it.
 
         assert_eq!(result.route, Route::Blocked);
         assert_eq!(result.next_action, Some(LogicalAction::RunWork));
-        assert!(result.load_skill_bodies.is_empty());
+        assert_eq!(result.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3767,7 +3767,7 @@ description: Inspect one local file without changing it.
         let decision = resolve_route(&request).expect("blocked route");
 
         assert_eq!(decision.route, Route::Blocked);
-        assert!(decision.load_skill_bodies.is_empty());
+        assert_eq!(decision.load_skill_bodies.len(), 0);
     }
 
     #[test]
