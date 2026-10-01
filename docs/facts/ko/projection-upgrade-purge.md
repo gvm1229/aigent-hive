@@ -9,9 +9,9 @@ summary: "Hive는 이전 Hive projection을 인증한 뒤 retired Skill과 직�
 tags: [consumer-harness, preservation, skills, upgrade]
 aliases: ["PUG93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:f2ff844d6567f78dde41ec78d1f030cd76a050cdd6fb977a4d8bf8401b2dffd7"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:6da6fa6180feb983e71a9be4915ff93a12cc1bfefae6016bad026f5c94b0238e"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6f0d42adfc0aa7cf6e199898d950a7219e0bc3b3c78ef1bbc5b822d742e142dd"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:37b93ac3de38edc4d3476786c58a3be0dec34824c39b8eb7d3fc9b7eb39f8c94"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:42f69c326667ad73522caeadec761a523074a78efcb5caf05a74185acb0fe3ce"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:d9140491d9a4df81de9d22f57ea2828ff4f8aca5ea72c36e118df178b0ef077b"
   - "repo:crates/hive-update/src/merge.rs#sha256:a8eeefc6b27b42c7eb0c0795f4ca91b25401cbdfdd9f00064a629138a50e6283"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:dd6012ef058aa3f08690daed211ab690ef4bccbb8eb1fa3710eeee72a4dd9ffc"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
