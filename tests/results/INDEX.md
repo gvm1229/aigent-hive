@@ -913,3 +913,21 @@
 | [passed](runs/20260929T214934-591df84543c4.md) | 0.11.1 공개 후보 전 코드 최종 검사 | 94fa2196febf288556780c7f68e6f752f15a6415 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260929T224954-8401014156c1.md) | 시험판 표시 형식의 수용 코드 정정 확인 | 55fba2d67e1da8b53b077390d3d639c4cecd4d40 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260930T002936-04802915c822.md) | 공개 수용 등록부의 버전·소스·제품 지문 계약 확인 | 85ac823630c76d138269972d932ff52baed55f06 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20261001T161350-74db75818502.md) | Claude 확장 경로 실패 회귀 재현 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T161539-700c42a91da0.md) | Claude 경로·오류 진단 Rust 관련 시험 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T161753-0ad8e9950651.md) | Claude 설치와 명령 오류 수집 Rust 시험 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T162133-506fc5e6511c.md) | 수정 CLI 빌드와 설치 회귀 관련 시험 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T162230-8511b2200082.md) | Claude Rust 관련 시험과 설치 회귀 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T162250-413921972a72.md) | Claude 경로·오류·보존 Rust 관련 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T162340-b4081167f359.md) | Claude Python 설치 경로와 스킬 복사본 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T162435-2353cb9c0f70.md) | 실제 Claude CLI의 격리 설치·검증·재설치·갱신 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T162740-a955b691eb61.md) | Claude 수정 후 전체 Rust 회귀 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T163057-04e3cd4eda56.md) | Claude 수정 후 전체 Python 분류 회귀 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T163059-270c8322a1e5.md) | Python conformance: documentation, security, contract, integration, release | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T163342-29760ef52dd3.md) | Claude 수정 전체 Python 회귀 재검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261001T163344-37aba93742ca.md) | Python conformance: documentation, security, contract, integration, release | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T163513-356483af2a78.md) | Claude 수정 최종 전체 Python 분류 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T163514-8382558d5401.md) | Python conformance: documentation, security, contract, integration, release | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T165920-6c6e38bdc900.md) | 최종 실행 파일의 실제 Claude 설치 수용 검증 | b3feedb374b8c3edab9ebf40f50931989b0e448e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T173737-d498334c87c2.md) | 오류 진단 커밋 전 관련 Rust 검증 | c21df71761afc5216ed33d35272225f6f19b2b1c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T173827-972f29efe1a7.md) | 현재 원본 시험 자료 버전 커밋 전 검증 | cd6a81de42c92caa37dbb9f190a0c11df5aa880c | Windows-11-10.0.26300-SP0 |
