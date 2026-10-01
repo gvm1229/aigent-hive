@@ -2182,9 +2182,12 @@ mod tests {
         fs::write(&root_page, page_before).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(query_shared(&user, None, Some("external-only"), None, 20)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            query_shared(&user, None, Some("external-only"), None, 20)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[cfg(unix)]
@@ -2223,10 +2226,11 @@ mod tests {
         fs::rename(saved, &first).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(
+        assert_eq!(
             query_shared(&user, Some(&first), Some("external-only"), None, 20)
                 .unwrap()
-                .is_empty()
+                .len(),
+            0
         );
     }
 
@@ -2284,10 +2288,11 @@ mod tests {
         fs::rename(saved, &controlled).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(
+        assert_eq!(
             query_shared(&user, Some(&nested), Some("external-only"), None, 20)
                 .unwrap()
-                .is_empty()
+                .len(),
+            0
         );
     }
 

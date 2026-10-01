@@ -734,13 +734,16 @@ mod tests {
         fs::write(&path, b"verified checkpoint").expect("restored owned copy");
         assert!(!clean_retired(target, &after));
         assert!(!path.exists());
-        assert!(target
-            .files
-            .read_control::<ScopeControl>(Some(&target.scope_id))
-            .expect("cleared queue")
-            .0
-            .expect("control")
-            .retired
-            .is_empty());
+        assert_eq!(
+            target
+                .files
+                .read_control::<ScopeControl>(Some(&target.scope_id))
+                .expect("cleared queue")
+                .0
+                .expect("control")
+                .retired
+                .len(),
+            0
+        );
     }
 }
