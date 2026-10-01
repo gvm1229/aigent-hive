@@ -6,7 +6,7 @@
 > 공개 Stable: `0.11.0`
 > 현재 단계: 승인된 0.11.1 정식 출시 준비·test.2 수용 진행
 > 공개 시험 수용: `0.11.1-test.1`
-> 다음 시험 대상: `0.11.1-test.2`
+> 다음 시험 대상: `0.11.1-test.3`
 
 ## 현재 요청과 경계
 
@@ -28,7 +28,8 @@
 | --- | ---: | ---: | ---: |
 | Codex 스킬 제공·자동 정리 | 4 | 1 | 80.0% |
 | Claude Windows 전역 설치 | 4 | 0 | 100.0% |
-| **현재 범위 합계** | **8** | **1** | **88.9%** |
+| 원격 출시 검증 수정 | 2 | 0 | 100.0% |
+| **현재 범위 합계** | **10** | **1** | **90.9%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -37,6 +38,7 @@
 | --- | --- | --- |
 | [skill-delivery-0.11.1.md](active/skill-delivery-0.11.1.md) | `SDP-001–005` | Codex 스킬 제공·자동 정리 |
 | [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
+| [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–002` | 원격 출시 검증 수정 |
 
 ## 실행 순서
 

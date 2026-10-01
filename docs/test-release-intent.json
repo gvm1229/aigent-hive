@@ -1,12 +1,10 @@
 {
   "schema_version": 1,
   "product_version": "0.11.1",
-  "package_version": "0.11.1-test.2",
+  "package_version": "0.11.1-test.3",
   "plan_ids": [
-    "CUI-001",
-    "CUI-002",
-    "CUI-003",
-    "CUI-004"
+    "RQP-001",
+    "RQP-002"
   ],
-  "product_tree_sha256": "sha256:b51f910b873bf094f38610cf8a4152efb724806af2482631b84a25ab830e16bf"
+  "product_tree_sha256": "sha256:78eed914287557f2fe6815ead12b609599a1c80533e3e43c84d2e9071ca88d77"
 }

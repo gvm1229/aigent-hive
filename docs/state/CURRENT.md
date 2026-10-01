@@ -4,7 +4,7 @@
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
 - 공개 시험 수용: `0.11.1-test.1`
-- 다음 시험 대상: `0.11.1-test.2`
+- 다음 시험 대상: `0.11.1-test.3`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
@@ -12,7 +12,7 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 8/9 완료
+- 현재 등록 항목: 10/11 완료
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: `SDP-005`
@@ -21,6 +21,9 @@
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- CI 36904470136의 macOS 백업 이름 충돌·Linux Rust 1.99 검사 호환 수정 완료, [수정 계획](../plans/active/release-qualification-repairs-0.11.1.md) 적용
+- test.2 후보 미게시, 제품 수정 뒤 test.3으로 전환
 
 - 0.11.1 정식 출시 승인, [실행 계획](../plans/0.11.1-stable-release.md)의 test.2 준비·수용 진행
 - [0.11.1 구독자 공지 초안](../releases/0.11.1.subscriber.ko.md) 문구·기존 Discord 채널 전송 승인, 정식 게시 뒤 발송 예정
