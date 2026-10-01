@@ -4,7 +4,7 @@
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
 - 공개 시험 수용: `0.11.1-test.1`
-- 다음 시험 대상: `0.11.1-test.4`
+- 다음 시험 대상: `0.11.1-test.5`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
