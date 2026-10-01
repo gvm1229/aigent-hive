@@ -130,7 +130,7 @@ def main() -> None:
         assert not (user / ".agents/skills/user-setup/SKILL.md").exists()
         scenarios.append("fresh-user-plugin-only")
 
-        # Simulate an exact older common projection. Never import real user data.
+        # Simulate an authenticated local fallback for this exact build; no real user data.
         manifest_path = user / ".hive/install/user-projection.json"
         manifest = json.loads(manifest_path.read_text())
         stock = user / ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup"
@@ -145,7 +145,6 @@ def main() -> None:
             digest = "sha256:" + hashlib.sha256(data).hexdigest()
             manifest["entries"].append({"path": relative, "digest": digest})
             manifest["base_entries"].append({"path": relative, "digest": digest, "content": data.decode("utf-8")})
-        manifest.update(product_version="0.11.0", package_version="0.11.0")
         for key in ("entries", "base_entries"):
             manifest[key].sort(key=lambda entry: entry["path"])
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
