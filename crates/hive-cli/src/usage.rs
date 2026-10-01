@@ -2350,7 +2350,7 @@ mod tests {
             Err(SensorError::ExecutableChanged)
         );
         assert_eq!(*native.invocations.borrow(), 1);
-        assert!(fallback.invocations.borrow().is_empty());
+        assert_eq!(fallback.invocations.borrow().len(), 0);
     }
 
     #[test]
@@ -2371,7 +2371,7 @@ mod tests {
             Err(SensorError::Timeout)
         );
         assert_eq!(*native.invocations.borrow(), 1);
-        assert!(fallback.invocations.borrow().is_empty());
+        assert_eq!(fallback.invocations.borrow().len(), 0);
     }
 
     #[test]
@@ -2394,7 +2394,7 @@ mod tests {
             native.requested_accounts.borrow().as_slice(),
             &[Some(invalid_digest), None]
         );
-        assert!(fallback.invocations.borrow().is_empty());
+        assert_eq!(fallback.invocations.borrow().len(), 0);
     }
 
     #[test]
@@ -2415,7 +2415,7 @@ mod tests {
             Err(SensorError::MissingIdentity)
         );
         assert_eq!(native.requested_accounts.borrow().len(), 2);
-        assert!(fallback.invocations.borrow().is_empty());
+        assert_eq!(fallback.invocations.borrow().len(), 0);
     }
 
     #[test]
@@ -2454,7 +2454,7 @@ mod tests {
                 Err(error)
             );
             assert_eq!(*native.invocations.borrow(), 1);
-            assert!(fallback.invocations.borrow().is_empty());
+            assert_eq!(fallback.invocations.borrow().len(), 0);
         }
     }
 

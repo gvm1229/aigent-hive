@@ -7691,7 +7691,7 @@ mod tests {
         )
         .expect("pinned dry-run");
 
-        assert!(!outcome.changed_paths.is_empty());
+        assert_ne!(outcome.changed_paths.len(), 0);
         assert_eq!(
             fs::read(target.join("sentinel")).expect("replacement sentinel"),
             b"replacement"
@@ -7747,7 +7747,7 @@ mod tests {
         )
         .expect("pinned dry-run");
 
-        assert!(!outcome.changed_paths.is_empty());
+        assert_ne!(outcome.changed_paths.len(), 0);
         assert_eq!(
             fs::read(&ambient_parent).expect("replacement parent"),
             b"replacement-parent"

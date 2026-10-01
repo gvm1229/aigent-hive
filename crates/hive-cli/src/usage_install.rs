@@ -376,6 +376,6 @@ mod tests {
             error,
             "CodexBar fallback installation is unsupported on this platform"
         );
-        assert!(runner.calls.lock().expect("calls").is_empty());
+        assert_eq!(runner.calls.lock().expect("calls").len(), 0);
     }
 }

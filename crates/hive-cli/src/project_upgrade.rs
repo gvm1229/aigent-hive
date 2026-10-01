@@ -3755,7 +3755,7 @@ mod tests {
             .expect("base ledger");
 
         assert_eq!(ledger.product_version, "0.3.0");
-        assert!(ledger.files.is_empty());
+        assert_eq!(ledger.files.len(), 0);
     }
 
     #[test]

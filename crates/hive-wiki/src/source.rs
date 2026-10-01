@@ -2279,7 +2279,7 @@ mod tests {
         }
         rebuild_index(temp.path()).expect("rebuild source Wiki index");
         let outcome = lint(temp.path()).expect("lint");
-        assert!(outcome.issues.is_empty());
+        assert_eq!(outcome.issues.len(), 0);
     }
 
     #[cfg(unix)]

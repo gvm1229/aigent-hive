@@ -1417,7 +1417,7 @@ mod tests {
         )
         .expect("declined");
         assert_eq!(outcome, FlowOutcome::Declined);
-        assert!(installer.calls.borrow().is_empty());
+        assert_eq!(installer.calls.borrow().len(), 0);
         assert!(String::from_utf8(output)
             .expect("output")
             .contains("no files were changed"));
@@ -1440,7 +1440,7 @@ mod tests {
         )
         .expect("current");
         assert_eq!(outcome, FlowOutcome::Reconciled);
-        assert!(installer.calls.borrow().is_empty());
+        assert_eq!(installer.calls.borrow().len(), 0);
         assert!(String::from_utf8(output)
             .expect("output")
             .contains("사용자 투영 호스트를 갱신·검증"));
@@ -1541,7 +1541,7 @@ mod tests {
             error,
             "npm registry does not publish an aigent-hive test channel"
         );
-        assert!(installer.calls.borrow().is_empty());
+        assert_eq!(installer.calls.borrow().len(), 0);
     }
 
     #[test]
@@ -1734,8 +1734,8 @@ mod tests {
         .expect_err("invalid scope blocks update");
 
         assert!(error.contains("ownership manifest is malformed"));
-        assert!(installer.calls.borrow().is_empty());
-        assert!(refresher.calls.borrow().is_empty());
+        assert_eq!(installer.calls.borrow().len(), 0);
+        assert_eq!(refresher.calls.borrow().len(), 0);
     }
 
     #[test]
