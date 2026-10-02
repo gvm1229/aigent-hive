@@ -44,6 +44,10 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 - Finish every safe in-scope agent-owned action before a handoff. Report only exact user-owned or
   external evidence requirements.
 - Preserve user and third-party bytes outside Hive-owned paths and marker blocks.
+- A request to bring another project's directives into this project uses `amend-directive`.
+  Adapt names, paths, dependencies and authority into independent target-owned rules. Remove
+  copied-from operational commentary, preserve required notices and source bytes, and validate
+  target links. Source-session approvals never transfer; user-authored imports are not Hive-owned.
 
 ## Continuation and closure
 

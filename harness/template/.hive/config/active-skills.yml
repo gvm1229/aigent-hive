@@ -11,7 +11,7 @@ skills:
   consent_digest: null
 - name: amend-directive
   source_type: built-in
-  content_digest: sha256:349eaa90b1a84d5cb35d5b04e38320778df8594f34a3539f4b510770c1122095
+  content_digest: sha256:8e9ad50eb58c10d535c7773e58d95a40b07e84da47a223fbd9655e15969ac15c
   side_effect_class: project-write
   capabilities:
   - filesystem-read
