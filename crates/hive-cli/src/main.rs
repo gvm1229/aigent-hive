@@ -65,7 +65,7 @@ USAGE:
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
     hive report preview|collect|export --help
-    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
+    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] --output json
     hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
     hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
     hive session recover --target <dir> --output json

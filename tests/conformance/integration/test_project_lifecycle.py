@@ -30,6 +30,62 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_reviewed_skill_combination_requires_exact_approval_and_preserves_both_rule_sets(self) -> None:
+        fixture = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.11.0/public-stable"
+        metadata = json.loads((fixture / "manifest.json").read_bytes())
+        archive = fixture / metadata["archive"]
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), metadata["sha256"])
+        target = self.work_root / "reviewed-combined-skill"
+        with ZipFile(archive) as package:
+            package.extractall(target)
+        skill_path = ".agents/skills/ship/SKILL.md"
+        skill = target / skill_path
+        guard = b"\n## Project safeguard\nRun the project commit guard before committing.\n"
+        skill.write_bytes(skill.read_bytes() + guard)
+        original = snapshot_tree(target)
+        identity = ["--target", str(target)]
+        process, inputs = self.invoke("project", "upgrade", *identity, "--scan", "--skill-merge-inputs", "ship")
+        self.assertEqual(process.returncode, 0, inputs)
+        self.assertEqual(snapshot_tree(target), original)
+        source = next(item for item in inputs["data"]["files"] if item["path"] == skill_path)
+        combined = source["incoming_content"] + guard.decode("utf-8")
+        request = {
+            "schema_version": 1, "product_version": PRODUCT_VERSION,
+            "project_base_digest": inputs["data"]["project_base_digest"],
+            "files": [{"path": skill_path, "local_digest": source["local_digest"],
+                       "incoming_digest": source["incoming_digest"], "merged_content": combined}],
+        }
+        request_path = self.work_root / "combined-skill.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        Draft202012Validator(json.loads((REPOSITORY_ROOT / "schemas/project-skill-merge.schema.json").read_text())).validate(request)
+        review = ["--skill-merges", str(request_path)]
+        process, preview = self.invoke("project", "upgrade", *identity, *review, "--dry-run")
+        self.assertEqual(process.returncode, 0, preview)
+        approval = preview["data"]["skill_merge_approval_digest"]
+        for provided in ([], ["--approve-skill-merge", "sha256:" + "0" * 64]):
+            process, denied = self.invoke("project", "upgrade", *identity, *review, "--apply", *provided)
+            self.assertNotEqual(process.returncode, 0, denied)
+            self.assertEqual(snapshot_tree(target), original)
+        reservations = ["--process-id", str(os.getpid())]
+        for path in preview["changed_paths"]:
+            reservations.extend(["--path", path])
+        session = [*identity, "--host", "codex", "--session-id", "reviewed-combination"]
+        process, leased = self.invoke("session", "begin", *session, *reservations)
+        self.assertEqual(process.returncode, 0, leased)
+        try:
+            process, applied = self.invoke("project", "upgrade", *identity, *review, "--apply", "--approve-skill-merge", approval)
+            self.assertEqual(process.returncode, 0, applied)
+        finally:
+            self.invoke("session", "close", *session)
+        self.assertEqual(skill.read_bytes(), combined.encode("utf-8"))
+        self.assertIn(guard, skill.read_bytes())
+        base = json.loads((target / ".hive/config/project-base.json").read_bytes())
+        upstream = next(item for item in base["files"] if item["path"] == skill_path)
+        self.assertEqual(upstream["content"], source["incoming_content"])
+        process, validated = self.invoke("project", "upgrade", *identity, "--validate")
+        self.assertEqual(process.returncode, 0, validated)
+        self.assertEqual(validated["changed_paths"], [])
+
     def test_all_public_stable_predecessors_preserve_and_recover(self) -> None:
         self._qualify_all_public_stable_predecessors(failure_tests=True)
 

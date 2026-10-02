@@ -40,6 +40,8 @@ const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
     ".hive/index/.stale",
 ];
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
+mod skill_merge;
+use skill_merge::SkillMergeRequest;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -49,6 +51,11 @@ enum CommandMode {
     Apply,
     Validate,
     Recover,
+}
+
+enum SkillReview {
+    Proposal(PathBuf),
+    Inputs(String),
 }
 
 #[derive(Serialize)]
@@ -153,7 +160,7 @@ struct JournalChange {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
-    let result = parse(arguments).and_then(|(target, mode, user_root)| match mode {
+    let result = parse(arguments).and_then(|(target, mode, user_root, skill_merges, approval)| match mode {
         CommandMode::Recover => {
             ensure_consumer_target(&target)
                 .map_err(|error| UpdateError::Input(error.to_string()))?;
@@ -176,7 +183,22 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             let plugin = user_root.as_deref()
                 .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
                 .unwrap_or_default();
-            let plan = prepare_with_plugin(&target_dir, &plugin)?;
+            if let Some(SkillReview::Inputs(name)) = skill_merges.as_ref() {
+                if mode != CommandMode::Scan || approval.is_some() {
+                    return Err(UpdateError::Input("Skill merge inputs require --scan without apply approval".to_owned()));
+                }
+                return skill_merge::input_result(&target_dir, name);
+            }
+            let reviewed = match skill_merges.as_ref() {
+                Some(SkillReview::Proposal(path)) => Some(SkillMergeRequest::load(path)?),
+                _ => None,
+            };
+            let plan = prepare_with_reviewed_skills(&target_dir, &plugin, reviewed.as_ref())?;
+            let review_digest = reviewed.as_ref().map(|_| skill_merge::approval_digest(&target, &plan)).transpose()?;
+            if mode == CommandMode::Apply {
+                skill_merge::ensure_no_unreviewed_overlaps(&plan.reports)?;
+                skill_merge::ensure_approved(review_digest.as_deref(), approval.as_deref())?;
+            }
             if mode == CommandMode::Validate && !plan.changed_paths.is_empty() {
                 return Err(UpdateError::Verification(
                     "installed project harness has applicable upgrades".to_owned(),
@@ -193,7 +215,11 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 }
                 apply(&target_dir, &plan)
             } else {
-                Ok(plan_result(&plan, mode))
+                let mut result = plan_result(&plan, mode);
+                if let (Some(digest), Some(data)) = (review_digest, result.data.as_mut()) {
+                    data["skill_merge_approval_digest"] = json!(digest);
+                }
+                Ok(result)
             }
         }
     });
@@ -227,7 +253,15 @@ pub(crate) fn authenticate_legacy_knowledge_target(target: &Path) -> Result<(), 
     Ok(())
 }
 
-fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>), UpdateError> {
+type UpgradeArguments = (
+    PathBuf,
+    CommandMode,
+    Option<PathBuf>,
+    Option<SkillReview>,
+    Option<String>,
+);
+
+fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
     if arguments.first().map(String::as_str) != Some("upgrade") {
         return Err(UpdateError::Input(
             "project requires the upgrade action".to_owned(),
@@ -235,6 +269,8 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>)
     }
     let mut target = None;
     let mut user_root = None;
+    let mut skill_merges = None;
+    let mut approval = None;
     let mut mode = None;
     let mut output = None;
     let mut index = 1;
@@ -257,7 +293,12 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>)
                 }
                 index += 1;
             }
-            "--target" | "--output" | "--user-root" => {
+            "--target"
+            | "--output"
+            | "--user-root"
+            | "--skill-merges"
+            | "--skill-merge-inputs"
+            | "--approve-skill-merge" => {
                 let value = arguments
                     .get(index + 1)
                     .ok_or_else(|| UpdateError::Input(format!("missing value for {option}")))?;
@@ -271,6 +312,21 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>)
                     if user_root.replace(PathBuf::from(value)).is_some() {
                         return Err(UpdateError::Input(
                             "duplicate project upgrade user root".to_owned(),
+                        ));
+                    }
+                } else if matches!(option, "--skill-merges" | "--skill-merge-inputs") {
+                    if skill_merges
+                        .replace(parse_skill_review(option, value))
+                        .is_some()
+                    {
+                        return Err(UpdateError::Input(
+                            "duplicate skill merge request".to_owned(),
+                        ));
+                    }
+                } else if option == "--approve-skill-merge" {
+                    if !valid_digest(value) || approval.replace(value.clone()).is_some() {
+                        return Err(UpdateError::Input(
+                            "invalid or duplicate skill merge approval".to_owned(),
                         ));
                     }
                 } else if output.replace(value.as_str()).is_some() {
@@ -292,6 +348,7 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>)
             "project upgrade requires --output json".to_owned(),
         ));
     }
+    validate_skill_merge_options(mode, skill_merges.is_some(), approval.is_some())?;
     Ok((
         target.ok_or_else(|| UpdateError::Input("missing --target".to_owned()))?,
         mode.ok_or_else(|| {
@@ -301,13 +358,47 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode, Option<PathBuf>)
             )
         })?,
         user_root,
+        skill_merges,
+        approval,
     ))
 }
 
+fn parse_skill_review(option: &str, value: &str) -> SkillReview {
+    match option {
+        "--skill-merges" => SkillReview::Proposal(PathBuf::from(value)),
+        _ => SkillReview::Inputs(value.to_owned()),
+    }
+}
+
+fn validate_skill_merge_options(
+    mode: Option<CommandMode>,
+    request: bool,
+    approval: bool,
+) -> Result<(), UpdateError> {
+    if (approval && (!request || mode != Some(CommandMode::Apply)))
+        || (mode == Some(CommandMode::Recover) && (request || approval))
+    {
+        return Err(UpdateError::Input(
+            "skill merge options require preview or exact approved apply, not recovery".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
+#[cfg(test)]
 fn prepare_with_plugin(
     target: &Dir,
     plugin: &hive_render::skill_delivery::PluginSkillFiles,
+) -> Result<UpgradePlan, UpdateError> {
+    prepare_with_reviewed_skills(target, plugin, None)
+}
+
+#[allow(clippy::too_many_lines)]
+fn prepare_with_reviewed_skills(
+    target: &Dir,
+    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    review: Option<&SkillMergeRequest>,
 ) -> Result<UpgradePlan, UpdateError> {
     let base = read_base_ledger(target, None)?;
     let candidate = project_upgrade_candidate_in(target).map_err(render_error)?;
@@ -319,6 +410,10 @@ fn prepare_with_plugin(
     }
     let candidate = hive_render::project_upgrade_candidate_with_plugin_in(target, plugin)
         .map_err(render_error)?;
+    let reviewed_files = review
+        .map(|request| request.validate(target, base.as_ref(), &candidate.files))
+        .transpose()?
+        .unwrap_or_default();
     let source_version = base.as_ref().map_or_else(
         || "legacy-unbased".to_owned(),
         |ledger| ledger.product_version.clone(),
@@ -384,7 +479,9 @@ fn prepare_with_plugin(
         } else {
             local.as_deref()
         };
-        let merged = if is_hive_directive_projection_path(Path::new(&path)) || is_shared(&path) {
+        let merged = if let Some(reviewed) = reviewed_files.get(&path) {
+            reviewed.clone()
+        } else if is_hive_directive_projection_path(Path::new(&path)) || is_shared(&path) {
             three_way_merge_hive_directive(Path::new(&path), effective_base, merge_local, incoming)?
         } else {
             three_way_merge(Path::new(&path), effective_base, merge_local, incoming)?
@@ -4196,6 +4293,150 @@ mod tests {
                     .len(),
                 0
             );
+        }
+    }
+
+    fn unselected_legacy_skill_fixture(root: &Path) -> Dir {
+        let _ = plugin_project_fixture(root);
+        let harness = root.join(".hive/config/harness.toml");
+        let original = fs::read_to_string(&harness).unwrap();
+        fs::write(
+            &harness,
+            original
+                .replace("project_skill_policy_version = 1\n", "")
+                .replace(
+                    "harness_version = \"0.11.1\"",
+                    "harness_version = \"0.11.0\"",
+                )
+                .replace(
+                    "source_release_version = \"0.11.1\"",
+                    "source_release_version = \"0.11.0\"",
+                ),
+        )
+        .unwrap();
+        let cap = target_dir(root);
+        let historical = historical_project_upgrade_candidate_in(&cap, "0.11.0").unwrap();
+        for file in &historical.files {
+            fs::create_dir_all(root.join(&file.path).parent().unwrap()).unwrap();
+            fs::write(root.join(&file.path), &file.content).unwrap();
+        }
+        let old_files = historical
+            .files
+            .iter()
+            .map(|file| BaseFile {
+                path: file.path.clone(),
+                kind: file.kind.clone(),
+                content_digest: file.content_digest.clone(),
+                content: String::from_utf8(file.content.clone()).unwrap(),
+            })
+            .collect::<Vec<_>>();
+        fs::write(
+            root.join(BASE_PATH),
+            signed_base_ledger("0.11.0", &old_files),
+        )
+        .unwrap();
+        fs::remove_file(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap();
+        cap
+    }
+
+    #[test]
+    fn reviewed_skill_merges_add_upstream_and_custom_rules_without_inventing_a_base() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().canonicalize().unwrap();
+        let cap = unselected_legacy_skill_fixture(&root);
+        let path = ".agents/skills/ship/SKILL.md";
+        fs::create_dir_all(root.join(".agents/skills/ship")).unwrap();
+        let custom = b"---\nname: ship\ndescription: Custom commit rules\n---\n\nRun the project commit guard.\n";
+        fs::write(root.join(path), custom).unwrap();
+        let base = read_base_ledger(&cap, None).unwrap().unwrap();
+        assert!(!base.files.iter().any(|file| file.path == path));
+        let incoming = project_upgrade_candidate_in(&cap).unwrap();
+        let inputs = skill_merge::input_result(&cap, "ship").unwrap();
+        let input_data = inputs.data.unwrap();
+        assert_eq!(input_data["project_base_digest"], base.ledger_digest);
+        assert!(input_data["files"].as_array().unwrap().iter().any(|file| {
+            file["path"] == path && file["incoming_digest"] == sha256_digest(&incoming.files[path])
+        }));
+        assert!(skill_merge::input_result(&cap, "../ship").is_err());
+        assert!(skill_merge::input_result(&cap, "user-setup").is_err());
+        assert!(prepare_with_plugin(&cap, &BTreeMap::new()).is_err());
+        let merged = format!(
+            "{}\n## Project safeguard\nRun the project commit guard.\n",
+            String::from_utf8(incoming.files[path].clone()).unwrap()
+        );
+        let request_path = temp.path().join("review.json");
+        fs::write(
+            &request_path,
+            serde_json::to_vec(&json!({
+                "schema_version":1,"product_version":env!("CARGO_PKG_VERSION"),
+                "project_base_digest":base.ledger_digest,
+                "files":[{"path":path,"local_digest":sha256_digest(custom),
+                    "incoming_digest":sha256_digest(&incoming.files[path]),"merged_content":merged}]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let request = SkillMergeRequest::load(&request_path).unwrap();
+        let plan = prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).unwrap();
+        let report = plan
+            .reports
+            .iter()
+            .find(|report| report.path == path)
+            .unwrap();
+        assert!(report.base_digest.is_none());
+        assert_eq!(fs::read(root.join(path)).unwrap(), custom);
+        let approval = skill_merge::approval_digest(&root, &plan).unwrap();
+        let other_target = tempdir().unwrap();
+        assert_ne!(
+            approval,
+            skill_merge::approval_digest(other_target.path(), &plan).unwrap()
+        );
+        assert!(skill_merge::ensure_approved(Some(&approval), None).is_err());
+        assert!(skill_merge::ensure_approved(Some(&approval), Some(&digest('b'))).is_err());
+        skill_merge::ensure_approved(Some(&approval), Some(&approval)).unwrap();
+        apply(&cap, &plan).unwrap();
+        assert_eq!(fs::read(root.join(path)).unwrap(), merged.as_bytes());
+        let updated_base = read_base_ledger(&cap, None).unwrap().unwrap();
+        assert_eq!(
+            updated_base
+                .files
+                .iter()
+                .find(|file| file.path == path)
+                .unwrap()
+                .content
+                .as_bytes(),
+            incoming.files[path]
+        );
+        assert_eq!(
+            prepare_with_plugin(&cap, &BTreeMap::new())
+                .unwrap()
+                .changed_paths,
+            [] as [String; 0]
+        );
+        assert!(prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).is_err());
+    }
+
+    #[test]
+    fn reviewed_skill_merge_options_reject_unbound_or_recovery_approval() {
+        for options in [
+            vec!["--approve-skill-merge", "sha256:invalid"],
+            vec![
+                "--skill-merges",
+                "review.json",
+                "--approve-skill-merge",
+                "sha256:invalid",
+            ],
+        ] {
+            let mut args = vec![
+                "upgrade",
+                "--target",
+                "target",
+                "--recover",
+                "--output",
+                "json",
+            ];
+            args.extend(options);
+            assert!(parse(&args.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err());
         }
     }
 }
