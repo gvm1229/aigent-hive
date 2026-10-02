@@ -1007,3 +1007,7 @@
 | [passed](runs/20261002T034844-1de4af08f291.md) | 추가 범위 최종 전체 Python 검사 | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T034845-99787a224a2b.md) | Python conformance: documentation, security, contract, integration, release | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T040612-86c48414b643.md) | Rust 1.99 최종 전체 Clippy 검사 | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T044546-8f00787dd676.md) | 공개 test.6 Windows 패키지의 격리 설치 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T044605-21bf4bc79c98.md) | 공개 test.6의 실제 Claude 세 경로 설치 검증 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T044757-e19a4db1e245.md) | 공개 test.6의 실제 Codex 격리 설치와 스킬 목록 검증 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T045454-045d353094ea.md) | 공개 test.6의 기본 23개와 전역 선호·개별 선택 보존 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |

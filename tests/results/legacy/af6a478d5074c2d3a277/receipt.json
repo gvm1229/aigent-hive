@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "binary_digest": "sha256:36734cb8ee9d69bd535a4f7c512265abf01a46872c84603c7ee48cc5668735fd",
+  "claude_digest": "sha256:99943f399d76e89a435b5e19a15814227bc258ba4afc583ec09c67933fdafd83",
+  "product_version": "0.11.1",
+  "native_cli": true,
+  "model_calls": 0,
+  "scenarios": [
+    {
+      "name": "ordinary",
+      "operations": [
+        {
+          "action": "install",
+          "mode": "--dry-run",
+          "code": "hive.user-install-dry-run-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "update",
+          "mode": "--apply",
+          "code": "hive.user-update-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        }
+      ],
+      "preserved": [
+        "foreign-guidance",
+        "foreign-settings",
+        "knowledge",
+        "preferences"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "user space",
+      "operations": [
+        {
+          "action": "install",
+          "mode": "--dry-run",
+          "code": "hive.user-install-dry-run-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "update",
+          "mode": "--apply",
+          "code": "hive.user-update-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        }
+      ],
+      "preserved": [
+        "foreign-guidance",
+        "foreign-settings",
+        "knowledge",
+        "preferences"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "사용자 한글",
+      "operations": [
+        {
+          "action": "install",
+          "mode": "--dry-run",
+          "code": "hive.user-install-dry-run-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        },
+        {
+          "action": "install",
+          "mode": "--apply",
+          "code": "hive.user-install-complete"
+        },
+        {
+          "action": "update",
+          "mode": "--apply",
+          "code": "hive.user-update-complete"
+        },
+        {
+          "action": "install",
+          "mode": "--validate",
+          "code": "hive.user-install-valid"
+        }
+      ],
+      "preserved": [
+        "foreign-guidance",
+        "foreign-settings",
+        "knowledge",
+        "preferences"
+      ],
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "claude_version": "2.1.163 (Claude Code)",
+  "binary_version": "AIgent Hive v0.11.1-test #6 · developer test build (released 2026-10-02)",
+  "not_proven": [
+    "interactive-skill-discovery",
+    "question-tool-invocation",
+    "natural-language-skill-invocation",
+    "UNC-and-long-path-support",
+    "original-reporters-machine"
+  ]
+}
