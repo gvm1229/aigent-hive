@@ -13,15 +13,15 @@
 ## 수용 기준
 
 - [x] [DPS-001] 독립 지침 이식 절차와 Orireki 프런트엔드 사례 정리
-  - state: complete; evidence: repo:docs/research/directive-localization-and-project-skills-0.11.1.md#sha256:f12cbc2ff6a9d3a9d46cf6daae097ea35a6155d7ae882de1fb1c84ff025350c2
+  - state: complete; evidence: repo:docs/research/directive-localization-and-project-skills-0.11.1.md#sha256:b605675e8999351d419a26920701fe89e3148886f0329d726d6b7e31a07956ad
 - [x] [DPS-002] 기본 23개·빈 선택·의존성·Wiki 조건의 일관된 선택
   - state: complete; evidence: repo:tests/results/runs/20261002T021301-49cf6fa9b6ae.md#sha256:00849e999d35dc801b9c61d042a26928bd69baff613967eb62d7c4118c23b8a8
 - [ ] [DPS-003] 선택 스킬의 자연어 활용과 제공 위치별 정책 일치
-  - state: agent-owned
+  - state: awaiting-external-evidence; owner: 유지관리자; reason: test.6 정책·선택·CLI 수용 완료, 새 실제 Codex 대화에서 선택 스킬의 명시·자연어 호출 증거 필요
 - [x] [DPS-004] 기존 기본 전환·사용자 선택 보존·재갱신 무변경
   - state: complete; evidence: repo:tests/results/runs/20261002T033536-3616b903f78c.md#sha256:e780038561f2b87ab1cc78bdb5569c97cac35d3b6923395391de7909e3806e72
-- [ ] [DPS-005] 관련·전체 회귀와 공개 test.6 수용
-  - state: agent-owned
+- [x] [DPS-005] 관련·전체 회귀와 공개 test.6 수용
+  - state: complete; evidence: repo:tests/results/legacy/c0de6506202c5222a985.md#sha256:62048cf7fc2fe8de25696ab7c1c347d2c74d2ddefbbf36ed5a8f33fee31866c3
 
 ## 구현 순서와 소유 파일
 

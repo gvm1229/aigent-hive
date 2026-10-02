@@ -10,7 +10,7 @@
 
 ## 로컬 실행 근거
 
-현재 호스트 Codex·Windows 11의 실제 실행. Linux·macOS 실행과 공개 test.6 수용은 별도 검사 대상.
+로컬 호스트 Codex·Windows 11의 실제 실행, 공개 test.6의 Linux·macOS 실행은 별도 원격 수용 근거.
 
 | 범위 | 근거 | 결과와 한계 |
 | --- | --- | --- |
@@ -22,6 +22,8 @@
 | 이전 공개 안정판 전환 | [갱신 기록](../../tests/results/runs/20261002T033536-3616b903f78c.md) | 2개 통과, 전체 이전 버전의 보존·복구·재갱신 무변경 |
 | 지식 통합 | [통합 기록](../../tests/results/runs/20261002T033727-5f41480ddf49.md) | 46개 통과·8개 Windows 권한·POSIX 조건 제외 |
 | 실제 Claude CLI | [실행 기록](../../tests/results/runs/20261002T034240-f85fe774332c.md), [지문 보고](../../tests/results/legacy/d27c79661d5100c0fb04.md) | Claude 2.1.163·일반/공백/한글 세 경로의 설치·검증·재설치·갱신 통과, 외부 지침·설정·지식 보존, 모델 호출 0건 |
+| 공개 test.6 | [게시·지문·세 운영체제 수용](../../tests/results/legacy/c0de6506202c5222a985.md), [기본 선택](../../tests/results/runs/20261002T045454-045d353094ea.md) | 정확한 공개 패키지의 세 운영체제 수용·Windows 기본 23개와 선호 보존 통과, 등록 응답은 모의 |
+| 공개 실제 호스트 CLI | [Claude](../../tests/results/legacy/af6a478d5074c2d3a277.md), [Codex](../../tests/results/legacy/937cab32117f2f51ca41.md) | Windows 실제 Claude 세 경로·Codex 격리 설치와 최소 2개 목록 통과, 모델 호출 0건·실제 대화 미증명 |
 
 ## 실패와 수정
 
@@ -31,6 +33,6 @@
 
 ## 남은 증명
 
-- 정확한 소스의 필수 CI, 공개 test.6 세 운영체제 수용
+- 필수 CI·공개 test.6 세 운영체제 수용 완료, [정확한 실행 번호·파일 지문](skill-delivery-public-test-0.11.1.md#최종-test6-수용)
 - 공개 test.6의 실제 Codex 목록·명시 호출·자연어 호출, 버전별 실제 사용자 설치 승인과 새 대화 필요
 - 실제 Claude 대화의 스킬 발견·질문 도구·자연어 호출, 구독 사용자 검증 범위; CLI 설치 성공으로 대체 금지

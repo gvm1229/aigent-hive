@@ -3,7 +3,7 @@
 - 제품 버전: `0.11.1`
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
-- 공개 시험 수용: `0.11.1-test.5`
+- 공개 시험 수용: `0.11.1-test.6`
 - 다음 시험 대상: `0.11.1-test.6`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
@@ -12,15 +12,19 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 13/16 완료
+- 현재 등록 항목: 14/16 완료
 
-- `agent-owned`: `DPS-003`, `DPS-005`
-- `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `SDP-005`
+- `agent-owned`: 없음
+- `awaiting-user-authority`: `SDP-005`
+- `awaiting-external-evidence`: `DPS-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- test.6의 필수 CI 36963278427·후보 36963962342·복구 게시 36965966512·세 운영체제 수용 36966439849 완료; [공개 수용 정본](../research/skill-delivery-public-test-0.11.1.md)의 정확한 지문·실행 범위 확인
+- 공개 test.6의 실제 Windows Claude 2.1.163 세 경로와 Codex 0.159.0 격리 CLI 검증 통과; GUI·명시/자연어 모델 호출 미증명, 모델 호출 0건
+- 현재 사용자 CLI는 test.5 유지, test.6 보존 재설치의 읽기 전용 미리보기·공개 지문 일치·격리 설치 검증 완료; 버전별 현재 사용자 설치 승인 대기
 
 - 사용자 승인 추가 범위: [지침 이식·프로젝트 스킬](../plans/active/directive-localization-and-project-skills-0.11.1.md); 지침 이식·기본 23개·자유 선택·기존 기본 전환 구현과 관련 검증 완료, [검증 근거](../research/directive-localization-and-project-skills-0.11.1.md); 자연어 호출 정책 구현 완료·실제 대화 호출 대기
 - 추가 범위 최종 Windows 검사: Rust 967개 통과·4개 조건 제외, Python 917개 통과·44개 조건 제외, Rust 1.99 Clippy 통과; 실제 Claude CLI 2.1.163 세 경로 설치·검증·재설치·갱신과 사용자 자료 보존 통과, 모델 호출 0건
@@ -43,7 +47,7 @@
 
 ## 승인 인계
 
-- 현재 사용자 test.5 설치 승인·적용 완료, 안정판 게시·main 통합·Discord 문구·발송 승인 유지
-- `SDP-005` 남은 사용자 실행: Codex 완전 종료·재실행 → 새 대화의 Hive 스킬 선택 목록 → `aigent-hive:user-setup` 명시 호출 → 전역 Hive 설치 검증의 자연어 요청
+- 현재 사용자 test.5 설치 승인·적용 완료, test.6 설치 승인 질문 제출; 안정판 게시·main 통합·881자 Discord 문구·발송 승인 유지
+- `SDP-005` 남은 사용자 실행: 승인 후 test.6 적용 → Codex 완전 종료·재실행 → 새 대화의 Hive 스킬 선택 목록 → `aigent-hive:user-setup` 명시 호출 → 전역 Hive 설치 검증의 자연어 요청
 - 기존 대화의 0.11.0 캐시 경로를 담은 스킬 목록으로 새 0.11.1 호출 성공 판정 제외; host 프로세스 신호·자격 증명 전달·모델 제공자 API를 통한 우회 금지
 - 두 호출은 설정 변경 없는 설치 검증으로 제한, 소비자 프로젝트 변경 제외; 실제 호출 증거 확보 뒤 SDP-005 완료와 보호 main 통합·안정판 후보·게시·Discord 전송 진행

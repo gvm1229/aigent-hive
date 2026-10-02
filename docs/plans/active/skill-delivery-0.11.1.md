@@ -3,7 +3,7 @@
 > Plan version: 0.11.1
 > Scope: product
 > 최초 공개 시험 대상: `0.11.1-test.1`
-> 최종 공개 수용 대상: `0.11.1-test.5`
+> 최종 공개 수용 대상: `0.11.1-test.6`
 
 ## 목적과 승인 경계
 
@@ -24,7 +24,7 @@
 - [x] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
   - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:ddd6a0c570ad81f6929700ee0c282ecb2a2df68b8bb5e1ccb5b6410c47775bc3
 - [ ] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
-  - state: awaiting-external-evidence; depends: SDP-004; owner: 유지관리자; reason: test.5 세 OS·승인된 현재 사용자 설치·지식 489개와 설정 2개 보존·새 실제 서버의 스킬 28개 발견 통과, Codex 완전 재시작·GUI 목록과 명시·자연어 호출의 사용자 증거 필요
+  - state: awaiting-user-authority; depends: SDP-004; owner: 유지관리자; reason: 공개 test.6 세 운영체제·실제 Windows CLI 수용 완료, 현재 사용자 test.6 설치 승인과 Codex 재시작·GUI 목록·명시/자연어 호출 증거 필요
 
 ## 구현 인계
 

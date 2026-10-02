@@ -1,6 +1,31 @@
 # 0.11.1 공개 시험판의 자동 정리 수용
 
-## 최종 test.5 수용
+## 최종 test.6 수용
+
+- 공개 시험: [`0.11.1-test.6`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.11.1-test.6), 소스·태그 커밋 `1917e1aaa59315badab6caef19fb48a5eb9f2a17`
+- 제품 지문: `sha256:1e64cd3aeadcc7ebf20b29bd19c8fae20d340e9c642879a0d6dfaaeb1e7d2b18`
+- [필수 CI 36963278427](https://github.com/gvm1229/aigent-hive/actions/runs/36963278427)·[후보 36963962342](https://github.com/gvm1229/aigent-hive/actions/runs/36963962342)·[복구 게시 36965966512](https://github.com/gvm1229/aigent-hive/actions/runs/36965966512)·[세 운영체제 수용 36966439849](https://github.com/gvm1229/aigent-hive/actions/runs/36966439849) 성공
+- [독립 지문·게시 근거](../../tests/results/legacy/c0de6506202c5222a985.md): npm 여섯 버전·test 태그·후보 압축 파일 지문 일치, latest 0.11.0 유지, GitHub 시험판·실제 태그 커밋 일치
+- 실제 공개 CLI 수용: Windows x64·Linux musl x64·macOS arm64의 자동 정리·복구·이전 버전 갱신·한국어·검색·선택형 벡터 검사 통과; 등록 응답은 모의, 모델 호출 제외
+- [Windows 실제 Claude CLI](../../tests/results/legacy/af6a478d5074c2d3a277.md): 2.1.163·일반/공백/한글 세 경로의 설치·검증·재설치·갱신과 외부 자료 보존 통과, 실제 대화 미증명
+- [Windows 실제 Codex CLI](../../tests/results/legacy/937cab32117f2f51ca41.md): 0.159.0·격리 설치·검증·재설치·갱신·새 관리 서버의 최소 스킬 2개 조회 통과, 모델 호출 0건; 현재 사용자 설치·GUI·명시/자연어 모델 호출 미증명
+- [공개 기본 선택 검사](../../tests/results/runs/20261002T045454-045d353094ea.md): 5개 통과·1개 다른 호스트의 기본 프로필 조건 제외, 23개 기본·전역 선호·개별 선택 보존; 등록 응답은 모의
+- 현재 사용자 test.6의 읽기 전용 보존 재설치 미리보기 통과, 버전별 설치 승인과 실제 새 대화 호출 검증 대기; 기존 test.5 적용 근거는 아래에 보존
+
+| 공개 파일 운영체제 | SHA-256 |
+| --- | --- |
+| Windows x64 | `36734cb8ee9d69bd535a4f7c512265abf01a46872c84603c7ee48cc5668735fd` |
+| Linux musl x64 | `c162a807f5538bd95daaff4e698e5c3b649a36e9a8d38f4ffe910c0d3360993f` |
+| macOS arm64 | `4a6761eb5101bd3eaf845ca3dc20748f339043e4b9936e0b5303148da9a7a42a` |
+
+파일 지문: 후보 패키지에서 추출한 실행 파일과 공개 압축 파일의 독립 무결성 일치 근거. Linux·macOS의 실제 실행은 원격 수용, Windows 실제 호스트 CLI는 로컬 수용.
+
+### 게시 지연과 복구
+
+- 최초 게시 36965302613의 업로드 후 태그 확인 시간 초과, 당시 공개 조회 미완료
+- 여섯 정확한 버전·후보 무결성·test 태그·latest 보존 확인 뒤 같은 후보에 `recover_published_packages=true` 적용, 새 후보·중복 업로드 제외
+
+## 이전 test.5 수용
 
 - 공개 시험: [`0.11.1-test.5`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.11.1-test.5), 제품 소스 `267b4a4e93df26d965acc96665588f21922bfbc7`
 - 제품 지문: `sha256:e589e5162fd486fe68e394737381f0cc6ef9f0296d6f66dee711cb849f6e5fd3`
