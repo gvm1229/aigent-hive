@@ -103,3 +103,9 @@ published_snapshots:
       - 0.10.0-test.2
       - 0.10.0-test.4
     project_base_digest: sha256:f7111bba56d490b98212681f629581870f7f7b0de108228eb67101defaa96be9
+
+  - version: 0.11.1-test.6
+    source_version: 0.11.1
+    overlays:
+      - 0.11.1-test.6
+    project_base_digest: sha256:d15145d8a09bacdbdc350ea1bd4ddd7e6a6e9377f3790157d2522a3e901f53d1

@@ -672,7 +672,30 @@ fn authenticate_current_base(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), UpdateError> {
-    authenticate_base_bytes(ledger, incoming)
+    let current = authenticate_base_bytes(ledger, incoming);
+    if current.is_ok() {
+        return current;
+    }
+    let reference = HistoricalProjectBase {
+        product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        files: incoming
+            .iter()
+            .map(|(path, bytes)| {
+                Ok(hive_render::HistoricalProjectBaseFile {
+                    path: path.clone(),
+                    kind: expected_base_kind(path)?.to_owned(),
+                    content_digest: sha256_digest(bytes),
+                    content: bytes.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, UpdateError>>()?,
+    };
+    for snapshot in historical_published_project_snapshots(&reference) {
+        if authenticate_full_historical_base(ledger, &snapshot.base).is_ok() {
+            return Ok(());
+        }
+    }
+    current
 }
 
 fn authenticate_base_bytes(
@@ -4195,6 +4218,16 @@ mod tests {
     }
 
     fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::PluginSkillFiles {
+        project_fixture_with_skills(
+            path,
+            vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
+        )
+    }
+
+    fn project_fixture_with_skills(
+        path: &Path,
+        selected: Vec<String>,
+    ) -> hive_render::skill_delivery::PluginSkillFiles {
         let preferences = hive_render::GlobalProjectPreferences {
             codex_plugin_files: BTreeMap::new(),
             interface_language: "en".to_owned(),
@@ -4203,7 +4236,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
+            selected_project_skills: selected,
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -4438,5 +4471,53 @@ mod tests {
             args.extend(options);
             assert!(parse(&args.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err());
         }
+    }
+
+    #[test]
+    fn published_test6_project_base_authenticates_only_the_registered_snapshot() {
+        let temporary = tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap();
+        let _ = project_fixture_with_skills(
+            &root,
+            vec!["project-refresh".to_owned(), "prompt-refine".to_owned()],
+        );
+        let target = target_dir(&root);
+        let path = ".agents/skills/project-refresh/SKILL.md";
+        let published = include_bytes!(
+            "../../../harness/project-bases/0.11.1-test.6/skills/project-refresh/SKILL.md"
+        );
+        let mut ledger = read_base_ledger(&target, None).unwrap().unwrap();
+        let entry = ledger
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap();
+        entry.content = String::from_utf8(published.to_vec()).unwrap();
+        entry.content_digest = sha256_digest(published);
+        fs::write(root.join(path), published).unwrap();
+        fs::write(
+            root.join(BASE_PATH),
+            signed_base_ledger(env!("CARGO_PKG_VERSION"), &ledger.files),
+        )
+        .unwrap();
+        let incoming = project_upgrade_candidate_in(&target).unwrap();
+        authenticate_current_base(&ledger, &incoming.files).unwrap();
+        let plan = prepare_with_plugin(&target, &BTreeMap::new()).unwrap();
+        apply(&target, &plan).unwrap();
+        assert_eq!(fs::read(root.join(path)).unwrap(), incoming.files[path]);
+        assert_eq!(
+            prepare_with_plugin(&target, &BTreeMap::new())
+                .unwrap()
+                .changed_paths,
+            [] as [String; 0]
+        );
+        ledger
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap()
+            .content
+            .push_str("Forged baseline\n");
+        assert!(authenticate_current_base(&ledger, &incoming.files).is_err());
     }
 }
