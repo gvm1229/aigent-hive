@@ -4,7 +4,7 @@
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
 - 공개 시험 수용: `0.11.1-test.5`
-- 다음 시험 대상: `0.11.1-test.5`
+- 다음 시험 대상: `0.11.1-test.6`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
@@ -12,15 +12,17 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 10/11 완료
+- 현재 등록 항목: 10/16 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `DPS-001`, `DPS-002`, `DPS-003`, `DPS-004`, `DPS-005`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `SDP-005`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- 사용자 승인 추가 범위: [지침 이식·프로젝트 스킬](../plans/active/directive-localization-and-project-skills-0.11.1.md); 기본 23개·자유 선택·자연어 활용·기존 기본 전환 구현 진행
 
 - CI 36904470136의 macOS 백업 이름 충돌·Linux Rust 1.99 검사 호환 수정 완료, [수정 계획](../plans/active/release-qualification-repairs-0.11.1.md) 적용
 - test.2–4 후보 미게시; 전체 필수 CI 36923839882 통과 뒤 test.5 후보 36940738218·복구 게시 36942587351·세 OS 수용 36943131885 성공

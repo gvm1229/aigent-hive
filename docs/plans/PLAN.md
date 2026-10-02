@@ -4,9 +4,9 @@
 > 기준일: 2026-10-02
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
-> 현재 단계: test.5 공개·현재 사용자 설치 수용, Codex 재시작 대기
+> 현재 단계: 지침 이식·프로젝트 스킬 추가 구현
 > 공개 시험 수용: `0.11.1-test.5`
-> 다음 시험 대상: `0.11.1-test.5`
+> 다음 시험 대상: `0.11.1-test.6`
 
 ## 현재 요청과 경계
 
@@ -29,7 +29,8 @@
 | Codex 스킬 제공·자동 정리 | 4 | 1 | 80.0% |
 | Claude Windows 전역 설치 | 4 | 0 | 100.0% |
 | 원격 출시 검증 수정 | 2 | 0 | 100.0% |
-| **현재 범위 합계** | **10** | **1** | **90.9%** |
+| 지침 이식·기본 스킬·자연어 활용 | 0 | 5 | 0.0% |
+| **현재 범위 합계** | **10** | **6** | **62.5%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -39,10 +40,11 @@
 | [skill-delivery-0.11.1.md](active/skill-delivery-0.11.1.md) | `SDP-001–005` | Codex 스킬 제공·자동 정리 |
 | [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
 | [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–002` | 원격 출시 검증 수정 |
+| [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
 
 ## 실행 순서
 
-`CUI-001–004` → test.5 공개 세 OS 수용·현재 사용자 설치 완료 → `SDP-005` 재시작·대화 호출 증거 대기
+기존 test.5 근거 보존 → `DPS-001–004` → 전체 검사·test.6 수용 → `SDP-005` 실제 호출 → 승인된 안정판 게시
 
 ## 보존 자료
 
