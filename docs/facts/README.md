@@ -21,6 +21,8 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
+| 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
 | Claude Windows 사용자 설치 | [en](en/claude-windows-user-install.md) | [ko](ko/claude-windows-user-install.md) |
 | Codex 스킬 제공·자동 정리 | [en](en/codex-skill-delivery.md) | [ko](ko/codex-skill-delivery.md) |
 | 구현 계획 인계 | [en](en/implementation-plan-handoff.md) | [ko](ko/implementation-plan-handoff.md) |
