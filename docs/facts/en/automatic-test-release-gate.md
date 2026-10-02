@@ -11,7 +11,7 @@ aliases: ["numbered public test gate"]
 sources:
   - "repo:.agents/directives/references/ci-and-candidates.md#sha256:b1b2a41cfcad009d6561bcc57e94bdd4ebcaee771931ed3369d85a6935dcd52c"
   - "repo:.github/workflows/release.yml#sha256:993bf1709b27d5f6f5c18df46dab392fbb44570ecb3fcc9e0c4bd321fc5dc664"
-  - "repo:docs/public-test-product.json#sha256:02422bff33d1d2f60048d245315e9d6a13c7f7c3edc3e21d694bc8cdd6f196b4"
+  - "repo:docs/public-test-product.json#sha256:36db820b7e01e9c9a8f787e2a354ed6022babed8c8793731d3305380dc195741"
   - "repo:scripts/check-test-release-gate.py#sha256:75a37fd28d2aaf302c7079088b54c4cedb4060bd4497f4aa9219198ff024ce95"
 links: [source-development, v0-9-full-release]
 reviewed_revision: "git:168ee7a1de87dcc8943f1ef72fd60c6f3ab26dd0"
