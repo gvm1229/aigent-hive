@@ -956,3 +956,21 @@
 | [passed](runs/20261002T011443-55de2990e712.md) | 독립 지침 이식 스킬의 정본·세 배포 사본·기존 계약 확인 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261002T011553-b3bb0c45e716.md) | 독립 지침 이식 부속 문서의 실제 Rust 배포 컴파일 확인 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T011732-101885c8e5d3.md) | 지침 이식 부속 문서 포함 모든 호스트 Rust 배포 회귀 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T012111-8441fcce02d4.md) | 기본 23개·일회성 제외·개별 추가·빈 프로젝트 선택 회귀 | 70ce16e92e5dacd4ad8cd719fc5330d12486e478 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T012402-d8544ed6b35a.md) | 독립 이식 부속 문서의 정확한 소유 경로와 새 기본 전체 렌더 검증 | 70ce16e92e5dacd4ad8cd719fc5330d12486e478 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T012433-18d450b5033b.md) | 이식 부속 문서 소유권 등록 후 핵심·렌더 회귀 | 70ce16e92e5dacd4ad8cd719fc5330d12486e478 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T012857-4d9550adc723.md) | 명시한 기본 23개 적용 후 핵심·배포·렌더 관련 회귀 | 70ce16e92e5dacd4ad8cd719fc5330d12486e478 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T013747-d3814f4f0e01.md) | 프로젝트 자연어 호출과 플러그인 호출 정책 일치 회귀 | 4ac0625a1acf70ee99ddd9b9f697b156ea2ea1d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T014051-26dededa239c.md) | 자연어 호출 정책의 정본·세 배포 사본 계약 검증 | 4ac0625a1acf70ee99ddd9b9f697b156ea2ea1d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T014540-6595a90a2c7f.md) | 프로젝트 선택 정책 1의 최초 전환과 기존 설정 호환 회귀 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T015258-8ce21570219d.md) | 기존 기본 전환·Wiki 18개·맞춤과 빈 선택 지속·재적용 무변경 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T015341-6f5054213ecb.md) | 프로젝트 최초 정책 전환과 사용자 선택 유지 회귀 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T015453-30da3a14b927.md) | 최초 정책 전환·Wiki 조건·사용자 축소와 빈 선택 유지 집중 검증 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T015611-dbc6a7adfb44.md) | 모든 프로젝트 스킬 개별 선택과 최초 정책 전환·빈 선택 지속 검증 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T015939-f30fea5879b8.md) | 최초 정책 전환과 프로젝트 렌더 전체 회귀 | ea0088af247c70d7af97486484395b3fe6b7f601 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T020327-68387aad50f4.md) | 프로젝트 기본·맞춤 선택과 최초 갱신 안내 배포 계약 검증 | 6a4c2ed043bf0fae14a037c363edc9242f370ed4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T020412-424f05e2c2ff.md) | 기본 선택 안내와 명시적 프롬프트 개선 요청 범위 배포 회귀 | 6a4c2ed043bf0fae14a037c363edc9242f370ed4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T020635-67a420245a1d.md) | Rust 1.99 전체 정적 검사와 출시 도구 호환 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T020858-b35d1b416eed.md) | 전체 정적 검사 실패군의 함수 경계·시험 배치 정정 확인 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T020947-fd3d2d124512.md) | 프로젝트 선택 정규화의 역할 분리와 전체 Rust 정적 검사 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T021301-49cf6fa9b6ae.md) | 정규화 역할 분리 뒤 프로젝트 렌더와 선택 지속 검증 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
