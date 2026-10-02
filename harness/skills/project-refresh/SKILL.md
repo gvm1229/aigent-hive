@@ -59,6 +59,35 @@ Skills and their resources; report their paths and remaining duplicate discovery
 Report changed paths, preserved local changes, validation results, and remaining conflicts.
 Validation proves the Hive projection state, not application tests or the host's compliance.
 
+## Combined customized Skills
+
+Combine incoming Hive improvements with user project rules. Keeping only an old customized file
+does not prove that it received the new improvements.
+
+- An authenticated base permits automatic disjoint three-way changes. Inspect
+  `reports[].omitted_incoming_hunks`; omitted incoming Skill changes require a reviewed combination.
+- No old base for an occupied Skill means no automatic takeover. Never invent a base, move/delete
+  the file, or exclude the built-in as the default repair. Unrelated foreign Skills stay foreign.
+- For the user's requested combination, run
+  `hive project upgrade --target <project-root> --scan --skill-merge-inputs <skill-name> --output json`.
+  Read only the indicated local files and applicable project rules. The result supplies exact
+  incoming contents, project base digest and local/incoming digests.
+- Write a coherent combination of applicable new Hive workflow and user checks, not contradictory
+  concatenated files. Preserve legal notices, resource links and the incoming Skill name. Retain
+  other settings and unrelated files; ask only about unresolved meaning.
+- Use temporary JSON matching `project-skill-merge.schema.json`: `schema_version: 1`,
+  `product_version`, `project_base_digest`, and `files` with `path`, `local_digest`,
+  `incoming_digest`, `merged_content`. Cover each occupied companion needing combination.
+- Preview with `--skill-merges <request.json> --dry-run`. Show the full combined diff, preserved
+  checks, new improvements and any omitted rules with reasons. Obtain approval for that exact
+  content and `skill_merge_approval_digest`; general upgrade authority alone is insufficient.
+- Apply the same request with `--apply --approve-skill-merge <approved-digest>`, using existing
+  exact-path reservations. Changed local/incoming/base/target/plan requires fresh review. Never
+  force stale approval or manually edit ownership ledgers.
+- Run `--validate` without the old request. The new upstream stays the next comparison base;
+  the combined Skill is a local override. Verify the next unchanged preview has zero writes.
+  CLI checks prove bytes and authority, not semantic equivalence or host compliance.
+
 Merge contract:
 
 - `local == base`: incoming exact replacement
