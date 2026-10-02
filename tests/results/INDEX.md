@@ -23,12 +23,15 @@
 | [passed](legacy/7a363e9284817b1b54a7.md) | tests/work/vector-native-i1kfz91b/receipt.json | 1cf563ee25e2f13267a3bd6cb4e50b65c1580930 | 원본 JSON 참조 |
 | [passed](legacy/9089d350df2a3359ccf5.md) | tests/work/vector-cancel-current-4lbmwxvy/receipt.json | not specified in original | 원본 JSON 참조 |
 | [interrupted](legacy/916533e5e68cefac3ce5.md) | tests/work/vector-native-qi9p03le/receipt.json | 4fdf6c274188c26e3701a727617cdc1770c51fd8 | 원본 JSON 참조 |
+| [passed](legacy/937cab32117f2f51ca41.md) | tests/work/public-native-codex-0111-test6/report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/9f0277101aa83fd13c50.md) | tests/work/knowledge-benchmark-baseline-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a6f68b84af5b9ecef590.md) | tests/work/vector-cancel-current-657d14iq/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a7e8a73bd8325035a62b.md) | tests/work/verified-workflow-acceptance-fgea1nsk/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/aa4091affe6ad8b5066f.md) | tests/work/knowledge-benchmark-current-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ae4a49f7898bdf789322.md) | tests/work/knowledge-benchmark-baseline-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/af6a478d5074c2d3a277.md) | tests/work/public-native-claude-0111-test6/report.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/ba4d710b9d66c9272da0.md) | tests/work/vector-privacy-current-94wtgsk1/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/c0de6506202c5222a985.md) | tests/work/public-package-0111-test6/public-qualification.json | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | 원본 JSON 참조 |
 | [passed](legacy/d27c79661d5100c0fb04.md) | tests/work/dps-native-claude-0111/report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/d61774a5d427663a3673.md) | tests/work/knowledge-transfer-native/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/dae785a93844d6fec25c.md) | tests/work/vector-privacy-current-cqikgvng/receipt.json | not specified in original | 원본 JSON 참조 |
@@ -1011,3 +1014,4 @@
 | [passed](runs/20261002T044605-21bf4bc79c98.md) | 공개 test.6의 실제 Claude 세 경로 설치 검증 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T044757-e19a4db1e245.md) | 공개 test.6의 실제 Codex 격리 설치와 스킬 목록 검증 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T045454-045d353094ea.md) | 공개 test.6의 기본 23개와 전역 선호·개별 선택 보존 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T052556-fc750bef65db.md) | 공개 test.6 기록과 계획·게시 경계의 관련 문서 검사 | c6e819704f5b203412472c6492f8c95fcd3a4b3b | Windows-11-10.0.26300-SP0 |
