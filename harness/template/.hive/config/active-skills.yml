@@ -140,7 +140,7 @@ skills:
   consent_digest: null
 - name: project-refresh
   source_type: built-in
-  content_digest: sha256:dd6012ef058aa3f08690daed211ab690ef4bccbb8eb1fa3710eeee72a4dd9ffc
+  content_digest: sha256:013ba0983c551d7c41d72c2394a82349f0e935dd523f9f6ab999546e33718df9
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -149,7 +149,7 @@ skills:
   consent_digest: null
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:a13ed7be45b3ee507f77517df44200513242ed54dc97e2137433eb8cefbaa428
+  content_digest: sha256:650ae6135ec398c2ef9bceb59b336b41ce54672ccb6f1e49e0799023e629ad3c
   side_effect_class: project-write
   capabilities:
   - filesystem-read

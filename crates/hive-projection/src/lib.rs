@@ -1263,9 +1263,9 @@ fn localized_skill_text(
         ),
         "prompt-refine" => (
             "Refine prompt",
-            "Turn a request into an approval-ready prompt before execution.",
+            "Draft or refine a prompt only when the user requests prompt authoring.",
             "프롬프트 다듬기",
-            "실행 전 승인받을 수 있도록 요청을 명확한 프롬프트로 다듬습니다.",
+            "프롬프트 작성이나 개선을 요청했을 때 뜻을 보존하며 다듬습니다.",
         ),
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",

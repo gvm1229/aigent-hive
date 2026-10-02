@@ -31,7 +31,7 @@ Configure a consumer project without copying Hive source-development instruction
    - In the guided workflow, ask for setup mode first, then ask for project kind in both modes.
    - When `project-setup` supplies a schema-valid evidence record, accept only
      `explicit` or `strong` inferred facts and ask for every `unresolved` required field.
-   - In `expedited` mode, tell the user that the signed CLI bridge inherits global language, Wiki, persona, and Skill preferences. Do not ask those preference questions.
+   - In `expedited` mode, tell the user that the signed CLI bridge inherits global language, Wiki, and persona, and selects the release's daily-work project suite. Do not ask those preference questions.
    - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, Skill selection, and an equal-or-higher usage-guard threshold when the global guard is enabled.
    - Infer repository facts before asking the user.
    - Do not infer preference, risk tolerance, host choice, or optional Skill approval.
@@ -92,7 +92,7 @@ Ask only questions whose quick-answers cannot be established from the repository
 
 1. **Setup mode**
    - Offer `expedited` or `custom`.
-   - `expedited` inherits global interface language, Wiki enablement and language, persona, and selected Skills through the signed CLI bridge.
+   - `expedited` inherits global interface language, Wiki enablement and language, and persona through the signed CLI bridge; project Skills default to `daily-work`.
    - `custom` records explicit project overrides for those preferences and, only when the global guard is enabled, a user-chosen equal-or-higher usage-guard threshold.
 2. **Project kind**
    - Ask this in both guided modes.
@@ -107,7 +107,7 @@ Ask only questions whose quick-answers cannot be established from the repository
    - Interface language: `en` or `ko`.
    - Wiki: explicit `enabled` state and `en`, `ko`, or `both`.
    - Persona: `strict`, `balanced`, `friendly`, or `custom`; require a non-empty custom description.
-   - Skills: recommended suite or an explicit non-empty built-in Skill list.
+   - Skills: `daily-work` (23) or an explicit built-in list, including an intentionally empty list.
    - Usage guard: inherit the global threshold or choose a higher integer from `1` through `99`. Do not suggest or create a project-type default.
    - Do not silently enable a project Wiki when the global Wiki is disabled. The signed CLI must either keep it disabled or include a global re-enable in the same approved action.
 5. **Primary host**
@@ -147,6 +147,22 @@ Ask only questions whose quick-answers cannot be established from the repository
    - A `Stop` event always returns a neutral allow result.
 13. **Write preview**
     - Show files, marker edits, ignored SQLite paths, and any conflicts.
+
+## Project Skill choices
+
+- Show the complete daily-work list before apply, one Skill per entry with its purpose.
+  Exclude user-setup, project-setup, custom-subagent-create, knowledge-transfer and
+  project-transition from the default; user-setup remains user-scope only.
+- Offer the full supported project catalog for customization, including the four opt-in
+  specialized Skills. Never invent a small individual selection on the user's behalf.
+- If the user customizes Skills during expedited setup, reuse the validated inherited language,
+  Wiki and persona as custom answers; ask only about the requested selection.
+- Show dependency closure before apply. Removing a required Skill also requires removing its
+  dependent selections; never silently re-add a Skill the user explicitly excluded.
+- A disabled Wiki excludes the five daily-work knowledge Skills and explains the 18-Skill result.
+- Show selected Skills and their verified plugin or local delivery. Physical folder count is not
+  availability. Selected Skills may route relevant natural-language requests; they do not grant
+  file mutation, publication, external delivery, model launches or hook consent.
 
 ## Fixed product decisions
 

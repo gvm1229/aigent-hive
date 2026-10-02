@@ -27,6 +27,17 @@ Use only for an installed consumer project.
 - Resolve the project and verified executable, inspect Git changes and Hive ownership, and
   preserve unrelated edits. Never select a different release or install it without authority.
 
+## First project Skill policy update
+
+- A missing project_skill_policy_version proposes daily-work as the new default, with 23 Skills
+  when Wiki is enabled. Explain the selected list, removals and plugin/local delivery in preview.
+- The user can accept the default or customize it. For a requested customization, use project-setup
+  to change only the Skill selection with the other validated preferences retained, then preview
+  again. Do not force the default or restart unrelated questions.
+- Policy 1 records the final choice. Later upgrades retain that choice, including an empty list.
+  Preserve modified and foreign Skills and explain remaining duplicates; global updates never
+  apply this transition across projects.
+
 ## Upgrade workflow
 
 Resolve the authenticated user root from Hive setup; pass it to every command below.
