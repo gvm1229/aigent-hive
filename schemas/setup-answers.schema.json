@@ -510,7 +510,7 @@
           "properties": {
             "mode": { "const": "recommended" },
             "recommended_suite": {
-              "enum": ["web-developer", "game-developer", "non-developer"]
+              "enum": ["daily-work", "web-developer", "game-developer", "non-developer"]
             }
           }
         },
@@ -522,7 +522,7 @@
             "mode": { "const": "individual" },
             "selected": {
               "type": "array",
-              "minItems": 1,
+              "minItems": 0,
               "uniqueItems": true,
               "items": { "$ref": "#/$defs/skill_name" }
             }

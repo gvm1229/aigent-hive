@@ -3512,14 +3512,13 @@ pub(crate) fn operational_wiki_preferences(user_root: &Path) -> Result<WikiPrefe
 
 pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPreferences, String> {
     let root = super::user_install::open_user_root_for_setup(user_root)?;
-    let (config, mut selected_project_skills) = resolved_operational_skills(&root)
+    let (config, _) = resolved_operational_skills(&root)
         .map_err(|error| error.message().to_owned())?
         .ok_or_else(|| {
             "global Hive setup is required before project expedited or custom setup".to_owned()
         })?;
-    selected_project_skills.retain(|name| name != "user-setup");
-    selected_project_skills.sort();
-    selected_project_skills.dedup();
+    let selected_project_skills = hive_projection::project_default_skills()
+        .map_err(|error| error.to_string())?;
     Ok(GlobalProjectPreferences {
         codex_plugin_files: std::collections::BTreeMap::new(),
         interface_language: config.interface_language.as_str().to_owned(),

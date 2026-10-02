@@ -1,5 +1,7 @@
 schema_version: 1
 project_skill_suites:
+  - id: daily-work
+    skills: [adversarial-judge, amend-directive, code-polish, humanize-kor, judge-evidence, knowledge-capture, knowledge-maintain, knowledge-promote, knowledge-recall, knowledge-scan, multi-goal, product-update, project-refresh, prompt-refine, quick-answer, research-best-practices, run-checkpoint, run-handoff, run-resume, ship, team-execution, usage-guard, verified-workflow]
   - id: web-developer
     skills: [project-setup, code-polish, humanize-kor, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-scan, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, judge-evidence, adversarial-judge]
   - id: game-developer

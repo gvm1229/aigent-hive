@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 pub mod hook_config;
 
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
+const PROJECT_SUITES_YAML: &str = include_str!("../../../harness/project-setup/skill-suites.yml");
 const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
@@ -687,19 +688,51 @@ pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, Proj
 ///
 /// Returns an error if the embedded catalog is invalid, an optional Skill lacks
 /// exact source/consent/capability proof, or projected names collide.
+#[derive(Deserialize)]
+struct ProjectDefaultCatalog {
+    project_skill_suites: Vec<ProjectDefaultSuite>,
+}
+
+#[derive(Deserialize)]
+struct ProjectDefaultSuite {
+    id: String,
+    skills: Vec<String>,
+}
+
+/// Return the explicitly maintained daily-work project selection.
+///
+/// # Errors
+/// Returns an error when the embedded suite is missing, duplicated or contains unavailable names.
+pub fn project_default_skills() -> Result<Vec<String>, ProjectionError> {
+    let suites: ProjectDefaultCatalog = serde_yaml::from_str(PROJECT_SUITES_YAML)
+        .map_err(|error| ProjectionError::new("hive.skill-catalog-invalid", error.to_string()))?;
+    let mut selected = suites.project_skill_suites.into_iter()
+        .find(|suite| suite.id == "daily-work")
+        .ok_or_else(|| ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is missing"))?
+        .skills;
+    selected.sort();
+    let catalog = embedded_catalog()?;
+    let unique = selected.iter().collect::<BTreeSet<_>>();
+    if unique.len() != selected.len() || selected.iter().any(|name| {
+        name == "user-setup" || !catalog.skills.iter().any(|entry| {
+            entry.name == *name && entry.availability == Availability::Implemented
+        })
+    }) {
+        return Err(ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is invalid"));
+    }
+    Ok(selected)
+}
+
+/// Compile the maintained daily-work suite to the selected host.
+///
+/// # Errors
+/// Returns an error for invalid embedded resources or optional source proofs.
 pub fn compile_projection(
     host: Host,
     optional_sources: &[OptionalSkillSource],
 ) -> Result<Projection, ProjectionError> {
     let catalog = embedded_catalog()?;
-    let selected = catalog
-        .skills
-        .iter()
-        .filter(|entry| {
-            entry.availability == Availability::Implemented && entry.name != "user-setup"
-        })
-        .map(|entry| entry.name.clone())
-        .collect();
+    let selected = project_default_skills()?.into_iter().collect();
     compile_selected(
         host,
         optional_sources,
@@ -2956,12 +2989,11 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 34 } else { 61 };
+            assert_eq!(first.active_skills.skills.len(), 23);
+            let expected_file_count = if host == Host::Claude { 30 } else { 53 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
-                "project-setup",
                 "research-best-practices",
                 "judge-evidence",
                 "adversarial-judge",
@@ -2975,7 +3007,6 @@ description: Inspect one local file without changing it.
                 "product-update",
                 "usage-guard",
                 "knowledge-maintain",
-                "project-transition",
             ] {
                 assert!(first
                     .files
@@ -3363,11 +3394,29 @@ description: Inspect one local file without changing it.
         let metadata = std::str::from_utf8(
             projection
                 .files
-                .get(".agents/skills/project-setup/agents/openai.yaml")
+                .get(".agents/skills/knowledge-recall/agents/openai.yaml")
                 .expect("project Skill metadata"),
         )
         .expect("project Skill metadata should be UTF-8");
         assert!(metadata.contains("allow_implicit_invocation: false"));
+    }
+
+    #[test]
+    fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
+        let default = super::project_default_skills().unwrap();
+        assert_eq!(default.len(), 23);
+        let excluded = ["user-setup", "project-setup", "custom-subagent-create", "knowledge-transfer", "project-transition"];
+        for name in excluded {
+            assert!(!default.iter().any(|selected| selected == name));
+        }
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            let selected = excluded[1..].iter().map(|name| (*name).to_owned()).collect::<Vec<_>>();
+            let projection = compile_project_projection(host, &selected, &[]).unwrap();
+            assert_eq!(projection.active_skills.skills.len(), 4);
+            let empty = compile_project_projection(host, &[], &[]).unwrap();
+            assert_eq!(empty.active_skills.skills.len(), 0);
+            assert_eq!(empty.files.len(), 1);
+        }
     }
 
     #[test]
@@ -3423,7 +3472,8 @@ description: Inspect one local file without changing it.
     }
 
     fn assert_projected_builtin_sources<const N: usize>(expected: [(&str, &[u8], &[u8]); N]) {
-        let projection = compile_projection(Host::Codex, &[]).expect("projection");
+        let selected = expected.iter().map(|(name, _, _)| (*name).to_owned()).collect::<Vec<_>>();
+        let projection = compile_project_projection(Host::Codex, &selected, &[]).expect("projection");
         for (name, embedded, template) in expected {
             assert_eq!(embedded, template);
             assert_eq!(

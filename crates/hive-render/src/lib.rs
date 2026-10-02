@@ -3180,7 +3180,7 @@ fn validate_project_skill_catalog(
     });
     if catalog.schema_version != 1
         || !catalog.mandatory_skills.is_empty()
-        || suite_ids != BTreeSet::from(["game-developer", "non-developer", "web-developer"])
+        || suite_ids != BTreeSet::from(["daily-work", "game-developer", "non-developer", "web-developer"])
         || !suites_valid
         || !dependencies_valid
     {
@@ -7092,12 +7092,10 @@ mod tests {
     fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
         let new_body_skills = [
             "quick-answer",
-            "project-setup",
             "code-polish",
             "humanize-kor",
             "verified-workflow",
             "knowledge-scan",
-            "knowledge-transfer",
             "knowledge-maintain",
             "knowledge-capture",
             "prompt-refine",
@@ -7107,7 +7105,6 @@ mod tests {
             "ship",
             "amend-directive",
             "run-handoff",
-            "project-transition",
             "run-resume",
             "run-checkpoint",
             "knowledge-promote",
@@ -7117,7 +7114,6 @@ mod tests {
             "adversarial-judge",
             "team-execution",
             "multi-goal",
-            "custom-subagent-create",
         ];
         let mut expected = new_body_skills
             .iter()
@@ -7132,6 +7128,7 @@ mod tests {
             "knowledge-recall/references/confidential.md",
             "knowledge-capture/references/ingest.md",
             "run-checkpoint/references/policy-review.md",
+            "amend-directive/references/transplant.md",
         ] {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
@@ -9182,7 +9179,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 32);
+        assert_eq!(deletions.len(), 29);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
