@@ -346,6 +346,7 @@ pub struct GlobalProjectPreferences {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct EffectiveProjectPreferences {
+    project_skill_policy_version: u32,
     codex_plugin_files: skill_delivery::PluginSkillFiles,
     provenance: &'static str,
     interface_language: String,
@@ -486,6 +487,8 @@ struct ProjectBaseFile {
 
 #[derive(Debug, Deserialize)]
 struct InstalledHarness {
+    #[serde(default)]
+    project_skill_policy_version: u32,
     schema_version: u32,
     harness_version: String,
     source_release_version: String,
@@ -900,7 +903,7 @@ pub fn project_upgrade_candidate_with_plugin_in(
     target_dir: &Dir,
     plugin: &skill_delivery::PluginSkillFiles,
 ) -> Result<ProjectUpgradeCandidate, RenderError> {
-    let answers = read_installed_answers(target_dir)?;
+    let mut answers = read_installed_answers(target_dir)?;
     let answers_value =
         serde_json::to_value(&answers).map_err(|error| RenderError::Internal(error.to_string()))?;
     let resolution = read_installed_resolution(target_dir)?;
@@ -924,6 +927,30 @@ pub fn project_upgrade_candidate_with_plugin_in(
             }
             preferences.selected_project_skills = migration.selected;
             skill_merges = migration.merges;
+        }
+    }
+    if harness.project_skill_policy_version > 1 {
+        return Err(RenderError::Verification("project Skill policy version is unsupported".to_owned()));
+    }
+    if harness.project_skill_policy_version == 0 {
+        if answers.setup_mode == "custom" {
+            answers.skills = Some(ProjectSkillSelection {
+                mode: "recommended".to_owned(),
+                recommended_suite: Some("daily-work".to_owned()),
+                selected: None,
+            });
+        }
+        if let Some(preferences) = effective_preferences.as_mut() {
+            preferences.project_skill_policy_version = 1;
+            preferences.selected_project_skills = hive_projection::project_default_skills()
+                .map_err(|error| RenderError::Internal(error.to_string()))?;
+            if !preferences.wiki_enabled {
+                preferences.selected_project_skills.retain(|name| !is_project_knowledge_skill(name));
+            }
+        }
+        normalized_fields.push("project_skill_policy_version".to_owned());
+        if !normalized_fields.iter().any(|field| field == "selected_project_skills") {
+            normalized_fields.push("selected_project_skills".to_owned());
         }
     }
     if let Some(preferences) = effective_preferences.as_mut() {
@@ -2889,6 +2916,7 @@ fn resolve_effective_project_preferences(
     validate_global_project_preferences(global)?;
     let mut effective = match answers.setup_mode.as_str() {
         "expedited" => EffectiveProjectPreferences {
+            project_skill_policy_version: 1,
             codex_plugin_files: BTreeMap::new(),
             provenance: "global-inherited",
             interface_language: global.interface_language.clone(),
@@ -2926,6 +2954,7 @@ fn resolve_effective_project_preferences(
                 .as_ref()
                 .expect("custom preferences were validated");
             EffectiveProjectPreferences {
+                project_skill_policy_version: 1,
                 codex_plugin_files: BTreeMap::new(),
                 provenance: "project-custom",
                 interface_language: answers
@@ -2961,15 +2990,7 @@ fn resolve_effective_project_preferences(
             .map(|name| -> Result<Option<String>, RenderError> {
                 let canonical = canonical_builtin_skill_name(&name)
                     .map_err(|error| RenderError::Internal(error.to_string()))?;
-                let is_knowledge_skill = matches!(
-                    canonical.as_deref().unwrap_or(name.as_str()),
-                    "knowledge-capture"
-                        | "knowledge-recall"
-                        | "knowledge-promote"
-                        | "knowledge-maintain"
-                        | "knowledge-scan"
-                        | "knowledge-transfer"
-                );
+                let is_knowledge_skill = is_project_knowledge_skill(canonical.as_deref().unwrap_or(name.as_str()));
                 Ok((!is_knowledge_skill).then_some(name))
             })
             .collect::<Result<Vec<_>, _>>()?
@@ -2979,6 +3000,11 @@ fn resolve_effective_project_preferences(
     }
     effective.selected_project_skills.sort();
     Ok(Some(effective))
+}
+
+fn is_project_knowledge_skill(name: &str) -> bool {
+    matches!(name, "knowledge-capture" | "knowledge-recall" | "knowledge-promote"
+        | "knowledge-maintain" | "knowledge-scan" | "knowledge-transfer")
 }
 
 fn validate_global_project_preferences(
@@ -3952,6 +3978,9 @@ fn render_harness_toml(
         elevated = quoted(&answers.elevated_judge_quorum),
         critical = quoted(&answers.critical_judge_quorum),
     );
+    writeln!(&mut output, "project_skill_policy_version = {}",
+        effective_preferences.map_or(1, |preferences| preferences.project_skill_policy_version))
+        .expect("writing to String cannot fail");
     if let Some(preferences) = effective_preferences {
         let selected = preferences
             .selected_project_skills
@@ -5581,6 +5610,9 @@ fn read_installed_harness<T: TargetRead + ?Sized>(
 fn effective_preferences_from_harness(
     harness: &InstalledHarness,
 ) -> Result<Option<EffectiveProjectPreferences>, RenderError> {
+    if harness.project_skill_policy_version > 1 {
+        return Err(RenderError::Verification("project Skill policy version is unsupported".to_owned()));
+    }
     let Some(provenance) = harness.preference_provenance.as_deref() else {
         return Ok(None);
     };
@@ -5626,6 +5658,7 @@ fn effective_preferences_from_harness(
     };
     validate_global_project_preferences(&global).map_err(as_verification)?;
     Ok(Some(EffectiveProjectPreferences {
+        project_skill_policy_version: harness.project_skill_policy_version,
         codex_plugin_files: BTreeMap::new(),
         provenance: if provenance == "global-inherited" {
             "global-inherited"
@@ -5682,7 +5715,8 @@ fn validate_harness_cross_file(
                 && custom_preferences_match_answers(answers, preferences)?
         }
     };
-    if harness.project_name != answers.project_name
+    if harness.project_skill_policy_version != 1
+        || harness.project_name != answers.project_name
         || harness.project_kind != answers.project_kind
         || harness.primary_host != answers.primary_host
         || harness.external_capability_detection != resolution.detection
@@ -9940,4 +9974,52 @@ mod tests {
             .join(".agents/skills/prompt-refine/SKILL.md")
             .is_file());
     }
+    #[test]
+    fn legacy_policy_uses_daily_work_once_and_keeps_subsequent_custom_or_empty_selection() {
+        for wiki_enabled in [true, false] {
+            let temporary = tempfile::tempdir().unwrap();
+            let target = temporary.path().canonicalize().unwrap();
+            let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+            let global = test_global_preferences();
+            answers.usage_stop_remaining_percent = global.usage_stop_remaining_percent;
+            answers.setup_mode = "custom".to_owned();
+            answers.interface_language = Some("ko".to_owned());
+            answers.wiki = Some(super::ProjectWikiPreferences { enabled: wiki_enabled, language: "ko".to_owned() });
+            answers.persona = Some(super::ProjectPreferenceSelection { id: "strict".to_owned(), custom_description: None });
+            answers.skills = Some(ProjectSkillSelection { mode: "individual".to_owned(), recommended_suite: None, selected: Some(vec!["prompt-refine".to_owned()]) });
+            let path = temporary.path().join("answers.yml");
+            fs::write(&path, serde_yaml::to_string(&answers).unwrap()).unwrap();
+            let mut request = SetupRequest { target: &target, answers: &path,
+                capabilities: &fixture("capabilities-codex-omx.json"), mode: SetupMode::Apply,
+                reconfigure_roles: BTreeSet::new(), global_preferences: Some(global) };
+            execute_setup(&request).unwrap();
+            let harness_path = target.join(".hive/config/harness.toml");
+            let before = fs::read_to_string(&harness_path).unwrap();
+            fs::write(&harness_path, before.replace("project_skill_policy_version = 1\n", "")).unwrap();
+            let root = open_target_capability(&target).unwrap();
+            let migrated = project_upgrade_candidate_in(&root).unwrap();
+            assert!(migrated.normalized_fields.iter().any(|name| name == "project_skill_policy_version"));
+            let config: toml::Value = toml::from_str(std::str::from_utf8(&migrated.support_files[".hive/config/harness.toml"]).unwrap()).unwrap();
+            assert_eq!(config["selected_project_skills"].as_array().unwrap().len(), if wiki_enabled { 23 } else { 18 });
+            assert_eq!(config["interface_language"].as_str(), Some("ko"));
+            assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));
+            let saved: serde_yaml::Value = serde_yaml::from_slice(&migrated.support_files[".hive/setup-answers.yml"]).unwrap();
+            assert_eq!(saved["skills"]["recommended_suite"].as_str(), Some("daily-work"));
+            for selected in [vec!["ship".to_owned()], vec![]] {
+                answers.skills.as_mut().unwrap().selected = Some(selected.clone());
+                fs::write(&path, serde_yaml::to_string(&answers).unwrap()).unwrap();
+                request.mode = SetupMode::Apply;
+                execute_setup(&request).unwrap();
+                request.mode = SetupMode::Validate;
+                execute_setup(&request).unwrap();
+                let next = project_upgrade_candidate_in(&root).unwrap();
+                assert_eq!(next.normalized_fields.len(), 0);
+                let config: toml::Value = toml::from_str(std::str::from_utf8(&next.support_files[".hive/config/harness.toml"]).unwrap()).unwrap();
+                assert_eq!(config["selected_project_skills"].as_array().unwrap().len(), selected.len());
+                request.mode = SetupMode::Apply;
+                assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
+            }
+        }
+    }
+
 }
