@@ -155,11 +155,8 @@ class Phase1CopierParity(Phase1CliTestCase):
         active_ledger = read_yaml(active_ledger_path)
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
-        expected_names = sorted(
-            path.name
-            for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
-            if path.is_dir() and path.name != "user-setup"
-        )
+        suites = read_yaml(REPOSITORY_ROOT / "harness/project-setup/skill-suites.yml")
+        expected_names = sorted(next(item["skills"] for item in suites["project_skill_suites"] if item["id"] == "daily-work"))
         self.assertEqual([entry["name"] for entry in skills], expected_names)
         for projection_root in projection_roots:
             projected_skill_root = target / projection_root / "skills"

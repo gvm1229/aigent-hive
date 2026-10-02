@@ -21,6 +21,7 @@ ACTION_RESULT_SCHEMA = json.loads(
 )
 # Exact shipped companion inventory; never treat a whole references directory as owned.
 BUILTIN_REFERENCE_PATHS = (
+    "amend-directive/references/transplant.md",
     "knowledge-capture/references/ingest.md",
     "knowledge-recall/references/confidential.md",
     "run-checkpoint/references/policy-review.md",

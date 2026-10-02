@@ -35,7 +35,7 @@ DIRECTIVE_SOURCE = ROOT / "harness" / "directives"
 DIRECTIVE_DESTINATION = (
     ROOT / "harness" / "template" / ".agents" / "directives"
 )
-ACTIVE_SKILLS_LEDGER = ROOT / "harness" / "template" / ".hive" / "config" / "active-skills.yml"
+ACTIVE_SKILLS_LEDGER = ROOT / "harness" / "template" / ".hive" / "config" / "active-skills.yml.jinja"
 
 
 def sync_directories(
