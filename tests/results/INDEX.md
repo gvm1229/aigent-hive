@@ -29,6 +29,7 @@
 | [passed](legacy/aa4091affe6ad8b5066f.md) | tests/work/knowledge-benchmark-current-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ae4a49f7898bdf789322.md) | tests/work/knowledge-benchmark-baseline-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/ba4d710b9d66c9272da0.md) | tests/work/vector-privacy-current-94wtgsk1/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/d27c79661d5100c0fb04.md) | tests/work/dps-native-claude-0111/report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/d61774a5d427663a3673.md) | tests/work/knowledge-transfer-native/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/dae785a93844d6fec25c.md) | tests/work/vector-privacy-current-cqikgvng/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e08157b1c8e5ba7fd862.md) | tests/work/knowledge-benchmark-current-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
@@ -974,3 +975,35 @@
 | [failed](runs/20261002T020858-b35d1b416eed.md) | 전체 정적 검사 실패군의 함수 경계·시험 배치 정정 확인 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T020947-fd3d2d124512.md) | 프로젝트 선택 정규화의 역할 분리와 전체 Rust 정적 검사 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T021301-49cf6fa9b6ae.md) | 정규화 역할 분리 뒤 프로젝트 렌더와 선택 지속 검증 | c56bc821ceb79aade0c6f1608bef78f1e4272e9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T022118-4802e8bdf2b1.md) | 0.11.1 추가 제품 범위 전체 Rust 회귀 | 78a73cda74a6c6e1fd7b54f8f7d88685fac63b4a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T022737-d415a5d13ece.md) | 기존 버전 실제 빈 선택 원본과 전체 역사 갱신 보존 회귀 | 78a73cda74a6c6e1fd7b54f8f7d88685fac63b4a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T022933-f8b707c03f5d.md) | 이전 버전 갱신의 정책 전환·병합·원본 보존·위조 거절 확인 | 78a73cda74a6c6e1fd7b54f8f7d88685fac63b4a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T023138-cf1b99203a01.md) | 추가 제품 전체 Rust 회귀와 역사 갱신 정정 최종 확인 | 1648eb48ec1fe5c0beb87a9c17fd32453ca02a9f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T023521-1f073b8a184f.md) | 전체 Python 검증에 사용할 정확한 현재 실행 파일 생성 | 1648eb48ec1fe5c0beb87a9c17fd32453ca02a9f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T023615-4404603c2d46.md) | 0.11.1 추가 범위 전체 Python 계약·설치·보존·출시 회귀 | 1648eb48ec1fe5c0beb87a9c17fd32453ca02a9f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T023616-4a6a26af4687.md) | Python conformance: documentation, security, contract, integration, release | 1648eb48ec1fe5c0beb87a9c17fd32453ca02a9f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T023927-e0f4a4bae742.md) | 코드 형식 정리 이후 정본 지문·문서 위키 계약 재검증 | 1648eb48ec1fe5c0beb87a9c17fd32453ca02a9f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T024020-0c1031f4a82c.md) | 최종 소스 지문 동기화 뒤 전체 Python 검증 | 4aef6282ef46fd1af6f618a3604396a0d430e6ff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T024021-7c7dc5d85a0b.md) | Python conformance: documentation, security, contract, integration, release | 4aef6282ef46fd1af6f618a3604396a0d430e6ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T025014-2edaab8a3f44.md) | Copier와 Rust의 기본 23개·호출 정책·소유 파일 일치 검증 | 4aef6282ef46fd1af6f618a3604396a0d430e6ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T025219-b9ec2a9d334a.md) | 기본 23개·호출 정책과 모든 Copier 배포 계약 최종 확인 | 4aef6282ef46fd1af6f618a3604396a0d430e6ff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T025519-1c6e33c9c9cf.md) | 배포 사본 동기화 뒤 전체 Python 최종 검증 | ad957b894a19b72fe6f030a4e6d40d24ea77f5e3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T025520-fef6144978b1.md) | Python conformance: documentation, security, contract, integration, release | ad957b894a19b72fe6f030a4e6d40d24ea77f5e3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T030459-e5214021d09d.md) | 기본 스킬 변경의 전체 보호·공급·현재 구성 기대값 회귀 | ad957b894a19b72fe6f030a4e6d40d24ea77f5e3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T030811-0129c34cc4e6.md) | 기본 구성의 전체 시험 자료 정정 뒤 Python 수용 검증 | 446fa915938bd73e8a772440f82635748fdfacf1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T030812-ecd43b10aee3.md) | Python conformance: documentation, security, contract, integration, release | 446fa915938bd73e8a772440f82635748fdfacf1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T031435-54f00a104fe2.md) | 최종 정본 지문과 승인 공지 반영 뒤 전체 Python 검사 | 34fdf2cb0d1d6b013c0563782ab24ae5a99c1290 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T031437-c8f6627b0e7d.md) | Python conformance: documentation, security, contract, integration, release | 34fdf2cb0d1d6b013c0563782ab24ae5a99c1290 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T033035-9ad2e314ef5b.md) | 기본 23개 연결 설정과 전역 선호 보존 검증 | 34fdf2cb0d1d6b013c0563782ab24ae5a99c1290 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T033123-81bfc1cb7388.md) | 기본 23개 변경 후 전체 통합 검사 | 9582f970ad22658468a9183c2f9d7f7c47e6a328 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T033124-9feed3433df2.md) | Python conformance: integration | 9582f970ad22658468a9183c2f9d7f7c47e6a328 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T033536-3616b903f78c.md) | 이전 안정판의 기본 전환과 보존 복구 회귀 | 9582f970ad22658468a9183c2f9d7f7c47e6a328 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T033727-5f41480ddf49.md) | 지식과 위키의 남은 전체 통합 검사 | 6977057abdb35e3a1559bb802ee675f72a84668f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T033932-d2aad2bad221.md) | 프로젝트 기본 스킬 변경 후 전체 출시 검사 | 6977057abdb35e3a1559bb802ee675f72a84668f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T033933-1c7a416fe202.md) | Python conformance: release | 6977057abdb35e3a1559bb802ee675f72a84668f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T034140-8cfc951d63f8.md) | 최종 소스의 Hive 실행 파일 빌드 | 6977057abdb35e3a1559bb802ee675f72a84668f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T034240-f85fe774332c.md) | 추가 기능 적용 실행 파일의 실제 Claude 세 경로 설치 회귀 | 6977057abdb35e3a1559bb802ee675f72a84668f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T034613-41b692e2444f.md) | 최종 추가 범위의 전체 Rust 검사 | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T034844-1de4af08f291.md) | 추가 범위 최종 전체 Python 검사 | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T034845-99787a224a2b.md) | Python conformance: documentation, security, contract, integration, release | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T040612-86c48414b643.md) | Rust 1.99 최종 전체 Clippy 검사 | 89bb172c2ea036ee32bf66f4777edcf668a77c20 | Windows-11-10.0.26300-SP0 |
