@@ -1015,3 +1015,5 @@
 | [passed](runs/20261002T044757-e19a4db1e245.md) | 공개 test.6의 실제 Codex 격리 설치와 스킬 목록 검증 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T045454-045d353094ea.md) | 공개 test.6의 기본 23개와 전역 선호·개별 선택 보존 | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T052556-fc750bef65db.md) | 공개 test.6 기록과 계획·게시 경계의 관련 문서 검사 | c6e819704f5b203412472c6492f8c95fcd3a4b3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T100650-564bc77ac85b.md) | 승인된 현재 사용자 test.6 설치와 설정·지식 보존 검증 | 4fecc1d7a7d2f18f62d20263a4dbf0d808756712 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T100757-87a70ec108b5.md) | 승인된 test.6 현재 사용자 새 Codex 서버의 스킬 목록 검증 | 4fecc1d7a7d2f18f62d20263a4dbf0d808756712 | Windows-11-10.0.26300-SP0 |
