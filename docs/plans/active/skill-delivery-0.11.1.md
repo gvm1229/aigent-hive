@@ -3,6 +3,7 @@
 > Plan version: 0.11.1
 > Scope: product
 > 최초 공개 시험 대상: `0.11.1-test.1`
+> 최종 공개 수용 대상: `0.11.1-test.5`
 
 ## 목적과 승인 경계
 
@@ -23,7 +24,7 @@
 - [x] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
   - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:ddd6a0c570ad81f6929700ee0c282ecb2a2df68b8bb5e1ccb5b6410c47775bc3
 - [ ] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
-  - state: awaiting-user-authority; depends: SDP-004; owner: 유지관리자; reason: 0.11.1-test.1 공개 세 OS 수용 완료, 현재 사용자 설치·Codex 재시작·실제 발견과 호출의 별도 승인 필요
+  - state: awaiting-external-evidence; depends: SDP-004; owner: 유지관리자; reason: test.5 세 OS·승인된 현재 사용자 설치·지식 489개와 설정 2개 보존·새 실제 서버의 스킬 28개 발견 통과, Codex 완전 재시작·GUI 목록과 명시·자연어 호출의 사용자 증거 필요
 
 ## 구현 인계
 
@@ -43,5 +44,5 @@
 ## 실행 인계
 
 - [공개 수용 근거](../../research/skill-delivery-public-test-0.11.1.md): 정확한 소스·후보·게시·세 OS 실행 파일 지문과 통과 범위
-- Agent 소유 작업 0건; 미완료 1건은 현재 사용자 설치의 승인과 실제 Codex 새 세션 수용
+- 제품 구현·test.5 공개 세 OS 수용·승인된 현재 사용자 설치 완료; 미완료 SDP-005의 Codex 완전 재시작과 실제 새 대화 호출 수용 필요
 - 승인 후 정확한 시험판 적용·사용자 자동 정리·대상 프로젝트 갱신·Codex 재시작·스킬 목록과 두 호출 방식 확인

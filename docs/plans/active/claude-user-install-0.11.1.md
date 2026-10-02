@@ -21,7 +21,7 @@
 - [x] [CUI-003] 반복 실패·복구·질문 도구 안내와 배포 복사본 정합화
   - state: complete; evidence: repo:tests/results/runs/20261001T163513-356483af2a78.md#sha256:f1eb86406c07d6c8f4a28a9cb4b5d875e7b767d72ec1c5736cd9448f05951b7c
 - [x] [CUI-004] 수정 실행 파일의 실제 Windows Claude CLI·전체 회귀·근거 기록
-  - state: complete; evidence: repo:docs/research/claude-user-install-0.11.1.md#sha256:b36c334d80e7c0db2140b4fd7effa801e5752796d84876e3a2734f138a3664bd
+  - state: complete; evidence: repo:docs/research/claude-user-install-0.11.1.md#sha256:f11e61b47b1ec0f96ff7d9a60569903cc2e33260f2c08cc698ab93a9d2a57019
 
 ## 구현 인계
 

@@ -3,7 +3,7 @@
 - 제품 버전: `0.11.1`
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
-- 공개 시험 수용: `0.11.1-test.1`
+- 공개 시험 수용: `0.11.1-test.5`
 - 다음 시험 대상: `0.11.1-test.5`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
@@ -15,17 +15,17 @@
 - 현재 등록 항목: 10/11 완료
 
 - `agent-owned`: 없음
-- `awaiting-user-authority`: `SDP-005`
-- `awaiting-external-evidence`: 없음
+- `awaiting-user-authority`: 없음
+- `awaiting-external-evidence`: `SDP-005`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
 
 - CI 36904470136의 macOS 백업 이름 충돌·Linux Rust 1.99 검사 호환 수정 완료, [수정 계획](../plans/active/release-qualification-repairs-0.11.1.md) 적용
-- test.2–4 후보 미게시; 전체 필수 CI 36923839882 통과 뒤 test.5 후보 36940738218 생성
+- test.2–4 후보 미게시; 전체 필수 CI 36923839882 통과 뒤 test.5 후보 36940738218·복구 게시 36942587351·세 OS 수용 36943131885 성공
 
-- 0.11.1 정식 출시 승인, [실행 계획](../plans/0.11.1-stable-release.md)의 test.5 후보·게시·수용 진행
+- 0.11.1 정식 출시 승인, [실행 계획](../plans/0.11.1-stable-release.md)의 공개 시험·현재 사용자 설치 완료; Codex 재시작 뒤 실제 대화 호출 증거 대기
 - 반복 지연 방지: 전체 실패군·도구 버전 확인, 필수 CI 통과 뒤 후보 생성, 입력 변화 없는 재시도 제외, 15분 정체 시 작업 상태 진단
 - [0.11.1 구독자 공지 초안](../releases/0.11.1.subscriber.ko.md) 문구·기존 Discord 채널 전송 승인, 정식 게시 뒤 발송 예정
 
@@ -33,13 +33,14 @@
 
 - 0.11.0 Git 태그의 정확한 프로젝트·사용자 원본 보존
 - [로컬 전체 검증](../research/skill-delivery-0.11.1.md): Windows Rust 959개 통과·4개 제외, Python 927개 통과·33개 운영체제 조건 제외
-- [공개 수용](../research/skill-delivery-public-test-0.11.1.md): 실제 0.11.1-test.1 실행 파일의 Windows x64·Linux musl x64·macOS arm64 네 조건 통과, Codex 등록 응답은 모의
-- Windows 실제 Codex 0.159.0의 격리 설치·검증과 새 app-server의 Hive 기본 스킬 2개 발견 성공; 실제 명시 호출·자연어 호출 미검증, 현재 사용자 설치·새 세션의 별도 승인 필요
-- Claude Windows 설치 CUI-001–004 구현·검증 완료, 안정판 0.11.0·현재 사용자 설치 유지
+- [공개 수용](../research/skill-delivery-public-test-0.11.1.md): 실제 test.5의 Windows x64·Linux musl x64·macOS arm64 네 조건·지침·한국어·검색 수용 통과, Codex 등록 응답은 모의
+- 승인된 현재 사용자 설치·설정 검증 통과: 공개 test.5 실행 파일 지문 일치, 지식 일반 파일 489개·기존 설정 2개·Hive 표시 블록 밖 지침 보존, 소비자 프로젝트 변경 0건
+- 현재 사용자 새 실제 Codex 0.159.0 서버: Hive 스킬 28개·중복 0개·오류 0개, 모델 호출 0건; GUI 선택·명시 모델 호출·자연어 모델 호출 미증명
+- Claude CUI-001–004·실제 Windows 공개 CLI 수용 완료; 안정판 latest 0.11.0 유지, 현재 사용자 CLI test.5 적용
 
 ## 승인 인계
 
-- Claude 설치 `CUI-001–004` 수용 완료; 기존 `SDP-005`의 실제 환경 수용 승인 대기
-- 승인 대상: 게시·수용 뒤 정확한 0.11.1-test.5 사용자 설치·갱신과 대상 소비자 프로젝트 갱신; 예상 결과는 동일 원본 자동 정리와 수정본 보존
-- AGENTS.md·승인된 계획의 버전별 설치 승인 규칙 적용
-- 승인 후 설치·정리 확인과 Codex 완전 재시작, 스킬 목록·명시 호출·자연어 호출의 실제 증거 필요
+- 현재 사용자 test.5 설치 승인·적용 완료, 안정판 게시·main 통합·Discord 문구·발송 승인 유지
+- `SDP-005` 남은 사용자 실행: Codex 완전 종료·재실행 → 새 대화의 Hive 스킬 선택 목록 → `aigent-hive:user-setup` 명시 호출 → 전역 Hive 설치 검증의 자연어 요청
+- 기존 대화의 0.11.0 캐시 경로를 담은 스킬 목록으로 새 0.11.1 호출 성공 판정 제외; host 프로세스 신호·자격 증명 전달·모델 제공자 API를 통한 우회 금지
+- 두 호출은 설정 변경 없는 설치 검증으로 제한, 소비자 프로젝트 변경 제외; 실제 호출 증거 확보 뒤 SDP-005 완료와 보호 main 통합·안정판 후보·게시·Discord 전송 진행
