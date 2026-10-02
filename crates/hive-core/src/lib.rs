@@ -354,6 +354,7 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
                 | ("knowledge-recall", "confidential.md")
                 | ("knowledge-capture", "ingest.md")
                 | ("run-checkpoint", "policy-review.md")
+                | ("amend-directive", "transplant.md")
         );
     }
     (parts.len() == 4
@@ -598,6 +599,7 @@ mod tests {
             ".agents/skills/local-inspect",
             ".agents/skills/local-inspect/README.md",
             ".agents/skills/local-inspect/references/extra.md",
+            ".agents/skills/amend-directive/references/extra.md",
             ".agents/skills/local-inspect/agents",
             ".agents/skills/local-inspect/agents/other.yaml",
             ".claude/skills/local-inspect/agents/openai.yaml",

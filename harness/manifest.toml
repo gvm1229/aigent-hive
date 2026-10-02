@@ -217,6 +217,16 @@ pattern = ".claude/skills/run-checkpoint/references/policy-review.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
+[[paths]]
+pattern = ".agents/skills/amend-directive/references/transplant.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/amend-directive/references/transplant.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
 [[forbidden_paths]]
 pattern = ".omx/**"
 
