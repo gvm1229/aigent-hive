@@ -23,8 +23,8 @@
   - state: complete; depends: SDP-002; evidence: repo:tests/results/runs/20260929T204752-0fe5ef9afbee.md#sha256:32ffc55bdcbf78116322a8fd4952b081416a5796ec935e3a0f9ab13c07bb40ca
 - [x] [SDP-004] 설치·갱신·실패 복구와 전체 회귀 검증
   - state: complete; depends: SDP-002,SDP-003; evidence: repo:docs/research/skill-delivery-0.11.1.md#sha256:ddd6a0c570ad81f6929700ee0c282ecb2a2df68b8bb5e1ccb5b6410c47775bc3
-- [ ] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
-  - state: awaiting-external-evidence; depends: SDP-004; owner: 유지관리자; reason: 승인된 현재 사용자 test.6 설치·자료 보존·새 실제 서버 28개 발견 완료, Codex 완전 재시작·GUI 목록·명시/자연어 모델 호출 증거 필요
+- [x] [SDP-005] 시험판 준비와 실제 Codex 발견 검증
+  - state: complete; depends: SDP-004; evidence: repo:docs/research/wproject-custom-ship-0.11.1.md#sha256:bfc275b9392b1ba2fcac66b3217f40a77a9d2fff264bf67ba3d172ad2da23004
 
 ## 구현 인계
 
