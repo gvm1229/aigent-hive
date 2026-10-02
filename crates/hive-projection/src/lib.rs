@@ -706,19 +706,29 @@ struct ProjectDefaultSuite {
 pub fn project_default_skills() -> Result<Vec<String>, ProjectionError> {
     let suites: ProjectDefaultCatalog = serde_yaml::from_str(PROJECT_SUITES_YAML)
         .map_err(|error| ProjectionError::new("hive.skill-catalog-invalid", error.to_string()))?;
-    let mut selected = suites.project_skill_suites.into_iter()
+    let mut selected = suites
+        .project_skill_suites
+        .into_iter()
         .find(|suite| suite.id == "daily-work")
-        .ok_or_else(|| ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is missing"))?
+        .ok_or_else(|| {
+            ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is missing")
+        })?
         .skills;
     selected.sort();
     let catalog = embedded_catalog()?;
     let unique = selected.iter().collect::<BTreeSet<_>>();
-    if unique.len() != selected.len() || selected.iter().any(|name| {
-        name == "user-setup" || !catalog.skills.iter().any(|entry| {
-            entry.name == *name && entry.availability == Availability::Implemented
+    if unique.len() != selected.len()
+        || selected.iter().any(|name| {
+            name == "user-setup"
+                || !catalog.skills.iter().any(|entry| {
+                    entry.name == *name && entry.availability == Availability::Implemented
+                })
         })
-    }) {
-        return Err(ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is invalid"));
+    {
+        return Err(ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "daily-work suite is invalid",
+        ));
     }
     Ok(selected)
 }
@@ -3405,12 +3415,21 @@ description: Inspect one local file without changing it.
     fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
         let default = super::project_default_skills().unwrap();
         assert_eq!(default.len(), 23);
-        let excluded = ["user-setup", "project-setup", "custom-subagent-create", "knowledge-transfer", "project-transition"];
+        let excluded = [
+            "user-setup",
+            "project-setup",
+            "custom-subagent-create",
+            "knowledge-transfer",
+            "project-transition",
+        ];
         for name in excluded {
             assert!(!default.iter().any(|selected| selected == name));
         }
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
-            let selected = excluded[1..].iter().map(|name| (*name).to_owned()).collect::<Vec<_>>();
+            let selected = excluded[1..]
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect::<Vec<_>>();
             let projection = compile_project_projection(host, &selected, &[]).unwrap();
             assert_eq!(projection.active_skills.skills.len(), 4);
             let empty = compile_project_projection(host, &[], &[]).unwrap();
@@ -3472,8 +3491,12 @@ description: Inspect one local file without changing it.
     }
 
     fn assert_projected_builtin_sources<const N: usize>(expected: [(&str, &[u8], &[u8]); N]) {
-        let selected = expected.iter().map(|(name, _, _)| (*name).to_owned()).collect::<Vec<_>>();
-        let projection = compile_project_projection(Host::Codex, &selected, &[]).expect("projection");
+        let selected = expected
+            .iter()
+            .map(|(name, _, _)| (*name).to_owned())
+            .collect::<Vec<_>>();
+        let projection =
+            compile_project_projection(Host::Codex, &selected, &[]).expect("projection");
         for (name, embedded, template) in expected {
             assert_eq!(embedded, template);
             assert_eq!(

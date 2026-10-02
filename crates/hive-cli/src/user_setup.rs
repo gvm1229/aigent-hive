@@ -3517,8 +3517,8 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         .ok_or_else(|| {
             "global Hive setup is required before project expedited or custom setup".to_owned()
         })?;
-    let selected_project_skills = hive_projection::project_default_skills()
-        .map_err(|error| error.to_string())?;
+    let selected_project_skills =
+        hive_projection::project_default_skills().map_err(|error| error.to_string())?;
     Ok(GlobalProjectPreferences {
         codex_plugin_files: std::collections::BTreeMap::new(),
         interface_language: config.interface_language.as_str().to_owned(),

@@ -914,45 +914,12 @@ pub fn project_upgrade_candidate_with_plugin_in(
     let source_version = harness.harness_version.clone();
     let mut effective_preferences = effective_preferences_from_harness(&harness)?;
     let mut normalized_fields = Vec::new();
-    let mut skill_merges = Vec::new();
-    if source_version != env!("CARGO_PKG_VERSION") {
-        if let Some(preferences) = effective_preferences.as_mut() {
-            let migration = migrate_historical_project_skill_selection(
-                &source_version,
-                &preferences.selected_project_skills,
-            )
-            .map_err(|error| RenderError::Verification(error.to_string()))?;
-            if migration.selected != preferences.selected_project_skills {
-                normalized_fields.push("selected_project_skills".to_owned());
-            }
-            preferences.selected_project_skills = migration.selected;
-            skill_merges = migration.merges;
-        }
-    }
-    if harness.project_skill_policy_version > 1 {
-        return Err(RenderError::Verification("project Skill policy version is unsupported".to_owned()));
-    }
-    if harness.project_skill_policy_version == 0 {
-        if answers.setup_mode == "custom" {
-            answers.skills = Some(ProjectSkillSelection {
-                mode: "recommended".to_owned(),
-                recommended_suite: Some("daily-work".to_owned()),
-                selected: None,
-            });
-        }
-        if let Some(preferences) = effective_preferences.as_mut() {
-            preferences.project_skill_policy_version = 1;
-            preferences.selected_project_skills = hive_projection::project_default_skills()
-                .map_err(|error| RenderError::Internal(error.to_string()))?;
-            if !preferences.wiki_enabled {
-                preferences.selected_project_skills.retain(|name| !is_project_knowledge_skill(name));
-            }
-        }
-        normalized_fields.push("project_skill_policy_version".to_owned());
-        if !normalized_fields.iter().any(|field| field == "selected_project_skills") {
-            normalized_fields.push("selected_project_skills".to_owned());
-        }
-    }
+    let skill_merges = normalize_project_skill_policy(
+        &harness,
+        &mut answers,
+        &mut effective_preferences,
+        &mut normalized_fields,
+    )?;
     if let Some(preferences) = effective_preferences.as_mut() {
         preferences.codex_plugin_files = plugin.clone();
     }
@@ -2990,7 +2957,8 @@ fn resolve_effective_project_preferences(
             .map(|name| -> Result<Option<String>, RenderError> {
                 let canonical = canonical_builtin_skill_name(&name)
                     .map_err(|error| RenderError::Internal(error.to_string()))?;
-                let is_knowledge_skill = is_project_knowledge_skill(canonical.as_deref().unwrap_or(name.as_str()));
+                let is_knowledge_skill =
+                    is_project_knowledge_skill(canonical.as_deref().unwrap_or(name.as_str()));
                 Ok((!is_knowledge_skill).then_some(name))
             })
             .collect::<Result<Vec<_>, _>>()?
@@ -3002,9 +2970,71 @@ fn resolve_effective_project_preferences(
     Ok(Some(effective))
 }
 
+fn normalize_project_skill_policy(
+    harness: &InstalledHarness,
+    answers: &mut SetupAnswers,
+    effective_preferences: &mut Option<EffectiveProjectPreferences>,
+    normalized_fields: &mut Vec<String>,
+) -> Result<Vec<SkillSelectionMerge>, RenderError> {
+    let mut skill_merges = Vec::new();
+    if harness.harness_version != env!("CARGO_PKG_VERSION") {
+        if let Some(preferences) = effective_preferences.as_mut() {
+            let migration = migrate_historical_project_skill_selection(
+                &harness.harness_version,
+                &preferences.selected_project_skills,
+            )
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+            if migration.selected != preferences.selected_project_skills {
+                normalized_fields.push("selected_project_skills".to_owned());
+            }
+            preferences.selected_project_skills = migration.selected;
+            skill_merges = migration.merges;
+        }
+    }
+    if harness.project_skill_policy_version > 1 {
+        return Err(RenderError::Verification(
+            "project Skill policy version is unsupported".to_owned(),
+        ));
+    }
+    if harness.project_skill_policy_version == 0 {
+        if answers.setup_mode == "custom" {
+            answers.skills = Some(ProjectSkillSelection {
+                mode: "recommended".to_owned(),
+                recommended_suite: Some("daily-work".to_owned()),
+                selected: None,
+            });
+        }
+        if let Some(preferences) = effective_preferences.as_mut() {
+            preferences.project_skill_policy_version = 1;
+            preferences.selected_project_skills = hive_projection::project_default_skills()
+                .map_err(|error| RenderError::Internal(error.to_string()))?;
+            if !preferences.wiki_enabled {
+                preferences
+                    .selected_project_skills
+                    .retain(|name| !is_project_knowledge_skill(name));
+            }
+        }
+        normalized_fields.push("project_skill_policy_version".to_owned());
+        if !normalized_fields
+            .iter()
+            .any(|field| field == "selected_project_skills")
+        {
+            normalized_fields.push("selected_project_skills".to_owned());
+        }
+    }
+    Ok(skill_merges)
+}
+
 fn is_project_knowledge_skill(name: &str) -> bool {
-    matches!(name, "knowledge-capture" | "knowledge-recall" | "knowledge-promote"
-        | "knowledge-maintain" | "knowledge-scan" | "knowledge-transfer")
+    matches!(
+        name,
+        "knowledge-capture"
+            | "knowledge-recall"
+            | "knowledge-promote"
+            | "knowledge-maintain"
+            | "knowledge-scan"
+            | "knowledge-transfer"
+    )
 }
 
 fn validate_global_project_preferences(
@@ -3206,7 +3236,13 @@ fn validate_project_skill_catalog(
     });
     if catalog.schema_version != 1
         || !catalog.mandatory_skills.is_empty()
-        || suite_ids != BTreeSet::from(["daily-work", "game-developer", "non-developer", "web-developer"])
+        || suite_ids
+            != BTreeSet::from([
+                "daily-work",
+                "game-developer",
+                "non-developer",
+                "web-developer",
+            ])
         || !suites_valid
         || !dependencies_valid
     {
@@ -3978,9 +4014,12 @@ fn render_harness_toml(
         elevated = quoted(&answers.elevated_judge_quorum),
         critical = quoted(&answers.critical_judge_quorum),
     );
-    writeln!(&mut output, "project_skill_policy_version = {}",
-        effective_preferences.map_or(1, |preferences| preferences.project_skill_policy_version))
-        .expect("writing to String cannot fail");
+    writeln!(
+        &mut output,
+        "project_skill_policy_version = {}",
+        effective_preferences.map_or(1, |preferences| preferences.project_skill_policy_version)
+    )
+    .expect("writing to String cannot fail");
     if let Some(preferences) = effective_preferences {
         let selected = preferences
             .selected_project_skills
@@ -5611,7 +5650,9 @@ fn effective_preferences_from_harness(
     harness: &InstalledHarness,
 ) -> Result<Option<EffectiveProjectPreferences>, RenderError> {
     if harness.project_skill_policy_version > 1 {
-        return Err(RenderError::Verification("project Skill policy version is unsupported".to_owned()));
+        return Err(RenderError::Verification(
+            "project Skill policy version is unsupported".to_owned(),
+        ));
     }
     let Some(provenance) = harness.preference_provenance.as_deref() else {
         return Ok(None);
@@ -9984,27 +10025,59 @@ mod tests {
             answers.usage_stop_remaining_percent = global.usage_stop_remaining_percent;
             answers.setup_mode = "custom".to_owned();
             answers.interface_language = Some("ko".to_owned());
-            answers.wiki = Some(super::ProjectWikiPreferences { enabled: wiki_enabled, language: "ko".to_owned() });
-            answers.persona = Some(super::ProjectPreferenceSelection { id: "strict".to_owned(), custom_description: None });
-            answers.skills = Some(ProjectSkillSelection { mode: "individual".to_owned(), recommended_suite: None, selected: Some(vec!["prompt-refine".to_owned()]) });
+            answers.wiki = Some(super::ProjectWikiPreferences {
+                enabled: wiki_enabled,
+                language: "ko".to_owned(),
+            });
+            answers.persona = Some(super::ProjectPreferenceSelection {
+                id: "strict".to_owned(),
+                custom_description: None,
+            });
+            answers.skills = Some(ProjectSkillSelection {
+                mode: "individual".to_owned(),
+                recommended_suite: None,
+                selected: Some(vec!["prompt-refine".to_owned()]),
+            });
             let path = temporary.path().join("answers.yml");
             fs::write(&path, serde_yaml::to_string(&answers).unwrap()).unwrap();
-            let mut request = SetupRequest { target: &target, answers: &path,
-                capabilities: &fixture("capabilities-codex-omx.json"), mode: SetupMode::Apply,
-                reconfigure_roles: BTreeSet::new(), global_preferences: Some(global) };
+            let mut request = SetupRequest {
+                target: &target,
+                answers: &path,
+                capabilities: &fixture("capabilities-codex-omx.json"),
+                mode: SetupMode::Apply,
+                reconfigure_roles: BTreeSet::new(),
+                global_preferences: Some(global),
+            };
             execute_setup(&request).unwrap();
             let harness_path = target.join(".hive/config/harness.toml");
             let before = fs::read_to_string(&harness_path).unwrap();
-            fs::write(&harness_path, before.replace("project_skill_policy_version = 1\n", "")).unwrap();
+            fs::write(
+                &harness_path,
+                before.replace("project_skill_policy_version = 1\n", ""),
+            )
+            .unwrap();
             let root = open_target_capability(&target).unwrap();
             let migrated = project_upgrade_candidate_in(&root).unwrap();
-            assert!(migrated.normalized_fields.iter().any(|name| name == "project_skill_policy_version"));
-            let config: toml::Value = toml::from_str(std::str::from_utf8(&migrated.support_files[".hive/config/harness.toml"]).unwrap()).unwrap();
-            assert_eq!(config["selected_project_skills"].as_array().unwrap().len(), if wiki_enabled { 23 } else { 18 });
+            assert!(migrated
+                .normalized_fields
+                .iter()
+                .any(|name| name == "project_skill_policy_version"));
+            let config: toml::Value = toml::from_str(
+                std::str::from_utf8(&migrated.support_files[".hive/config/harness.toml"]).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                config["selected_project_skills"].as_array().unwrap().len(),
+                if wiki_enabled { 23 } else { 18 }
+            );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));
-            let saved: serde_yaml::Value = serde_yaml::from_slice(&migrated.support_files[".hive/setup-answers.yml"]).unwrap();
-            assert_eq!(saved["skills"]["recommended_suite"].as_str(), Some("daily-work"));
+            let saved: serde_yaml::Value =
+                serde_yaml::from_slice(&migrated.support_files[".hive/setup-answers.yml"]).unwrap();
+            assert_eq!(
+                saved["skills"]["recommended_suite"].as_str(),
+                Some("daily-work")
+            );
             for selected in [vec!["ship".to_owned()], vec![]] {
                 answers.skills.as_mut().unwrap().selected = Some(selected.clone());
                 fs::write(&path, serde_yaml::to_string(&answers).unwrap()).unwrap();
@@ -10014,12 +10087,17 @@ mod tests {
                 execute_setup(&request).unwrap();
                 let next = project_upgrade_candidate_in(&root).unwrap();
                 assert_eq!(next.normalized_fields.len(), 0);
-                let config: toml::Value = toml::from_str(std::str::from_utf8(&next.support_files[".hive/config/harness.toml"]).unwrap()).unwrap();
-                assert_eq!(config["selected_project_skills"].as_array().unwrap().len(), selected.len());
+                let config: toml::Value = toml::from_str(
+                    std::str::from_utf8(&next.support_files[".hive/config/harness.toml"]).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(
+                    config["selected_project_skills"].as_array().unwrap().len(),
+                    selected.len()
+                );
                 request.mode = SetupMode::Apply;
                 assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
             }
         }
     }
-
 }
