@@ -951,3 +951,5 @@
 | [passed](runs/20261001T234717-11673280f355.md) | 공개 test.5 실제 Windows Claude 전역 설치·보존 수용 | b08b2774a3f9defbd1f92f400791c8d33f89049a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T234849-8d69a32ac064.md) | 공개 test.5 실제 Windows Codex 격리 설치와 새 서버 발견 수용 | b08b2774a3f9defbd1f92f400791c8d33f89049a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T235202-f2c863d4ab64.md) | 공개 test.5 수용 자료의 정확한 원본 표시 회귀 확인 | b08b2774a3f9defbd1f92f400791c8d33f89049a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261001T235956-d1ca9e889516.md) | 승인된 test.5 실제 사용자 설치와 지식·저장 설정·외부 지침 보존 확인 | c1f5a3108e0db622025edebbb1dc78dae0d27717 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T000208-eae715a45f37.md) | 승인 설치 뒤 실제 사용자 새 Codex 서버의 중복 없는 Hive 스킬 발견 | c1f5a3108e0db622025edebbb1dc78dae0d27717 | Windows-11-10.0.26300-SP0 |
