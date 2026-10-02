@@ -43,7 +43,7 @@ def sync_directories(
     destination_root: Path,
     *,
     copy_companions: bool,
-    copy_explicit_openai_metadata: bool,
+    copy_project_openai_metadata: bool,
     excluded_names: frozenset[str],
 ) -> None:
     destination_root.mkdir(parents=True, exist_ok=True)
@@ -73,7 +73,7 @@ def sync_directories(
             for companion in ("references", "scripts"):
                 if (source / companion).is_dir():
                     shutil.copytree(source / companion, destination / companion)
-        if copy_explicit_openai_metadata:
+        if copy_project_openai_metadata:
             source_metadata = source / "agents" / "openai.yaml"
             destination_metadata = destination / "agents" / "openai.yaml"
             destination_metadata.parent.mkdir()
@@ -85,7 +85,7 @@ def sync_directories(
                     f"missing Codex invocation policy: {source_metadata}"
                 )
             destination_metadata.write_text(
-                metadata.replace(policy_true, policy_false),
+                metadata.replace(policy_false, policy_true),
                 encoding="utf-8",
                 newline="\n",
             )
@@ -131,7 +131,7 @@ def main() -> int:
     for (
         destination,
         copy_companions,
-        copy_explicit_metadata,
+        copy_project_metadata,
         excluded_names,
     ) in (
         SKILL_DESTINATIONS
@@ -140,7 +140,7 @@ def main() -> int:
             SOURCE,
             destination,
             copy_companions=copy_companions,
-            copy_explicit_openai_metadata=copy_explicit_metadata,
+            copy_project_openai_metadata=copy_project_metadata,
             excluded_names=excluded_names,
         )
     sync_files(DIRECTIVE_SOURCE, DIRECTIVE_DESTINATION)

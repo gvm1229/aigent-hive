@@ -3,4 +3,4 @@ interface:
   short_description: "(multi-goal) Execute a bounded goal graph with budgets and terminal verification."
   default_prompt: "Use $aigent-hive:multi-goal for this explicit bounded goal graph."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

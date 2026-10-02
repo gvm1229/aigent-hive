@@ -3,4 +3,4 @@ interface:
   short_description: "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses."
   default_prompt: "Automatically review this Wiki-enabled turn and remember one safe durable claim when present."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

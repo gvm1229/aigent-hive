@@ -3,4 +3,4 @@ interface:
   short_description: "(knowledge-scan) Scan one repository or folder and prepare reviewed facts."
   default_prompt: "Use $aigent-hive:knowledge-scan to inventory this directory and prepare reviewed facts."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

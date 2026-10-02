@@ -901,7 +901,7 @@ fn compile_selected(
                 if preserve_implicit_metadata {
                     localized_skill_metadata(&entry.name, metadata, language)?
                 } else {
-                    explicit_only_metadata(&localized_skill_metadata(
+                    project_invocation_metadata(&localized_skill_metadata(
                         &entry.name,
                         metadata,
                         language,
@@ -1115,7 +1115,7 @@ fn skill_metadata_path(host: Host, name: &str) -> String {
     format!("{}/{name}/agents/openai.yaml", host.skill_root())
 }
 
-fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
+fn project_invocation_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
     const IMPLICIT: &str = "  allow_implicit_invocation: true";
     const EXPLICIT: &str = "  allow_implicit_invocation: false";
 
@@ -1131,7 +1131,7 @@ fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
             "embedded Codex Skill metadata lacks an invocation policy",
         ));
     }
-    Ok(text.replace(IMPLICIT, EXPLICIT).into_bytes())
+    Ok(text.replace(EXPLICIT, IMPLICIT).into_bytes())
 }
 
 /// Reproduce descriptor translation around unchanged authenticated Skill bytes.
@@ -1383,9 +1383,9 @@ fn localized_skill_text(
         ),
         "amend-directive" => (
             "Amend directives",
-            "Change Hive behavior directives while preserving safety boundaries.",
+            "Adapt another project's directives or amend selected rules within the requested scope.",
             "지침 수정",
-            "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
+            "다른 프로젝트의 지침을 대상에 맞게 이식하거나 요청한 규칙을 수정합니다.",
         ),
         "team-execution" => (
             "Coordinate a Hive team",
@@ -3062,7 +3062,7 @@ description: Inspect one local file without changing it.
         );
         for (name, expected_implicit) in [
             ("user-setup", true),
-            ("product-update", false),
+            ("product-update", true),
             ("usage-guard", true),
         ] {
             let metadata = std::str::from_utf8(
@@ -3081,7 +3081,7 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn project_refresh_user_discovery_preserves_project_explicit_boundary() {
+    fn project_refresh_discovery_supports_request_routing_on_each_surface() {
         let selected = vec!["product-update".to_owned(), "project-refresh".to_owned()];
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
             for language in [DescriptorLanguage::En, DescriptorLanguage::Ko] {
@@ -3123,7 +3123,7 @@ description: Inspect one local file without changing it.
                     .unwrap();
                     assert_eq!(
                         metadata["policy"]["allow_implicit_invocation"].as_bool(),
-                        Some(false)
+                        Some(true)
                     );
                 }
             }
@@ -3398,7 +3398,7 @@ description: Inspect one local file without changing it.
                 .expect("project Skill metadata"),
         )
         .expect("project Skill metadata should be UTF-8");
-        assert!(metadata.contains("allow_implicit_invocation: false"));
+        assert!(metadata.contains("allow_implicit_invocation: true"));
     }
 
     #[test]

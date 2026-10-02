@@ -48,8 +48,13 @@ fn groups(files: &BTreeMap<PathBuf, Vec<u8>>) -> BTreeMap<String, BTreeMap<Strin
 
 fn digest(files: &BTreeMap<String, Vec<u8>>) -> String {
     let mut bytes = Vec::new();
+    bytes.extend_from_slice(match invocation_policy(files) {
+        Some(true) => b"implicit\0",
+        Some(false) => b"explicit\0",
+        None => b"unverified\0",
+    });
     for (path, content) in files {
-        // Invocation/picker metadata is owned by the selected delivery surface.
+        // Localized picker text is presentation; invocation policy is included above.
         if path == "agents/openai.yaml" {
             continue;
         }
@@ -59,6 +64,51 @@ fn digest(files: &BTreeMap<String, Vec<u8>>) -> String {
         bytes.push(0);
     }
     sha256_digest(&bytes)
+}
+
+fn invocation_policy(files: &BTreeMap<String, Vec<u8>>) -> Option<bool> {
+    let value: serde_yaml::Value = serde_yaml::from_slice(files.get("agents/openai.yaml")?).ok()?;
+    value.get("policy")?.get("allow_implicit_invocation")?.as_bool()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matching_body_requires_matching_verified_invocation_policy() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = crate::open_target_capability(temporary.path()).unwrap();
+        let projection = hive_projection::compile_project_projection(
+            hive_projection::Host::Codex, &["prompt-refine".to_owned()], &[],
+        ).unwrap();
+        let original = projection.files.into_iter()
+            .map(|(path, bytes)| (PathBuf::from(path), bytes)).collect::<BTreeMap<_, _>>();
+        for policy in [Some(true), Some(false), None] {
+            let mut files = original.clone();
+            let mut plugin = original.iter().map(|(path, bytes)| {
+                (path.to_string_lossy().replace('\\', "/"), bytes.clone())
+            }).collect::<PluginSkillFiles>();
+            let metadata = ".agents/skills/prompt-refine/agents/openai.yaml";
+            if policy == Some(false) {
+                let bytes = plugin.get_mut(metadata).unwrap();
+                *bytes = String::from_utf8(bytes.clone()).unwrap()
+                    .replace("allow_implicit_invocation: true", "allow_implicit_invocation: false")
+                    .into_bytes();
+            } else if policy.is_none() {
+                plugin.remove(metadata);
+            }
+            apply(&target, &mut files, &plugin).unwrap();
+            let ledger: SkillProviders = serde_json::from_slice(&files[Path::new(PROVIDERS_PATH)]).unwrap();
+            let local = files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md"));
+            assert_eq!(local, policy != Some(true));
+            if local {
+                assert_eq!(ledger.local_skills["prompt-refine"], "invocation-policy-different");
+            } else {
+                assert!(ledger.skills.contains_key("prompt-refine"));
+            }
+        }
+    }
 }
 
 pub(crate) fn apply<T: TargetRead + ?Sized>(
@@ -91,6 +141,12 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
             );
             continue;
         };
+        if invocation_policy(&expected).is_none()
+            || invocation_policy(&expected) != invocation_policy(provided)
+        {
+            ledger.local_skills.insert(name, "invocation-policy-different".to_owned());
+            continue;
+        }
         if digest(&expected) != digest(provided) {
             ledger
                 .local_skills

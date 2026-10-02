@@ -3,4 +3,4 @@ interface:
   short_description: "(project-setup) Configure or reconfigure Aigent Hive for one project."
   default_prompt: "Use $aigent-hive:project-setup to inspect this project and configure its local Aigent Hive harness."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true
