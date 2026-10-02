@@ -4,7 +4,7 @@
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
 - 공개 시험 수용: `0.11.1-test.6`
-- 다음 시험 대상: `0.11.1-test.6`
+- 다음 시험 대상: `0.11.1-test.7`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
@@ -12,15 +12,17 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 15/16 완료
+- 현재 등록 항목: 15/20 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `SGM-001`, `SGM-002`, `SGM-003`, `SGM-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `DPS-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- 사용자 의도 확인: 기본 스킬 제외 대신 새 Hive 개선과 사용자 수정의 결합; [결합 계획](../plans/active/skill-merge-0.11.1.md) 구현, 새 제품 변경의 test.7 검증 필요
 
 - 사용자 재시작·GUI 목록 확인과 두 새 실제 Codex 대화의 명시/자연어 `user-setup` 호출·`hive.user-setup-valid` 확인 완료; 전역 호출 수용 SDP-005 완료, [검토 근거](../research/wproject-custom-ship-0.11.1.md#전역-스킬-검증)
 - WProject의 사용자 관리 `ship`에 프로젝트 전용 검사 존재·Hive 기준 목록 부재, 공식 scan 충돌 재현과 파일 보존; 이동·삭제 제외

@@ -1,12 +1,12 @@
 # Aigent Hive 활성 계획
 
-> Revision: 374
+> Revision: 375
 > 기준일: 2026-10-02
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
-> 현재 단계: 공개 test.6 수용 완료·실제 대화 호출 확인
+> 현재 단계: 사용자 스킬 결합 갱신 구현
 > 공개 시험 수용: `0.11.1-test.6`
-> 다음 시험 대상: `0.11.1-test.6`
+> 다음 시험 대상: `0.11.1-test.7`
 
 ## 현재 요청과 경계
 
@@ -30,7 +30,8 @@
 | Claude Windows 전역 설치 | 4 | 0 | 100.0% |
 | 원격 출시 검증 수정 | 2 | 0 | 100.0% |
 | 지침 이식·기본 스킬·자연어 활용 | 4 | 1 | 80.0% |
-| **현재 범위 합계** | **15** | **1** | **93.8%** |
+| 새 Hive 개선·사용자 스킬 결합 | 0 | 4 | 0.0% |
+| **현재 범위 합계** | **15** | **5** | **75.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -41,6 +42,7 @@
 | [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
 | [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–002` | 원격 출시 검증 수정 |
 | [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
+| [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–004` | 새 Hive 개선·사용자 스킬 결합 |
 
 ## 실행 순서
 
