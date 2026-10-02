@@ -953,3 +953,6 @@
 | [passed](runs/20261001T235202-f2c863d4ab64.md) | 공개 test.5 수용 자료의 정확한 원본 표시 회귀 확인 | b08b2774a3f9defbd1f92f400791c8d33f89049a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261001T235956-d1ca9e889516.md) | 승인된 test.5 실제 사용자 설치와 지식·저장 설정·외부 지침 보존 확인 | c1f5a3108e0db622025edebbb1dc78dae0d27717 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T000208-eae715a45f37.md) | 승인 설치 뒤 실제 사용자 새 Codex 서버의 중복 없는 Hive 스킬 발견 | c1f5a3108e0db622025edebbb1dc78dae0d27717 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T011443-55de2990e712.md) | 독립 지침 이식 스킬의 정본·세 배포 사본·기존 계약 확인 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T011553-b3bb0c45e716.md) | 독립 지침 이식 부속 문서의 실제 Rust 배포 컴파일 확인 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T011732-101885c8e5d3.md) | 지침 이식 부속 문서 포함 모든 호스트 Rust 배포 회귀 | c0d1b46b30d93f6ee67ac2e9c2a6adfe9a55f63d | Windows-11-10.0.26300-SP0 |
