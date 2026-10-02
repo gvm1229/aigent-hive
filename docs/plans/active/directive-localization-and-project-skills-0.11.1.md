@@ -13,7 +13,7 @@
 ## 수용 기준
 
 - [x] [DPS-001] 독립 지침 이식 절차와 Orireki 프런트엔드 사례 정리
-  - state: complete; evidence: repo:docs/research/directive-localization-and-project-skills-0.11.1.md#sha256:95663da337634c2e0104125f408dbe0c91a60adf6829d51e8ed7f84dcf9725e8
+  - state: complete; evidence: repo:docs/research/directive-localization-and-project-skills-0.11.1.md#sha256:f12cbc2ff6a9d3a9d46cf6daae097ea35a6155d7ae882de1fb1c84ff025350c2
 - [x] [DPS-002] 기본 23개·빈 선택·의존성·Wiki 조건의 일관된 선택
   - state: complete; evidence: repo:tests/results/runs/20261002T021301-49cf6fa9b6ae.md#sha256:00849e999d35dc801b9c61d042a26928bd69baff613967eb62d7c4118c23b8a8
 - [ ] [DPS-003] 선택 스킬의 자연어 활용과 제공 위치별 정책 일치

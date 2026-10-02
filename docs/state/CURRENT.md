@@ -23,6 +23,7 @@
 ## 현재 근거
 
 - 사용자 승인 추가 범위: [지침 이식·프로젝트 스킬](../plans/active/directive-localization-and-project-skills-0.11.1.md); 지침 이식·기본 23개·자유 선택·기존 기본 전환 구현과 관련 검증 완료, [검증 근거](../research/directive-localization-and-project-skills-0.11.1.md); 자연어 호출 정책 구현 완료·실제 대화 호출 대기
+- 추가 범위 최종 Windows 검사: Rust 967개 통과·4개 조건 제외, Python 917개 통과·44개 조건 제외, Rust 1.99 Clippy 통과; 실제 Claude CLI 2.1.163 세 경로 설치·검증·재설치·갱신과 사용자 자료 보존 통과, 모델 호출 0건
 
 - CI 36904470136의 macOS 백업 이름 충돌·Linux Rust 1.99 검사 호환 수정 완료, [수정 계획](../plans/active/release-qualification-repairs-0.11.1.md) 적용
 - test.2–4 후보 미게시; 전체 필수 CI 36923839882 통과 뒤 test.5 후보 36940738218·복구 게시 36942587351·세 OS 수용 36943131885 성공
