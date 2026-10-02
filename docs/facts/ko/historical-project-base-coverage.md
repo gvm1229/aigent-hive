@@ -10,7 +10,7 @@ tags: [migration, project-upgrade, regression, release]
 aliases: ["과거 기준본 정합성"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:92d7a0620ee61b08a18554a67b85fc6ce93471ad83cf58bdf9597869559fb627"
-  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:35f36abe56eaa66ef5047a2425602ddc9d2b926b37c5c3ebf0a38729d3dc45c8"
+  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:f5c90bf5b90baef8d7a5ec2228d0d23338ea95aef2c8078b7656c4df7d6ff600"
   - "repo:crates/hive-render/src/lib.rs#sha256:9a8dd35a7cbd20a71c44e5a09330410bf45bdd68de04c623454187d706687449"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
