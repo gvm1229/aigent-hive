@@ -13,6 +13,7 @@ USAGE:
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--format json|html] --output json
+    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
     hive source-wiki vector --help
 ";
 
@@ -120,7 +121,16 @@ fn lint(arguments: &CommonArguments) -> Result<ActionResult, WikiError> {
 
 fn rebuild_index(arguments: &CommonArguments) -> Result<ActionResult, WikiError> {
     let outcome = source::rebuild_index(&arguments.target)?;
-    index_success(outcome)
+    let graph_update = super::knowledge::semantic_graph::after_source_index(
+        &arguments.target,
+        !outcome.changed_paths.is_empty(),
+        &outcome.logical_digest,
+    );
+    let mut result = index_success(outcome)?;
+    if let Some(data) = result.data.as_mut() {
+        data["graph_update"] = graph_update;
+    }
+    Ok(result)
 }
 
 fn index_success(outcome: source::SourceIndexOutcome) -> Result<ActionResult, WikiError> {

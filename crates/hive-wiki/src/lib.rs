@@ -9,6 +9,7 @@ pub mod notion;
 pub mod portable;
 pub mod rag;
 pub mod scan;
+pub mod semantic_graph;
 pub mod shared;
 pub mod source;
 pub mod store;
@@ -3509,7 +3510,10 @@ fn open_capability_file_nofollow(parent: &Dir, name: &OsStr) -> io::Result<cap_s
 }
 
 fn managed_file_maximum(relative: &Path) -> u64 {
-    if relative == Path::new(INDEX_RELATIVE) {
+    if relative == Path::new(INDEX_RELATIVE)
+        || relative.starts_with(".hive/index/semantic-graph")
+        || relative.starts_with(".agents/work/semantic-graph")
+    {
         MAX_DERIVED_INDEX_BYTES
     } else if relative.starts_with(Path::new(RAW_RELATIVE)) {
         u64::try_from(MAX_RAW_BYTES).expect("Raw byte limit fits u64")

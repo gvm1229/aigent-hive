@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "Bounded host semantic review receipt",
+  "required": [
+    "schema_version",
+    "request_digest",
+    "result_digest",
+    "host",
+    "reviewed",
+    "attempt"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "request_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "result_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "host": {
+      "enum": [
+        "codex",
+        "claude",
+        "antigravity"
+      ]
+    },
+    "reviewed": {
+      "const": true
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2
+    }
+  }
+}

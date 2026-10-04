@@ -1,4 +1,5 @@
 mod remember;
+pub(crate) mod semantic_graph;
 use remember::run_remember;
 mod retrieve;
 use crate::knowledge_scan::scan_directory;
@@ -92,6 +93,7 @@ USAGE:
     hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
+    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
     hive knowledge vector --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
@@ -695,6 +697,12 @@ pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
 
 #[allow(clippy::too_many_lines)]
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    if arguments
+        .windows(2)
+        .any(|pair| pair == ["--engine", "host-semantic"])
+    {
+        return semantic_graph::run(arguments, false);
+    }
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
             "knowledge graph requires preview, enable, status, rebuild, disable, query, or export"
@@ -1038,6 +1046,15 @@ fn relation_question_subject(value: &str) -> Option<&str> {
 }
 
 pub(crate) fn run_source_graph(arguments: &[String]) -> ExitCode {
+    if arguments
+        .windows(2)
+        .any(|pair| pair == ["--engine", "host-semantic"])
+    {
+        let result = semantic_graph::run(arguments, true)
+            .unwrap_or_else(|error| failure("QueryKnowledge", &error));
+        emit(&result);
+        return ExitCode::from(result.exit_code);
+    }
     if arguments.iter().any(|argument| argument == "--scope") {
         let result = failure(
             "QueryKnowledge",

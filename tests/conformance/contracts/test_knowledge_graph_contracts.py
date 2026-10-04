@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from tests.conformance.support.harness import Phase1CliTestCase
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -100,6 +101,137 @@ class KnowledgeGraphContractTests(unittest.TestCase):
         validator.validate(generation)
         generation["edges"][0]["evidence"] = "provider"
         self.assertFalse(validator.is_valid(generation))
+
+
+class HostSemanticGraphCliTests(Phase1CliTestCase):
+    def command(self, *args: str, expect: int = 0) -> dict:
+        process = subprocess.run([str(self.hive_binary), *args, "--output", "json"],
+            capture_output=True, text=True, encoding="utf-8", cwd=ROOT, timeout=30)
+        data = json.loads(process.stdout)
+        self.assertEqual(process.returncode, expect, data)
+        return data
+
+    def remember(self, key: str, fact: str) -> dict:
+        return self.command("knowledge", "remember", "--user-root", str(self.setup_user_root),
+            "--user-statement", fact, "--claim-key", key, "--kind", "convention")
+
+    def graph(self, action: str, *args: str, expect: int = 0) -> dict:
+        return self.command("knowledge", "graph", action, "--engine", "host-semantic",
+            "--target", str(self.setup_user_root), "--user-root", str(self.setup_user_root),
+            "--collection", "user-root", "--visibility", "shared", "--host", "codex", *args, expect=expect)
+
+    def enable(self) -> None:
+        self.remember("semantic-alpha", "Alpha depends on Beta.")
+        self.remember("semantic-beta", "Beta is foundational.")
+        preview = self.graph("preview")["data"]
+        self.graph("enable", "--consent-digest", preview["consent_digest"])
+
+    def result_files(self, batch: dict, *, valid: bool = True) -> tuple[Path, Path]:
+        result = {"schema_version": 1, "request_digest": batch["request_digest"],
+            "processed_ids": [doc["id"] for doc in batch["documents"]], "relations": []}
+        encoded = json.dumps(result, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        receipt = {"schema_version": 1, "request_digest": batch["request_digest"],
+            "result_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+            "host": "codex", "reviewed": valid, "attempt": batch["next_attempt"]}
+        first, second = self.work_root / "result.json", self.work_root / "receipt.json"
+        first.write_bytes(encoded)
+        second.write_text(json.dumps(receipt), encoding="utf-8")
+        return first, second
+
+    def test_capture_prepare_apply_noop_and_stale_result(self) -> None:
+        self.enable()
+        batch = self.graph("prepare")["data"]["request"]
+        self.assertEqual(len(batch["documents"]), 2)
+        first, second = self.result_files(batch)
+        self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        self.assertEqual(self.graph("status")["data"]["pending_count"], 0)
+        noop = self.remember("semantic-alpha", "Alpha depends on Beta.")
+        self.assertEqual(noop["data"]["graph_update"]["state"], "unchanged")
+        queued = self.remember("semantic-gamma", "Gamma uses Alpha.")
+        self.assertEqual(queued["data"]["graph_update"]["state"], "pending")
+        result = self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second), expect=2)
+        self.assertIn("stale", result["message"])
+        self.assertEqual(self.graph("status")["data"]["pending_count"], 1)
+
+    def test_two_failed_reviews_exhaust_correction_budget(self) -> None:
+        self.enable()
+        request_digest = None
+        for attempt in (1, 2):
+            batch = self.graph("prepare")["data"]["request"]
+            self.assertEqual(batch["next_attempt"], attempt)
+            if request_digest is not None:
+                self.assertEqual(batch["request_digest"], request_digest)
+            request_digest = batch["request_digest"]
+            first, second = self.result_files(batch, valid=False)
+            self.graph("apply", "--request-digest", request_digest,
+                "--input", str(first), "--receipt", str(second), expect=5)
+        prepared = self.graph("prepare")["data"]
+        self.assertFalse(prepared["analysis_allowed"])
+        self.assertFalse(prepared["needs_model"])
+
+    def test_broken_derived_state_cannot_undo_canonical_capture(self) -> None:
+        self.enable()
+        state = next((self.setup_user_root / ".hive/index/semantic-graph").glob("*.json"))
+        state.write_bytes(b"broken")
+        result = self.remember("semantic-delta", "Delta is retained despite graph failure.")
+        self.assertEqual(result["data"]["graph_update"]["reason"], "derived-state-unavailable")
+        self.assertEqual(result["data"]["plan"]["disposition"], "insert")
+        again = self.remember("semantic-delta", "Delta is retained despite graph failure.")
+        self.assertEqual(again["data"]["plan"]["disposition"], "noop")
+
+    def test_source_partition_keeps_consumer_tree_absent(self) -> None:
+        source = self.work_root / "source"
+        (source / "docs/facts/en").mkdir(parents=True)
+        (source / "docs/facts/ko").mkdir()
+        (source / "hive-source.json").write_text(json.dumps({"schema_version": 1,
+            "kind": "aigent-hive-source-workspace", "consumer_setup_allowed": False}), encoding="utf-8")
+        (source / "docs/source.md").write_bytes(b"canonical\n")
+        fingerprint = hashlib.sha256(b"canonical\n").hexdigest()
+        for language, other in [("en", "ko"), ("ko", "en")]:
+            page = f'''---
+schema_version: 1
+pair_id: alpha
+topic_slug: alpha
+language: {language}
+counterpart: ../{other}/alpha.md
+title: Alpha
+summary: Canonical source
+tags: [test]
+aliases: []
+sources: ["repo:docs/source.md#sha256:{fingerprint}"]
+links: []
+reviewed_revision: "git:{'a' * 40}"
+status: active
+---
+
+# Alpha
+
+Canonical source.
+'''
+            (source / f"docs/facts/{language}/alpha.md").write_bytes(page.encode())
+        self.command("source-wiki", "index", "--target", str(source))
+        args = ["--engine", "host-semantic", "--target", str(source), "--language", "en", "--host", "codex"]
+        preview = self.command("source-wiki", "graph", "preview", *args)["data"]
+        self.command("source-wiki", "graph", "enable", *args, "--consent-digest", preview["consent_digest"])
+        batch = self.command("source-wiki", "graph", "prepare", *args)["data"]["request"]
+        first, second = self.result_files(batch)
+        self.command("source-wiki", "graph", "apply", *args, "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        self.assertFalse((source / ".hive").exists())
+        self.assertEqual(self.command("source-wiki", "graph", "status", *args)["data"]["pending_count"], 0)
+        self.assertTrue((source / ".agents/work/semantic-graph").is_dir())
+
+    def test_confidential_scope_without_action_grant_never_returns_documents(self) -> None:
+        self.enable()
+        process = subprocess.run([str(self.hive_binary), "knowledge", "graph", "prepare",
+            "--engine", "host-semantic", "--target", str(self.setup_user_root),
+            "--user-root", str(self.setup_user_root), "--collection", "user-root",
+            "--visibility", "confidential", "--host", "codex", "--output", "json"],
+            capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertNotEqual(process.returncode, 0)
+        self.assertNotIn("Alpha depends", process.stdout)
 
 
 if __name__ == "__main__":
