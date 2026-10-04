@@ -17,7 +17,7 @@
 - [x] [DPS-002] 기본 23개·빈 선택·의존성·Wiki 조건의 일관된 선택
   - state: complete; evidence: repo:tests/results/runs/20261002T021301-49cf6fa9b6ae.md#sha256:00849e999d35dc801b9c61d042a26928bd69baff613967eb62d7c4118c23b8a8
 - [ ] [DPS-003] 선택 스킬의 자연어 활용과 제공 위치별 정책 일치
-  - state: agent-owned
+  - state: awaiting-external-evidence; owner: 유지관리자; reason: test.8 설치·승인된 프로젝트 결합·새 실제 서버의 ship 발견 완료, WProject 새 대화 두 개의 명시 호출·자연어 선택 근거 필요
 - [x] [DPS-004] 기존 기본 전환·사용자 선택 보존·재갱신 무변경
   - state: complete; evidence: repo:tests/results/runs/20261002T033536-3616b903f78c.md#sha256:e780038561f2b87ab1cc78bdb5569c97cac35d3b6923395391de7909e3806e72
 - [x] [DPS-005] 관련·전체 회귀와 공개 test.6 수용
@@ -47,3 +47,5 @@
 - WProject의 두 사용자 파일 입력·결합 지문 불변과 승인된 47개 경로 범위 확인 → 새 미리보기의 정확한 승인 지문 적용 → `--validate`·재갱신 변경 0건·사용자 코드 불변 확인
 - 설치·갱신과 추가 파일 정리의 별도 실행, 새 모델 호출·호스트 강제 재시작 제외
 - 실제 선택 스킬 호출은 설치 검증과 구분, 새 대화 필요 시 정확한 사용자 단계 인계
+
+- [test.8 승인 반영 완료](../../research/skill-merge-public-test8-0.11.1.md), 원래 두 사용자 파일의 승인 의미 유지. 파일·관리 서버 검증을 실제 모델 호출 근거로 대체 금지

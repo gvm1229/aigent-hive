@@ -1,69 +1,39 @@
 # 현재 상태
 
-- 제품 버전: `0.11.1`
-- 공개 안정판: `0.11.0`
-- 작업 브랜치: `develop`
-- 공개 시험 수용: `0.11.1-test.7`
-- 다음 시험 대상: `0.11.1-test.8`
-- 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
-- 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
+- 제품 버전: `0.11.1`, 공개 안정판: `0.11.0`, 작업 브랜치: `develop`
+- 공개 시험 수용·현재 사용자 설치: `0.11.1-test.8`
+- 정본: [활성 계획](../plans/PLAN.md), [정식 출시 실행](../plans/0.11.1-stable-release.md)
+- 이전 수치·승인·미게시 후보·로컬 검사 이력: [반영 전 상태](../archive/state/0.11.1-before-test8-application.md)
 
 ## 생성된 현재 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 24/26 완료
+- 현재 등록 항목: 25/26 완료
 
-- `agent-owned`: `DPS-003`, `SGM-006`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: 없음
+- `awaiting-external-evidence`: `DPS-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
 
-- [추가 정리](../../tests/results/further-cleanup-20261005.md) 완료: 약 18.060GiB → 4.769GiB, 현재 설치·연구 코드·작은 결과 보존
+- [추가 정리](../../tests/results/further-cleanup-20261005.md): 최초 112.217GiB → 첫 정리 18.060GiB → 추가 정리 4.769GiB. 현재 설치·연구 코드·작은 결과 보존, 생성한 새 검증 산출물도 종료 후 정리
+- [매일 정리](../guides/test-cleanup.md): 한국 시간 09시 자동화 활성, 검토·결과 커밋을 마친 정확 경로만 삭제. 관리 영역 20GiB 초과·미검토·만료·오류 보고, 미래 예약 실행의 성공 주장 없음
+- [test.8 공개 수용·실제 반영](../research/skill-merge-public-test8-0.11.1.md): 소스 `06d56360`, 필수 CI `37217641485`, 후보 `37218215348`, 복구 게시 `37219894233`, 공개 수용 `37220067876`
+- Windows·Linux 최초 성공, macOS 새 환경 재검증 성공. 최초 macOS 검색 도우미 실패·원인 미확정 한계 보존, 새 성공을 원인 수정 근거로 해석하는 주장 제외
+- 공개 Windows 바이너리의 실제 Claude 2.1.163 세 경로 설치·갱신·보존 통과, 모델 호출 0건
+- [부속 폴더 오류 수정](../research/skill-resource-cleanup-0.11.1.md): test.7 실제 적용은 자동 원복, 실제 삭제 파일로 빈 상위 폴더를 검증하도록 수정. Windows 전체 Rust 976개 통과·4개 수동 조건 제외, Python 925개 통과·44개 운영체제/권한 조건 제외, 제외 항목의 실행 성공 주장 없음
+- 현재 사용자 test.8 인증 갱신·설치 검증 완료, 지식 502개·설정 2개·Hive 표시 밖 지침 보존
+- WProject: 기본 스킬 제외·사용자 파일 이동 없이 새 Hive 개선과 사용자 검사 결합. 승인된 두 파일 내용 그대로 반영, 총 34개 경로·원본과 같은 추가 중복 14개 정리, 사용자 AGENTS·기존 별도 문서 3개 보존
+- `hive.project-upgrade-current`, 두 번째 미리보기 변경 0건. 새 실제 Codex 관리 서버의 프로젝트 ship 한 개·활성 상태, 모델 호출 0건. Unity 실행·소비자 Git 커밋 없음
+- `SDP-005` 전역 실제 호출은 사용자 새 대화에서 확인 완료, 프로젝트 호출 `DPS-003`과 구분
 
-- 2026-10-05 test.7 설치 완료·502개 지식·2개 설정·외부 지침 보존; WProject 적용은 부속 폴더 검사 오류로 자동 원복, 원본·복구 기록 상태 확인. SGM-005–006 수정·test.8 진행
+## 승인과 다음 행동
 
-- 2026-10-04 정리: 112.217GiB → 18.030GiB, 94.190GiB 제거; 관리 대상 13.815GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
-- SGM-001–004 완료: [test.7 공개 수용·결합 미리보기](../research/skill-merge-public-test7-0.11.1.md), 필수 CI·다섯 배포 대상 후보·세 운영체제 수용·실제 Windows Claude 검사 통과; WProject 47개 변경 제안·8개 검사 파일 불변, 실제 적용 없음
-
-- 사용자 의도 확인: 기본 스킬 제외 대신 새 Hive 개선과 사용자 수정의 결합; [결합 계획](../plans/active/skill-merge-0.11.1.md) 구현, 새 제품 변경의 test.7 검증 필요
-
-- 사용자 재시작·GUI 목록 확인과 두 새 실제 Codex 대화의 명시/자연어 `user-setup` 호출·`hive.user-setup-valid` 확인 완료; 전역 호출 수용 SDP-005 완료, [검토 근거](../research/wproject-custom-ship-0.11.1.md#전역-스킬-검증)
-- WProject의 사용자 관리 `ship`에 프로젝트 전용 검사 존재·Hive 기준 목록 부재, 공식 scan 충돌 재현과 파일 보존; 이동·삭제 제외
-- 사용자 `ship` 유지·Hive 기본 `ship` 제외의 22개 선택 질문 제출, 공식 구버전 재설정 미리보기도 기존 목록 소유권 제약으로 중단; 프로젝트 적용과 제품 수정 경로는 선택 확인 뒤 검토
-
-- test.6의 필수 CI 36963278427·후보 36963962342·복구 게시 36965966512·세 운영체제 수용 36966439849 완료; [공개 수용 정본](../research/skill-delivery-public-test-0.11.1.md)의 정확한 지문·실행 범위 확인
-- 공개 test.6의 실제 Windows Claude 2.1.163 세 경로와 Codex 0.159.0 격리 CLI 검증 통과; GUI·명시/자연어 모델 호출 미증명, 모델 호출 0건
-- 현재 사용자 test.6 설치 승인·적용 완료: 공개 실행 파일 지문 일치, 지식 491개·설정 2개·외부 지침 보존, 소비자 프로젝트 변경 0건; [설치 근거](../../tests/results/legacy/7d159c3524fa28e6fde6.md)
-- 현재 사용자 새 실제 Codex 관리 서버: Hive 스킬 28개·중복/오류 0개·모델 호출 0건; [발견 근거](../../tests/results/legacy/f41c995a82c3db97f0a4.md), 이후 사용자 새 대화의 전역 명시/자연어 호출 확인 완료
-
-- 사용자 승인 추가 범위: [지침 이식·프로젝트 스킬](../plans/active/directive-localization-and-project-skills-0.11.1.md); 지침 이식·기본 23개·자유 선택·기존 기본 전환 구현과 관련 검증 완료, [검증 근거](../research/directive-localization-and-project-skills-0.11.1.md); 자연어 호출 정책 구현 완료·실제 대화 호출 대기
-- 추가 범위 최종 Windows 검사: Rust 967개 통과·4개 조건 제외, Python 917개 통과·44개 조건 제외, Rust 1.99 Clippy 통과; 실제 Claude CLI 2.1.163 세 경로 설치·검증·재설치·갱신과 사용자 자료 보존 통과, 모델 호출 0건
-
-- CI 36904470136의 macOS 백업 이름 충돌·Linux Rust 1.99 검사 호환 수정 완료, [수정 계획](../plans/active/release-qualification-repairs-0.11.1.md) 적용
-- test.2–4 후보 미게시; 전체 필수 CI 36923839882 통과 뒤 test.5 후보 36940738218·복구 게시 36942587351·세 OS 수용 36943131885 성공
-
-- 0.11.1 정식 출시 승인, [실행 계획](../plans/0.11.1-stable-release.md)의 공개 시험·현재 사용자 설치 완료; Codex 재시작 뒤 실제 대화 호출 증거 대기
-- 반복 지연 방지: 전체 실패군·도구 버전 확인, 필수 CI 통과 뒤 후보 생성, 입력 변화 없는 재시도 제외, 15분 정체 시 작업 상태 진단
-- [0.11.1 구독자 공지 초안](../releases/0.11.1.subscriber.ko.md) 문구·기존 Discord 채널 전송 승인, 정식 게시 뒤 발송 예정
-
-- [Claude Windows 설치 검증](../research/claude-user-install-0.11.1.md): 실제 격리 CLI 세 경로 통과, 전체 Rust 964개 통과·4개 제외, 전체 Python 917개 통과·44개 조건 제외
-
-- 0.11.0 Git 태그의 정확한 프로젝트·사용자 원본 보존
-- [로컬 전체 검증](../research/skill-delivery-0.11.1.md): Windows Rust 959개 통과·4개 제외, Python 927개 통과·33개 운영체제 조건 제외
-- [공개 수용](../research/skill-delivery-public-test-0.11.1.md): 실제 test.5의 Windows x64·Linux musl x64·macOS arm64 네 조건·지침·한국어·검색 수용 통과, Codex 등록 응답은 모의
-- 승인된 현재 사용자 설치·설정 검증 통과: 공개 test.5 실행 파일 지문 일치, 지식 일반 파일 489개·기존 설정 2개·Hive 표시 블록 밖 지침 보존, 소비자 프로젝트 변경 0건
-- 현재 사용자 새 실제 Codex 0.159.0 서버: Hive 스킬 28개·중복 0개·오류 0개, 모델 호출 0건; GUI 선택·명시 모델 호출·자연어 모델 호출 미증명
-- Claude CUI-001–004·실제 Windows 공개 CLI 수용 완료; 안정판 latest 0.11.0 유지, 현재 사용자 CLI test.5 적용
-
-## 승인 인계
-
-- 2026-10-05 현재 사용자 test.7 설치·검토한 WProject 결합 반영 승인 확보, 보존 검증·적용 뒤 DPS-003 실제 대화 확인 진행
-
-- 현재 사용자 test.5 설치 승인·적용 완료, test.6 설치 승인·적용 완료; 안정판 게시·main 통합·881자 Discord 문구·발송 승인 유지
-- `SDP-005` 사용자 실행·검토 완료; `DPS-003`의 프로젝트 선택 스킬 활용과 사용자 관리 스킬 충돌 처리 구분
-- 기존 대화의 0.11.0 캐시 경로를 담은 스킬 목록으로 새 0.11.1 호출 성공 판정 제외; host 프로세스 신호·자격 증명 전달·모델 제공자 API를 통한 우회 금지
-- 두 호출은 설정 변경 없는 설치 검증으로 제한, 소비자 프로젝트 변경 제외; 실제 호출 증거 확보 뒤 SDP-005 완료와 보호 main 통합·안정판 후보·게시·Discord 전송 진행
+- 2026-10-05 현재 사용자 설치·검토된 WProject 결합·0.11.1 진행 승인에 따른 구현·공개 시험·반영 완료
+- 0.11.1 안정판·보호 main·태그·npm·GitHub 게시·881자 Discord 문구와 전송의 기존 승인 유지, 추가 승인 질문 불필요
+- 남은 외부 근거: WProject 새 Codex 대화 두 개에서 프로젝트 ship 명시 호출·자연어 선택 확인. 선택 파일 경로·Unity 검사·변경 분리 규칙의 실제 응답, 코드·설정·Git 변경 없는 검사로 제한
+- 필요 시 사용자 Codex 재시작. 오래된 스킬 목록·파일 검증·관리 서버 발견을 실제 모델 호출 증명으로 대체 금지, 호스트 강제 종료·모델 API 우회 없음
+- 근거 확보 뒤 DPS-003 완료 → 미완료 0건 확인 → 보호 main 통합·안정판 후보·게시 → 승인된 Discord 전송. 현재 안정판·main·공지 실행 없음
