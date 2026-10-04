@@ -9,11 +9,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 25/26 완료
+- 현재 등록 항목: 26/26 완료
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `DPS-003`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -36,6 +36,6 @@
 
 - 2026-10-05 현재 사용자 설치·검토된 WProject 결합·0.11.1 진행 승인에 따른 구현·공개 시험·반영 완료
 - 0.11.1 안정판·보호 main·태그·npm·GitHub 게시·881자 Discord 문구와 전송의 기존 승인 유지, 추가 승인 질문 불필요
-- 남은 외부 근거: WProject 새 Codex 대화 두 개에서 프로젝트 ship 명시 호출·자연어 선택 확인. 선택 파일 경로·Unity 검사·변경 분리 규칙의 실제 응답, 코드·설정·Git 변경 없는 검사로 제한
-- 필요 시 사용자 Codex 재시작. 오래된 스킬 목록·파일 검증·관리 서버 발견을 실제 모델 호출 증명으로 대체 금지, 호스트 강제 종료·모델 API 우회 없음
-- 근거 확보 뒤 DPS-003 완료 → 미완료 0건 확인 → 보호 main 통합·안정판 후보·게시 → 승인된 Discord 전송. 현재 안정판·main·공지 실행 없음
+- [사용자 제공 두 새 대화 수용](../research/project-skill-user-acceptance-0.11.1.md): 프로젝트 ship의 명시·자연어 선택과 Unity 검사·변경 분리 규칙 설명 확인. 실제 검사·Unity 실행·커밋의 통과 증명 제외
+- 두 실제 대화 근거와 파일·관리 서버 검사 구분, 호스트 강제 종료·모델 API 우회 없음
+- DPS-003 완료, 기능 수용 26/26. 2026-10-05 대상 0.11.1 안정판까지 진행의 사용자 재확인. 승격 검사 보완 → 보호 main 통합·안정판 후보·게시 → 승인된 Discord 전송; 아직 게시 전
