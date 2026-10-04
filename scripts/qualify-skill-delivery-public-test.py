@@ -121,7 +121,7 @@ def main() -> None:
         config = {
             "schema_version": 1, "interface_language": "en", "wiki": {"enabled": False, "language": "both"},
             "profile": {"contexts": ["web-developer"]}, "persona": {"id": "balanced"}, "selected_hosts": ["codex"],
-            "skills": {"mode": "individual", "selected": ["user-setup", "prompt-refine"]},
+            "skills": {"mode": "individual", "selected": ["user-setup", "prompt-refine", "usage-guard"]},
             "usage_guard": {"enabled": False, "stop_remaining_percent": 20, "codexbar_fallback_enabled": False},
         }
         answers = work / "user.yml"
@@ -161,7 +161,7 @@ def main() -> None:
         foreign.write_bytes(b"Foreign project content\n")
         project_answers = yaml.safe_load((ROOT / "tests/fixtures/setup/answers-base.yml").read_text())
         project_answers.update(setup_mode="custom", interface_language="en", wiki={"enabled": False, "language": "both"},
-                               persona={"id": "balanced"}, skills={"mode": "individual", "selected": ["prompt-refine", "project-setup"]})
+                               persona={"id": "balanced"}, skills={"mode": "individual", "selected": ["prompt-refine", "project-setup", "usage-guard"]})
         path = work / "project.yml"
         path.write_text(yaml.safe_dump(project_answers), encoding="utf-8")
         invoke("setup", "--target", str(project), "--answers", str(path), "--capabilities", str(ROOT / "tests/fixtures/setup/capabilities-codex-host-native.json"),
@@ -175,13 +175,17 @@ def main() -> None:
         (user / "registration.json").write_text(json.dumps(state))
         invoke(*upgrade, "--apply", "--output", "json")
         assert (project / ".agents/skills/prompt-refine/SKILL.md").is_file()
+        assert (project / ".agents/skills/usage-guard/references/control.md").is_file()
+        assert (project / ".agents/skills/usage-guard/references/sensors.md").is_file()
         state["enabled"] = True
         (user / "registration.json").write_text(json.dumps(state))
         invoke(*upgrade, "--apply", "--output", "json")
         assert not (project / ".agents/skills/prompt-refine/SKILL.md").exists()
+        assert not (project / ".agents/skills/usage-guard").exists()
         invoke(*upgrade, "--validate", "--output", "json")
         assert foreign.read_bytes() == b"Foreign project content\n"
         scenarios.append("project-update-restoration-cleanup-and-foreign-preservation")
+        scenarios.append("project-companion-directories-removed-after-plugin-restoration")
     report = {"schema_version": 1, "status": "passed", "product_version": args.product_version,
               "package_version": args.package_version, "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
               "os": sys.platform, "registration": "simulated-native", "actual_ai_verified": False, "scenarios": scenarios}
