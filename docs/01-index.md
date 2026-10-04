@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.0 release-date=2026-09-27 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.1 release-date=2026-10-05 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -89,6 +89,7 @@ current catalog.
 | 문서 | 설명 |
 | --- | --- |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
+| [`0.11.1`](releases/0.11.1.md) | Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정 |
 | [`0.11.0`](releases/0.11.0.md) | 정식 출시: Hook 보호·긴 대화 지침 복구·프로젝트 갱신·사용량 리셋 중단 |
 | [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
 | [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |

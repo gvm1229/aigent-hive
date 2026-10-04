@@ -6,24 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.11.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.11.1-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.0 release-date=2026-09-27 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.1 release-date=2026-10-05 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.11.0` is the current public release.
+Stable `0.11.1` is the current public release.
 
 ## Install the current stable release
 
-`0.11.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.11.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.11.0
+npm install -g aigent-hive@0.11.1
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.11.0 (released 2026-09-27)
+AIgent Hive v0.11.1 (released 2026-10-05)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.11.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.11.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.11.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.11.1/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.11.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.11.1/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -76,7 +76,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.11.0. The stable install guidance is
+Install the current stable release 0.11.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -94,18 +94,23 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.11.0
+## What changed in 0.11.1
 
-- Optional Hooks check supported AI file edits before they happen and block direct edits to files you choose to protect. Verified file-edit coverage is Windows Codex and Antigravity; terminal commands are outside this check.
-- In Codex, you can preview and select key instructions to repeat after a long conversation is summarized. Turning this reminder off and on keeps other tool settings intact; it does not guarantee every instruction is followed.
-- Collaborators without Hive can keep using their tools in the same project. If you use Hive, your selected protections remain available.
-- Ask for a project guidance update in ordinary language, or preview the changes first. Projects set up with any public stable version since 0.9.1 can update while retaining valid settings and personal additions; numbered tests and every possible configuration are outside this guarantee.
-- Automatic continuation checks the current conversation and running program before resuming. When the next usage check detects a quota reset, new automatic work stops until you acknowledge it; running work is not interrupted in real time. You can turn reset detection off or on for this conversation while low-usage protection remains active.
-- Transferred knowledge stays readable without its original files and is marked when its current accuracy cannot be verified. Existing commands and stored knowledge remain available after updating.
+- Codex receives built-in Hive Skills from the verified plugin. User and project updates remove only authenticated, unchanged duplicate copies.
+- Cleanup is part of update, without a separate command or confirmation. Customized Skills, companion resources and foreign files stay intact; remaining duplicates have reasons.
+- Windows Claude global installation accepts ordinary, space-containing and Korean paths. Installation failures show bounded, safe diagnostics; subscription-backed interactive Skill use remains unverified.
+- Setup recovery avoids unchanged retries and preserves earlier answers when question tools fail.
+- Project-only Skills stay local. Project update restores local delivery if plugin verification fails. Global update does not modify consumer projects; Claude and Antigravity retain dedicated delivery.
+
+- Project setup starts with 23 Skills. You can add, remove or select none; Wiki-disabled projects start with 18. Saved choices survive later updates.
+- Selected project Skills can handle relevant natural-language requests. Their availability does not grant permission to change files, publish or send messages.
+- When you bring directives from another project, Hive adapts their paths, links and authority into independent rules for the target project.
+
+- Combine new Hive Skill improvements with your project rules through an exact reviewed preview. Keep your custom checks and companion settings.
 
 ## Supported targets
 
-| Platform | Native target | 0.11.0 evidence |
+| Platform | Native target | 0.11.1 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -115,7 +120,7 @@ This option installs only the current stable release.
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.11.0` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.11.1` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 

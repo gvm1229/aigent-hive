@@ -80,9 +80,14 @@ class PublicStableDocsTest(unittest.TestCase):
         self.assertIn("stable-target", {item["code"] for item in result["failures"]})
 
         registry = root / "latest.tsv"
-        registry.write_text("aigent-hive\t0.10.3\n@aigent-hive/win32-x64\t0.10.3\n", encoding="utf-8")
-        result = self.run_check(root, "--channel", "test", "--registry-latest-file", "latest.tsv")
-        self.assertEqual(result["exit_code"], 0)
+        for version in (manifest["stable_version"], manifest["previous_stable_version"]):
+            with self.subTest(version=version):
+                registry.write_text(
+                    f"aigent-hive\t{version}\n@aigent-hive/win32-x64\t{version}\n",
+                    encoding="utf-8",
+                )
+                result = self.run_check(root, "--channel", "test", "--registry-latest-file", "latest.tsv")
+                self.assertEqual(result["exit_code"], 0)
         registry.write_text("aigent-hive\t0.9.5\n", encoding="utf-8")
         result = self.run_check(root, "--channel", "test", "--registry-latest-file", "latest.tsv")
         self.assertIn("registry-latest", {item["code"] for item in result["failures"]})
