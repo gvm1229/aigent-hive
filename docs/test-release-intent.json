@@ -1,11 +1,9 @@
 {
   "schema_version": 1,
   "product_version": "0.11.1",
-  "package_version": "0.11.1-test.7",
+  "package_version": "0.11.1-test.8",
   "plan_ids": [
-    "SGM-001",
-    "SGM-002",
-    "SGM-003"
+    "SGM-005"
   ],
-  "product_tree_sha256": "sha256:0780fb57e3ffde4ccefcafdd69cc96b2f484bf51d31545f026110b228432c225"
+  "product_tree_sha256": "sha256:c4f357f2abdbc6b2231d9e50a025d1e8a35b22dd17060c0c01f3f0454873c074"
 }
