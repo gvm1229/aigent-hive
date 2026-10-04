@@ -4,7 +4,7 @@
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
 - 공개 시험 수용: `0.11.1-test.7`
-- 다음 시험 대상: 새 제품 변경 시 `0.11.1-test.8`
+- 다음 시험 대상: `0.11.1-test.8`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
@@ -12,15 +12,17 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 22/24 완료
+- 현재 등록 항목: 22/26 완료
 
-- `agent-owned`: `DPS-003`, `TCL-004`
+- `agent-owned`: `DPS-003`, `SGM-005`, `SGM-006`, `TCL-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- 2026-10-05 test.7 설치 완료·502개 지식·2개 설정·외부 지침 보존; WProject 적용은 부속 폴더 검사 오류로 자동 원복, 원본·복구 기록 상태 확인. SGM-005–006 수정·test.8 진행
 
 - 2026-10-04 정리: 112.217GiB → 18.030GiB, 94.190GiB 제거; 관리 대상 13.815GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
 - SGM-001–004 완료: [test.7 공개 수용·결합 미리보기](../research/skill-merge-public-test7-0.11.1.md), 필수 CI·다섯 배포 대상 후보·세 운영체제 수용·실제 Windows Claude 검사 통과; WProject 47개 변경 제안·8개 검사 파일 불변, 실제 적용 없음

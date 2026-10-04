@@ -1,12 +1,12 @@
 # Aigent Hive 활성 계획
 
-> Revision: 378
+> Revision: 379
 > 기준일: 2026-10-05
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
-> 현재 단계: 승인된 test.7 설치·결합 적용과 추가 정리
+> 현재 단계: 부속 자료 정리 회귀 수정·test.8 검증과 추가 정리
 > 공개 시험 수용: `0.11.1-test.7`
-> 다음 시험 대상: 새 제품 변경 시 `0.11.1-test.8`
+> 다음 시험 대상: `0.11.1-test.8`
 
 ## 현재 요청과 경계
 
@@ -30,9 +30,9 @@
 | Claude Windows 전역 설치 | 4 | 0 | 100.0% |
 | 원격 출시 검증 수정 | 2 | 0 | 100.0% |
 | 지침 이식·기본 스킬·자연어 활용 | 4 | 1 | 80.0% |
-| 새 Hive 개선·사용자 스킬 결합 | 4 | 0 | 100.0% |
+| 새 Hive 개선·사용자 스킬 결합 | 4 | 2 | 66.7% |
 | 시험 용량 제한·매일 정리 | 3 | 1 | 75.0% |
-| **현재 범위 합계** | **22** | **2** | **91.7%** |
+| **현재 범위 합계** | **22** | **4** | **84.6%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -43,7 +43,7 @@
 | [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
 | [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–002` | 원격 출시 검증 수정 |
 | [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
-| [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–004` | 새 Hive 개선·사용자 스킬 결합 |
+| [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–006` | 새 Hive 개선·사용자 스킬 결합 |
 | [test-cleanup-0.11.1.md](active/test-cleanup-0.11.1.md) | `TCL-001–003` | 시험 용량 제한·매일 정리 |
 
 ## 실행 순서

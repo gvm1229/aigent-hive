@@ -22,6 +22,11 @@
 - [x] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
   - state: complete; evidence: repo:docs/research/skill-merge-public-test7-0.11.1.md#sha256:f22a49255f626bb431a2340347a2f943750781e78b1c9dc9b2a643824e3a7533
 
+- [ ] [SGM-005] 부속 자료 폴더 정리의 실제 경로 검증·사용자 자료 보존
+  - state: agent-owned
+- [ ] [SGM-006] 수정한 test.8 공개 수용과 승인된 결합 갱신 검증
+  - state: agent-owned
+
 ## 구현 결정과 순서
 
 1. SGM-001: 기존 `hive-update::three_way_merge`의 인증 기준·서로 다른 변경 결합 유지. `project-refresh`에 `omitted_incoming_hunks`의 검토 의무, 새 개선 전체 반영으로 거짓 완료 금지. 겹친 의미는 사용자 규칙·필요한 새 Hive 규칙을 함께 반영한 호스트 작성 결합본으로 검토.
@@ -42,3 +47,14 @@
 
 - [test.7과 실제 결합 미리보기](../../research/skill-merge-public-test7-0.11.1.md)
 - 실제 사용자 설치·프로젝트 반영은 별도 승인 대상, 이후 DPS-003 실제 호출 검증
+
+## 2026-10-05 실제 적용 회귀
+
+- test.7 사용자 설치·502개 지식·2개 설정·외부 지침 보존 성공
+- 전역 플러그인 갱신 뒤 제안 34개, 추가 삭제 14개 모두 인증 원본과 같은 미수정 Hive 사본; 사용자 결합 두 파일의 입력·결합 내용 불변
+- 실제 적용: `references/SKILL.md`라는 허용되지 않는 가상 경로의 검사로 실패, 변경 대상의 원본 지문 일치·AGENTS의 Git 차이 없음·복구 기록 제거 확인
+- SGM-005 소유: `crates/hive-cli/src/project_upgrade.rs`의 `prune_empty_project_skill_ancestors`·`remove_empty_project_owned_dir`와 인접 시험
+- 설계: 이미 검증한 삭제 파일을 각 상위 폴더의 근거로 전달. 근거 파일의 허용 경로·같은 `.agents/skills` 안의 실제 상위 폴더 관계 확인. 가짜 본문 경로 생성 제거, `open_dir_nofollow`·비어 있는 폴더만 제거 유지
+- 검증: 부속 자료 삭제의 실제 갱신 재현, 외부 파일이 남은 폴더 보존, 다른 스킬·상위 경로·연결 경로 거절. 관련 CLI 시험 → 전체 Rust·Python → 정확한 소스 CI
+- SGM-006: 제품 바이트 수정으로 test.8 후보·공개·세 운영체제 수용 필요. 같은 0.11.1 진행 승인 범위에서 보존 갱신·공식 결합 적용 재검증, 새 사용자 의미 변경은 제외
+- 현재 WProject 원본 유지, 수동 소유권 변경·강제 파일 삭제·안전 검사 우회 금지
