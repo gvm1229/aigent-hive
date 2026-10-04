@@ -1131,3 +1131,7 @@
 | [passed](runs/20261004T223945-7021c6f52248.md) | 사용량 CLI 설치 경계와 원문 보존 회귀 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224013-7101ac7cbcc8.md) | 사용량 수신 Rust 정적 검사 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224054-283c332cb450.md) | 사용량 수신 정적 지적 수정 확인 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224213-7606c68c8eec.md) | 검색 도우미 종료 진단 회귀 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224242-79bcaa9c149b.md) | 공통 프로세스 실행기의 기존 회귀 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224334-4c9b553c0d88.md) | 도우미 진단 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224354-06118f0c8715.md) | 검색 도우미 최종 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
