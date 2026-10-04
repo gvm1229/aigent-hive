@@ -1190,7 +1190,7 @@ fn prune_empty_project_skill_ancestors<'a>(
     paths: impl IntoIterator<Item = &'a Path>,
 ) -> Result<(), UpdateError> {
     let skills_root = Path::new(".agents/skills");
-    let mut directories = BTreeSet::new();
+    let mut directories = BTreeMap::new();
     for path in paths {
         validate_hive_skill_projection_relative(path)
             .map_err(|error| UpdateError::Verification(error.to_string()))?;
@@ -1206,27 +1206,39 @@ fn prune_empty_project_skill_ancestors<'a>(
             .parent()
             .filter(|parent| *parent != skill_directory.as_path())
         {
-            directories.insert(parent.to_path_buf());
+            directories.insert(parent.to_path_buf(), path.to_path_buf());
         }
-        directories.insert(skill_directory);
-        directories.insert(skills_root.to_path_buf());
+        directories.insert(skill_directory, path.to_path_buf());
+        directories.insert(skills_root.to_path_buf(), path.to_path_buf());
     }
     let mut directories = directories.into_iter().collect::<Vec<_>>();
     directories.sort_by(|left, right| {
         right
+            .0
             .components()
             .count()
-            .cmp(&left.components().count())
-            .then_with(|| right.cmp(left))
+            .cmp(&left.0.components().count())
+            .then_with(|| right.0.cmp(&left.0))
     });
-    for directory in directories {
-        remove_empty_project_owned_dir(target, &directory)?;
+    for (directory, owned_file) in directories {
+        remove_empty_project_owned_dir(target, &directory, &owned_file)?;
     }
     Ok(())
 }
 
-fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), UpdateError> {
+fn remove_empty_project_owned_dir(
+    target: &Dir,
+    relative: &Path,
+    owned_file: &Path,
+) -> Result<(), UpdateError> {
     let skills_root = Path::new(".agents/skills");
+    validate_hive_skill_projection_relative(owned_file)
+        .map_err(|error| UpdateError::Verification(error.to_string()))?;
+    if !relative.starts_with(skills_root) || !owned_file.starts_with(relative) {
+        return Err(UpdateError::Verification(
+            "project Skill directory is not an ancestor of its owned file".to_owned(),
+        ));
+    }
     let (parent, name) = if relative == skills_root {
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
@@ -1243,14 +1255,11 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
             UpdateError::Verification("project Skill directory escaped its root".to_owned())
         })?;
         let components = suffix.components().collect::<Vec<_>>();
-        let validation_path =
-            if components.len() == 2 && components[1].as_os_str() == OsStr::new("agents") {
-                relative.join("openai.yaml")
-            } else {
-                relative.join("SKILL.md")
-            };
-        validate_hive_skill_projection_relative(&validation_path)
-            .map_err(|error| UpdateError::Verification(error.to_string()))?;
+        if !(1..=2).contains(&components.len()) {
+            return Err(UpdateError::Verification(
+                "project Skill directory has an unsupported depth".to_owned(),
+            ));
+        }
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -2917,6 +2926,106 @@ mod tests {
             .exists());
         assert!(!temporary.path().join(".agents/skills").exists());
         assert!(temporary.path().join(".agents").exists());
+    }
+
+    #[test]
+    fn project_upgrade_prunes_reference_directories_after_deletion() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let paths = [
+            ".agents/skills/usage-guard/SKILL.md",
+            ".agents/skills/usage-guard/agents/openai.yaml",
+            ".agents/skills/usage-guard/references/control.md",
+            ".agents/skills/usage-guard/references/sensors.md",
+        ];
+        for path in paths {
+            let file = temporary.path().join(path);
+            fs::create_dir_all(file.parent().expect("companion parent")).expect("parent");
+            fs::write(file, b"synthetic owned bytes\n").expect("owned file");
+        }
+        let plan = deletion_plan(
+            &target,
+            paths
+                .into_iter()
+                .map(|path| (path.to_owned(), None))
+                .collect(),
+        );
+
+        apply_with_failure_after(&target, &plan, None).expect("delete owned companions");
+
+        assert!(!temporary.path().join(".agents/skills/usage-guard").exists());
+        assert!(!temporary.path().join(JOURNAL_PATH).exists());
+        assert!(temporary.path().join(".agents").exists());
+    }
+
+    #[test]
+    fn project_reference_cleanup_preserves_foreign_resources() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let relative = ".agents/skills/usage-guard/references/control.md";
+        let owned = temporary.path().join(relative);
+        let foreign = owned.with_file_name("user-notes.md");
+        fs::create_dir_all(owned.parent().expect("resource parent")).expect("parent");
+        fs::write(&owned, b"owned\n").expect("owned resource");
+        fs::write(&foreign, b"user resource\n").expect("foreign resource");
+        let plan = deletion_plan(&target, BTreeMap::from([(relative.to_owned(), None)]));
+
+        apply_with_failure_after(&target, &plan, None).expect("delete only owned resource");
+
+        assert!(!owned.exists());
+        assert_eq!(
+            fs::read(foreign).expect("foreign resource"),
+            b"user resource\n"
+        );
+        assert!(!temporary.path().join(JOURNAL_PATH).exists());
+    }
+
+    #[test]
+    fn project_directory_cleanup_requires_its_own_valid_file() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let relative = Path::new(".agents/skills/usage-guard/references");
+        fs::create_dir_all(temporary.path().join(relative)).expect("resource directory");
+        for witness in [
+            ".agents/skills/knowledge-capture/references/ingest.md",
+            ".agents/skills/usage-guard/references/unknown-file.md",
+            ".agents/skills/usage-guard/references/../SKILL.md",
+        ] {
+            assert!(remove_empty_project_owned_dir(&target, relative, Path::new(witness)).is_err());
+            assert!(temporary.path().join(relative).is_dir());
+        }
+        assert!(remove_empty_project_owned_dir(
+            &target,
+            Path::new(".agents"),
+            Path::new(".agents/skills/usage-guard/references/control.md"),
+        )
+        .is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn project_reference_cleanup_rejects_linked_directory() {
+        use std::os::unix::fs::symlink;
+
+        let temporary = tempdir().expect("temporary target");
+        let outside = tempdir().expect("outside");
+        let parent = temporary.path().join(".agents/skills/usage-guard");
+        fs::create_dir_all(&parent).expect("Skill parent");
+        fs::write(outside.path().join("keep"), b"outside\n").expect("outside sentinel");
+        symlink(outside.path(), parent.join("references")).expect("resource alias");
+
+        assert!(prune_empty_project_skill_ancestors(
+            &target_dir(temporary.path()),
+            [Path::new(
+                ".agents/skills/usage-guard/references/control.md"
+            )],
+        )
+        .is_err());
+        assert_eq!(
+            fs::read(outside.path().join("keep")).expect("outside"),
+            b"outside\n"
+        );
+        assert!(parent.join("references").is_symlink());
     }
 
     #[cfg(unix)]
