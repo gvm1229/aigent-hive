@@ -42,6 +42,7 @@
 | [passed](legacy/edaed6e229a3ad05398c.md) | tests/work/vector-native-3xsczgt3/receipt.json | a4a2e46a0da5e837de281c0b0e9619507aec4405 | 원본 JSON 참조 |
 | [passed](legacy/f276b8547ce7bd55f215.md) | tests/work/vector-privacy-current-4g28310y/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/f41c995a82c3db97f0a4.md) | tests/work/public-package-0111-test6/test6-current-user-skills.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/f81c3ebd6e9f6e9994cf.md) | tests/work/vector-native-kmz4kbw2/receipt.json | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | 원본 JSON 참조 |
 | [passed](legacy/ffb74a75735a053453a7.md) | tests/work/verified-workflow-acceptance-bso8rk8t/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](runs/20260828T164357-78eb5962bf9a.md) | 시험 산출물 관리 도구 격리 회귀 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260828T164606-49f246f2a697.md) | 산출물 관리 격리 회귀 32개 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
