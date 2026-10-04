@@ -58,6 +58,8 @@ pub(crate) struct DirectoryScanOutcome {
 #[derive(Debug)]
 pub(crate) struct GitOutput {
     pub(crate) success: bool,
+    pub(crate) exit_code: Option<i32>,
+    pub(crate) signal: Option<i32>,
     pub(crate) stdout: Vec<u8>,
     pub(crate) stderr: Vec<u8>,
 }
@@ -397,6 +399,8 @@ pub(crate) fn run_bounded_process_with_input(
     match stop {
         ProcessStop::Completed(status) => Ok(GitOutput {
             success: status.success(),
+            exit_code: status.code(),
+            signal: exit_signal(status),
             stdout: stdout?,
             stderr: stderr?,
         }),
@@ -409,6 +413,19 @@ pub(crate) fn run_bounded_process_with_input(
         ProcessStop::WaitFailed(error) => Err(WikiError::Io(format!(
             "cannot wait for {label} command: {error}"
         ))),
+    }
+}
+
+fn exit_signal(status: ExitStatus) -> Option<i32> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        status.signal()
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = status;
+        None
     }
 }
 
@@ -1162,6 +1179,8 @@ mod tests {
             if action == "rev-parse" {
                 return Ok(GitOutput {
                     success: self.is_git,
+                    exit_code: Some(i32::from(!self.is_git)),
+                    signal: None,
                     stdout: if self.is_git {
                         format!("{}\n", self.target.display()).into_bytes()
                     } else {
@@ -1175,6 +1194,8 @@ mod tests {
                 .any(|argument| argument == OsStr::new("--others"));
             Ok(GitOutput {
                 success: true,
+                exit_code: Some(0),
+                signal: None,
                 stdout: if untracked {
                     self.untracked.clone()
                 } else {
