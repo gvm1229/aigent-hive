@@ -11,10 +11,10 @@ aliases: ["번호 공개 시험 gate"]
 sources:
   - "repo:.agents/directives/references/ci-and-candidates.md#sha256:b1b2a41cfcad009d6561bcc57e94bdd4ebcaee771931ed3369d85a6935dcd52c"
   - "repo:.github/workflows/release.yml#sha256:993bf1709b27d5f6f5c18df46dab392fbb44570ecb3fcc9e0c4bd321fc5dc664"
-  - "repo:docs/public-test-product.json#sha256:1009b8243fe6fcbd501ef38e715ff2962daecb7a1fa29e049e378efef11f0585"
+  - "repo:docs/public-test-product.json#sha256:b0a143d1c205c18f11f9d76fd7824345168fb90ebcf4f0bf1d7d436319768dfd"
   - "repo:scripts/check-test-release-gate.py#sha256:75a37fd28d2aaf302c7079088b54c4cedb4060bd4497f4aa9219198ff024ce95"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:5857c29c72341a0eb8a9fc55e360259144432dee"
+reviewed_revision: "git:4865309f5fdec9d6dc2ca869b3327cf7b7fde3d0"
 status: active
 ---
 
