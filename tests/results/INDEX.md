@@ -6,6 +6,7 @@
 | [passed](legacy/057c730f3a63a1d9e861.md) | tests/work/vector-native-lblw2nrc/receipt.json | 6e7c4a3c93e4be6ebc3447b02635615122fd65d4 | 원본 JSON 참조 |
 | [passed](legacy/08fa608298d6df2957fb.md) | tests/work/knowledge-benchmark-baseline-1000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/0ea576afb254691f59f2.md) | tests/work/vector-native-89j9057r/receipt.json | c264d0e315249dc2f95a58b2c4ab02375b0acad4 | 원본 JSON 참조 |
+| [passed](legacy/11df02a60451ecd446fc.md) | tests/work/stable-0111-promotion/receipt.json | afbb090306a6be6d5ab6688b22bc3660a6d1b823 | 원본 JSON 참조 |
 | [not specified in original](legacy/13557254244f22fcbb52.md) | tests/work/test8-acceptance-first/korean-public-test-darwin-arm64/_temp/vector-onboarding-public-test-darwin-arm64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/139e2f2d5ff523bcc3aa.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-darwin-arm64/aigent-hive/aigent-hive/tests/work/vector-native-d5q4mdan/receipt.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
 | [passed](legacy/179247c3a5f669d16b98.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-darwin-arm64/_temp/korean-public-test-darwin-arm64.json | not specified in original | 원본 JSON 참조 |
@@ -1112,3 +1113,5 @@
 | [passed](runs/20261004T172859-1085d15adb09.md) | 현재 사용자 Codex의 갱신된 프로젝트 스킬 발견 확인 | c3b91ef2c5cdc9c0ddb341c09f8efef800762d35 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T172952-d426c8df495f.md) | test.8 두 번째 macOS 실행의 정확한 산출물 확인 | c3b91ef2c5cdc9c0ddb341c09f8efef800762d35 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T173252-27543353267c.md) | test.8 수용 등록과 출시 규칙 관련 검사 | 3616f746227105e9ad2487831297f3ca32376c15 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T190420-234110b62b67.md) | 승격 산출물 명령의 중복·누락·만료 회귀 검사 | afbb090306a6be6d5ab6688b22bc3660a6d1b823 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T190435-186bb73034b4.md) | 실제 test.8 재실행 산출물의 안정판 승격 확인 | afbb090306a6be6d5ab6688b22bc3660a6d1b823 | Windows-11-10.0.26300-SP0 |
