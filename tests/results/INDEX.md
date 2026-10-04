@@ -1151,3 +1151,9 @@
 | [passed](runs/20261004T230658-8cec11f761b8.md) | 관계 대상 변경의 증분 동등성 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T230906-9e00b907ec77.md) | 관계 증분 보강 최종 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T231056-cef9fc7be6d1.md) | 자동 관계 기능 최종 정적 검사와 형식 확인 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T231826-b6f476a8043c.md) | 부모·자식 토큰 합산과 예산 초과 보존 회귀 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T231950-5f5530e9754b.md) | 실제 보존 수치의 초과 계측과 무변경 CLI 검증 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232132-67aa66013072.md) | 토큰 진단 라우팅과 과거 초과 수치 재현 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232327-da1c4d99ff26.md) | 계측 기준값과 전체 자식 합산 반례 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232335-e51c8bee8bd7.md) | 토큰 집계와 진단 CLI 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232535-39c3d817a87b.md) | 토큰 계측 최종 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
