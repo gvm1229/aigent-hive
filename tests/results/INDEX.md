@@ -1042,3 +1042,4 @@
 | [passed](runs/20261002T152327-391caf549cf2.md) | 사용자 스킬 결합 수정의 전체 Python 검사 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T152329-e23a1bc952a4.md) | Python conformance: documentation, security, contract, integration, release | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T154426-bb442dd4c006.md) | 사용자 스킬 결합 수정 뒤 실제 Claude 설치 보존 회귀 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T122419-4a15d5bbac83.md) | 매일 정리와 용량 상한의 삭제 안전 회귀 | 084e69c60cc341a830e86f7a91338a7770f408ad | Windows-11-10.0.26300-SP0 |

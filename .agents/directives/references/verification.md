@@ -8,7 +8,7 @@
 4. Release: clean-clone CI, all supported OS/architectures, hostile/security tests, install/update
    recovery, signing, provenance and publication qualification.
 
-## Test Output
+## Test Artifact Lifecycle
 
 - For local/CI tests producing `tests/work/` or `target/debug/`, use
   `python scripts/test-artifacts.py run --purpose <Korean-summary> --path <owned-path> --command <test-command>`.
