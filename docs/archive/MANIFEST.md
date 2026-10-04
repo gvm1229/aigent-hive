@@ -109,3 +109,10 @@
 | `docs/state/CURRENT.md` | [보존본](state/0.9.5-closeout.md) | `sha256:994194104c364ca994e99b50a71e24f72a221eebe9d2ebc7cab6654eb18cffb3` | [현재 탐색](../state/CURRENT.md) |
 
 | `docs/state/CURRENT.md` — 0.11.0 구현·생성 구간 도입 전 기록 | [보존본](state/0.11.0-before-plan-generation.md) | `sha256:95e772edea2c708149e62fcbe861b43b97467d46965c15933b8fdbc326d690d9` | [현재 상태](../state/CURRENT.md) |
+
+## 2026-10-05 범위 전환 보존
+
+| 이전 경로 | 보존본 | SHA-256 | 현재 정본 |
+| --- | --- | --- | --- |
+| `docs/plans/PLAN.md` | [0.11.1 완료](plans/0.11.1-complete.md) | `sha256:65378bb4d47ee64ca8fdcf8f239da8184d6df7834f6c9b98af7af7fead971da4` | [현재](../plans/PLAN.md) |
+| `docs/state/CURRENT.md` | [0.11.1 완료](state/0.11.1-complete.md) | `sha256:56a20b67a09df6f38cbdb2535dfd09f138f7864a4eb6edf2c258c7fcd4fdc417` | [현재](../state/CURRENT.md) |

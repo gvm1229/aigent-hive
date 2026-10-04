@@ -1,56 +1,52 @@
 # Aigent Hive 활성 계획
 
-> Revision: 383
+> Revision: 384
 > 기준일: 2026-10-05
-> Product version: `0.11.1`
+> Product version: `0.11.2`
 > 공개 Stable: `0.11.1`
-> 현재 단계: 0.11.1 정식 게시·승인 공지 전송 완료
-> 공개 시험 수용: `0.11.1-test.8`
-> 다음 단계: 현재 범위 완료, 새 요청 대기
+> 현재 단계: 후속 범위 조사·계획 반영 완료, 제품 구현 미착수
+> 다음 공개 시험: `0.11.2-test.1`
+> 다음 단계: Windows의 사용량·제어 연결·Graphify·진단 구현, macOS 전용 수용 마지막
 
 ## 현재 요청과 경계
 
-- 2026-10-02 사용자 승인: 0.11.1 안정판 main 통합·태그·npm·GitHub 게시와 자율 진행
-- 실행 정본: [0.11.1 정식 출시](0.11.1-stable-release.md)
-- 현재 사용자 test.8·프로젝트 결합·실제 스킬 선택 수용 완료, 0.11.1 정식 게시와 승인된 Discord 공지 전송 완료
-
-- 브랜치: `develop`
-- Codex 우선, 사용자·프로젝트 기본 스킬의 플러그인 제공과 자동 갱신 정리
-- 설치 기록·원본 일치 파일만 제거, 사용자 수정·외부 파일 보존
-- 전역 갱신의 프로젝트 일괄 변경 제외; 프로젝트 갱신에 자동 정리 포함
-- 구현·시험판·검증과 0.11.1 안정판·보호 main 통합 승인, 현재 사용자 설치는 별도 승인
-- 기존 0.11.0 완료 기준과 근거: [이전 계획](../archive/plans/0.11.0-before-skill-delivery.md), [이전 상태](../archive/state/0.11.0-before-skill-delivery.md)
+- [사용자 결정](../decisions/ADR-0025-0.11.2-scope.md): 주기 감시·중단, 작업 분담, Graphify 잔여를 0.11.2 편입
+- [조사 결과](../research/followup-feasibility-0.11.2.md): Antigravity 사용량, 호스트 검사, 토큰 계측, Windows 샌드박스, macOS 진단의 구현 후보와 선행 조건
+- 이번 요청 완료 범위: 조사·문서 반영. 아래 체크리스트는 후속 제품 구현·수용 기준, 현재 구현 성공 주장 제외
+- 기본 환경 Windows, 작업 브랜치 develop. macOS 전용 작업은 마지막 QLF112-005
+- 현재 소스·설치·공개 제품 0.11.1 유지. 구현 착수 시 0.11.2·test.1 적용
+- 0.11.2 안정판·보호 main·게시·설치의 현재 버전별 승인 없음
+- Claude 실제 대화·구독 사용량과 게시자 서명: 버전 미정 대기 유지
+- Notion 후보·오래된 발표 자료 폐기. 로고·벡터 완료, 엔진 비교 참고 보존. Obsidian 전용 플러그인 후보 종료
 
 ## Completion index
 
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| Codex 스킬 제공·자동 정리 | 5 | 0 | 100.0% |
-| Claude Windows 전역 설치 | 4 | 0 | 100.0% |
-| 원격 출시 검증 수정 | 4 | 0 | 100.0% |
-| 지침 이식·기본 스킬·자연어 활용 | 5 | 0 | 100.0% |
-| 새 Hive 개선·사용자 스킬 결합 | 6 | 0 | 100.0% |
-| 시험 용량 제한·매일 정리 | 4 | 0 | 100.0% |
-| **현재 범위 합계** | **28** | **0** | **100.0%** |
+| 호스트 사용량·중단·분담 | 0 | 5 | 0.0% |
+| Graphify 미완료 확장 | 0 | 3 | 0.0% |
+| 계측·진단·운영체제 수용 | 0 | 5 | 0.0% |
+| **현재 범위 합계** | **0** | **13** | **0.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [skill-delivery-0.11.1.md](active/skill-delivery-0.11.1.md) | `SDP-001–005` | Codex 스킬 제공·자동 정리 |
-| [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
-| [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–004` | 원격 출시 검증 수정 |
-| [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
-| [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–006` | 새 Hive 개선·사용자 스킬 결합 |
-| [test-cleanup-0.11.1.md](active/test-cleanup-0.11.1.md) | `TCL-001–004` | 시험 용량 제한·매일 정리 |
+| [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT112-001–005` | 호스트 사용량·중단·분담 |
+| [knowledge-graph-0.11.2.md](active/knowledge-graph-0.11.2.md) | `GPH112-001–003` | Graphify 미완료 확장 |
+| [qualification-0.11.2.md](active/qualification-0.11.2.md) | `QLF112-001–005` | 계측·진단·운영체제 수용 |
 
 ## 실행 순서
 
-test.8·실제 프로젝트 호출 수용 → 보호 main 통합 → 0.11.1 안정판 게시·승인 공지 전송 완료
+1. Windows의 지원 계약 검증과 독립 구현: HCT112-001·002·005, GPH112-001, QLF112-001·002·003
+2. 검증된 연결 기반 HCT112-003·004, GPH112-002·003
+3. Windows 실제 수용·관련 Linux 검사·공개 시험 준비 QLF112-004
+4. 마지막 macOS arm64 재현·실제 호스트·공개 수용 QLF112-005
 
 ## 보존 자료
 
-- [0.11.0 출시 계획](0.11.0-stable-release.md)
-- [후속 목표](backlog/README.md)
+- [0.11.1 완료 계획](../archive/plans/0.11.1-complete.md)·[완료 상태](../archive/state/0.11.1-complete.md)·[정식 출시](0.11.1-stable-release.md)
+- [후속 목록과 종료된 후보](backlog/README.md)
+- [이번 조사 절차](0.11.2-scope-research.md)

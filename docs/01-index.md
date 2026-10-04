@@ -196,3 +196,23 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [0.10.2 전역 갱신](plans/active/global-user-update-0.10.2.md) | 이전 구현·검증 보존 |
 | [0.10.2 지침 품질](plans/active/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
 | [0.10.2 출시](plans/active/release-0.10.2.md) | 이전 출시 검증 보존 |
+
+## 0.11.2 범위와 조사
+
+- [후속 조사 절차](plans/0.11.2-scope-research.md)
+- [구현 가능성 조사](research/followup-feasibility-0.11.2.md)
+- [범위 결정](decisions/ADR-0025-0.11.2-scope.md)
+- [호스트 사용량·중단·분담](plans/active/host-control-0.11.2.md)
+- [Graphify 잔여](plans/active/knowledge-graph-0.11.2.md)
+- [계측·진단·macOS 최종 수용](plans/active/qualification-0.11.2.md)
+
+- [0.11.2 사실 English](facts/en/v0-11-2-scope.md)·[한국어](facts/ko/v0-11-2-scope.md)
+
+## 이전 출시의 완료 문서
+
+- [0.11.0 정식 출시](plans/0.11.0-stable-release.md)·[게시 근거](research/0.11.0-stable-release-2026-09-27.md)
+- [0.11.1 Claude 설치](plans/active/claude-user-install-0.11.1.md)
+- [0.11.1 지침·스킬 계획](plans/active/directive-localization-and-project-skills-0.11.1.md)·[조사](research/directive-localization-and-project-skills-0.11.1.md)
+- [0.11.1 출시 검증 보완](plans/active/release-qualification-repairs-0.11.1.md)
+- [0.11.1 스킬 결합 계획](plans/active/skill-merge-0.11.1.md)·[조사](research/skill-merge-0.11.1.md)·[test.7 기록](research/skill-merge-public-test7-0.11.1.md)
+- [0.11.1 시험 정리](plans/active/test-cleanup-0.11.1.md)·[승인된 공지](releases/0.11.1.subscriber.ko.md)

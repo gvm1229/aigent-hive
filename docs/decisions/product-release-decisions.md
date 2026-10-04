@@ -2,6 +2,8 @@
 
 기준일: 2026-08-22
 
+2026-10-05 변경: [0.11.2 범위](ADR-0025-0.11.2-scope.md), Notion 정본 후보 폐기와 Markdown 정본 유지. 아래 과거 버전별 수치는 해당 시점 기록.
+
 | 영역 | 결정 |
 | --- | --- |
 | 구현 언어 | Rust stable, Cargo workspace |
@@ -10,10 +12,10 @@
 | API | model-provider API 호출·SDK·API key 전부 금지 |
 | 소스와 출하 | Hive source, release bundle, consumer harness 분리 |
 | setup template | Copier 9.17.0을 authoring·CI에 사용, 소비자 runtime dependency 금지 |
-| canonical data | Source Wiki·role·run·plan은 Markdown. Consumer Wiki는 `markdown|notion` user-scope backend 중 하나. Setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
-| SQLite | `~/.hive/index/hive.sqlite3` 단일 disposable projection. Markdown mode는 무네트워크 rebuild, Notion mode는 selected remote scope 기반 rebuild. Project DB 없음 |
+| 정본 | 소스 지식·역할·실행·계획과 소비자 지식은 Markdown. 설정·승인은 Git 추적 YAML/TOML, 원본 자료는 허용된 출처 객체 |
+| SQLite | `~/.hive/index/hive.sqlite3`의 재생성 가능한 검색 색인. Markdown에서 무네트워크 재구성, 프로젝트별 별도 DB 제외 |
 | v0.9 knowledge RAG | 모든 질문의 simple-question 이전 bounded retrieval, named project scope, durable user fact·preference·workflow mandatory write, citation-ready chunk·score·locator 반환. Selected backend 정본 우선, SQLite는 incremental FTS5 RAG projection과 measured deficiency 이후 optional local vector만 허용 |
-| Notion Wiki backend | Notion 유일 정본·active local Wiki Markdown 0건·SQLite changed-only projection. Official plugin/app → hosted MCP → consented REST, 매 turn freshness gate, Notion-first write, Webhook·Notion AI 이중 검색·양방향 Markdown sync 0건 |
+| Notion 정본 | 2026-10-05 사용자 요청으로 후보 폐기, 과거 설계는 ADR-0018 참고 보존 |
 | Discord integration | 초기 범위는 usage guard 중단의 optional outbound webhook. Claude inbound는 official Discord Channel 위임, Codex inbound continuation은 official capability 전 `unsupported` |
 | v0.9 knowledge portability·scan | SQLite 복사 대신 checksummed `.hivekb` canonical bundle export·import, 고정 normalized table의 `collection_id`, explicit `knowledge-import`, 기존 `knowledge-recall` Skill의 bounded automatic retrieval. Secret·confidential·runtime·absolute path·retrieved instruction authority 제외 |
 | Global onboarding | Minimal bootstrap 뒤 mandatory `user-setup`; 첫 질문은 language, 이후 모든 질문과 host 지침은 선택 언어. Wiki language·profile·persona·host·Skill·Wiki·usage·update-check preference 정본은 `~/.hive/config/user-setup.yml` |
@@ -85,8 +87,8 @@ v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directo
 `0.9.0` 정식 GitHub·npm release identity와 minimal trust:
 [`ADR-0017`](ADR-0017-0.9-full-release.md).
 
-Notion canonical backend·SQLite projection·Discord outbound 경계:
-[`ADR-0018`](ADR-0018-notion-wiki-backend.md).
+Notion의 폐기 전 설계·Discord 경계: [ADR-0018](ADR-0018-notion-wiki-backend.md).
+Notion 후보 폐기의 현재 결정: [ADR-0025](ADR-0025-0.11.2-scope.md).
 
 Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 제거:
 [`ADR-0019`](ADR-0019-hive-native-iterative-execution.md).
