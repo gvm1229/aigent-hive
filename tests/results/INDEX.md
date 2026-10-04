@@ -1065,3 +1065,13 @@
 | [passed](runs/20261004T131426-a29e8a734521.md) | 본문과 연결 설정을 포함한 공개 test.7의 읽기 전용 결합 미리보기 | c989f21f835dbc47369610fbf474fccb4872583c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T131505-accef459660e.md) | 공개 test.7 Windows 실행 파일의 실제 Claude 설치·보존 회귀 | c989f21f835dbc47369610fbf474fccb4872583c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T132805-bfc73a5b6be2.md) | 세 운영체제 공개 test.7 수용 결과 보존 준비 | c989f21f835dbc47369610fbf474fccb4872583c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T152808-7f1b9f03c9e8.md) | 실제 부속 자료 폴더 정리 오류의 합성 재현 | 20294a23281166afc76350f908c6ef07673f427a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T153237-d56207e1a059.md) | 부속 자료의 실제 삭제 경로로 빈 폴더 정리와 경계 보존 검증 | 20294a23281166afc76350f908c6ef07673f427a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T153548-e447e95553bb.md) | 부속 폴더 정리 수정의 전체 Rust 정적 검사 | 20294a23281166afc76350f908c6ef07673f427a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T153956-edc3dc4d9ecf.md) | 정확한 추가 빌드 경로의 소유권·프로세스·삭제 경계 검증 | de7eb1576c0b60b87ad894988f4845f9cd9fbd17 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T154327-9266b13c31b0.md) | 부속 폴더 정리 수정의 전체 Rust 회귀 | fdaba1977ecfaadd6da2e67eb22a016492ee4903 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T160222-20da65cdebb5.md) | Python conformance: documentation, security, contract, integration, release | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T162331-ba0158394ecf.md) | 공개 test.7의 부속 자료 정리 실패를 격리 환경에서 확인 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T162559-b33f5ce45c7c.md) | 부속 자료 복원·정리의 수정 개발 빌드 실제 CLI 검증 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T162744-9f7554afc956.md) | 부속 자료를 제공하는 전역 선택을 포함한 test.7 회귀 재현 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T162753-9fb032ae77a7.md) | 전역 제공 복원 뒤 부속 자료 정리의 수정 개발 빌드 검증 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
