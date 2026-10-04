@@ -31,6 +31,7 @@
 
 ## 소유 파일과 검증
 
+- [구현·전체 검사 근거](../../research/skill-merge-0.11.1.md)
 - CLI: `project_upgrade.rs`, 새 `project_upgrade/skill_merge.rs`, `main.rs` 도움말; 기존 결과·승인 없는 경로 호환
 - 요청 형식: `schemas/project-skill-merge.schema.json`, 기존 CLI JSON 결과의 data에 선택적 승인 값
 - 소비자 안내: `harness/skills/project-refresh/SKILL.md`와 배포 사본
