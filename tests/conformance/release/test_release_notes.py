@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -53,6 +54,25 @@ def note(*, english_compatibility_id: str = "COMPAT-01", korean_compatibility_id
 
 
 class ReleaseNoteContract(unittest.TestCase):
+    def test_current_product_release_note_is_valid(self) -> None:
+        version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
+        result = subprocess.run(
+            [sys.executable, str(CHECKER), "--version", version,
+             "--path", str(ROOT / f"docs/releases/{version}.md")],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_current_source_version_metadata_passes_release_validator(self) -> None:
+        version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
+        script = (ROOT / "scripts/check-release-version.sh").read_text(encoding="utf-8")
+        program = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+        result = subprocess.run(
+            [sys.executable, "-", version], input=program,
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def run_checker(self, content: str) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "0.9.4.md"
@@ -78,6 +98,14 @@ class ReleaseNoteContract(unittest.TestCase):
         result = self.run_checker(note().replace("Add the verified", "We can easily add the verified"))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("not ASD-STE100 concise", result.stderr)
+
+    def test_rejects_an_overlong_english_fact(self) -> None:
+        result = self.run_checker(note().replace(
+            "Run the release candidate checks on Windows x64.",
+            " ".join(["Verify"] * 26) + ".",
+        ))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("exceeds 25 words", result.stderr)
 
     def test_rejects_ordinary_english_in_korean_section(self) -> None:
         result = self.run_checker(note().replace("검증된 Hive 투영 검사 계약 추가.", "the Hive 투영 검사 계약 추가."))
