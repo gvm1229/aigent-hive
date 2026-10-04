@@ -15,7 +15,7 @@
 - Review/commit `tests/results/runs/*.md` before deletion; a pass is insufficient.
 - At closure run `python scripts/test-artifacts.py check`; inspect eligible/expired items and use
   `cleanup --apply --path <exact-path>` after review; remove completed output now.
-- Preserve live use, failed reproductions, incomplete evidence and concrete reuse for at most
+- Keep live use, failed reproductions and incomplete evidence. Concrete reuse leases: at most
   72 hours. No globs, parent deletion, age-only deletion or automatic deadline renewal.
 - Share one build tree. Tests default to `CARGO_INCREMENTAL=0`; an override
   needs bounded reuse. No target per test/retry. Review all consumers before cleanup.
