@@ -4,6 +4,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -17,6 +21,34 @@ VECTOR_ONBOARDING_SCRIPT = ROOT / "scripts/qualify-vector-onboarding-public-test
 
 
 class PublicTestAcceptanceContract(unittest.TestCase):
+    def test_promotion_artifact_command_accepts_reruns_but_requires_exact_live_set(self) -> None:
+        text = CANDIDATE_WORKFLOW.read_text(encoding="utf-8")
+        command = re.search(r"artifact_names=\$\(python3 -c '([^']+)'", text)
+        self.assertIsNotNone(command)
+        expected = "korean-public-test-darwin-arm64,korean-public-test-linux-x64,korean-public-test-win32-x64"
+        rows = [{"name": name, "expired": False} for name in expected.split(",")]
+        cases = (
+            (rows, True),
+            (rows + [dict(rows[0])], True),
+            (rows[1:], False),
+            (rows + [{"name": "unrelated", "expired": False}], False),
+            ([{**rows[0], "expired": True}] + rows[1:], False),
+            ([{"name": rows[0]["name"]}] + rows[1:], False),
+        )
+        for artifacts, accepted in cases:
+            with self.subTest(artifacts=artifacts):
+                result = subprocess.run(
+                    [sys.executable, "-c", command[1]],
+                    input=json.dumps({"artifacts": artifacts}),
+                    capture_output=True, text=True, check=True,
+                )
+                self.assertEqual(result.stdout.strip() == expected, accepted)
+        invalid = subprocess.run(
+            [sys.executable, "-c", command[1]], input="{}",
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(invalid.returncode, 0)
+
     def test_workflow_installs_exact_public_test_on_three_platforms(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         for required in (
