@@ -1135,3 +1135,6 @@
 | [passed](runs/20261004T224242-79bcaa9c149b.md) | 공통 프로세스 실행기의 기존 회귀 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224334-4c9b553c0d88.md) | 도우미 진단 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224354-06118f0c8715.md) | 검색 도우미 최종 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224523-e3ef645c8ecf.md) | 호스트 기능 명세 2와 구형 서명 호환 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224607-85c6b8d92b7c.md) | 호스트 명세와 CLI 활성화 경계 회귀 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224610-aacfb836f841.md) | 호스트 기능 형식 2 정적 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
