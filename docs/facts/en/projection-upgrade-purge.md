@@ -17,18 +17,14 @@ sources:
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
   - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:e6c5137a0c1e61dc0845202cbfa18421238ba0eef7550c08a3dd2f3bdd73cbc5"
 links: [consumer-session-coordination, hive-preserving-uninstall]
-reviewed_revision: "git:cace7e3fa885dd20d1b7a068b45c7f1536503d60"
+reviewed_revision: "git:931cff4f9faa2e27093ba07b26f7e572657e4ca6"
 status: active
 ---
 
 # Authenticated Projection Upgrade Purge
 
-Global setup removes a retired `.agents/skills/<name>/SKILL.md` only when the retired-name ledger
-and a shipped historical Hive digest both match its active bytes. The project refresh path already
-uses the authenticated project base inventory: an unmodified retired path absent from the incoming
-projection is deleted, while modified or foreign bytes remain protected.
+Global setup removes retired Skills only when the retired-name ledger and shipped historical digest match. Project refresh uses the authenticated base: delete unmodified retired paths; preserve modified or foreign bytes.
 
-For Hive directives and the Hive-owned marker in `AGENTS.md`, an incoming rule with safety or
-ownership content replaces an overlapping prior Hive rule. Disjoint user additions, foreign blocks,
-and overlapping non-safety local rules retain local priority. Every refresh keeps preview, digest,
-atomic apply, rollback, and empty owned-directory cleanup boundaries.
+Incoming safety or ownership rules replace overlapping Hive rules in directives and the exact AGENTS marker. Disjoint additions, foreign blocks and other local conflicts retain local priority. Preview, digest approval, atomic apply and rollback remain required.
+
+The cleanup regression fix uses an actual validated removed file as the empty-directory ancestry witness, with no-follow handles. Real project validation and an unchanged second preview check the update; model compliance needs separate evidence.
