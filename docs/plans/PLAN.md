@@ -1,7 +1,7 @@
 # Aigent Hive 활성 계획
 
-> Revision: 375
-> 기준일: 2026-10-02
+> Revision: 376
+> 기준일: 2026-10-04
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
 > 현재 단계: 사용자 스킬 결합 갱신 구현
@@ -31,7 +31,8 @@
 | 원격 출시 검증 수정 | 2 | 0 | 100.0% |
 | 지침 이식·기본 스킬·자연어 활용 | 4 | 1 | 80.0% |
 | 새 Hive 개선·사용자 스킬 결합 | 0 | 4 | 0.0% |
-| **현재 범위 합계** | **15** | **5** | **75.0%** |
+| 시험 용량 제한·매일 정리 | 0 | 3 | 0.0% |
+| **현재 범위 합계** | **15** | **8** | **65.2%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -43,6 +44,7 @@
 | [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–002` | 원격 출시 검증 수정 |
 | [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
 | [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–004` | 새 Hive 개선·사용자 스킬 결합 |
+| [test-cleanup-0.11.1.md](active/test-cleanup-0.11.1.md) | `TCL-001–003` | 시험 용량 제한·매일 정리 |
 
 ## 실행 순서
 
