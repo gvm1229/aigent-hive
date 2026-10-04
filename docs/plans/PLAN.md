@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 381
+> Revision: 382
 > 기준일: 2026-10-05
 > Product version: `0.11.1`
 > 공개 Stable: `0.11.0`
@@ -28,11 +28,11 @@
 | --- | ---: | ---: | ---: |
 | Codex 스킬 제공·자동 정리 | 5 | 0 | 100.0% |
 | Claude Windows 전역 설치 | 4 | 0 | 100.0% |
-| 원격 출시 검증 수정 | 3 | 0 | 100.0% |
+| 원격 출시 검증 수정 | 4 | 0 | 100.0% |
 | 지침 이식·기본 스킬·자연어 활용 | 5 | 0 | 100.0% |
 | 새 Hive 개선·사용자 스킬 결합 | 6 | 0 | 100.0% |
 | 시험 용량 제한·매일 정리 | 4 | 0 | 100.0% |
-| **현재 범위 합계** | **27** | **0** | **100.0%** |
+| **현재 범위 합계** | **28** | **0** | **100.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | [skill-delivery-0.11.1.md](active/skill-delivery-0.11.1.md) | `SDP-001–005` | Codex 스킬 제공·자동 정리 |
 | [claude-user-install-0.11.1.md](active/claude-user-install-0.11.1.md) | `CUI-001–004` | Claude Windows 전역 설치 |
-| [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–003` | 원격 출시 검증 수정 |
+| [release-qualification-repairs-0.11.1.md](active/release-qualification-repairs-0.11.1.md) | `RQP-001–004` | 원격 출시 검증 수정 |
 | [directive-localization-and-project-skills-0.11.1.md](active/directive-localization-and-project-skills-0.11.1.md) | `DPS-001–005` | 지침 이식·기본 스킬·자연어 활용 |
 | [skill-merge-0.11.1.md](active/skill-merge-0.11.1.md) | `SGM-001–006` | 새 Hive 개선·사용자 스킬 결합 |
 | [test-cleanup-0.11.1.md](active/test-cleanup-0.11.1.md) | `TCL-001–004` | 시험 용량 제한·매일 정리 |
