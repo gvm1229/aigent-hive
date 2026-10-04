@@ -13,12 +13,12 @@
 
 ## 수용 기준
 
-- [ ] [TCL-001] 큰 산출물의 근거 보존·미사용 검토·실제 용량 축소
-  - state: agent-owned
-- [ ] [TCL-002] 용량 상한·보존 만료 확인과 안전한 반복 정리 회귀
-  - state: agent-owned
-- [ ] [TCL-003] 매일 한국 시간 09시 정리 등록·실행 명령 검증
-  - state: agent-owned
+- [x] [TCL-001] 큰 산출물의 근거 보존·미사용 검토·실제 용량 축소
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
+- [x] [TCL-002] 용량 상한·보존 만료 확인과 안전한 반복 정리 회귀
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
+- [x] [TCL-003] 매일 한국 시간 09시 정리 등록·실행 명령 검증
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
 
 ## 실행 순서
 
@@ -32,3 +32,8 @@
 - 문체·Markdown 링크·계획 집계·Source Wiki 검사와 정확 변경 파일 커밋
 - 원시 정리 자료는 `.agents/work`에만 저장, 검토된 작은 결과는 `tests/results/` 보존
 - 이전 SGM 제품 검증과 본 소스 도구 검증의 결과 범위 구분
+
+## 실행 결과
+
+- [실제 용량·회귀·일일 실행 결과](../../../tests/results/daily-cleanup-20261004.md)
+- 보존 근거 부족 자료 323개는 별도 검토 대상, 미래 예약 실행 성공 주장 제외

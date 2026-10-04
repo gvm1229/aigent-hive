@@ -12,15 +12,18 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 18/23 완료
+- 현재 등록 항목: 21/23 완료
 
-- `agent-owned`: `SGM-004`, `TCL-001`, `TCL-002`, `TCL-003`
+- `agent-owned`: `SGM-004`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `DPS-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- 2026-10-04 정리: 112.217GiB → 22.654GiB, 89.565GiB 제거; 관리 대상 18.440GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
+- SGM-001–003 구현·전체 Windows 검사 정합화, test.7 필수 CI 진행; 실제 WProject 변경 없음
 
 - 사용자 의도 확인: 기본 스킬 제외 대신 새 Hive 개선과 사용자 수정의 결합; [결합 계획](../plans/active/skill-merge-0.11.1.md) 구현, 새 제품 변경의 test.7 검증 필요
 
