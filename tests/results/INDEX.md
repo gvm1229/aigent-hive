@@ -21,6 +21,7 @@
 | [passed](legacy/75dd1d088d27bc6427ff.md) | tests/work/knowledge-benchmark-current-1000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/762b6d8b3718f1a5defd.md) | tests/work/vector-privacy-export-znq7xf8j/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/7a363e9284817b1b54a7.md) | tests/work/vector-native-i1kfz91b/receipt.json | 1cf563ee25e2f13267a3bd6cb4e50b65c1580930 | 원본 JSON 참조 |
+| [passed](legacy/7d159c3524fa28e6fde6.md) | tests/work/public-package-0111-test6/test6-current-user-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/9089d350df2a3359ccf5.md) | tests/work/vector-cancel-current-4lbmwxvy/receipt.json | not specified in original | 원본 JSON 참조 |
 | [interrupted](legacy/916533e5e68cefac3ce5.md) | tests/work/vector-native-qi9p03le/receipt.json | 4fdf6c274188c26e3701a727617cdc1770c51fd8 | 원본 JSON 참조 |
 | [passed](legacy/937cab32117f2f51ca41.md) | tests/work/public-native-codex-0111-test6/report.json | not specified in original | 원본 JSON 참조 |
@@ -40,6 +41,7 @@
 | [passed](legacy/ec7bc52f8272dc6c5dac.md) | tests/work/knowledge-benchmark-baseline-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/edaed6e229a3ad05398c.md) | tests/work/vector-native-3xsczgt3/receipt.json | a4a2e46a0da5e837de281c0b0e9619507aec4405 | 원본 JSON 참조 |
 | [passed](legacy/f276b8547ce7bd55f215.md) | tests/work/vector-privacy-current-4g28310y/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/f41c995a82c3db97f0a4.md) | tests/work/public-package-0111-test6/test6-current-user-skills.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ffb74a75735a053453a7.md) | tests/work/verified-workflow-acceptance-bso8rk8t/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](runs/20260828T164357-78eb5962bf9a.md) | 시험 산출물 관리 도구 격리 회귀 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260828T164606-49f246f2a697.md) | 산출물 관리 격리 회귀 32개 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
@@ -1017,3 +1019,26 @@
 | [passed](runs/20261002T052556-fc750bef65db.md) | 공개 test.6 기록과 계획·게시 경계의 관련 문서 검사 | c6e819704f5b203412472c6492f8c95fcd3a4b3b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T100650-564bc77ac85b.md) | 승인된 현재 사용자 test.6 설치와 설정·지식 보존 검증 | 4fecc1d7a7d2f18f62d20263a4dbf0d808756712 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261002T100757-87a70ec108b5.md) | 승인된 test.6 현재 사용자 새 Codex 서버의 스킬 목록 검증 | 4fecc1d7a7d2f18f62d20263a4dbf0d808756712 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T143411-cbdef663668c.md) | 사용자 스킬 결합의 원본 부재·정확한 승인·재갱신 회귀 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T143631-6a194c3fc199.md) | 실제 동결 0.11.0 원본의 사용자 ship 검토 결합 회귀 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T143929-d7293996f42b.md) | 검토 스킬 결합의 지문·경로·이름·승인 부정 회귀 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T144226-be1254e09091.md) | 프로젝트 결합 갱신 전체 CLI 회귀 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T144456-1a2eb0868e69.md) | 검토 스킬 결합의 Rust 1.99 코드 검사 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T144705-e179bb933df7.md) | 검토 결합 경로의 코드 검사 정정 확인 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T144747-a43c0f4b41fe.md) | 결합 코드 정리 뒤 관련 회귀 확인 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T145715-ab54b1d11b01.md) | 공식 스킬 결합 원문·지문 읽기와 검토 경로 회귀 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T150058-04fef1bf118d.md) | 검토 결합 CLI 실행 파일 빌드 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T150115-9759feecac29.md) | 공식 명령의 결합본 미리보기·정확한 승인·설정 보존 시험 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T150153-0f172c432569.md) | 승인 입력 조회를 포함한 결합 명령 코드 검사 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T150238-1a6333ca99e4.md) | 결합 입력 명령의 정리된 코드 검사 | 1ce4ef3e20191c1a94cf8f1b4706c11ab820f285 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T150724-a44efb500f08.md) | 게시된 test.6 원본만 인증하는 동일 제품 갱신 회귀 | e3cd226984197f12012a73f28ee4fcd39bc926c1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T150821-1e56c02f908a.md) | test.6 원본 인증과 다음 갱신 일치 확인 | e3cd226984197f12012a73f28ee4fcd39bc926c1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T151009-acb17381e2e4.md) | 동일 제품 게시 원본과 결합 갱신 코드 검사 | e3cd226984197f12012a73f28ee4fcd39bc926c1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261002T151117-777b9672e571.md) | 게시 시험 원본 등록부와 동결 파일 정합성 검사 | e3cd226984197f12012a73f28ee4fcd39bc926c1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T151250-ac1a1539dc3a.md) | 현재 제품의 공개 시험 원본 등록 검사 정합화 | e3cd226984197f12012a73f28ee4fcd39bc926c1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T151556-5d2092e75643.md) | 결합 안내와 스킬 배포 사본 정합성 | 1e287ce9f86c790d97bdede2b82c10161451d379 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T151858-18eb36da3d44.md) | 사용자 스킬 결합 수정의 전체 Rust 검사 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T152245-499dd0bacc3a.md) | 결합 갱신의 최종 실행 파일 빌드 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T152327-391caf549cf2.md) | 사용자 스킬 결합 수정의 전체 Python 검사 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T152329-e23a1bc952a4.md) | Python conformance: documentation, security, contract, integration, release | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261002T154426-bb442dd4c006.md) | 사용자 스킬 결합 수정 뒤 실제 Claude 설치 보존 회귀 | 50d537ee8e11e355b035701d3b3f17369c0bc304 | Windows-11-10.0.26300-SP0 |
