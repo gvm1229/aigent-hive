@@ -3,7 +3,10 @@
 > Plan version: 0.11.2
 > Scope: product
 
-근거: [조사](../../research/followup-feasibility-0.11.2.md), [결정](../../decisions/ADR-0025-0.11.2-scope.md). 현재 구현 미착수. Windows 우선, Claude 제외.
+근거: [조사](../../research/followup-feasibility-0.11.2.md), [결정](../../decisions/ADR-0025-0.11.2-scope.md). 구현 승인, Windows 우선·Claude 제외.
+
+- 완료 기록: 구현·합성 반례와 실제 호스트 활성화 별도. 미지원 기능의 안전한 비활성·진단 수용 가능, 실제 동작 성공 주장 제외
+- 공개 변경: capture의 antigravity 선택, 기능 명세 형식 2의 주기 관측·현재 실행 제어·저장 후 관계 분석. 형식 1의 새 기능은 미검증
 
 ## 기준
 
