@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 15/23 완료
+- 현재 등록 항목: 18/23 완료
 
-- `agent-owned`: `SGM-001`, `SGM-002`, `SGM-003`, `SGM-004`, `TCL-001`, `TCL-002`, `TCL-003`
+- `agent-owned`: `SGM-004`, `TCL-001`, `TCL-002`, `TCL-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `DPS-003`
 - `blocked`: 없음

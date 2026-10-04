@@ -13,12 +13,12 @@
 
 ## 수용 기준
 
-- [ ] [SGM-001] 기존 인증 원본의 병합과 겹치는 새 변경의 명확한 안내
-  - state: agent-owned
-- [ ] [SGM-002] 원본 없는 사용자 스킬의 검토 결합·지문 승인·동일 경로 적용
-  - state: agent-owned
-- [ ] [SGM-003] 동시 변경·허용 경로·복구·다음 갱신의 사용자 수정 보존
-  - state: agent-owned
+- [x] [SGM-001] 기존 인증 원본의 병합과 겹치는 새 변경의 명확한 안내
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
+- [x] [SGM-002] 원본 없는 사용자 스킬의 검토 결합·지문 승인·동일 경로 적용
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
+- [x] [SGM-003] 동시 변경·허용 경로·복구·다음 갱신의 사용자 수정 보존
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
 - [ ] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
   - state: agent-owned
 
