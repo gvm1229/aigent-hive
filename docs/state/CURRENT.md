@@ -12,15 +12,17 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 23/26 완료
+- 현재 등록 항목: 24/26 완료
 
-- `agent-owned`: `DPS-003`, `SGM-006`, `TCL-004`
+- `agent-owned`: `DPS-003`, `SGM-006`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
+
+- [추가 정리](../../tests/results/further-cleanup-20261005.md) 완료: 약 18.060GiB → 4.769GiB, 현재 설치·연구 코드·작은 결과 보존
 
 - 2026-10-05 test.7 설치 완료·502개 지식·2개 설정·외부 지침 보존; WProject 적용은 부속 폴더 검사 오류로 자동 원복, 원본·복구 기록 상태 확인. SGM-005–006 수정·test.8 진행
 

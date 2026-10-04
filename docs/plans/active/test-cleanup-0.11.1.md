@@ -20,8 +20,8 @@
 - [x] [TCL-003] 매일 한국 시간 09시 정리 등록·실행 명령 검증
   - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 
-- [ ] [TCL-004] 남은 큰 시험 자료의 추가 정리와 용량 재측정
-  - state: agent-owned
+- [x] [TCL-004] 남은 큰 시험 자료의 추가 정리와 용량 재측정
+  - state: complete; evidence: repo:tests/results/further-cleanup-20261005.md#sha256:8e2585618f43abf04a327e0c6d8b2433878fbed169500ba901bbd1ed29435a66
 
 ## 실행 순서
 
@@ -50,3 +50,5 @@
 - 기존 삭제 경계 우회·연결 경로 추적·원본 연구 코드 삭제 제외, 불확실한 자료는 이유별 보존
 
 - 추가 빌드 범위: `target/release`, `target/x86_64-pc-windows-gnu`의 현재 미사용 Cargo 산출물. 설치된 활성 CLI는 저장소 밖 npm 소유 경로임을 확인. `scripts/test_artifacts.py`에 이 두 정확한 경로만 추가, 기존 근거·Git·경로·연결·프로세스 보호 유지. 모든 허용 빌드 폴더에 실행 중 빌드 소비자 보호 적용. 임의 `target`·알 수 없는 하위 폴더 거절 회귀 후 정리
+
+- [추가 정리 결과](../../../tests/results/further-cleanup-20261005.md): 최종 약 4.769GiB, 이번에 만든 검증 빌드도 정리
