@@ -20,6 +20,10 @@
 
 ## QLF112-001
 
+- 진단 인터페이스: `hive usage summarize-tokens --request <normalized-events.json> --output json`. 입력만 읽고 모델·계정 호출·상태 변경 없는 계측 검증
+- 입력 계약: 예산·출처 지문·부모 지문·카운터 포함 범위·캐시 포함 여부·기준값·순서 있는 관측. 원문 세션·프롬프트·자격 증명 제외
+- 출력 계약: 관측 입력/출력 합계·잔여·초과·늦은 보고 수·최종 관측 여부. 실제 강제 상한·구독 잔여량·실행 승인과 별도
+
 - 읽기: [기존 계측 결과](../../research/directive-context-host-acceptance-2026-09-27.md), `tests/results/readiness-host-acceptance-2026-09-27.json`, `crates/hive-core/src/native_workflow.rs`의 예산·재시도 경계
 - 첫 조사: 기존 수집기 소스의 보존 여부와 이벤트 필드 확인. 부재 시 정제한 합성 사건으로 재현기 구성, 원문 대화 수집 제외
 - 설계: 대화별 시작값·마지막 누적값·서로 다른 부모/자식 집계. 차분만 합산, 캐시 입력 포함 관계·초기화·늦은 중복 사건 검증
