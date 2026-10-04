@@ -22,7 +22,7 @@
 
 ## 현재 근거
 
-- 2026-10-04 정리: 112.217GiB → 22.654GiB, 89.565GiB 제거; 관리 대상 18.440GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
+- 2026-10-04 정리: 112.217GiB → 18.030GiB, 94.190GiB 제거; 관리 대상 13.815GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
 - SGM-001–003 구현·전체 Windows 검사 정합화, test.7 필수 CI 진행; 실제 WProject 변경 없음
 
 - 사용자 의도 확인: 기본 스킬 제외 대신 새 Hive 개선과 사용자 수정의 결합; [결합 계획](../plans/active/skill-merge-0.11.1.md) 구현, 새 제품 변경의 test.7 검증 필요

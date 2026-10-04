@@ -14,11 +14,11 @@
 ## 수용 기준
 
 - [x] [TCL-001] 큰 산출물의 근거 보존·미사용 검토·실제 용량 축소
-  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 - [x] [TCL-002] 용량 상한·보존 만료 확인과 안전한 반복 정리 회귀
-  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 - [x] [TCL-003] 매일 한국 시간 09시 정리 등록·실행 명령 검증
-  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:6ba16c8bf60c272a980fb8d5def8fc3fd265da4553b8188340da95a7bdcd0cb2
+  - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 
 ## 실행 순서
 
@@ -36,4 +36,4 @@
 ## 실행 결과
 
 - [실제 용량·회귀·일일 실행 결과](../../../tests/results/daily-cleanup-20261004.md)
-- 보존 근거 부족 자료 323개는 별도 검토 대상, 미래 예약 실행 성공 주장 제외
+- 보존 근거 부족 자료 313개는 별도 검토 대상, 미래 예약 실행 성공 주장 제외
