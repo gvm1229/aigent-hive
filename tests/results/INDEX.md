@@ -1157,3 +1157,8 @@
 | [passed](runs/20261004T232327-da1c4d99ff26.md) | 계측 기준값과 전체 자식 합산 반례 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T232335-e51c8bee8bd7.md) | 토큰 집계와 진단 CLI 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T232535-39c3d817a87b.md) | 토큰 계측 최종 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232957-0e90cbc543c4.md) | 미지원 호스트의 진단 보존과 활성화 거부 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233128-f7618f5fe937.md) | 미지원 제어의 상세 진단 회귀 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233143-6b0ae475ffeb.md) | 호스트 지원 진단 정적 검사 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T233153-e07a35a526eb.md) | 지원 진단 최종 정적 검사 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T233233-813c5ec93398.md) | 호스트 기능 진단의 거부 정보 검증 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
