@@ -3,8 +3,8 @@
 - 제품 버전: `0.11.1`
 - 공개 안정판: `0.11.0`
 - 작업 브랜치: `develop`
-- 공개 시험 수용: `0.11.1-test.6`
-- 다음 시험 대상: `0.11.1-test.7`
+- 공개 시험 수용: `0.11.1-test.7`
+- 다음 시험 대상: 새 제품 변경 시 `0.11.1-test.8`
 - 정본: [활성 계획](../plans/PLAN.md), [스킬 제공 계획](../plans/active/skill-delivery-0.11.1.md), [Claude 설치 계획](../plans/active/claude-user-install-0.11.1.md)
 - 이전 완료와 검증: [0.11.0 상태](../archive/state/0.11.0-before-skill-delivery.md)
 
@@ -12,18 +12,18 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 21/23 완료
+- 현재 등록 항목: 22/23 완료
 
-- `agent-owned`: `SGM-004`
-- `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `DPS-003`
+- `agent-owned`: 없음
+- `awaiting-user-authority`: `DPS-003`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 현재 근거
 
 - 2026-10-04 정리: 112.217GiB → 18.030GiB, 94.190GiB 제거; 관리 대상 13.815GiB·20GiB 상한, 매일 09시 자동화 등록, [검증·남긴 자료](../../tests/results/daily-cleanup-20261004.md)
-- SGM-001–003 구현·전체 Windows 검사 정합화, test.7 필수 CI 진행; 실제 WProject 변경 없음
+- SGM-001–004 완료: [test.7 공개 수용·결합 미리보기](../research/skill-merge-public-test7-0.11.1.md), 필수 CI·다섯 배포 대상 후보·세 운영체제 수용·실제 Windows Claude 검사 통과; WProject 47개 변경 제안·8개 검사 파일 불변, 실제 적용 없음
 
 - 사용자 의도 확인: 기본 스킬 제외 대신 새 Hive 개선과 사용자 수정의 결합; [결합 계획](../plans/active/skill-merge-0.11.1.md) 구현, 새 제품 변경의 test.7 검증 필요
 
@@ -56,6 +56,8 @@
 - Claude CUI-001–004·실제 Windows 공개 CLI 수용 완료; 안정판 latest 0.11.0 유지, 현재 사용자 CLI test.5 적용
 
 ## 승인 인계
+
+- 현재 사용자 test.7 설치·검토한 두 사용자 파일의 WProject 결합 반영 승인 대기, 적용 뒤 DPS-003의 새 실제 대화 호출 확인 필요
 
 - 현재 사용자 test.5 설치 승인·적용 완료, test.6 설치 승인·적용 완료; 안정판 게시·main 통합·881자 Discord 문구·발송 승인 유지
 - `SDP-005` 사용자 실행·검토 완료; `DPS-003`의 프로젝트 선택 스킬 활용과 사용자 관리 스킬 충돌 처리 구분

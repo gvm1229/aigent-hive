@@ -17,7 +17,7 @@
 - [x] [DPS-002] 기본 23개·빈 선택·의존성·Wiki 조건의 일관된 선택
   - state: complete; evidence: repo:tests/results/runs/20261002T021301-49cf6fa9b6ae.md#sha256:00849e999d35dc801b9c61d042a26928bd69baff613967eb62d7c4118c23b8a8
 - [ ] [DPS-003] 선택 스킬의 자연어 활용과 제공 위치별 정책 일치
-  - state: awaiting-external-evidence; owner: 유지관리자; reason: test.6 정책·선택·CLI 수용 완료, 새 실제 Codex 대화에서 선택 스킬의 명시·자연어 호출 증거 필요
+  - state: awaiting-user-authority; owner: 유지관리자; reason: test.7 사용자 설치와 검토한 WProject 결합 반영 승인 필요, 적용 뒤 새 실제 대화의 명시·자연어 호출 검증
 - [x] [DPS-004] 기존 기본 전환·사용자 선택 보존·재갱신 무변경
   - state: complete; evidence: repo:tests/results/runs/20261002T033536-3616b903f78c.md#sha256:e780038561f2b87ab1cc78bdb5569c97cac35d3b6923395391de7909e3806e72
 - [x] [DPS-005] 관련·전체 회귀와 공개 test.6 수용

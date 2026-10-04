@@ -2,7 +2,7 @@
 
 > Plan version: 0.11.1
 > Scope: product
-> 다음 공개 시험: `0.11.1-test.7`
+> 공개 시험 수용: `0.11.1-test.7`
 
 ## 목적과 경계
 
@@ -19,8 +19,8 @@
   - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
 - [x] [SGM-003] 동시 변경·허용 경로·복구·다음 갱신의 사용자 수정 보존
   - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
-- [ ] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
-  - state: agent-owned
+- [x] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
+  - state: complete; evidence: repo:docs/research/skill-merge-public-test7-0.11.1.md#sha256:f22a49255f626bb431a2340347a2f943750781e78b1c9dc9b2a643824e3a7533
 
 ## 구현 결정과 순서
 
@@ -37,3 +37,8 @@
 - 소비자 안내: `harness/skills/project-refresh/SKILL.md`와 배포 사본
 - 검증: 해당 CLI Rust 시험·Python 명령/형식 시험, 기존 소유권·Windows Claude 회귀 유지
 - 중단: 정확한 결합의 사용자 의미 결정 또는 실제 사용자 시험판 설치 승인만 해당 단계 대기, 독립 작업 계속
+
+## 공개 수용
+
+- [test.7과 실제 결합 미리보기](../../research/skill-merge-public-test7-0.11.1.md)
+- 실제 사용자 설치·프로젝트 반영은 별도 승인 대상, 이후 DPS-003 실제 호출 검증
