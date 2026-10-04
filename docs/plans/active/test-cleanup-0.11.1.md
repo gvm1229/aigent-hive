@@ -20,6 +20,9 @@
 - [x] [TCL-003] 매일 한국 시간 09시 정리 등록·실행 명령 검증
   - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 
+- [ ] [TCL-004] 남은 큰 시험 자료의 추가 정리와 용량 재측정
+  - state: agent-owned
+
 ## 실행 순서
 
 1. TCL-001: 기존 `scripts/test_artifacts.py`의 `Manager.inventory/review/cleanup` 재사용. 이전 실행 결과를 Git에 보존한 뒤, `target/debug/incremental`과 큰 과거 합성 자료를 조사. 작은 JSON 근거는 기존 `archive_legacy`로 보존. 현재 사용·72시간 내 재사용이 없는 정확 경로만 종료 검토, 기존 넓은 보존 예약은 종료한 작업의 예약만 해제. 미리보기 뒤 실제 정리와 전후 바이트 기록. 원본 증거 미보존·실행 중·연결 경로는 삭제 제외.
@@ -37,3 +40,11 @@
 
 - [실제 용량·회귀·일일 실행 결과](../../../tests/results/daily-cleanup-20261004.md)
 - 보존 근거 부족 자료 313개는 별도 검토 대상, 미래 예약 실행 성공 주장 제외
+
+## 추가 정리 절차
+
+- 승인된 사용자 설치·프로젝트 갱신과 별도 수행
+- `tests/work`와 기존 허용 빌드 범위의 현재 용량·용도·실행 참조 재검사
+- 과거 합성 조사 자료의 다운로드 모델·빌드·파생 색인·임시 환경만 정확 경로 검토, 유효한 코드·Markdown·작은 결과 보존
+- 작은 결과 Git 보존 → `Manager.review`의 현재 미사용 확인 → 미리보기·정리 → 파일 총량과 삭제 바이트 재측정
+- 기존 삭제 경계 우회·연결 경로 추적·원본 연구 코드 삭제 제외, 불확실한 자료는 이유별 보존

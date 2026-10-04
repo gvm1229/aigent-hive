@@ -12,10 +12,10 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.11.1`
-- 현재 등록 항목: 22/23 완료
+- 현재 등록 항목: 22/24 완료
 
-- `agent-owned`: 없음
-- `awaiting-user-authority`: `DPS-003`
+- `agent-owned`: `DPS-003`, `TCL-004`
+- `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
@@ -57,7 +57,7 @@
 
 ## 승인 인계
 
-- 현재 사용자 test.7 설치·검토한 두 사용자 파일의 WProject 결합 반영 승인 대기, 적용 뒤 DPS-003의 새 실제 대화 호출 확인 필요
+- 2026-10-05 현재 사용자 test.7 설치·검토한 WProject 결합 반영 승인 확보, 보존 검증·적용 뒤 DPS-003 실제 대화 확인 진행
 
 - 현재 사용자 test.5 설치 승인·적용 완료, test.6 설치 승인·적용 완료; 안정판 게시·main 통합·881자 Discord 문구·발송 승인 유지
 - `SDP-005` 사용자 실행·검토 완료; `DPS-003`의 프로젝트 선택 스킬 활용과 사용자 관리 스킬 충돌 처리 구분

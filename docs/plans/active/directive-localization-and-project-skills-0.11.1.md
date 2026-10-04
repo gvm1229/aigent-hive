@@ -17,7 +17,7 @@
 - [x] [DPS-002] 기본 23개·빈 선택·의존성·Wiki 조건의 일관된 선택
   - state: complete; evidence: repo:tests/results/runs/20261002T021301-49cf6fa9b6ae.md#sha256:00849e999d35dc801b9c61d042a26928bd69baff613967eb62d7c4118c23b8a8
 - [ ] [DPS-003] 선택 스킬의 자연어 활용과 제공 위치별 정책 일치
-  - state: awaiting-user-authority; owner: 유지관리자; reason: test.7 사용자 설치와 검토한 WProject 결합 반영 승인 필요, 적용 뒤 새 실제 대화의 명시·자연어 호출 검증
+  - state: agent-owned
 - [x] [DPS-004] 기존 기본 전환·사용자 선택 보존·재갱신 무변경
   - state: complete; evidence: repo:tests/results/runs/20261002T033536-3616b903f78c.md#sha256:e780038561f2b87ab1cc78bdb5569c97cac35d3b6923395391de7909e3806e72
 - [x] [DPS-005] 관련·전체 회귀와 공개 test.6 수용
@@ -39,3 +39,11 @@
 - 갱신: 이전 소수 선택의 기본 전환·재설정 선택 유지·두 번째 변경 0건·실패 복구
 - 실행 산출물: `scripts/test-artifacts.py run` 기록, 코드 변경 중 실행 소스 고정
 - 실패: 전체 실패군 확인·입력 변화 없는 재시도 제외; 소유권·복구 조건 완화 금지
+
+## 2026-10-05 적용 승인
+
+- 현재 사용자 test.7 설치와 검토한 WProject 결합 갱신의 사용자 승인 확보
+- 공식 갱신 명령의 test 채널이 정확히 test.7인지 확인 → 지식·설정·외부 지침 지문 보존 → `hive update --channel test --confirm` → 버전·바이너리·설치 검증
+- WProject의 두 사용자 파일 입력·결합 지문 불변과 승인된 47개 경로 범위 확인 → 새 미리보기의 정확한 승인 지문 적용 → `--validate`·재갱신 변경 0건·사용자 코드 불변 확인
+- 설치·갱신과 추가 파일 정리의 별도 실행, 새 모델 호출·호스트 강제 재시작 제외
+- 실제 선택 스킬 호출은 설치 검증과 구분, 새 대화 필요 시 정확한 사용자 단계 인계
