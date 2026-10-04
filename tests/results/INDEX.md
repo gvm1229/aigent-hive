@@ -1111,3 +1111,4 @@
 | [passed](runs/20261004T172817-9ff255455bc8.md) | test.8 macOS 새 환경 재검증 결과 보존 | c3b91ef2c5cdc9c0ddb341c09f8efef800762d35 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T172859-1085d15adb09.md) | 현재 사용자 Codex의 갱신된 프로젝트 스킬 발견 확인 | c3b91ef2c5cdc9c0ddb341c09f8efef800762d35 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T172952-d426c8df495f.md) | test.8 두 번째 macOS 실행의 정확한 산출물 확인 | c3b91ef2c5cdc9c0ddb341c09f8efef800762d35 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T173252-27543353267c.md) | test.8 수용 등록과 출시 규칙 관련 검사 | 3616f746227105e9ad2487831297f3ca32376c15 | Windows-11-10.0.26300-SP0 |
