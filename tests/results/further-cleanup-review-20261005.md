@@ -59,3 +59,8 @@
 - `tests/work/vector-research/engine-data`
 - `tests/work/vector-research/qdrant-edge-data`
 - `tests/work/vector-research/qdrant-edge-data-named`
+
+## 추가 확인
+
+- 같은 합성 원본 조사 폴더의 `.agents/work/vector`에 남은 파생 모델·실행 환경 복제본, 원본 docs와 제어 기록은 보존
+- `tests/work/scope-audit-20260828/vector-cli-runtime-iz9955o1/.agents/work/vector`
