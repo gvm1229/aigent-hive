@@ -9,7 +9,7 @@ summary: "Hive coordinates overlapping automated consumer-project edits through 
 tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:6be4a38c0ac64a81c64b23987c852256a6d5aaf84f66f54c3f243e20e468ebaa"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:0827c9c337e692cd64767fca05256862950fbb1b765595a3d7431ff75d265380"
   - "repo:crates/hive-cli/src/session.rs#sha256:a41fd95ca2576269d347b4635afa064dc9dc53a70d96434daef1eb819e0fbf19"
   - "repo:docs/decisions/product-release-decisions.md#sha256:9f234ef3fede8030ab6ad57fa4b560a71f30f468622c4e4ad56b83864d0e05ce"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
@@ -17,7 +17,7 @@ sources:
   - "repo:harness/skills/project-setup/SKILL.md#sha256:650ae6135ec398c2ef9bceb59b336b41ce54672ccb6f1e49e0799023e629ad3c"
   - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:4fc9686e5a469e5b2ecd083b883960ef53ca9abd22213eeda96f38695079e815"
 links: [knowledge-preservation, project-onboarding]
-reviewed_revision: "git:50d537ee8e11e355b035701d3b3f17369c0bc304"
+reviewed_revision: "git:cace7e3fa885dd20d1b7a068b45c7f1536503d60"
 status: active
 ---
 
