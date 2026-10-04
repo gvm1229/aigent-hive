@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product_version": "0.11.1",
-  "package_version": "0.11.1-test.6",
+  "package_version": "0.11.1-test.7",
   "plan_ids": [
-    "DPS-001",
-    "DPS-002",
-    "DPS-004"
+    "SGM-001",
+    "SGM-002",
+    "SGM-003"
   ],
-  "product_tree_sha256": "sha256:1e64cd3aeadcc7ebf20b29bd19c8fae20d340e9c642879a0d6dfaaeb1e7d2b18"
+  "product_tree_sha256": "sha256:0780fb57e3ffde4ccefcafdd69cc96b2f484bf51d31545f026110b228432c225"
 }
