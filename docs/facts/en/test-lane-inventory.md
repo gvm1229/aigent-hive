@@ -17,12 +17,12 @@ sources:
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:81d38458c1fb4e2b0ad406bac350d06b5df34b57de31d729509f726402e9b319"
   - "repo:tests/conformance/lanes.toml#sha256:28e9d1ab7c0edb9325c4f923708982f21be0f963395f8cc27ca67df38abd065a"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:6c7b1c159e7b3ec553529818674f02c09151ff7b"
+reviewed_revision: "git:a7766827a25ced9deec765503bc5c46290dbdf8d"
 status: active
 ---
 
 # Test Lane Inventory
 
-Purpose-based Python packages use one `tests/conformance/lanes.toml` inventory: documentation, security, contract, integration, release. The runner rejects missing/duplicate modules, selects changed lanes and records module timings. Stability and historical upgrade tests/fixtures remain intact.
+Purpose-based packages replace phase directories. One `tests/conformance/lanes.toml` inventory assigns every recursive `test_*.py` module: documentation, security, contract, integration, release. The runner rejects missing/duplicate modules, selects changed lanes and records JSON module timings. Stability and historical upgrade tests/fixtures remain intact.
 
 The user's storage request adds `daily`: reviewed paths with committed evidence only; unresolved reviews, expiry and nonoverlapping storage above 20 GiB require attention. Child tests default to `CARGO_INCREMENTAL=0`, preserving overrides. Live processes, changed inventories and links block deletion. Small Markdown results remain in Git.

@@ -17,15 +17,15 @@ sources:
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:81d38458c1fb4e2b0ad406bac350d06b5df34b57de31d729509f726402e9b319"
   - "repo:tests/conformance/lanes.toml#sha256:28e9d1ab7c0edb9325c4f923708982f21be0f963395f8cc27ca67df38abd065a"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:6c7b1c159e7b3ec553529818674f02c09151ff7b"
+reviewed_revision: "git:a7766827a25ced9deec765503bc5c46290dbdf8d"
 status: active
 ---
 
 # 시험 lane 대장
 
-- 목적별 Python package와 `tests/conformance/lanes.toml`의 단일 대장
+- phase 대신 목적별 Python package와 단일 `tests/conformance/lanes.toml` 대장, 재귀 발견한 모든 `test_*.py` 배정
 - documentation·security·contract·integration·release 배정, 누락·중복 거절
-- 변경 경로별 선택·모듈별 시간 기록, 안정성·과거 갱신 시험과 자료 보존
+- 변경 경로별 선택·모듈별 JSON 시간 기록, 안정성·과거 갱신 시험과 자료 보존
 - 사용자 용량 관리 요청: `daily`의 검토·Git 근거 확인 경로만 정리
 - 중복 제외 20GiB 상한·미검토·만료 점검, 시험 기본 `CARGO_INCREMENTAL=0`과 명시 설정 보존
 - 실행 중·목록 변경·연결 경로 삭제 거절, 작은 결과 Markdown의 Git 보존
