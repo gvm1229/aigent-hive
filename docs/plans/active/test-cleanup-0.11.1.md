@@ -21,7 +21,7 @@
   - state: complete; evidence: repo:tests/results/daily-cleanup-20261004.md#sha256:e1704b3441df95e2658383dcd41dfb58babcc3abb6827bb6109470847915f58c
 
 - [x] [TCL-004] 남은 큰 시험 자료의 추가 정리와 용량 재측정
-  - state: complete; evidence: repo:tests/results/further-cleanup-20261005.md#sha256:8e2585618f43abf04a327e0c6d8b2433878fbed169500ba901bbd1ed29435a66
+  - state: complete; evidence: repo:tests/results/further-cleanup-20261005.md#sha256:b528bab8835072afcfe9a05c1b818295ec23001b27f88e008ff80d86b6cab597
 
 ## 실행 순서
 
