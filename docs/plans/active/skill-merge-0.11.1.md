@@ -22,8 +22,8 @@
 - [x] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
   - state: complete; evidence: repo:docs/research/skill-merge-public-test7-0.11.1.md#sha256:f22a49255f626bb431a2340347a2f943750781e78b1c9dc9b2a643824e3a7533
 
-- [ ] [SGM-005] 부속 자료 폴더 정리의 실제 경로 검증·사용자 자료 보존
-  - state: agent-owned
+- [x] [SGM-005] 부속 자료 폴더 정리의 실제 경로 검증·사용자 자료 보존
+  - state: complete; evidence: repo:docs/research/skill-resource-cleanup-0.11.1.md#sha256:2431ea5930adaf167fc673b9e14252121f1b041a30771c393a0fc0e4b22dfb19
 - [ ] [SGM-006] 수정한 test.8 공개 수용과 승인된 결합 갱신 검증
   - state: agent-owned
 
@@ -60,3 +60,5 @@
 - 현재 WProject 원본 유지, 수동 소유권 변경·강제 파일 삭제·안전 검사 우회 금지
 
 - 공개 수용 보강: `scripts/qualify-skill-delivery-public-test.py`에 usage-guard 부속 자료의 플러그인 비활성 복원·재활성 정리 사례 추가. 기존 test.7의 격리 재현 실패와 수정 개발 빌드의 통과를 대조, 다음 공개 test.8의 세 운영체제에서 반복
+
+- [부속 폴더 회귀 수정과 검증](../../research/skill-resource-cleanup-0.11.1.md)
