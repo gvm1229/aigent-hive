@@ -9,10 +9,10 @@ summary: "Selected global project-refresh Skills accept natural-language project
 tags: [project, routing, skill]
 aliases: ["project-refresh"]
 sources:
-  - "repo:harness/skills/project-refresh/SKILL.md#sha256:013ba0983c551d7c41d72c2394a82349f0e935dd523f9f6ab999546e33718df9"
+  - "repo:harness/skills/project-refresh/SKILL.md#sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067"
   - "repo:harness/skills/project-refresh/agents/openai.yaml#sha256:b2563a605a8a14b629efb04dc36c7f4b4e4c556f91b5ea9c6cdb454bc92fccf8"
 links: [project-onboarding, skill-routing]
-reviewed_revision: "git:fc288bed8f925b89bfd0ed67b808cfdd0722a70b"
+reviewed_revision: "git:50d537ee8e11e355b035701d3b3f17369c0bc304"
 status: active
 ---
 

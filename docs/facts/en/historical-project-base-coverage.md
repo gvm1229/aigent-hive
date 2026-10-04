@@ -9,15 +9,15 @@ summary: "A declared project upgrade source range requires exact authenticable f
 tags: [migration, project-upgrade, regression, release]
 aliases: ["Historical base parity"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:92d7a0620ee61b08a18554a67b85fc6ce93471ad83cf58bdf9597869559fb627"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:6be4a38c0ac64a81c64b23987c852256a6d5aaf84f66f54c3f243e20e468ebaa"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:f5c90bf5b90baef8d7a5ec2228d0d23338ea95aef2c8078b7656c4df7d6ff600"
   - "repo:crates/hive-render/src/lib.rs#sha256:9a8dd35a7cbd20a71c44e5a09330410bf45bdd68de04c623454187d706687449"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
-  - "repo:scripts/check-project-base-coverage.py#sha256:6c90b2a4b1f84507f56a80ed540f6e97c9938b6f91a7ab087cc8347c8cfadf26"
+  - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"
   - "repo:scripts/qualify-project-predecessors.py#sha256:80f839a04103dc25d74259acd5b1daa7d933fa58e98eb605206eb1a046c67f58"
 links: [projection-upgrade-purge, update-transaction, version-policy]
-reviewed_revision: "git:bb6867465d9cb2f68f7103b89f8cb8e467246e0e"
+reviewed_revision: "git:50d537ee8e11e355b035701d3b3f17369c0bc304"
 status: active
 ---
 
