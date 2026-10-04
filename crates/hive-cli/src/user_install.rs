@@ -8958,6 +8958,7 @@ mod tests {
                 ("0.10.2", 68),
                 ("0.10.3", 68),
                 ("0.11.0", 73),
+                ("0.11.1", 74),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -9114,7 +9115,7 @@ mod tests {
                     .expect("direct stable upgrade plan");
                 if matches!(
                     version,
-                    "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3" | "0.11.0"
+                    "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3" | "0.11.0" | "0.11.1"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
