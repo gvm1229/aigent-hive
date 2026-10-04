@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "package_version": "0.11.1-test.8",
+  "actual_os": "Windows",
+  "host": "codex",
+  "operation": "authenticated hive update --channel test --confirm",
+  "binary_sha256": "777d76625056f6d86c3eb517c612d1a07cc12550bca2be5281465300bf592556",
+  "knowledge_preserved": 502,
+  "settings_preserved": 2,
+  "foreign_guidance_preserved": true,
+  "validation_code": "hive.user-install-valid",
+  "model_calls": 0,
+  "limit": "Current user install preservation only; no project or model invocation proof."
+}

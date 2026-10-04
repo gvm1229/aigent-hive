@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "actual_os": "Windows",
+  "scope": "fresh native Codex CLI project metadata",
+  "project_ship_count": 1,
+  "model_calls": 0,
+  "methods": [
+    "initialize",
+    "skills/list"
+  ],
+  "project_ship_metadata": [
+    {
+      "name": "ship",
+      "scope": "repo",
+      "enabled": true
+    }
+  ],
+  "not_proven": [
+    "desktop GUI refresh",
+    "explicit model invocation",
+    "natural-language model invocation"
+  ]
+}
