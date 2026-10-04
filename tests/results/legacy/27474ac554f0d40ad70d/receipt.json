@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "package_version": "0.11.1-test.8",
+  "product_version": "0.11.1",
+  "release_date": "2026-10-05",
+  "source_commit": "06d56360748fd4202fec894bfa92c7ddbfe703df",
+  "product_tree_sha256": "sha256:c4f357f2abdbc6b2231d9e50a025d1e8a35b22dd17060c0c01f3f0454873c074",
+  "required_ci": 37217641485,
+  "candidate_run_id": 37218215348,
+  "first_publication_run_id": 37219209309,
+  "first_failure": "npm linux-arm64 test tag propagation timeout after successful upload",
+  "recovery_publication_run_id": 37219894233,
+  "release_url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.11.1-test.8",
+  "annotated_tag_source_verified": true,
+  "all_six_candidate_sha512_matched": true,
+  "all_six_test_tags": "0.11.1-test.8",
+  "all_six_latest_tags": "0.11.0",
+  "actual_check_host": "Windows / Codex",
+  "limits": "Publication identity only; separate public acceptance and real-user apply required."
+}

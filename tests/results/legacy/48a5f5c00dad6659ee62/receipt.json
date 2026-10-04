@@ -1,0 +1,55 @@
+{
+  "status": "ready",
+  "candidate_run_id": 37218215348,
+  "package_version": "0.11.1-test.8",
+  "packages": [
+    {
+      "package": "aigent-hive",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/win32-x64",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/linux-x64",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/linux-arm64",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/darwin-x64",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/darwin-arm64",
+      "status": "ready",
+      "version": "0.11.1-test.8",
+      "test": "0.11.1-test.8",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    }
+  ]
+}

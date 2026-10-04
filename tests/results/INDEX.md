@@ -5,12 +5,15 @@
 | [passed](legacy/057c730f3a63a1d9e861.md) | tests/work/vector-native-lblw2nrc/receipt.json | 6e7c4a3c93e4be6ebc3447b02635615122fd65d4 | 원본 JSON 참조 |
 | [passed](legacy/08fa608298d6df2957fb.md) | tests/work/knowledge-benchmark-baseline-1000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/0ea576afb254691f59f2.md) | tests/work/vector-native-89j9057r/receipt.json | c264d0e315249dc2f95a58b2c4ab02375b0acad4 | 원본 JSON 참조 |
+| [not specified in original](legacy/13557254244f22fcbb52.md) | tests/work/test8-acceptance-first/korean-public-test-darwin-arm64/_temp/vector-onboarding-public-test-darwin-arm64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/139e2f2d5ff523bcc3aa.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-darwin-arm64/aigent-hive/aigent-hive/tests/work/vector-native-d5q4mdan/receipt.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
 | [passed](legacy/179247c3a5f669d16b98.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-darwin-arm64/_temp/korean-public-test-darwin-arm64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/216987327d9437b8f8f6.md) | tests/work/vector-native-qtujpkxl/receipt.json | c138378a1a573658fdc655419b21de89f34e79aa | 원본 JSON 참조 |
 | [failed](legacy/22dcd2a030ce315c6eeb.md) | tests/work/verified-workflow-acceptance-8dkzi35p/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/24b8527d8183dae26a17.md) | tests/work/skill-merge-public-test7/public-binary.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
+| [passed](legacy/27474ac554f0d40ad70d.md) | tests/work/test8-candidate-integrity/publication-receipt.json | 06d56360748fd4202fec894bfa92c7ddbfe703df | 원본 JSON 참조 |
 | [passed](legacy/29acf32b56fe05bc84e4.md) | tests/work/resource-prune-qualification/fixed.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/2be163022cf2a9fc5c8d.md) | tests/work/test8-acceptance-first/korean-public-test-win32-x64/aigent-hive/aigent-hive/tests/work/vector-native-n2rhauly/receipt.json | 06d56360748fd4202fec894bfa92c7ddbfe703df | 원본 JSON 참조 |
 | [passed](legacy/2d2e22b05ee47f197749.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/aigent-hive/aigent-hive/tests/work/vector-native-36eg9ttp/receipt.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
 | [failed-and-rolled-back](legacy/2e2073a5bbd14cd5306d.md) | tests/work/skill-merge-public-test7/project-apply-failure.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/33f2199d81acd5b98001.md) | tests/work/knowledge-benchmark-baseline-1000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
@@ -18,7 +21,9 @@
 | [failed](legacy/34c83b95dac8bea30d43.md) | tests/work/vector-privacy-current-m8_ohepk/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/39c2f5ac340558ce6239.md) | tests/work/knowledge-benchmark-current-5000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/3a0b65a55a0117fccd49.md) | tests/work/knowledge-benchmark-current-1000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
+| [ready](legacy/48a5f5c00dad6659ee62.md) | tests/work/test8-candidate-integrity/registry-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/49d49ddd6b882205916f.md) | tests/work/knowledge-benchmark-current-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/50e46fddc60c2c2b3db4.md) | tests/work/test8-acceptance-first/korean-public-test-win32-x64/_temp/korean-public-test-win32-x64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/50e9074da9c1645eea9c.md) | tests/work/vector-native-tq2_sv_v/receipt.json | 6dd42f6abc8c9879f2879ad433484c78335f3110 | 원본 JSON 참조 |
 | [passed](legacy/52e2ec0f933aba8e7d54.md) | tests/work/verified-workflow-acceptance-0jyfpp95/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/55c3cbf8bf47b5d38606.md) | tests/work/vector-source-x9i5dsz5/receipt.json | not specified in original | 원본 JSON 참조 |
@@ -36,15 +41,21 @@
 | [passed](legacy/9089d350df2a3359ccf5.md) | tests/work/vector-cancel-current-4lbmwxvy/receipt.json | not specified in original | 원본 JSON 참조 |
 | [interrupted](legacy/916533e5e68cefac3ce5.md) | tests/work/vector-native-qi9p03le/receipt.json | 4fdf6c274188c26e3701a727617cdc1770c51fd8 | 원본 JSON 참조 |
 | [passed](legacy/937cab32117f2f51ca41.md) | tests/work/public-native-codex-0111-test6/report.json | not specified in original | 원본 JSON 참조 |
+| [not specified in original](legacy/9561ec46e8a6eaa0b4f5.md) | tests/work/test8-acceptance-first/korean-public-test-win32-x64/_temp/vector-onboarding-public-test-win32-x64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/9f0277101aa83fd13c50.md) | tests/work/knowledge-benchmark-baseline-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a6f68b84af5b9ecef590.md) | tests/work/vector-cancel-current-657d14iq/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a7e8a73bd8325035a62b.md) | tests/work/verified-workflow-acceptance-fgea1nsk/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/aa4091affe6ad8b5066f.md) | tests/work/knowledge-benchmark-current-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ae4a49f7898bdf789322.md) | tests/work/knowledge-benchmark-baseline-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/aed6dcc60fca988bdf4a.md) | tests/work/test8-acceptance-first/korean-public-test-linux-x64/aigent-hive/aigent-hive/tests/work/vector-native-1pu741ay/receipt.json | 06d56360748fd4202fec894bfa92c7ddbfe703df | 원본 JSON 참조 |
 | [passed](legacy/af41de221b52640b0bbc.md) | tests/work/skill-merge-public-test7/merge-preview-report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/af6a478d5074c2d3a277.md) | tests/work/public-native-claude-0111-test6/report.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/b66dd94fd1c08258f5a1.md) | tests/work/test8-acceptance-first/korean-public-test-linux-x64/_temp/korean-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
+| [not specified in original](legacy/b9eeb17776cc7b6c88c5.md) | tests/work/test8-acceptance-first/korean-public-test-linux-x64/_temp/vector-onboarding-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/ba4d710b9d66c9272da0.md) | tests/work/vector-privacy-current-94wtgsk1/receipt.json | not specified in original | 원본 JSON 참조 |
+| [failed](legacy/bcb66f25fd4cb5ead63a.md) | tests/work/test8-acceptance-first/korean-public-test-darwin-arm64/aigent-hive/aigent-hive/tests/work/vector-native-188438ee/receipt.json | 06d56360748fd4202fec894bfa92c7ddbfe703df | 원본 JSON 참조 |
 | [passed](legacy/c0de6506202c5222a985.md) | tests/work/public-package-0111-test6/public-qualification.json | 1917e1aaa59315badab6caef19fb48a5eb9f2a17 | 원본 JSON 참조 |
+| [not specified in original](legacy/ca0f91adbd2c90599117.md) | tests/work/test8-candidate-integrity/release-npm-umbrella/release-candidate.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/cd9ffca497430272c70f.md) | tests/work/skill-merge-public-test7/claude-report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/d27c79661d5100c0fb04.md) | tests/work/dps-native-claude-0111/report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/d45b052e637f84111ae3.md) | tests/work/skill-merge-public-test7/registry-integrity.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
@@ -54,13 +65,16 @@
 | [passed](legacy/e08157b1c8e5ba7fd862.md) | tests/work/knowledge-benchmark-current-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [not specified in original](legacy/e15b790b7f0a101fe5ac.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/_temp/vector-onboarding-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e17443fdca866fcff71e.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/_temp/korean-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/e404c56d5bc7657c5c5a.md) | tests/work/test8-acceptance-first/korean-public-test-darwin-arm64/_temp/korean-public-test-darwin-arm64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e4363ffa666df5321eb7.md) | tests/work/knowledge-benchmark-baseline-5000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e87096491f0227f6f5da.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-win32-x64/aigent-hive/aigent-hive/tests/work/vector-native-aluwxg9u/receipt.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
 | [passed](legacy/ec7bc52f8272dc6c5dac.md) | tests/work/knowledge-benchmark-baseline-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/edaed6e229a3ad05398c.md) | tests/work/vector-native-3xsczgt3/receipt.json | a4a2e46a0da5e837de281c0b0e9619507aec4405 | 원본 JSON 참조 |
+| [passed](legacy/edfbd6e8d6154d588c12.md) | tests/work/skill-merge-public-test8/public-binary.json | 06d56360748fd4202fec894bfa92c7ddbfe703df | 원본 JSON 참조 |
 | [passed](legacy/f276b8547ce7bd55f215.md) | tests/work/vector-privacy-current-4g28310y/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/f41c995a82c3db97f0a4.md) | tests/work/public-package-0111-test6/test6-current-user-skills.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/f81c3ebd6e9f6e9994cf.md) | tests/work/vector-native-kmz4kbw2/receipt.json | 0090c097e5ccc83702041e221a277d92ce4d2ee8 | 원본 JSON 참조 |
+| [passed](legacy/fa3bf530d1827a49c6b9.md) | tests/work/claude-public-test8/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ffb74a75735a053453a7.md) | tests/work/verified-workflow-acceptance-bso8rk8t/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](runs/20260828T164357-78eb5962bf9a.md) | 시험 산출물 관리 도구 격리 회귀 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260828T164606-49f246f2a697.md) | 산출물 관리 격리 회귀 32개 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
@@ -1080,3 +1094,9 @@
 | [failed](runs/20261004T162744-9f7554afc956.md) | 부속 자료를 제공하는 전역 선택을 포함한 test.7 회귀 재현 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T162753-9fb032ae77a7.md) | 전역 제공 복원 뒤 부속 자료 정리의 수정 개발 빌드 검증 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T163258-ea9ca3951ee1.md) | 정리 직전 프로세스 변화의 실제 보존 사유 유지 검증 | 2a87bf8d3080ad76616582a7e2a845685c8dd128 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T171123-ebcf76fe2988.md) | test.8 게시 복구 전 후보와 npm 파일 지문 비교 | 931cff4f9faa2e27093ba07b26f7e572657e4ca6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T171148-a0bb09cf9294.md) | test.8 여섯 npm 패키지 후보 지문과 시험판·안정판 표시 검증 | 931cff4f9faa2e27093ba07b26f7e572657e4ca6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T171230-55293315d155.md) | test.8 공개 Windows 실행 파일 지문 확인 | 931cff4f9faa2e27093ba07b26f7e572657e4ca6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T171949-b402a1ac84f3.md) | test.8 실제 Windows Claude 설치·갱신·보존 검증 | b61ef2a1841efb4ac97ddad10a74043b537643ce | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T172337-a073b77040c2.md) | test.8 macOS 검색 수용 실패의 정확한 결과 수집 | b61ef2a1841efb4ac97ddad10a74043b537643ce | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T172444-c80ed6987954.md) | test.8 최초 공개 수용 세 운영체제 결과 보존 | b61ef2a1841efb4ac97ddad10a74043b537643ce | Windows-11-10.0.26300-SP0 |
