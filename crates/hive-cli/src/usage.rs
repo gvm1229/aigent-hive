@@ -1468,7 +1468,7 @@ fn unix_seconds(time: SystemTime) -> Result<u64, SensorError> {
         .map_err(|_| SensorError::ClockInvalid)
 }
 
-fn parse_iso8601_z(value: &str) -> Result<u64, SensorError> {
+pub(crate) fn parse_iso8601_z(value: &str) -> Result<u64, SensorError> {
     let (date, time) = value
         .strip_suffix('Z')
         .and_then(|value| value.split_once('T'))

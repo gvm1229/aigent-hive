@@ -1,3 +1,5 @@
+mod antigravity;
+
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarget};
 use crate::usage;
@@ -24,7 +26,7 @@ USAGE:
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-reset <halt-digest>] --output json
-    hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
 ";
 
 #[derive(Debug)]
@@ -66,6 +68,7 @@ struct SessionArguments {
 
 #[derive(Debug)]
 struct CaptureArguments {
+    host: String,
     target: Option<PathBuf>,
     target_from_stdin: bool,
 }
@@ -514,7 +517,13 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
         ),
         Some("capture") => (
             "CaptureUsage",
-            parse_capture(&arguments[1..]).and_then(|parsed| capture_claude(&parsed)),
+            parse_capture(&arguments[1..]).and_then(|parsed| {
+                if parsed.host == "antigravity" {
+                    antigravity::capture(&parsed)
+                } else {
+                    capture_claude(&parsed)
+                }
+            }),
         ),
         Some(other) => (
             "CheckUsage",
@@ -578,9 +587,9 @@ fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError>
             }
         }
     }
-    if host.as_deref() != Some("claude") {
+    if !matches!(host.as_deref(), Some("claude" | "antigravity")) {
         return Err(AdapterError::Input(
-            "usage capture currently requires --host claude".to_owned(),
+            "usage capture requires --host claude|antigravity".to_owned(),
         ));
     }
     if output.as_deref() != Some("json") {
@@ -599,6 +608,7 @@ fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError>
         ));
     }
     Ok(CaptureArguments {
+        host: host.expect("validated capture host"),
         target: target.map(PathBuf::from),
         target_from_stdin,
     })
@@ -642,26 +652,13 @@ fn capture_claude(arguments: &CaptureArguments) -> Result<ActionResult, AdapterE
         .into_iter()
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
-    let mut changed = false;
-    for attempt in 0..3 {
-        let snapshot = target.snapshot_bounded(&relative, MAX_CONTROL_BYTES)?;
-        if let Some(existing) = snapshot.bytes() {
-            let existing = serde_json::from_slice::<ClaudeCapture>(existing).map_err(|_| {
-                AdapterError::Safety("existing Claude capture is malformed".to_owned())
-            })?;
-            if existing.received_at_unix_millis > capture.received_at_unix_millis {
-                break;
-            }
-        }
-        match target.publish_runtime(&relative, &snapshot, &desired) {
-            Ok(value) => {
-                changed = value;
-                break;
-            }
-            Err(AdapterError::Conflict(_)) if attempt < 2 => {}
-            Err(error) => return Err(error),
-        }
-    }
+    let changed = publish_capture::<ClaudeCapture>(
+        &target,
+        &relative,
+        &desired,
+        capture.received_at_unix_millis,
+        |old| old.received_at_unix_millis,
+    )?;
     Ok(ActionResult {
         schema_version: 1,
         action: "CaptureUsage",
@@ -691,6 +688,34 @@ fn capture_claude(arguments: &CaptureArguments) -> Result<ActionResult, AdapterE
             "raw_input_persisted": false,
         })),
     })
+}
+
+fn publish_capture<T: serde::de::DeserializeOwned>(
+    target: &PinnedTarget,
+    relative: &Path,
+    desired: &[u8],
+    received_at_millis: u128,
+    timestamp: fn(&T) -> u128,
+) -> Result<bool, AdapterError> {
+    for attempt in 0..3 {
+        let snapshot = target.snapshot_bounded(relative, MAX_CONTROL_BYTES)?;
+        if let Some(existing) = snapshot.bytes() {
+            let existing = serde_json::from_slice::<T>(existing).map_err(|_| {
+                AdapterError::Safety("existing usage capture is malformed".to_owned())
+            })?;
+            if timestamp(&existing) > received_at_millis {
+                return Ok(false);
+            }
+        }
+        match target.publish_runtime(relative, &snapshot, desired) {
+            Ok(changed) => return Ok(changed),
+            Err(AdapterError::Conflict(_)) if attempt < 2 => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Err(AdapterError::Conflict(
+        "usage capture changed concurrently".to_owned(),
+    ))
 }
 
 fn claude_workspace_target(input: &ClaudeStatusInput) -> Result<PathBuf, AdapterError> {
@@ -1718,7 +1743,7 @@ fn read_usage_snapshot(
         ),
         "antigravity" => native_then_consented_fallback(
             usage::UsageHost::Antigravity,
-            Err(usage::SensorError::Unsupported),
+            antigravity::read(target, binding, account_digest, sampled_at),
             config.codexbar_fallback_enabled,
             || match account_digest {
                 Some(account_digest) => usage::check_codexbar_provider_with_runner(

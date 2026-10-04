@@ -978,6 +978,43 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(enforced_result["data"]["selected_window"], "session")
         self.assertFalse(sensor_log.exists(), "native limited must not call CodexBar")
 
+    def test_antigravity_capture_blocks_low_pool_without_fallback_or_raw_identity(self) -> None:
+        config = self.consumer / ".hive/config/harness.toml"
+        config.write_text(config.read_text(encoding="utf-8").replace(
+            'primary_host = "codex"', 'primary_host = "antigravity"'), encoding="utf-8")
+        reset = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 3600))
+        payload = {
+            "conversation_id": "antigravity-private-session",
+            "session_id": "antigravity-private-session",
+            "version": "1.1.18", "email": RAW_ACCOUNT,
+            "transcript_path": "/private/transcript",
+            "quota": {
+                "gemini-weekly": {"remaining_fraction": .9, "reset_time": reset},
+                "3p-weekly": {"remaining_fraction": .01, "reset_time": reset},
+            },
+        }
+        process, result = self.invoke("usage", "capture", "--host", "antigravity",
+            "--target", str(self.consumer), "--stdin-json", stdin=json.dumps(payload))
+        self.assertEqual(process.returncode, 0, result)
+        capture_path = self.consumer / result["changed_paths"][0]
+        persisted = capture_path.read_text(encoding="utf-8")
+        for secret in [RAW_ACCOUNT, payload["conversation_id"], "/private/"]:
+            self.assertNotIn(secret, persisted)
+        sensor_log = self.work_root / "antigravity-fallback.log"
+        process, result = self.invoke("usage", "enforce", "--target", str(self.consumer),
+            "--session-id", payload["conversation_id"], "--process-id", "991",
+            "--account-digest", ACCOUNT_DIGEST, sensor_case="allow",
+            extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log), "FAKE_CODEXBAR_PROVIDER": "antigravity"})
+        self.assert_result(process, result, action="CheckUsage", exit_code=3,
+            status="blocked", code="hive.usage-limited")
+        self.assertFalse(sensor_log.exists())
+        before = capture_path.read_bytes()
+        del payload["quota"]["3p-weekly"]
+        process, result = self.invoke("usage", "capture", "--host", "antigravity",
+            "--target", str(self.consumer), "--stdin-json", stdin=json.dumps(payload))
+        self.assertNotEqual(process.returncode, 0)
+        self.assertEqual(capture_path.read_bytes(), before)
+
     def test_antigravity_native_unsupported_uses_codexbar_fallback(self) -> None:
         config = self.consumer / ".hive/config/harness.toml"
         config.write_text(
