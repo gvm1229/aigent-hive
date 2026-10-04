@@ -1138,3 +1138,16 @@
 | [passed](runs/20261004T224523-e3ef645c8ecf.md) | 호스트 기능 명세 2와 구형 서명 호환 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224607-85c6b8d92b7c.md) | 호스트 명세와 CLI 활성화 경계 회귀 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T224610-aacfb836f841.md) | 호스트 기능 형식 2 정적 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225346-5dfd2d20b477.md) | 자동 의미 관계의 범위와 원자 적용 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T225517-8969e205b94a.md) | 관계 분석 명령과 저장 후 대기 연결 빌드 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225557-335dfa3e13fe.md) | 관계 분석 CLI 자료형 정합화 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225738-0c91346c2636.md) | 저장 후 자동 관계 준비·적용·오류 복구 CLI 검증 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225843-a8db74bf96a1.md) | 자동 관계 분석과 저장 경계 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230035-58ecb362f7ed.md) | 자동 관계 분석 최종 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T230152-c52c869cdb56.md) | 소스·소비자·기밀 경계와 자동 관계 전체 CLI 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230258-a3ef92b07e84.md) | 소스 분리와 관계 분석 수용 자료 수정 확인 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230405-ab8b00586551.md) | 관계 저장 경쟁·근거·삭제 반례 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230419-39540b829bdd.md) | 자동 관계 기능과 스킬 투영 계약 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230658-8cec11f761b8.md) | 관계 대상 변경의 증분 동등성 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230906-9e00b907ec77.md) | 관계 증분 보강 최종 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T231056-cef9fc7be6d1.md) | 자동 관계 기능 최종 정적 검사와 형식 확인 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
