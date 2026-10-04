@@ -10,7 +10,7 @@
 
 ## Test Artifact Lifecycle
 
-- For local/CI tests producing `tests/work/` or `target/debug/`, use
+- For local/CI tests producing `tests/work/` or `target/`, use
   `python scripts/test-artifacts.py run --purpose <Korean-summary> --path <owned-path> --command <test-command>`.
 - Review/commit `tests/results/runs/*.md` before deletion; a pass is insufficient.
 - At closure run `python scripts/test-artifacts.py check`; inspect eligible/expired items and use

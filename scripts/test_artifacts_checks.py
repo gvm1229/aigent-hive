@@ -180,9 +180,29 @@ class ArtifactTests(unittest.TestCase):
             self.review(path="tests/work", state="retained", task="acceptance", review_at=(a.now() + timedelta(hours=2)).isoformat(), excluded_paths=["target/debug"])
 
     def test_paths_outside_owned_roots_and_root_deletion_refused(self):
-        for path in ("tests/work", "tests/work/../fixtures", "target", "target/release", "C:/tmp", "/tmp", "tests/work//old"):
+        for path in ("tests/work", "tests/work/../fixtures", "target", "target/unknown", "target/release-copy", "C:/tmp", "/tmp", "tests/work//old"):
             with self.subTest(path=path), self.assertRaises(a.ArtifactError):
                 self.manager.target(path)
+
+    def test_named_build_profiles_require_review_and_preserve_siblings(self):
+        for relative in a.BUILD_ROOTS:
+            path = self.root / relative
+            path.mkdir(parents=True)
+            (path / "compiled.bin").write_bytes(b"synthetic build")
+            self.assertEqual("review", self.manager.scan(selected=[relative])[0]["status"])
+            self.review(path=relative)
+            self.snapshot.append({"pid": 999, "parent": 0, "name": "cargo.exe", "start": "build", "command": "cargo test", "image": ""})
+            self.assertEqual("active", self.manager.scan(selected=[relative])[0]["status"])
+            self.snapshot.pop()
+            self.assertEqual("removed", self.manager.cleanup(apply=True, selected=[relative])[0]["status"])
+        self.assertTrue((self.root / "tests/work/old/data").is_file())
+
+    def test_completed_build_subdirectory_still_needs_shared_review(self):
+        path = self.root / "target/release/deps"
+        path.mkdir(parents=True)
+        run = a.Run("shared build", ["synthetic"], root=self.root, paths=["target/release/deps"])
+        run.finish(0)
+        self.assertEqual("review", self.manager.records()[0]["state"])
 
     def test_symlink_escape_refused(self):
         alias = self.root / "tests/work/old/alias"

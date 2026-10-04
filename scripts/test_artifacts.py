@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 UTC = timezone.utc
 MAX_REUSE = timedelta(hours=72)
 DEFAULT_MAX_BYTES = 20 * 1024**3
+BUILD_ROOTS = ("target/debug", "target/release", "target/x86_64-pc-windows-gnu")
 
 
 class ArtifactError(RuntimeError):
@@ -271,7 +272,7 @@ class Manager:
     def target(self, relative, *, reservation=False):
         if str(relative).replace("\\", "/") == "tests/work" and not reservation:
             raise ArtifactError("work root deletion refused")
-        return confined(self.root, relative, ("tests/work", "target/debug"))
+        return confined(self.root, relative, ("tests/work", *BUILD_ROOTS))
 
     def git(self, *args):
         return subprocess.run(["git", *args], cwd=self.root, capture_output=True, check=True).stdout
@@ -390,7 +391,7 @@ class Manager:
                 return "process-identity-unavailable"
             if absolute in command or relative.casefold() in command:
                 return "live-path-reference"
-            if relative.startswith("target/debug") and relevant and (
+            if any(overlap(relative, root) for root in BUILD_ROOTS) and relevant and (
                 name in ("cargo", "rustc", "hive") or "test-lanes.py" in command or "unittest" in command or "dev-check.py" in command
             ):
                 return "live-shared-build-consumer"
@@ -404,8 +405,7 @@ class Manager:
             work = confined(self.root, "tests/work", ("tests/work",))
             if work.exists():
                 paths.update(p.relative_to(self.root).as_posix() for p in work.iterdir())
-            if (self.root / "target/debug").exists():
-                paths.add("target/debug")
+            paths.update(path for path in BUILD_ROOTS if (self.root / path).exists())
             paths.update(r["path"] for r in records if "path" in r and r.get("state") not in ("superseded", "released"))
         result = []
         for path in sorted(paths):
@@ -501,8 +501,11 @@ class Manager:
 $root=[IO.Path]::GetFullPath($env:HIVE_CLEAN_ROOT)
 $target=[IO.Path]::GetFullPath($env:HIVE_CLEAN_TARGET)
 $work=[IO.Path]::Combine($root,'tests','work')+[IO.Path]::DirectorySeparatorChar
-$debug=[IO.Path]::Combine($root,'target','debug')
-if (-not ($target.StartsWith($work,[StringComparison]::OrdinalIgnoreCase) -or $target.Equals($debug,[StringComparison]::OrdinalIgnoreCase) -or $target.StartsWith($debug+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase))) { throw 'unsafe cleanup target' }
+$allowed=$target.StartsWith($work,[StringComparison]::OrdinalIgnoreCase)
+foreach ($build in ($env:HIVE_CLEAN_BUILDS | ConvertFrom-Json)) {
+ if ($target.Equals($build,[StringComparison]::OrdinalIgnoreCase) -or $target.StartsWith($build+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { $allowed=$true }
+}
+if (-not $allowed) { throw 'unsafe cleanup target' }
 $item=Get-Item -LiteralPath $target -Force
 $cursor=$item
 while ($cursor -and $cursor.FullName -ne $root) {
@@ -519,7 +522,8 @@ if ($item.PSIsContainer) {
 Remove-Item -LiteralPath $target -Recurse -Force
 '''
             subprocess.run(["pwsh", "-NoProfile", "-NonInteractive", "-Command", script],
-                           env={**os.environ, "HIVE_CLEAN_ROOT": str(self.root), "HIVE_CLEAN_TARGET": str(path)}, check=True)
+                           env={**os.environ, "HIVE_CLEAN_ROOT": str(self.root), "HIVE_CLEAN_TARGET": str(path),
+                                "HIVE_CLEAN_BUILDS": json.dumps([str(self.root / p) for p in BUILD_ROOTS])}, check=True)
         elif path.is_dir():
             if not shutil.rmtree.avoids_symlink_attacks:
                 raise ArtifactError("platform lacks safe directory removal")
@@ -616,7 +620,9 @@ class Run:
             for record in self.manager.records():
                 if record.get("run") == self.id:
                     # A shared build tree needs a separate all-consumers review.
-                    complete = self.data["status"] == "passed" and code == 0 and record["path"] != "target/debug"
+                    complete = self.data["status"] == "passed" and code == 0 and not any(
+                        overlap(record["path"], root) for root in BUILD_ROOTS
+                    )
                     record.update(state="completed" if complete else "review", report=self.relative,
                                   report_sha256=digest, reason="completed test; report awaits commit" if complete else "shared build or failure reproduction review",
                                   review_at=(now() + MAX_REUSE).isoformat())
