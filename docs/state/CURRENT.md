@@ -30,6 +30,8 @@
 - `hive.project-upgrade-current`, 두 번째 미리보기 변경 0건. 새 실제 Codex 관리 서버의 프로젝트 ship 한 개·활성 상태, 모델 호출 0건. Unity 실행·소비자 Git 커밋 없음
 - `SDP-005` 전역 실제 호출은 사용자 새 대화에서 확인 완료, 프로젝트 호출 `DPS-003`과 구분
 
+- 관련 구현 근거: [지침 이식·프로젝트 스킬](../research/directive-localization-and-project-skills-0.11.1.md), 승인된 [구독자 공지](../releases/0.11.1.subscriber.ko.md)
+
 ## 승인과 다음 행동
 
 - 2026-10-05 현재 사용자 설치·검토된 WProject 결합·0.11.1 진행 승인에 따른 구현·공개 시험·반영 완료
