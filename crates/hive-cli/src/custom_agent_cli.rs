@@ -974,6 +974,13 @@ fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliErro
             "host_version": capability.host_version,
             "host_capability_digest": capability_digest,
             "activation": "default-off",
+            "runtime_support": {
+                "periodic_observation": capability.runtime_support()[0],
+                "active_turn_control": capability.runtime_support()[1],
+                "semantic_after_capture": capability.runtime_support()[2],
+                "declared_periodic_control_supported": capability.supports_periodic_control(),
+                "active_connection_verified": false,
+            },
             "spawned": false,
         })),
     })

@@ -15,16 +15,40 @@
     "limitations"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "captured_at": { "type": "string", "format": "date-time" },
-    "host": { "enum": ["codex", "claude", "antigravity"] },
-    "host_version": { "type": "string", "minLength": 1, "maxLength": 128 },
-    "activation": { "const": "default-off" },
+    "schema_version": {
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "host": {
+      "enum": [
+        "codex",
+        "claude",
+        "antigravity"
+      ]
+    },
+    "host_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "activation": {
+      "const": "default-off"
+    },
     "sources": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
     },
     "capabilities": {
       "type": "object",
@@ -45,29 +69,120 @@
         "fresh_session"
       ],
       "properties": {
-        "agent_discovery": { "$ref": "#/$defs/status" },
-        "user_scope": { "$ref": "#/$defs/status" },
-        "project_scope": { "$ref": "#/$defs/status" },
-        "model_pin": { "$ref": "#/$defs/status" },
-        "effort_pin": { "$ref": "#/$defs/status" },
-        "native_dispatch": { "$ref": "#/$defs/status" },
-        "launch_ack": { "$ref": "#/$defs/status" },
-        "result_return": { "$ref": "#/$defs/status" },
-        "cancel": { "$ref": "#/$defs/status" },
-        "lookup": { "$ref": "#/$defs/status" },
-        "idempotency": { "$ref": "#/$defs/status" },
-        "runtime_attestation": { "$ref": "#/$defs/status" },
-        "fresh_session": { "$ref": "#/$defs/status" }
+        "agent_discovery": {
+          "$ref": "#/$defs/status"
+        },
+        "user_scope": {
+          "$ref": "#/$defs/status"
+        },
+        "project_scope": {
+          "$ref": "#/$defs/status"
+        },
+        "model_pin": {
+          "$ref": "#/$defs/status"
+        },
+        "effort_pin": {
+          "$ref": "#/$defs/status"
+        },
+        "native_dispatch": {
+          "$ref": "#/$defs/status"
+        },
+        "launch_ack": {
+          "$ref": "#/$defs/status"
+        },
+        "result_return": {
+          "$ref": "#/$defs/status"
+        },
+        "cancel": {
+          "$ref": "#/$defs/status"
+        },
+        "lookup": {
+          "$ref": "#/$defs/status"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/status"
+        },
+        "runtime_attestation": {
+          "$ref": "#/$defs/status"
+        },
+        "fresh_session": {
+          "$ref": "#/$defs/status"
+        },
+        "periodic_observation": {
+          "$ref": "#/$defs/status"
+        },
+        "active_turn_control": {
+          "$ref": "#/$defs/status"
+        },
+        "semantic_after_capture": {
+          "$ref": "#/$defs/status"
+        }
       }
     },
     "limitations": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
     }
   },
   "$defs": {
     "status": {
-      "enum": ["supported", "partial", "unsupported", "unverified"]
+      "enum": [
+        "supported",
+        "partial",
+        "unsupported",
+        "unverified"
+      ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 2
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "required": [
+              "periodic_observation",
+              "active_turn_control",
+              "semantic_after_capture"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "capabilities": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "periodic_observation"
+                  ]
+                },
+                {
+                  "required": [
+                    "active_turn_control"
+                  ]
+                },
+                {
+                  "required": [
+                    "semantic_after_capture"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
 }

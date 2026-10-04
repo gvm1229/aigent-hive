@@ -319,6 +319,12 @@ pub struct HostOrchestrationCapabilities {
     pub idempotency: HostCapabilityStatus,
     pub runtime_attestation: HostCapabilityStatus,
     pub fresh_session: HostCapabilityStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub periodic_observation: Option<HostCapabilityStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_turn_control: Option<HostCapabilityStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic_after_capture: Option<HostCapabilityStatus>,
 }
 
 /// A host capability observation from its current session evidence.
@@ -332,6 +338,41 @@ pub enum HostCapabilityStatus {
 }
 
 impl HostOrchestrationCapability {
+    /// A capability report, never authorization to launch a monitor or host process.
+    /// Version one did not prove any of these runtime features.
+    #[must_use]
+    pub fn runtime_support(&self) -> [HostCapabilityStatus; 3] {
+        if self.schema_version != 2 {
+            return [HostCapabilityStatus::Unverified; 3];
+        }
+        [
+            self.capabilities
+                .periodic_observation
+                .unwrap_or(HostCapabilityStatus::Unverified),
+            self.capabilities
+                .active_turn_control
+                .unwrap_or(HostCapabilityStatus::Unverified),
+            self.capabilities
+                .semantic_after_capture
+                .unwrap_or(HostCapabilityStatus::Unverified),
+        ]
+    }
+
+    /// Require all control capabilities. Exact session authority is checked by the host owner.
+    #[must_use]
+    pub fn supports_periodic_control(&self) -> bool {
+        let runtime = self.runtime_support();
+        runtime[0] == HostCapabilityStatus::Supported
+            && runtime[1] == HostCapabilityStatus::Supported
+            && [
+                self.capabilities.cancel,
+                self.capabilities.lookup,
+                self.capabilities.fresh_session,
+                self.capabilities.idempotency,
+            ]
+            .iter()
+            .all(|value| *value == HostCapabilityStatus::Supported)
+    }
     /// Parse a schema-validated host snapshot and reject all non-activation modes.
     ///
     /// # Errors
@@ -711,6 +752,40 @@ mod tests {
         let capability =
             HostOrchestrationCapability::parse_json(&serde_json::to_vec(&value).expect("json"))
                 .expect("capability");
+        assert_eq!(
+            capability.runtime_support(),
+            [HostCapabilityStatus::Unverified; 3]
+        );
+        assert!(!capability.supports_periodic_control());
+        assert_eq!(
+            serde_json::to_value(&capability).expect("round trip"),
+            value
+        );
+        let mut modern = value.clone();
+        modern["schema_version"] = serde_json::json!(2);
+        assert!(
+            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&modern).unwrap()).is_err()
+        );
+        for key in [
+            "periodic_observation",
+            "active_turn_control",
+            "semantic_after_capture",
+        ] {
+            modern["capabilities"][key] = serde_json::json!("supported");
+        }
+        let parsed =
+            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&modern).unwrap()).unwrap();
+        assert!(parsed.supports_periodic_control());
+        modern["capabilities"]["active_turn_control"] = serde_json::json!("unverified");
+        assert!(
+            !HostOrchestrationCapability::parse_json(&serde_json::to_vec(&modern).unwrap())
+                .unwrap()
+                .supports_periodic_control()
+        );
+        modern["schema_version"] = serde_json::json!(1);
+        assert!(
+            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&modern).unwrap()).is_err()
+        );
         assert!(capability
             .verify_profile_activation(&profile, "codex")
             .is_ok());
