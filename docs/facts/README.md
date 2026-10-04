@@ -147,3 +147,5 @@ Derived SQLite와 advisory lock:
 ```
 
 둘 다 Git 제외 상태. Explicit `hive source-wiki index`만 rebuild authority 보유.
+
+| 0.11.2 범위 | [en](en/v0-11-2-scope.md) | [ko](ko/v0-11-2-scope.md) |

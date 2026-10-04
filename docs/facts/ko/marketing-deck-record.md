@@ -4,22 +4,21 @@ pair_id: marketing-deck-record
 topic_slug: marketing-deck-record
 language: ko
 counterpart: ../en/marketing-deck-record.md
-title: "Marketing deck record"
-summary: "External deck의 safe locator·resume 기준을 보존하는 tracked handoff."
+title: "폐기된 발표 자료"
+summary: "0.9.0 발표 자료 폐기, Hive 로고 완료와 후속 교체 과제 종료."
 tags: [artifact, marketing]
 aliases: ["LumaDeck handoff"]
 sources:
-  - "repo:docs/state/artifacts/aigent-hive-marketing-deck.md#sha256:14498376f97d611f701aad80e11ab76d7b3e4f5204203d10391edea94c6a48d9"
+  - "repo:docs/state/artifacts/aigent-hive-marketing-deck.md#sha256:1032816b8da5fe78dd0e1e4b06b3d3db0cc3adf88a44dc608a799ee1866d300e"
 links: [product-purpose, v0-9-skill-suite-plan]
-reviewed_revision: "git:2b819c1060972bb2416a751ff17e596094b00a6b"
+reviewed_revision: "git:e91331b5a498484c8abde81fe0989df1bccf8ea6"
 status: active
 ---
 
-# Marketing deck record
+# 폐기된 발표 자료
 
-External LumaDeck artifact: 안정판 `0.9.0` 기준 91장·60분 `aigent-hive-overview` 발표자료.
-공개 short Skill name 22개 각각의 설명·직후 예시, 안정판 설치 선택, 구현 원리와 저장소의
-계획·ADR·prefix·workflow·verification convention 포함. 전체 Pretendard Variable 적용,
-1280×720 기준 사방 48px 동일 padding 적용, font·line-height·text-box contact·overflow·production
-build·Safari 육안 검수 통과. Source corpus 보존 범위: safe locator, 범위, 버전 기준, 검증 결과,
-exact resume condition.
+- 2026-10-05 사용자 결정: 오래된 발표 자료 폐기, Hive 로고 완료
+- 발표 갱신·로고 교체의 미완료 과제 없음. 이번 문서 작업의 외부 파일 삭제 없음
+- 과거 LumaDeck `aigent-hive-overview`: 0.9.0·공개 스킬 22개·91장·60분
+- 상대 위치·당시 배치·빌드 검증 범위만 보존. 현재 제품 설명의 정확성·외부 파일 존재의 증명 제외
+- 과거 편집 절차의 Git 이력 복구 가능
