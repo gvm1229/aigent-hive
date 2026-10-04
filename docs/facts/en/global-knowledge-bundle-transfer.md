@@ -9,11 +9,11 @@ summary: "A global .hivekb transfer uses the current shell home, SHA-256 verific
 tags: [bundle, global, knowledge, portability]
 aliases: [".hivekb transfer", "knowledge export import"]
 sources:
-  - "repo:README.md#sha256:ef0e22aa026b267338f193ae7a9ebe5ff341609a9f10410f21d0dbb54fe7f853"
+  - "repo:README.md#sha256:cbe5432e605da1a725374981799f2a3555c87cabf8a9409f3315fab4a83fca11"
   - "repo:docs/archive/plans/releases/0.9.5/knowledge-bundle-portability-0.9.5.md#sha256:78721fbbaf589353a17fdee534e5c86f1406283cf546eb32acd9996e84adb3c3"
-  - "repo:docs/hive-install-guide.ko.html#sha256:805c77883f8d7956df2023cbc5dd9fd94bd770473464f3f0e916136c889f27b5"
+  - "repo:docs/hive-install-guide.ko.html#sha256:542be87b8dc1ac08d2cde50e6408253c67ebd22084e0a884283a56e7cf6ce911"
 links: [knowledge-portability-scan, knowledge-storage]
-reviewed_revision: "git:1b755a995d91739d758830210d93cdc012e9e61b"
+reviewed_revision: "git:8a1e2b93fc5e1bf59ea54bdd7bfb4eb6bd63f6da"
 status: active
 ---
 
