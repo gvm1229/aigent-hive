@@ -498,6 +498,6 @@ mod tests {
         let result =
             source_hybrid(&target, "ko", "자료를 되찾는 방법", 5).expect("actual semantic query");
         assert_eq!(result["search"]["used"], json!(["fts", "vector"]));
-        assert!(!result["hits"].as_array().expect("hits").is_empty());
+        assert_ne!(result["hits"].as_array().expect("hits").len(), 0);
     }
 }

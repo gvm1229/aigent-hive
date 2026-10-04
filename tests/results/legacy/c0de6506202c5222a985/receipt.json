@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "product_version": "0.11.1",
+  "package_version": "0.11.1-test.6",
+  "source_commit": "1917e1aaa59315badab6caef19fb48a5eb9f2a17",
+  "product_tree_sha256": "sha256:1e64cd3aeadcc7ebf20b29bd19c8fae20d340e9c642879a0d6dfaaeb1e7d2b18",
+  "ci_run_id": 36963278427,
+  "candidate_run_id": 36963962342,
+  "first_publication_run_id": 36965302613,
+  "publication_run_id": 36965966512,
+  "acceptance_run_id": 36966439849,
+  "release_tag": "v0.11.1-test.6",
+  "release_is_prerelease": true,
+  "tag_commit_verified": true,
+  "registry": [
+    {
+      "package": "aigent-hive",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/win32-x64",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/linux-x64",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/linux-arm64",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/darwin-x64",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    },
+    {
+      "package": "@aigent-hive/darwin-arm64",
+      "status": "ready",
+      "version": "0.11.1-test.6",
+      "test": "0.11.1-test.6",
+      "latest": "0.11.0",
+      "candidate_integrity_match": true
+    }
+  ],
+  "candidate_native_binary_digests": {
+    "@aigent-hive/darwin-arm64": "sha256:4a6761eb5101bd3eaf845ca3dc20748f339043e4b9936e0b5303148da9a7a42a",
+    "@aigent-hive/linux-arm64": "sha256:61a01f84dc2634e33e85d668e88ddd747228650af43298007c3f943e3d73ef76",
+    "@aigent-hive/darwin-x64": "sha256:381466e1e8559630eac95e6eb8eea135b330527c42a09f5617f8911577a5087c",
+    "@aigent-hive/win32-x64": "sha256:36734cb8ee9d69bd535a4f7c512265abf01a46872c84603c7ee48cc5668735fd",
+    "@aigent-hive/linux-x64": "sha256:c162a807f5538bd95daaff4e698e5c3b649a36e9a8d38f4ffe910c0d3360993f"
+  },
+  "digest_limit": "Native digests derived from candidate packages; independent exact public archive integrity equality and public CI execution bind these bytes to the release.",
+  "public_acceptance_os": [
+    "Windows x64",
+    "Linux musl x64",
+    "macOS arm64"
+  ],
+  "local_native_cli_os": "Windows",
+  "model_calls": 0,
+  "not_proven": [
+    "GUI skill picker",
+    "explicit model invocation",
+    "natural-language model invocation",
+    "Claude subscription conversation",
+    "original reporter machine"
+  ]
+}

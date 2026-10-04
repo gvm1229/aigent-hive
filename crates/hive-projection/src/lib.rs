@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 pub mod hook_config;
 
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
+const PROJECT_SUITES_YAML: &str = include_str!("../../../harness/project-setup/skill-suites.yml");
 const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
@@ -615,9 +616,9 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 18] = [
+    const SUPPORTED: [&str; 19] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
-        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3",
+        "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -687,19 +688,61 @@ pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, Proj
 ///
 /// Returns an error if the embedded catalog is invalid, an optional Skill lacks
 /// exact source/consent/capability proof, or projected names collide.
+#[derive(Deserialize)]
+struct ProjectDefaultCatalog {
+    project_skill_suites: Vec<ProjectDefaultSuite>,
+}
+
+#[derive(Deserialize)]
+struct ProjectDefaultSuite {
+    id: String,
+    skills: Vec<String>,
+}
+
+/// Return the explicitly maintained daily-work project selection.
+///
+/// # Errors
+/// Returns an error when the embedded suite is missing, duplicated or contains unavailable names.
+pub fn project_default_skills() -> Result<Vec<String>, ProjectionError> {
+    let suites: ProjectDefaultCatalog = serde_yaml::from_str(PROJECT_SUITES_YAML)
+        .map_err(|error| ProjectionError::new("hive.skill-catalog-invalid", error.to_string()))?;
+    let mut selected = suites
+        .project_skill_suites
+        .into_iter()
+        .find(|suite| suite.id == "daily-work")
+        .ok_or_else(|| {
+            ProjectionError::new("hive.skill-catalog-invalid", "daily-work suite is missing")
+        })?
+        .skills;
+    selected.sort();
+    let catalog = embedded_catalog()?;
+    let unique = selected.iter().collect::<BTreeSet<_>>();
+    if unique.len() != selected.len()
+        || selected.iter().any(|name| {
+            name == "user-setup"
+                || !catalog.skills.iter().any(|entry| {
+                    entry.name == *name && entry.availability == Availability::Implemented
+                })
+        })
+    {
+        return Err(ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "daily-work suite is invalid",
+        ));
+    }
+    Ok(selected)
+}
+
+/// Compile the maintained daily-work suite to the selected host.
+///
+/// # Errors
+/// Returns an error for invalid embedded resources or optional source proofs.
 pub fn compile_projection(
     host: Host,
     optional_sources: &[OptionalSkillSource],
 ) -> Result<Projection, ProjectionError> {
     let catalog = embedded_catalog()?;
-    let selected = catalog
-        .skills
-        .iter()
-        .filter(|entry| {
-            entry.availability == Availability::Implemented && entry.name != "user-setup"
-        })
-        .map(|entry| entry.name.clone())
-        .collect();
+    let selected = project_default_skills()?.into_iter().collect();
     compile_selected(
         host,
         optional_sources,
@@ -868,7 +911,7 @@ fn compile_selected(
                 if preserve_implicit_metadata {
                     localized_skill_metadata(&entry.name, metadata, language)?
                 } else {
-                    explicit_only_metadata(&localized_skill_metadata(
+                    project_invocation_metadata(&localized_skill_metadata(
                         &entry.name,
                         metadata,
                         language,
@@ -1082,7 +1125,7 @@ fn skill_metadata_path(host: Host, name: &str) -> String {
     format!("{}/{name}/agents/openai.yaml", host.skill_root())
 }
 
-fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
+fn project_invocation_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
     const IMPLICIT: &str = "  allow_implicit_invocation: true";
     const EXPLICIT: &str = "  allow_implicit_invocation: false";
 
@@ -1098,7 +1141,24 @@ fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
             "embedded Codex Skill metadata lacks an invocation policy",
         ));
     }
-    Ok(text.replace(IMPLICIT, EXPLICIT).into_bytes())
+    Ok(text.replace(EXPLICIT, IMPLICIT).into_bytes())
+}
+
+/// Reproduce descriptor translation around unchanged authenticated Skill bytes.
+///
+/// # Errors
+/// Returns an error if the Skill has no supported descriptor or valid metadata.
+pub fn localized_builtin_artifact(
+    name: &str,
+    suffix: &str,
+    source: &[u8],
+    language: DescriptorLanguage,
+) -> Result<Vec<u8>, ProjectionError> {
+    match suffix {
+        "SKILL.md" => localized_skill_source(name, source, language),
+        "agents/openai.yaml" => localized_skill_metadata(name, source, language),
+        _ => Ok(source.to_vec()),
+    }
 }
 
 fn localized_skill_source(
@@ -1213,9 +1273,9 @@ fn localized_skill_text(
         ),
         "prompt-refine" => (
             "Refine prompt",
-            "Turn a request into an approval-ready prompt before execution.",
+            "Draft or refine a prompt only when the user requests prompt authoring.",
             "프롬프트 다듬기",
-            "실행 전 승인받을 수 있도록 요청을 명확한 프롬프트로 다듬습니다.",
+            "프롬프트 작성이나 개선을 요청했을 때 뜻을 보존하며 다듬습니다.",
         ),
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",
@@ -1333,9 +1393,9 @@ fn localized_skill_text(
         ),
         "amend-directive" => (
             "Amend directives",
-            "Change Hive behavior directives while preserving safety boundaries.",
+            "Adapt another project's directives or amend selected rules within the requested scope.",
             "지침 수정",
-            "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
+            "다른 프로젝트의 지침을 대상에 맞게 이식하거나 요청한 규칙을 수정합니다.",
         ),
         "team-execution" => (
             "Coordinate a Hive team",
@@ -1379,6 +1439,10 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
         }
     }
     let resources: &[(&str, &[u8])] = match name {
+        "amend-directive" => &[(
+            "references/transplant.md",
+            include_bytes!("../../../harness/skills/amend-directive/references/transplant.md"),
+        )],
         "usage-guard" => &[
             (
                 "references/control.md",
@@ -2687,7 +2751,7 @@ mod tests {
         assert_eq!(resolved.logical_action, LogicalAction::RunWork);
         assert!(resolved.refine_suggestion);
         assert!(resolved.selected_skill.is_none());
-        assert!(resolved.load_skill_bodies.is_empty());
+        assert_eq!(resolved.load_skill_bodies.len(), 0);
         assert!(resolved.mode.is_none());
     }
 
@@ -2734,7 +2798,7 @@ mod tests {
 
         assert_eq!(resolved.route, Route::HostNative);
         assert_eq!(resolved.workflow_route, Some(WorkflowRoute::Simple));
-        assert!(resolved.load_skill_bodies.is_empty());
+        assert_eq!(resolved.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -2935,12 +2999,11 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 33 } else { 60 };
+            assert_eq!(first.active_skills.skills.len(), 23);
+            let expected_file_count = if host == Host::Claude { 30 } else { 53 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
-                "project-setup",
                 "research-best-practices",
                 "judge-evidence",
                 "adversarial-judge",
@@ -2954,7 +3017,6 @@ description: Inspect one local file without changing it.
                 "product-update",
                 "usage-guard",
                 "knowledge-maintain",
-                "project-transition",
             ] {
                 assert!(first
                     .files
@@ -3010,7 +3072,7 @@ description: Inspect one local file without changing it.
         );
         for (name, expected_implicit) in [
             ("user-setup", true),
-            ("product-update", false),
+            ("product-update", true),
             ("usage-guard", true),
         ] {
             let metadata = std::str::from_utf8(
@@ -3029,7 +3091,7 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn project_refresh_user_discovery_preserves_project_explicit_boundary() {
+    fn project_refresh_discovery_supports_request_routing_on_each_surface() {
         let selected = vec!["product-update".to_owned(), "project-refresh".to_owned()];
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
             for language in [DescriptorLanguage::En, DescriptorLanguage::Ko] {
@@ -3071,7 +3133,7 @@ description: Inspect one local file without changing it.
                     .unwrap();
                     assert_eq!(
                         metadata["policy"]["allow_implicit_invocation"].as_bool(),
-                        Some(false)
+                        Some(true)
                     );
                 }
             }
@@ -3342,11 +3404,38 @@ description: Inspect one local file without changing it.
         let metadata = std::str::from_utf8(
             projection
                 .files
-                .get(".agents/skills/project-setup/agents/openai.yaml")
+                .get(".agents/skills/knowledge-recall/agents/openai.yaml")
                 .expect("project Skill metadata"),
         )
         .expect("project Skill metadata should be UTF-8");
-        assert!(metadata.contains("allow_implicit_invocation: false"));
+        assert!(metadata.contains("allow_implicit_invocation: true"));
+    }
+
+    #[test]
+    fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
+        let default = super::project_default_skills().unwrap();
+        assert_eq!(default.len(), 23);
+        let excluded = [
+            "user-setup",
+            "project-setup",
+            "custom-subagent-create",
+            "knowledge-transfer",
+            "project-transition",
+        ];
+        for name in excluded {
+            assert!(!default.iter().any(|selected| selected == name));
+        }
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            let selected = excluded[1..]
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect::<Vec<_>>();
+            let projection = compile_project_projection(host, &selected, &[]).unwrap();
+            assert_eq!(projection.active_skills.skills.len(), 4);
+            let empty = compile_project_projection(host, &[], &[]).unwrap();
+            assert_eq!(empty.active_skills.skills.len(), 0);
+            assert_eq!(empty.files.len(), 1);
+        }
     }
 
     #[test]
@@ -3402,7 +3491,12 @@ description: Inspect one local file without changing it.
     }
 
     fn assert_projected_builtin_sources<const N: usize>(expected: [(&str, &[u8], &[u8]); N]) {
-        let projection = compile_projection(Host::Codex, &[]).expect("projection");
+        let selected = expected
+            .iter()
+            .map(|(name, _, _)| (*name).to_owned())
+            .collect::<Vec<_>>();
+        let projection =
+            compile_project_projection(Host::Codex, &selected, &[]).expect("projection");
         for (name, embedded, template) in expected {
             assert_eq!(embedded, template);
             assert_eq!(
@@ -3556,7 +3650,7 @@ description: Inspect one local file without changing it.
         let result = resolve_route(&request).expect("route");
 
         assert_eq!(result.route, Route::Direct);
-        assert!(result.load_skill_bodies.is_empty());
+        assert_eq!(result.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3585,13 +3679,13 @@ description: Inspect one local file without changing it.
         automatic.hive_candidate = Some("arbitrary-skill".to_owned());
         let automatic_decision = resolve_route(&automatic).expect("blocked automatic route");
         assert_eq!(automatic_decision.route, Route::Blocked);
-        assert!(automatic_decision.load_skill_bodies.is_empty());
+        assert_eq!(automatic_decision.load_skill_bodies.len(), 0);
 
         let mut explicit = routing_request();
         explicit.explicit_skill = Some("arbitrary-skill".to_owned());
         let explicit_decision = resolve_route(&explicit).expect("blocked explicit route");
         assert_eq!(explicit_decision.route, Route::Blocked);
-        assert!(explicit_decision.load_skill_bodies.is_empty());
+        assert_eq!(explicit_decision.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3648,7 +3742,7 @@ description: Inspect one local file without changing it.
 
         assert_eq!(result.route, Route::Blocked);
         assert_eq!(result.next_action, Some(LogicalAction::RunWork));
-        assert!(result.load_skill_bodies.is_empty());
+        assert_eq!(result.load_skill_bodies.len(), 0);
     }
 
     #[test]
@@ -3750,7 +3844,7 @@ description: Inspect one local file without changing it.
         let decision = resolve_route(&request).expect("blocked route");
 
         assert_eq!(decision.route, Route::Blocked);
-        assert!(decision.load_skill_bodies.is_empty());
+        assert_eq!(decision.load_skill_bodies.len(), 0);
     }
 
     #[test]

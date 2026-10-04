@@ -474,31 +474,34 @@
     },
     "skill_name": {
       "enum": [
-        "project-setup",
-        "project-setup",
+        "adversarial-judge",
+        "amend-directive",
         "code-polish",
+        "custom-subagent-create",
         "humanize-kor",
-        "research-best-practices",
-        "verified-workflow",
-        "knowledge-maintain",
-        "quick-answer",
-        "prompt-refine",
+        "judge-evidence",
         "knowledge-capture",
-        "knowledge-recall",
         "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
         "knowledge-scan",
         "knowledge-transfer",
-        "knowledge-promote",
-        "knowledge-maintain",
-        "run-checkpoint",
-        "run-resume",
-        "usage-guard",
-        "run-handoff",
-        "judge-evidence",
-        "adversarial-judge",
+        "multi-goal",
         "product-update",
         "project-refresh",
-        "project-transition"
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "verified-workflow"
       ]
     },
     "skill_selection": {
@@ -510,7 +513,7 @@
           "properties": {
             "mode": { "const": "recommended" },
             "recommended_suite": {
-              "enum": ["web-developer", "game-developer", "non-developer"]
+              "enum": ["daily-work", "web-developer", "game-developer", "non-developer"]
             }
           }
         },
@@ -522,7 +525,7 @@
             "mode": { "const": "individual" },
             "selected": {
               "type": "array",
-              "minItems": 1,
+              "minItems": 0,
               "uniqueItems": true,
               "items": { "$ref": "#/$defs/skill_name" }
             }

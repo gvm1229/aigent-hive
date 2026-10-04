@@ -9,7 +9,7 @@ summary: "부하가 있는 Windows CI setup에 최대 30초를 허용하는 fore
 tags: [ci, test, windows]
 aliases: ["Windows setup timeout"]
 sources:
-  - "repo:tests/conformance/contracts/test_setup_ownership_gates.py#sha256:1bbc80c9aac1120b3d84256df7ed0693cf52ba957cc20d271ca8ff1bc1700339"
+  - "repo:tests/conformance/contracts/test_setup_ownership_gates.py#sha256:00d918da6d1524a6edc551fc1c06338f1891cc7330850e09be83cf19fd2fe2e8"
 links: [test-fault-isolation]
 reviewed_revision: "git:3cbfc0c10665c869499293e0008392f53c2fa0c9"
 status: active

@@ -30,6 +30,62 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_reviewed_skill_combination_requires_exact_approval_and_preserves_both_rule_sets(self) -> None:
+        fixture = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.11.0/public-stable"
+        metadata = json.loads((fixture / "manifest.json").read_bytes())
+        archive = fixture / metadata["archive"]
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), metadata["sha256"])
+        target = self.work_root / "reviewed-combined-skill"
+        with ZipFile(archive) as package:
+            package.extractall(target)
+        skill_path = ".agents/skills/ship/SKILL.md"
+        skill = target / skill_path
+        guard = b"\n## Project safeguard\nRun the project commit guard before committing.\n"
+        skill.write_bytes(skill.read_bytes() + guard)
+        original = snapshot_tree(target)
+        identity = ["--target", str(target)]
+        process, inputs = self.invoke("project", "upgrade", *identity, "--scan", "--skill-merge-inputs", "ship")
+        self.assertEqual(process.returncode, 0, inputs)
+        self.assertEqual(snapshot_tree(target), original)
+        source = next(item for item in inputs["data"]["files"] if item["path"] == skill_path)
+        combined = source["incoming_content"] + guard.decode("utf-8")
+        request = {
+            "schema_version": 1, "product_version": PRODUCT_VERSION,
+            "project_base_digest": inputs["data"]["project_base_digest"],
+            "files": [{"path": skill_path, "local_digest": source["local_digest"],
+                       "incoming_digest": source["incoming_digest"], "merged_content": combined}],
+        }
+        request_path = self.work_root / "combined-skill.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        Draft202012Validator(json.loads((REPOSITORY_ROOT / "schemas/project-skill-merge.schema.json").read_text())).validate(request)
+        review = ["--skill-merges", str(request_path)]
+        process, preview = self.invoke("project", "upgrade", *identity, *review, "--dry-run")
+        self.assertEqual(process.returncode, 0, preview)
+        approval = preview["data"]["skill_merge_approval_digest"]
+        for provided in ([], ["--approve-skill-merge", "sha256:" + "0" * 64]):
+            process, denied = self.invoke("project", "upgrade", *identity, *review, "--apply", *provided)
+            self.assertNotEqual(process.returncode, 0, denied)
+            self.assertEqual(snapshot_tree(target), original)
+        reservations = ["--process-id", str(os.getpid())]
+        for path in preview["changed_paths"]:
+            reservations.extend(["--path", path])
+        session = [*identity, "--host", "codex", "--session-id", "reviewed-combination"]
+        process, leased = self.invoke("session", "begin", *session, *reservations)
+        self.assertEqual(process.returncode, 0, leased)
+        try:
+            process, applied = self.invoke("project", "upgrade", *identity, *review, "--apply", "--approve-skill-merge", approval)
+            self.assertEqual(process.returncode, 0, applied)
+        finally:
+            self.invoke("session", "close", *session)
+        self.assertEqual(skill.read_bytes(), combined.encode("utf-8"))
+        self.assertIn(guard, skill.read_bytes())
+        base = json.loads((target / ".hive/config/project-base.json").read_bytes())
+        upstream = next(item for item in base["files"] if item["path"] == skill_path)
+        self.assertEqual(upstream["content"], source["incoming_content"])
+        process, validated = self.invoke("project", "upgrade", *identity, "--validate")
+        self.assertEqual(process.returncode, 0, validated)
+        self.assertEqual(validated["changed_paths"], [])
+
     def test_all_public_stable_predecessors_preserve_and_recover(self) -> None:
         self._qualify_all_public_stable_predecessors(failure_tests=True)
 
@@ -313,6 +369,17 @@ elif host == "antigravity" and command == "plugin uninstall aigent-hive":
         shutil.rmtree(stage)
     state["plugin"] = False
 elif command.startswith("plugin marketplace add "):
+    if host == "claude":
+        if arguments[3].startswith(chr(92) * 2 + "?" + chr(92)):
+            print("Invalid marketplace source format. Try: owner/repo, https://..., or ./path", file=sys.stderr)
+            raise SystemExit(1)
+        source = Path(arguments[3])
+        marketplace_manifest = json.loads((source / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        assert marketplace_manifest["name"] == "aigent-hive"
+        assert marketplace_manifest["plugins"][0]["source"] == "./plugins/aigent-hive"
+        plugin_manifest = json.loads((source / "plugins/aigent-hive/.claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        assert plugin_manifest["name"] == "aigent-hive"
+        assert (source / "plugins/aigent-hive/skills/user-setup/SKILL.md").is_file()
     state["marketplace"] = True
 elif command in ("plugin add aigent-hive@aigent-hive --json", "plugin install aigent-hive@aigent-hive --scope user"):
     state["plugin"] = True
@@ -499,6 +566,23 @@ else:
             },
         )
         return path
+
+    def test_claude_user_lifecycle_accepts_a_unicode_root_with_spaces(self) -> None:
+        user_root = self.work_root / "user space 한글"
+        user_root.mkdir()
+        for action, mode in (("install", "--apply"), ("install", "--validate"),
+                             ("install", "--apply"), ("update", "--apply")):
+            process, result = self.invoke(
+                action, "--scope", "user", "--host", "claude", "--user-root", str(user_root), mode,
+                environment={"HIVE_TEST_USER_ROOT": str(user_root)},
+            )
+            self.assertEqual(process.returncode, 0, process.stderr)
+            self.assertEqual(result["status"], "success")
+        calls = [json.loads(line) for line in self.host_log.read_text("utf-8").splitlines()]
+        adds = [row for row in calls if row["argv"][:3] == ["plugin", "marketplace", "add"]]
+        self.assertEqual(len(adds), 1)
+        self.assertEqual(Path(adds[0]["argv"][3]), user_root / ".hive/marketplaces/claude")
+        self.assertFalse((user_root / ".hive/install-transactions/claude.json").exists())
 
     def test_user_install_preserves_foreign_guidance_for_all_hosts(self) -> None:
         cases = {
@@ -710,7 +794,7 @@ else:
             ".agents/directives/00-hive-user.md",
             preview_result["changed_paths"],
         )
-        self.assertIn(
+        self.assertNotIn(
             ".agents/skills/prompt-refine/SKILL.md",
             preview_result["changed_paths"],
         )
@@ -735,7 +819,6 @@ else:
         self.assertEqual(applied_result["code"], "hive.user-setup-complete")
         self.assertEqual(applied_result["data"]["setup_state"], "operational")
         refresh_copies = [
-            user_root / ".agents/skills/project-refresh",
             user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/project-refresh",
         ]
         for refresh in refresh_copies:
@@ -743,13 +826,10 @@ else:
             self.assertTrue(
                 read_yaml(refresh / "agents/openai.yaml")["policy"]["allow_implicit_invocation"]
             )
-        self.assertEqual(
-            (refresh_copies[0] / "SKILL.md").read_bytes(),
-            (refresh_copies[1] / "SKILL.md").read_bytes(),
-        )
+        self.assertFalse((user_root / ".agents/skills/project-refresh/SKILL.md").exists())
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
-        self.assertTrue(
+        self.assertFalse(
             (user_root / ".agents/skills/prompt-refine/SKILL.md").is_file()
         )
         self.assertTrue(
@@ -760,7 +840,7 @@ else:
             ).is_file()
         )
         self.assertTrue(
-            (user_root / ".agents/skills/usage-guard/SKILL.md").is_file()
+            (user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/SKILL.md").is_file()
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("상태: `operational`", guidance)
@@ -796,7 +876,7 @@ else:
         self.assertFalse((user_root / ".hive/index/hive.sqlite3").exists())
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue(
-            (user_root / ".agents/skills/usage-guard/SKILL.md").is_file()
+            (user_root / ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/SKILL.md").is_file()
         )
         self.assertFalse(
             (user_root / ".agents/skills/knowledge-recall/SKILL.md").exists()

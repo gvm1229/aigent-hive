@@ -110,7 +110,8 @@ jobs:
             test -z "$acceptance_drift"
             artifacts=$(gh api \
               "repos/$GITHUB_REPOSITORY/actions/runs/$ACCEPTANCE_RUN_ID/artifacts")
-            test "$(jq -r '[.artifacts[].name] | sort | join(",")' <<<"$artifacts")" = \
+            artifact_names=$(python3 -c 'import json,sys; print(",".join(sorted({a["name"] for a in json.load(sys.stdin)["artifacts"] if a.get("expired") is False})))' <<<"$artifacts")
+            test "$artifact_names" = \
               "korean-public-test-darwin-arm64,korean-public-test-linux-x64,korean-public-test-win32-x64"
             exit 0
           fi

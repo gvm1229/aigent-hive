@@ -2832,7 +2832,7 @@ mod tests {
         assert_eq!(result.status, "success");
         assert_eq!(result.exit_code, 0);
         assert!(result.code.starts_with("hive."));
-        assert!(!result.message.is_empty());
+        assert_ne!(result.message.len(), 0);
         assert_eq!(
             result
                 .evidence
@@ -2974,7 +2974,7 @@ mod tests {
         );
         assert_eq!(second.code, "hive.loop-dispatch-already-prepared");
         assert!(second.next_action.is_none());
-        assert!(second.changed_paths.is_empty());
+        assert_eq!(second.changed_paths.len(), 0);
         let second_data = second.data.as_ref().expect("second data");
         assert_eq!(second_data["dispatch_id"], first_data["dispatch_id"]);
         assert_eq!(second_data["already_prepared"], true);

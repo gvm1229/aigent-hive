@@ -90,13 +90,24 @@ def qualify(hive: Path, work: Path, target_version: str, failure_tests: bool) ->
         assert content.startswith(prefix) and content.endswith(suffix) and note in content
         updated = tomllib.loads((target / ".hive/config/harness.toml").read_text(encoding="utf-8"))
         assert updated["harness_version"] == target_version, (version, "wrong incoming binary version")
+        assert updated["project_skill_policy_version"] == 1
         for key, value in preferences.items():
             if key == "selected_project_skills":
-                ledger = yaml.safe_load((ROOT / "harness/skills/retired-names.yml").read_text(encoding="utf-8"))
-                expected = sorted({ledger["retired_names"].get(name, name) for name in value})
-                assert updated[key] == expected, (version, "undeclared skill selection change")
+                if preferences.get("project_skill_policy_version", 0) == 0:
+                    suites = yaml.safe_load((ROOT / "harness/project-setup/skill-suites.yml").read_text(encoding="utf-8"))
+                    expected = next(suite["skills"] for suite in suites["project_skill_suites"] if suite["id"] == "daily-work")
+                    if not preferences["wiki_enabled"]:
+                        expected = [name for name in expected if name not in {
+                            "knowledge-capture", "knowledge-recall", "knowledge-promote",
+                            "knowledge-maintain", "knowledge-scan",
+                        }]
+                    assert len(expected) == (23 if preferences["wiki_enabled"] else 18)
+                else:
+                    ledger = yaml.safe_load((ROOT / "harness/skills/retired-names.yml").read_text(encoding="utf-8"))
+                    expected = list({ledger["retired_names"].get(name, name) for name in value})
+                assert updated[key] == sorted(expected), (version, "undeclared skill selection change")
                 continue
-            if key not in ("harness_version", "source_release_version"):
+            if key not in ("harness_version", "source_release_version", "project_skill_policy_version"):
                 assert updated[key] == value, (version, "preference changed", key)
         assert not invoke("--apply")["changed_paths"] and snapshot(target) == after
         rows.append({"source_version": version, "fixture_sha256": manifest["sha256"],

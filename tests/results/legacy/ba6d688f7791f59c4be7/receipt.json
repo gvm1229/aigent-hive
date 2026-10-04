@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "run": 37220067876,
+  "attempt": 2,
+  "artifact_id": 11309369485,
+  "files": [
+    "macos-korean.json",
+    "macos-vector.json",
+    "macos-onboarding.json"
+  ],
+  "source_commit": "06d56360748fd4202fec894bfa92c7ddbfe703df"
+}

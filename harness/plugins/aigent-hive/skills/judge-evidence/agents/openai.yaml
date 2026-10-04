@@ -3,4 +3,4 @@ interface:
   short_description: "(judge-evidence) Validate a clean-context work package and signed Judge attestations."
   default_prompt: "Use $aigent-hive:judge-evidence to validate this clean-context Judge package and provenance chain."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

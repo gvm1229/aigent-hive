@@ -1410,7 +1410,7 @@ mod tests {
         let mut empty = request();
         empty.entries.clear();
         let empty_bundle = encode_bundle(&empty, BundleLimits::default()).expect("empty bundle");
-        assert!(empty_bundle.plan().entries().is_empty());
+        assert_eq!(empty_bundle.plan().entries().len(), 0);
         assert_eq!(
             decode_bundle(empty_bundle.archive(), BundleLimits::default())
                 .expect("decode empty bundle"),

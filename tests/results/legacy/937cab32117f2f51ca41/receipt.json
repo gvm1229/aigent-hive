@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "os": "Windows",
+  "host": "codex",
+  "package_version": "0.11.1-test.6",
+  "binary_version": "AIgent Hive v0.11.1-test #6 · developer test build (released 2026-10-02)",
+  "binary_digest": "sha256:36734cb8ee9d69bd535a4f7c512265abf01a46872c84603c7ee48cc5668735fd",
+  "operations": [
+    {
+      "action": "install",
+      "mode": "--dry-run",
+      "code": "hive.user-install-dry-run-complete",
+      "qualified_host_version": "0.159.0"
+    },
+    {
+      "action": "install",
+      "mode": "--apply",
+      "code": "hive.user-install-complete",
+      "qualified_host_version": "0.159.0"
+    },
+    {
+      "action": "install",
+      "mode": "--validate",
+      "code": "hive.user-install-valid",
+      "qualified_host_version": "0.159.0"
+    },
+    {
+      "action": "install",
+      "mode": "--apply",
+      "code": "hive.user-install-complete",
+      "qualified_host_version": "0.159.0"
+    },
+    {
+      "action": "update",
+      "mode": "--apply",
+      "code": "hive.user-update-complete",
+      "qualified_host_version": "0.159.0"
+    },
+    {
+      "action": "install",
+      "mode": "--validate",
+      "code": "hive.user-install-valid",
+      "qualified_host_version": "0.159.0"
+    }
+  ],
+  "native_server": true,
+  "model_calls": 0,
+  "skills": [
+    "aigent-hive:product-update",
+    "aigent-hive:user-setup"
+  ],
+  "foreign_guidance_preserved": true,
+  "not_proven": [
+    "actual-user-installation",
+    "GUI-skill-picker",
+    "explicit-model-invocation",
+    "natural-language-model-invocation"
+  ]
+}

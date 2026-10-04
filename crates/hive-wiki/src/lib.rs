@@ -4782,7 +4782,7 @@ mod tests {
 
         let alpha = read_page(&target, "alpha").unwrap();
         assert_eq!(alpha.outgoing_links, vec!["beta"]);
-        assert!(alpha.backlinks.is_empty());
+        assert_eq!(alpha.backlinks.len(), 0);
         assert_eq!(alpha.nonreciprocal_links, vec!["beta"]);
         let beta = read_page(&target, "beta").unwrap();
         assert_eq!(beta.backlinks, vec!["alpha"]);
@@ -5077,7 +5077,7 @@ user_store_binding: {binding}\n"
         .unwrap_err();
         assert!(matches!(error, WikiError::Conflict(_)));
         assert!(!user_root.join(INDEX_RELATIVE).exists());
-        assert!(scan_pages(&user_root).unwrap().is_empty());
+        assert_eq!(scan_pages(&user_root).unwrap().len(), 0);
     }
 
     #[test]

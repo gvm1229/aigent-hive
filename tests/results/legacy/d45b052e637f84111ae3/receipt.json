@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "candidate_run_id": 37203633109,
+  "source_commit": "41dc5ff6c02dd83a17ef9f21f21623682105355f",
+  "results": [
+    {
+      "name": "@aigent-hive/darwin-arm64",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-yqbkaYj1oTN2o26ADtCH2XHSX02XJIev+BgOyRoS+rtsyvHZjmhm7HdYfYd9obkM6/SLG1p++Ez6Cqo5vnEiNA==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    },
+    {
+      "name": "@aigent-hive/linux-arm64",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-NMYXzr+jDWzlAXwSgJxGCmoLAPlJUAetpG6ndRkWgReNUBHpyr05/WrQoHsMNp8WtFkHT4fSpYSrlW4YvkrVaQ==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    },
+    {
+      "name": "aigent-hive",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-Q8qpk3jf+ipSebl+0y3hIYgL8psTSLOLh5JHV2DaQtUAVLD5N1vbJ9DoniMydhCxO93PiuGqMEHxuvUppdb5Sg==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    },
+    {
+      "name": "@aigent-hive/darwin-x64",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-gMe/kSU+vNuPIjqSqXD93h+zSiUywUQVvWfCc5EcgUDpMcV23HdFdv69Gkks5LS4KnGY58kzlj5XFRXpFprNDg==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    },
+    {
+      "name": "@aigent-hive/win32-x64",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-p/WH/z/sOk7/PUl36mht0Nw6UhQbQfPK5xTzgDDL0XW9vnPKGhTvrpU4svyUDgElcVrX929a60FY/q6Pwgorow==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    },
+    {
+      "name": "@aigent-hive/linux-x64",
+      "version": "0.11.1-test.7",
+      "integrity": "sha512-3qjw7pDy2RVMqARS/052/bLil1bdyYpvU0eKd4/0OMb+xYFAgV61Zq1RFWd37SMcITQ9WV8wkiLMi8nDwhyG4A==",
+      "status": "matched",
+      "test_tag": "0.11.1-test.7",
+      "latest_tag": "0.11.0"
+    }
+  ],
+  "publication_run_id": 37204903795,
+  "failed_publication_run_id": 37204424655,
+  "platform": "Windows read-only registry verification"
+}

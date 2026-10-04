@@ -48,7 +48,19 @@ fn require_success(output: &std::process::Output, action: &str) {
 
 fn seed_historical_project(target: &Path, version: &str) {
     let repository = root();
-    let answers = repository.join("tests/fixtures/setup/answers-base.yml");
+    let original_answers = repository.join("tests/fixtures/setup/answers-base.yml");
+    let answers = target
+        .parent()
+        .expect("consumer parent")
+        .join("historical-bootstrap.yml");
+    let mut bootstrap: serde_yaml::Value =
+        serde_yaml::from_slice(&fs::read(&original_answers).unwrap()).unwrap();
+    bootstrap["setup_mode"] = serde_yaml::Value::from("custom");
+    bootstrap["interface_language"] = serde_yaml::Value::from("ko");
+    bootstrap["wiki"] = serde_yaml::from_str("enabled: true\nlanguage: both\n").unwrap();
+    bootstrap["persona"] = serde_yaml::from_str("id: balanced\n").unwrap();
+    bootstrap["skills"] = serde_yaml::from_str("mode: individual\nselected: []\n").unwrap();
+    fs::write(&answers, serde_yaml::to_string(&bootstrap).unwrap()).unwrap();
     let capabilities = repository.join("tests/fixtures/setup/capabilities-codex-omx.json");
     let user_root = target.parent().expect("consumer parent").join("user-root");
     let user_config = user_root.join(".hive/config");
@@ -86,8 +98,19 @@ fn seed_historical_project(target: &Path, version: &str) {
         .replace(
             &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
             &format!("source_release_version = \"{version}\""),
+        )
+        .replace("project_skill_policy_version = 1\n", "")
+        .replace("setup_mode = \"custom\"", "setup_mode = \"expedited\"")
+        .replace(
+            "preference_provenance = \"project-custom\"",
+            "preference_provenance = \"global-inherited\"",
         );
     fs::write(&harness, historical_harness).expect("historical harness config");
+    fs::copy(&original_answers, target.join(".hive/setup-answers.yml"))
+        .expect("restore historical expedited answers");
+    // The historical install predates the provider ledger created by setup above.
+    fs::remove_file(target.join(hive_render::skill_delivery::PROVIDERS_PATH))
+        .expect("remove current-only provider record from the historical fixture");
 
     write_historical_project_base(target, version);
 }
@@ -311,7 +334,7 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
         );
         assert_eq!(
             result["data"]["normalized_fields"],
-            json!(["selected_project_skills"])
+            json!(["selected_project_skills", "project_skill_policy_version"])
         );
         assert_eq!(
             result["data"]["skill_merges"][0],

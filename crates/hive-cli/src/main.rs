@@ -65,7 +65,7 @@ USAGE:
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
     hive report preview|collect|export --help
-    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
+    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] --output json
     hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
     hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
     hive session recover --target <dir> --output json
@@ -613,10 +613,13 @@ fn run_setup(arguments: &[String]) -> ExitCode {
         Ok(arguments) => {
             let global_preferences =
                 user_setup::project_preferences(&arguments.user_root).map_err(RenderError::Input);
-            let global_preferences = match global_preferences {
+            let mut global_preferences = match global_preferences {
                 Ok(preferences) => preferences,
                 Err(error) => return emit_setup_result(&failure_result(&error)),
             };
+            global_preferences.codex_plugin_files =
+                user_install::validated_codex_plugin_files(&arguments.user_root)
+                    .unwrap_or_default();
             let global_wiki_enabled = global_preferences.wiki_enabled;
             let setup_mode = arguments.mode;
             let user_root = arguments.user_root.clone();
@@ -709,6 +712,20 @@ fn execute_setup_and_registry(
     })?;
     let registry_changed_paths = RefCell::new(Vec::new());
     let commit = || {
+        if let Some(expected) = request
+            .global_preferences
+            .as_ref()
+            .map(|preferences| &preferences.codex_plugin_files)
+            .filter(|files| !files.is_empty())
+        {
+            let current = user_install::validated_codex_plugin_files(user_root)
+                .map_err(RenderError::Verification)?;
+            if &current != expected {
+                return Err(RenderError::Verification(
+                    "Codex plugin changed during project setup".to_owned(),
+                ));
+            }
+        }
         reconcile_project_registry(
             user_root,
             target,

@@ -3,4 +3,4 @@ interface:
   short_description: "(run-checkpoint) Save durable, resumable work progress in canonical Markdown."
   default_prompt: "Use $aigent-hive:run-checkpoint to record the current durable run state."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

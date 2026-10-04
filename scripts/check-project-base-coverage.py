@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -78,6 +79,7 @@ def tree_digest(root: Path) -> str:
 
 
 def compatibility_registry() -> tuple[dict[str, dict[str, object]], list[dict[str, object]]]:
+    current_product = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
     value = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
     if value.get("schema_version") != 1 or not isinstance(value.get("releases"), list):
         raise ValueError("invalid project-base compatibility registry")
@@ -107,7 +109,7 @@ def compatibility_registry() -> tuple[dict[str, dict[str, object]], list[dict[st
         if (
             not isinstance(snapshot_version, str)
             or snapshot_version in snapshot_versions
-            or source_version not in indexed
+            or (source_version not in indexed and source_version != current_product)
             or not snapshot_version.startswith(f"{source_version}-test.")
             or not isinstance(overlays, list)
             or not overlays

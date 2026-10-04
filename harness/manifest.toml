@@ -52,6 +52,11 @@ ownership = "hive-generated-config"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".hive/config/skill-providers.json"
+ownership = "hive-generated-config"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".hive/config/capability-resolution.yml"
 ownership = "hive-generated-config"
 source = "read-only-capability-probe"
@@ -209,6 +214,16 @@ source = "compiled-skill-projection"
 
 [[paths]]
 pattern = ".claude/skills/run-checkpoint/references/policy-review.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/amend-directive/references/transplant.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/amend-directive/references/transplant.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 

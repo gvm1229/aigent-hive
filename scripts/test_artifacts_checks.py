@@ -46,6 +46,61 @@ class ArtifactTests(unittest.TestCase):
         self.assertEqual("review", self.scan()["status"])
         self.assertEqual("unowned-artifact", self.scan()["reason"])
 
+    def test_daily_preview_and_apply_preserve_unreviewed_files(self):
+        self.review()
+        self.assertEqual("attention-required", self.manager.daily()["status"])
+        self.assertTrue((self.root / "tests/work/old/data").exists())
+        result = self.manager.daily(apply=True)
+        self.assertEqual("ok", result["status"])
+        self.assertEqual("removed", result["cleanup"][0]["status"])
+        reports = list((self.root / "tests/results/cleanup").glob("*.md"))
+        self.assertEqual("ok", self.manager.daily(apply=True)["status"])
+        self.assertEqual(reports, list((self.root / "tests/results/cleanup").glob("*.md")))
+        (self.root / "tests/work/unknown").mkdir()
+        sentinel = self.root / "tests/work/unknown/keep"
+        sentinel.write_text("keep", encoding="utf-8")
+        self.assertEqual("attention-required", self.manager.daily(apply=True)["status"])
+        self.assertEqual("keep", sentinel.read_text(encoding="utf-8"))
+
+    def test_daily_storage_budget_applies_even_to_retained_artifacts(self):
+        self.review(state="retained", task="specific rerun", review_at=(a.now() + timedelta(hours=2)).isoformat())
+        result = self.manager.daily(apply=True, max_bytes=1)
+        self.assertEqual("attention-required", result["status"])
+        self.assertTrue(result["storage"]["over_budget"])
+        self.assertTrue((self.root / "tests/work/old/data").exists())
+        with self.assertRaises(a.ArtifactError):
+            self.manager.daily(max_bytes=0)
+
+    def test_storage_totals_ignore_overlap_and_report_unknown_measurements(self):
+        rows = [{"path": "tests/work", "bytes": None},
+                {"path": "tests/work/a", "bytes": 10},
+                {"path": "tests/work/a/nested", "bytes": 6},
+                {"path": "target/debug", "bytes": 20},
+                {"path": "target/debug/deps", "bytes": 15},
+                {"path": "tests/work/b", "bytes": None}]
+        result = a.storage_summary(rows, 30)
+        self.assertEqual(30, result["bytes"])
+        self.assertFalse(result["over_budget"])
+        self.assertEqual(["tests/work/b"], result["unmeasured_paths"])
+
+    def test_cancelled_zero_exit_never_authorizes_cleanup(self):
+        run = a.Run("cancelled fixture", ["synthetic"], root=self.root, paths=["tests/work/old"])
+        run.finish(0, status="cancelled")
+        self.assertEqual("review", self.manager.records()[0]["state"])
+
+    def test_test_children_disable_incremental_builds_unless_explicit(self):
+        command = [sys.executable, "-c", "import os; print('OK incremental=' + os.environ['CARGO_INCREMENTAL'])"]
+        for override, expected in ((None, "0"), ("1", "1")):
+            env = dict(os.environ)
+            env.pop("CARGO_INCREMENTAL", None)
+            if override:
+                env["CARGO_INCREMENTAL"] = override
+            run = a.Run("bounded build cache", command, root=self.root)
+            self.assertEqual(0, run.execute(command, env=env))
+            self.assertIn("OK incremental=" + expected, run.output)
+            self.assertEqual(expected, run.data["cargo_incremental"])
+            run.finish(0)
+
     def test_completed_committed_evidence_is_eligible_preview_does_not_delete(self):
         self.review()
         rows = self.manager.cleanup()
@@ -125,9 +180,29 @@ class ArtifactTests(unittest.TestCase):
             self.review(path="tests/work", state="retained", task="acceptance", review_at=(a.now() + timedelta(hours=2)).isoformat(), excluded_paths=["target/debug"])
 
     def test_paths_outside_owned_roots_and_root_deletion_refused(self):
-        for path in ("tests/work", "tests/work/../fixtures", "target", "target/release", "C:/tmp", "/tmp", "tests/work//old"):
+        for path in ("tests/work", "tests/work/../fixtures", "target", "target/unknown", "target/release-copy", "C:/tmp", "/tmp", "tests/work//old"):
             with self.subTest(path=path), self.assertRaises(a.ArtifactError):
                 self.manager.target(path)
+
+    def test_named_build_profiles_require_review_and_preserve_siblings(self):
+        for relative in a.BUILD_ROOTS:
+            path = self.root / relative
+            path.mkdir(parents=True)
+            (path / "compiled.bin").write_bytes(b"synthetic build")
+            self.assertEqual("review", self.manager.scan(selected=[relative])[0]["status"])
+            self.review(path=relative)
+            self.snapshot.append({"pid": 999, "parent": 0, "name": "cargo.exe", "start": "build", "command": "cargo test", "image": ""})
+            self.assertEqual("active", self.manager.scan(selected=[relative])[0]["status"])
+            self.snapshot.pop()
+            self.assertEqual("removed", self.manager.cleanup(apply=True, selected=[relative])[0]["status"])
+        self.assertTrue((self.root / "tests/work/old/data").is_file())
+
+    def test_completed_build_subdirectory_still_needs_shared_review(self):
+        path = self.root / "target/release/deps"
+        path.mkdir(parents=True)
+        run = a.Run("shared build", ["synthetic"], root=self.root, paths=["target/release/deps"])
+        run.finish(0)
+        self.assertEqual("review", self.manager.records()[0]["state"])
 
     def test_symlink_escape_refused(self):
         alias = self.root / "tests/work/old/alias"
@@ -185,6 +260,26 @@ class ArtifactTests(unittest.TestCase):
             raise PermissionError("locked remainder")
         with patch.object(self.manager, "remove", side_effect=partial):
             self.assertEqual("cleanup-failed", self.manager.cleanup(apply=True)[0]["status"])
+
+    def test_new_live_process_retains_exact_reason_without_delete_failure(self):
+        self.review()
+        original = self.manager.scan
+        calls = 0
+
+        def changing(**kwargs):
+            nonlocal calls
+            calls += 1
+            rows = original(**kwargs)
+            if calls == 2:
+                rows[0].update(status="active", reason="process-identity-unavailable")
+            return rows
+
+        with patch.object(self.manager, "scan", side_effect=changing), patch.object(self.manager, "remove") as remove:
+            row = self.manager.cleanup(apply=True)[0]
+            remove.assert_not_called()
+        self.assertEqual("active", row["status"])
+        self.assertEqual("process-identity-unavailable", row["reason"])
+        self.assertTrue((self.root / "tests/work/old/data").exists())
 
     def test_actual_bounded_cleanup_and_external_sentinel(self):
         self.review()

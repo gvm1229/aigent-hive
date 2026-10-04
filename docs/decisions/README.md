@@ -26,3 +26,4 @@ Accepted product decision과 선택 근거의 정본.
 | Hive-native 반복 실행 | [ADR-0019](ADR-0019-hive-native-iterative-execution.md) |
 | `0.10.0` 제품 범위 | [ADR-0020](ADR-0020-0.10.0-product-scope.md) |
 | `0.10.1` 갱신·사용량 정책 전이 | [ADR-0021](ADR-0021-0.10.1-upgrade-usage-fix.md) |
+| Codex 스킬 제공·자동 정리 | [ADR-0024](ADR-0024-codex-skill-delivery.md) |

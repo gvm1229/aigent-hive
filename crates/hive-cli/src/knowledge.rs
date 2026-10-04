@@ -5651,7 +5651,7 @@ mod tests {
         let claims = user.path().join(".hive/knowledge/Claims/user-root");
         assert_eq!(fs::read_dir(&claims).expect("claims").count(), 1);
         let repeated = run_remember(&remember_arguments).expect("remember no-op");
-        assert!(repeated.changed_paths.is_empty());
+        assert_eq!(repeated.changed_paths.len(), 0);
         assert_eq!(fs::read_dir(&claims).expect("claims").count(), 1);
 
         let retrieve_arguments = vec![
@@ -5825,7 +5825,7 @@ mod tests {
             .starts_with(".hive/knowledge/Claims/user-root/claim-"));
 
         let repeated = run_remember(&arguments).expect("user statement no-op");
-        assert!(repeated.changed_paths.is_empty());
+        assert_eq!(repeated.changed_paths.len(), 0);
     }
 
     #[test]
@@ -6137,10 +6137,13 @@ mod tests {
             None,
         ))
         .expect("current project query remains bounded");
-        assert!(without_authorization.data.expect("retrieval")["hits"]
-            .as_array()
-            .expect("hits")
-            .is_empty());
+        assert_eq!(
+            without_authorization.data.expect("retrieval")["hits"]
+                .as_array()
+                .expect("hits")
+                .len(),
+            0
+        );
 
         let authorization = confidential_authorization(
             &fixture,
@@ -6177,10 +6180,13 @@ mod tests {
             None,
         ))
         .expect("unauthorized query remains bounded");
-        assert!(without_authorization.data.expect("retrieval")["hits"]
-            .as_array()
-            .expect("hits")
-            .is_empty());
+        assert_eq!(
+            without_authorization.data.expect("retrieval")["hits"]
+                .as_array()
+                .expect("hits")
+                .len(),
+            0
+        );
 
         let authorization = confidential_authorization(
             &fixture,

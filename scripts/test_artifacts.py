@@ -24,6 +24,8 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 UTC = timezone.utc
 MAX_REUSE = timedelta(hours=72)
+DEFAULT_MAX_BYTES = 20 * 1024**3
+BUILD_ROOTS = ("target/debug", "target/release", "target/x86_64-pc-windows-gnu")
 
 
 class ArtifactError(RuntimeError):
@@ -192,6 +194,27 @@ def overlap(left, right):
     return a == b or a.startswith(b + "/") or b.startswith(a + "/")
 
 
+def needs_review(row):
+    return row["status"] in ("eligible", "cleanup-failed") or (
+        row["status"] == "review" and (
+            not row.get("review_at") or datetime.fromisoformat(row["review_at"]) <= now()
+        )
+    )
+
+
+def storage_summary(rows, max_bytes=DEFAULT_MAX_BYTES):
+    """Count each tree once; failed measurements never mean zero storage."""
+    roots = []
+    for row in sorted(rows, key=lambda r: (r["path"].count("/"), r["path"])):
+        if row["path"] == "tests/work":  # Reservation only; direct children cover it.
+            continue
+        if not any(overlap(parent["path"], row["path"]) for parent in roots):
+            roots.append(row)
+    total = sum(row.get("bytes") or 0 for row in roots)
+    return {"bytes": total, "max_bytes": max_bytes, "over_budget": total > max_bytes,
+            "unmeasured_paths": [row["path"] for row in roots if row.get("bytes") is None]}
+
+
 class Manager:
     def __init__(self, root=ROOT):
         self.root = Path(root).resolve(strict=True)
@@ -249,7 +272,7 @@ class Manager:
     def target(self, relative, *, reservation=False):
         if str(relative).replace("\\", "/") == "tests/work" and not reservation:
             raise ArtifactError("work root deletion refused")
-        return confined(self.root, relative, ("tests/work", "target/debug"))
+        return confined(self.root, relative, ("tests/work", *BUILD_ROOTS))
 
     def git(self, *args):
         return subprocess.run(["git", *args], cwd=self.root, capture_output=True, check=True).stdout
@@ -368,7 +391,7 @@ class Manager:
                 return "process-identity-unavailable"
             if absolute in command or relative.casefold() in command:
                 return "live-path-reference"
-            if relative.startswith("target/debug") and relevant and (
+            if any(overlap(relative, root) for root in BUILD_ROOTS) and relevant and (
                 name in ("cargo", "rustc", "hive") or "test-lanes.py" in command or "unittest" in command or "dev-check.py" in command
             ):
                 return "live-shared-build-consumer"
@@ -382,8 +405,7 @@ class Manager:
             work = confined(self.root, "tests/work", ("tests/work",))
             if work.exists():
                 paths.update(p.relative_to(self.root).as_posix() for p in work.iterdir())
-            if (self.root / "target/debug").exists():
-                paths.add("target/debug")
+            paths.update(path for path in BUILD_ROOTS if (self.root / path).exists())
             paths.update(r["path"] for r in records if "path" in r and r.get("state") not in ("superseded", "released"))
         result = []
         for path in sorted(paths):
@@ -431,7 +453,7 @@ class Manager:
             rows = self.scan(selected=selected)
             free_before = shutil.disk_usage(self.root).free
             audit = None
-            if apply:
+            if apply and any(row["status"] == "eligible" for row in rows):
                 audit_relative = "tests/results/cleanup/" + now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:12] + ".md"
                 audit = confined(self.root, audit_relative, ("tests/results",))
                 self.last_cleanup_report = audit_relative
@@ -442,13 +464,16 @@ class Manager:
                 try:
                     # Fresh process/state/evidence checks and inventory immediately before removal.
                     fresh = self.scan(selected=[row["path"]])[0]
-                    if fresh["status"] != "eligible" or fresh["fingerprint"] != row["fingerprint"]:
+                    if fresh["status"] != "eligible":
+                        row.update(fresh)
+                        continue
+                    if fresh["fingerprint"] != row["fingerprint"]:
                         raise ArtifactError("artifact changed after preview")
                     self.remove(row["path"])
                     row["status"] = "removed"
                 except (ArtifactError, OSError, subprocess.SubprocessError) as error:
                     row.update(status="cleanup-failed", reason=str(error))
-            if apply:
+            if audit is not None:
                 journal = confined(self.root, ".agents/work/test-artifacts/last-cleanup.log", (".agents/work/test-artifacts",))
                 result = {"finished_at": stamp(), "platform": platform.platform(), "rows": rows,
                           "removed_logical_bytes": sum(r["bytes"] or 0 for r in rows if r["status"] == "removed"),
@@ -456,6 +481,19 @@ class Manager:
                 atomic(journal, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
                 atomic(audit, "# 산출물 정리 결과\n\n```json\n" + json.dumps(scrub(result, self.root), ensure_ascii=False, indent=2) + "\n```\n\n- 논리적 파일 크기와 드라이브 여유 공간 차이 구분\n- 다른 프로세스의 쓰기·하드 링크·파일시스템 할당에 따른 실제 회수량 차이 가능\n- 삭제 환경의 재생성은 원래 소스·입력·도구 필요, 원시 산출물의 직접 복구 보장 없음\n- 보존된 결과 Markdown은 이전 시험 근거이며 현재 코드 재검증과 구분\n")
             return rows
+
+    def daily(self, *, apply=False, max_bytes=DEFAULT_MAX_BYTES):
+        """Sweep reviewed output, then expose unresolved work and storage pressure."""
+        if max_bytes <= 0:
+            raise ArtifactError("storage budget must be positive")
+        # No implicit review, evidence commit, lease extension, or age-based deletion.
+        cleanup = self.cleanup(apply=apply)
+        rows = self.scan(sizes=True)
+        storage = storage_summary(rows, max_bytes)
+        attention = any(needs_review(row) for row in rows + cleanup)
+        attention |= storage["over_budget"] or bool(storage["unmeasured_paths"])
+        return {"status": "attention-required" if attention else "ok", "applied": apply,
+                "storage": storage, "cleanup": cleanup, "remaining": rows}
 
     def remove(self, relative):
         path = self.target(relative)
@@ -466,8 +504,11 @@ class Manager:
 $root=[IO.Path]::GetFullPath($env:HIVE_CLEAN_ROOT)
 $target=[IO.Path]::GetFullPath($env:HIVE_CLEAN_TARGET)
 $work=[IO.Path]::Combine($root,'tests','work')+[IO.Path]::DirectorySeparatorChar
-$debug=[IO.Path]::Combine($root,'target','debug')
-if (-not ($target.StartsWith($work,[StringComparison]::OrdinalIgnoreCase) -or $target.Equals($debug,[StringComparison]::OrdinalIgnoreCase) -or $target.StartsWith($debug+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase))) { throw 'unsafe cleanup target' }
+$allowed=$target.StartsWith($work,[StringComparison]::OrdinalIgnoreCase)
+foreach ($build in ($env:HIVE_CLEAN_BUILDS | ConvertFrom-Json)) {
+ if ($target.Equals($build,[StringComparison]::OrdinalIgnoreCase) -or $target.StartsWith($build+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { $allowed=$true }
+}
+if (-not $allowed) { throw 'unsafe cleanup target' }
 $item=Get-Item -LiteralPath $target -Force
 $cursor=$item
 while ($cursor -and $cursor.FullName -ne $root) {
@@ -484,7 +525,8 @@ if ($item.PSIsContainer) {
 Remove-Item -LiteralPath $target -Recurse -Force
 '''
             subprocess.run(["pwsh", "-NoProfile", "-NonInteractive", "-Command", script],
-                           env={**os.environ, "HIVE_CLEAN_ROOT": str(self.root), "HIVE_CLEAN_TARGET": str(path)}, check=True)
+                           env={**os.environ, "HIVE_CLEAN_ROOT": str(self.root), "HIVE_CLEAN_TARGET": str(path),
+                                "HIVE_CLEAN_BUILDS": json.dumps([str(self.root / p) for p in BUILD_ROOTS])}, check=True)
         elif path.is_dir():
             if not shutil.rmtree.avoids_symlink_attacks:
                 raise ArtifactError("platform lacks safe directory removal")
@@ -538,6 +580,9 @@ class Run:
 
     def execute(self, command, *, env=None, cwd=None):
         started = time.monotonic()
+        env = dict(os.environ if env is None else env)
+        env.setdefault("CARGO_INCREMENTAL", "0")
+        self.data["cargo_incremental"] = env["CARGO_INCREMENTAL"]
         executable = Path(command[0]).name.casefold().removesuffix(".exe")
         if executable in ("cargo", "rustc", "python", "python3", "uv"):
             version = subprocess.run([command[0], "--version"], env=env, capture_output=True, text=True, check=False, timeout=20)
@@ -578,7 +623,9 @@ class Run:
             for record in self.manager.records():
                 if record.get("run") == self.id:
                     # A shared build tree needs a separate all-consumers review.
-                    complete = code == 0 and record["path"] != "target/debug"
+                    complete = self.data["status"] == "passed" and code == 0 and not any(
+                        overlap(record["path"], root) for root in BUILD_ROOTS
+                    )
                     record.update(state="completed" if complete else "review", report=self.relative,
                                   report_sha256=digest, reason="completed test; report awaits commit" if complete else "shared build or failure reproduction review",
                                   review_at=(now() + MAX_REUSE).isoformat())
@@ -608,19 +655,28 @@ class Run:
 def cli(arguments=None):
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("scan", "check", "cleanup", "review", "archive", "index", "run"))
+    parser.add_argument("action", choices=("scan", "check", "cleanup", "daily", "review", "archive", "index", "run"))
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--path", action="append")
     parser.add_argument("--sizes", action="store_true")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
     parser.add_argument("--request", type=Path)
     parser.add_argument("--purpose")
     parser.add_argument("--command", nargs=argparse.REMAINDER)
     args = parser.parse_args(arguments)
-    if args.apply and args.action != "cleanup":
-        parser.error("--apply is only valid with cleanup")
+    if args.apply and args.action not in ("cleanup", "daily"):
+        parser.error("--apply is only valid with cleanup or daily")
+    if args.max_bytes <= 0:
+        parser.error("--max-bytes must be positive")
+    if args.action == "daily" and args.path:
+        parser.error("daily measures the full managed scope; --path is not supported")
     try:
         manager = Manager(args.root)
+        if args.action == "daily":
+            result = manager.daily(apply=args.apply, max_bytes=args.max_bytes)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return int(result["status"] != "ok")
         if args.action == "run":
             if not args.purpose or not args.command:
                 parser.error("run requires --purpose and --command")
@@ -651,7 +707,7 @@ def cli(arguments=None):
         rows = manager.cleanup(apply=args.apply, selected=args.path) if args.action == "cleanup" else manager.scan(sizes=args.sizes, selected=args.path)
         print(json.dumps(rows, ensure_ascii=False, indent=2))
         if args.action == "check":
-            return int(any(r["status"] in ("eligible", "cleanup-failed") or (r["status"] == "review" and (not r.get("review_at") or datetime.fromisoformat(r["review_at"]) <= now())) for r in rows))
+            return int(any(needs_review(r) for r in rows))
         return int(any(r["status"] == "cleanup-failed" for r in rows))
     except (ArtifactError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print("test-artifacts: " + str(error), file=sys.stderr)

@@ -48,6 +48,9 @@ critical path: 356.39초, 순차 실행 대비 48.0% 단축 모델. checkout·de
 - 일반 실행: `python scripts/test-artifacts.py run --purpose "시험 목적" --path target/debug --command python scripts/test-lanes.py --lane <name>`
 - 결과 기록의 Git 보존·명시 검토 뒤에만 `python scripts/test-artifacts.py cleanup --path <exact-path> --apply` 사용
 - 진행 중·72시간 안의 구체적 재사용·실패 재현·원본 근거는 보존. 기간 만료만으로 자동 삭제 없음
+- 시험 자식 프로세스의 기본 `CARGO_INCREMENTAL=0`: 수정마다 쌓이는 Rust 중간 파일 억제, 명시 설정 보존
+- 검사별 별도 빌드 폴더 생성 제외, 공통 빌드 폴더 재사용과 완료 결과 커밋 뒤 같은 작업에서 정리
+- [매일 정리](test-cleanup.md): 관리 대상 합계 20GiB 초과·미검토·기한 만료 점검
 
 ## CI
 

@@ -1,0 +1,69 @@
+# 새 Hive 개선과 사용자 스킬 결합
+
+> Plan version: 0.11.1
+> Scope: product
+> 공개 시험 수용: `0.11.1-test.8`
+
+## 목적과 경계
+
+- 사용자 의도: 새 Hive 스킬 개선과 사용자 수정의 결합, 기본 스킬 제외·사용자 파일 이동을 대신 해결책으로 사용하는 방식 제외
+- 기존 0.11.1 안정판·main·공지 전송 승인 유지, test.6 근거 보존; 새 제품 변경의 다음 번호 test.7 필요
+- WProject 승인된 결합 적용·검증 완료, 실제 대화 호출은 DPS-003 외부 근거 대기
+- 모델·의미 검토는 호스트 소유, CLI는 지문·경로·권한·거래·복구 검증만 수행
+
+## 수용 기준
+
+- [x] [SGM-001] 기존 인증 원본의 병합과 겹치는 새 변경의 명확한 안내
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
+- [x] [SGM-002] 원본 없는 사용자 스킬의 검토 결합·지문 승인·동일 경로 적용
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
+- [x] [SGM-003] 동시 변경·허용 경로·복구·다음 갱신의 사용자 수정 보존
+  - state: complete; evidence: repo:docs/research/skill-merge-0.11.1.md#sha256:491bea8712b1e3be12e7088230b85ffb42e6c6b8fd63e450616691610007c0b2
+- [x] [SGM-004] 전체 검사·test.7 공개 수용·WProject 정확한 결합 미리보기
+  - state: complete; evidence: repo:docs/research/skill-merge-public-test7-0.11.1.md#sha256:f22a49255f626bb431a2340347a2f943750781e78b1c9dc9b2a643824e3a7533
+
+- [x] [SGM-005] 부속 자료 폴더 정리의 실제 경로 검증·사용자 자료 보존
+  - state: complete; evidence: repo:docs/research/skill-resource-cleanup-0.11.1.md#sha256:2431ea5930adaf167fc673b9e14252121f1b041a30771c393a0fc0e4b22dfb19
+- [x] [SGM-006] 수정한 test.8 공개 수용과 승인된 결합 갱신 검증
+  - state: complete; evidence: repo:docs/research/skill-merge-public-test8-0.11.1.md#sha256:c82f099fff511f8b4ed48ee298a1bce71879b5c2742faf4af7edb916b9eb8fa2
+
+## 구현 결정과 순서
+
+1. SGM-001: 기존 `hive-update::three_way_merge`의 인증 기준·서로 다른 변경 결합 유지. `project-refresh`에 `omitted_incoming_hunks`의 검토 의무, 새 개선 전체 반영으로 거짓 완료 금지. 겹친 의미는 사용자 규칙·필요한 새 Hive 규칙을 함께 반영한 호스트 작성 결합본으로 검토.
+2. SGM-002: 기존 `project upgrade`에 `--skill-merges <json>`과 `--approve-skill-merge <digest>` 추가. `project_upgrade/skill_merge.rs`의 엄격한 요청: schema_version=1, product_version, project_base_digest, files의 path·local_digest·incoming_digest·merged_content. 인증한 기존 프로젝트 원본 목록의 지문과 현재 제품을 요구, 선택된 들어오는 기본 스킬의 이식 가능 경로만 허용. 전체 요청·각 파일 크기 제한, 중복·불명 필드·알 수 없는/다른 경로·소스 없음·지문 변경 거절. 기존 원본이 없는 파일의 가짜 원본 생성 금지. 명시 검토본만 기존 거래에서 대체, 들어오는 Hive 본문을 다음 비교 기준으로 저장하고 결합본은 수정본 목록에 기록.
+3. SGM-003: `run`에서 결합 계획과 정규화 대상의 지문으로 승인 값을 계산, 미리보기에는 승인 값과 각 경로의 비교 지문 표시. 실제 적용은 그 값의 명시 확인 필수; 일반 갱신 권한을 사용자 파일 인수 권한으로 확대 금지. 원래 거래의 백업·변경 경쟁·복구 사용. 현재·들어오는·결합 내용 하나라도 바뀌면 새 검토. 적용 뒤 요청 파일 없이 `--validate`와 두 번째 갱신 변경 0건, 다음 개선과 결합의 보존 검증.
+4. SGM-004: 인증·누락 원본·겹침·불명 스킬·승인 없음/다름·경쟁·복구·보존의 합성 사례 시험. WProject 내용의 제품 시험 자료 복사 금지. 관련 검사 → 전체 Rust/Python → 필수 CI → 유일한 test.7 후보·공개·세 운영체제 수용. 그 뒤 WProject의 새 원문·사용자 검사 규칙을 포함한 정확한 결합 차이 제시. 시험판 설치와 실제 소비자 적용의 버전·내용별 권한 경계 유지.
+
+## 소유 파일과 검증
+
+- [구현·전체 검사 근거](../../research/skill-merge-0.11.1.md)
+- CLI: `project_upgrade.rs`, 새 `project_upgrade/skill_merge.rs`, `main.rs` 도움말; 기존 결과·승인 없는 경로 호환
+- 요청 형식: `schemas/project-skill-merge.schema.json`, 기존 CLI JSON 결과의 data에 선택적 승인 값
+- 소비자 안내: `harness/skills/project-refresh/SKILL.md`와 배포 사본
+- 검증: 해당 CLI Rust 시험·Python 명령/형식 시험, 기존 소유권·Windows Claude 회귀 유지
+- 중단: 정확한 결합의 사용자 의미 결정 또는 실제 사용자 시험판 설치 승인만 해당 단계 대기, 독립 작업 계속
+
+## 공개 수용
+
+- [test.7과 실제 결합 미리보기](../../research/skill-merge-public-test7-0.11.1.md)
+- 2026-10-05 사용자 승인·test.8 설치·프로젝트 반영 완료, 이후 DPS-003 실제 호출 검증
+
+## 2026-10-05 실제 적용 회귀
+
+- test.7 사용자 설치·502개 지식·2개 설정·외부 지침 보존 성공
+- 전역 플러그인 갱신 뒤 제안 34개, 추가 삭제 14개 모두 인증 원본과 같은 미수정 Hive 사본; 사용자 결합 두 파일의 입력·결합 내용 불변
+- 실제 적용: `references/SKILL.md`라는 허용되지 않는 가상 경로의 검사로 실패, 변경 대상의 원본 지문 일치·AGENTS의 Git 차이 없음·복구 기록 제거 확인
+- SGM-005 소유: `crates/hive-cli/src/project_upgrade.rs`의 `prune_empty_project_skill_ancestors`·`remove_empty_project_owned_dir`와 인접 시험
+- 설계: 이미 검증한 삭제 파일을 각 상위 폴더의 근거로 전달. 근거 파일의 허용 경로·같은 `.agents/skills` 안의 실제 상위 폴더 관계 확인. 가짜 본문 경로 생성 제거, `open_dir_nofollow`·비어 있는 폴더만 제거 유지
+- 검증: 부속 자료 삭제의 실제 갱신 재현, 외부 파일이 남은 폴더 보존, 다른 스킬·상위 경로·연결 경로 거절. 관련 CLI 시험 → 전체 Rust·Python → 정확한 소스 CI
+- SGM-006: 제품 바이트 수정으로 test.8 후보·공개·세 운영체제 수용 필요. 같은 0.11.1 진행 승인 범위에서 보존 갱신·공식 결합 적용 재검증, 새 사용자 의미 변경은 제외
+- test.7 실패 당시 WProject 원복 확인; test.8 공식 적용 완료, 수동 소유권 변경·강제 파일 삭제·안전 검사 우회 없음
+
+- 공개 수용 보강: `scripts/qualify-skill-delivery-public-test.py`에 usage-guard 부속 자료의 플러그인 비활성 복원·재활성 정리 사례 추가. 기존 test.7의 격리 재현 실패와 수정 개발 빌드의 통과를 대조, 다음 공개 test.8의 세 운영체제에서 반복
+
+- [부속 폴더 회귀 수정과 검증](../../research/skill-resource-cleanup-0.11.1.md)
+
+## 최종 반영
+
+- [test.8 공개 수용·실제 반영·macOS 최초 실패와 재검증](../../research/skill-merge-public-test8-0.11.1.md)
+- 세 운영체제 공개 수용·현재 사용자 설치·승인된 두 파일 결합·재갱신 0건 완료. 실제 프로젝트 스킬 호출은 새 사용자 대화의 외부 근거 필요

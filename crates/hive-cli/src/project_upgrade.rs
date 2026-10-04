@@ -40,6 +40,8 @@ const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
     ".hive/index/.stale",
 ];
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
+mod skill_merge;
+use skill_merge::SkillMergeRequest;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -49,6 +51,11 @@ enum CommandMode {
     Apply,
     Validate,
     Recover,
+}
+
+enum SkillReview {
+    Proposal(PathBuf),
+    Inputs(String),
 }
 
 #[derive(Serialize)]
@@ -153,7 +160,7 @@ struct JournalChange {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
-    let result = parse(arguments).and_then(|(target, mode)| match mode {
+    let result = parse(arguments).and_then(|(target, mode, user_root, skill_merges, approval)| match mode {
         CommandMode::Recover => {
             ensure_consumer_target(&target)
                 .map_err(|error| UpdateError::Input(error.to_string()))?;
@@ -173,16 +180,46 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                     "project upgrade journal requires explicit --recover".to_owned(),
                 ));
             }
-            let plan = prepare(&target_dir)?;
+            let plugin = user_root.as_deref()
+                .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                .unwrap_or_default();
+            if let Some(SkillReview::Inputs(name)) = skill_merges.as_ref() {
+                if mode != CommandMode::Scan || approval.is_some() {
+                    return Err(UpdateError::Input("Skill merge inputs require --scan without apply approval".to_owned()));
+                }
+                return skill_merge::input_result(&target_dir, name);
+            }
+            let reviewed = match skill_merges.as_ref() {
+                Some(SkillReview::Proposal(path)) => Some(SkillMergeRequest::load(path)?),
+                _ => None,
+            };
+            let plan = prepare_with_reviewed_skills(&target_dir, &plugin, reviewed.as_ref())?;
+            let review_digest = reviewed.as_ref().map(|_| skill_merge::approval_digest(&target, &plan)).transpose()?;
+            if mode == CommandMode::Apply {
+                skill_merge::ensure_no_unreviewed_overlaps(&plan.reports)?;
+                skill_merge::ensure_approved(review_digest.as_deref(), approval.as_deref())?;
+            }
             if mode == CommandMode::Validate && !plan.changed_paths.is_empty() {
                 return Err(UpdateError::Verification(
                     "installed project harness has applicable upgrades".to_owned(),
                 ));
             }
             if mode == CommandMode::Apply {
+                if !plugin.is_empty() {
+                    let refreshed = user_root.as_deref()
+                        .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                        .unwrap_or_default();
+                    if refreshed != plugin {
+                        return Err(UpdateError::Conflict("Codex plugin changed after the project cleanup preview; no project files changed".to_owned()));
+                    }
+                }
                 apply(&target_dir, &plan)
             } else {
-                Ok(plan_result(&plan, mode))
+                let mut result = plan_result(&plan, mode);
+                if let (Some(digest), Some(data)) = (review_digest, result.data.as_mut()) {
+                    data["skill_merge_approval_digest"] = json!(digest);
+                }
+                Ok(result)
             }
         }
     });
@@ -216,13 +253,24 @@ pub(crate) fn authenticate_legacy_knowledge_target(target: &Path) -> Result<(), 
     Ok(())
 }
 
-fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
+type UpgradeArguments = (
+    PathBuf,
+    CommandMode,
+    Option<PathBuf>,
+    Option<SkillReview>,
+    Option<String>,
+);
+
+fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
     if arguments.first().map(String::as_str) != Some("upgrade") {
         return Err(UpdateError::Input(
             "project requires the upgrade action".to_owned(),
         ));
     }
     let mut target = None;
+    let mut user_root = None;
+    let mut skill_merges = None;
+    let mut approval = None;
     let mut mode = None;
     let mut output = None;
     let mut index = 1;
@@ -245,7 +293,12 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
                 }
                 index += 1;
             }
-            "--target" | "--output" => {
+            "--target"
+            | "--output"
+            | "--user-root"
+            | "--skill-merges"
+            | "--skill-merge-inputs"
+            | "--approve-skill-merge" => {
                 let value = arguments
                     .get(index + 1)
                     .ok_or_else(|| UpdateError::Input(format!("missing value for {option}")))?;
@@ -253,6 +306,27 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
                     if target.replace(PathBuf::from(value)).is_some() {
                         return Err(UpdateError::Input(
                             "duplicate project upgrade target".to_owned(),
+                        ));
+                    }
+                } else if option == "--user-root" {
+                    if user_root.replace(PathBuf::from(value)).is_some() {
+                        return Err(UpdateError::Input(
+                            "duplicate project upgrade user root".to_owned(),
+                        ));
+                    }
+                } else if matches!(option, "--skill-merges" | "--skill-merge-inputs") {
+                    if skill_merges
+                        .replace(parse_skill_review(option, value))
+                        .is_some()
+                    {
+                        return Err(UpdateError::Input(
+                            "duplicate skill merge request".to_owned(),
+                        ));
+                    }
+                } else if option == "--approve-skill-merge" {
+                    if !valid_digest(value) || approval.replace(value.clone()).is_some() {
+                        return Err(UpdateError::Input(
+                            "invalid or duplicate skill merge approval".to_owned(),
                         ));
                     }
                 } else if output.replace(value.as_str()).is_some() {
@@ -274,6 +348,7 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
             "project upgrade requires --output json".to_owned(),
         ));
     }
+    validate_skill_merge_options(mode, skill_merges.is_some(), approval.is_some())?;
     Ok((
         target.ok_or_else(|| UpdateError::Input("missing --target".to_owned()))?,
         mode.ok_or_else(|| {
@@ -282,11 +357,49 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
                     .to_owned(),
             )
         })?,
+        user_root,
+        skill_merges,
+        approval,
     ))
 }
 
+fn parse_skill_review(option: &str, value: &str) -> SkillReview {
+    match option {
+        "--skill-merges" => SkillReview::Proposal(PathBuf::from(value)),
+        _ => SkillReview::Inputs(value.to_owned()),
+    }
+}
+
+fn validate_skill_merge_options(
+    mode: Option<CommandMode>,
+    request: bool,
+    approval: bool,
+) -> Result<(), UpdateError> {
+    if (approval && (!request || mode != Some(CommandMode::Apply)))
+        || (mode == Some(CommandMode::Recover) && (request || approval))
+    {
+        return Err(UpdateError::Input(
+            "skill merge options require preview or exact approved apply, not recovery".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
-fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
+#[cfg(test)]
+fn prepare_with_plugin(
+    target: &Dir,
+    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+) -> Result<UpgradePlan, UpdateError> {
+    prepare_with_reviewed_skills(target, plugin, None)
+}
+
+#[allow(clippy::too_many_lines)]
+fn prepare_with_reviewed_skills(
+    target: &Dir,
+    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    review: Option<&SkillMergeRequest>,
+) -> Result<UpgradePlan, UpdateError> {
     let base = read_base_ledger(target, None)?;
     let candidate = project_upgrade_candidate_in(target).map_err(render_error)?;
     if let Some(ledger) = base
@@ -295,6 +408,12 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
     {
         authenticate_current_base(ledger, &candidate.files)?;
     }
+    let candidate = hive_render::project_upgrade_candidate_with_plugin_in(target, plugin)
+        .map_err(render_error)?;
+    let reviewed_files = review
+        .map(|request| request.validate(target, base.as_ref(), &candidate.files))
+        .transpose()?
+        .unwrap_or_default();
     let source_version = base.as_ref().map_or_else(
         || "legacy-unbased".to_owned(),
         |ledger| ledger.product_version.clone(),
@@ -315,6 +434,21 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
                 .collect::<BTreeMap<_, _>>()
         })
         .unwrap_or_default();
+    let provider_bytes = read_bounded_optional(
+        target,
+        Path::new(hive_render::skill_delivery::PROVIDERS_PATH),
+        MAX_LEDGER_BYTES,
+    )?;
+    let provider_base = base_files
+        .iter()
+        .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
+        .collect();
+    let previous_plugin_skills = hive_render::skill_delivery::covered(
+        provider_bytes.as_deref(),
+        &provider_base,
+        &source_version,
+    )
+    .map_err(render_error)?;
     let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
     paths.extend(candidate.files.keys().cloned());
     let mut reports = Vec::new();
@@ -334,15 +468,23 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
             )));
         }
         let effective_base = if base.is_none() { incoming } else { base_bytes };
-        let merged = if is_hive_directive_projection_path(Path::new(&path)) || is_shared(&path) {
-            three_way_merge_hive_directive(
-                Path::new(&path),
-                effective_base,
-                local.as_deref(),
-                incoming,
-            )?
+        let restore_plugin_file = local.is_none()
+            && incoming.is_some()
+            && Path::new(&path).starts_with(".agents/skills/")
+            && Path::new(&path).components().nth(2).is_some_and(|name| {
+                previous_plugin_skills.contains(&name.as_os_str().to_string_lossy().into_owned())
+            });
+        let merge_local = if restore_plugin_file {
+            base_bytes
         } else {
-            three_way_merge(Path::new(&path), effective_base, local.as_deref(), incoming)?
+            local.as_deref()
+        };
+        let merged = if let Some(reviewed) = reviewed_files.get(&path) {
+            reviewed.clone()
+        } else if is_hive_directive_projection_path(Path::new(&path)) || is_shared(&path) {
+            three_way_merge_hive_directive(Path::new(&path), effective_base, merge_local, incoming)?
+        } else {
+            three_way_merge(Path::new(&path), effective_base, merge_local, incoming)?
         };
         let final_full = materialize_final(target, &path, merged.bytes.as_deref())?;
         let local_full = read_full_optional(target, Path::new(&path))?;
@@ -530,7 +672,30 @@ fn authenticate_current_base(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), UpdateError> {
-    authenticate_base_bytes(ledger, incoming)
+    let current = authenticate_base_bytes(ledger, incoming);
+    if current.is_ok() {
+        return current;
+    }
+    let reference = HistoricalProjectBase {
+        product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        files: incoming
+            .iter()
+            .map(|(path, bytes)| {
+                Ok(hive_render::HistoricalProjectBaseFile {
+                    path: path.clone(),
+                    kind: expected_base_kind(path)?.to_owned(),
+                    content_digest: sha256_digest(bytes),
+                    content: bytes.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, UpdateError>>()?,
+    };
+    for snapshot in historical_published_project_snapshots(&reference) {
+        if authenticate_full_historical_base(ledger, &snapshot.base).is_ok() {
+            return Ok(());
+        }
+    }
+    current
 }
 
 fn authenticate_base_bytes(
@@ -1025,7 +1190,7 @@ fn prune_empty_project_skill_ancestors<'a>(
     paths: impl IntoIterator<Item = &'a Path>,
 ) -> Result<(), UpdateError> {
     let skills_root = Path::new(".agents/skills");
-    let mut directories = BTreeSet::new();
+    let mut directories = BTreeMap::new();
     for path in paths {
         validate_hive_skill_projection_relative(path)
             .map_err(|error| UpdateError::Verification(error.to_string()))?;
@@ -1041,27 +1206,39 @@ fn prune_empty_project_skill_ancestors<'a>(
             .parent()
             .filter(|parent| *parent != skill_directory.as_path())
         {
-            directories.insert(parent.to_path_buf());
+            directories.insert(parent.to_path_buf(), path.to_path_buf());
         }
-        directories.insert(skill_directory);
-        directories.insert(skills_root.to_path_buf());
+        directories.insert(skill_directory, path.to_path_buf());
+        directories.insert(skills_root.to_path_buf(), path.to_path_buf());
     }
     let mut directories = directories.into_iter().collect::<Vec<_>>();
     directories.sort_by(|left, right| {
         right
+            .0
             .components()
             .count()
-            .cmp(&left.components().count())
-            .then_with(|| right.cmp(left))
+            .cmp(&left.0.components().count())
+            .then_with(|| right.0.cmp(&left.0))
     });
-    for directory in directories {
-        remove_empty_project_owned_dir(target, &directory)?;
+    for (directory, owned_file) in directories {
+        remove_empty_project_owned_dir(target, &directory, &owned_file)?;
     }
     Ok(())
 }
 
-fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), UpdateError> {
+fn remove_empty_project_owned_dir(
+    target: &Dir,
+    relative: &Path,
+    owned_file: &Path,
+) -> Result<(), UpdateError> {
     let skills_root = Path::new(".agents/skills");
+    validate_hive_skill_projection_relative(owned_file)
+        .map_err(|error| UpdateError::Verification(error.to_string()))?;
+    if !relative.starts_with(skills_root) || !owned_file.starts_with(relative) {
+        return Err(UpdateError::Verification(
+            "project Skill directory is not an ancestor of its owned file".to_owned(),
+        ));
+    }
     let (parent, name) = if relative == skills_root {
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
@@ -1078,14 +1255,11 @@ fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), U
             UpdateError::Verification("project Skill directory escaped its root".to_owned())
         })?;
         let components = suffix.components().collect::<Vec<_>>();
-        let validation_path =
-            if components.len() == 2 && components[1].as_os_str() == OsStr::new("agents") {
-                relative.join("openai.yaml")
-            } else {
-                relative.join("SKILL.md")
-            };
-        validate_hive_skill_projection_relative(&validation_path)
-            .map_err(|error| UpdateError::Verification(error.to_string()))?;
+        if !(1..=2).contains(&components.len()) {
+            return Err(UpdateError::Verification(
+                "project Skill directory has an unsupported depth".to_owned(),
+            ));
+        }
         let agents = match target.open_dir_nofollow(".agents") {
             Ok(agents) => agents,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -2754,6 +2928,106 @@ mod tests {
         assert!(temporary.path().join(".agents").exists());
     }
 
+    #[test]
+    fn project_upgrade_prunes_reference_directories_after_deletion() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let paths = [
+            ".agents/skills/usage-guard/SKILL.md",
+            ".agents/skills/usage-guard/agents/openai.yaml",
+            ".agents/skills/usage-guard/references/control.md",
+            ".agents/skills/usage-guard/references/sensors.md",
+        ];
+        for path in paths {
+            let file = temporary.path().join(path);
+            fs::create_dir_all(file.parent().expect("companion parent")).expect("parent");
+            fs::write(file, b"synthetic owned bytes\n").expect("owned file");
+        }
+        let plan = deletion_plan(
+            &target,
+            paths
+                .into_iter()
+                .map(|path| (path.to_owned(), None))
+                .collect(),
+        );
+
+        apply_with_failure_after(&target, &plan, None).expect("delete owned companions");
+
+        assert!(!temporary.path().join(".agents/skills/usage-guard").exists());
+        assert!(!temporary.path().join(JOURNAL_PATH).exists());
+        assert!(temporary.path().join(".agents").exists());
+    }
+
+    #[test]
+    fn project_reference_cleanup_preserves_foreign_resources() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let relative = ".agents/skills/usage-guard/references/control.md";
+        let owned = temporary.path().join(relative);
+        let foreign = owned.with_file_name("user-notes.md");
+        fs::create_dir_all(owned.parent().expect("resource parent")).expect("parent");
+        fs::write(&owned, b"owned\n").expect("owned resource");
+        fs::write(&foreign, b"user resource\n").expect("foreign resource");
+        let plan = deletion_plan(&target, BTreeMap::from([(relative.to_owned(), None)]));
+
+        apply_with_failure_after(&target, &plan, None).expect("delete only owned resource");
+
+        assert!(!owned.exists());
+        assert_eq!(
+            fs::read(foreign).expect("foreign resource"),
+            b"user resource\n"
+        );
+        assert!(!temporary.path().join(JOURNAL_PATH).exists());
+    }
+
+    #[test]
+    fn project_directory_cleanup_requires_its_own_valid_file() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let relative = Path::new(".agents/skills/usage-guard/references");
+        fs::create_dir_all(temporary.path().join(relative)).expect("resource directory");
+        for witness in [
+            ".agents/skills/knowledge-capture/references/ingest.md",
+            ".agents/skills/usage-guard/references/unknown-file.md",
+            ".agents/skills/usage-guard/references/../SKILL.md",
+        ] {
+            assert!(remove_empty_project_owned_dir(&target, relative, Path::new(witness)).is_err());
+            assert!(temporary.path().join(relative).is_dir());
+        }
+        assert!(remove_empty_project_owned_dir(
+            &target,
+            Path::new(".agents"),
+            Path::new(".agents/skills/usage-guard/references/control.md"),
+        )
+        .is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn project_reference_cleanup_rejects_linked_directory() {
+        use std::os::unix::fs::symlink;
+
+        let temporary = tempdir().expect("temporary target");
+        let outside = tempdir().expect("outside");
+        let parent = temporary.path().join(".agents/skills/usage-guard");
+        fs::create_dir_all(&parent).expect("Skill parent");
+        fs::write(outside.path().join("keep"), b"outside\n").expect("outside sentinel");
+        symlink(outside.path(), parent.join("references")).expect("resource alias");
+
+        assert!(prune_empty_project_skill_ancestors(
+            &target_dir(temporary.path()),
+            [Path::new(
+                ".agents/skills/usage-guard/references/control.md"
+            )],
+        )
+        .is_err());
+        assert_eq!(
+            fs::read(outside.path().join("keep")).expect("outside"),
+            b"outside\n"
+        );
+        assert!(parent.join("references").is_symlink());
+    }
+
     #[cfg(unix)]
     #[test]
     fn legacy_070_derived_index_cleanup_rejects_symlink_without_mutation() {
@@ -3710,7 +3984,7 @@ mod tests {
             .expect("base ledger");
 
         assert_eq!(ledger.product_version, "0.3.0");
-        assert!(ledger.files.is_empty());
+        assert_eq!(ledger.files.len(), 0);
     }
 
     #[test]
@@ -4050,5 +4324,309 @@ mod tests {
                 sentinel
             );
         }
+    }
+
+    fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::PluginSkillFiles {
+        project_fixture_with_skills(
+            path,
+            vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
+        )
+    }
+
+    fn project_fixture_with_skills(
+        path: &Path,
+        selected: Vec<String>,
+    ) -> hive_render::skill_delivery::PluginSkillFiles {
+        let preferences = hive_render::GlobalProjectPreferences {
+            codex_plugin_files: BTreeMap::new(),
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: selected,
+            usage_guard_enabled: true,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            discord_message_fields: vec!["remaining-usage".to_owned()],
+            usage_stop_remaining_percent: 20,
+        };
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+        hive_render::execute_setup(&hive_render::SetupRequest {
+            target: path,
+            answers: &fixture.join("answers-base.yml"),
+            capabilities: &fixture.join("capabilities-codex-omx.json"),
+            mode: hive_render::SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        })
+        .unwrap();
+        hive_projection::compile_user_projection(
+            hive_projection::Host::Codex,
+            &["prompt-refine".to_owned()],
+            &[],
+        )
+        .unwrap()
+        .files
+    }
+
+    #[test]
+    fn project_upgrade_cleans_plugin_copies_and_restores_local_delivery_when_unavailable() {
+        let temporary = tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap();
+        let plugin = plugin_project_fixture(&root);
+        let cap = target_dir(&root);
+        let plan = prepare_with_plugin(&cap, &plugin).unwrap();
+        apply(&cap, &plan).unwrap();
+        assert!(!root.join(".agents/skills/prompt-refine/SKILL.md").exists());
+        assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
+        assert_eq!(
+            prepare_with_plugin(&cap, &plugin)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
+        let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
+        apply(&cap, &restore).unwrap();
+        assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
+        assert_eq!(
+            prepare_with_plugin(&cap, &BTreeMap::new())
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn project_upgrade_keeps_a_modified_plugin_covered_skill_and_reports_why() {
+        for suffix in ["SKILL.md", "custom.txt"] {
+            let temporary = tempdir().unwrap();
+            let root = temporary.path().canonicalize().unwrap();
+            let plugin = plugin_project_fixture(&root);
+            let changed = root.join(".agents/skills/prompt-refine").join(suffix);
+            let mut custom = if changed.exists() {
+                fs::read(&changed).unwrap()
+            } else {
+                Vec::new()
+            };
+            custom.extend_from_slice(b"\nLocal customization\n");
+            fs::write(&changed, &custom).unwrap();
+            let cap = target_dir(&root);
+            let plan = prepare_with_plugin(&cap, &plugin).unwrap();
+            apply(&cap, &plan).unwrap();
+            assert_eq!(fs::read(changed).unwrap(), custom);
+            assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
+            let ledger: Value = serde_json::from_slice(
+                &fs::read(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap(),
+            )
+            .unwrap();
+            assert!(ledger["local_skills"]["prompt-refine"]
+                .as_str()
+                .unwrap()
+                .contains("resource"));
+            assert_eq!(
+                prepare_with_plugin(&cap, &plugin)
+                    .unwrap()
+                    .changed_paths
+                    .len(),
+                0
+            );
+        }
+    }
+
+    fn unselected_legacy_skill_fixture(root: &Path) -> Dir {
+        let _ = plugin_project_fixture(root);
+        let harness = root.join(".hive/config/harness.toml");
+        let original = fs::read_to_string(&harness).unwrap();
+        fs::write(
+            &harness,
+            original
+                .replace("project_skill_policy_version = 1\n", "")
+                .replace(
+                    "harness_version = \"0.11.1\"",
+                    "harness_version = \"0.11.0\"",
+                )
+                .replace(
+                    "source_release_version = \"0.11.1\"",
+                    "source_release_version = \"0.11.0\"",
+                ),
+        )
+        .unwrap();
+        let cap = target_dir(root);
+        let historical = historical_project_upgrade_candidate_in(&cap, "0.11.0").unwrap();
+        for file in &historical.files {
+            fs::create_dir_all(root.join(&file.path).parent().unwrap()).unwrap();
+            fs::write(root.join(&file.path), &file.content).unwrap();
+        }
+        let old_files = historical
+            .files
+            .iter()
+            .map(|file| BaseFile {
+                path: file.path.clone(),
+                kind: file.kind.clone(),
+                content_digest: file.content_digest.clone(),
+                content: String::from_utf8(file.content.clone()).unwrap(),
+            })
+            .collect::<Vec<_>>();
+        fs::write(
+            root.join(BASE_PATH),
+            signed_base_ledger("0.11.0", &old_files),
+        )
+        .unwrap();
+        fs::remove_file(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap();
+        cap
+    }
+
+    #[test]
+    fn reviewed_skill_merges_add_upstream_and_custom_rules_without_inventing_a_base() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().canonicalize().unwrap();
+        let cap = unselected_legacy_skill_fixture(&root);
+        let path = ".agents/skills/ship/SKILL.md";
+        fs::create_dir_all(root.join(".agents/skills/ship")).unwrap();
+        let custom = b"---\nname: ship\ndescription: Custom commit rules\n---\n\nRun the project commit guard.\n";
+        fs::write(root.join(path), custom).unwrap();
+        let base = read_base_ledger(&cap, None).unwrap().unwrap();
+        assert!(!base.files.iter().any(|file| file.path == path));
+        let incoming = project_upgrade_candidate_in(&cap).unwrap();
+        let inputs = skill_merge::input_result(&cap, "ship").unwrap();
+        let input_data = inputs.data.unwrap();
+        assert_eq!(input_data["project_base_digest"], base.ledger_digest);
+        assert!(input_data["files"].as_array().unwrap().iter().any(|file| {
+            file["path"] == path && file["incoming_digest"] == sha256_digest(&incoming.files[path])
+        }));
+        assert!(skill_merge::input_result(&cap, "../ship").is_err());
+        assert!(skill_merge::input_result(&cap, "user-setup").is_err());
+        assert!(prepare_with_plugin(&cap, &BTreeMap::new()).is_err());
+        let merged = format!(
+            "{}\n## Project safeguard\nRun the project commit guard.\n",
+            String::from_utf8(incoming.files[path].clone()).unwrap()
+        );
+        let request_path = temp.path().join("review.json");
+        fs::write(
+            &request_path,
+            serde_json::to_vec(&json!({
+                "schema_version":1,"product_version":env!("CARGO_PKG_VERSION"),
+                "project_base_digest":base.ledger_digest,
+                "files":[{"path":path,"local_digest":sha256_digest(custom),
+                    "incoming_digest":sha256_digest(&incoming.files[path]),"merged_content":merged}]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let request = SkillMergeRequest::load(&request_path).unwrap();
+        let plan = prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).unwrap();
+        let report = plan
+            .reports
+            .iter()
+            .find(|report| report.path == path)
+            .unwrap();
+        assert!(report.base_digest.is_none());
+        assert_eq!(fs::read(root.join(path)).unwrap(), custom);
+        let approval = skill_merge::approval_digest(&root, &plan).unwrap();
+        let other_target = tempdir().unwrap();
+        assert_ne!(
+            approval,
+            skill_merge::approval_digest(other_target.path(), &plan).unwrap()
+        );
+        assert!(skill_merge::ensure_approved(Some(&approval), None).is_err());
+        assert!(skill_merge::ensure_approved(Some(&approval), Some(&digest('b'))).is_err());
+        skill_merge::ensure_approved(Some(&approval), Some(&approval)).unwrap();
+        apply(&cap, &plan).unwrap();
+        assert_eq!(fs::read(root.join(path)).unwrap(), merged.as_bytes());
+        let updated_base = read_base_ledger(&cap, None).unwrap().unwrap();
+        assert_eq!(
+            updated_base
+                .files
+                .iter()
+                .find(|file| file.path == path)
+                .unwrap()
+                .content
+                .as_bytes(),
+            incoming.files[path]
+        );
+        assert_eq!(
+            prepare_with_plugin(&cap, &BTreeMap::new())
+                .unwrap()
+                .changed_paths,
+            [] as [String; 0]
+        );
+        assert!(prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).is_err());
+    }
+
+    #[test]
+    fn reviewed_skill_merge_options_reject_unbound_or_recovery_approval() {
+        for options in [
+            vec!["--approve-skill-merge", "sha256:invalid"],
+            vec![
+                "--skill-merges",
+                "review.json",
+                "--approve-skill-merge",
+                "sha256:invalid",
+            ],
+        ] {
+            let mut args = vec![
+                "upgrade",
+                "--target",
+                "target",
+                "--recover",
+                "--output",
+                "json",
+            ];
+            args.extend(options);
+            assert!(parse(&args.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err());
+        }
+    }
+
+    #[test]
+    fn published_test6_project_base_authenticates_only_the_registered_snapshot() {
+        let temporary = tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap();
+        let _ = project_fixture_with_skills(
+            &root,
+            vec!["project-refresh".to_owned(), "prompt-refine".to_owned()],
+        );
+        let target = target_dir(&root);
+        let path = ".agents/skills/project-refresh/SKILL.md";
+        let published = include_bytes!(
+            "../../../harness/project-bases/0.11.1-test.6/skills/project-refresh/SKILL.md"
+        );
+        let mut ledger = read_base_ledger(&target, None).unwrap().unwrap();
+        let entry = ledger
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap();
+        entry.content = String::from_utf8(published.to_vec()).unwrap();
+        entry.content_digest = sha256_digest(published);
+        fs::write(root.join(path), published).unwrap();
+        fs::write(
+            root.join(BASE_PATH),
+            signed_base_ledger(env!("CARGO_PKG_VERSION"), &ledger.files),
+        )
+        .unwrap();
+        let incoming = project_upgrade_candidate_in(&target).unwrap();
+        authenticate_current_base(&ledger, &incoming.files).unwrap();
+        let plan = prepare_with_plugin(&target, &BTreeMap::new()).unwrap();
+        apply(&target, &plan).unwrap();
+        assert_eq!(fs::read(root.join(path)).unwrap(), incoming.files[path]);
+        assert_eq!(
+            prepare_with_plugin(&target, &BTreeMap::new())
+                .unwrap()
+                .changed_paths,
+            [] as [String; 0]
+        );
+        ledger
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap()
+            .content
+            .push_str("Forged baseline\n");
+        assert!(authenticate_current_base(&ledger, &incoming.files).is_err());
     }
 }

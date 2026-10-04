@@ -2005,9 +2005,12 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["private-page"]
         );
-        assert!(query_shared(&user, None, Some("private"), None, 20)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            query_shared(&user, None, Some("private"), None, 20)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[test]
@@ -2083,10 +2086,13 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["alpha-project", "zeta-project"]
         );
-        assert!(register_project(&user, first_entry)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            register_project(&user, first_entry)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
         let collision = RegisteredProject {
             id: "other-project".to_owned(),
             root: first,
@@ -2102,9 +2108,12 @@ mod tests {
         let (_temporary, user, _first, second) = fixture();
         rebuild_shared_index(&user).unwrap();
         write_page(&second, "shared-page", "changed searchable");
-        assert!(query_shared(&user, None, Some("changed"), None, 20)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            query_shared(&user, None, Some("changed"), None, 20)
+                .unwrap()
+                .len(),
+            0
+        );
         rebuild_shared_index(&user).unwrap();
         assert_eq!(
             query_shared(&user, None, Some("changed"), None, 20)
@@ -2173,9 +2182,12 @@ mod tests {
         fs::write(&root_page, page_before).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(query_shared(&user, None, Some("external-only"), None, 20)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            query_shared(&user, None, Some("external-only"), None, 20)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[cfg(unix)]
@@ -2214,10 +2226,11 @@ mod tests {
         fs::rename(saved, &first).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(
+        assert_eq!(
             query_shared(&user, Some(&first), Some("external-only"), None, 20)
                 .unwrap()
-                .is_empty()
+                .len(),
+            0
         );
     }
 
@@ -2275,10 +2288,11 @@ mod tests {
         fs::rename(saved, &controlled).unwrap();
         rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
-        assert!(
+        assert_eq!(
             query_shared(&user, Some(&nested), Some("external-only"), None, 20)
                 .unwrap()
-                .is_empty()
+                .len(),
+            0
         );
     }
 
@@ -2304,10 +2318,11 @@ mod tests {
             category: None,
             limit: 20,
         };
-        assert!(
+        assert_eq!(
             crate::rag::query_wiki_pages_serialized(&snapshot, &manifest, &registry, &request)
                 .unwrap()
-                .is_empty()
+                .len(),
+            0
         );
         assert_eq!(
             query_shared(&user, None, Some("replacement"), None, 20)
@@ -2343,7 +2358,7 @@ mod tests {
         let second = rebuild_shared_index(&user).unwrap();
 
         assert_eq!(second.logical_digest, first.logical_digest);
-        assert!(second.changed_paths.is_empty());
+        assert_eq!(second.changed_paths.len(), 0);
         assert_eq!(fs::read(index).unwrap(), before);
     }
 

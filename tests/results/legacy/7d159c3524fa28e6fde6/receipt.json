@@ -1,0 +1,44 @@
+{
+  "package_version": "0.11.1-test.6",
+  "os": "Windows",
+  "host": "codex",
+  "knowledge_regular_files": 491,
+  "saved_settings_files": 2,
+  "operations": [
+    {
+      "operation": "global-npm-update",
+      "changed_packages": 2,
+      "status": "passed"
+    },
+    {
+      "operation": "user-install",
+      "mode": "--dry-run",
+      "code": "hive.user-install-dry-run-preserving-reinstall-planned",
+      "changed_paths_count": 0
+    },
+    {
+      "operation": "user-install",
+      "mode": "--apply",
+      "code": "hive.user-install-complete-after-preserving-reinstall",
+      "changed_paths_count": 91
+    },
+    {
+      "operation": "user-install",
+      "mode": "--validate",
+      "code": "hive.user-install-valid",
+      "changed_paths_count": 0
+    }
+  ],
+  "status": "passed",
+  "binary_version": "AIgent Hive v0.11.1-test #6 · developer test build (released 2026-10-02)",
+  "binary_digest": "sha256:36734cb8ee9d69bd535a4f7c512265abf01a46872c84603c7ee48cc5668735fd",
+  "knowledge_preserved": true,
+  "saved_settings_preserved": true,
+  "foreign_guidance_preserved": true,
+  "consumer_projects_changed": false,
+  "not_proven": [
+    "fresh-GUI-skill-picker",
+    "explicit-model-invocation",
+    "natural-language-model-invocation"
+  ]
+}

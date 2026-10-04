@@ -9,7 +9,7 @@ summary: "The Korean language core uses a pinned im-not-ai-derived rule pack, de
 tags: [korean, language, skill, v0-10]
 aliases: ["Korean output gate", "humanize-kor"]
 sources:
-  - "repo:.github/workflows/public-test-acceptance.yml#sha256:4990f29ff164bc161b852ac96e1b63f63d6e3961aab60ef68325313b5df1b82c"
+  - "repo:.github/workflows/public-test-acceptance.yml#sha256:421f734c607bfa3d10de846c2388d9e63d94acb7185c0d679bd6da9fc459aa21"
   - "repo:crates/hive-core/src/korean.rs#sha256:bb575d5e73f1567755656c7e6be98cca871416a052e83e920d95b91e77186188"
   - "repo:docs/architecture/korean-language-core.md#sha256:3b97a9ba4e09ea2c68e2094ff57b383e255ecd7e50d85facf50b9f3ea3c56fa3"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:d84549268a83748e23da88c1e9c1d51163776e9511b258feb2b79c3318239e09"
@@ -17,7 +17,7 @@ sources:
   - "repo:harness/skills/humanize-kor/SKILL.md#sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67"
   - "repo:scripts/qualify-korean-public-test.py#sha256:f65f27b409d902b3d44beb1fd7f30f843eacbcb7f3acf5c9288bc04bef659a0c"
 links: [language-consistency, public-skill-identity, v0-10-product-scope]
-reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
+reviewed_revision: "git:af8701b0ee9440a411a2f1701c643c28839ec4e8"
 status: active
 ---
 

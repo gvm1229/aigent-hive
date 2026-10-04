@@ -38,13 +38,7 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/README.md",
     ".hive/team/roles/reviewer.md",
 )
-BUILTIN_SKILL_NAMES = tuple(
-    sorted(
-        path.name
-        for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
-        if path.is_dir() and path.name != "user-setup"
-    )
-)
+BUILTIN_SKILL_NAMES = tuple(sorted(next(item["skills"] for item in read_yaml(REPOSITORY_ROOT / "harness/project-setup/skill-suites.yml")["project_skill_suites"] if item["id"] == "daily-work")))
 CODEX_HIVE_PROJECTION_PATHS = {
     *{f"skills/{relative}" for relative in BUILTIN_REFERENCE_PATHS},
     *{f"skills/{Path(relative).parent.as_posix()}" for relative in BUILTIN_REFERENCE_PATHS},

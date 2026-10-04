@@ -10,12 +10,12 @@ tags: [documentation, release, stable]
 aliases: ["public stable docs"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:e664105a2734fc5ec7c35f93ddc5ce0362ad5e391ae881c63e326a8c25866bca"
-  - "repo:.github/workflows/release.yml#sha256:993bf1709b27d5f6f5c18df46dab392fbb44570ecb3fcc9e0c4bd321fc5dc664"
-  - "repo:README.md#sha256:ef0e22aa026b267338f193ae7a9ebe5ff341609a9f10410f21d0dbb54fe7f853"
-  - "repo:docs/public-stable-release.json#sha256:4afe5f0576ee7b6cf52338d94c3534336f5d79d6941abd9ad7acc4e578c03882"
+  - "repo:.github/workflows/release.yml#sha256:fe8bb871aaa0710a655f41521b7fe7960c63ff5c660795a2ee09aed29cb92631"
+  - "repo:README.md#sha256:cbe5432e605da1a725374981799f2a3555c87cabf8a9409f3315fab4a83fca11"
+  - "repo:docs/public-stable-release.json#sha256:45457a87b48e081972cef7de23a63d5d5533854fa2cb67f34f6c7d264081f668"
   - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
 links: [product-purpose, release-verification]
-reviewed_revision: "git:8a45250106590f065df639132298b840940a3a35"
+reviewed_revision: "git:8a1e2b93fc5e1bf59ea54bdd7bfb4eb6bd63f6da"
 status: active
 ---
 

@@ -1,0 +1,1 @@
+{"schema_version":1,"product_version":"0.11.1","provider":"aigent-hive:codex","skills":{},"local_skills":{ {%- for name in (selected_project_skills + (approved_optional_skills | map(attribute='name') | list)) | sort %}{{ name | tojson }}:"plugin-unavailable-or-unverified"{% if not loop.last %},{% endif %}{% endfor %}}}

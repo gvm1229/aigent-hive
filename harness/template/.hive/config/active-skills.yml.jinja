@@ -1,5 +1,9 @@
 schema_version: 1
+{% if selected_project_skills | length == 0 -%}
+skills: []
+{% else -%}
 skills:
+{% if 'adversarial-judge' in selected_project_skills -%}
 - name: adversarial-judge
   source_type: built-in
   content_digest: sha256:9b8641f4c858698cb8959ed311cc2bcefb7764e1465b6109ec4343c2dc27f215
@@ -9,15 +13,19 @@ skills:
   - run-state
   - subagents
   consent_digest: null
+{% endif -%}
+{% if 'amend-directive' in selected_project_skills -%}
 - name: amend-directive
   source_type: built-in
-  content_digest: sha256:349eaa90b1a84d5cb35d5b04e38320778df8594f34a3539f4b510770c1122095
+  content_digest: sha256:8e9ad50eb58c10d535c7773e58d95a40b07e84da47a223fbd9655e15969ac15c
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'code-polish' in selected_project_skills -%}
 - name: code-polish
   source_type: built-in
   content_digest: sha256:834fe741e1125b76f457ba3b421e73567b3bdcee475ddaa1b16997677bea5f43
@@ -27,6 +35,8 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'custom-subagent-create' in selected_project_skills -%}
 - name: custom-subagent-create
   source_type: built-in
   content_digest: sha256:d879e384a9869eaa2873bf00ff4f53c5b4995976b38f850df6fb9a777b31e754
@@ -38,6 +48,8 @@ skills:
   - shell
   - subagents
   consent_digest: null
+{% endif -%}
+{% if 'humanize-kor' in selected_project_skills -%}
 - name: humanize-kor
   source_type: built-in
   content_digest: sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67
@@ -47,6 +59,8 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'judge-evidence' in selected_project_skills -%}
 - name: judge-evidence
   source_type: built-in
   content_digest: sha256:140dafda618921f8178a0bf8ab9ffa44607ca5ed0fc17079f5990c7bd0e79e77
@@ -55,6 +69,8 @@ skills:
   - filesystem-read
   - run-state
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-capture' in selected_project_skills -%}
 - name: knowledge-capture
   source_type: built-in
   content_digest: sha256:3fbde6d532df67e0de9b15d1b480db9005f0a3247545bc1baf7e16afa7a7fed4
@@ -65,6 +81,8 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-maintain' in selected_project_skills -%}
 - name: knowledge-maintain
   source_type: built-in
   content_digest: sha256:64ed85e443785e97560031f6d64930836f3e349dd5b1b873e22376f76d6b0fd8
@@ -76,6 +94,8 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-promote' in selected_project_skills -%}
 - name: knowledge-promote
   source_type: built-in
   content_digest: sha256:a96707ad90c399aff34475844384d26c1e8f6b6670a3c900b17790b4a264c9ca
@@ -87,6 +107,8 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-recall' in selected_project_skills -%}
 - name: knowledge-recall
   source_type: built-in
   content_digest: sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673
@@ -96,6 +118,8 @@ skills:
   - memory-read
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-scan' in selected_project_skills -%}
 - name: knowledge-scan
   source_type: built-in
   content_digest: sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef
@@ -107,6 +131,8 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'knowledge-transfer' in selected_project_skills -%}
 - name: knowledge-transfer
   source_type: built-in
   content_digest: sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188
@@ -118,6 +144,8 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'multi-goal' in selected_project_skills -%}
 - name: multi-goal
   source_type: built-in
   content_digest: sha256:78519d508ec6b8836c67e2e608c07398aa093bbd70fe0bf5ed69e77f824c7f94
@@ -129,6 +157,8 @@ skills:
   - shell
   - subagents
   consent_digest: null
+{% endif -%}
+{% if 'product-update' in selected_project_skills -%}
 - name: product-update
   source_type: built-in
   content_digest: sha256:4f701367ef653b5119ae2927d20e35986c498df23aee84d0e6f5adb5b8ee97b6
@@ -138,24 +168,30 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'project-refresh' in selected_project_skills -%}
 - name: project-refresh
   source_type: built-in
-  content_digest: sha256:31cf73d71c42e548978b4e80dcc24820546e40f8e1d39cabb5eaaa4eaa78a1ff
+  content_digest: sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'project-setup' in selected_project_skills -%}
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:a13ed7be45b3ee507f77517df44200513242ed54dc97e2137433eb8cefbaa428
+  content_digest: sha256:650ae6135ec398c2ef9bceb59b336b41ce54672ccb6f1e49e0799023e629ad3c
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'project-transition' in selected_project_skills -%}
 - name: project-transition
   source_type: built-in
   content_digest: sha256:61f42b55c441f9683d1f1023d2586b3143849aa35bfe42977c76ba0d55ee167a
@@ -165,18 +201,24 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'prompt-refine' in selected_project_skills -%}
 - name: prompt-refine
   source_type: built-in
   content_digest: sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed
   side_effect_class: none
   capabilities: []
   consent_digest: null
+{% endif -%}
+{% if 'quick-answer' in selected_project_skills -%}
 - name: quick-answer
   source_type: built-in
   content_digest: sha256:03704e8e8a61ed6c8becc38910b83a555c75b109fc618ba20f20bac168089249
   side_effect_class: none
   capabilities: []
   consent_digest: null
+{% endif -%}
+{% if 'research-best-practices' in selected_project_skills -%}
 - name: research-best-practices
   source_type: built-in
   content_digest: sha256:f413df87cfea8b938414550a9045463bda277780f9200ed45eda1d2b4f0822e6
@@ -186,6 +228,8 @@ skills:
   - network
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'run-checkpoint' in selected_project_skills -%}
 - name: run-checkpoint
   source_type: built-in
   content_digest: sha256:2892a1d16f2795a0a2629c5d9082410d29205b0b9f46a41707d3cf40e764f655
@@ -195,6 +239,8 @@ skills:
   - filesystem-write
   - run-state
   consent_digest: null
+{% endif -%}
+{% if 'run-handoff' in selected_project_skills -%}
 - name: run-handoff
   source_type: built-in
   content_digest: sha256:f257a35ba81113d8ce3c0e6e219af4bcdc037cbca08c0083d34e1309958daacc
@@ -204,6 +250,8 @@ skills:
   - filesystem-write
   - run-state
   consent_digest: null
+{% endif -%}
+{% if 'run-resume' in selected_project_skills -%}
 - name: run-resume
   source_type: built-in
   content_digest: sha256:106c44df121b382a306e6725a31ceccb038915eb007b27b438ec587022895d40
@@ -212,6 +260,8 @@ skills:
   - filesystem-read
   - run-state
   consent_digest: null
+{% endif -%}
+{% if 'ship' in selected_project_skills -%}
 - name: ship
   source_type: built-in
   content_digest: sha256:4b37fb1da9359f17bdc4a066c0fdf0c03494067c01567f8eacf9a7ce0f6ece47
@@ -221,6 +271,8 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'team-execution' in selected_project_skills -%}
 - name: team-execution
   source_type: built-in
   content_digest: sha256:2f2f92ac93c8f3a69c40af7ac346a206a330fc7937d7c567e9ce6fc9ea9d1188
@@ -232,6 +284,8 @@ skills:
   - shell
   - subagents
   consent_digest: null
+{% endif -%}
+{% if 'usage-guard' in selected_project_skills -%}
 - name: usage-guard
   source_type: built-in
   content_digest: sha256:7f7e3b9add1ad700d032c2cd0f8a5251ecfdbccf9fa44161dfbb626cb9683cac
@@ -242,6 +296,8 @@ skills:
   - run-state
   - shell
   consent_digest: null
+{% endif -%}
+{% if 'verified-workflow' in selected_project_skills -%}
 - name: verified-workflow
   source_type: built-in
   content_digest: sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf
@@ -253,3 +309,5 @@ skills:
   - shell
   - subagents
   consent_digest: null
+{% endif -%}
+{% endif -%}

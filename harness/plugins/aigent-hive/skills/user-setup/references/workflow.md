@@ -138,3 +138,14 @@ apply to each branch. Do not load every question catalog for a named single-sett
    - When another session already holds an unanswered claim, do not ask a duplicate question. A later session may claim again after the short local claim expires; never store a host session identifier.
    - For yes, save the answer with `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json`, then return the `prompt` field from `hive setup feature prompt --id vector-search --user-root <user-root> --output json` as a new-session prompt. Preserve its fixed collection list and `setup_request_digest`; changed collections require a new preview rather than a quiet scope expansion.
    - For no, save `--answer no` and never ask again unless the user explicitly requests vector-search setup. Do not save a no answer after silence, cancellation, or an interrupted setup.
+
+## Question tool failure
+
+- Use the active host's actual question-tool schema. After an invalid-parameter error, check
+  that schema and reconstruct the question once. If that attempt fails, ask the same question
+  in ordinary text and wait for its answer; do not restart setup or invent tool arguments.
+- Preserve earlier explicit answers and pending progress. Never treat silence, tool failure,
+  or cancellation as a choice. `Invalid tool parameters` without the original tool call does
+  not establish a Hive installation defect.
+- An installation failure follows [recovery](recovery.md). Do not repeat the same failed apply
+  or offer uninstall or administrator execution as an unsupported generic repair.

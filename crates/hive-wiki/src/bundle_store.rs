@@ -3868,7 +3868,7 @@ mod tests {
         .expect("preview merge");
         assert_eq!(preview.archive_sha256s.len(), 2);
         assert!(preview.exact_duplicate_count > 0);
-        assert!(preview.conflict_paths.is_empty());
+        assert_eq!(preview.conflict_paths.len(), 0);
         let encoded =
             encode_bundle(preview.request(), BundleLimits::default()).expect("encode merge");
         assert!(encoded
@@ -4233,7 +4233,7 @@ mod tests {
         assert_eq!(noop.disposition, BundleImportDisposition::Noop);
         assert_eq!(noop.added_count, 0);
         assert!(!noop.index_rebuilt);
-        assert!(noop.changed_paths.is_empty());
+        assert_eq!(noop.changed_paths.len(), 0);
 
         let reexport_path = bundle_dir.path().join("detached-reexport.hivekb");
         export_bundle(
@@ -4321,7 +4321,7 @@ mod tests {
         )
         .expect("import into attached mapping");
         assert_eq!(applied.disposition, BundleImportDisposition::Applied);
-        assert!(applied.detached_collection_ids.is_empty());
+        assert_eq!(applied.detached_collection_ids.len(), 0);
         assert!(mapped_project
             .path()
             .join(WIKI_RELATIVE)
@@ -4601,7 +4601,7 @@ mod tests {
         .unwrap();
         assert_eq!(retry.disposition, BundleImportDisposition::Noop);
         assert!(!retry.canonical_mutation);
-        assert!(retry.changed_paths.is_empty());
+        assert_eq!(retry.changed_paths.len(), 0);
     }
 
     #[test]

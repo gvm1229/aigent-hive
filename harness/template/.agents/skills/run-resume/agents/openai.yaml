@@ -3,4 +3,4 @@ interface:
   short_description: "(run-resume) Validate a work handoff and read safe resume context."
   default_prompt: "Use $aigent-hive:run-resume to load and validate this durable Hive run."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

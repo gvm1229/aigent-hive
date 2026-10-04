@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "actual_os": "Windows",
+  "host": "Codex",
+  "source_commit": "afbb090306a6be6d5ab6688b22bc3660a6d1b823",
+  "acceptance_run_id": 37220067876,
+  "artifacts": 4,
+  "live_platform_names": [
+    "korean-public-test-darwin-arm64",
+    "korean-public-test-linux-x64",
+    "korean-public-test-win32-x64"
+  ],
+  "duplicate_preserved": true,
+  "product_digest_unchanged": "sha256:c4f357f2abdbc6b2231d9e50a025d1e8a35b22dd17060c0c01f3f0454873c074",
+  "limits": "Exact workflow artifact selection only; stable candidate and publication not executed."
+}

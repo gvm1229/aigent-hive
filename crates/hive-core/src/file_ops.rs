@@ -115,6 +115,6 @@ mod tests {
             stage(&dir, OsStr::new("partial"), b"bad", |_| Err("permissions")),
             Err(StageError::Configure("permissions"))
         ));
-        assert!(dir.read("partial").expect("retained empty file").is_empty());
+        assert_eq!(dir.read("partial").expect("retained empty file").len(), 0);
     }
 }

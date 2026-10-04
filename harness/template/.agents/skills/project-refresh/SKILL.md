@@ -27,22 +27,66 @@ Use only for an installed consumer project.
 - Resolve the project and verified executable, inspect Git changes and Hive ownership, and
   preserve unrelated edits. Never select a different release or install it without authority.
 
+## First project Skill policy update
+
+- A missing project_skill_policy_version proposes daily-work as the new default, with 23 Skills
+  when Wiki is enabled. Explain the selected list, removals and plugin/local delivery in preview.
+- The user can accept the default or customize it. For a requested customization, use project-setup
+  to change only the Skill selection with the other validated preferences retained, then preview
+  again. Do not force the default or restart unrelated questions.
+- Policy 1 records the final choice. Later upgrades retain that choice, including an empty list.
+  Preserve modified and foreign Skills and explain remaining duplicates; global updates never
+  apply this transition across projects.
+
 ## Upgrade workflow
 
-1. Run `hive project upgrade --target <project-root> --scan --output json`.
+Resolve the authenticated user root from Hive setup; pass it to every command below.
+An update automatically removes exact Hive-owned plugin-covered copies. Preserve modified
+Skills and their resources; report their paths and remaining duplicate discovery.
+
+1. Run `hive project upgrade --target <project-root> --user-root <user-root> --scan --output json`.
 2. Report installed, base, local, and incoming digests plus every applicable change, including retired Hive Skill removal only when ownership is authenticated.
-3. For preview, run `hive project upgrade --target <project-root> --dry-run --output json`.
+3. For preview, run `hive project upgrade --target <project-root> --user-root <user-root> --dry-run --output json`.
 4. Apply only after the user requests the update:
-   `hive project upgrade --target <project-root> --apply --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --apply --output json`.
 5. Validate with
-   `hive project upgrade --target <project-root> --validate --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --validate --output json`.
 6. If an interrupted activation leaves an upgrade journal requiring recovery, run
-   `hive project upgrade --target <project-root> --recover --output json`.
+   `hive project upgrade --target <project-root> --user-root <user-root> --recover --output json`.
    Inspect whether recovery rolled back or completed forward. This is not an undo command for
    a successful upgrade. Stop on an unauthenticated base or unresolved ownership conflict.
 
 Report changed paths, preserved local changes, validation results, and remaining conflicts.
 Validation proves the Hive projection state, not application tests or the host's compliance.
+
+## Combined customized Skills
+
+Combine incoming Hive improvements with user project rules. Keeping only an old customized file
+does not prove that it received the new improvements.
+
+- An authenticated base permits automatic disjoint three-way changes. Inspect
+  `reports[].omitted_incoming_hunks`; omitted incoming Skill changes require a reviewed combination.
+- No old base for an occupied Skill means no automatic takeover. Never invent a base, move/delete
+  the file, or exclude the built-in as the default repair. Unrelated foreign Skills stay foreign.
+- For the user's requested combination, run
+  `hive project upgrade --target <project-root> --scan --skill-merge-inputs <skill-name> --output json`.
+  Read only the indicated local files and applicable project rules. The result supplies exact
+  incoming contents, project base digest and local/incoming digests.
+- Write a coherent combination of applicable new Hive workflow and user checks, not contradictory
+  concatenated files. Preserve legal notices, resource links and the incoming Skill name. Retain
+  other settings and unrelated files; ask only about unresolved meaning.
+- Use temporary JSON matching `project-skill-merge.schema.json`: `schema_version: 1`,
+  `product_version`, `project_base_digest`, and `files` with `path`, `local_digest`,
+  `incoming_digest`, `merged_content`. Cover each occupied companion needing combination.
+- Preview with `--skill-merges <request.json> --dry-run`. Show the full combined diff, preserved
+  checks, new improvements and any omitted rules with reasons. Obtain approval for that exact
+  content and `skill_merge_approval_digest`; general upgrade authority alone is insufficient.
+- Apply the same request with `--apply --approve-skill-merge <approved-digest>`, using existing
+  exact-path reservations. Changed local/incoming/base/target/plan requires fresh review. Never
+  force stale approval or manually edit ownership ledgers.
+- Run `--validate` without the old request. The new upstream stays the next comparison base;
+  the combined Skill is a local override. Verify the next unchanged preview has zero writes.
+  CLI checks prove bytes and authority, not semantic equivalence or host compliance.
 
 Merge contract:
 

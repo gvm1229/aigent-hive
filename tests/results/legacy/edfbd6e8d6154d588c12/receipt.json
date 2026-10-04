@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "package_version": "0.11.1-test.8",
+  "source_commit": "06d56360748fd4202fec894bfa92c7ddbfe703df",
+  "registry_integrity": "sha512-HWZSQYiA1Aq8ZPnNJCFfabUkKl3QOSWnUyzMWNF/shoHKii9t0bIq3IRoaQpm1JX0n84PmPWlb71Os+mmvLIMQ==",
+  "binary_sha256": "777d76625056f6d86c3eb517c612d1a07cc12550bca2be5281465300bf592556",
+  "version_output": "AIgent Hive v0.11.1-test #8 · developer test build (released 2026-10-05)",
+  "installed": false,
+  "actual_os": "Windows",
+  "limit": "Exact public package integrity and version only; no user installation or model call."
+}

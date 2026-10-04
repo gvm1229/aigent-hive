@@ -782,7 +782,7 @@ mod tests {
         };
         let retry =
             handoff_with_fault(&retry_arguments, HandoffFault::None).expect("exact retry succeeds");
-        assert!(retry.changed_paths.is_empty());
+        assert_eq!(retry.changed_paths.len(), 0);
         assert_eq!(
             fs::read(target.path().join(".hive/runs/run-1/HANDOFF.md")).expect("handoff"),
             handoff_before

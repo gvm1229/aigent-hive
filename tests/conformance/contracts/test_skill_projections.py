@@ -26,13 +26,7 @@ HOST_PATHS = json.loads(
 LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
-PROJECTED_BUILTINS = tuple(
-    sorted(
-        path.name
-        for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
-        if path.is_dir() and path.name != "user-setup"
-    )
-)
+PROJECTED_BUILTINS = tuple(sorted(next(item["skills"] for item in read_yaml(REPOSITORY_ROOT / "harness/project-setup/skill-suites.yml")["project_skill_suites"] if item["id"] == "daily-work")))
 CATALOG_ONLY = ()
 
 

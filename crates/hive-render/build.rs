@@ -141,7 +141,9 @@ fn generate_published_snapshots(root: &Path, registry: &Registry, generated: &mu
         .collect::<BTreeSet<_>>()
     {
         assert!(
-            release_versions.contains(source_version),
+            release_versions.contains(source_version)
+                || source_version
+                    == std::env::var("CARGO_PKG_VERSION").expect("current product version"),
             "published snapshot source release is not registered"
         );
         writeln!(generated, "        \"{source_version}\" => {{").expect("snapshot arm");

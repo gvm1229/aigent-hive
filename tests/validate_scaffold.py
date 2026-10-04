@@ -12,6 +12,7 @@ import tomllib
 from pathlib import Path
 
 import yaml
+from jinja2 import Environment
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 
@@ -812,19 +813,14 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     assert isinstance(active_skills, dict)
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
-    source_active_skills = read_yaml(
-        REPOSITORY_ROOT / "harness/template/.hive/config/active-skills.yml"
-    )
-    assert isinstance(source_active_skills, dict)
-    source_entries = source_active_skills["skills"]
-    assert isinstance(source_entries, list)
-    expected_skill_names = [entry["name"] for entry in source_entries]
+    selected = tomllib.loads((render_root / ".hive/config/harness.toml").read_text(encoding="utf-8"))["selected_project_skills"]
+    source_template = (REPOSITORY_ROOT / "harness/template/.hive/config/active-skills.yml.jinja").read_text(encoding="utf-8")
+    source_bytes = Environment(keep_trailing_newline=True).from_string(source_template).render(selected_project_skills=selected).encode("utf-8")
+    expected_skill_names = sorted(selected)
     if [entry["name"] for entry in active_entries] != expected_skill_names:
         raise AssertionError("Copier activated an unexpected Skill set")
-    if active_skills_path.read_bytes() != (
-        REPOSITORY_ROOT / "harness/template/.hive/config/active-skills.yml"
-    ).read_bytes():
-        raise AssertionError("Copier active Skill ledger changed from source bytes")
+    if active_skills_path.read_bytes() != source_bytes:
+        raise AssertionError("Copier active Skill ledger differs from selected canonical entries")
 
     primary_host = answers["primary_host"]
     projection_roots = [".agents"]

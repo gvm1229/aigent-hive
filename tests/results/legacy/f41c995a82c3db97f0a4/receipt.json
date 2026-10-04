@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "os": "Windows",
+  "scope": "current-user",
+  "native_server": true,
+  "model_calls": 0,
+  "hive_skill_count": 28,
+  "unique_hive_skill_count": 28,
+  "error_count": 0,
+  "not_proven": [
+    "fresh-GUI-picker",
+    "explicit-model-invocation",
+    "natural-language-model-invocation"
+  ]
+}

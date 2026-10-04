@@ -296,6 +296,8 @@ mod tests {
                 .expect("calls lock")
                 .push(format!("run:{}", arguments.join(" ")));
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: true,
                 stdout: Vec::new(),
             })
@@ -374,6 +376,6 @@ mod tests {
             error,
             "CodexBar fallback installation is unsupported on this platform"
         );
-        assert!(runner.calls.lock().expect("calls").is_empty());
+        assert_eq!(runner.calls.lock().expect("calls").len(), 0);
     }
 }

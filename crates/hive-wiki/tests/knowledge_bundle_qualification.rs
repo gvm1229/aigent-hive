@@ -239,5 +239,5 @@ fn schema_objects(connection: &Connection) -> Vec<(String, String)> {
 
 #[test]
 fn qualification_contract_is_release_only() {
-    assert!(!QUALIFICATION_TEST.is_empty());
+    assert_ne!(QUALIFICATION_TEST.len(), 0);
 }

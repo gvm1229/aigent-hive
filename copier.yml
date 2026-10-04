@@ -9,6 +9,62 @@ _exclude:
   # Global setup is installed into the user's host directory, never a project.
   - ".agents/skills/user-setup"
   - ".claude/skills/user-setup"
+  - "{% if primary_host != 'codex' %}.hive/config/skill-providers.json{% endif %}"
+  # Project selection controls generated Skill directories.
+  - "{% if 'adversarial-judge' not in selected_project_skills %}.agents/skills/adversarial-judge{% endif %}"
+  - "{% if 'adversarial-judge' not in selected_project_skills %}.claude/skills/adversarial-judge{% endif %}"
+  - "{% if 'amend-directive' not in selected_project_skills %}.agents/skills/amend-directive{% endif %}"
+  - "{% if 'amend-directive' not in selected_project_skills %}.claude/skills/amend-directive{% endif %}"
+  - "{% if 'code-polish' not in selected_project_skills %}.agents/skills/code-polish{% endif %}"
+  - "{% if 'code-polish' not in selected_project_skills %}.claude/skills/code-polish{% endif %}"
+  - "{% if 'custom-subagent-create' not in selected_project_skills %}.agents/skills/custom-subagent-create{% endif %}"
+  - "{% if 'custom-subagent-create' not in selected_project_skills %}.claude/skills/custom-subagent-create{% endif %}"
+  - "{% if 'humanize-kor' not in selected_project_skills %}.agents/skills/humanize-kor{% endif %}"
+  - "{% if 'humanize-kor' not in selected_project_skills %}.claude/skills/humanize-kor{% endif %}"
+  - "{% if 'judge-evidence' not in selected_project_skills %}.agents/skills/judge-evidence{% endif %}"
+  - "{% if 'judge-evidence' not in selected_project_skills %}.claude/skills/judge-evidence{% endif %}"
+  - "{% if 'knowledge-capture' not in selected_project_skills %}.agents/skills/knowledge-capture{% endif %}"
+  - "{% if 'knowledge-capture' not in selected_project_skills %}.claude/skills/knowledge-capture{% endif %}"
+  - "{% if 'knowledge-maintain' not in selected_project_skills %}.agents/skills/knowledge-maintain{% endif %}"
+  - "{% if 'knowledge-maintain' not in selected_project_skills %}.claude/skills/knowledge-maintain{% endif %}"
+  - "{% if 'knowledge-promote' not in selected_project_skills %}.agents/skills/knowledge-promote{% endif %}"
+  - "{% if 'knowledge-promote' not in selected_project_skills %}.claude/skills/knowledge-promote{% endif %}"
+  - "{% if 'knowledge-recall' not in selected_project_skills %}.agents/skills/knowledge-recall{% endif %}"
+  - "{% if 'knowledge-recall' not in selected_project_skills %}.claude/skills/knowledge-recall{% endif %}"
+  - "{% if 'knowledge-scan' not in selected_project_skills %}.agents/skills/knowledge-scan{% endif %}"
+  - "{% if 'knowledge-scan' not in selected_project_skills %}.claude/skills/knowledge-scan{% endif %}"
+  - "{% if 'knowledge-transfer' not in selected_project_skills %}.agents/skills/knowledge-transfer{% endif %}"
+  - "{% if 'knowledge-transfer' not in selected_project_skills %}.claude/skills/knowledge-transfer{% endif %}"
+  - "{% if 'multi-goal' not in selected_project_skills %}.agents/skills/multi-goal{% endif %}"
+  - "{% if 'multi-goal' not in selected_project_skills %}.claude/skills/multi-goal{% endif %}"
+  - "{% if 'product-update' not in selected_project_skills %}.agents/skills/product-update{% endif %}"
+  - "{% if 'product-update' not in selected_project_skills %}.claude/skills/product-update{% endif %}"
+  - "{% if 'project-refresh' not in selected_project_skills %}.agents/skills/project-refresh{% endif %}"
+  - "{% if 'project-refresh' not in selected_project_skills %}.claude/skills/project-refresh{% endif %}"
+  - "{% if 'project-setup' not in selected_project_skills %}.agents/skills/project-setup{% endif %}"
+  - "{% if 'project-setup' not in selected_project_skills %}.claude/skills/project-setup{% endif %}"
+  - "{% if 'project-transition' not in selected_project_skills %}.agents/skills/project-transition{% endif %}"
+  - "{% if 'project-transition' not in selected_project_skills %}.claude/skills/project-transition{% endif %}"
+  - "{% if 'prompt-refine' not in selected_project_skills %}.agents/skills/prompt-refine{% endif %}"
+  - "{% if 'prompt-refine' not in selected_project_skills %}.claude/skills/prompt-refine{% endif %}"
+  - "{% if 'quick-answer' not in selected_project_skills %}.agents/skills/quick-answer{% endif %}"
+  - "{% if 'quick-answer' not in selected_project_skills %}.claude/skills/quick-answer{% endif %}"
+  - "{% if 'research-best-practices' not in selected_project_skills %}.agents/skills/research-best-practices{% endif %}"
+  - "{% if 'research-best-practices' not in selected_project_skills %}.claude/skills/research-best-practices{% endif %}"
+  - "{% if 'run-checkpoint' not in selected_project_skills %}.agents/skills/run-checkpoint{% endif %}"
+  - "{% if 'run-checkpoint' not in selected_project_skills %}.claude/skills/run-checkpoint{% endif %}"
+  - "{% if 'run-handoff' not in selected_project_skills %}.agents/skills/run-handoff{% endif %}"
+  - "{% if 'run-handoff' not in selected_project_skills %}.claude/skills/run-handoff{% endif %}"
+  - "{% if 'run-resume' not in selected_project_skills %}.agents/skills/run-resume{% endif %}"
+  - "{% if 'run-resume' not in selected_project_skills %}.claude/skills/run-resume{% endif %}"
+  - "{% if 'ship' not in selected_project_skills %}.agents/skills/ship{% endif %}"
+  - "{% if 'ship' not in selected_project_skills %}.claude/skills/ship{% endif %}"
+  - "{% if 'team-execution' not in selected_project_skills %}.agents/skills/team-execution{% endif %}"
+  - "{% if 'team-execution' not in selected_project_skills %}.claude/skills/team-execution{% endif %}"
+  - "{% if 'usage-guard' not in selected_project_skills %}.agents/skills/usage-guard{% endif %}"
+  - "{% if 'usage-guard' not in selected_project_skills %}.claude/skills/usage-guard{% endif %}"
+  - "{% if 'verified-workflow' not in selected_project_skills %}.agents/skills/verified-workflow{% endif %}"
+  - "{% if 'verified-workflow' not in selected_project_skills %}.claude/skills/verified-workflow{% endif %}"
   # Claude project projection carries Skill bodies only, matching the Rust renderer.
   - ".claude/skills/*/agents"
   # The Discord onboarding guide belongs to the user-level installation.
@@ -236,7 +292,6 @@ selected_project_skills:
     - adversarial-judge
     - amend-directive
     - code-polish
-    - custom-subagent-create
     - humanize-kor
     - judge-evidence
     - knowledge-capture
@@ -244,12 +299,9 @@ selected_project_skills:
     - knowledge-promote
     - knowledge-recall
     - knowledge-scan
-    - knowledge-transfer
     - multi-goal
     - product-update
     - project-refresh
-    - project-setup
-    - project-transition
     - prompt-refine
     - quick-answer
     - research-best-practices

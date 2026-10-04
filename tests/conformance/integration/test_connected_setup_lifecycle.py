@@ -439,13 +439,15 @@ else:
         self.assertEqual(harness["usage_stop_remaining_percent"], 17)
         self.assertEqual(
             harness["selected_project_skills"],
-            [
-                "knowledge-recall",
-                "project-setup",
-                "prompt-refine",
-                "usage-guard",
-            ],
+            sorted(next(
+                suite["skills"]
+                for suite in read_yaml(
+                    REPOSITORY_ROOT / "harness/project-setup/skill-suites.yml"
+                )["project_skill_suites"]
+                if suite["id"] == "daily-work"
+            )),
         )
+        self.assertEqual(harness["project_skill_policy_version"], 1)
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
         behavior = (target / ".agents/directives/00-project-harness.md").read_text(encoding="utf-8")
         self.assertIn("Interface language: `ko`", agents)

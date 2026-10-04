@@ -1,6 +1,6 @@
 mod host_state;
 use super::{emit_action_result, ActionResult, Evidence};
-use crate::usage::{CommandRunner, QualifiedExecutable, SystemCommandRunner};
+use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
 use cap_primitives::fs::FollowSymlinks;
 #[cfg(unix)]
@@ -16,16 +16,17 @@ use host_state::{
     codex_compensation_command, compensate_host_mutations, expected_antigravity_plugin_state,
     expected_claude_marketplace_path, expected_codex_marketplace_root,
     expected_codex_plugin_source_path, is_recoverable_dangling_codex_marketplace,
-    probe_antigravity_state, probe_antigravity_state_if_required, probe_claude_state,
-    probe_claude_state_if_required, probe_codex_state, probe_codex_state_if_required,
-    resolve_pending_host_transition, sanitized_command_diagnostic, validate_antigravity_activation,
-    validate_antigravity_prestate, validate_claude_activation, validate_claude_prestate,
-    validate_codex_activation, validate_codex_prestate, validate_installed_host,
+    normalize_host_path, probe_antigravity_state, probe_antigravity_state_if_required,
+    probe_claude_state, probe_claude_state_if_required, probe_codex_state,
+    probe_codex_state_if_required, resolve_pending_host_transition, sanitized_command_diagnostic,
+    validate_antigravity_activation, validate_antigravity_prestate, validate_claude_activation,
+    validate_claude_prestate, validate_codex_activation, validate_codex_prestate,
+    validate_installed_host,
 };
 #[cfg(test)]
 use host_state::{
-    normalize_host_path, parse_antigravity_plugin_state, parse_claude_marketplace_state,
-    parse_claude_plugin_state, parse_codex_marketplace_state, parse_codex_plugin_state,
+    parse_antigravity_plugin_state, parse_claude_marketplace_state, parse_claude_plugin_state,
+    parse_codex_marketplace_state, parse_codex_plugin_state,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -360,6 +361,7 @@ struct RegularTree {
 }
 
 struct UserPlan {
+    deferred_projection: crate::user_setup::AppliedProjection,
     files: BTreeMap<PathBuf, PlannedFile>,
     retired_files: BTreeMap<PathBuf, RetiredFile>,
     changed_paths: Vec<String>,
@@ -1094,6 +1096,103 @@ pub(crate) fn validate_configured_host(
         resolved_skills,
         UserMode::Validate,
     )
+}
+
+/// Read no host cache or configuration. Native structured registration and the
+/// authenticated installed source inventory must both verify before delivery.
+pub(crate) fn validated_codex_plugin_files(
+    user_root: &Path,
+) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
+    let root = open_user_root_for_setup(user_root)?;
+    let (config, skills) = crate::user_setup::resolved_operational_skills(&root)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "global Hive setup is missing".to_owned())?;
+    if !config
+        .selected_hosts
+        .contains(&crate::user_setup::SelectedHost::Codex)
+    {
+        return Err("Codex is not a selected Hive host".to_owned());
+    }
+    validate_configured_host(
+        user_root,
+        crate::user_setup::SelectedHost::Codex,
+        &config,
+        &skills,
+    )?;
+    let language = match config.interface_language {
+        crate::user_setup::InterfaceLanguage::Ko => DescriptorLanguage::Ko,
+        crate::user_setup::InterfaceLanguage::En => DescriptorLanguage::En,
+    };
+    let projection =
+        compile_user_projection_localized(ProjectionHost::Codex, &skills, &[], language)
+            .map_err(|error| error.to_string())?;
+    Ok(projection
+        .files
+        .into_iter()
+        .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        .collect())
+}
+
+pub(crate) fn authentic_historical_user_skill(
+    version: &str,
+    relative: &Path,
+    bytes: &[u8],
+) -> bool {
+    let path = relative.to_string_lossy().replace('\\', "/");
+    let Some(rest) = path.strip_prefix(".agents/skills/") else {
+        return false;
+    };
+    let Some((name, suffix)) = rest.split_once('/') else {
+        return false;
+    };
+    let artifact = format!("skills/{rest}");
+    if version == env!("CARGO_PKG_VERSION")
+        && [DescriptorLanguage::En, DescriptorLanguage::Ko]
+            .into_iter()
+            .any(|language| {
+                compile_user_projection_localized(
+                    ProjectionHost::Codex,
+                    &[name.to_owned()],
+                    &[],
+                    language,
+                )
+                .is_ok_and(|projection| {
+                    projection
+                        .files
+                        .get(&path)
+                        .is_some_and(|expected| expected == bytes)
+                })
+            })
+    {
+        return true;
+    }
+    HISTORICAL_USER_SKILL_CONTENTS
+        .iter()
+        .filter(|(release, _)| *release == version || version == env!("CARGO_PKG_VERSION"))
+        .filter_map(|(_, files)| {
+            files
+                .iter()
+                .find(|(path, _)| *path == artifact)
+                .map(|(_, bytes)| *bytes)
+        })
+        .any(|source| {
+            source == bytes
+                || (Path::new(suffix)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+                    && String::from_utf8_lossy(source)
+                        .replace("\r\n", "\n")
+                        .replace('\n', "\r\n")
+                        .as_bytes()
+                        == bytes)
+                || [DescriptorLanguage::En, DescriptorLanguage::Ko]
+                    .into_iter()
+                    .any(|language| {
+                        hive_projection::localized_builtin_artifact(name, suffix, source, language)
+                            .is_ok_and(|expected| expected == bytes)
+                    })
+        })
 }
 
 fn configured_host(
@@ -1995,6 +2094,7 @@ fn execute_preserving_reinstall(
     Ok(reinstalled)
 }
 
+#[allow(clippy::too_many_lines)]
 fn execute_apply(
     operation: UserOperation,
     arguments: &UserArguments,
@@ -2046,16 +2146,18 @@ fn execute_apply(
         }
     })
     .and_then(|()| {
-        crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
-            |error| {
-                InstallError::Verification(format!(
-                    "saved user preferences could not be restored after installation: {}",
-                    error.message()
-                ))
-            },
-        )
-    })
-    .and_then(|_| validate_applied_bytes(arguments));
+        let mut refreshed = build_plan(arguments)?;
+        refreshed
+            .changed_paths
+            .retain(|path| !refreshed.deferred_projection.changed_paths.contains(path));
+        if refreshed.changed_paths.is_empty() {
+            Ok(refreshed)
+        } else {
+            Err(InstallError::Verification(
+                "user host files failed post-activation byte validation".to_owned(),
+            ))
+        }
+    });
     let mut refreshed = activated.map_err(|primary| {
         rollback_after_failure(
             arguments,
@@ -2068,17 +2170,75 @@ fn execute_apply(
     if let Some(host_version) = host_version.as_deref() {
         bind_host_version(&mut refreshed, host_version);
     }
-    remove_transaction_journal(arguments, &transaction.journal_relative).map_err(|primary| {
+    if arguments.setup_override.is_none() {
+        let selected = match arguments.host {
+            UserHost::Codex => crate::user_setup::SelectedHost::Codex,
+            UserHost::Claude => crate::user_setup::SelectedHost::Claude,
+            UserHost::Antigravity => crate::user_setup::SelectedHost::Antigravity,
+        };
+        let current = crate::user_setup::plan_saved_projection_after_host_install(
+            &arguments.root_cap,
+            selected,
+        )
+        .map_err(|error| {
+            rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                InstallError::Conflict(error.message().to_owned()),
+            )
+        })?;
+        if current.changes != plan.deferred_projection.changes {
+            return Err(rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                InstallError::Conflict(
+                    "user Skill inventory changed after the cleanup preview".to_owned(),
+                ),
+            ));
+        }
+    }
+    let projection = crate::user_setup::apply_planned_user_projection(
+        &arguments.root_cap,
+        &plan.deferred_projection,
+    )
+    .map_err(|error| {
         rollback_after_failure(
             arguments,
             &mut transaction,
             host_executable.as_ref(),
             runner,
-            primary,
+            InstallError::Verification(format!("user Skill refresh failed: {}", error.message())),
         )
     })?;
+    validate_applied_bytes(arguments)
+        .and_then(|_| remove_transaction_journal(arguments, &transaction.journal_relative))
+        .map_err(|primary| {
+            let rollback =
+                crate::user_setup::rollback_user_projection(&arguments.root_cap, &projection);
+            let primary = match rollback {
+                Err(error) => InstallError::Verification(format!(
+                    "{}; user projection rollback failed: {error}",
+                    primary.message()
+                )),
+                Ok(()) => primary,
+            };
+            rollback_after_failure(
+                arguments,
+                &mut transaction,
+                host_executable.as_ref(),
+                runner,
+                primary,
+            )
+        })?;
     refreshed.changed_paths = applied_changed_paths;
-    Ok(success_result(
+    refreshed.changed_paths.extend(projection.changed_paths);
+    refreshed.changed_paths.sort();
+    refreshed.changed_paths.dedup();
+    let mut result = success_result(
         operation,
         arguments,
         &refreshed,
@@ -2091,7 +2251,11 @@ fn execute_apply(
             UserOperation::Update => "user-scope Hive update completed",
         },
         Some(&portable(&transaction.backup_relative)),
-    ))
+    );
+    if let Some(data) = result.data.as_mut() {
+        data["user_projection"] = json!({"paths": projection.reports});
+    }
+    Ok(result)
 }
 
 fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
@@ -2421,16 +2585,38 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
             ownership: "user-install-manifest",
         },
     );
-    let expected_before = snapshot_operation_paths(&arguments.root_cap, &files, &retired_files)?;
+    let selected_host = match arguments.host {
+        UserHost::Codex => crate::user_setup::SelectedHost::Codex,
+        UserHost::Claude => crate::user_setup::SelectedHost::Claude,
+        UserHost::Antigravity => crate::user_setup::SelectedHost::Antigravity,
+    };
+    let deferred_projection = if arguments.setup_override.is_some() {
+        crate::user_setup::AppliedProjection::default()
+    } else {
+        crate::user_setup::plan_saved_projection_after_host_install(
+            &arguments.root_cap,
+            selected_host,
+        )
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?
+    };
+    let mut expected_before =
+        snapshot_operation_paths(&arguments.root_cap, &files, &retired_files)?;
+    for change in &deferred_projection.changes {
+        expected_before.insert(change.path.clone(), change.before.clone());
+    }
     let expected_permissions =
         snapshot_operation_permissions(&arguments.root_cap, &expected_before, &retired_files)?;
-    let changed_paths = changed_paths(
+    let mut changed_paths = changed_paths(
         &expected_before,
         &arguments.root_cap,
         &files,
         &retired_files,
     )?;
+    changed_paths.extend(deferred_projection.changed_paths.clone());
+    changed_paths.sort();
+    changed_paths.dedup();
     Ok(UserPlan {
+        deferred_projection,
         files,
         retired_files,
         changed_paths,
@@ -4271,10 +4457,20 @@ fn apply_plan(
     claude_state_before: Option<ClaudeHostState>,
     antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
+    let mut backup_nonce = [0_u8; 16];
+    getrandom::fill(&mut backup_nonce).map_err(|error| {
+        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
+    })?;
+    let mut encoded_nonce = String::with_capacity(32);
+    for byte in backup_nonce {
+        encoded_nonce.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded_nonce.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
     let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}",
+        ".hive/backups/user-install/{}/{}-{}-{encoded_nonce}",
         arguments.host.as_str(),
         unix_seconds()?,
         std::process::id()
@@ -4302,15 +4498,39 @@ fn apply_plan(
             installed_digest: plan
                 .files
                 .get(relative)
-                .map(|planned| sha256_digest(&planned.bytes)),
+                .map(|planned| sha256_digest(&planned.bytes))
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_deref())
+                        .map(sha256_digest)
+                }),
             installed_executable: plan
                 .files
                 .get(relative)
-                .map(|planned| installed_file_permissions(planned.executable).executable),
+                .map(|planned| installed_file_permissions(planned.executable).executable)
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_ref())
+                        .map(|_| false)
+                }),
             installed_unix_mode: plan
                 .files
                 .get(relative)
-                .and_then(|planned| installed_file_permissions(planned.executable).unix_mode),
+                .and_then(|planned| installed_file_permissions(planned.executable).unix_mode)
+                .or_else(|| {
+                    plan.deferred_projection
+                        .changes
+                        .iter()
+                        .find(|change| change.path == *relative)
+                        .and_then(|change| change.after.as_ref())
+                        .and_then(|_| installed_file_permissions(false).unix_mode)
+                }),
             executable: permissions.executable,
             unix_mode: permissions.unix_mode,
         });
@@ -4363,6 +4583,14 @@ fn apply_plan(
         persist_backup(arguments, &backup_relative, &backup)?;
     }
     for (relative, existing, permissions) in &snapshots {
+        if plan
+            .deferred_projection
+            .changes
+            .iter()
+            .any(|change| change.path == *relative)
+        {
+            continue;
+        }
         let expected = existing.as_deref();
         let expected_permissions = existing.as_ref().map(|_| *permissions);
         let result = if let Some(file) = plan.files.get(relative) {
@@ -4442,7 +4670,7 @@ fn apply_plan(
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
     let mut snapshots = Vec::with_capacity(plan.files.len() + plan.retired_files.len());
-    for relative in plan.files.keys().chain(plan.retired_files.keys()) {
+    for relative in plan.expected_before.keys() {
         validate_relative(relative)?;
         let existing = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
         let permissions = existing
@@ -5403,6 +5631,9 @@ fn activate_host(
     let marketplace_text = marketplace.to_str().ok_or_else(|| {
         InstallError::Unsupported("marketplace path is not valid UTF-8".to_owned())
     })?;
+    let claude_marketplace =
+        (arguments.host == UserHost::Claude).then(|| normalize_host_path(marketplace_text));
+    let marketplace_text = claude_marketplace.as_deref().unwrap_or(marketplace_text);
     let command_sets = activation_commands(arguments.host, &transaction.backup, marketplace_text)?;
     for (command, mutation) in command_sets {
         if let Some(mutation) = mutation {
@@ -5441,7 +5672,7 @@ fn activate_host(
             return Err(InstallError::Unsupported(format!(
                 "{} native plugin command exited unsuccessfully: {}",
                 arguments.host.as_str(),
-                sanitized_command_diagnostic(&command, &output.stdout)
+                sanitized_command_diagnostic(&command, &output)
             )));
         }
     }
@@ -5500,7 +5731,7 @@ fn execute_forward_host_transition(
         if !output.success {
             return Err(InstallError::Unsupported(format!(
                 "Codex Hive stale plugin recovery command exited unsuccessfully: {}",
-                sanitized_command_diagnostic(remove, &output.stdout)
+                sanitized_command_diagnostic(remove, &output)
             )));
         }
         observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
@@ -5538,12 +5769,12 @@ fn execute_forward_host_transition(
         Ok(output) if output.success => Err(InstallError::Verification(format!(
             "{} native plugin command did not produce its exact structured transition: {}",
             arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Ok(output) => Err(InstallError::Unsupported(format!(
             "{} native plugin command returned a non-success result and remains unresolved: {}",
             arguments.host.as_str(),
-            sanitized_command_diagnostic(command, &output.stdout)
+            sanitized_command_diagnostic(command, &output)
         ))),
         Err(error) => Err(InstallError::Unsupported(format!(
             "{} native plugin command `{}` failed before its exact structured transition was observed: {error}",
@@ -6603,6 +6834,8 @@ mod tests {
         ) -> Result<CommandOutput, SensorError> {
             assert_eq!(arguments, ["--version"]);
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: self.success,
                 stdout: self.stdout.clone(),
             })
@@ -6644,6 +6877,7 @@ mod tests {
         ForeignAfterFailedForward,
         ForeignAfterFailedCompensation,
         DanglingCodexMarketplace,
+        RejectClaudeMarketplaceSource,
     }
 
     struct StatefulHostRunner {
@@ -6660,6 +6894,35 @@ mod tests {
     }
 
     impl StatefulHostRunner {
+        fn assert_claude_marketplace_source(&self, arguments: &[&str]) {
+            if self.qualified_host.lock().expect("host").as_str() != "claude" {
+                return;
+            }
+            #[cfg(windows)]
+            assert!(
+                !arguments[3].starts_with(r"\\?\"),
+                "Claude marketplace registration rejects verbatim Windows paths"
+            );
+            let root = Path::new(arguments[3]);
+            let marketplace: serde_json::Value = serde_json::from_slice(
+                &fs::read(root.join(".claude-plugin/marketplace.json"))
+                    .expect("marketplace exists before registration"),
+            )
+            .expect("valid marketplace JSON");
+            assert_eq!(marketplace["name"], "aigent-hive");
+            assert_eq!(marketplace["plugins"][0]["source"], "./plugins/aigent-hive");
+            let plugin: serde_json::Value = serde_json::from_slice(
+                &fs::read(root.join("plugins/aigent-hive/.claude-plugin/plugin.json"))
+                    .expect("plugin exists before registration"),
+            )
+            .expect("valid plugin JSON");
+            assert_eq!(plugin["name"], "aigent-hive");
+            assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
+            assert!(root
+                .join("plugins/aigent-hive/skills/user-setup/SKILL.md")
+                .is_file());
+        }
+
         fn new(root: &Path, sabotage: HostSabotage) -> Self {
             Self {
                 root: root.canonicalize().expect("canonical fake host root"),
@@ -6735,6 +6998,8 @@ mod tests {
                 && *self.marketplace_installed.lock().expect("marketplace")
             {
                 return Some(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -6752,6 +7017,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&entries).expect("Claude marketplace JSON"),
                     })
@@ -6769,6 +7036,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&entries).expect("Claude plugin JSON"),
                     })
@@ -6787,6 +7056,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&json!({"marketplaces": entries}))
                             .expect("Codex marketplace JSON"),
@@ -6827,6 +7098,8 @@ mod tests {
                         Vec::new()
                     };
                     Some(CommandOutput {
+                        stderr: Vec::new(),
+                        exit_code: None,
                         success: true,
                         stdout: serde_json::to_vec(&json!({
                             "installed": entries,
@@ -6871,9 +7144,12 @@ mod tests {
                 | HostSabotage::DriftBeforeLaterCompensation
                 | HostSabotage::ForeignAfterFailedForward
                 | HostSabotage::ForeignAfterFailedCompensation
-                | HostSabotage::DanglingCodexMarketplace => {}
+                | HostSabotage::DanglingCodexMarketplace
+                | HostSabotage::RejectClaudeMarketplaceSource => {}
             }
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: true,
                 stdout: Vec::new(),
             })
@@ -6884,6 +7160,8 @@ mod tests {
             if *failures > 0 {
                 *failures -= 1;
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -6891,6 +7169,8 @@ mod tests {
             let mut installed = self.plugin_installed.lock().expect("plugin");
             if !*installed {
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: false,
                     stdout: Vec::new(),
                 });
@@ -6939,11 +7219,15 @@ mod tests {
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout,
                 });
             }
             Ok(CommandOutput {
+                stderr: Vec::new(),
+                exit_code: None,
                 success: true,
                 stdout: Vec::new(),
             })
@@ -7018,6 +7302,8 @@ mod tests {
             self.calls.lock().expect("calls").push(command.clone());
             if arguments == ["--version"] {
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout: b"1.1.7\n".to_vec(),
                 });
@@ -7037,6 +7323,8 @@ mod tests {
                 }
                 let installed = *self.plugin_installed.lock().expect("plugin");
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout: if installed {
                         serde_json::to_vec(&json!({
@@ -7099,6 +7387,8 @@ mod tests {
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
+                    stderr: Vec::new(),
+                    exit_code: None,
                     success: true,
                     stdout,
                 });
@@ -7108,6 +7398,13 @@ mod tests {
             }
             match command.as_str() {
                 command if command.starts_with("plugin marketplace add ") => {
+                    if matches!(self.sabotage, HostSabotage::RejectClaudeMarketplaceSource) {
+                        return Ok(CommandOutput {
+                            success: false, exit_code: Some(1), stdout: Vec::new(),
+                            stderr: b"Invalid marketplace source format. Try: owner/repo, https://..., or ./path\nsecret=not-for-display".to_vec(),
+                        });
+                    }
+                    self.assert_claude_marketplace_source(arguments);
                     if matches!(self.sabotage, HostSabotage::ForeignAfterFailedForward) {
                         *self.marketplace_installed.lock().expect("marketplace") = true;
                         return Err(SensorError::Failed);
@@ -7161,6 +7458,8 @@ mod tests {
                     let mut installed = self.marketplace_installed.lock().expect("marketplace");
                     if !*installed {
                         return Ok(CommandOutput {
+                            stderr: Vec::new(),
+                            exit_code: None,
                             success: false,
                             stdout: Vec::new(),
                         });
@@ -7178,6 +7477,8 @@ mod tests {
 
     fn successful_output() -> CommandOutput {
         CommandOutput {
+            stderr: Vec::new(),
+            exit_code: None,
             success: true,
             stdout: Vec::new(),
         }
@@ -7406,8 +7707,7 @@ mod tests {
 
     fn seed_test19_retired_empty_agent_dirs(root: &Path) -> Vec<PathBuf> {
         let projection_manifest: serde_json::Value = serde_json::from_slice(
-            &fs::read(root.join(".hive/install/user-projection.json"))
-                .expect("user projection manifest"),
+            &fs::read(root.join(".hive/install/codex.json")).expect("user projection manifest"),
         )
         .expect("user projection manifest JSON");
         let projected_plugin_agents = projection_manifest["entries"]
@@ -7423,8 +7723,10 @@ mod tests {
             "the all-Skill installation must project plugin agent metadata"
         );
         let projected_plugin_agent_count = projected_plugin_agents.len();
+        let generic_projection_present = root.join(".agents/skills/user-setup/SKILL.md").is_file();
         let mut retired_empty_agents = projected_plugin_agents
             .iter()
+            .filter(|_| generic_projection_present)
             .filter_map(|relative| {
                 relative
                     .components()
@@ -7440,7 +7742,7 @@ mod tests {
         retired_empty_agents.extend(projected_plugin_agents);
         assert_eq!(
             retired_empty_agents.len(),
-            projected_plugin_agent_count * 2,
+            projected_plugin_agent_count * if generic_projection_present { 2 } else { 1 },
             "each projected agent metadata file must have both retired empty-directory shapes"
         );
         for relative in &retired_empty_agents {
@@ -8655,6 +8957,7 @@ mod tests {
                 ("0.10.1", 62),
                 ("0.10.2", 68),
                 ("0.10.3", 68),
+                ("0.11.0", 73),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -8809,7 +9112,10 @@ mod tests {
                 seed_historical_09x_user_install(temporary.path(), version, host);
                 let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
                     .expect("direct stable upgrade plan");
-                if matches!(version, "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3") {
+                if matches!(
+                    version,
+                    "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3" | "0.11.0"
+                ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
                             && !path.to_string_lossy().contains("package-review")
@@ -8823,7 +9129,7 @@ mod tests {
                         .filter(|path| temporary.path().join(path).is_file())
                         .cloned()
                         .collect::<Vec<_>>();
-                    assert!(!existing.is_empty());
+                    assert_ne!(existing.len(), 0);
                     assert!(existing
                         .iter()
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
@@ -8834,7 +9140,7 @@ mod tests {
                         .filter(|path| temporary.path().join(path).is_file())
                         .cloned()
                         .collect::<Vec<_>>();
-                    assert!(!existing.is_empty());
+                    assert_ne!(existing.len(), 0);
                     assert!(existing
                         .iter()
                         .all(|path| plan.retired_files.contains_key(Path::new(path))));
@@ -10297,16 +10603,103 @@ mod tests {
     }
 
     #[test]
+    fn claude_install_lifecycle_accepts_spaces_and_unicode() {
+        let temporary = tempdir().expect("tempdir");
+        let root = temporary.path().join("user space 한글");
+        fs::create_dir(&root).expect("user root");
+        let runner = StatefulHostRunner::new(&root, HostSabotage::None);
+        let mut arguments = args(&root, UserHost::Claude, UserMode::Apply);
+        let first = execute(UserOperation::Install, &arguments, &runner).expect("new install");
+        let first_backup = first.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        let first_manifest = root.join(first_backup).join("manifest.json");
+        let original_backup = fs::read(&first_manifest).expect("first backup retained");
+        arguments.mode = UserMode::Validate;
+        execute(UserOperation::Install, &arguments, &runner).expect("validate");
+        arguments.mode = UserMode::Apply;
+        let second = execute(UserOperation::Install, &arguments, &runner).expect("reinstall");
+        let third = execute(UserOperation::Update, &arguments, &runner).expect("update");
+        let second_backup = second.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        let third_backup = third.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        assert_ne!(first_backup, second_backup);
+        assert_ne!(second_backup, third_backup);
+        assert_ne!(first_backup, third_backup);
+        assert_eq!(fs::read(first_manifest).unwrap(), original_backup);
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(!root.join(".hive/install-transactions/claude.json").exists());
+    }
+
+    #[test]
+    fn claude_rejection_keeps_the_first_diagnostic_and_foreign_bytes() {
+        let temporary = tempdir().expect("tempdir");
+        let guidance = temporary.path().join(".claude/CLAUDE.md");
+        fs::create_dir_all(guidance.parent().unwrap()).unwrap();
+        fs::write(&guidance, b"foreign user instructions\n").unwrap();
+        let knowledge = temporary.path().join(".hive/knowledge/preserved.txt");
+        fs::create_dir_all(knowledge.parent().unwrap()).unwrap();
+        fs::write(&knowledge, b"user knowledge\n").unwrap();
+        write_operational_setup(temporary.path(), &["claude"]);
+        let config = temporary.path().join(".hive/config/user-setup.yml");
+        let preferences = fs::read(&config).unwrap();
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::RejectClaudeMarketplaceSource,
+        );
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("rejected source");
+        assert!(error
+            .message()
+            .contains("reason=invalid-marketplace-source"));
+        assert!(error.message().contains("exit-code=1"));
+        assert!(error
+            .message()
+            .contains("cannot be attributed during recovery"));
+        assert!(!error.message().contains("not-for-display"));
+        assert_eq!(fs::read(guidance).unwrap(), b"foreign user instructions\n");
+        assert_eq!(fs::read(knowledge).unwrap(), b"user knowledge\n");
+        assert_eq!(fs::read(config).unwrap(), preferences);
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/claude.json")
+            .exists());
+        assert_eq!(runner.external_state(), (false, false));
+    }
+
+    #[test]
+    fn host_diagnostics_classify_stderr_without_exposing_raw_output() {
+        let output = CommandOutput {
+            success: false,
+            exit_code: Some(1),
+            stdout: b"private stdout token=example-secret".to_vec(),
+            stderr: b"Invalid marketplace source format. Try: owner/repo, https://..., or ./path\nprivate stderr password=example-secret".to_vec(),
+        };
+        let diagnostic =
+            sanitized_command_diagnostic(&["plugin", "marketplace", "add", "example"], &output);
+        assert!(diagnostic.contains("exit-code=1"));
+        assert!(diagnostic.contains("reason=invalid-marketplace-source"));
+        assert!(diagnostic.contains(&sha256_digest(&output.stdout)));
+        assert!(diagnostic.contains(&sha256_digest(&output.stderr)));
+        assert!(!diagnostic.contains("example-secret"));
+        assert!(!diagnostic.contains("Invalid marketplace source format"));
+        let unknown = CommandOutput {
+            stderr: b"secret-value".to_vec(),
+            exit_code: None,
+            success: false,
+            stdout: Vec::new(),
+        };
+        let diagnostic = sanitized_command_diagnostic(&["plugin", "list"], &unknown);
+        assert!(diagnostic.contains("exit-code=unknown; reason=unclassified"));
+        assert!(!diagnostic.contains("secret-value"));
+    }
+
+    #[test]
     fn claude_activation_uses_only_native_fixed_argv() {
         let temporary = tempdir().expect("tempdir");
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
         let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
         execute(UserOperation::Install, &arguments, &runner).expect("Claude install");
-        let marketplace = arguments
-            .user_root
-            .join(".hive/marketplaces/claude")
-            .to_string_lossy()
-            .into_owned();
+        let marketplace = expected_claude_marketplace_path(&arguments).expect("Claude path");
         assert_eq!(
             *runner.calls.lock().expect("calls"),
             [
@@ -11199,6 +11592,104 @@ mod tests {
             sha256_digest(
                 &fs::read(temporary.path().join(&evidence.locator)).expect("backup manifest")
             )
+        );
+    }
+
+    fn seed_old_common_skill_projection(root: &Path) {
+        write_operational_setup(root, &["codex"]);
+        let cap = open_user_root(root).unwrap();
+        let (_, selected) = crate::user_setup::resolved_operational_skills(&cap)
+            .unwrap()
+            .unwrap();
+        let projection = compile_user_projection_localized(
+            ProjectionHost::Codex,
+            &selected,
+            &[],
+            DescriptorLanguage::En,
+        )
+        .unwrap();
+        let mut entries = Vec::new();
+        let mut bases = Vec::new();
+        for (path, bytes) in projection
+            .files
+            .into_iter()
+            .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        {
+            let file = root.join(&path);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, &bytes).unwrap();
+            entries.push(json!({"path":path,"digest":sha256_digest(&bytes)}));
+            bases.push(json!({"path":path,"digest":sha256_digest(&bytes),"content":String::from_utf8(bytes).unwrap()}));
+        }
+        let config = fs::read(root.join(".hive/config/user-setup.yml")).unwrap();
+        fs::create_dir_all(root.join(".hive/install")).unwrap();
+        fs::write(root.join(".hive/install/user-projection.json"), json_line(&json!({
+            "schema_version":2,"product_version":env!("CARGO_PKG_VERSION"),"package_version":env!("CARGO_PKG_VERSION"),"setup_digest":sha256_digest(&config),"entries":entries,"base_entries":bases
+        })).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn user_update_automatically_cleans_exact_common_skills_after_plugin_activation() {
+        let temporary = tempdir().unwrap();
+        seed_old_common_skill_projection(temporary.path());
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let result = execute(UserOperation::Update, &arguments, &runner).unwrap();
+        assert!(!temporary
+            .path()
+            .join(".agents/skills/user-setup/SKILL.md")
+            .exists());
+        assert!(temporary
+            .path()
+            .join(".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md")
+            .is_file());
+        assert!(result
+            .changed_paths
+            .iter()
+            .any(|path| path == ".agents/skills/user-setup/SKILL.md"));
+        let backup = result.data.as_ref().unwrap()["backup"].as_str().unwrap();
+        assert!(temporary
+            .path()
+            .join(backup)
+            .join("files/.agents/skills/user-setup/SKILL.md")
+            .is_file());
+        assert_eq!(
+            execute(UserOperation::Update, &arguments, &runner)
+                .unwrap()
+                .changed_paths
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn failed_plugin_activation_preserves_all_common_skill_resources() {
+        let temporary = tempdir().unwrap();
+        seed_old_common_skill_projection(temporary.path());
+        let original =
+            fs::read(temporary.path().join(".agents/skills/user-setup/SKILL.md")).unwrap();
+        let resource = fs::read(
+            temporary
+                .path()
+                .join(".agents/skills/user-setup/references/workflow.md"),
+        )
+        .unwrap();
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::FailAfterPluginMutation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        assert!(execute(UserOperation::Update, &arguments, &runner).is_err());
+        assert_eq!(
+            fs::read(temporary.path().join(".agents/skills/user-setup/SKILL.md")).unwrap(),
+            original
+        );
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(".agents/skills/user-setup/references/workflow.md")
+            )
+            .unwrap(),
+            resource
         );
     }
 }
