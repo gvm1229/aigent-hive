@@ -464,7 +464,10 @@ class Manager:
                 try:
                     # Fresh process/state/evidence checks and inventory immediately before removal.
                     fresh = self.scan(selected=[row["path"]])[0]
-                    if fresh["status"] != "eligible" or fresh["fingerprint"] != row["fingerprint"]:
+                    if fresh["status"] != "eligible":
+                        row.update(fresh)
+                        continue
+                    if fresh["fingerprint"] != row["fingerprint"]:
                         raise ArtifactError("artifact changed after preview")
                     self.remove(row["path"])
                     row["status"] = "removed"

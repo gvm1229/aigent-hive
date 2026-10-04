@@ -261,6 +261,26 @@ class ArtifactTests(unittest.TestCase):
         with patch.object(self.manager, "remove", side_effect=partial):
             self.assertEqual("cleanup-failed", self.manager.cleanup(apply=True)[0]["status"])
 
+    def test_new_live_process_retains_exact_reason_without_delete_failure(self):
+        self.review()
+        original = self.manager.scan
+        calls = 0
+
+        def changing(**kwargs):
+            nonlocal calls
+            calls += 1
+            rows = original(**kwargs)
+            if calls == 2:
+                rows[0].update(status="active", reason="process-identity-unavailable")
+            return rows
+
+        with patch.object(self.manager, "scan", side_effect=changing), patch.object(self.manager, "remove") as remove:
+            row = self.manager.cleanup(apply=True)[0]
+            remove.assert_not_called()
+        self.assertEqual("active", row["status"])
+        self.assertEqual("process-identity-unavailable", row["reason"])
+        self.assertTrue((self.root / "tests/work/old/data").exists())
+
     def test_actual_bounded_cleanup_and_external_sentinel(self):
         self.review()
         sentinel = self.root / "keep"
