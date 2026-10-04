@@ -1,0 +1,19 @@
+{
+  "accepted_verification_cases": 1,
+  "active_rules_consumed": true,
+  "api_keys_read": 0,
+  "binary_version": "AIgent Hive v0.11.1-test #7 · developer test build (released 2026-10-04)",
+  "corpus_digest": "sha256:737d0b21f975161a518b1585659efab0cfe5b3278cf92745fc2c71216d0cecc6",
+  "initial_activation": true,
+  "inspect_cases": 6,
+  "invalid_rules_rejected": true,
+  "pack_check_current_version": "2.3.2",
+  "pack_check_latest_version": "2.3.2",
+  "pack_manifest_digest": "sha256:50e8bec5fb4c7a479f9e0800f262d49c3e01258ba3c7b9066aab65ba3f7ca34e",
+  "provider_api_calls": 0,
+  "rejected_verification_cases": 3,
+  "rollback_behavior_restored": true,
+  "rollback_version": "2.3.2",
+  "schema_version": 1,
+  "status": "passed"
+}

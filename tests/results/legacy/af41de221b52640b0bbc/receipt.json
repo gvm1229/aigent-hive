@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "package_version": "0.11.1-test.7",
+  "scope": "WProject official read-only Skill merge preview",
+  "actual_os": "Windows",
+  "inspected_files_unchanged": 8,
+  "applied": false,
+  "proposed_changed_paths": 47,
+  "approval_digest": "sha256:a90bd362aa95684879aabda82700d274114124fdfcc02d91a4293f7affa0a107",
+  "local_skill_sha256": "4b0d276648626eab2ff411f4d46f7f3c05163bfcf0a2a203119326d1686d7082",
+  "proposal_sha256": "d4e9cc85b5e8e08d07442b0f95cf1701a4f8dd7bf09e05cfab52bfa0e8c14073",
+  "limit": "Eight inspected files only; no consumer apply, user installation or model invocation."
+}
