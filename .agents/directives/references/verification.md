@@ -1,25 +1,24 @@
 # Verification
 
-## Verification Tiers
+## Tiers
 
-Match verification cost to the current boundary:
-
-1. **Work loop** — run the changed Rust crate tests and directly related Python tests only.
-2. **Pre-commit** — run affected crates plus the nearest black-box, schema, static-contract,
-   or regression tests for the changed behavior.
-3. **Pre-push** — run the full Rust workspace and full Python conformance suite once for the
-   logical milestone being pushed. Do not repeat an unchanged full-suite result for every
-   commit in the same milestone.
-4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
-   suites, installer/update recovery, signing, provenance, and publication qualification.
+1. Work loop: changed Rust crates and related Python tests.
+2. Pre-commit: affected crates and nearest behavior/schema/static/regression tests.
+3. Pre-push: full Rust/Python suites once per milestone, not per commit.
+4. Release: clean-clone CI, all supported OS/architectures, hostile/security tests, install/update
+   recovery, signing, provenance and publication qualification.
 
 ## Test Artifact Lifecycle
 
-- Before a local or CI test that produces source `tests/work/` or `target/debug/` output, use
+- For tests producing `tests/work/` or `target/debug/`, local or CI, use
   `python scripts/test-artifacts.py run --purpose <Korean-summary> --path <owned-path> --command <test-command>`.
-- Keep the resulting `tests/results/runs/*.md` record. A passing test is not a cleanup authority
-  until its result record is reviewed and committed.
-- Use `python scripts/test-artifacts.py check` at a task closure. Resolve every eligible or expired
-  item through an explicit review, then use `cleanup --apply` only for the exact reviewed paths.
-- A path with a live process, a concrete 72-hour reuse reservation, a failed reproduction, or
-  incomplete evidence remains retained. Never use a glob, parent-directory deletion, or age alone.
+- Review and commit `tests/results/runs/*.md` before deletion; passing alone is insufficient.
+- At closure run `python scripts/test-artifacts.py check`; inspect eligible/expired items and use
+  `cleanup --apply --path <exact-path>` after review. Remove completed output in the same task.
+- Preserve live processes, failed reproductions, incomplete evidence and concrete reuse for at most
+  72 hours. No globs, parent deletion, age-only deletion or automatic deadline renewal.
+- Reuse one shared build tree. Child tests default to `CARGO_INCREMENTAL=0`; an explicit override
+  needs bounded reuse. No separate Cargo target per test/retry. Review all consumers before cleanup.
+- Daily: `python scripts/test-artifacts.py daily --apply`; only reviewed output is removed.
+  Report unresolved reviews and storage above 20 GiB. Inspect unknown/expired ownership;
+  archive small evidence before releasing reproductions. See `docs/guides/test-cleanup.md`.
