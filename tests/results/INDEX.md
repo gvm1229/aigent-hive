@@ -1125,3 +1125,9 @@
 | [passed](runs/20261004T205842-5c2b4e469818.md) | 최종 0.11.1 안정판 후보의 공개 파일 대조 준비 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T210208-dfb45104c1e3.md) | 공개 0.11.1 안정판 여섯 패키지와 후보 SHA512 대조 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T210910-af1252cf45a5.md) | 게시된 0.11.1 안정판 무결성 확인서 수집 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T223653-cca7617f3a08.md) | Antigravity 사용량 수신 회귀 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T223813-823ad84b27ab.md) | 0.11.1 기준본과 사용량 수신 빌드 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T223832-66bb6223d1cf.md) | 동결 지문 정합화 뒤 사용량 회귀 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T223945-7021c6f52248.md) | 사용량 CLI 설치 경계와 원문 보존 회귀 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224013-7101ac7cbcc8.md) | 사용량 수신 Rust 정적 검사 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224054-283c332cb450.md) | 사용량 수신 정적 지적 수정 확인 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
