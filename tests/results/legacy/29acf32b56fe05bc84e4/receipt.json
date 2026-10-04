@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "product_version": "0.11.1",
+  "package_version": "0.11.1-dev",
+  "binary_sha256": "e33a0935a93a05e9d10ba0f4d4aa028106f3a8a1196cc778d5a90e6026c7ec98",
+  "os": "win32",
+  "registration": "simulated-native",
+  "actual_ai_verified": false,
+  "scenarios": [
+    "fresh-user-plugin-only",
+    "user-update-automatic-cleanup-and-idempotence",
+    "project-only-selection-preserved",
+    "project-update-restoration-cleanup-and-foreign-preservation",
+    "project-companion-directories-removed-after-plugin-restoration"
+  ]
+}

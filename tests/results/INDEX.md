@@ -10,7 +10,9 @@
 | [passed](legacy/216987327d9437b8f8f6.md) | tests/work/vector-native-qtujpkxl/receipt.json | c138378a1a573658fdc655419b21de89f34e79aa | 원본 JSON 참조 |
 | [failed](legacy/22dcd2a030ce315c6eeb.md) | tests/work/verified-workflow-acceptance-8dkzi35p/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/24b8527d8183dae26a17.md) | tests/work/skill-merge-public-test7/public-binary.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
+| [passed](legacy/29acf32b56fe05bc84e4.md) | tests/work/resource-prune-qualification/fixed.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/2d2e22b05ee47f197749.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/aigent-hive/aigent-hive/tests/work/vector-native-36eg9ttp/receipt.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
+| [failed-and-rolled-back](legacy/2e2073a5bbd14cd5306d.md) | tests/work/skill-merge-public-test7/project-apply-failure.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/33f2199d81acd5b98001.md) | tests/work/knowledge-benchmark-baseline-1000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/34502f13750ead9133e1.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-win32-x64/_temp/korean-public-test-win32-x64.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/34c83b95dac8bea30d43.md) | tests/work/vector-privacy-current-m8_ohepk/receipt.json | not specified in original | 원본 JSON 참조 |
@@ -21,6 +23,7 @@
 | [passed](legacy/52e2ec0f933aba8e7d54.md) | tests/work/verified-workflow-acceptance-0jyfpp95/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/55c3cbf8bf47b5d38606.md) | tests/work/vector-source-x9i5dsz5/receipt.json | not specified in original | 원본 JSON 참조 |
 | [not specified in original](legacy/673321622c85a0ae2eb7.md) | tests/work/skill-merge-public-test7/candidate/release-npm-umbrella/release-candidate.json | not specified in original | 원본 JSON 참조 |
+| [not specified in original](legacy/6bafc654121b96ebd45f.md) | tests/work/resource-prune-qualification/local-checks-summary.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/6ccb1ca0d6ff6f512e0a.md) | tests/work/vector-native-f6f5t3n2/receipt.json | ddbd5908d45882dbddf88580e3587a8a290d91f4 | 원본 JSON 참조 |
 | [passed](legacy/6f7264b6522b91f073ce.md) | tests/work/vector-portability-wzmxb7qt/receipt.json | 01cba41784b2d63fca513edf62201a1966d0910f | 원본 JSON 참조 |
 | [not specified in original](legacy/712cd122823076821291.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-win32-x64/_temp/vector-onboarding-public-test-win32-x64.json | not specified in original | 원본 JSON 참조 |
@@ -47,6 +50,7 @@
 | [passed](legacy/d45b052e637f84111ae3.md) | tests/work/skill-merge-public-test7/registry-integrity.json | 41dc5ff6c02dd83a17ef9f21f21623682105355f | 원본 JSON 참조 |
 | [passed](legacy/d61774a5d427663a3673.md) | tests/work/knowledge-transfer-native/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/dae785a93844d6fec25c.md) | tests/work/vector-privacy-current-cqikgvng/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/de02a504d7f71cc60c20.md) | tests/work/skill-merge-public-test7/user-install-report.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e08157b1c8e5ba7fd862.md) | tests/work/knowledge-benchmark-current-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [not specified in original](legacy/e15b790b7f0a101fe5ac.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/_temp/vector-onboarding-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/e17443fdca866fcff71e.md) | tests/work/skill-merge-public-test7/acceptance/korean-public-test-linux-x64/_temp/korean-public-test-linux-x64.json | not specified in original | 원본 JSON 참조 |
@@ -1075,3 +1079,4 @@
 | [failed](runs/20261004T162559-b33f5ce45c7c.md) | 부속 자료 복원·정리의 수정 개발 빌드 실제 CLI 검증 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261004T162744-9f7554afc956.md) | 부속 자료를 제공하는 전역 선택을 포함한 test.7 회귀 재현 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T162753-9fb032ae77a7.md) | 전역 제공 복원 뒤 부속 자료 정리의 수정 개발 빌드 검증 | 7facf2e4ff92172a69552462e2933ed40c54039e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T163258-ea9ca3951ee1.md) | 정리 직전 프로세스 변화의 실제 보존 사유 유지 검증 | 2a87bf8d3080ad76616582a7e2a845685c8dd128 | Windows-11-10.0.26300-SP0 |

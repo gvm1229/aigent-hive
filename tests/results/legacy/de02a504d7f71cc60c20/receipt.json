@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "scope": "approved current-user update",
+  "package_version": "0.11.1-test.7",
+  "actual_os": "Windows",
+  "existing_knowledge_files_preserved": 502,
+  "existing_settings_files_preserved": 2,
+  "foreign_guidance_preserved": true,
+  "product_cli_update_succeeded": true,
+  "model_calls": 0
+}
