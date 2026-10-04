@@ -14,8 +14,9 @@ sources:
   - "repo:README.md#sha256:cbe5432e605da1a725374981799f2a3555c87cabf8a9409f3315fab4a83fca11"
   - "repo:docs/public-stable-release.json#sha256:45457a87b48e081972cef7de23a63d5d5533854fa2cb67f34f6c7d264081f668"
   - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
+  - "repo:tests/conformance/release/test_release_notes.py#sha256:f32a5b2ed683b7369676d905c4dfeef0546d742a2a2317f6679992b034ed5299"
 links: [product-purpose, release-verification]
-reviewed_revision: "git:8a1e2b93fc5e1bf59ea54bdd7bfb4eb6bd63f6da"
+reviewed_revision: "git:a01b9e3116e901729f9c403b5a1d83d579b81199"
 status: active
 ---
 
@@ -25,3 +26,5 @@ status: active
 README·설치 HTML·제품 개요·문서 색인은 해당 안정판만 안내.
 번호 시험판은 npm·GitHub·유지보수자 검증 기록에 보존, 일반 설치 안내 노출 제외.
 test 후보는 대장 안정판 유지, stable 후보는 build·게시 전 요청 version·배포일 일치 필수.
+
+후보 생성 전 CI에서 현재 출시 설명·실제 소스 버전 검증부 실행. 합성 시험만으로 실제 출시 문서의 검증을 대체하는 방식 제외.
