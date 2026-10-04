@@ -18,6 +18,9 @@
 - [x] [RQP-002] Rust 1.99 검사 호환과 hook 검증 동작 보존
   - state: complete; evidence: repo:tests/results/runs/20261001T185139-c5168eabc611.md#sha256:ee65157244569e7f1f2a0fc102421a00007d0fac488461b1c0633311dc21c06e
 
+- [x] [RQP-003] 재실행된 공개 수용의 유효 산출물 집합 검증
+  - state: complete; evidence: repo:tests/results/legacy/11df02a60451ecd446fc.md#sha256:3b2b7eebd31e48614b0520e910de6666f37a6dfe0e95a3e26f969d839ab1426e
+
 ## 구현과 검증
 
 1. RQP-001: user_install::apply_plan의 시간·PID 백업 이름에 OS 무작위 128비트 값을 추가. 기존 getrandom 의존성과 파일별 배타적 생성 재사용, 기존 백업 덮어쓰기·복구 형식 변경 제외. 기존 빠른 Claude 설치·재설치·갱신 시험에서 백업 경로의 구별과 이전 명세 보존 확인. Windows 관련 시험→전체 Rust·Python→새 번호 원격 수용, 실제 Claude 공개 파일 재검증.
@@ -31,3 +34,12 @@
 - 9658d4e5 Linux CI의 POSIX 전용 빈 값 확인을 같은 길이 조건으로 정정, 문체 한 곳 정정; test.3 미게시·test.4 사용
 
 - fbae6016 Linux CI의 POSIX 다중 줄 빈 값 확인 추가 정정; 다음 후보는 원격 CI 전체 통과 뒤 test.5 생성
+
+## 승격 산출물 검사
+
+- 원인: 수용 실행 37220067876의 macOS 재실행으로 동일 이름 산출물 두 개, 기존 원시 이름 목록 비교의 거절
+- 변경: `.github/workflows/release.yml`에서 만료되지 않은 산출물의 이름 집합 생성, 정확한 세 운영체제 집합 비교 유지. 실행 성공·브랜치·소스·패키지 연결의 기존 검사는 그대로 유지
+- 검사: `test_public_test_acceptance.py`에서 실제 워크플로 명령을 실행, 중복 허용·필수 이름 누락·추가 유효 이름·필수 자료 만료·잘못된 JSON의 거절 확인
+- 범위: 출시 자동화만 변경, 수용한 제품 지문 불변. 공개 시험 재생성·이전 실패 자료 삭제 없음
+- 완료: Windows·Codex 관련 검사 17개와 실제 GitHub 산출물 목록 대조 통과, 제품 지문 불변 확인. 정확한 소스 CI와 main 승격 검사는 정식 게시 전 필수 단계
+- [관련 검사](../../../tests/results/runs/20261004T190420-234110b62b67.md)·[실제 네 산출물의 유효 이름 집합](../../../tests/results/legacy/11df02a60451ecd446fc.md), 필수 누락·추가·만료·잘못된 JSON 거절
