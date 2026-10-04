@@ -75,6 +75,29 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def test_token_summary_preserves_historical_overrun_without_guard_authority(self) -> None:
+        historical = json.loads((REPOSITORY_ROOT / "tests/results/readiness-host-acceptance-2026-09-27.json").read_text(encoding="utf-8"))
+        request = {
+            "schema_version": 1, "budget": historical["budget"], "budget_metric": "input",
+            "sources": [{"source_digest": "sha256:" + hashlib.sha256(b"normalized-measurement").hexdigest(),
+                "parent_digest": None, "coverage": "own", "cache_in_input": True,
+                "baseline": {"input": 0, "output": 0, "cached_input": 0},
+                "baseline_sequence": 0,
+                "observations": [{"sequence": 1, "counters": {
+                    "input": historical["reported_input_used"], "output": 0, "cached_input": 0}}],
+                "final_observed": True}],
+        }
+        path = self.work_root / "normalized-usage.json"
+        path.write_text(json.dumps(request), encoding="utf-8")
+        before = snapshot_tree(self.consumer)
+        process, result = self.invoke("usage", "summarize-tokens", "--request", str(path))
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["data"]["overrun"], historical["budget_overrun"])
+        self.assertFalse(result["data"]["within_budget"])
+        self.assertFalse(result["data"]["hard_cap_enforced"])
+        self.assertFalse(result["data"]["authorizes_dispatch"])
+        self.assertEqual(snapshot_tree(self.consumer), before)
+
     def setUp(self) -> None:
         super().setUp()
         self.consumer = self.work_root / "consumer"

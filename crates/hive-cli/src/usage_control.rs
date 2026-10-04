@@ -1,4 +1,5 @@
 mod antigravity;
+mod token_accounting;
 
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarget};
@@ -27,6 +28,7 @@ USAGE:
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-reset <halt-digest>] --output json
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage summarize-tokens --request <normalized-events.json> --output json
 ";
 
 #[derive(Debug)]
@@ -494,6 +496,7 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
         || arguments == ["threshold", "--help"]
         || arguments == ["session", "--help"]
         || arguments == ["capture", "--help"]
+        || arguments == ["summarize-tokens", "--help"]
     {
         print!("{USAGE_CONTROL}");
         return ExitCode::SUCCESS;
@@ -515,6 +518,7 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
             "ControlUsageSession",
             parse_session(&arguments[1..]).and_then(|parsed| control_session(&parsed)),
         ),
+        Some("summarize-tokens") => ("CheckUsage", token_accounting::run(&arguments[1..])),
         Some("capture") => (
             "CaptureUsage",
             parse_capture(&arguments[1..]).and_then(|parsed| {

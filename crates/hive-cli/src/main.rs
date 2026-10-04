@@ -83,6 +83,7 @@ USAGE:
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage summarize-tokens --request <normalized-events.json> --output json
     hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] --output json
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
@@ -301,7 +302,7 @@ enum ParsedUsageArguments {
 fn run_usage(arguments: &[String]) -> ExitCode {
     if matches!(
         arguments.first().map(String::as_str),
-        Some("enforce" | "status" | "threshold" | "session" | "capture")
+        Some("enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")
     ) {
         return usage_control::run_usage_control(arguments);
     }
