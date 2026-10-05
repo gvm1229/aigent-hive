@@ -1187,3 +1187,7 @@
 | [failed](runs/20261005T001601-7e8a194178b0.md) | 고유 5만 청크의 실제 CLI 색인과 관계 준비 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T001633-350ddbef60f1.md) | 비밀값 오인 없는 고유 5만 정본의 색인과 관계 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T002217-7e08f6a4b7ba.md) | 500개 정본 안의 서로 다른 5만 청크 성능 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002424-64a4cd7b53ef.md) | 관련 문서 변경 후 실제 의미 관계 CLI 계약 검사 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002530-1ca8a7154ce8.md) | 현재 Codex가 검토할 제한된 관계 분석 입력 준비 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002602-9fe3da09535f.md) | 현재 Codex가 검토한 실제 추정 관계의 적용과 원문 보존 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002614-94857ff3b643.md) | 0.11.2 고정 직접 사실 30개와 근거 관계 30개의 CLI 수용 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
