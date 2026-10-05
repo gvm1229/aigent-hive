@@ -1251,3 +1251,5 @@
 | [passed](runs/20261005T120948-938f2b336ed0.md) | Linux 실행 가능한 격리 시험 폴더의 최종 이력 재개 계약 | 2ccd8b174fd9ceb9b33903a25a9f7d555ae5073c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T123618-134bbfd64c59.md) | Rust 1.99 규칙과 관계 빈 목록 시험 정합화 | f10db689cb3664087bdb276daf48695a87ecfe2a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T155250-67d7e0be3d70.md) | 공개 Windows 시험 바이너리의 소진 보호 계약 | ef026a39112c9e971242d349417099a911d9bdd3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184239-0a4193b1d8e8.md) | 승인한 실제 호스트 검사의 공개 바이너리 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184911-a67e783e9ec1.md) | 실제 호스트 CLI 콘솔의 고정 격리 도구 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |

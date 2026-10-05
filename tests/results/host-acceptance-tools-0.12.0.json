@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "package_version": "0.12.0-test.2",
+  "hive_binary_sha256": "ee2df10a1fbee9b7ed8a80b44db117abbdbb3a5d6c31485eaed69da19eabf0ae",
+  "console_library": {
+    "version": "3.0.5",
+    "wheels": [
+      {
+        "filename": "pywinpty-3.0.5-cp312-cp312-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/45/34/942cc95ca4e26489875aa8a95192766247a687379ec29543eebe73ec945f/pywinpty-3.0.5-cp312-cp312-win_amd64.whl",
+        "sha256": "d62946adf14b15b54c0b8d785f93fe18b04da23f4ad59e2e8c4612646e9abd23"
+      }
+    ]
+  },
+  "scope": "Isolated public binary and pinned console tool preparation; no live host capability or model result claimed."
+}
