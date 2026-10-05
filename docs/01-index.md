@@ -203,6 +203,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [구현 가능성 조사](research/followup-feasibility-0.11.2.md)
 - [구현과 Windows 검증 범위](research/implementation-evidence-0.11.2.md)
 - [0.11.2 출시 설명 초안](releases/0.11.2.md)
+- [호스트 지원과 연결 검토](guides/host-support-0.11.2.md)
 - [범위 결정](decisions/ADR-0025-0.11.2-scope.md)
 - [호스트 사용량·중단·분담](plans/active/host-control-0.11.2.md)
 - [Graphify 잔여](plans/active/knowledge-graph-0.11.2.md)
