@@ -1241,3 +1241,5 @@
 | [failed](runs/20261005T112105-e8d4381182eb.md) | Python conformance: contract | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T113337-868ffe0daa7d.md) | 다중 창 이력의 왕복·단일 창 호환·작업 재개 계약 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T113411-500a0c5fa7c7.md) | Windows에서도 유효한 다중 창 이력 왕복과 재개 회귀 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T113705-377d26193411.md) | 다중 창 이력 보완 뒤 전체 Rust·정적 분석 검증 | 35317b78346ee2558183c9edbe1089aec97d7865 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T113840-99e7dbb7892e.md) | 정확한 소진 값 보존과 전체 Rust 최종 검증 | 35317b78346ee2558183c9edbe1089aec97d7865 | Windows-11-10.0.26300-SP0 |
