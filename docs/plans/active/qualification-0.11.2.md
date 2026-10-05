@@ -14,7 +14,7 @@
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
-  - state: agent-owned; depends: HCT120-001,HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 현재 Codex; reason: 사용자 지정 0.12.0 전환 승인, 버전·갱신 회귀·Linux 검사·번호 시험 후보 준비 재개. 실제 호스트 대기는 해당 기준에 보존
+  - state: awaiting-external-evidence; depends: HCT120-001,HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 승인된 실제 호스트 연결·사건을 제공하는 환경; reason: 0.12.0-test.2의 정확한 후보·게시·세 운영체제 공개 자동 검사와 Windows 소진 계약 완료. 남은 선행 기준의 실제 연결·사건·권한 증명 없이 전체 수용 완료 불가
 - [ ] [QLF112-005] 마지막 macOS arm64 오류 재현·수정 검증과 실제 호스트·공개 수용
   - state: awaiting-external-evidence; depends: QLF112-004; owner: macOS 실행 환경; reason: Windows 선행 작업 완료 뒤 실제 macOS의 원래 실패 조건과 수정 후 동작 증명 필요
 
@@ -53,6 +53,8 @@
 - 실행: 관심사별 Rust·Python 회귀 → Windows 실제 지원 호스트 검증 → 관련 Linux 검사 → 공개 시험 후보·출시 문서 준비
 - 전체 완료 기준 누락을 공개 시험 허가로 우회 금지. 후보에 필요한 macOS 빌드 확인과 QLF112-005의 최종 실제 수용을 구분
 - 완료: Windows·Linux 결과, 제외 이유, 정확한 후보 지문과 macOS에 넘길 실행 절차. 0.12.0 안정판·설치 승인과 구분
+- 독립 실행 완료: 후보37333076795·같은 소스 CI37313197680, 게시 복구37336199897, 공개 자동 수용37336511191 모두 통과. [정확한 근거와 macOS 인계](../../research/implementation-evidence-0.12.0.md)의 소스·산출물 지문 보존
+- 선행 미완료 기준의 실제 호스트 수용은 계속 대기. 공개 바이너리의 합성 호스트·사용량 시험을 실제 실행 중단·자식 상속·의미 모델 수용으로 확대 금지
 
 ## QLF112-005: 마지막 할 일
 
