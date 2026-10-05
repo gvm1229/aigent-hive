@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -1666,9 +1667,9 @@ class Phase4Contracts(unittest.TestCase):
                         )
                     )
                 else:
-                    self.assertEqual(history["schema_version"], 1)
-                    self.assertEqual(history["snapshot"]["schema_version"], 1)
-                    self.assertNotIn("quota_pool", history["snapshot"])
+                    self.assertEqual(history["schema_version"], 2)
+                    self.assertEqual([item["quota_window"] for item in history["snapshots"]], ["session", "weekly"])
+                    self.assertTrue(all(item["schema_version"] == 2 and item["quota_pool"] == "default" for item in history["snapshots"]))
                 expected_usage = [
                     "usage",
                     "--provider",
@@ -2203,7 +2204,7 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(config.read_bytes(),before)
 
     def test_automatic_history_rejects_regressions_and_tampering(self) -> None:
-        reset_at = "2026-07-25T00:00:00Z"
+        reset_at = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         for case in ("remaining-increase", "measurement-regression"):
             with self.subTest(case=case):
                 target = self.fresh_target(f"automatic-history-{case}")
