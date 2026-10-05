@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.1 release-date=2026-10-05 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.12.0 release-date=2026-10-06 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -202,7 +202,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [후속 조사 절차](plans/0.11.2-scope-research.md)
 - [구현 가능성 조사](research/followup-feasibility-0.11.2.md)
 - [구현과 Windows 검증 범위](research/implementation-evidence-0.11.2.md)
-- [0.12.0 공개 시험 설명](releases/0.12.0.md)·[이전 0.11.2 초안](releases/0.11.2.md)
+- [`0.12.0`](releases/0.12.0.md)·[승인된 완료 기능 안내문](releases/0.12.0.subscriber.ko.md)·[이전 0.11.2 초안](releases/0.11.2.md)
 - [기본 활성 0% 보호 구현](plans/usage-zero-guard-0.12.0.md)·[0.12.0 검증](research/implementation-evidence-0.12.0.md)
 - [Linux 격리 검증 순서](plans/linux-qualification-0.12.0.md)
 - [승인 뒤 실제 호스트 검증](plans/host-acceptance-0.12.0.md)
