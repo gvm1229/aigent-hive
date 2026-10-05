@@ -1172,3 +1172,7 @@
 | [passed](runs/20261005T000006-9aed15ff4773.md) | Graphify 후보의 고정 해시 환경에서 코드 추출 검증 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T000048-97eb31992219.md) | Graphify 추가 수정 이름 변경 삭제의 전체 재생성 대조 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T000129-d35ee21fb844.md) | Graphify 후보 동등성 실패의 양쪽 지문과 출하 제외 판정 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000320-1e981edfc956.md) | 의미 관계의 제한된 관련 문서와 미전달 대상 거부 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000347-febf19965084.md) | 관련 문서 전달 후 의미 관계 CLI 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000427-9229df942767.md) | 관련 문서 변경 후 지식 명령 전체 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000438-52ce01ec2ca6.md) | 관련 문서 경계 변경의 Rust 정적 검사 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
