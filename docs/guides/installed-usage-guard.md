@@ -115,3 +115,22 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 Windows Codex에서 [명령·사용량 검사](../../tests/results/runs/20260919T082740-2745afbd4d3d.md)
 66개 통과, POSIX 전용 4개 제외. [CLI 단위 시험](../../tests/results/runs/20260919T083543-4aa35fb79366.md)
 462개 통과, 별도 실행 환경 1개 제외. 합성 입력의 명령 결과와 상태 보존 증거이며 실제 호스트 실행·다른 운영체제 증명 제외.
+
+## 0.12.0 기본 활성 소진 보호
+
+- 목적: 구독 잔여량 0%에서 Hive 경유 새 자동 작업 차단, 유료 크레딧으로의 자동 진행 위험 감소
+- 기본 활성: 전역·현재 대화의 일반 보호 해제 뒤에도 검사 유지. 전달된 세션·주간·제공자 모음 중 하나라도 0%면 `hive.usage-quota-exhausted`, 종료 코드 3
+- 누락·손상·만료·다른 계정: 안전한 판단 불가로 차단. 충분한 다른 창의 잔여량이나 유료 크레딧으로 소진 창 대체 금지
+- 차단 기록과 새 측정: 기존 초기화 보호의 저장·원자적 교체 경로 재사용. 단순 재개·초기화 확인으로 소진 해제 불가
+- 잔량 회복: 새 측정 뒤 소진 차단 해제 가능. 일반 초기화 보호 활성 시 증가 감지의 별도 확인 절차 유지
+- 현재 대화 한정 제외: 정확한 호스트·대화·프로세스의 아래 별도 명령. 새 대화·프로세스 기본 활성
+
+```text
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-zero-quota-guard --confirm-zero-quota-guard-disable --output json
+```
+
+- 복원: 확인 인자 없는 `--action enable-zero-quota-guard`, 두 명령 뒤 같은 연결의 `enforce` 필수
+- 제외 뒤 일반 하한 보호 유지. 두 보호를 각각 명시적으로 해제한 경우만 측정 우회·크레딧 사용 가능성
+- Windows·Codex 개발 검증: Rust 사용량102개·공개 명령28개 통과, Windows 링크 시험1개 제외. 합성 측정·파일·제어 결합의 증명
+- 실제 계정의 0% 소진·유료 전환 시험 미실행, 계정 비용 발생 시험 제외. 지원 중단 연결 없는 진행 중 호스트 호출·Hive 밖 호출의 크레딧 사용 방지 보장 제외
+- 현재 설치 0.11.1과 개발 0.12.0 구분. 도움말의 새 명령 지원 확인 선행, 현재 사용자 설치 승인 별도

@@ -197,12 +197,13 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [0.10.2 지침 품질](plans/active/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
 | [0.10.2 출시](plans/active/release-0.10.2.md) | 이전 출시 검증 보존 |
 
-## 0.11.2 범위와 조사
+## 0.12.0 범위와 이전 조사
 
 - [후속 조사 절차](plans/0.11.2-scope-research.md)
 - [구현 가능성 조사](research/followup-feasibility-0.11.2.md)
 - [구현과 Windows 검증 범위](research/implementation-evidence-0.11.2.md)
-- [0.11.2 출시 설명 초안](releases/0.11.2.md)
+- [0.12.0 출시 설명 초안](releases/0.12.0.md)·[이전 0.11.2 초안](releases/0.11.2.md)
+- [기본 활성 0% 보호 구현](plans/usage-zero-guard-0.12.0.md)·[0.12.0 검증](research/implementation-evidence-0.12.0.md)
 - [호스트 지원과 연결 검토](guides/host-support-0.11.2.md)
 - [범위 결정](decisions/ADR-0025-0.11.2-scope.md)
 - [호스트 사용량·중단·분담](plans/active/host-control-0.11.2.md)
