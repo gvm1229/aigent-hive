@@ -256,6 +256,7 @@ mod tests {
         let base = BaseLedger {
             schema_version: 1,
             product_version: "0.11.0".to_owned(),
+            package_version: None,
             files: Vec::new(),
             ledger_digest: sha256_digest(b"authenticated project base"),
         };

@@ -46,6 +46,8 @@ const FORMATTER_MARKER_START: &str = "# AIGENT-HIVE:FORMAT:START";
 const FORMATTER_MARKER_END: &str = "# AIGENT-HIVE:FORMAT:END";
 const FORMATTER_IGNORE: &str = "# AIGENT-HIVE:FORMAT:START\n.agents/skills/\n.agents/directives/\n.claude/skills/\n.hive/config/active-skills.yml\n.hive/config/approved-skills.yml\n.hive/config/capability-resolution.yml\n.hive/config/project-base.json\n.hive/config/project-overrides.json\n.hive/team/roles/\n# AIGENT-HIVE:FORMAT:END\n";
 const PROJECT_OVERRIDES_PATH: &str = ".hive/config/project-overrides.json";
+/// Exact compiled package identity; test packages are not stable migration targets.
+pub const PACKAGE_VERSION: &str = env!("HIVE_RENDER_PACKAGE_VERSION");
 const SETUP_SCHEMA: &str = include_str!("../../../schemas/setup-answers.schema.json");
 const ROLE_SCHEMA: &str = include_str!("../../../schemas/role-profile.schema.json");
 const CAPABILITY_SCHEMA: &str = include_str!("../../../schemas/capability-matrix.schema.json");
@@ -3856,6 +3858,13 @@ fn project_upgrade_files(
 }
 
 fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, RenderError> {
+    render_project_base_with_package(files, PACKAGE_VERSION)
+}
+
+fn render_project_base_with_package(
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    package_version: &str,
+) -> Result<Vec<u8>, RenderError> {
     let mergeable = project_upgrade_files(files)?;
     let mut entries = Vec::new();
     for (path, bytes) in mergeable {
@@ -3880,6 +3889,12 @@ fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, Re
         "product_version": env!("CARGO_PKG_VERSION"),
         "files": entries,
     });
+    if package_version != env!("CARGO_PKG_VERSION") {
+        value.as_object_mut().expect("project base payload").insert(
+            "package_version".to_owned(),
+            JsonValue::String(package_version.to_owned()),
+        );
+    }
     let canonical = serde_json_canonicalizer::to_vec(&value).map_err(|error| {
         RenderError::Internal(format!("cannot canonicalize project base ledger: {error}"))
     })?;
@@ -6598,6 +6613,43 @@ fn io_internal(error: io::Error) -> RenderError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_project_base_retains_exact_package_identity_in_its_digest() {
+        let files = std::collections::BTreeMap::from([(
+            std::path::PathBuf::from(".agents/skills/project-setup/SKILL.md"),
+            b"controlled Skill bytes\n".to_vec(),
+        )]);
+        let product = env!("CARGO_PKG_VERSION");
+        let package = format!("{product}-test.3");
+        let bytes = super::render_project_base_with_package(&files, &package).unwrap();
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value["product_version"], product);
+        assert_eq!(value["package_version"], package);
+        let digest = value
+            .as_object_mut()
+            .unwrap()
+            .remove("ledger_digest")
+            .unwrap();
+        assert_eq!(
+            digest,
+            serde_json::Value::String(hive_core::sha256_digest(
+                &serde_json_canonicalizer::to_vec(&value).unwrap()
+            ))
+        );
+        value["package_version"] = serde_json::json!(format!("{product}-test.4"));
+        assert_ne!(
+            digest,
+            serde_json::Value::String(hive_core::sha256_digest(
+                &serde_json_canonicalizer::to_vec(&value).unwrap()
+            ))
+        );
+        let stable: serde_json::Value = serde_json::from_slice(
+            &super::render_project_base_with_package(&files, product).unwrap(),
+        )
+        .unwrap();
+        assert!(stable.get("package_version").is_none());
+    }
+
     #[cfg(unix)]
     use super::execute_setup_in;
     use super::{
