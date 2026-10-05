@@ -1235,3 +1235,4 @@
 | [failed](runs/20261005T104818-684766d0fed1.md) | Linux 로컬 실행 파일로 같은 관계·설치 수용 재검증 | bccec7509cc065a3a13d6f5b47864e57e23c0fea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T105935-426f2f479d29.md) | Linux 임시 문서·색인의 네이티브 파일 시스템 수용 | eb5d2eee9350c41c9d535cd331c3ea4914b0b4c4 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T111202-d9e0f13362b4.md) | Python conformance: documentation, security, contract, integration, release | 86138911b3c143cf61c39c98c0b4091a1003cb64 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T111346-bc2a5fff7117.md) | Python conformance: documentation, security, contract, integration, release | 59c1a69f3c889173191e4dbdde0085859b629ed1 | Windows-11-10.0.26300-SP0 |
