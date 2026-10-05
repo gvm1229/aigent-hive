@@ -9,16 +9,18 @@ summary: "Maintainer-approved scope for 0.12.0, with Windows first and macOS-spe
 tags: [scope, v0-12-0, windows]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:84a2fba7eacd840fdd0bac536595b58b6f73afb2381fea7c8cc971a3ae1f6247"
+  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:c4b1eb00f0ce498b28622ac773bf9b8108164e93d82a703d1214cf5af5b39002"
 links: [knowledge-storage, marketing-deck-record, product-purpose]
-reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
+reviewed_revision: "git:1f642217752c4d6bb7fa85d1d296ca1fa66968cf"
 status: active
 ---
 
 # 0.12.0 Scope and Windows First
 
-The maintainer moved the approved 0.11.2 work to 0.12.0 on 2026-10-05. It includes usage control, host-owned delegation, remaining Graphify work and diagnostics. Only verified host features activate; others stay disabled or pending. Enabled relations run after capture and preserve saved knowledge on analysis failure.
+The maintainer moved approved 0.11.2 work to 0.12.0 on 2026-10-05: usage, host-owned delegation, Graphify and diagnostics. Only verified host features activate; others stay disabled or pending. Enabled relations run after capture; analysis failure preserves saved knowledge.
 
-Windows comes first and macOS last. Claude live validation and signing remain pending. Notion and the old presentation are retired. Logo and vectors are complete; engine comparisons stay references. Obsidian needs Markdown without extra plugins. Research does not prove live acceptance.
+Windows first, macOS last. Claude live checks and signing wait. Notion and presentations retire. Logo and vectors are complete; engine comparisons remain references. Obsidian uses Markdown without extra plugins. Research does not prove live acceptance.
 
-The added zero-quota safeguard defaults on, with a separate session opt-out. It gates new Hive work; active host interruption remains unverified.
+Zero-quota protection defaults on with a separate session opt-out. It gates new Hive work; active host interruption is unverified.
+
+Automated status-line changes and official Windows sandbox recovery were approved on 2026-10-06.

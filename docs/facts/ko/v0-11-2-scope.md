@@ -9,9 +9,9 @@ summary: "사용자 결정에 따른 0.12.0 범위, Windows 우선과 macOS 최�
 tags: [scope, v0-12-0, windows]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:84a2fba7eacd840fdd0bac536595b58b6f73afb2381fea7c8cc971a3ae1f6247"
+  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:c4b1eb00f0ce498b28622ac773bf9b8108164e93d82a703d1214cf5af5b39002"
 links: [knowledge-storage, marketing-deck-record, product-purpose]
-reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
+reviewed_revision: "git:1f642217752c4d6bb7fa85d1d296ca1fa66968cf"
 status: active
 ---
 
@@ -23,3 +23,4 @@ status: active
 - Notion·발표 폐기, 로고·벡터 완료, 엔진 비교 보존. Obsidian 별도 플러그인 제외
 - 조사·구현과 실제 호스트 수용 증명 구분
 - 추가 0% 보호 기본 활성·별도 대화 한정 제외. 새 Hive 작업 차단, 진행 중 호스트 중단은 미검증
+- 2026-10-06 자동 수용의 상태 표시 변경·Windows 공식 복구에 필요한 수동 승인 허용
