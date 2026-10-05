@@ -1248,3 +1248,4 @@
 | [passed](runs/20261005T115418-7584f00c6d1c.md) | Python conformance: integration | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T120101-8844a52a92c0.md) | Python conformance: release | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T120356-19a43709c352.md) | 최종 다중 창 이력의 Linux 재개 계약 | 02399695893c9431c74b5028f5c806b6ddb62cc1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T120948-938f2b336ed0.md) | Linux 실행 가능한 격리 시험 폴더의 최종 이력 재개 계약 | 2ccd8b174fd9ceb9b33903a25a9f7d555ae5073c | Windows-11-10.0.26300-SP0 |
