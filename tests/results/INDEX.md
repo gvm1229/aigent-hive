@@ -1250,3 +1250,4 @@
 | [failed](runs/20261005T120356-19a43709c352.md) | 최종 다중 창 이력의 Linux 재개 계약 | 02399695893c9431c74b5028f5c806b6ddb62cc1 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T120948-938f2b336ed0.md) | Linux 실행 가능한 격리 시험 폴더의 최종 이력 재개 계약 | 2ccd8b174fd9ceb9b33903a25a9f7d555ae5073c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T123618-134bbfd64c59.md) | Rust 1.99 규칙과 관계 빈 목록 시험 정합화 | f10db689cb3664087bdb276daf48695a87ecfe2a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T155250-67d7e0be3d70.md) | 공개 Windows 시험 바이너리의 소진 보호 계약 | ef026a39112c9e971242d349417099a911d9bdd3 | Windows-11-10.0.26300-SP0 |
