@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "model_calls": 0,
+  "sandbox_policy": "CLI default; no policy override or permission repair command",
+  "codex_binary_sha256": "37762753b554982eef1c109303d1be652b6397f1479e844794353a85650199c6",
+  "read_executable_sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+  "direct_single": [
+    {
+      "path_case": "plain",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.516,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.5,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "direct_concurrent": [
+    {
+      "path_case": "plain",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.234,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.219,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "sandbox_single": [
+    {
+      "path_case": "plain",
+      "sandbox": true,
+      "exit_code": 1,
+      "seconds": 1.625,
+      "expected_bytes_read": false,
+      "startup_failure": "sandbox-bin-acl-startup",
+      "stderr_sha256": "a841a097c078d9fe9bb5aa136d4e7f0d6465585da60073b2e03b89d2a80f5cbc",
+      "stderr_bytes": 160
+    }
+  ],
+  "sandbox_remaining": "not-run: startup failure before payload; avoid unchanged retries",
+  "status": "external-startup-failure",
+  "canonical_fixture_preserved": true
+}
