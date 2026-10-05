@@ -1168,3 +1168,7 @@
 | [passed](runs/20261004T234702-5542649fbf2c.md) | 0.11.1 역사 스킬 등록부와 렌더링 검사 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T234715-f5cf56aafaba.md) | 동결 프로젝트 원본 렌더링 회귀 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T235153-d27a4e9d0adb.md) | 최근 안정판 두 버전의 스킬 역사 수용 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T235707-13ed196229ec.md) | Graphify 0.9.76 후보의 격리 평가와 유지 판정 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000006-9aed15ff4773.md) | Graphify 후보의 고정 해시 환경에서 코드 추출 검증 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000048-97eb31992219.md) | Graphify 추가 수정 이름 변경 삭제의 전체 재생성 대조 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000129-d35ee21fb844.md) | Graphify 후보 동등성 실패의 양쪽 지문과 출하 제외 판정 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
