@@ -14,7 +14,7 @@
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
-  - state: agent-owned; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 현재 Codex; reason: 사용자 지정 0.12.0 전환 승인, 버전·갱신 회귀·Linux 검사·번호 시험 후보 준비 재개. 실제 호스트 대기는 해당 기준에 보존
+  - state: agent-owned; depends: HCT120-001,HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 현재 Codex; reason: 사용자 지정 0.12.0 전환 승인, 버전·갱신 회귀·Linux 검사·번호 시험 후보 준비 재개. 실제 호스트 대기는 해당 기준에 보존
 - [ ] [QLF112-005] 마지막 macOS arm64 오류 재현·수정 검증과 실제 호스트·공개 수용
   - state: awaiting-external-evidence; depends: QLF112-004; owner: macOS 실행 환경; reason: Windows 선행 작업 완료 뒤 실제 macOS의 원래 실패 조건과 수정 후 동작 증명 필요
 

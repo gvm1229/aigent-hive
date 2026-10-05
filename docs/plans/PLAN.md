@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 389
+> Revision: 390
 > 기준일: 2026-10-05
 > Product version: `0.12.0`
 > 공개 Stable: `0.11.1`
@@ -25,17 +25,17 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 호스트 사용량·중단·분담 | 0 | 5 | 0.0% |
+| 호스트 사용량·중단·분담 | 1 | 5 | 16.7% |
 | Graphify 미완료 확장 | 2 | 1 | 66.7% |
 | 계측·진단·운영체제 수용 | 1 | 4 | 20.0% |
-| **현재 범위 합계** | **3** | **10** | **23.1%** |
+| **현재 범위 합계** | **4** | **10** | **28.6%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT112-001–005` | 호스트 사용량·중단·분담 |
+| [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT112-001–005`, `HCT120-001` | 호스트 사용량·중단·분담 |
 | [knowledge-graph-0.11.2.md](active/knowledge-graph-0.11.2.md) | `GPH112-001–003` | Graphify 미완료 확장 |
 | [qualification-0.11.2.md](active/qualification-0.11.2.md) | `QLF112-001–005` | 계측·진단·운영체제 수용 |
 
@@ -54,5 +54,5 @@
 
 ## 추가 승인
 
-- 2026-10-05 사용자 지정 0.12.0 전환. 원래 13개 ID·문서 경로·실행 근거 보존
+- 2026-10-05 사용자 지정 0.12.0 전환. 원래 13개 ID·문서 경로·실행 근거 보존, 추가 소진 보호 HCT120-001 별도 집계
 - [0% 보호 구현](usage-zero-guard-0.12.0.md): 일반 보호 해제와 독립, 기본 활성·현재 대화 한정 명시적 제외

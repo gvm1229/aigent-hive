@@ -21,6 +21,9 @@
 - [ ] [HCT112-005] Windows Codex·Antigravity 도구별 검사·자식 상속·오류 처리 수용
   - state: awaiting-external-evidence; owner: 승인된 실제 호스트 검증 대화; reason: 변환기 계약·지원 표 검증 완료, Antigravity 자식의 실제 이벤트 상속과 파일 변경 전후 증명 부재
 
+- [x] [HCT120-001] 기본 활성 0% 보호·별도 대화 한정 제외·새 작업 차단 회귀
+  - state: complete; evidence: repo:tests/results/runs/20261005T094857-7b6b1f6920bf.md#sha256:8739824220d1bd2455f65e9ba4dc7f1171065fa5ab2ae06b92f11f4b3590d40f
+
 ## HCT112-001
 
 - 읽기·변경: `crates/hive-cli/src/usage_control.rs`의 `parse_capture`, `capture_claude`, `read_claude_capture_snapshot`, Antigravity 관측 분기. `usage.rs`의 정규화 구조 재사용
@@ -67,3 +70,5 @@
 ## 추가 소진 보호
 
 - HCT112-003의 독립 구현: [0% 보호](../usage-zero-guard-0.12.0.md). 현재 실행 중단 연결 수용과 구분
+
+- HCT120-001 수용: Windows·Codex 개발의 합성 입력·차단 기록·명령 검사. 현재 계정의 실제 0%·유료 전환·진행 중 호출 중단 증명 제외, HCT112-003의 외부 연결 대기 보존
