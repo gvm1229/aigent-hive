@@ -3661,9 +3661,26 @@ mod tests {
     }
 
     #[test]
-    fn disabled_installed_guard_bypasses_sensors_and_preserves_one_shot_authorization() {
+    fn both_explicit_guard_opt_outs_preserve_one_shot_authorization_without_sensors() {
         let (_temp, target, capability) = setup_run();
         write_usage_config(&target, false, false);
+        // Ordinary disable alone no longer bypasses the independent exhaustion safeguard.
+        let session_digest = sha256_digest(b"codex\0fixture-session");
+        let control_path = target
+            .join(".hive/runtime/usage-guard/sessions")
+            .join(session_digest.strip_prefix("sha256:").expect("digest"))
+            .join("control.json");
+        fs::create_dir_all(control_path.parent().expect("control parent")).expect("control dir");
+        fs::write(
+            control_path,
+            serde_json::to_vec(&json!({
+                "schema_version": 1, "host_scope": "codex", "session_id_digest": session_digest,
+                "process_id": 4242, "guard_enabled": false, "zero_quota_guard_disabled": true,
+                "revision": 1,
+            }))
+            .expect("control bytes"),
+        )
+        .expect("explicit opt-out fixture");
         let request = write_checkpoint_request(&target, 0, "2026-07-24T00:00:00Z", &[], None);
         checkpoint(&CheckpointArguments {
             target: target.clone(),
