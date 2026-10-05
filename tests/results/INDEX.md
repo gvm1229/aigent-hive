@@ -1212,3 +1212,4 @@
 | [failed](runs/20261005T012637-c76a8f519f2d.md) | 파일 수집과 동일 내용 재수집의 관계 처리 검증 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T012808-0da2bf26ebfd.md) | 정상 지식 저장 구조를 갖춘 파일 수집 관계 회귀 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T012952-491948cd08ed.md) | 파일 수집 뒤 관계 알림의 Rust 정적 검사 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T014034-6fb8fc7689ee.md) | 출처 지문 정합화 뒤 전체 관계 CLI와 고정 질문 재검증 | 355a66483fb42f28184538c313ebc440f9ae394a | Windows-11-10.0.26300-SP0 |
