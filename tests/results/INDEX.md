@@ -1193,3 +1193,4 @@
 | [passed](runs/20261005T002614-94857ff3b643.md) | 0.11.2 고정 직접 사실 30개와 근거 관계 30개의 CLI 수용 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T002716-002a33bdb436.md) | Python conformance: contract | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T003733-06d6b5ae1759.md) | 같은 실행 파일의 직접 읽기와 Windows 샌드박스 읽기 비교 | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T004000-ec9afad7ad40.md) | 통합 검사의 지식 라이브러리 전체 회귀 | 0717d2cf35a48eba96414e0976ae2d67f4ff5238 | Windows-11-10.0.26300-SP0 |
