@@ -1247,3 +1247,4 @@
 | [passed](runs/20261005T115235-a5b966567d5a.md) | 최종 지식 지문과 고정 관계 질문 검사 | 050a9badde4b2efaa5c02dfdc9f271cda2cca820 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T115418-7584f00c6d1c.md) | Python conformance: integration | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T120101-8844a52a92c0.md) | Python conformance: release | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T120356-19a43709c352.md) | 최종 다중 창 이력의 Linux 재개 계약 | 02399695893c9431c74b5028f5c806b6ddb62cc1 | Windows-11-10.0.26300-SP0 |
