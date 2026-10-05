@@ -3139,15 +3139,25 @@ fn run_ingest(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     } else {
         ingest(&target, &source, &wiki)?
     };
+    let canonical_changed = !outcome.changed_paths.is_empty();
     let mutation =
         serde_json::to_value(&outcome).map_err(|error| WikiError::Io(error.to_string()))?;
-    let (changed_paths, locator, digest, data) = finish_shared_mutation(
+    let (changed_paths, locator, digest, mut data) = finish_shared_mutation(
         &target,
         shared.as_ref(),
         outcome.changed_paths.into_iter().chain(prepared).collect(),
         mutation,
         ".hive/knowledge",
     )?;
+    if let Some(shared) = &shared {
+        data["graph_update"] = semantic_graph::after_ingest(
+            &shared.user_root,
+            (shared.target_kind == SharedTargetKind::RegisteredProject)
+                .then_some(shared.namespace.as_str()),
+            canonical_changed,
+            &digest,
+        );
+    }
     Ok(success(
         "IngestKnowledge",
         "hive.knowledge-ingested",

@@ -422,3 +422,36 @@ pub(super) fn after_capture(
 pub(crate) fn after_source_index(root: &Path, changed: bool, fingerprint: &str) -> Value {
     json!({"en":after_capture(root,true,"source:en","source",changed,fingerprint),"ko":after_capture(root,true,"source:ko","source",changed,fingerprint)})
 }
+
+/// The canonical ingest and index have committed before this optional derived notice.
+pub(super) fn after_ingest(
+    root: &Path,
+    project_id: Option<&str>,
+    changed: bool,
+    fingerprint: &str,
+) -> Value {
+    let notice = || -> Result<Value, WikiError> {
+        let registry = RagStore::open(root)?.load_registry()?;
+        let resolution = project_id.map_or_else(
+            || registry.resolve_collection("user-root"),
+            |id| registry.resolve_project(id),
+        );
+        let hive_wiki::collection::CollectionResolution::Resolved(id) = resolution else {
+            return Err(invalid("derived ingest scope is unavailable"));
+        };
+        let record = registry
+            .collections
+            .iter()
+            .find(|record| record.collection_id == id)
+            .ok_or_else(|| invalid("derived ingest collection is unavailable"))?;
+        Ok(after_capture(
+            root,
+            false,
+            &id,
+            visibility_name(record.default_visibility.into()),
+            changed,
+            fingerprint,
+        ))
+    };
+    notice().unwrap_or_else(|_| json!({"state":"pending","reason":"derived-scope-unavailable","canonical_preserved":true}))
+}

@@ -216,6 +216,53 @@ class HostSemanticGraphCliTests(Phase1CliTestCase):
         again = self.remember("semantic-delta", "Delta is retained despite graph failure.")
         self.assertEqual(again["data"]["plan"]["disposition"], "noop")
 
+    def test_source_ingest_queues_once_and_graph_failure_preserves_storage(self) -> None:
+        self.enable()
+        (self.setup_user_root / ".hive/knowledge/suppression.yml").write_bytes(
+            (ROOT / "harness/template/.hive/knowledge/suppression.yml").read_bytes())
+        batch = self.graph("prepare")["data"]["request"]
+        first, second = self.result_files(batch)
+        self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        source = self.work_root / "public-source.md"
+        source.write_text("Public source for semantic ingest.\n", encoding="utf-8")
+        draft = self.work_root / "draft.md"
+        draft.write_text("""---
+schema_version: 1
+id: semantic-source
+kind: concept
+summary: Stored source
+tags: [semantic]
+aliases: []
+sources: [raw:self]
+links: []
+contradictions: []
+status: active
+created_at: 2026-10-05T00:00:00Z
+updated_at: 2026-10-05T00:00:00Z
+---
+
+Gamma retains public source evidence.
+""", encoding="utf-8")
+        args = ["--target", str(self.setup_user_root), "--user-root", str(self.setup_user_root),
+            "--source", str(source), "--wiki", str(draft)]
+        added = self.command("knowledge", "ingest", *args)
+        self.assertEqual(added["data"]["graph_update"]["state"], "pending")
+        self.assertTrue(added["data"]["graph_update"]["changed"])
+        batch = self.graph("prepare")["data"]["request"]
+        self.assertEqual(len(batch["documents"]), 1)
+        first, second = self.result_files(batch)
+        self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        repeated = self.command("knowledge", "add", *args)
+        self.assertEqual(repeated["data"]["graph_update"]["state"], "unchanged")
+        state = next((self.setup_user_root / ".hive/index/semantic-graph").glob("*.json"))
+        state.write_bytes(b"broken")
+        source.write_text("Revised public source for semantic ingest.\n", encoding="utf-8")
+        saved = self.command("knowledge", "ingest", *args)
+        self.assertEqual(saved["data"]["graph_update"]["reason"], "derived-state-unavailable")
+        self.assertTrue((self.setup_user_root / ".hive/knowledge/Wiki/semantic-source.md").is_file())
+
     def test_source_partition_keeps_consumer_tree_absent(self) -> None:
         source = self.work_root / "source"
         (source / "docs/facts/en").mkdir(parents=True)
