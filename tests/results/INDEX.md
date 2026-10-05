@@ -1227,3 +1227,5 @@
 | [passed](runs/20261005T094715-bb6e23c6655f.md) | 소진 보호 Rust·정적 분석·공개 명령 계약 검증 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T094857-7b6b1f6920bf.md) | 소진 보호 실행 결합·정적 분석·CLI 최종 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T095232-aac048701a5e.md) | 소진 보호 스킬과 세 호스트 투영 일치 검사 | c1f91110a4aa5a3772c63d8b823f078f43c6c729 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T100257-fe7d1aae3703.md) | 0.12.0 전체 Rust 구현·이전 설치 갱신 통합 검사 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T100510-de16141ba0b9.md) | 두 보호의 명시적 제외와 일회 실행 허가 회귀 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
