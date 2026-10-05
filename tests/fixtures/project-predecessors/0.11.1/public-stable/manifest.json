@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "product_version": "0.11.1",
+  "archive": "codex-native.zip",
+  "sha256": "41522df483e3b03fb64790a293642377f7fd4abe3306ba239cc1c0f6e16c677f",
+  "file_count": 81,
+  "generation": "Existing official installed Windows 0.11.1 CLI; synthetic setup only; no stable installation performed",
+  "source_asset": "npm:@aigent-hive/win32-x64@0.11.1",
+  "source_binary_sha256": "dd3e3387a0c331d8296b1b0d420ad49676bcef50c53115649e7290b7a6e8f9f1",
+  "source_dist_integrity": "sha512-HVoeuhhaDHqK3o4ItUw8UgWKqgo0UoZv+2cWdbYYPwnSOjEOeeCAT89oLLPI/AhQACHsWdlMjB3WprPsDWY0oQ==",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}
