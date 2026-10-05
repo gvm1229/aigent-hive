@@ -1203,3 +1203,4 @@
 | [passed](runs/20261005T010048-f9bca27e894b.md) | Python conformance: documentation | 0264da756650ed31a8e6d4915d5b854443da2a63 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T010228-d3fcdf20ef5a.md) | Python conformance: release | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T010551-99e4c0e03733.md) | 공개 0.11.1과 다음 목표의 스킬 호환 목록 검사 | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T010754-ca1301507570.md) | 구현과 갱신 보완 후 Rust 전체 정적 검사 | fc6dcfe3d771fcdc21098dce08ab4792e033cb45 | Windows-11-10.0.26300-SP0 |
