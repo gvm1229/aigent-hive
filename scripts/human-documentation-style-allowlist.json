@@ -382,5 +382,65 @@
     "line": 36,
     "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
     "text_sha256": "e05e831aa22b241146c1e51d7dc1e7e7ed06062c87018b80e03a4e3b1e51de6c"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 4,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "4fc81b4a02f4f2786b82e82d72bbc505993cc3cf504154fb4cf11de4a7b87eef"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 5,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "c41d2f8ba3e465d07249cd619522275822ca51ae9d04fa84687174c865a4aaba"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 6,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "21d40d4b5731061fa07924743e90aac4e3dc9d7f46f9a1d4eee364553e7d339d"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 9,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "91c167154563219ea2dab64dc3dbd1849874487cef99845a670ec0afaed82bc9"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 10,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "66bea2d0ee5ed8a272e05e329c8106ff7dd0b2e99557ffaf25a078251a126ea4"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 11,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "c90dbedd7105d0aedabd89979f9fc8bbac03a0c9560b413b0f950a7a47faea3b"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 14,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "c4e1bb8b22aeabeefab8062fea29680825230d38e1fe35f892801e532103d8ad"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 15,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "f466347252fbbaa37fa59b400eb04faba77bc27c6aeb64439d3dde698e4ab5a5"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 18,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "4ba5efe3185527ccb69b94397f87477d729154acf626e1341990e3716afe6c09"
+  },
+  {
+    "path": "docs/releases/0.12.0.subscriber.ko.md",
+    "line": 19,
+    "reason": "2026-10-06 사용자 승인한 완료 기능 공지의 정확한 문구 보존; 승인 지문을 가진 외부 구독자용 안내문",
+    "text_sha256": "31721a835d194335c91b70882ce064fac54a1724eb25e4eb49ac06b23cbd1ff7"
   }
 ]
