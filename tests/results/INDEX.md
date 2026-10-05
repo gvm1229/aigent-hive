@@ -1221,3 +1221,8 @@
 | [failed](runs/20261005T015511-f42e2e7b2da0.md) | 현재 Codex의 저장 알림 뒤 근거 관계 적용과 원문 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T015601-3d4e10aa68d3.md) | 저장 알림 뒤 현재 호스트의 관계 적용과 검색 색인 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T093719-ccd3c12c7102.md) | 0.12.0 새 기능 버전 분류 회귀 | 18521646764e2e522aae2e4dab9938ab14d3644c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T094249-88e78a9b336d.md) | 기본 활성 소진 보호와 기존 사용량 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094429-2e51a6ecdcc1.md) | 모든 사용량 창 보존과 독립 소진 보호 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T094607-c8526b7be427.md) | 소진 보호 CLI 입력과 기존 사용량 계약 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094715-bb6e23c6655f.md) | 소진 보호 Rust·정적 분석·공개 명령 계약 검증 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094857-7b6b1f6920bf.md) | 소진 보호 실행 결합·정적 분석·CLI 최종 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
