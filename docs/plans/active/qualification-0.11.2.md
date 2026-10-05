@@ -10,7 +10,7 @@
 - [ ] [QLF112-001] 토큰 집계의 중복·부모/자식·사건 지연 조사와 예산 제어 보완
   - state: agent-owned
 - [ ] [QLF112-002] Windows 명령줄 샌드박스 오류 5의 원인 분리와 진단·복구 수용
-  - state: agent-owned
+  - state: awaiting-user-authority; owner: 사용자 또는 Windows 관리자; reason: 동일 파일 직접 읽기 성공·Codex 샌드박스 시작 권한 설정 오류 5, 공식 설정 복구의 관리자 승인 뒤 동일 조건 재검증 필요
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
