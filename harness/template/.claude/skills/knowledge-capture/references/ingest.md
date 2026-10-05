@@ -16,3 +16,6 @@ Read only for an explicitly selected source-ingest request.
 
 4. Require a schema-valid success result and report its changed paths and evidence digest.
 5. Run `hive knowledge lint --target <project-root> --user-root <user-root> --output json`.
+6. If the result returns `data.graph_update.state=pending`, follow the main Skill's automatic
+   derived relationships procedure for one bounded batch. Preserve the ingest success receipt;
+   never call `remember` again for these derived relationships.
