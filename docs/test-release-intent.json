@@ -1,12 +1,9 @@
 {
   "schema_version": 1,
   "product_version": "0.12.0",
-  "package_version": "0.12.0-test.2",
+  "package_version": "0.12.0-test.3",
   "plan_ids": [
-    "GPH112-001",
-    "GPH112-002",
-    "HCT120-001",
-    "QLF112-003"
+    "QLF120-006"
   ],
-  "product_tree_sha256": "sha256:368e777a1d498d74cd1c0a9478612f967153c0a42e9c705b0174e934c2a41389"
+  "product_tree_sha256": "sha256:aa9793423ad8b7bd9dd82553189bc1d8cf8ea2e5442ce6a3528580e818307098"
 }
