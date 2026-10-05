@@ -1176,3 +1176,4 @@
 | [passed](runs/20261005T000347-febf19965084.md) | 관련 문서 전달 후 의미 관계 CLI 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T000427-9229df942767.md) | 관련 문서 변경 후 지식 명령 전체 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T000438-52ce01ec2ca6.md) | 관련 문서 경계 변경의 Rust 정적 검사 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000657-691c3a9102e2.md) | 0.11.2 배포 자료와 이전 버전 갱신 계약 검사 | 7aeb8807602213061ffa2f48cf794e05e892fe2b | Windows-11-10.0.26300-SP0 |
