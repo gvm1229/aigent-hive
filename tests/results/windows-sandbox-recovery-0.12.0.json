@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "codex_version": "0.159.0",
+  "codex_binary_sha256": "0e2a4cd6ac1b329e64ec74745e38b71a3d4fa701102c86f49cf605d23a02c4df",
+  "model_calls": 0,
+  "purpose": "Official elevated sandbox setup only; not a current-turn control connection",
+  "approval": "User authorized described official Windows recovery on 2026-10-06",
+  "mode": "elevated",
+  "setup_started": true,
+  "setup_success": true,
+  "notification_received": true,
+  "outcome": "setup-completed",
+  "error_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "error_kind": null,
+  "server_exit_code": 0,
+  "stderr_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

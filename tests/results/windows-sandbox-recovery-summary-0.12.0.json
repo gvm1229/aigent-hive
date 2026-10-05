@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operating_system": "Windows",
+  "current_codex_version": "codex-cli 0.160.1",
+  "passed_reads": 8,
+  "isolated_fixture_preserved": true,
+  "administrator_launch_completed": true,
+  "official_setup_completed": true,
+  "regular_user_post_repair_success": true,
+  "hive_product_fix": false,
+  "model_calls": 0,
+  "limits": "Current CLI0.160.1 after approved administrator-run official command; original0.159.0 and earlier failures retained. No claim of parent-turn control, token-cap enforcement or macOS repair. No custom ACL/firewall command."
+}

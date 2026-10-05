@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "codex_version": "codex-cli 0.160.1",
+  "binary_sha256": "9e7c59c05cc1ce5677b1f94e835b2ac038ca3be14504e78d558eacdb0ea3f55d",
+  "model_calls": 0,
+  "transport": "one-shot official app-server command/exec; not parent-turn control",
+  "policy": "host-provided named read-only profile; no global override",
+  "cases": [
+    {
+      "path_case": "plain",
+      "error_code": -32603,
+      "error_digest": "d64b3509fb52f74984d05fcb16d59f5a9959af0bc7eef408271acedfe3a9e7e8",
+      "error_kind": "helper-lock-acl",
+      "expected_bytes_read": false
+    }
+  ],
+  "readiness": {
+    "status": "ready"
+  },
+  "allowed_readonly_profile": ":read-only",
+  "success": false,
+  "server_exit_code": 0
+}
