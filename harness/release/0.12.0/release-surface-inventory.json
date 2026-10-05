@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "product_version": "0.11.2",
+  "product_version": "0.12.0",
   "schemas": [
     "action-result.schema.json",
     "active-skills.schema.json",

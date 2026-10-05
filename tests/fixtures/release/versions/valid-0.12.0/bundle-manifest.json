@@ -3,27 +3,27 @@
     {
       "length": 603,
       "path": "targets/migration-table.json",
-      "sha256": "ed5e290d75a0ba94c0de8d784dea5e2601d4fe7ab522cf668007bf74742ab023"
+      "sha256": "ee5fe956e8c4c87acbf8599aae78a88aa9de14938d46f3e7427262cb3b16e1a8"
     },
     {
       "length": 5922,
       "path": "targets/release-surface-inventory.json",
-      "sha256": "bed319f7b2f28e53205b84ec0054f5ea1103db0aa5400b86a6ef94756ec4885b"
+      "sha256": "fe75d3eb3aa9b9e2b3404339c2ff38a64e8c927acd22fd11a232b5fdcddca95a"
     }
   ],
   "classification": "feature",
   "license": "Apache-2.0",
-  "migration_table_digest": "sha256:ed5e290d75a0ba94c0de8d784dea5e2601d4fe7ab522cf668007bf74742ab023",
+  "migration_table_digest": "sha256:ee5fe956e8c4c87acbf8599aae78a88aa9de14938d46f3e7427262cb3b16e1a8",
   "minimum_supported_harness_version": "0.8.0",
   "minimum_updater_version": "0.9.0",
   "product": "aigent-hive",
   "release_sequence": 21,
-  "release_version": "0.11.2",
+  "release_version": "0.12.0",
   "schema_version": 1,
   "source": {
     "commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     "repository": "https://github.com/gvm1229/aigent-hive",
-    "tag": "v0.11.2"
+    "tag": "v0.12.0"
   },
-  "surface_inventory_digest": "sha256:bed319f7b2f28e53205b84ec0054f5ea1103db0aa5400b86a6ef94756ec4885b"
+  "surface_inventory_digest": "sha256:fe75d3eb3aa9b9e2b3404339c2ff38a64e8c927acd22fd11a232b5fdcddca95a"
 }
