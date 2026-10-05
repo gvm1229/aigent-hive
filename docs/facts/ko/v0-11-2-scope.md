@@ -9,7 +9,7 @@ summary: "사용자 결정에 따른 0.12.0 범위, Windows 우선과 macOS 최�
 tags: [scope, v0-12-0, windows]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:c4b1eb00f0ce498b28622ac773bf9b8108164e93d82a703d1214cf5af5b39002"
+  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:72f2989faf99a78eb09b3f84fe6feb8842e3004b575c7267e4048a2213ee3214"
 links: [knowledge-storage, marketing-deck-record, product-purpose]
 reviewed_revision: "git:1f642217752c4d6bb7fa85d1d296ca1fa66968cf"
 status: active
