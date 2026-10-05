@@ -1,3 +1,3 @@
-# 0.11.2 갱신 시험 자료
+# Test-only `0.11.2` release bundle fixture
 
-로컬 갱신·버전 일치 검사용 합성 자료. 공개 배포 파일과 구분.
+Local updater and version-parity tests only. This synthetic bundle is not a public release artifact.
