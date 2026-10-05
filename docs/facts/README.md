@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 안정판만의 이전 버전 호환성 | [en](en/stable-only-backward-compatibility.md) | [ko](ko/stable-only-backward-compatibility.md) |
 | 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
 | 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
 | Claude Windows 사용자 설치 | [en](en/claude-windows-user-install.md) | [ko](ko/claude-windows-user-install.md) |
