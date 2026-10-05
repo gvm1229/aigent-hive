@@ -171,6 +171,41 @@ class HostSemanticGraphCliTests(Phase1CliTestCase):
         self.assertFalse(prepared["analysis_allowed"])
         self.assertFalse(prepared["needs_model"])
 
+    def test_deleted_documents_hide_relations_and_cleanup_without_analysis(self) -> None:
+        self.enable()
+        batch = self.graph("prepare")["data"]["request"]
+        source = next(d for d in batch["documents"] if d["text"].startswith("Alpha"))
+        target = next(d for d in batch["documents"] if d["text"].startswith("Beta"))
+        first, second = self.result_files(batch)
+        result = json.loads(first.read_bytes())
+        result["relations"] = [{"from": source["id"], "to": target["id"],
+            "kind": "depends-on", "evidence": "INFERRED", "start": 0,
+            "end": len(source["text"].encode()),
+            "text_digest": "sha256:" + hashlib.sha256(source["text"].encode()).hexdigest(),
+            "source_digest": source["digest"], "target_digest": target["digest"]}]
+        encoded = json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
+        first.write_bytes(encoded)
+        receipt = json.loads(second.read_bytes())
+        receipt["result_digest"] = "sha256:" + hashlib.sha256(encoded).hexdigest()
+        second.write_text(json.dumps(receipt), encoding="utf-8")
+        self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        self.assertEqual(self.graph("status")["data"]["relations"], 1)
+        for document in batch["documents"]:
+            canonical = self.setup_user_root / document["locator"].split("#", 1)[0]
+            self.assertTrue(canonical.resolve().is_relative_to(self.setup_user_root.resolve()))
+            canonical.unlink()
+        self.command("index", "rebuild", "--user-root", str(self.setup_user_root))
+        self.assertEqual(self.graph("status")["data"]["relations"], 0)
+        prepared = self.graph("prepare")["data"]
+        self.assertFalse(prepared["needs_model"])
+        self.assertTrue(prepared["cleanup_required"])
+        batch = prepared["request"]
+        first, second = self.result_files(batch)
+        self.graph("apply", "--request-digest", batch["request_digest"],
+            "--input", str(first), "--receipt", str(second))
+        self.assertFalse(self.graph("prepare")["data"]["cleanup_required"])
+
     def test_broken_derived_state_cannot_undo_canonical_capture(self) -> None:
         self.enable()
         state = next((self.setup_user_root / ".hive/index/semantic-graph").glob("*.json"))
