@@ -14,7 +14,7 @@ sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:5327d6c3417a62069df8eda30e76fe907c48418806023847eb16189cbe3041ef"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:3e2106b90defce8839164efed8054463a8504b873abcb7cd07d7e8a8a45c60bc"
-  - "repo:harness/release/stable-skill-ledger.yml#sha256:19c6e51fe479ea5b9e71b46af81786052681b978a3bfcd87869f50d47bca0680"
+  - "repo:harness/release/stable-skill-ledger.yml#sha256:332a5616eb78c080df39fb69f78dc8699d658153df7b5af8ddf2259682a55a06"
   - "repo:scripts/check-stable-skill-ledger.py#sha256:0aa6a3582d31854106dd69d7faf05072a9027a3e3cfa707e00fce43b7090de58"
 links: [global-onboarding, v0-10-product-scope, verified-workflow]
 reviewed_revision: "git:52e63238cb6063312240d1c9b5ed1006d8a23a7b"

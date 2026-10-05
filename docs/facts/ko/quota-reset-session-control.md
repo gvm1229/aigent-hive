@@ -9,10 +9,10 @@ summary: "초기화 감지의 작업별 제외와 잔여량 하한·기존 초�
 tags: [reset, session, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:b96d727dc4effe4c4ed77141927a7a67b4a5be047683544c4992b1e274b9ef55"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:c94975f1e11052ebf9c04e00066fe121229eea186945c056164d3a33c609df87"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:41e5712b85c91de0f0df5505e999b245e60a530d5764f8cf4a35c285b8c4f730"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:916836c260db60424f19f6540ee5855e490e896f3681b658b07c8d1c063ddc05"
 links: [automatic-dispatch-guard, installed-usage-guard]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
 status: active
 ---
 

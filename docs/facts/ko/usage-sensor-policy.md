@@ -10,13 +10,13 @@ tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:a21d2797007b8b826e639cd77c3c42a2ab630586815ec37883899b77afdbcf41"
-  - "repo:crates/hive-cli/src/usage.rs#sha256:e0e5657f3011a076a47d06f2fc646adcd3a405a243bea57d7670af3e8c901680"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:b96d727dc4effe4c4ed77141927a7a67b4a5be047683544c4992b1e274b9ef55"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:08df602b839ca6ced6cd1571c37111b300853def9bba4e25c9c24774453535f6"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:41e5712b85c91de0f0df5505e999b245e60a530d5764f8cf4a35c285b8c4f730"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
 links: [automatic-dispatch-guard, supported-hosts]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
 status: active
 ---
 
