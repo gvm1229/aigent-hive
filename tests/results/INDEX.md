@@ -1267,3 +1267,14 @@
 | [passed](runs/20261005T195044-c6f965a420fc.md) | 제한된 Windows 요청에서 미지원 출력 인자를 제거한 읽기 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T195617-f42c059165d9.md) | 데이터 제공 거부 선택의 실제 화면과 초기 실행 완료 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T201820-29287087047d.md) | 승인한 관리자 실행 뒤 일반 사용자 조건의 Windows 샌드박스 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T204743-1d495d6ab88d.md) | 시험판 출처 필드와 안정판 인증 경계의 변경 영역 Rust 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T205048-7c3abb489819.md) | 시험판 패키지 출처와 기존 안정판 기준본의 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205253-36ca0d9dcc5c.md) | 시험판 출처와 안정판 기준본 인증의 수정 후 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205534-bf62d16d4a9a.md) | 시험판 패키지 출처와 기준본 지문의 실제 생성 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T205926-229632320317.md) | 시험판 출처와 안정판 인증 변경의 정적 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205949-400ebea32855.md) | 시험판 출처 변경의 정적 검사 보완 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T210318-873e610c969b.md) | 실제 기준본 읽기에 시험판 출처 검사를 연결한 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T211025-2df4b9bc75ea.md) | 시험 패키지 실제 바이너리의 과거 시험판 거부와 안정판 이식 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T211530-f56b9bdb9427.md) | 생성한 시험판 출처와 변조 거부의 실제 CLI 계약 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T212039-c73bd7aad95c.md) | 시험 패키지 출처를 포함한 전체 Rust 회귀와 정적 검사 | 8aefd94546860569fcb5337105381f065b3f887a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T214615-184e974a7e26.md) | 시험판 출처 수정의 전체 Python 다섯 검사 묶음 | 87ada8af7018827cf9f8525a6cf69e7a440e2ce5 | Windows-11-10.0.26300-SP0 |
