@@ -4447,11 +4447,11 @@ mod tests {
             original
                 .replace("project_skill_policy_version = 1\n", "")
                 .replace(
-                    "harness_version = \"0.11.1\"",
+                    &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
                     "harness_version = \"0.11.0\"",
                 )
                 .replace(
-                    "source_release_version = \"0.11.1\"",
+                    &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
                     "source_release_version = \"0.11.0\"",
                 ),
         )
@@ -4591,11 +4591,33 @@ mod tests {
             vec!["project-refresh".to_owned(), "prompt-refine".to_owned()],
         );
         let target = target_dir(&root);
+        let harness = root.join(".hive/config/harness.toml");
+        let original = fs::read_to_string(&harness).unwrap();
+        fs::write(
+            &harness,
+            original
+                .replace(
+                    &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "harness_version = \"0.11.1\"",
+                )
+                .replace(
+                    &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "source_release_version = \"0.11.1\"",
+                ),
+        )
+        .unwrap();
+        let historical = historical_project_upgrade_candidate_in(&target, "0.11.1").unwrap();
+        // This fixture models project-local delivery, with no plugin coverage.
+        fs::remove_file(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap();
+        for file in &historical.files {
+            fs::create_dir_all(root.join(&file.path).parent().unwrap()).unwrap();
+            fs::write(root.join(&file.path), &file.content).unwrap();
+        }
         let path = ".agents/skills/project-refresh/SKILL.md";
         let published = include_bytes!(
             "../../../harness/project-bases/0.11.1-test.6/skills/project-refresh/SKILL.md"
         );
-        let mut ledger = read_base_ledger(&target, None).unwrap().unwrap();
+        let mut ledger = ledger_from_historical(&historical);
         let entry = ledger
             .files
             .iter_mut()
@@ -4606,11 +4628,20 @@ mod tests {
         fs::write(root.join(path), published).unwrap();
         fs::write(
             root.join(BASE_PATH),
-            signed_base_ledger(env!("CARGO_PKG_VERSION"), &ledger.files),
+            signed_base_ledger("0.11.1", &ledger.files),
         )
         .unwrap();
         let incoming = project_upgrade_candidate_in(&target).unwrap();
-        authenticate_current_base(&ledger, &incoming.files).unwrap();
+        authenticate_historical_base(&target, &ledger).unwrap();
+        let mut forged = ledger.clone();
+        forged
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == path)
+            .unwrap()
+            .content
+            .push_str("Forged baseline\n");
+        assert!(authenticate_historical_base(&target, &forged).is_err());
         let plan = prepare_with_plugin(&target, &BTreeMap::new()).unwrap();
         apply(&target, &plan).unwrap();
         assert_eq!(fs::read(root.join(path)).unwrap(), incoming.files[path]);
@@ -4620,13 +4651,5 @@ mod tests {
                 .changed_paths,
             [] as [String; 0]
         );
-        ledger
-            .files
-            .iter_mut()
-            .find(|entry| entry.path == path)
-            .unwrap()
-            .content
-            .push_str("Forged baseline\n");
-        assert!(authenticate_current_base(&ledger, &incoming.files).is_err());
     }
 }
