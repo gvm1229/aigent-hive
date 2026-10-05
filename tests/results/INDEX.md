@@ -1230,3 +1230,4 @@
 | [failed](runs/20261005T100257-fe7d1aae3703.md) | 0.12.0 전체 Rust 구현·이전 설치 갱신 통합 검사 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T100510-de16141ba0b9.md) | 두 보호의 명시적 제외와 일회 실행 허가 회귀 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T100638-e62417ca0584.md) | 0.12.0 전체 Rust 최종 통합·호환 검사 | 537880d96968ebde38ae5c9739fc96530a395bb6 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T101340-4cec91f2bd90.md) | 고정 Linux 컨테이너의 사용량·그래프·설치·갱신 수용 | effac2dc117dc51b3f468c2f6a2f4e1280323838 | Windows-11-10.0.26300-SP0 |
