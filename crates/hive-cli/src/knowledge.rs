@@ -896,8 +896,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             .map(|id| query_node_metadata(&graph, id, 10))
             .unwrap_or_default();
         let fts = if let Some(query) = text {
+            let planned = relation_question_subject(query).unwrap_or(query);
             if scope == "source" {
-                let planned = relation_question_subject(query).unwrap_or(query);
                 let hits = hive_wiki::source::query(&target, "en", Some(planned), None, 10)?;
                 Some(json!({"count": hits.len(), "hits": hits, "language": "en"}))
             } else {
@@ -905,7 +905,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                     "--target".to_owned(),
                     target.to_string_lossy().into_owned(),
                     "--text".to_owned(),
-                    query.to_owned(),
+                    planned.to_owned(),
                     "--limit".to_owned(),
                     "10".to_owned(),
                     "--output".to_owned(),
