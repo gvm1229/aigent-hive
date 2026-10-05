@@ -1,6 +1,6 @@
-# Graphify 잔여 범위 0.11.2
+# Graphify 잔여 범위 0.12.0
 
-> Plan version: 0.11.2
+> Plan version: 0.12.0
 > Scope: product
 
 기존 코드 전용 추출·Markdown 관계·벡터 검색의 완료 유지. 미완료 확장만 소유. [조사](../../research/followup-feasibility-0.11.2.md)·[결정](../../decisions/ADR-0025-0.11.2-scope.md).

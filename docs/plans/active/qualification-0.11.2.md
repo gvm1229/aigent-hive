@@ -1,6 +1,6 @@
-# 계측·진단·운영체제 수용 0.11.2
+# 계측·진단·운영체제 수용 0.12.0
 
-> Plan version: 0.11.2
+> Plan version: 0.12.0
 > Scope: product
 
 [조사 결과](../../research/followup-feasibility-0.11.2.md)에 근거한 Windows 우선 순서. 아래 macOS 기준을 전체 계획의 마지막 할 일로 고정.
@@ -14,7 +14,7 @@
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
-  - state: awaiting-user-authority; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 버전 규칙을 선택하는 사용자; reason: 요청한 0.11.2의 새 기능 분류를 기존 갱신 엔진이 거부, 이번 버전 예외 또는 새 기능 버전 선택 뒤 갱신 검증·Linux CI·번호 시험 진행
+  - state: agent-owned; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 현재 Codex; reason: 사용자 지정 0.12.0 전환 승인, 버전·갱신 회귀·Linux 검사·번호 시험 후보 준비 재개. 실제 호스트 대기는 해당 기준에 보존
 - [ ] [QLF112-005] 마지막 macOS arm64 오류 재현·수정 검증과 실제 호스트·공개 수용
   - state: awaiting-external-evidence; depends: QLF112-004; owner: macOS 실행 환경; reason: Windows 선행 작업 완료 뒤 실제 macOS의 원래 실패 조건과 수정 후 동작 증명 필요
 
@@ -49,10 +49,10 @@
 
 ## QLF112-004
 
-- 제품 변경 착수 때 0.11.2·0.11.2-test.1과 기존 버전 정책 정합화. 이번 문서 작업에서 제품 번호 변경 제외
+- 제품 변경 착수 때 0.12.0·0.12.0-test.1과 기존 버전 정책 정합화. 이번 문서 작업에서 제품 번호 변경 제외
 - 실행: 관심사별 Rust·Python 회귀 → Windows 실제 지원 호스트 검증 → 관련 Linux 검사 → 공개 시험 후보·출시 문서 준비
 - 전체 완료 기준 누락을 공개 시험 허가로 우회 금지. 후보에 필요한 macOS 빌드 확인과 QLF112-005의 최종 실제 수용을 구분
-- 완료: Windows·Linux 결과, 제외 이유, 정확한 후보 지문과 macOS에 넘길 실행 절차. 0.11.2 안정판·설치 승인과 구분
+- 완료: Windows·Linux 결과, 제외 이유, 정확한 후보 지문과 macOS에 넘길 실행 절차. 0.12.0 안정판·설치 승인과 구분
 
 ## QLF112-005: 마지막 할 일
 
