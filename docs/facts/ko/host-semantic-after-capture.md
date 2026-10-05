@@ -10,7 +10,7 @@ tags: [graph, knowledge, provenance]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:1005e13b2b4b354a8846e3b6d080ba6e738b87e4cb54a88f2e2b8bb5316dd0bd"
-  - "repo:crates/hive-wiki/src/semantic_graph.rs#sha256:bbae24fb52a295ea0cc84170e44ad165aa51ff04df23e76b2fe500cf67177c4a"
+  - "repo:crates/hive-wiki/src/semantic_graph.rs#sha256:211c9a8cee0dd8217be535dcdc4c355d4fd50442693f90fd22945674b153adad"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:40d08d401f60962d70f8bb4fcb83b4f17b3b067d165e24db9f579cf364b63b2d"
   - "repo:tests/results/semantic-host-0.11.2.json#sha256:b8e9e8f9e987993f82ed584c2dea46e6b8d70ca0ab51f86b55b48b435ccdaaac"
 links: [knowledge-storage, source-graph-public-qualification]
