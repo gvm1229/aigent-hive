@@ -11,8 +11,8 @@
   - state: agent-owned
 - [ ] [QLF112-002] Windows 명령줄 샌드박스 오류 5의 원인 분리와 진단·복구 수용
   - state: agent-owned
-- [ ] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
-  - state: agent-owned
+- [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
+  - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
   - state: agent-owned; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003
 - [ ] [QLF112-005] 마지막 macOS arm64 오류 재현·수정 검증과 실제 호스트·공개 수용
@@ -45,6 +45,7 @@
 - 절차: 자식 종료 상태·신호·시간 초과·JSON 파싱·도우미 오류 종류 분리. 정제된 제한 정보만 결과에 포함, 계정·원문·경로 누출 제외
 - Windows 검증: 성공 JSON 뒤 비정상 종료, 손상 JSON·출력 제한·느린 종료·오류 후 재시도. 기존 정상 세대·Markdown·FTS 보존
 - 완료: 분류별 회귀와 기존 CLI 호환성. macOS 실제 오류 원인 해결의 증명 제외
+- 구현 수용: Windows·Codex의 합성 종료·응답 분류 회귀와 정적 검사 통과. 성공 JSON 뒤 비정상 종료도 실패, 기존 종료 코드 유지. 실제 macOS 신호와 간헐 오류는 QLF112-005에서 별도 검증
 
 ## QLF112-004
 
