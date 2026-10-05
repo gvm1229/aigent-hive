@@ -8,13 +8,13 @@
 ## 기준
 
 - [ ] [QLF112-001] 토큰 집계의 중복·부모/자식·사건 지연 조사와 예산 제어 보완
-  - state: agent-owned
+  - state: awaiting-external-evidence; owner: 현재 실행의 정제된 누적 사건을 제공하는 호스트; reason: 차분·중복·지연 진단 구현과 합성 검사 완료, 실제 사건별 집계와 중단 연결 부재로 최초 초과 원인 및 엄격한 상한 미증명
 - [ ] [QLF112-002] Windows 명령줄 샌드박스 오류 5의 원인 분리와 진단·복구 수용
   - state: awaiting-user-authority; owner: 사용자 또는 Windows 관리자; reason: 동일 파일 직접 읽기 성공·Codex 샌드박스 시작 권한 설정 오류 5, 공식 설정 복구의 관리자 승인 뒤 동일 조건 재검증 필요
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
-  - state: agent-owned; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003
+  - state: awaiting-user-authority; depends: HCT112-001,HCT112-002,HCT112-003,HCT112-004,HCT112-005,GPH112-001,GPH112-002,GPH112-003,QLF112-001,QLF112-002,QLF112-003; owner: 버전 규칙을 선택하는 사용자; reason: 요청한 0.11.2의 새 기능 분류를 기존 갱신 엔진이 거부, 이번 버전 예외 또는 새 기능 버전 선택 뒤 갱신 검증·Linux CI·번호 시험 진행
 - [ ] [QLF112-005] 마지막 macOS arm64 오류 재현·수정 검증과 실제 호스트·공개 수용
   - state: awaiting-external-evidence; depends: QLF112-004; owner: macOS 실행 환경; reason: Windows 선행 작업 완료 뒤 실제 macOS의 원래 실패 조건과 수정 후 동작 증명 필요
 

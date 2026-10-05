@@ -11,7 +11,7 @@
 ## 기준
 
 - [ ] [HCT112-001] Antigravity CLI 사용량 수신·정제·최신성 검사와 실제 Windows 수용
-  - state: agent-owned
+  - state: awaiting-user-authority; owner: 사용자와 Antigravity 상태 표시 설정; reason: 수신 구현·실제 quota 조회 완료, 현재 사용자 연결 설정의 정확한 변경 승인과 실제 콜백 전달 수용 필요
 - [ ] [HCT112-002] 현재 호스트 실행의 지원 제어 연결과 정확한 대상 결합 검증
   - state: awaiting-external-evidence; owner: 현재 실행 제어 연결을 제공하는 호스트; reason: 기능 선언과 별개인 현재 앱 실행의 인증된 중단 연결·최종 상태 증명 부재
 - [ ] [HCT112-003] 15초 사용량 관측·제한 감지·호스트 중단 확인·명시적 재개
@@ -19,7 +19,7 @@
 - [ ] [HCT112-004] 호스트 소유 작업 분담의 실제 역할·모델·결과 검증과 불확정 실행 회복
   - state: awaiting-external-evidence; depends: HCT112-002; owner: 서명된 실행 확인을 제공하는 호스트; reason: 실제 역할·모델·결과의 독립 증명 연결 부재로 자동 분담 비활성 유지
 - [ ] [HCT112-005] Windows Codex·Antigravity 도구별 검사·자식 상속·오류 처리 수용
-  - state: agent-owned
+  - state: awaiting-external-evidence; owner: 승인된 실제 호스트 검증 대화; reason: 변환기 계약·지원 표 검증 완료, Antigravity 자식의 실제 이벤트 상속과 파일 변경 전후 증명 부재
 
 ## HCT112-001
 
