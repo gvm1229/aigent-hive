@@ -600,10 +600,7 @@ mod tests {
         let (r, receipt) = result(&batch, &docs);
         let state = apply(&state, &docs, &batch, &r, &receipt).unwrap();
         assert_eq!(state.relations.len(), 1);
-        assert!(prepare(&state, &docs, "p", "a")
-            .unwrap()
-            .documents
-            .is_empty());
+        assert_eq!(prepare(&state, &docs, "p", "a").unwrap().documents.len(), 0);
         let batch = prepare(&state, &docs[..1], "next", "a").unwrap();
         let r = ResultInput {
             schema_version: 1,
@@ -619,10 +616,13 @@ mod tests {
             reviewed: true,
             attempt: 1,
         };
-        assert!(apply(&state, &docs[..1], &batch, &r, &receipt)
-            .unwrap()
-            .relations
-            .is_empty());
+        assert_eq!(
+            apply(&state, &docs[..1], &batch, &r, &receipt)
+                .unwrap()
+                .relations
+                .len(),
+            0
+        );
     }
     #[test]
     fn refuses_stale_cross_scope_and_false_grounding() {
@@ -685,7 +685,7 @@ mod tests {
         assert_eq!(b.blocked_oversized_count, 1);
         assert!(b.documents.len() <= 10);
         assert!(b.documents.iter().map(|d| d.text.len()).sum::<usize>() <= MAX_TEXT_BYTES);
-        assert!(!b.documents.is_empty());
+        assert_ne!(b.documents.len(), 0);
     }
     #[test]
     fn related_context_is_bounded_and_undisclosed_targets_are_refused() {
