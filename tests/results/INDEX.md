@@ -1217,3 +1217,6 @@
 | [failed](runs/20261005T014813-e34cc360c90c.md) | 원래 제목과 요약을 모두 보존한 세 범위 질문 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T014955-bda35394bf5d.md) | 세 범위 관계 질문 해석 수정 빌드 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T015024-79e8a070147f.md) | 세 범위의 관계 질문과 지목한 양 끝 문서의 근거 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015405-d0bdef86524d.md) | 활성 범위의 실제 저장 알림에 따른 현재 호스트 분석 준비 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T015511-f42e2e7b2da0.md) | 현재 Codex의 저장 알림 뒤 근거 관계 적용과 원문 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015601-3d4e10aa68d3.md) | 저장 알림 뒤 현재 호스트의 관계 적용과 검색 색인 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |

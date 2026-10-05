@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "trigger": "after-capture",
+  "review_method": "current conversation processed the pending capture notice and reviewed Gamma dependence on Alpha",
+  "separate_model_processes": 0,
+  "independent_host_attestation": false,
+  "automatic_fresh_skill_discovery": "not-tested",
+  "request_digest": "sha256:319d8cdea3ae7eb16da1ceba79b0fdac6c90abad29da95ec9ad5932956bb7092",
+  "result_digest": "sha256:82fd6c40ceccb636df998bd7913be3292f75dd39ca634957d7149e5c6f033d7b",
+  "binary_sha256": "sha256:d3a5a0e9a2a36c4fb6c91b1cbef7996fd47b61e96c1f4b5c6c1ab2b838e7091a",
+  "source_commit": "e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335",
+  "documents": 1,
+  "related_documents": 1,
+  "accepted_inferred_relations": 1,
+  "canonical_and_fts_bytes_preserved": true,
+  "query_seconds": 0.047,
+  "pending_count": 0,
+  "apply": {
+    "applied": true,
+    "canonical_written": false,
+    "generation_digest": "sha256:8d7e7545ad665f674aaeddbd1c7a96d7901bfcf7e25906327cb6c4e333a99bc6",
+    "graph_update": "unchanged",
+    "host_execution_independently_verified": false,
+    "processed": 1
+  }
+}
