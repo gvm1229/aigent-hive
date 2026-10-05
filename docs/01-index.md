@@ -206,6 +206,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [기본 활성 0% 보호 구현](plans/usage-zero-guard-0.12.0.md)·[0.12.0 검증](research/implementation-evidence-0.12.0.md)
 - [Linux 격리 검증 순서](plans/linux-qualification-0.12.0.md)
 - [승인 뒤 실제 호스트 검증](plans/host-acceptance-0.12.0.md)
+- [시험판 출처와 안정판 호환성 분리](plans/active/release-provenance-0.12.0.md)
 - [호스트 지원과 연결 검토](guides/host-support-0.11.2.md)
 - [범위 결정](decisions/ADR-0025-0.11.2-scope.md)
 - [호스트 사용량·중단·분담](plans/active/host-control-0.11.2.md)

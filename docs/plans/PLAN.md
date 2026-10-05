@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 393
+> Revision: 394
 > 기준일: 2026-10-06
 > Product version: `0.12.0`
 > 공개 Stable: `0.11.1`
@@ -19,6 +19,7 @@
 - [공개 수용 근거](../research/implementation-evidence-0.12.0.md): Windows·Linux·macOS 공개 바이너리의 설치·갱신·복구 통과. 실제 호스트 활성화와 원래 macOS 오류 증명 별도
 - 번호 공개 시험은 승인 범위. 0.12.0 안정판 태그·보호 main·정식 게시·현재 사용자 설치의 버전별 승인 없음
 - 2026-10-06 필요한 수동 승인 허용: [실제 호스트 검증 순서](host-acceptance-0.12.0.md)의 Antigravity 연결 변경·복원과 Windows 공식 복구. 실제 사용자 조작과 지원 연결의 존재는 별도 확인
+- 추가0.12.0 버그: 시험판의 기준본을 안정판 출처로 잘못 분류하는 문제. [출처 분리](active/release-provenance-0.12.0.md), 시험판을 이전 버전 호환 대상으로 추가하는 처리 제외
 - Claude 실제 대화·구독 사용량과 게시자 서명: 버전 미정 대기 유지
 - Notion 후보·오래된 발표 자료 폐기. 로고·벡터 완료, 엔진 비교 참고 보존. Obsidian 전용 플러그인 후보 종료
 
@@ -30,7 +31,8 @@
 | 호스트 사용량·중단·분담 | 1 | 5 | 16.7% |
 | Graphify 미완료 확장 | 2 | 1 | 66.7% |
 | 계측·진단·운영체제 수용 | 1 | 4 | 20.0% |
-| **현재 범위 합계** | **4** | **10** | **28.6%** |
+| 시험판 출처·안정판 호환성 | 0 | 1 | 0.0% |
+| **현재 범위 합계** | **4** | **11** | **26.7%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -40,6 +42,7 @@
 | [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT112-001–005`, `HCT120-001` | 호스트 사용량·중단·분담 |
 | [knowledge-graph-0.11.2.md](active/knowledge-graph-0.11.2.md) | `GPH112-001–003` | Graphify 미완료 확장 |
 | [qualification-0.11.2.md](active/qualification-0.11.2.md) | `QLF112-001–005` | 계측·진단·운영체제 수용 |
+| [release-provenance-0.12.0.md](active/release-provenance-0.12.0.md) | `QLF120-006` | 시험판 출처·안정판 호환성 |
 
 ## 실행 순서
 
