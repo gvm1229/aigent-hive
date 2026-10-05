@@ -1209,3 +1209,6 @@
 | [passed](runs/20261005T011502-255541b64528.md) | 삭제 관계 정리 경로의 Rust 정적 검사 | f46701e74df15e86bc258e52f6405bd2d3df2c2b | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T011743-f04f9e140c40.md) | 빈 관계 정리 스킬과 현재 투영의 실행 계약 검증 | 0026a1f85832736ab9b7326f037811cc1f5a1a63 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T012252-91ecb364fc24.md) | 빈 정리 지시와 스킬 투영의 직접 회귀 검증 | 0026a1f85832736ab9b7326f037811cc1f5a1a63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T012637-c76a8f519f2d.md) | 파일 수집과 동일 내용 재수집의 관계 처리 검증 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T012808-0da2bf26ebfd.md) | 정상 지식 저장 구조를 갖춘 파일 수집 관계 회귀 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T012952-491948cd08ed.md) | 파일 수집 뒤 관계 알림의 Rust 정적 검사 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
