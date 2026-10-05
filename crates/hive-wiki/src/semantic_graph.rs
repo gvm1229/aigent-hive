@@ -66,6 +66,7 @@ pub struct Batch {
     pub partition_digest: String,
     pub authority_digest: String,
     pub documents: Vec<Document>,
+    pub related_documents: Vec<Document>,
     pub pending_count: usize,
     pub blocked_oversized_count: usize,
     pub max_corrections: u8,
@@ -296,6 +297,40 @@ pub fn prepare(
             bytes += doc.text.len();
         }
     }
+    // Context is drawn only from the already-authorized partition. Never expose
+    // the full catalog or spend more than the shared text budget.
+    let selected_ids = selected
+        .iter()
+        .map(|d| d.id.as_str())
+        .collect::<BTreeSet<_>>();
+    let terms = |text: &str| {
+        text.split(|c: char| !c.is_alphanumeric())
+            .filter(|s| s.len() >= 3)
+            .map(str::to_lowercase)
+            .collect::<BTreeSet<_>>()
+    };
+    let selected_terms = selected
+        .iter()
+        .flat_map(|d| terms(&d.text))
+        .collect::<BTreeSet<_>>();
+    let mut candidates = sorted
+        .values()
+        .filter(|d| !selected_ids.contains(d.id.as_str()))
+        .map(|d| (terms(&d.text).intersection(&selected_terms).count(), *d))
+        .filter(|(score, _)| *score > 0)
+        .collect::<Vec<_>>();
+    candidates.sort_by(|(left_score, left), (right_score, right)| {
+        right_score
+            .cmp(left_score)
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    let mut related_documents = Vec::new();
+    for (_, doc) in candidates {
+        if related_documents.len() < MAX_DOCUMENTS && bytes + doc.text.len() <= MAX_TEXT_BYTES {
+            bytes += doc.text.len();
+            related_documents.push(doc.clone());
+        }
+    }
     let request_digest = digest(&(
         &state.selector,
         state.enabled,
@@ -307,6 +342,7 @@ pub fn prepare(
         partition,
         authority,
         &selected,
+        &related_documents,
     ))?;
     let next_attempt = if state.last_attempt_digest.as_deref() == Some(&request_digest) {
         state.attempts.saturating_add(1)
@@ -321,6 +357,7 @@ pub fn prepare(
         partition_digest: partition.to_owned(),
         authority_digest: authority.to_owned(),
         documents: selected,
+        related_documents,
         pending_count: pending,
         blocked_oversized_count: oversized,
         max_corrections: 1,
@@ -418,7 +455,10 @@ pub fn apply(
         &batch.partition_digest,
         &batch.authority_digest,
     )?;
-    if expected.request_digest != batch.request_digest {
+    if expected.request_digest != batch.request_digest
+        || expected.documents != batch.documents
+        || expected.related_documents != batch.related_documents
+    {
         return Err(invalid("semantic preparation is stale"));
     }
     let selected = batch
@@ -443,6 +483,21 @@ pub fn apply(
         .iter()
         .map(|d| (d.id.as_str(), d))
         .collect::<BTreeMap<_, _>>();
+    let disclosed = batch
+        .documents
+        .iter()
+        .chain(&batch.related_documents)
+        .map(|d| d.id.as_str())
+        .collect::<BTreeSet<_>>();
+    if result
+        .relations
+        .iter()
+        .any(|edge| !disclosed.contains(edge.to.as_str()))
+    {
+        return Err(invalid(
+            "semantic target was not included in the prepared input",
+        ));
+    }
     validate_relations(&result.relations, &selected, &current)?;
     let mut next = state.clone();
     next.last_attempt_digest = None;
@@ -631,6 +686,48 @@ mod tests {
         assert!(b.documents.len() <= 10);
         assert!(b.documents.iter().map(|d| d.text.len()).sum::<usize>() <= MAX_TEXT_BYTES);
         assert!(!b.documents.is_empty());
+    }
+    #[test]
+    fn related_context_is_bounded_and_undisclosed_targets_are_refused() {
+        let mut state = state();
+        let mut documents = docs();
+        documents[0].text = "[[b]] target".into();
+        documents[0].digest = sha256_digest(documents[0].text.as_bytes());
+        state
+            .processed
+            .insert("b".into(), documents[1].digest.clone());
+        documents.push(Document {
+            id: "unrelated".into(),
+            locator: "unrelated.md".into(),
+            digest: sha256_digest(b"separate"),
+            text: "separate".into(),
+        });
+        state
+            .processed
+            .insert("unrelated".into(), documents[2].digest.clone());
+        let batch = prepare(&state, &documents, "p", "a").unwrap();
+        assert_eq!(batch.documents.len(), 1);
+        assert_eq!(batch.related_documents.len(), 1);
+        assert_eq!(batch.related_documents[0].id, "b");
+        assert!(
+            batch
+                .documents
+                .iter()
+                .chain(&batch.related_documents)
+                .map(|d| d.text.len())
+                .sum::<usize>()
+                <= MAX_TEXT_BYTES
+        );
+        let (mut r, mut receipt) = result(&batch, &documents);
+        assert!(apply(&state, &documents, &batch, &r, &receipt).is_ok());
+        r.relations[0].to = "unrelated".into();
+        r.relations[0].target_digest = documents[2].digest.clone();
+        r.relations[0].evidence = "INFERRED".into();
+        receipt.result_digest = digest(&r).unwrap();
+        assert!(apply(&state, &documents, &batch, &r, &receipt).is_err());
+        let mut forged = batch.clone();
+        forged.related_documents.push(documents[2].clone());
+        assert!(apply(&state, &documents, &forged, &r, &receipt).is_err());
     }
     #[test]
     fn scope_storage_is_atomic_and_preserves_prior_state_on_conflict() {
