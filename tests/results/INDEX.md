@@ -1239,3 +1239,5 @@
 | [passed](runs/20261005T111738-be60f2a537f8.md) | 모든 사용량 창의 손상·중복 차단 보안 계약 | 6ce65580a42dfec7545993b984043d3988488892 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T111944-69d7a5350029.md) | Python conformance: security | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T112105-e8d4381182eb.md) | Python conformance: contract | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T113337-868ffe0daa7d.md) | 다중 창 이력의 왕복·단일 창 호환·작업 재개 계약 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T113411-500a0c5fa7c7.md) | Windows에서도 유효한 다중 창 이력 왕복과 재개 회귀 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
