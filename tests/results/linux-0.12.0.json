@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "source_commit": "eb5d2eee9350c41c9d535cd331c3ea4914b0b4c4",
+  "base_image": "rust@sha256:408fe88047cef61a2087653b0c5255fa51c0f2d6d94ddedd7a2562a9b91a46f6",
+  "platform": "Linux amd64 via Docker Desktop on Windows",
+  "actual_host_models_executed": false,
+  "status": "passed",
+  "steps": [
+    {
+      "command": [
+        "docker",
+        "build",
+        "--tag",
+        "aigent-hive-qualification:0.12.0-local",
+        "<source-root>\\tests\\work\\hive-linux-0120"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.219
+    },
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        "aigent-hive-linux-0120",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--mount",
+        "type=bind,source=<source-root>,target=/source,readonly",
+        "--mount",
+        "type=bind,source=<source-root>\\tests\\work\\hive-linux-0120,target=/artifacts",
+        "--tmpfs",
+        "/source/tests/work:rw,uid=1000,gid=1000,mode=0700,size=512m",
+        "--tmpfs",
+        "/source/.agents/work:rw,uid=1000,gid=1000,mode=0700,size=512m",
+        "--workdir",
+        "/source",
+        "--env",
+        "CARGO_HOME=/artifacts/cargo",
+        "--env",
+        "CARGO_TARGET_DIR=/artifacts/build",
+        "--env",
+        "CARGO_INCREMENTAL=0",
+        "--env",
+        "RUSTUP_TOOLCHAIN=1.97.1",
+        "--env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "--env",
+        "GIT_CONFIG_COUNT=1",
+        "--env",
+        "GIT_CONFIG_KEY_0=safe.directory",
+        "--env",
+        "GIT_CONFIG_VALUE_0=/source",
+        "aigent-hive-qualification:0.12.0-local",
+        "bash",
+        "/artifacts/qualification.sh"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 346.141
+    }
+  ],
+  "limits": [
+    "container CLI and fixtures only",
+    "no active host interruption or paid-credit transition proof"
+  ],
+  "tool_image_id": "sha256:a2f62dc21b3b996d1bbd7168075413365606c1bc99828dfe5692725adb337abe",
+  "owned_venv_links": {
+    "venv/lib64": "lib",
+    "venv/bin/python": "python3",
+    "venv/bin/python3": "/usr/bin/python3",
+    "venv/bin/python3.11": "python3"
+  },
+  "artifact_finalization": "tests passed; artifact inventory refused owned Linux virtual-environment links on Windows",
+  "qualification_script": "#!/bin/bash\nset -euo pipefail\nuname -s\nrustc --version\npython3 --version\ncargo test --locked -p hive-core -p hive-cli usage\ncargo test --locked -p hive-wiki -p hive-update\ncargo build --locked -p hive-cli\npython3 -m venv /artifacts/venv\n/artifacts/venv/bin/python -m pip install --disable-pip-version-check -r requirements-conformance.txt\ncp /artifacts/build/debug/hive /tmp/hive\nsha256sum /artifacts/build/debug/hive /tmp/hive\nexport HIVE_BIN=/tmp/hive\nexport PATH=/artifacts/venv/bin:$PATH\n/artifacts/venv/bin/python -m unittest tests.conformance.contracts.test_usage_control tests.conformance.contracts.test_knowledge_graph_contracts tests.conformance.release.test_update_migration -v\npython scripts/qualify-source-graph.py --hive /tmp/hive --target /source --output /artifacts/graph-qualification.json\nbash -n scripts/install.sh\n",
+  "dockerfile": "FROM rust@sha256:408fe88047cef61a2087653b0c5255fa51c0f2d6d94ddedd7a2562a9b91a46f6\nRUN apt-get update && apt-get install -y --no-install-recommends python3-venv\nUSER 1000:1000\n",
+  "linux_binary_sha256": "fada803f32f3030178d43b8b4820e9878005fb9814fddac2c5d45a7691ac9e15",
+  "graph_report": "tests/results/source-graph-linux-0.12.0.json"
+}

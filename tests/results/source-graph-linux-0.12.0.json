@@ -1,0 +1,75 @@
+{
+  "api_keys_read": 0,
+  "canonical_changed": false,
+  "canonical_tree_digest_after": "sha256:1ec5298cd032efa0d85e5be7842e841917614060eb444dc4f86d482e55d24053",
+  "canonical_tree_digest_before": "sha256:1ec5298cd032efa0d85e5be7842e841917614060eb444dc4f86d482e55d24053",
+  "cold_cli_p95_ms": 333.6547,
+  "current_canonical_changed": false,
+  "current_source_lint": {
+    "action": "LintSourceWiki",
+    "changed_paths": [],
+    "code": "hive.source-wiki-lint-passed",
+    "data": {
+      "error_count": 0,
+      "issues": [],
+      "logical_digest": "sha256:a9a995bed5b943f46dddcd4dab60f7c39194a9d9be213cff6c3f7bdcf3fe9b16",
+      "page_count": 228,
+      "warning_count": 0
+    },
+    "evidence": [
+      {
+        "digest": "sha256:9375502d52544029777178920d84a907cd85c9a0db7f20aa1a2bb2a6a7ccfb58",
+        "kind": "report",
+        "locator": "docs/facts"
+      }
+    ],
+    "exit_code": 0,
+    "message": "source Wiki lint completed without errors",
+    "next_action": null,
+    "schema_version": 1,
+    "status": "success"
+  },
+  "edge_count": 726,
+  "engine": "native-markdown",
+  "exact_recall_at_10": 1.0,
+  "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+  "failed_exact": [],
+  "failed_relation": [],
+  "frozen_source_lint": {
+    "action": "LintSourceWiki",
+    "changed_paths": [],
+    "code": "hive.source-wiki-lint-passed",
+    "data": {
+      "error_count": 0,
+      "issues": [],
+      "logical_digest": "sha256:e4512385393603e668f08dc24d0034312d2dad7c4e72a68f5b4d0dc5f38602e7",
+      "page_count": 162,
+      "warning_count": 0
+    },
+    "evidence": [
+      {
+        "digest": "sha256:49b1b5695b91a02dfc0fdd2814a29775aabb9c867f2db05e2a4bb753a7c095ed",
+        "kind": "report",
+        "locator": "docs/facts"
+      }
+    ],
+    "exit_code": 0,
+    "message": "source Wiki lint completed without errors",
+    "next_action": null,
+    "schema_version": 1,
+    "status": "success"
+  },
+  "graphify_preview": false,
+  "node_count": 81,
+  "provider_api_calls": 0,
+  "query_logs": 0,
+  "question_corpus_changed": false,
+  "question_corpus_digest": "sha256:ee6e1f364fb4bba428c3cef81f3e7c6e3f687812ef0b42bc5ec63805a580fd97",
+  "questions": {
+    "exact": 30,
+    "relation": 30
+  },
+  "relation_grounded_recall_at_10": 1.0,
+  "schema_version": 1,
+  "scope": "source"
+}
