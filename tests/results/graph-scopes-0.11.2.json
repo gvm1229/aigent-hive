@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "engine": "native-markdown",
+  "host": "win32",
+  "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+  "question_corpus_sha256": "ee6e1f364fb4bba428c3cef81f3e7c6e3f687812ef0b42bc5ec63805a580fd97",
+  "binary_sha256": "d3a5a0e9a2a36c4fb6c91b1cbef7996fd47b61e96c1f4b5c6c1ab2b838e7091a",
+  "semantic_model_accuracy": "not measured by this explicit-link regression",
+  "scopes": [
+    {
+      "scope": "source",
+      "exact_passed": 10,
+      "relation_passed": 10,
+      "failures": []
+    },
+    {
+      "scope": "project",
+      "exact_passed": 10,
+      "relation_passed": 10,
+      "failures": []
+    },
+    {
+      "scope": "user-root",
+      "exact_passed": 10,
+      "relation_passed": 10,
+      "failures": []
+    }
+  ],
+  "exact_passed": 30,
+  "relation_passed": 30,
+  "cold_cli_p95_ms": 458.02980003645644,
+  "canonical_preserved": true,
+  "questions_preserved": true,
+  "passed": true
+}

@@ -1213,3 +1213,7 @@
 | [passed](runs/20261005T012808-0da2bf26ebfd.md) | 정상 지식 저장 구조를 갖춘 파일 수집 관계 회귀 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T012952-491948cd08ed.md) | 파일 수집 뒤 관계 알림의 Rust 정적 검사 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T014034-6fb8fc7689ee.md) | 출처 지문 정합화 뒤 전체 관계 CLI와 고정 질문 재검증 | 355a66483fb42f28184538c313ebc440f9ae394a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T014450-9c8c32c27bdb.md) | Source Wiki와 소비자 및 전역의 고정 질문 각10개 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T014813-e34cc360c90c.md) | 원래 제목과 요약을 모두 보존한 세 범위 질문 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T014955-bda35394bf5d.md) | 세 범위 관계 질문 해석 수정 빌드 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015024-79e8a070147f.md) | 세 범위의 관계 질문과 지목한 양 끝 문서의 근거 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
