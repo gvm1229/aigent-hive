@@ -11,7 +11,7 @@
 ## 기준
 
 - [ ] [HCT112-001] Antigravity CLI 사용량 수신·정제·최신성 검사와 실제 Windows 수용
-  - state: awaiting-user-authority; owner: 사용자와 Antigravity 상태 표시 설정; reason: 수신 구현·실제 quota 조회 완료, 현재 사용자 연결 설정의 정확한 변경 승인과 실제 콜백 전달 수용 필요
+  - state: agent-owned; owner: 현재 Codex; reason: 2026-10-06 상태 표시 연결 변경·복원 승인, 공개 test.2로 현재 CLI1.2.16의 실제 전달 검사 재개. 기존1.1.18 수신 증거의 자동 확대 금지
 - [ ] [HCT112-002] 현재 호스트 실행의 지원 제어 연결과 정확한 대상 결합 검증
   - state: awaiting-external-evidence; owner: 현재 실행 제어 연결을 제공하는 호스트; reason: 기능 선언과 별개인 현재 앱 실행의 인증된 중단 연결·최종 상태 증명 부재
 - [ ] [HCT112-003] 15초 사용량 관측·제한 감지·호스트 중단 확인·명시적 재개

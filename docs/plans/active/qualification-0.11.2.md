@@ -10,7 +10,7 @@
 - [ ] [QLF112-001] 토큰 집계의 중복·부모/자식·사건 지연 조사와 예산 제어 보완
   - state: awaiting-external-evidence; owner: 현재 실행의 정제된 누적 사건을 제공하는 호스트; reason: 차분·중복·지연 진단 구현과 합성 검사 완료, 실제 사건별 집계와 중단 연결 부재로 최초 초과 원인 및 엄격한 상한 미증명
 - [ ] [QLF112-002] Windows 명령줄 샌드박스 오류 5의 원인 분리와 진단·복구 수용
-  - state: awaiting-user-authority; owner: 사용자 또는 Windows 관리자; reason: 동일 파일 직접 읽기 성공·Codex 샌드박스 시작 권한 설정 오류 5, 공식 설정 복구의 관리자 승인 뒤 동일 조건 재검증 필요
+  - state: agent-owned; owner: 현재 Codex와 필요한 경우 Windows 관리자; reason: 2026-10-06 공식 복구 시도의 필요한 수동 승인 허용. 현재 CLI0.159.0 진단·동일 제한 조건 재검증부터 실행, UAC 직접 조작·앱 재시작 필요 여부 확인
 - [x] [QLF112-003] 검색 도우미 종료·신호·시간 초과·응답 오류의 분리 진단
   - state: complete; evidence: repo:tests/results/runs/20261004T224213-7606c68c8eec.md#sha256:155211cbb42c4b221463a757be61752136b7d9e36a772be8088ac14ceed3ef22
 - [ ] [QLF112-004] Windows 실제 수용·관련 Linux 검사·번호 공개 시험 준비
