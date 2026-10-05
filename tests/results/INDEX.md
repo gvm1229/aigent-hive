@@ -1194,3 +1194,7 @@
 | [passed](runs/20261005T002716-002a33bdb436.md) | Python conformance: contract | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T003733-06d6b5ae1759.md) | 같은 실행 파일의 직접 읽기와 Windows 샌드박스 읽기 비교 | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T004000-ec9afad7ad40.md) | 통합 검사의 지식 라이브러리 전체 회귀 | 0717d2cf35a48eba96414e0976ae2d67f4ff5238 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T004111-0265cd204e71.md) | Python conformance: integration | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T004930-c90f8c4fc747.md) | 공개 배포와 일치하는 기존 0.11.1 CLI의 격리 표본 생성 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005007-395ee448a6e3.md) | npm 연결 스크립트 뒤의 실제 공개 0.11.1 실행 파일로 표본 생성 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005047-08f702f35bce.md) | 0.11.1 포함 모든 공개 이전 설치의 갱신과 중단 복구 검증 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
