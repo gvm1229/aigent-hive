@@ -1,12 +1,12 @@
 # Aigent Hive 활성 계획
 
-> Revision: 396
+> Revision: 397
 > 기준일: 2026-10-06
 > Product version: `0.12.0`
 > 공개 Stable: `0.11.1`
-> 현재 단계: 0.12.0-test.3 공개 수용 완료·실제 호스트 증거 대기
+> 현재 단계: 완료 기능만의0.12.0 안정판 출시 승인·후속9개 이관
 > 다음 공개 시험: `0.12.0-test.4` — 새 제품 변경 때만
-> 다음 단계: Windows의 사용량·제어 연결·Graphify·진단 구현, macOS 전용 수용 마지막
+> 다음 단계: 승인 문구·공개 문서 정합화 → develop/main 보호 통합 → 안정판 후보·게시
 
 ## 현재 요청과 경계
 
@@ -17,7 +17,7 @@
 - 기본 환경 Windows, 작업 브랜치 develop. macOS 전용 작업은 마지막 QLF112-005
 - 현재 소스 0.12.0, 설치·공개 안정판 0.11.1. 공개 자동 수용 0.12.0-test.3, 다음 제품 변경의 번호 시험 0.12.0-test.4
 - [공개 수용 근거](../research/implementation-evidence-0.12.0.md): Windows·Linux·macOS 공개 바이너리의 설치·갱신·복구 통과. 실제 호스트 활성화와 원래 macOS 오류 증명 별도
-- 번호 공개 시험은 승인 범위. 0.12.0 안정판 태그·보호 main·정식 게시·현재 사용자 설치의 버전별 승인 없음
+- 2026-10-06 사용자 명시 승인: 미완료9개 후속 이관, 완료 기능만의0.12.0 안정판·보호 main·태그·npm·GitHub 게시. 현재 사용자 설치·Orireki 갱신은 요청 범위 밖
 - 2026-10-06 필요한 수동 승인 허용: [실제 호스트 검증 순서](host-acceptance-0.12.0.md)의 Antigravity 연결 변경·복원과 Windows 공식 복구. 실제 사용자 조작과 지원 연결의 존재는 별도 확인
 - 추가0.12.0 버그: 시험판의 기준본을 안정판 출처로 잘못 분류하는 문제. [출처 분리](active/release-provenance-0.12.0.md), 시험판을 이전 버전 호환 대상으로 추가하는 처리 제외
 - Claude 실제 대화·구독 사용량과 게시자 서명: 버전 미정 대기 유지
@@ -28,23 +28,29 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 호스트 사용량·중단·분담 | 1 | 5 | 16.7% |
-| Graphify 미완료 확장 | 2 | 1 | 66.7% |
-| 계측·진단·운영체제 수용 | 2 | 3 | 40.0% |
+| 0% 소진 보호 | 1 | 0 | 100.0% |
+| 지식 관계 검증·저장 보존 | 2 | 0 | 100.0% |
+| Windows 복구·검색 진단 | 2 | 0 | 100.0% |
 | 시험판 출처·안정판 호환성 | 1 | 0 | 100.0% |
-| **현재 범위 합계** | **6** | **9** | **40.0%** |
+| **현재 범위 합계** | **6** | **0** | **100.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT112-001–005`, `HCT120-001` | 호스트 사용량·중단·분담 |
-| [knowledge-graph-0.11.2.md](active/knowledge-graph-0.11.2.md) | `GPH112-001–003` | Graphify 미완료 확장 |
-| [qualification-0.11.2.md](active/qualification-0.11.2.md) | `QLF112-001–005` | 계측·진단·운영체제 수용 |
+| [host-control-0.11.2.md](active/host-control-0.11.2.md) | `HCT120-001` | 0% 소진 보호 |
+| [knowledge-graph-0.11.2.md](active/knowledge-graph-0.11.2.md) | `GPH112-001–002` | 지식 관계 검증·저장 보존 |
+| [qualification-0.11.2.md](active/qualification-0.11.2.md) | `QLF112-002–003` | Windows 복구·검색 진단 |
 | [release-provenance-0.12.0.md](active/release-provenance-0.12.0.md) | `QLF120-006` | 시험판 출처·안정판 호환성 |
 
-## 실행 순서
+## 후속 이관
+
+- 정확한 제외 ID: HCT112-001·002·003·004·005, GPH112-003, QLF112-001·004·005
+- [미완료9개 보존](backlog/0.12.0-deferred-host-acceptance.md): 대상은 후속 버전 미지정. 사용자 명시 이관에 따라 이번 안정판의 활성 범위에서 제외, 성공으로 변경 없음
+- [정식 출시 실행](0.12.0-stable-release.md): 수용한test.3의 제품 지문 보존·완료 기능만의 안내문
+
+## 이전 구현 순서
 
 1. Windows의 지원 계약 검증과 독립 구현: HCT112-001·002·005, GPH112-001, QLF112-001·002·003
 2. 검증된 연결 기반 HCT112-003·004, GPH112-002·003

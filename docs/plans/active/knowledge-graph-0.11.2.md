@@ -5,14 +5,14 @@
 
 기존 코드 전용 추출·Markdown 관계·벡터 검색의 완료 유지. 미완료 확장만 소유. [조사](../../research/followup-feasibility-0.11.2.md)·[결정](../../decisions/ADR-0025-0.11.2-scope.md).
 
+미완료 실제 수용은 [후속 목록](../backlog/0.12.0-deferred-host-acceptance.md)으로 이관. 아래 구현 절차의 미실행 부분은 후속 재개 참고이며 이번 안정판 완료 주장 제외
+
 ## 기준
 
 - [x] [GPH112-001] 고정 후보의 증분/전체 동등성과 모음별 권한 격리
   - state: complete; evidence: repo:tests/results/graph-implementation-0.11.2.md#sha256:cd0e83b1d5eb5853ae48402bea0971389335d36d111ec6f4894cd91dc9e6107d
 - [x] [GPH112-002] 호스트 소유 문서 의미 추출과 출처 검증·가져오기
   - state: complete; depends: GPH112-001; evidence: repo:tests/results/graph-implementation-0.11.2.md#sha256:cd0e83b1d5eb5853ae48402bea0971389335d36d111ec6f4894cd91dc9e6107d
-- [ ] [GPH112-003] 30개 관계 질문·고유 5만 청크 성능·복구의 Windows 수용
-  - state: awaiting-external-evidence; depends: GPH112-001,GPH112-002; owner: 대규모 의미 분석의 실제 호스트 수용 환경; reason: 세 범위 명시 관계30개와 고유5만 청크 색인·준비 실측 완료, 전체 의미 모델 분석과 그 정답률·실제 실행 사용량 근거 미확보
 
 ## GPH112-001
 

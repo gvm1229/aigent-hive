@@ -8,18 +8,10 @@
 - 완료 기록: 구현·합성 반례와 실제 호스트 활성화 별도. 미지원 기능의 안전한 비활성·진단 수용 가능, 실제 동작 성공 주장 제외
 - 공개 변경: capture의 antigravity 선택, 기능 명세 형식 2의 주기 관측·현재 실행 제어·저장 후 관계 분석. 형식 1의 새 기능은 미검증
 
+미완료 실제 수용은 [후속 목록](../backlog/0.12.0-deferred-host-acceptance.md)으로 이관. 아래 구현 절차의 미실행 부분은 후속 재개 참고이며 이번 안정판 완료 주장 제외
+
 ## 기준
 
-- [ ] [HCT112-001] Antigravity CLI 사용량 수신·정제·최신성 검사와 실제 Windows 수용
-  - state: awaiting-external-evidence; owner: 현재 Antigravity CLI 초기 설정과 실제 상태 표시 전달을 확인하는 호스트; reason: 승인한 Windows CLI1.2.16의 제한된 실제 콘솔 검사에서 콜백0건. 선택형 수집 해제 화면 확인·임시 설정 복원 완료, 초기 설정 완료와 실제 전달 미증명. 기존1.1.18 수신 증거의 자동 확대 금지
-- [ ] [HCT112-002] 현재 호스트 실행의 지원 제어 연결과 정확한 대상 결합 검증
-  - state: awaiting-external-evidence; owner: 현재 실행 제어 연결을 제공하는 호스트; reason: 기능 선언과 별개인 현재 앱 실행의 인증된 중단 연결·최종 상태 증명 부재
-- [ ] [HCT112-003] 15초 사용량 관측·제한 감지·호스트 중단 확인·명시적 재개
-  - state: awaiting-external-evidence; depends: HCT112-001,HCT112-002; owner: 현재 실행 제어 연결을 제공하는 호스트; reason: 현재 실행의 관측·중단 연결 부재로 15초 감시 활성화 불가
-- [ ] [HCT112-004] 호스트 소유 작업 분담의 실제 역할·모델·결과 검증과 불확정 실행 회복
-  - state: awaiting-external-evidence; depends: HCT112-002; owner: 서명된 실행 확인을 제공하는 호스트; reason: 실제 역할·모델·결과의 독립 증명 연결 부재로 자동 분담 비활성 유지
-- [ ] [HCT112-005] Windows Codex·Antigravity 도구별 검사·자식 상속·오류 처리 수용
-  - state: awaiting-external-evidence; owner: 승인된 실제 호스트 검증 대화; reason: 변환기 계약·지원 표 검증 완료, Antigravity 자식의 실제 이벤트 상속과 파일 변경 전후 증명 부재
 
 - [x] [HCT120-001] 기본 활성 0% 보호·별도 대화 한정 제외·새 작업 차단 회귀
   - state: complete; evidence: repo:tests/results/runs/20261005T113840-99e7dbb7892e.md#sha256:04c0e230a2cc9056133bd38917ebe17bcaec9e0199558294f7675477b9f89362
