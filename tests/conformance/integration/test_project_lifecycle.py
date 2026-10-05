@@ -263,11 +263,34 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
                 self.assertEqual(process.returncode, 0, result)
                 self.assertEqual(active_snapshot(), upgraded)
 
-    def test_published_test2_project_upgrades_without_a_same_version_lockout(self) -> None:
+    def test_published_test2_is_not_a_stable_backwards_compatibility_target(self) -> None:
         self._check_same_product_test_upgrade("0.10.0-test.2")
 
-    def test_published_test4_project_upgrades_without_a_same_version_lockout(self) -> None:
+    def test_published_test4_is_not_a_stable_backwards_compatibility_target(self) -> None:
         self._check_same_product_test_upgrade("0.10.0-test.4")
+
+    def test_new_project_base_retains_test_package_identity_and_rejects_origin_tampering(self) -> None:
+        target = self.work_root / "package-origin-project"
+        target.mkdir()
+        process, result = self.invoke_setup(target)
+        self.assertEqual(process.returncode, 0, result)
+        ledger_path = target / ".hive/config/project-base.json"
+        ledger = json.loads(ledger_path.read_bytes())
+        version = subprocess.check_output([str(self.hive_binary), "--version"], text=True)
+        if "developer test build" in version:
+            import re
+            number = re.search(r"test #(\d+)", version)
+            expected = PRODUCT_VERSION + ("-test." + number.group(1) if number else "-test")
+            self.assertEqual(ledger.get("package_version"), expected)
+        else:
+            self.assertNotIn("package_version", ledger)
+        ledger["package_version"] = "0.11.0-test.6"
+        ledger_path.write_bytes(json.dumps(ledger, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode() + b"\n")
+        before = snapshot_tree(target)
+        process, result = self.invoke("project", "upgrade", "--target", str(target), "--apply")
+        self.assertNotEqual(process.returncode, 0, result)
+        self.assertIn("digest", result["message"])
+        self.assertEqual(snapshot_tree(target), before)
 
     def _check_same_product_test_upgrade(self, version: str) -> None:
         fixture_root = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.10.0"
@@ -314,9 +337,12 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
                 unsigned = json.dumps(ledger, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
                 ledger["ledger_digest"] = "sha256:" + hashlib.sha256(unsigned).hexdigest()
                 ledger_path.write_bytes(json.dumps(ledger, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n")
+                before = snapshot_tree(target)
                 for mode in ("--scan", "--dry-run", "--apply", "--validate"):
                     process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
-                    self.assertEqual(process.returncode, 0, result)
+                    self.assertNotEqual(process.returncode, 0, result)
+                    self.assertIn("test package", result["message"])
+                    self.assertEqual(snapshot_tree(target), before)
                 self.assertIn("OMX bytes must survive exactly.", (target / "AGENTS.md").read_text("utf-8"))
 
     def setUp(self) -> None:
