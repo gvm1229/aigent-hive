@@ -11,7 +11,7 @@ aliases: []
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:30e453d8375c22b0ec9ec56998fc472dace3fff8cea63ad7ad360d5ff4c19898"
   - "repo:crates/hive-render/src/lib.rs#sha256:62174ca2ea76cf5c379e1638e3ef2c33cc332f3ae312f03a983711f9abe1a1d5"
-  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:72f2989faf99a78eb09b3f84fe6feb8842e3004b575c7267e4048a2213ee3214"
+  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:958df30cdb8c19d4591eed2324587cd0cdb3fb90a30da8ef01daee015efc150e"
   - "repo:tests/results/acceptance-0.12.0-test.3.json#sha256:56a95cce7790c624305121943ac216f2651350f2b9325b8f61a24db566b89304"
 links: [source-development, v0-11-2-scope]
 reviewed_revision: "git:032b1b5083970fa092d85fcd49ea7847c185b15e"
