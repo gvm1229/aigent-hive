@@ -1201,3 +1201,5 @@
 | [passed](runs/20261005T005551-e7f1135919d5.md) | 발표 자료 폐기 결정과 이력 보존 회귀 | 1ae86f7c36901a8c4e3352cce1d0a78596157115 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T005609-c84c5897ce6a.md) | Python conformance: security | b2abc1da5fb31d01f5f4b4a73b615063fbce35cc | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T010048-f9bca27e894b.md) | Python conformance: documentation | 0264da756650ed31a8e6d4915d5b854443da2a63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T010228-d3fcdf20ef5a.md) | Python conformance: release | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T010551-99e4c0e03733.md) | 공개 0.11.1과 다음 목표의 스킬 호환 목록 검사 | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
