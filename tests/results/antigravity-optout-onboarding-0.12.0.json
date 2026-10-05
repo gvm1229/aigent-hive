@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "host": "antigravity",
+  "os": "Windows",
+  "cli_version": "1.2.16",
+  "package_version": "0.12.0-test.2",
+  "model_calls": 0,
+  "fixture_target": true,
+  "settings_previously_absent": true,
+  "settings_restored": true,
+  "raw_console_persisted": false,
+  "raw_callback_persisted": false,
+  "commands": [
+    "accept-current-theme-for-cli-onboarding",
+    "opt-out-of-optional-interactions-data-collection"
+  ],
+  "console_state": {
+    "login_prompt": false,
+    "project_prompt": false,
+    "usage_display": true
+  },
+  "trial_exited": true,
+  "exit_code": 0,
+  "callbacks": [],
+  "status": "no-callback-observed",
+  "global_runtime_signal_used": false,
+  "default_line_preserved_by_configuration": true,
+  "limits": "Actual CLI callback transport only; bootstrap target is a synthetic harness fixture. No model call, IDE, periodic interruption, live role attestation or billing transition proof."
+}

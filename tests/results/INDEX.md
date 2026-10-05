@@ -1278,3 +1278,13 @@
 | [passed](runs/20261005T211530-f56b9bdb9427.md) | 생성한 시험판 출처와 변조 거부의 실제 CLI 계약 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T212039-c73bd7aad95c.md) | 시험 패키지 출처를 포함한 전체 Rust 회귀와 정적 검사 | 8aefd94546860569fcb5337105381f065b3f887a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T214615-184e974a7e26.md) | 시험판 출처 수정의 전체 Python 다섯 검사 묶음 | 87ada8af7018827cf9f8525a6cf69e7a440e2ce5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T185832-2a7e2fd44a94.md) | 승인한 Antigravity 실제 상태 표시 전달과 설정 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185906-f8104f9806c5.md) | Antigravity 실제 콘솔의 상태 표시 전달과 안전한 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T190542-6836a8753995.md) | 현재 CLI 초기 색상 안내를 통과한 상태 표시 전달 검사 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T191529-d6a891117cca.md) | Antigravity 초기 안내의 필요한 사용자 선택 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192301-081d1937a076.md) | 선택형 데이터 제공을 끈 Antigravity 실제 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192745-6b31b3d75dfc.md) | 데이터 제공 해제의 화면 갱신 뒤 Antigravity 전달 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T193823-530986daf50e.md) | 실제 콘솔 화면 상태의 고정 해석 도구 준비 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194536-136ba760d9f4.md) | 실제 화면 해석으로 Antigravity 초기 안내와 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T202027-b4b8b4ce6e1a.md) | 수집 동의 해제를 확인한 Antigravity 초기 안내 완료와 전달 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T203031-fe9a67e63b84.md) | 수집 해제 뒤 완료 버튼을 선택한 실제 Antigravity 전달 확인 | 2dd0fe438d57290d31616d2ccf16939bcfab0ea1 | Windows-11-10.0.26300-SP0 |
