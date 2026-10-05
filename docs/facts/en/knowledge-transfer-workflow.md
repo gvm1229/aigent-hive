@@ -9,13 +9,13 @@ summary: "Single and multi-bundle imports bind exact inputs, destination bytes, 
 tags: [knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:1dccff4126427eee75e24cb440139c4791b1fae34c115cee69d2cb46dd182e87"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:a9ee28808bdeb2119ecd0b906638d4d1481348c6ef039ef06b6e1d5a84b30bf9"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
   - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:9847834a133b3728b43e78e539d1fe61fe5ca95d1f6a115363017c85f814bfbb"
   - "repo:docs/guides/knowledge-transfer.md#sha256:18fcddede882c3dbcfa642b5b6c2b6be6e4bac898532e03c3f178da56c8633af"
   - "repo:harness/skills/knowledge-transfer/SKILL.md#sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188"
 links: [global-knowledge-bundle-transfer, knowledge-storage]
-reviewed_revision: "git:dd63333a702a7a89585d101d2b9d043ebd0987d8"
+reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
 status: active
 ---
 

@@ -9,17 +9,16 @@ summary: "사용자 결정에 따른 0.11.2 범위, Windows 우선과 macOS 최�
 tags: [scope, v0-11-2, windows]
 aliases: []
 sources:
-  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:569eff874c80ecdf6ba6866e28392b0b1668ad083905429fe4a337ad6f4358a8"
+  - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:559da92582358c331cfd939bfeb380f31c3361f3e92ba8cb2294b013f05a8fe3"
 links: [knowledge-storage, marketing-deck-record, product-purpose]
-reviewed_revision: "git:e91331b5a498484c8abde81fe0989df1bccf8ea6"
+reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
 status: active
 ---
 
 # 0.11.2 범위와 Windows 우선 순서
 
-- 2026-10-05 결정: 0.11.2에 주기 사용량 감시·중단, 호스트 소유 분담, Graphify 잔여와 구현 가능한 진단 편입
+- 2026-10-05 결정: 사용량 감시·중단, 호스트 소유 분담, Graphify 잔여·진단의 0.11.2 편입
+- 검증된 기능만 활성, 미지원·미검증 호스트는 비활성·대기. 활성 관계 기능은 저장 뒤 자동 분석, 분석 실패도 저장 성공 보존
 - Windows 우선, macOS 전용 수용 마지막. Claude 실제 검증·게시자 서명 대기
-- Notion·오래된 발표 자료 폐기. 로고·벡터 완료, 엔진 비교 참고 보존
-- Obsidian 기본 Markdown 사용 가능, 별도 플러그인 후보 종료
-- 근거: 공식 자료·CLI 도움말·소스 조사와 저장한 계획·검증 순서
-- 조사 완료와 제품 구현·실제 수용의 성공 증명 구분
+- Notion·오래된 발표 자료 폐기. 로고·벡터 완료, 엔진 비교 보존. Obsidian은 Markdown 사용, 별도 플러그인 제외
+- 공식 자료·CLI·소스 조사에 따른 계획. 조사·구현 완료와 실제 호스트 수용 증명 구분
