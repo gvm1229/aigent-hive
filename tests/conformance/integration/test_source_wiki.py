@@ -962,7 +962,7 @@ class SourceWikiConformance(unittest.TestCase):
         self.assertIn("originating request", documentation_directive)
         self.assertIn("hook", decision.lower())
 
-    def test_hive_marketing_deck_has_bilingual_resume_memory(self) -> None:
+    def test_retired_marketing_deck_preserves_history_without_pending_work(self) -> None:
         english = (ROOT / "docs/facts/en/marketing-deck-record.md").read_text(
             encoding="utf-8"
         )
@@ -975,14 +975,18 @@ class SourceWikiConformance(unittest.TestCase):
         for surface in (english, korean, task_record):
             self.assertIn("LumaDeck", surface)
             self.assertIn("aigent-hive-overview", surface)
-        self.assertIn("91-slide", english)
+        self.assertIn("91 slides", english)
         self.assertIn("91장", korean)
-        for surface in (task_record,):
-            self.assertIn("What our hive harness is about", surface)
-            self.assertIn("optimization strategy", surface)
-        self.assertIn("Initial request", task_record)
-        self.assertIn("8", english)
-        self.assertIn("8", korean)
+        self.assertIn("retired", english.lower())
+        self.assertIn("logo is complete", english)
+        self.assertIn("폐기", korean)
+        self.assertIn("Hive 로고 완료", korean)
+        self.assertIn("갱신·재개·로고 교체 과제 종료", task_record)
+        self.assertIn("실제 삭제 대상 제외", task_record)
+        for surface in (english, korean, task_record):
+            self.assertIn("0.9.0", surface)
+            self.assertIn("22", surface)
+            self.assertIn("Git", surface)
 
 
 if __name__ == "__main__":
