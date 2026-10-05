@@ -1,6 +1,7 @@
 # 현재 상태
 
-- 목표·소스: `0.12.0`, 작업 브랜치 `develop`
+- 제품 버전: `0.12.0`
+- 작업 브랜치: `develop`
 - 공개 시험: `0.12.0-test.2` 게시·자동 수용 완료
 - 공개 안정판·현재 사용자 설치: `0.11.1`
 - 정본: [활성 계획](../plans/PLAN.md)·[결정](../decisions/ADR-0025-0.11.2-scope.md)·[현재 근거](../research/implementation-evidence-0.12.0.md)
