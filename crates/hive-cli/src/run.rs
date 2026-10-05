@@ -3780,7 +3780,7 @@ mod tests {
         assert!(decoded
             .iter()
             .all(|item| item.schema_version == 2 && item.quota_pool.as_deref() == Some("default")));
-        assert_eq!(decoded[1].remaining_percent, 0.0);
+        assert_eq!(decoded[1].remaining_percent.to_bits(), 0.0_f64.to_bits());
         assert!(!super::publish_usage_history(
             &pinned,
             &path,
