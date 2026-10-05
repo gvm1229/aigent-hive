@@ -1245,3 +1245,5 @@
 | [passed](runs/20261005T113840-99e7dbb7892e.md) | 정확한 소진 값 보존과 전체 Rust 최종 검증 | 35317b78346ee2558183c9edbe1089aec97d7865 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T114206-372a7cb08419.md) | Python conformance: contract | 4a70bfccee612e1cee2beb8741ec2d85b8de74fa | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T115235-a5b966567d5a.md) | 최종 지식 지문과 고정 관계 질문 검사 | 050a9badde4b2efaa5c02dfdc9f271cda2cca820 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T115418-7584f00c6d1c.md) | Python conformance: integration | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T120101-8844a52a92c0.md) | Python conformance: release | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
