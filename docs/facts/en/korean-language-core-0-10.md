@@ -9,7 +9,7 @@ summary: "The Korean language core uses a pinned im-not-ai-derived rule pack, de
 tags: [korean, language, skill, v0-10]
 aliases: ["Korean output gate", "humanize-kor"]
 sources:
-  - "repo:.github/workflows/public-test-acceptance.yml#sha256:421f734c607bfa3d10de846c2388d9e63d94acb7185c0d679bd6da9fc459aa21"
+  - "repo:.github/workflows/public-test-acceptance.yml#sha256:c14cc428bfce38f70b6aabba8dad9063c6e3bbee1f2bd4b7ac668d52c3ff15b3"
   - "repo:crates/hive-core/src/korean.rs#sha256:bb575d5e73f1567755656c7e6be98cca871416a052e83e920d95b91e77186188"
   - "repo:docs/architecture/korean-language-core.md#sha256:3b97a9ba4e09ea2c68e2094ff57b383e255ecd7e50d85facf50b9f3ea3c56fa3"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:d84549268a83748e23da88c1e9c1d51163776e9511b258feb2b79c3318239e09"
