@@ -9,9 +9,9 @@ summary: "Shared knowledge commands reject linked consumer targets before canoni
 tags: [index, security, symlink]
 aliases: ["legacy stale marker", "shared knowledge target guard"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:a9ee28808bdeb2119ecd0b906638d4d1481348c6ef039ef06b6e1d5a84b30bf9"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:fb2a64a7cafaf921a5252a65b042ade24ab03b7dcee5eec52dc7b895b5b92df5"
 links: [knowledge-storage, shared-index]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:52e63238cb6063312240d1c9b5ed1006d8a23a7b"
 status: active
 ---
 
