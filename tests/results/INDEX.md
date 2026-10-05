@@ -1237,3 +1237,5 @@
 | [failed](runs/20261005T111202-d9e0f13362b4.md) | Python conformance: documentation, security, contract, integration, release | 86138911b3c143cf61c39c98c0b4091a1003cb64 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T111346-bc2a5fff7117.md) | Python conformance: documentation, security, contract, integration, release | 59c1a69f3c889173191e4dbdde0085859b629ed1 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T111738-be60f2a537f8.md) | 모든 사용량 창의 손상·중복 차단 보안 계약 | 6ce65580a42dfec7545993b984043d3988488892 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T111944-69d7a5350029.md) | Python conformance: security | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T112105-e8d4381182eb.md) | Python conformance: contract | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
