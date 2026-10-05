@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "product_version": "0.12.0",
+  "package_version": "0.12.0-test.2",
+  "source_commit": "876491d6ea0e614ce01ec4162a7895ce7798e8d1",
+  "product_tree_sha256": "sha256:368e777a1d498d74cd1c0a9478612f967153c0a42e9c705b0174e934c2a41389",
+  "candidate_run_id": 37333076795,
+  "exact_source_ci_run_id": 37313197680,
+  "failed_publication_run_id": 37335406918,
+  "publication_run_id": 37336199897,
+  "publication_recovery": "Identical candidate and package bytes; recover_published_packages=true validates registry integrity. Initial linux-arm64 visibility failure; no package/version substitution.",
+  "npm": [
+    {
+      "package": "aigent-hive",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-zj5ZTgEskaTDReu0+c2503MTQDCHmOAyK2eXKiEyzgBydQkJPwScp6xyycqi+SXZDikmI5BvGqNb7H1muW1hkQ==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    },
+    {
+      "package": "@aigent-hive/darwin-arm64",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-8pq9BK6djpoYCt8ppac2OKgHLj38A4VfSr0/MVtvVdzrIDVhZs0637T+FHd7X8bK/WO3XPn+8qHTzDpGh7CoUw==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    },
+    {
+      "package": "@aigent-hive/darwin-x64",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-adm2pRYku1MBam4f+izmxwRUPgmC6Jfd+FndpG91TfoR2/p0FdnxfnpDcTGFWXs7hq0FASHO1SaIdfbvIobIZg==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    },
+    {
+      "package": "@aigent-hive/linux-arm64",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-PDN8Kn9jzpjBPI5pAxeZFm4aNk0UxXv7iUCxMDv5BbgZ4xkiVd1tB1RiMK7nOwcSSi0ITI2VetUmksQA53pZ7A==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    },
+    {
+      "package": "@aigent-hive/linux-x64",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-40Yg1f/jRA9xnEgb/9VtLQXKh30tmlfzioNdUbbx3LJOzmlncojnBqep7vIW3j11SzTCK01thC0xVzOOFtr4qQ==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    },
+    {
+      "package": "@aigent-hive/win32-x64",
+      "version": "0.12.0-test.2",
+      "integrity": "sha512-AGNzlWWjtK/1Z7C6fAChLTJXbTJj1D+g/Df5jz87I/J7+eZC9NaSSoFvvQvHXQWxx/GPm9AyOn1iDshwm7TkRQ==",
+      "tags": {
+        "test": "0.12.0-test.2",
+        "latest": "0.11.1"
+      }
+    }
+  ],
+  "github_release": {
+    "isDraft": false,
+    "isPrerelease": true,
+    "tagName": "v0.12.0-test.2",
+    "targetCommitish": "876491d6ea0e614ce01ec4162a7895ce7798e8d1",
+    "url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.12.0-test.2"
+  },
+  "limits": "Publication is verified; actual host interruption, paid-credit transition and original macOS intermittent-error acceptance are not proved. Current-user installation remains 0.11.1."
+}
