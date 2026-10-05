@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "host": "win32",
+  "chunks_requested": 50000,
+  "canonical_documents": 500,
+  "binary_sha256": "c36853ec9e59a1b171badab18697be66441fa90c22b8eb3fe847ac9d064b6ca7",
+  "model_calls": 0,
+  "steps": {
+    "index": {
+      "seconds": 36.187,
+      "exit_code": 0,
+      "code": "hive.index-rebuilt",
+      "sampled_peak_working_set_bytes": 690626560
+    },
+    "native_full": {
+      "seconds": 7.063,
+      "exit_code": 0,
+      "code": "hive.knowledge-graph-rebuilt",
+      "sampled_peak_working_set_bytes": 101433344
+    },
+    "semantic_preview": {
+      "seconds": 14.703,
+      "exit_code": 0,
+      "code": "hive.semantic-graph",
+      "sampled_peak_working_set_bytes": 474374144
+    },
+    "semantic_enable": {
+      "seconds": 14.406,
+      "exit_code": 0,
+      "code": "hive.semantic-graph",
+      "sampled_peak_working_set_bytes": 474222592
+    },
+    "semantic_prepare": {
+      "seconds": 16.719,
+      "exit_code": 0,
+      "code": "hive.semantic-graph",
+      "sampled_peak_working_set_bytes": 473972736
+    },
+    "fts_0": {
+      "seconds": 1.968,
+      "exit_code": 0,
+      "code": "hive.knowledge-query-complete",
+      "sampled_peak_working_set_bytes": 329564160
+    },
+    "fts_250": {
+      "seconds": 1.969,
+      "exit_code": 0,
+      "code": "hive.knowledge-query-complete",
+      "sampled_peak_working_set_bytes": 328630272
+    },
+    "fts_499": {
+      "seconds": 1.969,
+      "exit_code": 0,
+      "code": "hive.knowledge-query-complete",
+      "sampled_peak_working_set_bytes": 329519104
+    }
+  },
+  "semantic_full_generation": "not-run: host analysis of 5000 bounded batches required",
+  "fixture_seconds": 0.234,
+  "chunks_indexed": 50000,
+  "unique_chunk_texts": 50000,
+  "semantic_batch": {
+    "pending_count": 50000,
+    "blocked_oversized_count": 0,
+    "documents": 10,
+    "bytes": 15642
+  },
+  "status": "measured",
+  "disk_bytes": 197961810
+}
