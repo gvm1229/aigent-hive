@@ -22,7 +22,7 @@
   - state: awaiting-external-evidence; owner: 승인된 실제 호스트 검증 대화; reason: 변환기 계약·지원 표 검증 완료, Antigravity 자식의 실제 이벤트 상속과 파일 변경 전후 증명 부재
 
 - [x] [HCT120-001] 기본 활성 0% 보호·별도 대화 한정 제외·새 작업 차단 회귀
-  - state: complete; evidence: repo:tests/results/runs/20261005T094857-7b6b1f6920bf.md#sha256:8739824220d1bd2455f65e9ba4dc7f1171065fa5ab2ae06b92f11f4b3590d40f
+  - state: complete; evidence: repo:tests/results/runs/20261005T113840-99e7dbb7892e.md#sha256:04c0e230a2cc9056133bd38917ebe17bcaec9e0199558294f7675477b9f89362
 
 ## HCT112-001
 
