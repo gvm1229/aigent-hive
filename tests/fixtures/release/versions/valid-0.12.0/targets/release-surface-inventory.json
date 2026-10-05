@@ -121,7 +121,8 @@
     "run-policy-review",
     "session-bound-policy-review-notice",
     "signed-offline-update",
-    "token-counter-diagnostics"
+    "token-counter-diagnostics",
+    "zero-quota-dispatch-guard"
   ],
   "migrations": [
     "same-major-render-v1"
