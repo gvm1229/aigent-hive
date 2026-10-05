@@ -615,7 +615,12 @@ impl NormalizedSnapshot {
         let Some(first) = self.windows.first().map(|window| window.name) else {
             return "unknown";
         };
-        if self.windows.len() == 1 {
+        if self.windows.len() == 1
+            || self
+                .windows
+                .iter()
+                .all(|window| window.quota_pool.is_none())
+        {
             first
         } else {
             "multiple"
@@ -1336,7 +1341,18 @@ fn normalize_output_for_account(
     } else if let Some(primary) = usage.primary.as_ref() {
         let primary: CodexBarWindow =
             serde_json::from_value(primary.clone()).map_err(|_| SensorError::Malformed)?;
-        vec![normalize_window(&primary, "session", None, 300)?]
+        let mut windows = vec![normalize_window(&primary, "session", None, 300)?];
+        match usage.secondary.as_slice() {
+            [] => {}
+            [secondary] if secondary.is_null() => {}
+            [secondary] => {
+                let secondary: CodexBarWindow = serde_json::from_value(secondary.clone())
+                    .map_err(|_| SensorError::Malformed)?;
+                windows.push(normalize_window(&secondary, "weekly", None, 10_080)?);
+            }
+            _ => return Err(SensorError::WrongWindows),
+        }
+        windows
     } else {
         let [secondary] = usage.secondary.as_slice() else {
             return Err(SensorError::WrongWindows);
@@ -2640,7 +2656,7 @@ mod tests {
     }
 
     #[test]
-    fn session_window_ignores_malformed_duplicate_and_low_weekly_data() {
+    fn session_window_cannot_hide_malformed_duplicate_weekly_data() {
         let valid = String::from_utf8(row(
             "codex-cli",
             "2026-07-23T12:00:00Z",
@@ -2659,12 +2675,8 @@ mod tests {
             hostile.as_bytes(),
             &account_digest(),
             parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
-        )
-        .expect("session must take absolute precedence");
-
-        assert_eq!(snapshot.windows.len(), 1);
-        assert_eq!(snapshot.windows[0].name, "session");
-        assert!((snapshot.windows[0].remaining_percent - 80.0).abs() < f64::EPSILON);
+        );
+        assert!(snapshot.is_err());
     }
 
     #[test]

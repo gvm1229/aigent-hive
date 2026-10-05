@@ -447,6 +447,62 @@ pub fn evaluate_usage(
     })
 }
 
+/// Evaluate the default-on exhaustion safeguard independently of the ordinary threshold.
+/// Every supplied quota window is checked, including a weekly window hidden by session precedence.
+#[must_use]
+pub fn evaluate_zero_quota(
+    policy: &UsagePolicy,
+    snapshots: &[UsageSnapshot],
+    now_unix_seconds: i64,
+) -> UsageDecision {
+    let mut zero_policy = policy.clone();
+    zero_policy.stop_threshold_percent = 0;
+    let selected = evaluate_usage(&zero_policy, snapshots, &[], now_unix_seconds);
+    if matches!(selected, UsageDecision::Unknown(_)) {
+        return selected;
+    }
+    for snapshot in snapshots {
+        if let Some(reason) = validate_snapshot(&zero_policy, snapshot, now_unix_seconds) {
+            return UsageDecision::Unknown(reason);
+        }
+        if snapshot.resets_at_unix_seconds <= now_unix_seconds {
+            return UsageDecision::Unknown(UsageUnknownReason::StaleMeasurement {
+                window: snapshot.quota_window,
+                expires_at_unix_seconds: snapshot.resets_at_unix_seconds,
+                evaluated_at_unix_seconds: now_unix_seconds,
+            });
+        }
+        if let Err(reason) =
+            unique_snapshot(snapshots, raw_quota_pool(snapshot), snapshot.quota_window)
+        {
+            return UsageDecision::Unknown(reason);
+        }
+    }
+    if let Some(snapshot) = snapshots
+        .iter()
+        .find(|snapshot| snapshot.remaining_percent == 0.0)
+    {
+        return UsageDecision::Block(UsageBlock {
+            window: snapshot.quota_window,
+            remaining_percent: 0.0,
+            threshold_percent: 0.0,
+        });
+    }
+    UsageDecision::Allow(UsagePermit {
+        expires_at_unix_seconds: snapshots
+            .iter()
+            .map(|snapshot| {
+                snapshot
+                    .expires_at_unix_seconds
+                    .min(snapshot.resets_at_unix_seconds)
+            })
+            .min()
+            .unwrap_or(now_unix_seconds)
+            .min(now_unix_seconds.saturating_add(policy.permit_deadline_seconds())),
+        consumed: false,
+    })
+}
+
 fn unique_snapshot<'a>(
     snapshots: &'a [UsageSnapshot],
     scope: &str,
@@ -604,11 +660,74 @@ fn validate_monotonicity(
 #[cfg(test)]
 mod tests {
     use super::{
-        detect_usage_reset, evaluate_usage, SourceConfidence, UsageDecision, UsagePermitError,
-        UsagePolicy, UsagePolicyError, UsageSnapshot, UsageUnknownReason, UsageWindow,
+        detect_usage_reset, evaluate_usage, evaluate_zero_quota, SourceConfidence, UsageDecision,
+        UsagePermitError, UsagePolicy, UsagePolicyError, UsageSnapshot, UsageUnknownReason,
+        UsageWindow,
     };
 
     const NOW: i64 = 1_000;
+
+    #[test]
+    fn zero_quota_checks_every_window_without_applying_the_ordinary_threshold() {
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &pair(1.0, 1.0), NOW),
+            UsageDecision::Allow(_)
+        ));
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &pair(90.0, 0.0), NOW),
+            UsageDecision::Block(_)
+        ));
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &pair(0.0, 90.0), NOW),
+            UsageDecision::Block(_)
+        ));
+        let pools = [
+            scoped_snapshot("gemini-weekly", UsageWindow::Provider, 50.0),
+            scoped_snapshot("3p-weekly", UsageWindow::Provider, 0.0),
+        ];
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &pools, NOW),
+            UsageDecision::Block(_)
+        ));
+    }
+
+    #[test]
+    fn zero_quota_rejects_unknown_or_hidden_invalid_windows() {
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &[], NOW),
+            UsageDecision::Unknown(_)
+        ));
+        for invalid in [f64::NAN, f64::INFINITY, -1.0, 101.0] {
+            assert!(matches!(
+                evaluate_zero_quota(&policy(), &pair(90.0, invalid), NOW),
+                UsageDecision::Unknown(_)
+            ));
+        }
+        let mut windows = pair(90.0, 1.0);
+        windows[1].expires_at_unix_seconds = NOW;
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &windows, NOW),
+            UsageDecision::Unknown(_)
+        ));
+        windows = pair(90.0, 1.0);
+        windows[1].resets_at_unix_seconds = NOW;
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &windows, NOW),
+            UsageDecision::Unknown(_)
+        ));
+        windows = pair(90.0, 1.0);
+        windows[1].account_scope_digest = "sha256:other".to_owned();
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &windows, NOW),
+            UsageDecision::Unknown(_)
+        ));
+        windows = pair(90.0, 1.0);
+        windows.push(windows[1].clone());
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &windows, NOW),
+            UsageDecision::Unknown(_)
+        ));
+    }
 
     fn policy() -> UsagePolicy {
         UsagePolicy::new("local-sensor", "1.2.3", "codex", "sha256:account")

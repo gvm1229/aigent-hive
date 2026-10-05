@@ -97,6 +97,10 @@ elif case == "weekly-only-threshold":
     secondary_used = 90
 elif case == "weekly-low-session-high":
     secondary_used = 92
+elif case == "weekly-zero-session-high":
+    secondary_used = 100
+elif case == "zero":
+    primary_used = secondary_used = 100
 elif case == "remaining-increase":
     primary_used = 30
 elif case == "session-low-weekly-malformed":

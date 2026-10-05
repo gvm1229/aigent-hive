@@ -1309,7 +1309,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
                 self.assertEqual(result["changed_paths"], [])
                 self.assertEqual(snapshot_tree(self.consumer), before)
 
-    def test_explicit_disable_bypasses_sensor_and_enable_rechecks_latch(self) -> None:
+    def test_ordinary_disable_keeps_zero_guard_until_separate_opt_out(self) -> None:
         latched, latched_result = self.invoke(
             "usage",
             "enforce",
@@ -1340,6 +1340,15 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
 
         empty_path = self.work_root / "empty-path"
         empty_path.mkdir()
+        binding = ("--target", str(self.consumer), "--session-id", "session-bypass", "--process-id", "903")
+        unknown, unknown_result = self.invoke("usage", "enforce", *binding,
+                                             extra_environment={"PATH": str(empty_path)})
+        self.assertEqual(unknown.returncode, 3, unknown_result)
+        self.assertTrue(unknown_result["data"]["zero_quota_guard_enabled"])
+        self.assertEqual(unknown_result["code"], "hive.usage-unknown")
+        opted_out, opt_out_result = self.invoke("usage", "session", *binding,
+            "--action", "disable-zero-quota-guard", "--confirm-zero-quota-guard-disable")
+        self.assertEqual(opted_out.returncode, 0, opt_out_result)
         bypassed, bypassed_result = self.invoke(
             "usage",
             "enforce",
@@ -1385,8 +1394,28 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "903",
             sensor_case="allow",
         )
-        self.assertEqual(blocked.returncode, 3, blocked.stderr)
-        self.assertEqual(blocked_result["code"], "hive.usage-reset")
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertEqual(blocked_result["code"], "hive.usage-allowed")
+        self.assertFalse(blocked_result["data"]["zero_quota_guard_enabled"])
+
+    def test_zero_quota_overrides_session_disable_and_cannot_be_acknowledged(self) -> None:
+        binding = ("--target", str(self.consumer), "--session-id", "zero-bypass", "--process-id", "907")
+        disabled, _ = self.invoke("usage", "session", *binding, "--action", "disable", "--confirm-session-disable")
+        self.assertEqual(disabled.returncode, 0)
+        for case in ("zero", "weekly-zero-session-high"):
+            process, result = self.invoke("usage", "enforce", *binding, sensor_case=case)
+            self.assertEqual(process.returncode, 3, result)
+            self.assertEqual(result["code"], "hive.usage-quota-exhausted")
+            self.assertTrue(result["data"]["zero_quota_guard_enabled"])
+            self.assertFalse(result["data"]["guard_enabled"])
+            self.assertFalse(result["data"]["active_turn_interruption_verified"])
+            halted, status = self.invoke("usage", "status", *binding)
+            self.assertEqual(halted.returncode, 3, status)
+            rejected, _ = self.invoke("usage", "session", *binding, "--action", "acknowledge-reset", "--confirm-reset", status["data"]["halt_digest"])
+            self.assertNotEqual(rejected.returncode, 0)
+        restored, result = self.invoke("usage", "enforce", *binding, sensor_case="one-window-low")
+        self.assertEqual(restored.returncode, 0, result)
+        self.assertEqual(result["code"], "hive.usage-allowed")
 
     def test_enforce_uses_weekly_only_as_fallback_and_supports_unique_account(
         self,
