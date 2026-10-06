@@ -13,16 +13,14 @@ sources:
   - "repo:.github/workflows/release-publish.yml#sha256:240f5376bc7ea26109a1c34be965c6e74f9dc840e400af78bb1e55a2bac01263"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:82db6eddc542a4e618f073469d5456d30173b3d16961e2cfb074988180e193d5"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:04e76513d36ede4c84e57d01b4a22335ac19ba0bab2bc604c9af1f7cab5f348c"
   - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:604b352d2d2b34c3e62e6b0b6578fd3ff18cf8ff"
+reviewed_revision: "git:2d59ff6bd00e1f7c3f44d0744700a736bfdb7a3d"
 status: active
 ---
 
 # Stable Release Discord Subscriber Notification
 
-Stable publication requires approved Korean copy and banner; the external approval digest is checked before uploads. Missing or disabled notification blocks stable publication. After GitHub Release success, send banner then summary. Tests send nothing; never print webhook URLs. Versioned copy/sidecar/external digest checks retain nested bullets and the 2,000-character limit. The registrar uses existing gh access after explicit wording approval; it never rewrites, publishes or sends. Retry the same digest; changed copy needs new approval. Recovery binds a published stable and skipped successful publication, rejects duplicate receipts, and sends approved copy without republishing.
-
-0.12.0 recovery: both requests accepted.
+Stable publication requires approved copy/external digest before uploads; disabled notification blocks publication. After GitHub Release success, send banner then summary. Tests send nothing; never print webhook URLs. Validate versioned copy/sidecar/external digest and the entire 2,000-character limit without reformatting. Accept historic flat lists and ordered nonempty new-feature/fix/improvement sections with separators. Registration needs wording approval/existing gh; it never rewrites, publishes or sends. Retry the same digest; changed copy needs new approval. Recovery binds published stable/skipped successful publication, rejects duplicate receipts, and sends without republishing. 0.12.0 recovery accepted both requests.
