@@ -14,7 +14,7 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 1. Identify the requested baseline and target releases from canonical release notes, facts, plans, and release metadata. Normally compare consecutive stable releases; for an explicitly requested unreleased target, compare it with the latest stable and label the result a review draft.
 2. Extract only verified improvements that an end user can notice, use, avoid, or understand differently. Exclude future candidates, internal investigation notes, unshipped changes, and developer- or contributor-only work.
 3. Write a Korean Markdown title in this form: `# Aigent Hive v<current> 업데이트 내역:`.
-4. Write one concise Korean main bullet per change, with practical examples and relevant limits in a nested list. Lead with the feature addition or improvement and its benefit; place setup choices and costs below it.
+4. Group verified changes into `## 새 기능`, `## 수정`, and `## 개선`, in that order. Omit a category with no changes; never insert an empty section or a filler “없음” item. Put a standalone `---` with blank lines around it between populated sections. Within each section, write one concise Korean main bullet per change, with practical examples and relevant limits in a two-space child list. Assign each change once: new capability, corrected incorrect behavior, or improved existing behavior. Lead with the user benefit; place setup choices and costs below it. Renames belong under improvements unless they fix incorrect behavior.
 5. Measure the exact final Unicode character count after normalizing line endings to `\n` and trimming outer whitespace, as the delivery tool does. If it is at most 2,000 characters, do not summarize, shorten, or rephrase it because of length. If it exceeds 2,000, automatically revise and recount until it fits; never stop just to ask the maintainer how to handle the limit. Remove repetition and internal detail first, shorten overlapping examples next, and combine child bullets only when their meaning stays clear. Preserve the title, every distinct user-facing change, feature classification and core technical names, verified numbers, material costs, user choices, and compatibility or safety limits. Never truncate text mechanically, hide a feature, drop a warning, split the payload, or weaken factual accuracy to fit.
 6. Compare only the baseline and target identified above. Do not describe a review draft as a released stable version, rebuild an artifact, publish a release, or change product harness files.
 7. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
@@ -27,6 +27,7 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 Before drafting any update note, read the [maintainer-approved 0.10.0 example](../../../docs/releases/0.10.0.subscriber.ko.md).
 The maintainer approved this exact wording on 2026-09-01 as the primary editorial reference.
 Use its feature-led headlines, core technical names, natural Korean, and nested examples/limits.
+Its approved flat layout remains historical evidence; use the sectioned format above for new copy.
 Apply the feature-positioning and output rules below as the final review checklist; revise any
 draft that makes a new capability sound pre-existing or hides it behind setup guidance.
 Transfer the approach, not its versions, features, figures, or fixed bullet count. Reverify every
@@ -57,6 +58,7 @@ the banner or summary.
 - Use Korean for the title and bullets unless the requester explicitly selects another output language.
 - Use natural, confident Korean with readable sentences; do not copy terse internal checklist wording. For an agent's separate review, use `리뷰` rather than presenting a `검토자` as the feature.
 - Every bullet must state the subscriber benefit or changed capability; do not expose implementation, process, or publication details as an improvement.
+- Preserve the three category labels and their order. Headings and separators count toward the same 2,000-character message limit. Do not repeat an item in multiple sections.
 - Do not place the banner image or a webhook URL in the subscriber summary file.
 - Preserve security boundaries. Describe blocked secrets or credentials only as a safety outcome; never include a secret-shaped example or value.
 - Keep failed tests, retries, crashes, and their investigation in maintainer records. Never place them in release notes or Discord copy. Omit a claim without positive verification, while retaining any material supported-host or setup limit a subscriber needs.
