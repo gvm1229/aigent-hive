@@ -225,3 +225,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.11.1 출시 검증 보완](plans/active/release-qualification-repairs-0.11.1.md)
 - [0.11.1 스킬 결합 계획](plans/active/skill-merge-0.11.1.md)·[조사](research/skill-merge-0.11.1.md)·[test.7 기록](research/skill-merge-public-test7-0.11.1.md)
 - [0.11.1 시험 정리](plans/active/test-cleanup-0.11.1.md)·[승인된 공지](releases/0.11.1.subscriber.ko.md)
+
+- [0.12.0 정식 게시의 독립 확인](../tests/results/stable-release-0.12.0.md)
