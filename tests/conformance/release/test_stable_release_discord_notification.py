@@ -51,6 +51,7 @@ class StableSummaryApprovalRegistration(unittest.TestCase):
         self.assertEqual(command.call_args.kwargs["input"], self.digest)
         self.assertEqual(before, (self.summary.read_bytes(), self.approval.read_bytes()))
 
+
     def test_rewriting_both_files_cannot_replace_the_approved_digest(self) -> None:
         self.summary.write_bytes(self.summary.read_bytes().replace("승인".encode(), "변경".encode()))
         changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
@@ -345,3 +346,38 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         )
         release = next(step for step in steps if step.get("name") == "Create annotated channel tag and GitHub Release")
         self.assertNotIn("send_subscriber_update", release.get("if", ""))
+
+
+class StableNotificationRecoveryWorkflow(unittest.TestCase):
+    def test_recovery_binds_main_published_stable_and_successfully_skipped_send(self) -> None:
+        path = ROOT / ".github/workflows/release-discord-notification.yml"
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        job = workflow["jobs"]["notify"]
+        self.assertEqual(job["environment"]["name"], "release-publication")
+        self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
+        contract = job["steps"][0]["run"]
+        for boundary in (
+            'test "$GITHUB_REF" = refs/heads/main',
+            'test "$(jq -r .isPrerelease <<<"$release")" = false',
+            'test "$(jq -r .conclusion <<<"$publication")" = success',
+            'test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"',
+            '.conclusion == "skipped"',
+            'duplicate send refused',
+        ):
+            self.assertIn(boundary, contract)
+        checkout = job["steps"][1]
+        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.source_sha }}")
+
+    def test_recovery_validates_before_sending_and_never_republishes(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["notify"]["steps"]
+        validation = steps[2]["run"]
+        delivery = steps[3]["run"]
+        self.assertIn("--validate-only", validation)
+        self.assertIn("--summary-approval", delivery)
+        self.assertNotIn("--validate-only", delivery)
+        for step in steps:
+            command = step.get("run", "")
+            for forbidden in ("npm publish", "gh release create", "git push", "gh secret"):
+                self.assertNotIn(forbidden, command)
+
