@@ -21,6 +21,7 @@ STABLE_VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)
 SUMMARY_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 DISCORD_HOSTS = frozenset({"discord.com", "discordapp.com"})
 LOCAL_TEST_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+SUMMARY_SECTIONS = ("## 새 기능", "## 수정", "## 개선")
 
 
 class NotificationError(ValueError):
@@ -72,16 +73,35 @@ def read_summary(
     lines = contents.splitlines()
     if not lines or lines[0] != expected_title:
         fail("subscriber summary title does not match the stable product version")
-    bullets = [line for line in lines[1:] if line.strip()]
-    if (
-        not bullets
-        or not bullets[0].startswith("- ")
-        or any(re.fullmatch(r"(?:- |  - )\S.*", line) is None for line in bullets)
-    ):
+    body = [line for line in lines[1:] if line.strip()]
+    if body and body[0].startswith("## "):
+        sections: list[list[str]] = [[]]
+        for line in body:
+            if line == "---":
+                sections.append([])
+            else:
+                sections[-1].append(line)
+        previous_rank = -1
+        for section in sections:
+            if not section or section[0] not in SUMMARY_SECTIONS:
+                fail("subscriber summary has an unknown or empty section")
+            rank = SUMMARY_SECTIONS.index(section[0])
+            if rank <= previous_rank:
+                fail("subscriber summary sections must be unique and ordered")
+            if not valid_summary_bullets(section[1:]):
+                fail("each subscriber section requires main bullets and optional child bullets")
+            previous_rank = rank
+    elif not valid_summary_bullets(body):
         fail("subscriber summary requires main Markdown bullets with optional two-space child bullets")
     if len(contents) > 2_000:
         fail("subscriber summary exceeds the Discord message limit")
     return contents
+
+
+def valid_summary_bullets(lines: list[str]) -> bool:
+    return bool(lines) and lines[0].startswith("- ") and all(
+        re.fullmatch(r"(?:- |  - )\S.*", line) is not None for line in lines
+    )
 
 
 def validate_webhook_url(value: str, allow_insecure_test_webhook: bool) -> str:
