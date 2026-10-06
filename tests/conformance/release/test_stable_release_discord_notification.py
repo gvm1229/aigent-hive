@@ -273,6 +273,55 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("Discord message limit", rejected.stderr)
         self.assertEqual(self.server.requests, [])
 
+    def test_change_sections_and_separators_reach_receiver_without_reformatting(self) -> None:
+        summary = (
+            "# Aigent Hive v0.12.0 업데이트 내역:\n\n"
+            "## 새 기능\n\n- 새 보호 기능\n  - 적용 범위 안내\n\n"
+            "---\n\n## 수정\n\n- 잘못된 버전 구분 수정\n\n"
+            "---\n\n## 개선\n\n- 오류 안내 개선\n  - 기존 자료 보존\n"
+        )
+        result = self.run_notifier("0.12.0", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+        self.assertEqual(json.loads(self.server.requests[1][1])["content"], summary.strip())
+
+    def test_sectioned_summary_omits_categories_without_changes(self) -> None:
+        for body in (
+            "## 개선\n\n- 안내 개선\n",
+            "## 새 기능\n\n- 기능 추가\n\n---\n\n## 개선\n\n- 안내 개선\n",
+        ):
+            with self.subTest(body=body):
+                result = self.run_notifier("0.12.0", "# Aigent Hive v0.12.0 업데이트 내역:\n\n" + body, validate_only=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.server.requests, [])
+
+    def test_malformed_sections_are_rejected_before_any_request(self) -> None:
+        for body in (
+            "## 수정\n- 수정\n---\n## 새 기능\n- 추가",
+            "## 새 기능\n- 추가\n---\n## 새 기능\n- 중복",
+            "## 새 기능\n- 추가\n## 개선\n- 누락된 구분선",
+            "## 새 기능\n---\n## 수정\n- 비어 있는 앞 섹션",
+            "## 새 기능\n- 추가\n---",
+            "## 새 기능\n- 추가\n---\n---\n## 수정\n- 수정",
+            "## 변경\n- 알 수 없는 범주",
+            "## 개선\n  - 부모 없는 하위 목록",
+            "## 개선\n- 안내\n목록 밖 문장",
+        ):
+            with self.subTest(body=body):
+                result = self.run_notifier("0.12.0", "# Aigent Hive v0.12.0 업데이트 내역:\n\n" + body)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.server.requests, [])
+
+    def test_section_headings_and_separators_count_toward_message_limit(self) -> None:
+        prefix = "# Aigent Hive v0.12.0 업데이트 내역:\n\n## 새 기능\n- 추가\n\n---\n\n## 개선\n- "
+        summary = prefix + "가" * (2_000 - len(prefix))
+        accepted = self.run_notifier("0.12.0", summary, validate_only=True)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        rejected = self.run_notifier("0.12.0", summary + "가", validate_only=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("Discord message limit", rejected.stderr)
+        self.assertEqual(self.server.requests, [])
+
     def test_rejects_nonstable_versions_before_sending(self) -> None:
         result = self.run_notifier("0.9.5-test.1")
         self.assertNotEqual(result.returncode, 0)
@@ -389,7 +438,8 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
         contract = job["steps"][0]["run"]
         for boundary in (
-            'test "$GITHUB_REF" = refs/heads/main',
+            'refs/heads/main) ;;',
+            'refs/heads/develop) test "$RESEND_APPROVED_SUMMARY" = true ;;',
             'test "$(jq -r .isPrerelease <<<"$release")" = false',
             'test "$(jq -r .conclusion <<<"$publication")" = success',
             'test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"',
@@ -398,7 +448,22 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         ):
             self.assertIn(boundary, contract)
         checkout = job["steps"][1]
-        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.source_sha }}")
+        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.summary_source_sha }}")
+
+    def test_approved_revision_uses_dispatch_source_and_digest_scoped_duplicate_receipt(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        events = workflow.get("on", workflow.get(True))
+        request = events["workflow_dispatch"]["inputs"]["resend_approved_summary"]
+        self.assertEqual(request["type"], "boolean")
+        self.assertIs(request["default"], False)
+        steps = workflow["jobs"]["notify"]["steps"]
+        contract = steps[0]["run"]
+        self.assertIn('summary_source_sha=$GITHUB_SHA', contract)
+        self.assertIn('"$original_digest" = "$APPROVED_SUMMARY_DIGEST"', contract)
+        self.assertIn('receipt_name="$receipt_name-${APPROVED_SUMMARY_DIGEST#sha256:}"', contract)
+        self.assertIn('name=$receipt_name', contract)
+        self.assertEqual(steps[-1]["with"]["name"], "${{ steps.contract.outputs.receipt_name }}")
+        self.assertIn('test "$(git rev-parse HEAD)" = "$SUMMARY_SOURCE_SHA"', steps[2]["run"])
 
     def test_recovery_validates_before_sending_and_never_republishes(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))

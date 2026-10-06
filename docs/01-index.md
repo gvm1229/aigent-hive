@@ -229,3 +229,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.12.0 정식 게시의 독립 확인](../tests/results/stable-release-0.12.0.md)
 - [0.12.0 Discord 누락 공지 복구](plans/0.12.0-discord-recovery.md)
 - [0.12.0 Discord 실제 전송 확인](../tests/results/discord-notification-0.12.0.md)
+- [업데이트 안내문 종류별 섹션 형식](plans/update-summary-sections.md)
+- [0.12.0 섹션 형식 안내문 미리보기](releases/0.12.0.subscriber.sectioned-preview.ko.md)
