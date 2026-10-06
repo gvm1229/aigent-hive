@@ -11,6 +11,11 @@ on:
         description: Successful main publication run with a skipped Discord send
         required: true
         type: string
+      resend_approved_summary:
+        description: Send a newly approved revision from the main or develop dispatch commit
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -30,14 +35,20 @@ jobs:
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+      RESEND_APPROVED_SUMMARY: ${{ inputs.resend_approved_summary }}
     steps:
       - name: Bind explicit request to a published stable release and skipped send
         id: contract
         env:
           GH_TOKEN: ${{ github.token }}
+          APPROVED_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
         run: |
           test "$GITHUB_EVENT_NAME" = workflow_dispatch
-          test "$GITHUB_REF" = refs/heads/main
+          case "$GITHUB_REF" in
+            refs/heads/main) ;;
+            refs/heads/develop) test "$RESEND_APPROVED_SUMMARY" = true ;;
+            *) exit 2 ;;
+          esac
           [[ "$PRODUCT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           [[ "$PUBLICATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
           release=$(gh release view "v$PRODUCT_VERSION" --repo "$GITHUB_REPOSITORY" \
@@ -54,25 +65,44 @@ jobs:
           test "$(jq -r .status <<<"$publication")" = completed
           test "$(jq -r .conclusion <<<"$publication")" = success
           test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"
+          summary_source_sha=$source_sha
+          receipt_name="stable-discord-notification-$PRODUCT_VERSION"
+          if [ "$RESEND_APPROVED_SUMMARY" = true ]; then
+            [[ "$APPROVED_SUMMARY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+            [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+            original_approval=$(gh api "repos/$GITHUB_REPOSITORY/contents/docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256?ref=$source_sha" --jq .content | base64 --decode)
+            original_digest=$(printf '%s' "$original_approval" | cut -d ' ' -f 1)
+            if [ "$original_digest" = "$APPROVED_SUMMARY_DIGEST" ]; then
+              echo 'A resend requires newly approved wording, not the original release copy.' >&2
+              exit 3
+            fi
+            summary_source_sha=$GITHUB_SHA
+            receipt_name="$receipt_name-${APPROVED_SUMMARY_DIGEST#sha256:}"
+          fi
           jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID/jobs?per_page=100")
           skipped=$(jq '[.jobs[].steps[] | select(.name == "Send stable Discord banner and subscriber update" and .conclusion == "skipped")] | length' <<<"$jobs")
-          test "$skipped" = 1
-          delivered=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=stable-discord-notification-$PRODUCT_VERSION&per_page=1")
+          if [ "$RESEND_APPROVED_SUMMARY" != true ]; then
+            test "$skipped" = 1
+          fi
+          delivered=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$receipt_name&per_page=1")
           if [ "$(jq -r .total_count <<<"$delivered")" != 0 ]; then
             echo 'This version already has a notification receipt; duplicate send refused.' >&2
             exit 3
           fi
           printf 'source_sha=%s\n' "$source_sha" >>"$GITHUB_OUTPUT"
+          printf 'summary_source_sha=%s\n' "$summary_source_sha" >>"$GITHUB_OUTPUT"
+          printf 'receipt_name=%s\n' "$receipt_name" >>"$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.contract.outputs.source_sha }}
+          ref: ${{ steps.contract.outputs.summary_source_sha }}
       - name: Verify the published source and approved notification
         env:
           RELEASE_SOURCE_SHA: ${{ steps.contract.outputs.source_sha }}
+          SUMMARY_SOURCE_SHA: ${{ steps.contract.outputs.summary_source_sha }}
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
           AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
         run: |
-          test "$(git rev-parse HEAD)" = "$RELEASE_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$SUMMARY_SOURCE_SHA"
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
@@ -92,6 +122,7 @@ jobs:
       - name: Record successful delivery without webhook or message bodies
         env:
           RELEASE_SOURCE_SHA: ${{ steps.contract.outputs.source_sha }}
+          SUMMARY_SOURCE_SHA: ${{ steps.contract.outputs.summary_source_sha }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os
@@ -104,6 +135,8 @@ jobs:
               'publication_run_id': int(os.environ['PUBLICATION_RUN_ID']),
               'notification_run_id': int(os.environ['GITHUB_RUN_ID']),
               'release_source_sha': os.environ['RELEASE_SOURCE_SHA'],
+              'summary_source_sha': os.environ['SUMMARY_SOURCE_SHA'],
+              'approved_revision': os.environ['RESEND_APPROVED_SUMMARY'] == 'true',
               'summary_sha256': hashlib.sha256(summary).hexdigest(),
               'banner_sha256': hashlib.sha256(banner).hexdigest(),
               'summary_characters': len(summary.decode().replace('\r\n', '\n').strip()),
@@ -114,6 +147,6 @@ jobs:
           PY
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: stable-discord-notification-${{ inputs.product_version }}
+          name: ${{ steps.contract.outputs.receipt_name }}
           path: notification-receipt.json
           if-no-files-found: error

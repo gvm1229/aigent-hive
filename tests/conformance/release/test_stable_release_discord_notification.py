@@ -438,7 +438,8 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
         contract = job["steps"][0]["run"]
         for boundary in (
-            'test "$GITHUB_REF" = refs/heads/main',
+            'refs/heads/main) ;;',
+            'refs/heads/develop) test "$RESEND_APPROVED_SUMMARY" = true ;;',
             'test "$(jq -r .isPrerelease <<<"$release")" = false',
             'test "$(jq -r .conclusion <<<"$publication")" = success',
             'test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"',
@@ -447,7 +448,22 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         ):
             self.assertIn(boundary, contract)
         checkout = job["steps"][1]
-        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.source_sha }}")
+        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.summary_source_sha }}")
+
+    def test_approved_revision_uses_dispatch_source_and_digest_scoped_duplicate_receipt(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        events = workflow.get("on", workflow.get(True))
+        request = events["workflow_dispatch"]["inputs"]["resend_approved_summary"]
+        self.assertEqual(request["type"], "boolean")
+        self.assertIs(request["default"], False)
+        steps = workflow["jobs"]["notify"]["steps"]
+        contract = steps[0]["run"]
+        self.assertIn('summary_source_sha=$GITHUB_SHA', contract)
+        self.assertIn('"$original_digest" = "$APPROVED_SUMMARY_DIGEST"', contract)
+        self.assertIn('receipt_name="$receipt_name-${APPROVED_SUMMARY_DIGEST#sha256:}"', contract)
+        self.assertIn('name=$receipt_name', contract)
+        self.assertEqual(steps[-1]["with"]["name"], "${{ steps.contract.outputs.receipt_name }}")
+        self.assertIn('test "$(git rev-parse HEAD)" = "$SUMMARY_SOURCE_SHA"', steps[2]["run"])
 
     def test_recovery_validates_before_sending_and_never_republishes(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
