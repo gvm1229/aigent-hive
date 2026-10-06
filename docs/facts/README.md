@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 안정판만의 이전 버전 호환성 | [en](en/stable-only-backward-compatibility.md) | [ko](ko/stable-only-backward-compatibility.md) |
 | 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
 | 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
 | Claude Windows 사용자 설치 | [en](en/claude-windows-user-install.md) | [ko](ko/claude-windows-user-install.md) |
@@ -66,6 +67,7 @@
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
 | Graphify 0.10 도입 판정 | [en](en/graphify-0-10-adoption.md) | [ko](ko/graphify-0-10-adoption.md) |
 | Source graph 공개 자격 검증 | [en](en/source-graph-public-qualification.md) | [ko](ko/source-graph-public-qualification.md) |
+| 저장 뒤 호스트 관계 분석 | [en](en/host-semantic-after-capture.md) | [ko](ko/host-semantic-after-capture.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | Nested project scan `0.10.0` 범위 | [en](en/nested-project-scan-0-10.md) | [ko](ko/nested-project-scan-0-10.md) |
@@ -147,3 +149,7 @@ Derived SQLite와 advisory lock:
 ```
 
 둘 다 Git 제외 상태. Explicit `hive source-wiki index`만 rebuild authority 보유.
+
+| 0.12.0 범위 | [en](en/v0-11-2-scope.md) | [ko](ko/v0-11-2-scope.md) |
+
+| 기본 활성 소진 보호 | [en](en/zero-quota-safeguard.md) | [ko](ko/zero-quota-safeguard.md) |

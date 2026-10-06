@@ -75,6 +75,29 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def test_token_summary_preserves_historical_overrun_without_guard_authority(self) -> None:
+        historical = json.loads((REPOSITORY_ROOT / "tests/results/readiness-host-acceptance-2026-09-27.json").read_text(encoding="utf-8"))
+        request = {
+            "schema_version": 1, "budget": historical["budget"], "budget_metric": "input",
+            "sources": [{"source_digest": "sha256:" + hashlib.sha256(b"normalized-measurement").hexdigest(),
+                "parent_digest": None, "coverage": "own", "cache_in_input": True,
+                "baseline": {"input": 0, "output": 0, "cached_input": 0},
+                "baseline_sequence": 0,
+                "observations": [{"sequence": 1, "counters": {
+                    "input": historical["reported_input_used"], "output": 0, "cached_input": 0}}],
+                "final_observed": True}],
+        }
+        path = self.work_root / "normalized-usage.json"
+        path.write_text(json.dumps(request), encoding="utf-8")
+        before = snapshot_tree(self.consumer)
+        process, result = self.invoke("usage", "summarize-tokens", "--request", str(path))
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["data"]["overrun"], historical["budget_overrun"])
+        self.assertFalse(result["data"]["within_budget"])
+        self.assertFalse(result["data"]["hard_cap_enforced"])
+        self.assertFalse(result["data"]["authorizes_dispatch"])
+        self.assertEqual(snapshot_tree(self.consumer), before)
+
     def setUp(self) -> None:
         super().setUp()
         self.consumer = self.work_root / "consumer"
@@ -978,6 +1001,43 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(enforced_result["data"]["selected_window"], "session")
         self.assertFalse(sensor_log.exists(), "native limited must not call CodexBar")
 
+    def test_antigravity_capture_blocks_low_pool_without_fallback_or_raw_identity(self) -> None:
+        config = self.consumer / ".hive/config/harness.toml"
+        config.write_text(config.read_text(encoding="utf-8").replace(
+            'primary_host = "codex"', 'primary_host = "antigravity"'), encoding="utf-8")
+        reset = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 3600))
+        payload = {
+            "conversation_id": "antigravity-private-session",
+            "session_id": "antigravity-private-session",
+            "version": "1.1.18", "email": RAW_ACCOUNT,
+            "transcript_path": "/private/transcript",
+            "quota": {
+                "gemini-weekly": {"remaining_fraction": .9, "reset_time": reset},
+                "3p-weekly": {"remaining_fraction": .01, "reset_time": reset},
+            },
+        }
+        process, result = self.invoke("usage", "capture", "--host", "antigravity",
+            "--target", str(self.consumer), "--stdin-json", stdin=json.dumps(payload))
+        self.assertEqual(process.returncode, 0, result)
+        capture_path = self.consumer / result["changed_paths"][0]
+        persisted = capture_path.read_text(encoding="utf-8")
+        for secret in [RAW_ACCOUNT, payload["conversation_id"], "/private/"]:
+            self.assertNotIn(secret, persisted)
+        sensor_log = self.work_root / "antigravity-fallback.log"
+        process, result = self.invoke("usage", "enforce", "--target", str(self.consumer),
+            "--session-id", payload["conversation_id"], "--process-id", "991",
+            "--account-digest", ACCOUNT_DIGEST, sensor_case="allow",
+            extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log), "FAKE_CODEXBAR_PROVIDER": "antigravity"})
+        self.assert_result(process, result, action="CheckUsage", exit_code=3,
+            status="blocked", code="hive.usage-limited")
+        self.assertFalse(sensor_log.exists())
+        before = capture_path.read_bytes()
+        del payload["quota"]["3p-weekly"]
+        process, result = self.invoke("usage", "capture", "--host", "antigravity",
+            "--target", str(self.consumer), "--stdin-json", stdin=json.dumps(payload))
+        self.assertNotEqual(process.returncode, 0)
+        self.assertEqual(capture_path.read_bytes(), before)
+
     def test_antigravity_native_unsupported_uses_codexbar_fallback(self) -> None:
         config = self.consumer / ".hive/config/harness.toml"
         config.write_text(
@@ -1249,7 +1309,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
                 self.assertEqual(result["changed_paths"], [])
                 self.assertEqual(snapshot_tree(self.consumer), before)
 
-    def test_explicit_disable_bypasses_sensor_and_enable_rechecks_latch(self) -> None:
+    def test_ordinary_disable_keeps_zero_guard_until_separate_opt_out(self) -> None:
         latched, latched_result = self.invoke(
             "usage",
             "enforce",
@@ -1280,6 +1340,15 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
 
         empty_path = self.work_root / "empty-path"
         empty_path.mkdir()
+        binding = ("--target", str(self.consumer), "--session-id", "session-bypass", "--process-id", "903")
+        unknown, unknown_result = self.invoke("usage", "enforce", *binding,
+                                             extra_environment={"PATH": str(empty_path)})
+        self.assertEqual(unknown.returncode, 3, unknown_result)
+        self.assertTrue(unknown_result["data"]["zero_quota_guard_enabled"])
+        self.assertEqual(unknown_result["code"], "hive.usage-unknown")
+        opted_out, opt_out_result = self.invoke("usage", "session", *binding,
+            "--action", "disable-zero-quota-guard", "--confirm-zero-quota-guard-disable")
+        self.assertEqual(opted_out.returncode, 0, opt_out_result)
         bypassed, bypassed_result = self.invoke(
             "usage",
             "enforce",
@@ -1325,8 +1394,28 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "903",
             sensor_case="allow",
         )
-        self.assertEqual(blocked.returncode, 3, blocked.stderr)
-        self.assertEqual(blocked_result["code"], "hive.usage-reset")
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertEqual(blocked_result["code"], "hive.usage-allowed")
+        self.assertFalse(blocked_result["data"]["zero_quota_guard_enabled"])
+
+    def test_zero_quota_overrides_session_disable_and_cannot_be_acknowledged(self) -> None:
+        binding = ("--target", str(self.consumer), "--session-id", "zero-bypass", "--process-id", "907")
+        disabled, _ = self.invoke("usage", "session", *binding, "--action", "disable", "--confirm-session-disable")
+        self.assertEqual(disabled.returncode, 0)
+        for case in ("zero", "weekly-zero-session-high"):
+            process, result = self.invoke("usage", "enforce", *binding, sensor_case=case)
+            self.assertEqual(process.returncode, 3, result)
+            self.assertEqual(result["code"], "hive.usage-quota-exhausted")
+            self.assertTrue(result["data"]["zero_quota_guard_enabled"])
+            self.assertFalse(result["data"]["guard_enabled"])
+            self.assertFalse(result["data"]["active_turn_interruption_verified"])
+            halted, status = self.invoke("usage", "status", *binding)
+            self.assertEqual(halted.returncode, 3, status)
+            rejected, _ = self.invoke("usage", "session", *binding, "--action", "acknowledge-reset", "--confirm-reset", status["data"]["halt_digest"])
+            self.assertNotEqual(rejected.returncode, 0)
+        restored, result = self.invoke("usage", "enforce", *binding, sensor_case="one-window-low")
+        self.assertEqual(restored.returncode, 0, result)
+        self.assertEqual(result["code"], "hive.usage-allowed")
 
     def test_enforce_uses_weekly_only_as_fallback_and_supports_unique_account(
         self,

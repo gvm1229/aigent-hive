@@ -334,7 +334,10 @@ fn normalize(
             _ => return Err(SensorError::WrongWindows),
         }
     }
-    let window = session.or(weekly).ok_or(SensorError::WrongWindows)?;
+    let windows = session.into_iter().chain(weekly).collect::<Vec<_>>();
+    if windows.is_empty() {
+        return Err(SensorError::WrongWindows);
+    }
     Ok(NormalizedSnapshot {
         sensor_id: SENSOR_ID.to_owned(),
         sensor_version: version.to_owned(),
@@ -343,7 +346,7 @@ fn normalize(
         measured_at: now,
         expires_at: now.saturating_add(60),
         source_confidence: "local".to_owned(),
-        windows: vec![window],
+        windows,
     })
 }
 

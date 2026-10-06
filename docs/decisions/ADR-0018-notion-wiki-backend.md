@@ -1,6 +1,8 @@
 # ADR-0018: Notion Wiki backend와 SQLite projection
 
-- 상태: accepted, 버전 비종속 backlog
+- 상태: Notion 채택 폐기, Discord 결정 유지
+- 대체 결정: 2026-10-05 [ADR-0025](ADR-0025-0.11.2-scope.md)
+- 아래 Notion 내용: 폐기 전 설계의 보존 기록, 구현·출시 약속 아님
 - 날짜: 2026-08-08
 - Target: 미정
 - 부분 대체: ADR-0003·ADR-0016의 consumer knowledge 정본 규칙

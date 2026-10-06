@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "host": "win32",
+  "chunks_requested": 50000,
+  "binary_sha256": "c36853ec9e59a1b171badab18697be66441fa90c22b8eb3fe847ac9d064b6ca7",
+  "model_calls": 0,
+  "steps": {},
+  "semantic_full_generation": "not-run: host analysis of 5000 bounded batches required",
+  "fixture_seconds": 14.531,
+  "status": "failed",
+  "reason": "index: child timeout",
+  "disk_bytes": 145943207
+}

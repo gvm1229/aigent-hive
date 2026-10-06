@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "source_commit": "bccec7509cc065a3a13d6f5b47864e57e23c0fea",
+  "base_image": "rust@sha256:408fe88047cef61a2087653b0c5255fa51c0f2d6d94ddedd7a2562a9b91a46f6",
+  "platform": "Linux amd64 via Docker Desktop on Windows",
+  "actual_host_models_executed": false,
+  "status": "failed",
+  "steps": [
+    {
+      "command": [
+        "docker",
+        "build",
+        "--tag",
+        "aigent-hive-qualification:0.12.0-local",
+        "<source-root>\\tests\\work\\hive-linux-0120"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.5
+    },
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        "aigent-hive-linux-0120",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--mount",
+        "type=bind,source=<source-root>,target=/source,readonly",
+        "--mount",
+        "type=bind,source=<source-root>\\tests\\work\\hive-linux-0120,target=/source/tests/work",
+        "--mount",
+        "type=bind,source=<source-root>\\tests\\work\\hive-linux-0120\\agents-work,target=/source/.agents/work",
+        "--workdir",
+        "/source",
+        "--env",
+        "CARGO_HOME=/source/tests/work/cargo",
+        "--env",
+        "CARGO_TARGET_DIR=/source/tests/work/build",
+        "--env",
+        "CARGO_INCREMENTAL=0",
+        "--env",
+        "RUSTUP_TOOLCHAIN=1.97.1",
+        "--env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "--env",
+        "GIT_CONFIG_COUNT=1",
+        "--env",
+        "GIT_CONFIG_KEY_0=safe.directory",
+        "--env",
+        "GIT_CONFIG_VALUE_0=/source",
+        "aigent-hive-qualification:0.12.0-local",
+        "bash",
+        "/source/tests/work/qualification.sh"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 210.61
+    }
+  ],
+  "limits": [
+    "container CLI and fixtures only",
+    "no active host interruption or paid-credit transition proof"
+  ],
+  "tool_image_id": "sha256:ec9981d57cc47e5e9638bb917a48685492ebb72917983ccca891496aaf8dcc1c",
+  "error": "Linux qualification command failed: 1"
+}

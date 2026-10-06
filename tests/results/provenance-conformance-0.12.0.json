@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "lanes": [
+    {
+      "name": "documentation",
+      "owner": "documentation",
+      "release_gate": true,
+      "elapsed_seconds": 32.984,
+      "modules": [
+        {
+          "module": "tests.conformance.documentation.test_branch_policy",
+          "elapsed_seconds": 10.344
+        },
+        {
+          "module": "tests.conformance.documentation.test_plan_state",
+          "elapsed_seconds": 0.468
+        },
+        {
+          "module": "tests.conformance.documentation.test_dev_check",
+          "elapsed_seconds": 0.141
+        },
+        {
+          "module": "tests.conformance.documentation.test_dev_install_script",
+          "elapsed_seconds": 0.141
+        },
+        {
+          "module": "tests.conformance.documentation.test_docs_wiki",
+          "elapsed_seconds": 0.937
+        },
+        {
+          "module": "tests.conformance.documentation.test_directive_reading",
+          "elapsed_seconds": 0.281
+        },
+        {
+          "module": "tests.conformance.documentation.test_human_documentation_style",
+          "elapsed_seconds": 0.547
+        },
+        {
+          "module": "tests.conformance.documentation.test_markdown_links",
+          "elapsed_seconds": 0.735
+        },
+        {
+          "module": "tests.conformance.documentation.test_public_stable_docs",
+          "elapsed_seconds": 0.922
+        },
+        {
+          "module": "tests.conformance.documentation.test_test_lanes",
+          "elapsed_seconds": 0.14
+        },
+        {
+          "module": "tests.conformance.documentation.test_test_artifacts",
+          "elapsed_seconds": 18.328
+        }
+      ]
+    },
+    {
+      "name": "security",
+      "owner": "platform-safety",
+      "release_gate": true,
+      "elapsed_seconds": 71.532,
+      "modules": [
+        {
+          "module": "tests.conformance.security.test_ownership_hostile",
+          "elapsed_seconds": 5.266
+        },
+        {
+          "module": "tests.conformance.security.test_setup_security",
+          "elapsed_seconds": 58.937
+        },
+        {
+          "module": "tests.conformance.security.test_usage_guard",
+          "elapsed_seconds": 7.329
+        }
+      ]
+    },
+    {
+      "name": "contract",
+      "owner": "harness-core",
+      "release_gate": true,
+      "elapsed_seconds": 497.984,
+      "modules": [
+        {
+          "module": "tests.conformance.contracts.test_capabilities",
+          "elapsed_seconds": 15.031
+        },
+        {
+          "module": "tests.conformance.contracts.test_cli_exit_contract",
+          "elapsed_seconds": 5.828
+        },
+        {
+          "module": "tests.conformance.contracts.test_setup_fixtures",
+          "elapsed_seconds": 0.266
+        },
+        {
+          "module": "tests.conformance.contracts.test_setup_regressions",
+          "elapsed_seconds": 102.062
+        },
+        {
+          "module": "tests.conformance.contracts.test_role_projection_parity",
+          "elapsed_seconds": 94.375
+        },
+        {
+          "module": "tests.conformance.contracts.test_setup",
+          "elapsed_seconds": 49.938
+        },
+        {
+          "module": "tests.conformance.contracts.test_setup_ownership_gates",
+          "elapsed_seconds": 16.25
+        },
+        {
+          "module": "tests.conformance.contracts.test_skill_projections",
+          "elapsed_seconds": 90.031
+        },
+        {
+          "module": "tests.conformance.contracts.test_prompt_refinement",
+          "elapsed_seconds": 0.656
+        },
+        {
+          "module": "tests.conformance.contracts.test_skill_routing",
+          "elapsed_seconds": 1.297
+        },
+        {
+          "module": "tests.conformance.contracts.test_static_contracts",
+          "elapsed_seconds": 0.641
+        },
+        {
+          "module": "tests.conformance.contracts.test_run_role_contracts",
+          "elapsed_seconds": 26.625
+        },
+        {
+          "module": "tests.conformance.contracts.test_source_draft_devlog",
+          "elapsed_seconds": 4.89
+        },
+        {
+          "module": "tests.conformance.contracts.test_judge_contracts",
+          "elapsed_seconds": 3.266
+        },
+        {
+          "module": "tests.conformance.contracts.test_korean_language_core",
+          "elapsed_seconds": 3.375
+        },
+        {
+          "module": "tests.conformance.contracts.test_usage_control",
+          "elapsed_seconds": 7.734
+        },
+        {
+          "module": "tests.conformance.contracts.test_vector_feasibility",
+          "elapsed_seconds": 2.25
+        },
+        {
+          "module": "tests.conformance.contracts.test_vector_requalification",
+          "elapsed_seconds": 3.266
+        },
+        {
+          "module": "tests.conformance.contracts.test_vector_runtime",
+          "elapsed_seconds": 2.062
+        },
+        {
+          "module": "tests.conformance.contracts.test_vector_parent",
+          "elapsed_seconds": 0.766
+        },
+        {
+          "module": "tests.conformance.contracts.test_vector_onboarding",
+          "elapsed_seconds": 0.547
+        },
+        {
+          "module": "tests.conformance.contracts.test_action_result_contracts",
+          "elapsed_seconds": 0.297
+        },
+        {
+          "module": "tests.conformance.contracts.test_native_policy_hooks",
+          "elapsed_seconds": 31.015
+        },
+        {
+          "module": "tests.conformance.contracts.test_directive_context",
+          "elapsed_seconds": 3.047
+        },
+        {
+          "module": "tests.conformance.contracts.test_hive_skills",
+          "elapsed_seconds": 0.156
+        },
+        {
+          "module": "tests.conformance.contracts.test_host_capabilities",
+          "elapsed_seconds": 0.172
+        },
+        {
+          "module": "tests.conformance.contracts.test_knowledge_schemas",
+          "elapsed_seconds": 0.407
+        },
+        {
+          "module": "tests.conformance.contracts.test_knowledge_graph_contracts",
+          "elapsed_seconds": 30.718
+        },
+        {
+          "module": "tests.conformance.contracts.test_native_orchestration_feasibility",
+          "elapsed_seconds": 0.25
+        },
+        {
+          "module": "tests.conformance.contracts.test_skill_inventory",
+          "elapsed_seconds": 0.766
+        }
+      ]
+    },
+    {
+      "name": "integration",
+      "owner": "consumer-lifecycle",
+      "release_gate": true,
+      "elapsed_seconds": 376.297,
+      "modules": [
+        {
+          "module": "tests.conformance.integration.test_connected_setup_lifecycle",
+          "elapsed_seconds": 35.422
+        },
+        {
+          "module": "tests.conformance.integration.test_wiki_lifecycle",
+          "elapsed_seconds": 64.953
+        },
+        {
+          "module": "tests.conformance.integration.test_project_lifecycle",
+          "elapsed_seconds": 186.875
+        },
+        {
+          "module": "tests.conformance.integration.test_root_knowledge_promotion",
+          "elapsed_seconds": 62.406
+        },
+        {
+          "module": "tests.conformance.integration.test_shared_knowledge_index",
+          "elapsed_seconds": 1.078
+        },
+        {
+          "module": "tests.conformance.integration.test_source_wiki",
+          "elapsed_seconds": 2.688
+        },
+        {
+          "module": "tests.conformance.integration.test_vector_cli",
+          "elapsed_seconds": 1.687
+        },
+        {
+          "module": "tests.conformance.integration.test_wiki_cli_e2e",
+          "elapsed_seconds": 21.188
+        }
+      ]
+    },
+    {
+      "name": "release",
+      "owner": "release-engineering",
+      "release_gate": true,
+      "elapsed_seconds": 63.203,
+      "modules": [
+        {
+          "module": "tests.conformance.release.test_historical_project_bases",
+          "elapsed_seconds": 13.922
+        },
+        {
+          "module": "tests.conformance.release.test_project_base_coverage",
+          "elapsed_seconds": 6.781
+        },
+        {
+          "module": "tests.conformance.release.test_npm_packaging",
+          "elapsed_seconds": 16.219
+        },
+        {
+          "module": "tests.conformance.release.test_update_migration",
+          "elapsed_seconds": 6.187
+        },
+        {
+          "module": "tests.conformance.release.test_release_notes",
+          "elapsed_seconds": 0.547
+        },
+        {
+          "module": "tests.conformance.release.test_public_test_acceptance",
+          "elapsed_seconds": 0.297
+        },
+        {
+          "module": "tests.conformance.release.test_vector_runtime_acceptance",
+          "elapsed_seconds": 1.078
+        },
+        {
+          "module": "tests.conformance.release.test_release_qualification_order",
+          "elapsed_seconds": 0.078
+        },
+        {
+          "module": "tests.conformance.release.test_stable_release_discord_notification",
+          "elapsed_seconds": 8.719
+        },
+        {
+          "module": "tests.conformance.release.test_test_release_gate",
+          "elapsed_seconds": 8.578
+        },
+        {
+          "module": "tests.conformance.release.test_stable_skill_ledger",
+          "elapsed_seconds": 0.531
+        },
+        {
+          "module": "tests.conformance.release.test_update_discovery",
+          "elapsed_seconds": 0.25
+        }
+      ]
+    }
+  ]
+}

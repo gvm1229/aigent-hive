@@ -1,0 +1,10 @@
+{
+  "source_commit": "2ccd8b174fd9ceb9b33903a25a9f7d555ae5073c",
+  "platform": "Linux amd64 container",
+  "tool_image": "sha256:a2f62dc21b3b996d1bbd7168075413365606c1bc99828dfe5692725adb337abe",
+  "exit_code": 0,
+  "elapsed_seconds": 122.984,
+  "script": "#!/bin/bash\nset -euo pipefail\ncargo test --locked -p hive-cli cadence_history\ncargo build --locked -p hive-cli\ncp /artifacts/build/debug/hive /tmp/hive\nexport HIVE_BIN=/tmp/hive\nexport PATH=/artifacts/venv/bin:$PATH\npython -m unittest tests.conformance.contracts.test_run_role_contracts\n",
+  "scope": "cadence history round trip and run-resume contracts",
+  "limitations": "no live host interruption or billing transition test"
+}

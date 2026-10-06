@@ -62,6 +62,18 @@ pub(super) fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, Wiki
     let snapshot = store.load_canonical_snapshot(revision)?;
     let plan = plan_remember(&snapshot.claims, &request, revision).map_err(map_rag_error)?;
     let committed = store.apply_remember_plan(&plan)?;
+    let graph_update = super::semantic_graph::after_capture(
+        &user_root,
+        false,
+        &request.collection_id,
+        match request.visibility {
+            RagVisibility::Shared => "shared",
+            RagVisibility::ProjectPrivate => "project-private",
+            RagVisibility::Confidential => "confidential",
+        },
+        plan.disposition != hive_wiki::rag::RememberDisposition::Noop,
+        &committed.manifest_digest,
+    );
     let mut changed_paths = initialized.changed_paths;
     changed_paths.extend(committed.changed_paths.clone());
     Ok(success(
@@ -71,7 +83,7 @@ pub(super) fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         changed_paths,
         SHARED_INDEX_RELATIVE,
         &committed.manifest_digest,
-        json!({"plan": plan, "store": committed}),
+        json!({"plan": plan, "store": committed, "graph_update": graph_update}),
     ))
 }
 

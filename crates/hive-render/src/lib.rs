@@ -46,6 +46,8 @@ const FORMATTER_MARKER_START: &str = "# AIGENT-HIVE:FORMAT:START";
 const FORMATTER_MARKER_END: &str = "# AIGENT-HIVE:FORMAT:END";
 const FORMATTER_IGNORE: &str = "# AIGENT-HIVE:FORMAT:START\n.agents/skills/\n.agents/directives/\n.claude/skills/\n.hive/config/active-skills.yml\n.hive/config/approved-skills.yml\n.hive/config/capability-resolution.yml\n.hive/config/project-base.json\n.hive/config/project-overrides.json\n.hive/team/roles/\n# AIGENT-HIVE:FORMAT:END\n";
 const PROJECT_OVERRIDES_PATH: &str = ".hive/config/project-overrides.json";
+/// Exact compiled package identity; test packages are not stable migration targets.
+pub const PACKAGE_VERSION: &str = env!("HIVE_RENDER_PACKAGE_VERSION");
 const SETUP_SCHEMA: &str = include_str!("../../../schemas/setup-answers.schema.json");
 const ROLE_SCHEMA: &str = include_str!("../../../schemas/role-profile.schema.json");
 const CAPABILITY_SCHEMA: &str = include_str!("../../../schemas/capability-matrix.schema.json");
@@ -1858,6 +1860,75 @@ fn frozen_project_base_0_11_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
             files.insert(format!(".agents/skills/{name}/references/{suffix}"), bytes.to_vec());
             if host == "claude" {
                 files.insert(format!(".claude/skills/{name}/references/{suffix}"), bytes.to_vec());
+            }
+        }
+    }
+    Ok(files)
+}
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_11_1_without_resources,
+    "0.11.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_11_1(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_11_1_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.11.1/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" {
+                files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec());
             }
         }
     }
@@ -3787,6 +3858,13 @@ fn project_upgrade_files(
 }
 
 fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, RenderError> {
+    render_project_base_with_package(files, PACKAGE_VERSION)
+}
+
+fn render_project_base_with_package(
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    package_version: &str,
+) -> Result<Vec<u8>, RenderError> {
     let mergeable = project_upgrade_files(files)?;
     let mut entries = Vec::new();
     for (path, bytes) in mergeable {
@@ -3811,6 +3889,12 @@ fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, Re
         "product_version": env!("CARGO_PKG_VERSION"),
         "files": entries,
     });
+    if package_version != env!("CARGO_PKG_VERSION") {
+        value.as_object_mut().expect("project base payload").insert(
+            "package_version".to_owned(),
+            JsonValue::String(package_version.to_owned()),
+        );
+    }
     let canonical = serde_json_canonicalizer::to_vec(&value).map_err(|error| {
         RenderError::Internal(format!("cannot canonicalize project base ledger: {error}"))
     })?;
@@ -6529,6 +6613,43 @@ fn io_internal(error: io::Error) -> RenderError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_project_base_retains_exact_package_identity_in_its_digest() {
+        let files = std::collections::BTreeMap::from([(
+            std::path::PathBuf::from(".agents/skills/project-setup/SKILL.md"),
+            b"controlled Skill bytes\n".to_vec(),
+        )]);
+        let product = env!("CARGO_PKG_VERSION");
+        let package = format!("{product}-test.3");
+        let bytes = super::render_project_base_with_package(&files, &package).unwrap();
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value["product_version"], product);
+        assert_eq!(value["package_version"], package);
+        let digest = value
+            .as_object_mut()
+            .unwrap()
+            .remove("ledger_digest")
+            .unwrap();
+        assert_eq!(
+            digest,
+            serde_json::Value::String(hive_core::sha256_digest(
+                &serde_json_canonicalizer::to_vec(&value).unwrap()
+            ))
+        );
+        value["package_version"] = serde_json::json!(format!("{product}-test.4"));
+        assert_ne!(
+            digest,
+            serde_json::Value::String(hive_core::sha256_digest(
+                &serde_json_canonicalizer::to_vec(&value).unwrap()
+            ))
+        );
+        let stable: serde_json::Value = serde_json::from_slice(
+            &super::render_project_base_with_package(&files, product).unwrap(),
+        )
+        .unwrap();
+        assert!(stable.get("package_version").is_none());
+    }
+
     #[cfg(unix)]
     use super::execute_setup_in;
     use super::{

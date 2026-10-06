@@ -56,6 +56,10 @@ enum AgentCliError {
     Input(String),
     Conflict(String),
     Verification(String),
+    Capability {
+        message: String,
+        data: Box<serde_json::Value>,
+    },
 }
 
 impl From<AdapterError> for AgentCliError {
@@ -70,7 +74,7 @@ impl AgentCliError {
             Self::Adapter(error) => error.status(),
             Self::Input(_) => "error",
             Self::Conflict(_) => "conflict",
-            Self::Verification(_) => "verification-failed",
+            Self::Verification(_) | Self::Capability { .. } => "verification-failed",
         }
     }
 
@@ -79,7 +83,7 @@ impl AgentCliError {
             Self::Adapter(error) => error.exit_code(),
             Self::Input(_) => 2,
             Self::Conflict(_) => 3,
-            Self::Verification(_) => 5,
+            Self::Verification(_) | Self::Capability { .. } => 5,
         }
     }
 
@@ -88,14 +92,17 @@ impl AgentCliError {
             Self::Adapter(error) => error.code(),
             Self::Input(_) => "hive.invalid-input",
             Self::Conflict(_) => "hive.agent-ownership-conflict",
-            Self::Verification(_) => "hive.agent-verification-failed",
+            Self::Verification(_) | Self::Capability { .. } => "hive.agent-verification-failed",
         }
     }
 
     fn message(&self) -> &str {
         match self {
             Self::Adapter(error) => error.message(),
-            Self::Input(message) | Self::Conflict(message) | Self::Verification(message) => message,
+            Self::Input(message)
+            | Self::Conflict(message)
+            | Self::Verification(message)
+            | Self::Capability { message, .. } => message,
         }
     }
 }
@@ -256,7 +263,10 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         changed_paths: Vec::new(),
         evidence: Vec::new(),
         next_action: None,
-        data: None,
+        data: match &error {
+            AgentCliError::Capability { data, .. } => Some(data.as_ref().clone()),
+            _ => None,
+        },
     });
     emit_action_result(&result)
 }
@@ -942,7 +952,20 @@ fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliErro
         .map_err(|error| AgentCliError::Verification(error.to_string()))?;
     capability
         .verify_profile_activation(&profile, &arguments.host)
-        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+        .map_err(|error| AgentCliError::Capability {
+            message: error.to_string(),
+            data: Box::new(json!({
+                "activation":"default-off", "profile_activation_supported":false,
+                "host":capability.host,"host_version":capability.host_version,
+                "runtime_support":{
+                    "periodic_observation":capability.runtime_support()[0],
+                    "active_turn_control":capability.runtime_support()[1],
+                    "semantic_after_capture":capability.runtime_support()[2],
+                    "active_connection_verified":false
+                },
+                "spawned":false
+            })),
+        })?;
     let capability_digest = sha256_digest(&capability_bytes);
     Ok(ActionResult {
         schema_version: 1,
@@ -950,7 +973,7 @@ fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliErro
         status: "success",
         exit_code: 0,
         code: "hive.agent-preflight",
-        message: "fresh host capability evidence permits custom agent activation".to_owned(),
+        message: "declared host capabilities pass profile checks; activation remains default-off".to_owned(),
         changed_paths: Vec::new(),
         evidence: vec![
             Evidence {
@@ -974,6 +997,13 @@ fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliErro
             "host_version": capability.host_version,
             "host_capability_digest": capability_digest,
             "activation": "default-off",
+            "runtime_support": {
+                "periodic_observation": capability.runtime_support()[0],
+                "active_turn_control": capability.runtime_support()[1],
+                "semantic_after_capture": capability.runtime_support()[2],
+                "declared_periodic_control_supported": capability.supports_periodic_control(),
+                "active_connection_verified": false,
+            },
             "spawned": false,
         })),
     })
@@ -2061,12 +2091,20 @@ mod tests {
             serde_json::to_vec(&unverified).expect("capability bytes"),
         )
         .expect("capability");
-        assert!(preflight(PreflightArguments {
+        let refused = preflight(PreflightArguments {
             profile: profile_path,
             host: "codex".to_owned(),
             capabilities: capability_path,
         })
-        .is_err());
+        .err()
+        .expect("unverified capability must remain disabled");
+        let super::AgentCliError::Capability { data, .. } = refused else {
+            panic!("missing unsupported capability diagnostic");
+        };
+        assert_eq!(data["activation"], "default-off");
+        assert_eq!(data["runtime_support"]["active_turn_control"], "unverified");
+        assert_eq!(data["runtime_support"]["active_connection_verified"], false);
+        assert_eq!(data["spawned"], false);
         fs::remove_dir_all(root).expect("cleanup");
     }
 

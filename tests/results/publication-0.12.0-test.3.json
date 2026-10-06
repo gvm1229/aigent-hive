@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "product_version": "0.12.0",
+  "package_version": "0.12.0-test.3",
+  "source_commit": "e8d4fa891dd42b9594b42b3dd48fc085d9bade32",
+  "product_tree_sha256": "sha256:aa9793423ad8b7bd9dd82553189bc1d8cf8ea2e5442ce6a3528580e818307098",
+  "exact_source_ci_run_id": 37381089834,
+  "candidate_run_id": 37382446219,
+  "publication_run_id": 37384780588,
+  "publication_recovery": "recover_published_packages=true; exact candidate and existing package integrity checked, no product/package bytes replaced.",
+  "failed_publication_run_id": 37383782795,
+  "registry_delayed_publication_run_id": 37383959771,
+  "registry_delay_reason": "All six npm uploads reported success. Channel verification failed for darwin-x64; later independent queries saw five exact packages while linux-arm64 still returned 404 and previous test tag. Preserve candidate bytes; recovery requires exact registry integrity equality.",
+  "publication_retry_reason": "First dispatch ran before umbrella/installers candidate completed; successful-candidate resolution refused before checkout, artifact download or npm publication. Exact candidate later completed successfully; no source, package, installer or acceptance bytes changed.",
+  "npm": [
+    {
+      "package": "aigent-hive",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-RsGp/MNAceWyoghNz0Vg9I/E9/lXFAgIGnQnYY2E+GcEpbioZMEMMjLzMN5zB4vYgFLrxvD2goBRZxmPM/YlyQ==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    },
+    {
+      "package": "@aigent-hive/darwin-arm64",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-QN3rrzl4VT7KmP8S38AhuFRmprqkArjyoXvQeTlMg/RepW5ztPF36lOLMURkQTk6gPEad1tYjI4OPynyZ1rqiw==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    },
+    {
+      "package": "@aigent-hive/darwin-x64",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-vYCmyCbehN+8A0DI54CJ+vpHeYPDYT/tq5BIu7AviozpfTHWPNmsS8x30pHVKZpmOAzkM5p4b2l40okfJgEgAw==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    },
+    {
+      "package": "@aigent-hive/linux-arm64",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-DXkjyS39VgZnt2wC3fVPY7Q/SAbKLOpWED21Ryd0gDhT5h+aVhgbRa6pHFvyuTcG8m1LZJREQXhqQzJ8BngR9A==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    },
+    {
+      "package": "@aigent-hive/linux-x64",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-1Ff+8JmNn//mwt2z0mEGXpiz9q+asjSDRqD3Cq16eEE7mNLl8UptyWfMc2+BdODQm4RQsd1wEO0eNYLmSlrljA==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    },
+    {
+      "package": "@aigent-hive/win32-x64",
+      "version": "0.12.0-test.3",
+      "integrity": "sha512-JL4KyuqSfNRCX4AhYweQ2dmqOQKHlyZdQb0QVhl6V6ysBMWSWhPmUiCuTxXodwC0xyvDCpa3w7C6KqzbgNy3+A==",
+      "tags": {
+        "latest": "0.11.1",
+        "test": "0.12.0-test.3"
+      }
+    }
+  ],
+  "github_release": {
+    "isDraft": false,
+    "isPrerelease": true,
+    "tagName": "v0.12.0-test.3",
+    "targetCommitish": "e8d4fa891dd42b9594b42b3dd48fc085d9bade32",
+    "url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.12.0-test.3"
+  },
+  "limits": "Exact public distribution only; current-user stable remains 0.11.1. No Orireki consumer writes or actual account exhaustion, paid-credit transition, current-turn interruption, original macOS failure acceptance."
+}

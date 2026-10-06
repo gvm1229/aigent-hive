@@ -1,5 +1,11 @@
 # Graphify 전면 지식 graph
 
+- 현재 상태: 2026-10-05 사용자 승인으로 0.11.2 편입
+- 현재 기준: [GPH112-001–003](../active/knowledge-graph-0.11.2.md)
+- 아래 내용: 승격 전 문제·기존 실패·선행 조건의 보존 기록, 현재 상태 판정은 위 기준 우선
+
+## 승격 전 기록
+
 - 상태: `blocked`
 - 마지막 검토일: 2026-08-22
 - 관련 조사: [`graphify-0.10-feasibility.md`](../../research/graphify-0.10-feasibility.md)

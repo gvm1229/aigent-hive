@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.11.1 release-date=2026-10-05 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.12.0 release-date=2026-10-06 -->
 
 ## 목적
 
@@ -64,7 +64,7 @@ provider-neutral 로컬 agent harness.
 | Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Installed policy](../guides/installed-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.11.1` release](../releases/0.11.1.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.12.0` release](../releases/0.12.0.md) |
 
 ## Artifact 흐름
 
@@ -82,7 +82,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.11.1` (released 2026-10-05)
+- Current public stable version: `0.12.0` (released 2026-10-06)
+- `0.12.0`: 기본 활성0% 보호·지식 관계 검증과 저장 보호·검색 오류 안내·시험판 출처 구분
 - `0.11.1`: Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정·안전 진단과 설정 복구 안내
 - `0.11.0`: 선택형 Hook 파일 보호·긴 대화 지침 복구·오래된 안정판 프로젝트 갱신·사용량 리셋 중단
 - `0.10.1`: authenticated general harness migration and immediate same-session usage-threshold rechecks without disabling protection

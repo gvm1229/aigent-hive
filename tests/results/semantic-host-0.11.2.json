@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "review_method": "current conversation reviewed the two prepared synthetic statements",
+  "separate_model_processes": 0,
+  "independent_host_attestation": false,
+  "automatic_fresh_skill_discovery": "not-tested",
+  "request_digest": "sha256:4e3924f191b6a57e78161a7ecf4f9b54ad333a66b2253d69cd39956ea6d9c926",
+  "result_digest": "sha256:96d27f30923726e45a21e47a68af94c0d492356affe897406611934673bafbbc",
+  "binary_sha256": "sha256:76216a5440d1b8c2c09602ab3fc7c45054c53f7513792b52417c6ee9b90746bd",
+  "source_commit": "274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2",
+  "documents": 2,
+  "accepted_inferred_relations": 1,
+  "canonical_and_fts_bytes_preserved": true,
+  "query_seconds": 0.031,
+  "pending_count": 0,
+  "apply": {
+    "applied": true,
+    "canonical_written": false,
+    "generation_digest": "sha256:67c0bcc8f84b4f3eaed1f50167f4ac20a5134eed4a6d5730a4cf94787fe346b4",
+    "graph_update": "unchanged",
+    "host_execution_independently_verified": false,
+    "processed": 2
+  }
+}

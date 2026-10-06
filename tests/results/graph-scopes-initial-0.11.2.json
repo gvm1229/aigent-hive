@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "engine": "native-markdown",
+  "host": "win32",
+  "facts_revision": "622f2b7b5411d054abd94c5443ce2b620231b240",
+  "question_corpus_sha256": "ee6e1f364fb4bba428c3cef81f3e7c6e3f687812ef0b42bc5ec63805a580fd97",
+  "binary_sha256": "8f126eab35c32be316c58683fcb33c917807e8aecf6a83f82e1a5bf70171abe2",
+  "semantic_model_accuracy": "not measured by this explicit-link regression",
+  "scopes": [
+    {
+      "scope": "source",
+      "exact_passed": 10,
+      "relation_passed": 10,
+      "failures": []
+    },
+    {
+      "scope": "project",
+      "exact_passed": 8,
+      "relation_passed": 0,
+      "failures": [
+        "exact-11-adversarial-judge",
+        "exact-12-automatic-user-projection-refresh",
+        "relation-developer-binary-lifecycle",
+        "relation-docs-wiki-architecture",
+        "relation-git-worktree-lifecycle",
+        "relation-global-knowledge-bundle-transfer",
+        "relation-global-knowledge-rag",
+        "relation-global-onboarding",
+        "relation-global-user-contexts",
+        "relation-graphify-0-10-adoption",
+        "relation-historical-project-base-coverage",
+        "relation-hive-preserving-uninstall"
+      ]
+    },
+    {
+      "scope": "user-root",
+      "exact_passed": 10,
+      "relation_passed": 0,
+      "failures": [
+        "relation-host-external-integrations",
+        "relation-host-neutral-continuation",
+        "relation-hybrid-vector-search-0-10",
+        "relation-install-wide-knowledge-capture",
+        "relation-installed-usage-guard",
+        "relation-interactive-binary-update",
+        "relation-judge-verification",
+        "relation-knowledge-cross-project-access",
+        "relation-knowledge-portability-scan",
+        "relation-knowledge-preservation"
+      ]
+    }
+  ],
+  "exact_passed": 28,
+  "relation_passed": 10,
+  "cold_cli_p95_ms": 454.35459999134764,
+  "canonical_preserved": true,
+  "questions_preserved": true,
+  "passed": false
+}

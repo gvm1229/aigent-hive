@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "codex_version": "codex-cli 0.160.1",
+  "binary_sha256": "9e7c59c05cc1ce5677b1f94e835b2ac038ca3be14504e78d558eacdb0ea3f55d",
+  "model_calls": 0,
+  "transport": "one-shot official app-server command/exec; not parent-turn control",
+  "policy": "host-provided named read-only profile; no global override",
+  "cases": [
+    {
+      "path_case": "plain",
+      "error_code": -32600,
+      "error_digest": "c94c72e86922e45bead9cb944e2fc0e6ba1a8d7abbd3908a65646ceac74a2c9e",
+      "error_kind": "other",
+      "expected_bytes_read": false
+    }
+  ],
+  "readiness": {
+    "status": "ready"
+  },
+  "allowed_readonly_profile": ":read-only",
+  "success": false,
+  "server_exit_code": 0
+}

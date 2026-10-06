@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "product_version": "0.12.0",
+  "package_version": "0.12.0-test.2",
+  "source_commit": "876491d6ea0e614ce01ec4162a7895ce7798e8d1",
+  "run_id": 37336511191,
+  "url": "https://github.com/gvm1229/aigent-hive/actions/runs/37336511191",
+  "status": "success",
+  "jobs": [
+    {
+      "id": 111852553278,
+      "name": "Korean public test (macOS arm64)",
+      "conclusion": "success",
+      "passed_steps": [
+        "Set up job",
+        "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Install pinned conformance dependencies",
+        "Bind numbered public test source and registry state",
+        "Install the exact public npm package",
+        "Qualify Skill delivery using the exact public binary",
+        "Qualify directive recovery using the exact public binary",
+        "Qualify public binary simple-explanation guidance",
+        "Qualify legacy usage halt recovery with the exact public binary",
+        "Qualify collaborator directives with the exact public binary",
+        "Qualify Korean core, preservation, update, and rollback",
+        "Qualify vector onboarding using the exact public binary",
+        "Select SQLite-capable Python for vector acceptance",
+        "Qualify optional vector using the exact public binary",
+        "Run actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+        "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Complete job"
+      ]
+    },
+    {
+      "id": 111852553580,
+      "name": "Korean public test (Windows x64)",
+      "conclusion": "success",
+      "passed_steps": [
+        "Set up job",
+        "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Install pinned conformance dependencies",
+        "Bind numbered public test source and registry state",
+        "Install the exact public npm package",
+        "Qualify Skill delivery using the exact public binary",
+        "Qualify directive recovery using the exact public binary",
+        "Qualify public binary simple-explanation guidance",
+        "Qualify legacy usage halt recovery with the exact public binary",
+        "Qualify collaborator directives with the exact public binary",
+        "Qualify Korean core, preservation, update, and rollback",
+        "Qualify vector onboarding using the exact public binary",
+        "Qualify optional vector using the exact public binary",
+        "Run actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+        "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Complete job"
+      ]
+    },
+    {
+      "id": 111852553972,
+      "name": "Korean public test (Linux musl x64)",
+      "conclusion": "success",
+      "passed_steps": [
+        "Set up job",
+        "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Install pinned conformance dependencies",
+        "Bind numbered public test source and registry state",
+        "Install the exact public npm package",
+        "Qualify Skill delivery using the exact public binary",
+        "Qualify directive recovery using the exact public binary",
+        "Qualify public binary simple-explanation guidance",
+        "Qualify legacy usage halt recovery with the exact public binary",
+        "Qualify collaborator directives with the exact public binary",
+        "Qualify Korean core, preservation, update, and rollback",
+        "Qualify vector onboarding using the exact public binary",
+        "Qualify optional vector using the exact public binary",
+        "Run actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+        "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "Complete job"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 11356777451,
+      "name": "korean-public-test-win32-x64",
+      "digest": "sha256:fdd42ba9bf15f009a9ef3fadadbd69f7d5f1592cd76271c38e014dc91279b117",
+      "size_in_bytes": 1615483
+    },
+    {
+      "id": 11356533879,
+      "name": "korean-public-test-darwin-arm64",
+      "digest": "sha256:23c8be0ff25662e1b9f7b4388031ae4b18002b4745c971d0254341424abeac5f",
+      "size_in_bytes": 1614765
+    },
+    {
+      "id": 11355734393,
+      "name": "korean-public-test-linux-x64",
+      "digest": "sha256:975b6384d038bf7a567c39ec205cb18e19deae418deb27c9f5d3db4e38cacfd0",
+      "size_in_bytes": 1614564
+    }
+  ],
+  "scope": "Native CI runners Windows x64, Linux musl x64, macOS arm64; exact public npm binary, isolated installation, Skill/directive delivery, legacy halt recovery, upgrades, preservation, rollback and optional vector. Each unittest sequence reports 29+3+6 checks; no unittest skips reported. Separate local Windows zero-quota suite:28passed/1POSIXskip.",
+  "limits": "Synthetic host executables and quota fixtures; no actual account exhaustion, paid-credit transition, live current-turn interruption, or original intermittent macOS failure reproduction. Hosted macOS acceptance does not complete QLF112-005."
+}

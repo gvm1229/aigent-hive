@@ -18,6 +18,7 @@ pub mod orchestration;
 pub mod policy;
 pub mod role;
 pub mod run;
+pub mod token_accounting;
 pub mod usage_guard;
 
 /// Validate a JSON value against one embedded Draft 2020-12 schema.

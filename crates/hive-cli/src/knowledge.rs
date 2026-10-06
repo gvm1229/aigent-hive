@@ -1,4 +1,5 @@
 mod remember;
+pub(crate) mod semantic_graph;
 use remember::run_remember;
 mod retrieve;
 use crate::knowledge_scan::scan_directory;
@@ -92,6 +93,7 @@ USAGE:
     hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
+    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
     hive knowledge vector --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
@@ -695,6 +697,12 @@ pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
 
 #[allow(clippy::too_many_lines)]
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    if arguments
+        .windows(2)
+        .any(|pair| pair == ["--engine", "host-semantic"])
+    {
+        return semantic_graph::run(arguments, false);
+    }
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
             "knowledge graph requires preview, enable, status, rebuild, disable, query, or export"
@@ -888,8 +896,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             .map(|id| query_node_metadata(&graph, id, 10))
             .unwrap_or_default();
         let fts = if let Some(query) = text {
+            let planned = relation_question_subject(query).unwrap_or(query);
             if scope == "source" {
-                let planned = relation_question_subject(query).unwrap_or(query);
                 let hits = hive_wiki::source::query(&target, "en", Some(planned), None, 10)?;
                 Some(json!({"count": hits.len(), "hits": hits, "language": "en"}))
             } else {
@@ -897,7 +905,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                     "--target".to_owned(),
                     target.to_string_lossy().into_owned(),
                     "--text".to_owned(),
-                    query.to_owned(),
+                    planned.to_owned(),
                     "--limit".to_owned(),
                     "10".to_owned(),
                     "--output".to_owned(),
@@ -1038,6 +1046,15 @@ fn relation_question_subject(value: &str) -> Option<&str> {
 }
 
 pub(crate) fn run_source_graph(arguments: &[String]) -> ExitCode {
+    if arguments
+        .windows(2)
+        .any(|pair| pair == ["--engine", "host-semantic"])
+    {
+        let result = semantic_graph::run(arguments, true)
+            .unwrap_or_else(|error| failure("QueryKnowledge", &error));
+        emit(&result);
+        return ExitCode::from(result.exit_code);
+    }
     if arguments.iter().any(|argument| argument == "--scope") {
         let result = failure(
             "QueryKnowledge",
@@ -3122,15 +3139,25 @@ fn run_ingest(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     } else {
         ingest(&target, &source, &wiki)?
     };
+    let canonical_changed = !outcome.changed_paths.is_empty();
     let mutation =
         serde_json::to_value(&outcome).map_err(|error| WikiError::Io(error.to_string()))?;
-    let (changed_paths, locator, digest, data) = finish_shared_mutation(
+    let (changed_paths, locator, digest, mut data) = finish_shared_mutation(
         &target,
         shared.as_ref(),
         outcome.changed_paths.into_iter().chain(prepared).collect(),
         mutation,
         ".hive/knowledge",
     )?;
+    if let Some(shared) = &shared {
+        data["graph_update"] = semantic_graph::after_ingest(
+            &shared.user_root,
+            (shared.target_kind == SharedTargetKind::RegisteredProject)
+                .then_some(shared.namespace.as_str()),
+            canonical_changed,
+            &digest,
+        );
+    }
     Ok(success(
         "IngestKnowledge",
         "hive.knowledge-ingested",

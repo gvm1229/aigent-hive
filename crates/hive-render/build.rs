@@ -35,7 +35,29 @@ struct PublishedSnapshot {
     project_base_digest: String,
 }
 
+fn publish_package_identity() {
+    let product_version = std::env::var("CARGO_PKG_VERSION").expect("product version");
+    let package_version =
+        std::env::var("AIGENT_HIVE_PACKAGE_VERSION").unwrap_or_else(|_| product_version.clone());
+    assert!(
+        package_version == product_version
+            || package_version == format!("{product_version}-dev")
+            || package_version == format!("{product_version}-test")
+            || package_version
+                .strip_prefix(&format!("{product_version}-test."))
+                .is_some_and(|number| {
+                    !number.is_empty()
+                        && !number.starts_with('0')
+                        && number.bytes().all(|byte| byte.is_ascii_digit())
+                }),
+        "render package version must belong to the current product"
+    );
+    println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_VERSION");
+    println!("cargo:rustc-env=HIVE_RENDER_PACKAGE_VERSION={package_version}");
+}
+
 fn main() {
+    publish_package_identity();
     let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("manifest dir"));
     let root = manifest.join("../..");
     let registry_path = root.join("harness/project-bases/registry.yml");

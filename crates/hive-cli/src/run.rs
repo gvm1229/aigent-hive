@@ -2300,7 +2300,19 @@ fn publish_usage_history(
             "normalized usage observation must contain at least one selected window".to_owned(),
         ));
     }
-    let canonical = canonical_usage_snapshots(snapshots);
+    let mut canonical = canonical_usage_snapshots(snapshots);
+    // Schema 1 retains its exact single-window representation. Multiple cadence windows
+    // share the existing default quota pool in schema 2; do not drop weekly exhaustion.
+    if canonical.len() > 1
+        && canonical
+            .iter()
+            .all(|snapshot| snapshot.schema_version == 1 && snapshot.quota_pool.is_none())
+    {
+        for snapshot in &mut canonical {
+            snapshot.schema_version = 2;
+            snapshot.quota_pool = Some(DEFAULT_QUOTA_POOL.to_owned());
+        }
+    }
     let account_digest = &canonical[0].account_scope_digest;
     if canonical
         .iter()
@@ -2703,7 +2715,7 @@ fn resume_inner(
                     }
                 }
                 let outcome = match preflight.result.code {
-                    "hive.usage-limited" => "limited",
+                    "hive.usage-limited" | "hive.usage-quota-exhausted" => "limited",
                     "hive.usage-reset" => "reset",
                     _ => "unknown",
                 };
@@ -3661,9 +3673,26 @@ mod tests {
     }
 
     #[test]
-    fn disabled_installed_guard_bypasses_sensors_and_preserves_one_shot_authorization() {
+    fn both_explicit_guard_opt_outs_preserve_one_shot_authorization_without_sensors() {
         let (_temp, target, capability) = setup_run();
         write_usage_config(&target, false, false);
+        // Ordinary disable alone no longer bypasses the independent exhaustion safeguard.
+        let session_digest = sha256_digest(b"codex\0fixture-session");
+        let control_path = target
+            .join(".hive/runtime/usage-guard/sessions")
+            .join(session_digest.strip_prefix("sha256:").expect("digest"))
+            .join("control.json");
+        fs::create_dir_all(control_path.parent().expect("control parent")).expect("control dir");
+        fs::write(
+            control_path,
+            serde_json::to_vec(&json!({
+                "schema_version": 1, "host_scope": "codex", "session_id_digest": session_digest,
+                "process_id": 4242, "guard_enabled": false, "zero_quota_guard_disabled": true,
+                "revision": 1,
+            }))
+            .expect("control bytes"),
+        )
+        .expect("explicit opt-out fixture");
         let request = write_checkpoint_request(&target, 0, "2026-07-24T00:00:00Z", &[], None);
         checkpoint(&CheckpointArguments {
             target: target.clone(),
@@ -3709,6 +3738,56 @@ mod tests {
             replay_data["dispatch_briefs"].as_array().map(Vec::len),
             Some(0)
         );
+    }
+
+    #[test]
+    fn cadence_history_round_trip_preserves_both_windows_and_single_window_compatibility() {
+        let (_temp, target, _capability) = setup_run();
+        let pinned = super::PinnedTarget::open(&target).expect("target");
+        let account = sha256_digest(b"history-account");
+        let mut snapshot = hive_core::usage_guard::UsageSnapshot {
+            schema_version: 1,
+            sensor_id: "test".to_owned(),
+            sensor_version: "1".to_owned(),
+            host_scope: "codex".to_owned(),
+            account_scope_digest: account.clone(),
+            quota_pool: None,
+            quota_window: hive_core::usage_guard::UsageWindow::Session,
+            remaining_percent: 50.0,
+            measured_at_unix_seconds: 100,
+            expires_at_unix_seconds: 200,
+            resets_at_unix_seconds: 300,
+            source_confidence: hive_core::usage_guard::SourceConfidence::High,
+        };
+        let (path, before, _, _) =
+            super::read_usage_history(&pinned, &account).expect("empty history");
+        super::publish_usage_history(&pinned, &path, &before, &[snapshot.clone()])
+            .expect("single history");
+        let bytes = fs::read(target.join(&path)).expect("bytes");
+        let record: serde_json::Value = serde_json::from_slice(&bytes).expect("record");
+        assert_eq!(record["schema_version"], json!(1));
+        assert_eq!(record["snapshot"]["schema_version"], json!(1));
+        let mut windows = vec![snapshot.clone()];
+        snapshot.quota_window = hive_core::usage_guard::UsageWindow::Weekly;
+        snapshot.remaining_percent = 0.0;
+        windows.push(snapshot);
+        let (_, before, _, _) = super::read_usage_history(&pinned, &account).expect("single read");
+        super::publish_usage_history(&pinned, &path, &before, &windows).expect("two windows");
+        let (_, _, decoded, state) =
+            super::read_usage_history(&pinned, &account).expect("two-window read");
+        assert_eq!(state, "available");
+        assert_eq!(decoded.len(), 2);
+        assert!(decoded
+            .iter()
+            .all(|item| item.schema_version == 2 && item.quota_pool.as_deref() == Some("default")));
+        assert_eq!(decoded[1].remaining_percent.to_bits(), 0.0_f64.to_bits());
+        assert!(!super::publish_usage_history(
+            &pinned,
+            &path,
+            &pinned.snapshot(&path).expect("snapshot"),
+            &windows
+        )
+        .expect("idempotent"));
     }
 
     #[test]

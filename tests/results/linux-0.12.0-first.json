@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "source_commit": "effac2dc117dc51b3f468c2f6a2f4e1280323838",
+  "base_image": "rust@sha256:408fe88047cef61a2087653b0c5255fa51c0f2d6d94ddedd7a2562a9b91a46f6",
+  "platform": "Linux amd64 via Docker Desktop on Windows",
+  "actual_host_models_executed": false,
+  "status": "failed",
+  "steps": [
+    {
+      "command": [
+        "docker",
+        "build",
+        "--tag",
+        "aigent-hive-qualification:0.12.0-local",
+        "<source-root>\\tests\\work\\hive-linux-0120"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 8.312
+    },
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        "aigent-hive-linux-0120",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--mount",
+        "type=bind,source=<source-root>,target=/source,readonly",
+        "--mount",
+        "type=bind,source=<source-root>\\tests\\work\\hive-linux-0120,target=/source/tests/work",
+        "--workdir",
+        "/source",
+        "--env",
+        "CARGO_HOME=/source/tests/work/cargo",
+        "--env",
+        "CARGO_TARGET_DIR=/source/tests/work/build",
+        "--env",
+        "CARGO_INCREMENTAL=0",
+        "--env",
+        "RUSTUP_TOOLCHAIN=1.97.1",
+        "--env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "--env",
+        "GIT_CONFIG_COUNT=1",
+        "--env",
+        "GIT_CONFIG_KEY_0=safe.directory",
+        "--env",
+        "GIT_CONFIG_VALUE_0=/source",
+        "aigent-hive-qualification:0.12.0-local",
+        "bash",
+        "/source/tests/work/qualification.sh"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 541.422
+    }
+  ],
+  "limits": [
+    "container CLI and fixtures only",
+    "no active host interruption or paid-credit transition proof"
+  ],
+  "tool_image_id": "sha256:97d837aff6972be01d606b42b57236fbff08d5a1fc26ff037c7db7617e096e49",
+  "error": "Linux qualification command failed: 1"
+}

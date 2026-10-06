@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "product_version": "0.11.1",
-  "package_version": "0.11.1-test.8",
+  "product_version": "0.12.0",
+  "package_version": "0.12.0-test.3",
   "plan_ids": [
-    "SGM-005"
+    "QLF120-006"
   ],
-  "product_tree_sha256": "sha256:c4f357f2abdbc6b2231d9e50a025d1e8a35b22dd17060c0c01f3f0454873c074"
+  "product_tree_sha256": "sha256:aa9793423ad8b7bd9dd82553189bc1d8cf8ea2e5442ce6a3528580e818307098"
 }

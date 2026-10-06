@@ -1,8 +1,13 @@
+mod antigravity;
+mod token_accounting;
+
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarget};
 use crate::usage;
 use hive_core::sha256_digest;
-use hive_core::usage_guard::{detect_usage_reset, evaluate_usage, UsageDecision, UsagePolicy};
+use hive_core::usage_guard::{
+    detect_usage_reset, evaluate_usage, evaluate_zero_quota, UsageDecision, UsagePolicy,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, Read};
@@ -23,8 +28,9 @@ USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-reset <halt-digest>] --output json
-    hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] [--confirm-reset <halt-digest>] --output json
+    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage summarize-tokens --request <normalized-events.json> --output json
 ";
 
 #[derive(Debug)]
@@ -61,11 +67,13 @@ struct SessionArguments {
     action: SessionAction,
     confirm_disable: bool,
     confirm_reset_guard_disable: bool,
+    confirm_zero_quota_guard_disable: bool,
     confirm_reset: Option<String>,
 }
 
 #[derive(Debug)]
 struct CaptureArguments {
+    host: String,
     target: Option<PathBuf>,
     target_from_stdin: bool,
 }
@@ -192,9 +200,9 @@ pub(crate) fn current_dispatch_binding(
     user_root: Option<&Path>,
 ) -> Result<String, AdapterError> {
     let config = read_effective_config(target, user_root, Some(host))?;
-    if !config.guard_enabled || config.primary_host != host || process_id == 0 {
+    if config.primary_host != host || process_id == 0 {
         return Err(AdapterError::OwnerBlocked(
-            "usage guard is disabled or bound to another host".to_owned(),
+            "usage guard is bound to another host or invalid process".to_owned(),
         ));
     }
     let parsed = ParsedBinding {
@@ -204,7 +212,8 @@ pub(crate) fn current_dispatch_binding(
     let binding = bind_session(&parsed, host);
     let control = load_control(target, &binding)?;
     if matches!(control.state, OverrideState::Stale | OverrideState::Damaged)
-        || !effective_enabled(&control, config.guard_enabled)
+        || (!effective_enabled(&control, config.guard_enabled)
+            && !effective_zero_quota_enabled(&control))
     {
         return Err(AdapterError::OwnerBlocked(
             "usage session control is stale, disabled, or incorrectly bound".to_owned(),
@@ -315,7 +324,7 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             "usage policy or session control changed before dispatch authorization".to_owned(),
         ));
     }
-    if effective_enabled(&control, config.guard_enabled) {
+    if effective_enabled(&control, config.guard_enabled) || effective_zero_quota_enabled(&control) {
         let halt = load_halt(runtime, &binding)?;
         if runtime_digest(halt.snapshot.bytes()) != preflight.trace.halt_digest {
             return Err(AdapterError::Conflict(
@@ -339,7 +348,13 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
         .with_stop_remaining_percent(config.threshold)
         .map_err(|_| AdapterError::Safety("dispatch usage policy is invalid".to_owned()))?;
         if !matches!(
-            evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now),
+            evaluate_guard_decision(
+                &policy,
+                &snapshot.core_snapshots(),
+                now,
+                effective_enabled(&control, config.guard_enabled),
+                effective_zero_quota_enabled(&control)
+            ),
             UsageDecision::Allow(_)
         ) {
             return Err(AdapterError::Safety(
@@ -420,6 +435,8 @@ enum SessionAction {
     AcknowledgeReset,
     EnableResetGuard,
     DisableResetGuard,
+    EnableZeroQuotaGuard,
+    DisableZeroQuotaGuard,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -432,6 +449,8 @@ struct SessionControl {
     guard_enabled: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     reset_guard_disabled: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    zero_quota_guard_disabled: bool,
     revision: u64,
 }
 
@@ -491,6 +510,7 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
         || arguments == ["threshold", "--help"]
         || arguments == ["session", "--help"]
         || arguments == ["capture", "--help"]
+        || arguments == ["summarize-tokens", "--help"]
     {
         print!("{USAGE_CONTROL}");
         return ExitCode::SUCCESS;
@@ -512,9 +532,16 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
             "ControlUsageSession",
             parse_session(&arguments[1..]).and_then(|parsed| control_session(&parsed)),
         ),
+        Some("summarize-tokens") => ("CheckUsage", token_accounting::run(&arguments[1..])),
         Some("capture") => (
             "CaptureUsage",
-            parse_capture(&arguments[1..]).and_then(|parsed| capture_claude(&parsed)),
+            parse_capture(&arguments[1..]).and_then(|parsed| {
+                if parsed.host == "antigravity" {
+                    antigravity::capture(&parsed)
+                } else {
+                    capture_claude(&parsed)
+                }
+            }),
         ),
         Some(other) => (
             "CheckUsage",
@@ -578,9 +605,9 @@ fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError>
             }
         }
     }
-    if host.as_deref() != Some("claude") {
+    if !matches!(host.as_deref(), Some("claude" | "antigravity")) {
         return Err(AdapterError::Input(
-            "usage capture currently requires --host claude".to_owned(),
+            "usage capture requires --host claude|antigravity".to_owned(),
         ));
     }
     if output.as_deref() != Some("json") {
@@ -599,6 +626,7 @@ fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError>
         ));
     }
     Ok(CaptureArguments {
+        host: host.expect("validated capture host"),
         target: target.map(PathBuf::from),
         target_from_stdin,
     })
@@ -642,26 +670,13 @@ fn capture_claude(arguments: &CaptureArguments) -> Result<ActionResult, AdapterE
         .into_iter()
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
-    let mut changed = false;
-    for attempt in 0..3 {
-        let snapshot = target.snapshot_bounded(&relative, MAX_CONTROL_BYTES)?;
-        if let Some(existing) = snapshot.bytes() {
-            let existing = serde_json::from_slice::<ClaudeCapture>(existing).map_err(|_| {
-                AdapterError::Safety("existing Claude capture is malformed".to_owned())
-            })?;
-            if existing.received_at_unix_millis > capture.received_at_unix_millis {
-                break;
-            }
-        }
-        match target.publish_runtime(&relative, &snapshot, &desired) {
-            Ok(value) => {
-                changed = value;
-                break;
-            }
-            Err(AdapterError::Conflict(_)) if attempt < 2 => {}
-            Err(error) => return Err(error),
-        }
-    }
+    let changed = publish_capture::<ClaudeCapture>(
+        &target,
+        &relative,
+        &desired,
+        capture.received_at_unix_millis,
+        |old| old.received_at_unix_millis,
+    )?;
     Ok(ActionResult {
         schema_version: 1,
         action: "CaptureUsage",
@@ -691,6 +706,34 @@ fn capture_claude(arguments: &CaptureArguments) -> Result<ActionResult, AdapterE
             "raw_input_persisted": false,
         })),
     })
+}
+
+fn publish_capture<T: serde::de::DeserializeOwned>(
+    target: &PinnedTarget,
+    relative: &Path,
+    desired: &[u8],
+    received_at_millis: u128,
+    timestamp: fn(&T) -> u128,
+) -> Result<bool, AdapterError> {
+    for attempt in 0..3 {
+        let snapshot = target.snapshot_bounded(relative, MAX_CONTROL_BYTES)?;
+        if let Some(existing) = snapshot.bytes() {
+            let existing = serde_json::from_slice::<T>(existing).map_err(|_| {
+                AdapterError::Safety("existing usage capture is malformed".to_owned())
+            })?;
+            if timestamp(&existing) > received_at_millis {
+                return Ok(false);
+            }
+        }
+        match target.publish_runtime(relative, &snapshot, desired) {
+            Ok(changed) => return Ok(changed),
+            Err(AdapterError::Conflict(_)) if attempt < 2 => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Err(AdapterError::Conflict(
+        "usage capture changed concurrently".to_owned(),
+    ))
 }
 
 fn claude_workspace_target(input: &ClaudeStatusInput) -> Result<PathBuf, AdapterError> {
@@ -933,9 +976,11 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         "acknowledge-reset" => SessionAction::AcknowledgeReset,
         "enable-reset-guard" => SessionAction::EnableResetGuard,
         "disable-reset-guard" => SessionAction::DisableResetGuard,
+        "enable-zero-quota-guard" => SessionAction::EnableZeroQuotaGuard,
+        "disable-zero-quota-guard" => SessionAction::DisableZeroQuotaGuard,
         _ => {
             return Err(AdapterError::Input(
-                "--action must be enable, disable, toggle, acknowledge-reset, enable-reset-guard, or disable-reset-guard".to_owned(),
+                "--action must be enable, disable, toggle, acknowledge-reset, enable-reset-guard, disable-reset-guard, enable-zero-quota-guard, or disable-zero-quota-guard".to_owned(),
             ));
         }
     };
@@ -946,6 +991,19 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         return Err(AdapterError::Input(
             "disabling the current-session usage safeguard requires --confirm-session-disable"
                 .to_owned(),
+        ));
+    }
+    let confirm_zero_quota_guard_disable = options
+        .iter()
+        .any(|(option, _)| *option == "--confirm-zero-quota-guard-disable");
+    if (action == SessionAction::DisableZeroQuotaGuard) != confirm_zero_quota_guard_disable
+        || (matches!(
+            action,
+            SessionAction::EnableZeroQuotaGuard | SessionAction::DisableZeroQuotaGuard
+        ) && confirm_disable)
+    {
+        return Err(AdapterError::Input(
+            "disable-zero-quota-guard requires only --confirm-zero-quota-guard-disable".to_owned(),
         ));
     }
     let confirm_reset = optional(&options, "--confirm-reset").map(str::to_owned);
@@ -980,6 +1038,7 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         action,
         confirm_disable,
         confirm_reset_guard_disable,
+        confirm_zero_quota_guard_disable,
         confirm_reset,
     })
 }
@@ -995,7 +1054,9 @@ fn parse_key_value_options<'a>(
         let option = arguments[index].as_str();
         if matches!(
             option,
-            "--confirm-session-disable" | "--confirm-reset-guard-disable"
+            "--confirm-session-disable"
+                | "--confirm-reset-guard-disable"
+                | "--confirm-zero-quota-guard-disable"
         ) {
             if !allow_confirmation {
                 return Err(AdapterError::Input(format!("unknown option: {option}")));
@@ -1128,7 +1189,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             .marker
             .as_ref()
             .is_some_and(|marker| marker.decision == "usage-reset");
-    let halted = guard_enabled
+    let halted = (guard_enabled || effective_zero_quota_enabled(&loaded))
         && (pending_reset
             || (current_halt
                 && current_policy
@@ -1136,7 +1197,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
                     .marker
                     .as_ref()
                     .is_some_and(|marker| marker.decision != "observed")));
-    let recheck_required = guard_enabled
+    let recheck_required = (guard_enabled || effective_zero_quota_enabled(&loaded))
         && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
     let mut evidence = vec![Evidence {
@@ -1188,6 +1249,9 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
+            "zero_quota_guard_enabled": effective_zero_quota_enabled(&loaded),
+            "zero_quota_guard_scope": "hive-dispatch-preflight",
+            "active_turn_interruption_verified": false,
             "quota_reset_guard_enabled": effective_reset_enabled(&loaded, config.quota_reset_guard_enabled),
             "quota_reset_guard_installed_enabled": config.quota_reset_guard_enabled,
             "quota_reset_guard_monitoring": false,
@@ -1237,7 +1301,7 @@ fn enforce_captured(
     trace.policy_digest.clone_from(&policy_digest);
     trace.control_digest = runtime_digest(loaded.snapshot.bytes());
     "absent".clone_into(&mut trace.halt_digest);
-    if !effective_enabled(&loaded, config.guard_enabled) {
+    if !effective_enabled(&loaded, config.guard_enabled) && !effective_zero_quota_enabled(&loaded) {
         return Ok(ActionResult {
             schema_version: 1,
             action: "CheckUsage",
@@ -1254,6 +1318,7 @@ fn enforce_captured(
             next_action: None,
             data: Some(json!({
                 "guard_enabled": false,
+                "zero_quota_guard_enabled": false,
                 "host_scope": binding.host_scope,
                 "session_id_digest": binding.session_digest,
                 "process_id": binding.process_id,
@@ -1289,6 +1354,8 @@ fn enforce_captured(
             &config,
             &binding,
             arguments.account_digest.as_deref(),
+            effective_enabled(&loaded, config.guard_enabled),
+            effective_zero_quota_enabled(&loaded),
             if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
                 halt.marker
                     .as_ref()
@@ -1306,7 +1373,7 @@ fn enforce_captured(
         if refreshed_digest == policy_digest {
             break observation;
         }
-        if attempts == 3 || !refreshed.guard_enabled {
+        if attempts == 3 {
             return Ok(policy_changed_result(&binding, &refreshed));
         }
         config = refreshed;
@@ -1324,6 +1391,21 @@ fn enforce_captured(
     }
     let Some(decision) = observation.decision else {
         let mut result = allowed_result(&binding, &config, &observation);
+        if let Some(data) = result
+            .data
+            .as_mut()
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            data.insert(
+                "guard_enabled".to_owned(),
+                json!(effective_enabled(&loaded, config.guard_enabled)),
+            );
+            data.insert(
+                "zero_quota_guard_enabled".to_owned(),
+                json!(effective_zero_quota_enabled(&loaded)),
+            );
+            data.insert("active_turn_interruption_verified".to_owned(), json!(false));
+        }
         if let Some(data) = result
             .data
             .as_mut()
@@ -1457,6 +1539,21 @@ fn enforce_captured(
         ));
     }
     let mut result = halted_result(&binding, &published, changed);
+    if let Some(data) = result
+        .data
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        data.insert(
+            "guard_enabled".to_owned(),
+            json!(effective_enabled(&loaded, config.guard_enabled)),
+        );
+        data.insert(
+            "zero_quota_guard_enabled".to_owned(),
+            json!(effective_zero_quota_enabled(&loaded)),
+        );
+        data.insert("active_turn_interruption_verified".to_owned(), json!(false));
+    }
     if let Some(data) = result
         .data
         .as_mut()
@@ -1602,11 +1699,14 @@ fn record_discord_notification(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn observe_usage(
     target: &PinnedTarget,
     config: &InstalledUsageConfig,
     binding: &SessionBinding,
     account_digest: Option<&str>,
+    threshold_enabled: bool,
+    zero_enabled: bool,
     previous_snapshots: &[hive_core::usage_guard::UsageSnapshot],
 ) -> TurnObservation {
     let sampled_at = SystemTime::now();
@@ -1648,13 +1748,29 @@ fn observe_usage(
         )
         .with_stop_remaining_percent(config.threshold)
         .ok()
-        .map(|policy| evaluate_usage(&policy, &core_snapshots, &[], now))
+        .map(|policy| {
+            evaluate_guard_decision(
+                &policy,
+                &core_snapshots,
+                now,
+                threshold_enabled,
+                zero_enabled,
+            )
+        })
     }) {
         Some(UsageDecision::Allow(_)) => (None, None),
-        Some(UsageDecision::Block(block)) => (Some("halted"), Some(block.remaining_percent)),
+        Some(UsageDecision::Block(block)) => (
+            Some(if zero_enabled && block.remaining_percent == 0.0 {
+                "quota-exhausted"
+            } else {
+                "halted"
+            }),
+            Some(block.remaining_percent),
+        ),
         Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
-    if config.quota_reset_guard_enabled
+    if threshold_enabled
+        && config.quota_reset_guard_enabled
         && decision.is_none()
         && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
     {
@@ -1662,7 +1778,23 @@ fn observe_usage(
     }
     TurnObservation {
         decision,
-        selected_window: snapshot.selected_window_label(),
+        selected_window: if decision == Some("quota-exhausted")
+            && core_snapshots
+                .iter()
+                .all(|snapshot| snapshot.quota_pool.is_none())
+        {
+            match core_snapshots
+                .iter()
+                .find(|snapshot| snapshot.remaining_percent == 0.0)
+                .map(|snapshot| snapshot.quota_window)
+            {
+                Some(hive_core::usage_guard::UsageWindow::Weekly) => "weekly",
+                Some(hive_core::usage_guard::UsageWindow::Session) => "session",
+                _ => snapshot.selected_window_label(),
+            }
+        } else {
+            snapshot.selected_window_label()
+        },
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
         remaining_percent,
@@ -1670,6 +1802,22 @@ fn observe_usage(
         snapshots: core_snapshots,
         normalized: Some(snapshot),
     }
+}
+
+fn evaluate_guard_decision(
+    policy: &UsagePolicy,
+    snapshots: &[hive_core::usage_guard::UsageSnapshot],
+    now: i64,
+    threshold_enabled: bool,
+    zero_enabled: bool,
+) -> UsageDecision {
+    if zero_enabled {
+        let decision = evaluate_zero_quota(policy, snapshots, now);
+        if !matches!(decision, UsageDecision::Allow(_)) || !threshold_enabled {
+            return decision;
+        }
+    }
+    evaluate_usage(policy, snapshots, &[], now)
 }
 
 fn read_usage_snapshot(
@@ -1718,7 +1866,7 @@ fn read_usage_snapshot(
         ),
         "antigravity" => native_then_consented_fallback(
             usage::UsageHost::Antigravity,
-            Err(usage::SensorError::Unsupported),
+            antigravity::read(target, binding, account_digest, sampled_at),
             config.codexbar_fallback_enabled,
             || match account_digest {
                 Some(account_digest) => usage::check_codexbar_provider_with_runner(
@@ -1807,7 +1955,10 @@ fn read_claude_capture_snapshot(
             _ => return Err(usage::SensorError::WrongWindows),
         }
     }
-    let selected = session.or(weekly).ok_or(usage::SensorError::WrongWindows)?;
+    let windows = session.into_iter().chain(weekly).collect::<Vec<_>>();
+    if windows.is_empty() {
+        return Err(usage::SensorError::WrongWindows);
+    }
     Ok(usage::NormalizedSnapshot {
         sensor_id: capture.sensor_id,
         sensor_version: capture.sensor_version,
@@ -1816,7 +1967,7 @@ fn read_claude_capture_snapshot(
         measured_at: capture.received_at_unix_seconds,
         expires_at: capture.expires_at_unix_seconds,
         source_confidence: "local".to_owned(),
-        windows: vec![selected],
+        windows,
     })
 }
 
@@ -1927,14 +2078,18 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
         action: "CheckUsage",
         status: "blocked",
         exit_code: 3,
-        code: if marker.decision == "halted" {
+        code: if marker.decision == "quota-exhausted" {
+            "hive.usage-quota-exhausted"
+        } else if marker.decision == "halted" {
             "hive.usage-limited"
         } else if marker.decision == "usage-reset" {
             "hive.usage-reset"
         } else {
             "hive.usage-unknown"
         },
-        message: if marker.decision == "halted" {
+        message: if marker.decision == "quota-exhausted" {
+            "subscription quota is exhausted; automatic work remains blocked until quota recovers or zero-quota protection is explicitly opted out".to_owned()
+        } else if marker.decision == "halted" {
             format!(
                 "subscription usage is at or below the {}% remaining threshold",
                 marker.threshold_remaining_percent
@@ -2147,6 +2302,17 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
     );
     let loaded = load_control(runtime, &binding)?;
     let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
+    let zero_action = matches!(
+        arguments.action,
+        SessionAction::EnableZeroQuotaGuard | SessionAction::DisableZeroQuotaGuard
+    );
+    if arguments.action == SessionAction::DisableZeroQuotaGuard
+        && !arguments.confirm_zero_quota_guard_disable
+    {
+        return Err(AdapterError::Input(
+            "zero-quota opt-out requires --confirm-zero-quota-guard-disable".to_owned(),
+        ));
+    }
     let reset_action = matches!(
         arguments.action,
         SessionAction::EnableResetGuard | SessionAction::DisableResetGuard
@@ -2191,7 +2357,10 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         SessionAction::Enable | SessionAction::AcknowledgeReset => true,
         SessionAction::Disable => false,
         SessionAction::Toggle => !currently_enabled,
-        SessionAction::EnableResetGuard | SessionAction::DisableResetGuard => currently_enabled,
+        SessionAction::EnableResetGuard
+        | SessionAction::DisableResetGuard
+        | SessionAction::EnableZeroQuotaGuard
+        | SessionAction::DisableZeroQuotaGuard => currently_enabled,
     };
     if desired_enabled && !config.guard_enabled {
         return Err(AdapterError::Safety(
@@ -2199,7 +2368,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
                 .to_owned(),
         ));
     }
-    if !desired_enabled && !arguments.confirm_disable {
+    if !desired_enabled && !arguments.confirm_disable && !zero_action {
         return Err(AdapterError::Input(
             "disabling the current-session usage safeguard requires --confirm-session-disable"
                 .to_owned(),
@@ -2223,6 +2392,11 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
                 loaded.state == OverrideState::Current && control.reset_guard_disabled
             }),
         },
+        zero_quota_guard_disabled: match arguments.action {
+            SessionAction::EnableZeroQuotaGuard => false,
+            SessionAction::DisableZeroQuotaGuard => true,
+            _ => !effective_zero_quota_enabled(&loaded),
+        },
         revision,
     };
     let desired_bytes = serde_json::to_vec(&desired)
@@ -2231,7 +2405,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
     let changed = runtime.publish_runtime(&loaded.relative, &loaded.snapshot, &desired_bytes)?;
-    let code = if reset_action {
+    let code = if zero_action {
+        if desired.zero_quota_guard_disabled {
+            "hive.usage-zero-quota-guard-disabled"
+        } else {
+            "hive.usage-zero-quota-guard-enabled"
+        }
+    } else if reset_action {
         if desired.reset_guard_disabled {
             "hive.usage-reset-guard-disabled"
         } else {
@@ -2249,7 +2429,10 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         status: "success",
         exit_code: 0,
         code,
-        message: if reset_action {
+        message: if zero_action {
+            "zero-quota protection changed only for this session binding; fresh enforce is required"
+                .to_owned()
+        } else if reset_action {
             "reset-only protection changed for this binding; threshold protection remains enabled and fresh enforce is required".to_owned()
         } else if desired_enabled {
             "usage safeguard is enabled for the current session binding".to_owned()
@@ -2266,7 +2449,8 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         data: Some(json!({
             "guard_enabled": desired_enabled,
             "quota_reset_guard_enabled": config.quota_reset_guard_enabled && !desired.reset_guard_disabled,
-            "session_recheck_required": reset_action,
+            "session_recheck_required": reset_action || zero_action,
+            "zero_quota_guard_enabled": !desired.zero_quota_guard_disabled,
             "authorizes_dispatch": false,
             "session_override": "current",
             "host_scope": binding.host_scope,
@@ -2832,7 +3016,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         || !is_sha256_digest(&marker.evidence_digest)
         || !matches!(
             marker.decision.as_str(),
-            "halted" | "usage-unknown" | "usage-reset" | "observed"
+            "halted" | "quota-exhausted" | "usage-unknown" | "usage-reset" | "observed"
         )
         || !matches!(
             marker.selected_window.as_str(),
@@ -2900,6 +3084,12 @@ fn effective_reset_enabled(loaded: &LoadedControl, installed_enabled: bool) -> b
         && !loaded.control.as_ref().is_some_and(|control| {
             loaded.state == OverrideState::Current && control.reset_guard_disabled
         })
+}
+
+fn effective_zero_quota_enabled(loaded: &LoadedControl) -> bool {
+    !loaded.control.as_ref().is_some_and(|control| {
+        loaded.state == OverrideState::Current && control.zero_quota_guard_disabled
+    })
 }
 
 fn effective_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
@@ -3109,6 +3299,7 @@ mod tests {
             action: SessionAction::Disable,
             confirm_disable: true,
             confirm_reset_guard_disable: false,
+            confirm_zero_quota_guard_disable: false,
             confirm_reset: None,
         })
         .expect("disable");
@@ -3217,8 +3408,8 @@ mod tests {
     }
 
     #[test]
-    fn installed_disable_bypasses_enforcement_for_every_host_without_runtime_state() {
-        for host in ["codex", "claude", "antigravity"] {
+    fn installed_disable_keeps_zero_quota_protection_and_missing_usage_blocks() {
+        for host in ["claude", "antigravity"] {
             let directory = temporary_target();
             let config = directory.path().join(".hive/config");
             fs::create_dir_all(&config).expect("config directory");
@@ -3238,14 +3429,15 @@ mod tests {
                 host: None,
                 run_id: None,
             })
-            .expect("installed disable should bypass enforcement");
+            .expect("installed disable still checks exhaustion");
 
-            assert_eq!(result.code, "hive.usage-session-bypassed");
+            assert_eq!(result.code, "hive.usage-unknown");
+            assert_eq!(result.exit_code, 3);
             assert_eq!(
                 result.data.as_ref().map(|data| &data["guard_enabled"]),
                 Some(&json!(false))
             );
-            assert!(!directory.path().join(".hive/runtime").exists());
+            assert!(directory.path().join(".hive/runtime").exists());
         }
     }
 
@@ -3263,12 +3455,169 @@ mod tests {
                 process_id: 1,
                 guard_enabled: true,
                 reset_guard_disabled: false,
+                zero_quota_guard_disabled: false,
                 revision: 1,
             }),
             state: OverrideState::Current,
         };
         assert!(!effective_enabled(&loaded, false));
         assert!(effective_enabled(&loaded, true));
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn zero_quota_halt_survives_ordinary_disable_and_only_explicit_opt_out_bypasses_it() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).expect("config");
+        let parsed = ParsedBinding {
+            session_id: "zero-quota-test".to_owned(),
+            process_id: 7,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().to_owned(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: None,
+            host: Some("claude".to_owned()),
+            run_id: None,
+        };
+        let capture_path = project
+            .path()
+            .join(claude_capture_path(&bound.session_digest).expect("path"));
+        fs::create_dir_all(capture_path.parent().expect("parent")).expect("capture dir");
+        let write_usage = |weekly: f64| {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock")
+                .as_secs();
+            let mut capture = valid_capture(&bound);
+            capture["received_at_unix_seconds"] = json!(now);
+            capture["received_at_unix_millis"] = json!(u128::from(now) * 1000);
+            capture["expires_at_unix_seconds"] = json!(now + 120);
+            capture["windows"] = json!([
+                {"name":"session","window_minutes":300,"remaining_percent":50.0,"resets_at_unix_seconds":now+3600},
+                {"name":"weekly","window_minutes":10080,"remaining_percent":weekly,"resets_at_unix_seconds":now+3600}
+            ]);
+            fs::write(&capture_path, serde_json::to_vec(&capture).expect("encode"))
+                .expect("capture");
+        };
+        write_usage(0.0);
+        for installed_enabled in [true, false] {
+            fs::write(
+                config_dir.join("harness.toml"),
+                installed_config("claude", installed_enabled, false),
+            )
+            .expect("config");
+            assert_eq!(
+                enforce(&args).expect("enforce").code,
+                "hive.usage-quota-exhausted"
+            );
+        }
+        let mut control_args = SessionArguments {
+            target: project.path().to_owned(),
+            binding: parsed.clone(),
+            user_root: None,
+            host: Some("claude".to_owned()),
+            action: SessionAction::DisableZeroQuotaGuard,
+            confirm_disable: false,
+            confirm_reset_guard_disable: false,
+            confirm_zero_quota_guard_disable: false,
+            confirm_reset: None,
+        };
+        assert!(control_session(&control_args).is_err());
+        control_args.confirm_zero_quota_guard_disable = true;
+        control_session(&control_args).expect("explicit opt out");
+        assert_eq!(
+            enforce(&args).expect("bypass").code,
+            "hive.usage-session-bypassed"
+        );
+        // A restarted process cannot inherit the opt-out, even in the same conversation.
+        let restarted = EnforceArguments {
+            binding: ParsedBinding {
+                process_id: 8,
+                ..parsed
+            },
+            ..args
+        };
+        assert_eq!(
+            enforce(&restarted).expect("restart").code,
+            "hive.usage-quota-exhausted"
+        );
+        control_args.action = SessionAction::EnableZeroQuotaGuard;
+        control_args.confirm_zero_quota_guard_disable = false;
+        control_session(&control_args).expect("enable");
+        write_usage(1.0);
+        let args = EnforceArguments {
+            binding: control_args.binding.clone(),
+            ..restarted
+        };
+        let preflight = super::dispatch_preflight(
+            project.path(),
+            "claude",
+            "zero-quota-test",
+            7,
+            None,
+            "absent-run",
+            None,
+            |_| Ok(()),
+        )
+        .expect("positive quota preflight");
+        assert_eq!(preflight.result.code, "hive.usage-allowed");
+        assert_eq!(
+            preflight.result.data.as_ref().expect("data")["guard_enabled"],
+            json!(false)
+        );
+        super::verify_dispatch_preflight(&preflight).expect("fresh zero-only permit");
+        assert_eq!(
+            super::current_dispatch_binding(
+                &PinnedTarget::open(project.path()).expect("target"),
+                "claude",
+                "zero-quota-test",
+                7,
+                None
+            )
+            .expect("zero-only observed binding"),
+            preflight.binding_digest()
+        );
+        control_args.action = SessionAction::DisableZeroQuotaGuard;
+        control_args.confirm_zero_quota_guard_disable = true;
+        control_session(&control_args).expect("change control");
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
+        control_args.action = SessionAction::EnableZeroQuotaGuard;
+        control_args.confirm_zero_quota_guard_disable = false;
+        control_session(&control_args).expect("restore");
+        fs::remove_file(capture_path).expect("remove sensor");
+        assert_eq!(enforce(&args).expect("unknown").code, "hive.usage-unknown");
+    }
+
+    #[test]
+    fn zero_quota_opt_out_requires_its_own_confirmation() {
+        let base = [
+            "--target",
+            ".",
+            "--session-id",
+            "test",
+            "--process-id",
+            "7",
+            "--action",
+            "disable-zero-quota-guard",
+            "--output",
+            "json",
+        ];
+        let mut args = base
+            .iter()
+            .map(|value| (*value).to_owned())
+            .collect::<Vec<_>>();
+        assert!(super::parse_session(&args).is_err());
+        args.push("--confirm-session-disable".to_owned());
+        assert!(super::parse_session(&args).is_err());
+        args.pop();
+        args.push("--confirm-zero-quota-guard-disable".to_owned());
+        assert!(super::parse_session(&args).is_ok());
+        args[7] = "disable".to_owned();
+        assert!(super::parse_session(&args).is_err());
     }
 
     #[test]
@@ -3531,6 +3880,7 @@ usage_guard:
                 action: SessionAction::Disable,
                 confirm_disable: true,
                 confirm_reset_guard_disable: false,
+                confirm_zero_quota_guard_disable: false,
                 confirm_reset: None,
             })
             .is_err());
@@ -3572,6 +3922,7 @@ usage_guard:
             action: SessionAction::Disable,
             confirm_disable: true,
             confirm_reset_guard_disable: false,
+            confirm_zero_quota_guard_disable: false,
             confirm_reset: None,
         })
         .expect("exact target session control");

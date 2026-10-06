@@ -27,6 +27,11 @@ on:
         required: false
         default: false
         type: boolean
+      send_subscriber_update:
+        description: Explicitly authorize the approved stable Discord banner and subscriber update
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -499,7 +504,7 @@ jobs:
               dist/release-integrity-receipt.json
           fi
       - name: Send stable Discord banner and subscriber update
-        if: ${{ inputs.channel == 'stable' }}
+        if: ${{ inputs.channel == 'stable' && inputs.send_subscriber_update == true }}
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
           AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}

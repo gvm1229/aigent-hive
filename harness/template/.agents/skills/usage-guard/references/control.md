@@ -64,6 +64,29 @@ Read before any threshold, disable, enable, toggle, or reset acknowledgement ope
 - After either successful action, run one same-binding `enforce`. Continue only after fresh `hive.usage-allowed`. Control success never grants dispatch authority or supplies periodic monitoring.
 - Do not use general `disable` or `toggle` for a reset-only request. A bare continuation request authorizes neither kind of bypass.
 
+## Zero-quota session control
+
+- Zero-quota protection is independent of ordinary threshold and reset protection. Do not treat
+  general disable, toggle, threshold changes, or continuation as permission to disable it.
+- For an explicit current-session request to allow exhausted subscription usage, confirm installed
+  command support and run:
+
+  ```text
+  hive usage session --target <hive-target> --host <host> --user-root <user-root> --session-id <current-session-id> --process-id <current-process-id> --action disable-zero-quota-guard --confirm-zero-quota-guard-disable --output json
+  ```
+
+- Restore with `--action enable-zero-quota-guard`, without the disable confirmation. General
+  controls preserve this separate preference. New hosts, conversations, and processes default on.
+- After either action, run one same-binding `enforce`. A successful control is not dispatch authority.
+  An opt-out leaves an enabled ordinary threshold guard in force. Only disabling both allows sensing
+  to be bypassed. Warn that the opt-out permits work that may use paid account credits.
+- Exhaustion returns exit `3` and `hive.usage-quota-exhausted`. Stop Hive-controlled work, keep the
+  halt receipt, and report the exhausted window. A bare continue does not remove the stop.
+  A fresh positive observation can clear exhaustion; a quota increase can still require the separate
+  reset acknowledgement while ordinary protection is enabled.
+- Report `zero_quota_guard_enabled` and `active_turn_interruption_verified`. Do not promise live
+  interruption, stop a host process, or change provider billing settings.
+
 ## Intent rules
 
 - Recognize clear threshold, disable/bypass, enable/restore, and toggle intent semantically; the examples below are illustrative rather than a finite phrase allowlist.

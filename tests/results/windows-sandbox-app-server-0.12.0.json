@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "codex_version": "0.159.0",
+  "binary_sha256": "0e2a4cd6ac1b329e64ec74745e38b71a3d4fa701102c86f49cf605d23a02c4df",
+  "model_calls": 0,
+  "transport": "one-shot official app-server command/exec; not parent-turn control",
+  "policy": {
+    "type": "readOnly",
+    "networkAccess": false
+  },
+  "cases": [
+    {
+      "path_case": "plain",
+      "error_code": -32600,
+      "error_digest": "c94c72e86922e45bead9cb944e2fc0e6ba1a8d7abbd3908a65646ceac74a2c9e",
+      "error_kind": "other",
+      "expected_bytes_read": false
+    }
+  ],
+  "readiness": {
+    "status": "ready"
+  },
+  "success": false,
+  "server_exit_code": 0
+}

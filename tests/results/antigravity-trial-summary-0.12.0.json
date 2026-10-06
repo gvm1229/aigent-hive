@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "host": "antigravity",
+  "os": "Windows",
+  "cli_version": "1.2.16",
+  "status": "unverified",
+  "model_calls": 0,
+  "callback_count": 0,
+  "temporary_status_line_restored": true,
+  "trial_processes_exited": true,
+  "terminal_parser": {
+    "version": "0.8.2",
+    "wheels": [
+      {
+        "filename": "pyte-0.8.2-py3-none-any.whl",
+        "url": "https://files.pythonhosted.org/packages/59/d0/bb522283b90853afbf506cd5b71c650cf708829914efd0003d615cf426cd/pyte-0.8.2-py3-none-any.whl",
+        "sha256": "85db42a35798a5aafa96ac4d8da78b090b2c933248819157fc0e6f78876a0135"
+      }
+    ]
+  },
+  "limits": "Receipt passed means bounded observer finished and restored settings, not capability acceptance. Early opt-out actions were attempts; later rendered screen confirmed unchecked optional collection, but onboarding completion and callback delivery were not proved. Pinned 1.1.18 parser does not qualify CLI 1.2.16."
+}

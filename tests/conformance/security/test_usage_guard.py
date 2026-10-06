@@ -336,7 +336,7 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             code="hive.usage-allowed",
         )
 
-    def test_session_takes_precedence_over_malformed_or_duplicate_weekly(self) -> None:
+    def test_session_cannot_hide_malformed_or_duplicate_weekly(self) -> None:
         for case in (
             "weekly-malformed-session-high",
             "weekly-duplicate-session-high",
@@ -347,12 +347,12 @@ class UsageGuardCliConformance(Phase1CliTestCase):
                 self.assert_usage_result(
                     process,
                     result,
-                    exit_code=0,
-                    status="success",
-                    code="hive.usage-allowed",
+                    exit_code=3,
+                    status="blocked",
+                    code="hive.usage-unknown",
                 )
 
-    def test_session_threshold_blocks_even_when_weekly_is_malformed(self) -> None:
+    def test_malformed_weekly_is_unknown_even_when_session_is_limited(self) -> None:
         process, result = self.invoke_usage("session-low-weekly-malformed")
 
         self.assert_usage_result(
@@ -360,7 +360,7 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             result,
             exit_code=3,
             status="blocked",
-            code="hive.usage-limited",
+            code="hive.usage-unknown",
         )
 
     def test_duplicate_weekly_is_unknown_only_when_weekly_is_the_fallback(self) -> None:

@@ -779,13 +779,50 @@ fn invoke(
         4 * 1024 * 1024,
         Some(input),
         "vector helper",
-    )?;
+    )
+    .map_err(|error| sanitized_process_error(&error))?;
+    decode_worker_output(&result)
+}
+
+fn sanitized_process_error(error: &WikiError) -> WikiError {
+    let text = error.to_string();
+    let kind = if text.contains("output exceeds the bounded command budget") {
+        "output-limit"
+    } else if text.contains("command exceeded its timeout") {
+        "timeout"
+    } else if text.contains("cannot run vector helper command") {
+        "start-failed"
+    } else if text.contains("did not consume its bounded input") {
+        "input-incomplete"
+    } else if text.contains("reader") || text.contains("cannot read vector helper") {
+        "output-incomplete"
+    } else {
+        "process-failure"
+    };
+    invalid(&format!(
+        "vector helper failed ({kind}); FTS remains available"
+    ))
+}
+
+fn decode_worker_output(result: &crate::knowledge_scan::GitOutput) -> Result<Value, WikiError> {
+    // Process termination is authoritative even after a success payload was written.
+    if !result.success {
+        return Err(invalid(&format!(
+            "vector helper failed (process-exit; exit_code={:?}; signal={:?}); FTS remains available",
+            result.exit_code, result.signal
+        )));
+    }
     let value: Value = serde_json::from_slice(&result.stdout)
-        .map_err(|_| invalid("vector helper returned invalid JSON"))?;
-    if !result.success || value["status"] != "success" {
+        .map_err(|_| invalid("vector helper failed (invalid-json); FTS remains available"))?;
+    if !value.is_object() {
+        return Err(invalid(
+            "vector helper failed (non-object); FTS remains available",
+        ));
+    }
+    if value["status"] != "success" {
         let reason = worker_error_type(&value);
         return Err(invalid(&format!(
-            "vector helper validation failed ({reason}); FTS remains available"
+            "vector helper validation failed (worker-error:{reason}); FTS remains available"
         )));
     }
     let mut value = value;
@@ -887,6 +924,64 @@ fn io_error(error: impl std::fmt::Display) -> WikiError {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn helper_success_payload_cannot_hide_abnormal_exit() {
+        let mut output = crate::knowledge_scan::GitOutput {
+            success: false,
+            exit_code: Some(6),
+            signal: None,
+            stdout: br#"{"status":"success","value":3}"#.to_vec(),
+            stderr: b"private filesystem and source text".to_vec(),
+        };
+        let error = decode_worker_output(&output).unwrap_err().to_string();
+        assert!(error.contains("process-exit"));
+        assert!(error.contains("Some(6)"));
+        assert!(!error.contains("private"));
+        output.exit_code = None;
+        output.signal = Some(6);
+        assert!(decode_worker_output(&output)
+            .unwrap_err()
+            .to_string()
+            .contains("signal=Some(6)"));
+        output.success = true;
+        output.exit_code = Some(0);
+        output.signal = None;
+        assert_eq!(decode_worker_output(&output).unwrap()["value"], 3);
+        output.stdout = b"[]".to_vec();
+        assert!(decode_worker_output(&output)
+            .unwrap_err()
+            .to_string()
+            .contains("non-object"));
+        output.stdout = b"private malformed input".to_vec();
+        assert!(decode_worker_output(&output)
+            .unwrap_err()
+            .to_string()
+            .contains("invalid-json"));
+    }
+
+    #[test]
+    fn helper_process_failure_classes_remain_distinct_without_raw_errors() {
+        for (message, expected) in [
+            ("cannot run vector helper command: PRIVATE", "start-failed"),
+            (
+                "vector helper output exceeds the bounded command budget PRIVATE",
+                "output-limit",
+            ),
+            (
+                "vector helper command exceeded its timeout and was terminated PRIVATE",
+                "timeout",
+            ),
+            (
+                "vector helper stdout reader terminated unexpectedly PRIVATE",
+                "output-incomplete",
+            ),
+        ] {
+            let result = sanitized_process_error(&WikiError::Io(message.to_owned())).to_string();
+            assert!(result.contains(expected));
+            assert!(!result.contains("PRIVATE"));
+        }
+    }
 
     #[test]
     fn default_parallelism_is_bounded_by_host_capacity() {

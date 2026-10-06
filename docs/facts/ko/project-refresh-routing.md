@@ -9,7 +9,7 @@ summary: "선택한 전역 프로젝트 갱신 스킬의 자연어 요청 지원
 tags: [project, routing, skill]
 aliases: ["project-refresh"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade/skill_merge.rs#sha256:bd54c1079731029e60963b8d6002d94b4be637812c14b2e460c30b9ebab451fe"
+  - "repo:crates/hive-cli/src/project_upgrade/skill_merge.rs#sha256:9c3362827e588d15401dd0f11a4853ea02155749864615a9083ebdfdd8126ae3"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067"
   - "repo:harness/skills/project-refresh/agents/openai.yaml#sha256:b2563a605a8a14b629efb04dc36c7f4b4e4c556f91b5ea9c6cdb454bc92fccf8"
   - "repo:schemas/project-skill-merge.schema.json#sha256:d0e320be45bbc7873261a9b125359d87e883c54903b2a11ab13939c56404a599"

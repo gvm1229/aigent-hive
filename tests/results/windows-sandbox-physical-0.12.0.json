@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "same_binary_sha256": "0e2a4cd6ac1b329e64ec74745e38b71a3d4fa701102c86f49cf605d23a02c4df",
+  "physical_distribution_path": true,
+  "exit_code": 1,
+  "stderr_sha256": "a841a097c078d9fe9bb5aa136d4e7f0d6465585da60073b2e03b89d2a80f5cbc",
+  "error_kind": "executable-directory-acl",
+  "read_success": false,
+  "model_calls": 0
+}

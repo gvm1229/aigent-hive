@@ -324,4 +324,24 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         notifier = next(step for step in steps if step.get("name") == "Send stable Discord banner and subscriber update")
         self.assertIn("gh release create", release["run"])
         self.assertNotIn("publish-stable-discord-update.py", release["run"])
-        self.assertEqual(notifier["if"], "${{ inputs.channel == 'stable' }}")
+        self.assertEqual(
+            notifier["if"],
+            "${{ inputs.channel == 'stable' && inputs.send_subscriber_update == true }}",
+        )
+
+    def test_publication_requires_explicit_notification_opt_in(self) -> None:
+        workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+        # PyYAML's YAML 1.1 parser treats the GitHub Actions `on` key as True.
+        events = workflow.get("on", workflow.get(True))
+        notification = events["workflow_dispatch"]["inputs"]["send_subscriber_update"]
+        self.assertEqual(notification["type"], "boolean")
+        self.assertIs(notification["default"], False)
+        self.assertIs(notification["required"], False)
+        steps = workflow["jobs"]["publish"]["steps"]
+        notifier = next(step for step in steps if step.get("name") == "Send stable Discord banner and subscriber update")
+        self.assertEqual(
+            notifier["if"],
+            "${{ inputs.channel == 'stable' && inputs.send_subscriber_update == true }}",
+        )
+        release = next(step for step in steps if step.get("name") == "Create annotated channel tag and GitHub Release")
+        self.assertNotIn("send_subscriber_update", release.get("if", ""))

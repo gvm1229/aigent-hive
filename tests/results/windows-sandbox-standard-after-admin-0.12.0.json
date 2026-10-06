@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows",
+  "model_calls": 0,
+  "codex_version": "codex-cli 0.160.1",
+  "sandbox_policy": "Current CLI default after approved administrator-run official sandbox command; no custom ACL or policy override",
+  "codex_binary_sha256": "9e7c59c05cc1ce5677b1f94e835b2ac038ca3be14504e78d558eacdb0ea3f55d",
+  "read_executable_sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+  "direct_single": [
+    {
+      "path_case": "plain",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.516,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.5,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "direct_concurrent": [
+    {
+      "path_case": "plain",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.218,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": false,
+      "exit_code": 0,
+      "seconds": 0.265,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "sandbox_single": [
+    {
+      "path_case": "plain",
+      "sandbox": true,
+      "exit_code": 0,
+      "seconds": 1.985,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": true,
+      "exit_code": 0,
+      "seconds": 1.828,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "sandbox_concurrent": [
+    {
+      "path_case": "plain",
+      "sandbox": true,
+      "exit_code": 0,
+      "seconds": 1.515,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "path_case": "space 한글",
+      "sandbox": true,
+      "exit_code": 0,
+      "seconds": 1.515,
+      "expected_bytes_read": true,
+      "startup_failure": null,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "status": "measured",
+  "canonical_fixture_preserved": true
+}

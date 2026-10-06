@@ -11,6 +11,8 @@ harness/project-bases/0.10.2/** -text
 harness/user-bases/0.10.2/** -text
 harness/project-bases/0.10.3/** -text
 harness/user-bases/0.10.3/** -text
+harness/project-bases/0.11.1/** -text
+harness/user-bases/0.11.1/** -text
 
 *.png binary
 *.jpg binary

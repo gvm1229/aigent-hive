@@ -9,14 +9,14 @@ summary: "Claude 명령의 일반 Windows 경로 전달과 제한된 안전 오�
 tags: [claude, installation, windows]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage.rs#sha256:d15d172496becbc6623d561a8fab0729364f11bb4b9a1ce4b2c3069ff23406c3"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:42f69c326667ad73522caeadec761a523074a78efcb5caf05a74185acb0fe3ce"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:08df602b839ca6ced6cd1571c37111b300853def9bba4e25c9c24774453535f6"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:07c53684b15ca76c0912c67ab9d2dac2464a98580fa186956492a95fa238af63"
   - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:f7f2d78da2e843f3a75267a106251eb26af09f22773bf67ec8f7bc2cca7f8c60"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
   - "repo:tests/results/legacy/af6a478d5074c2d3a277.md#sha256:ff1b2012dc26150493fa439cf4eab9f546d64549640d94622d9e1ee9704ff9bd"
   - "repo:tests/results/runs/20261001T234717-11673280f355.md#sha256:72fa345ddb6e4feff83592041055cf32edb4a3bd3347cee6a5af5423328ea692"
 links: [multi-host-user-install, supported-hosts]
-reviewed_revision: "git:c6e819704f5b203412472c6492f8c95fcd3a4b3b"
+reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
 status: active
 ---
 

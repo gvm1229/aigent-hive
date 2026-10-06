@@ -1,29 +1,30 @@
-# 버전 미지정 Backlog
+# 버전 미지정 후속 목록
 
-활성 release에 결속되지 않은 아이디어·조사·대기 항목의 색인.
+현재 대기 항목과 활성 계획으로 옮기거나 종료한 후보의 색인. [2026-10-05 결정](../../decisions/ADR-0025-0.11.2-scope.md) 기준.
 
-## 수명주기
+## 대기
 
-- `idea`: 문제·효과만 확인
-- `researching`: 공식 근거·prototype·위험 조사 진행
-- `ready`: 범위·수락 기준·선행 조건 확정
-- `blocked`: 외부 기능·권한·증거 대기
+- [0.12.0 미완료9개](0.12.0-deferred-host-acceptance.md): 사용자 승인으로 이번 안정판 범위 밖, 후속 버전 미지정·실제 증거 대기
 
-Backlog 항목의 release checklist·완료율 집계 금지. 활성 계획 승격 때 stable checklist ID와 version을 새로 부여.
-
-## 항목
-
-| 항목 | 상태 | 승격 조건 |
+| 항목 | 상태 | 재개 조건 |
 | --- | --- | --- |
-| [Claude 실제 호스트 검증](claude-host-acceptance.md) | `ready` | 실행 환경 확보와 미래 버전의 명시적 범위 편입 |
-| [주기 감시·자동 중단](periodic-usage-interruption.md) | `blocked` | 현재 호스트의 지원 제어 경로 확보와 미래 버전 편입 |
-| [Notion Wiki backend](notion-wiki-backend.md) | `idea` | host 연결·OAuth·scope receipt의 현재 계약 확정 |
-| [작업 자동 분담](host-work-delegation.md) | `researching` | 두 host의 역할·모델·결과 확인 가능성 입증 |
-| [Platform signing](platform-signing.md) | `blocked` | 무료·지속 가능한 publisher identity 확보 |
-| [Alternative vector indexes](alternative-indexes.md) | `researching` | Active hard gate 실패 뒤 측정된 품질 결손과 안전한 engine 확보 |
-| [Obsidian integration](obsidian-integration.md) | `idea` | 실제 사용자 탐색 수요와 무손실 경계 확정 |
-| [Graphify 전면 지식 graph](graphify-knowledge-graph.md) | `blocked` | Active code-only 범위 밖의 증분 동등성·visibility 격리·host-owned 의미 추출 확보 |
+| [Claude 실제 호스트·사용량 검증](claude-host-acceptance.md) | 실행 환경 대기 | 사용 가능한 Claude 환경 확보와 미래 범위 편입 |
+| [게시자 서명](platform-signing.md) | 외부 승인 대기 | 승인된 인증서·안전한 CI 서명 환경 |
 
-현재 실행: [`../PLAN.md`](../PLAN.md)
+## 0.11.2 편입
 
-과거 기록: [`../../archive/README.md`](../../archive/README.md)
+| 원래 후보 | 현재 소유 |
+| --- | --- |
+| [주기 감시·자동 중단](periodic-usage-interruption.md) | HCT112-002·003 |
+| [작업 자동 분담](host-work-delegation.md) | HCT112-004 |
+| [Graphify 전체 지식 확장](graphify-knowledge-graph.md) | GPH112-001–003 |
+
+## 종료·참고
+
+| 항목 | 결정 |
+| --- | --- |
+| [Notion 정본](notion-wiki-backend.md) | 사용자 요청으로 폐기 |
+| [벡터와 엔진 비교](alternative-indexes.md) | 구현 완료·종료, 비교 자료 참고 보존 |
+| [Obsidian](obsidian-integration.md) | 기본 Markdown 사용 가능, 별도 플러그인 후보 종료 |
+
+후속·종료 항목의 현재 완료율 합산 금지. 실행 기준은 [PLAN](../PLAN.md)의 등록 문서만 사용. [과거 기록](../../archive/README.md) 보존.

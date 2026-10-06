@@ -1125,3 +1125,166 @@
 | [passed](runs/20261004T205842-5c2b4e469818.md) | 최종 0.11.1 안정판 후보의 공개 파일 대조 준비 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T210208-dfb45104c1e3.md) | 공개 0.11.1 안정판 여섯 패키지와 후보 SHA512 대조 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261004T210910-af1252cf45a5.md) | 게시된 0.11.1 안정판 무결성 확인서 수집 | 36408a75f05aae32d5e0f71d23eb09af6676b7bd | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T223653-cca7617f3a08.md) | Antigravity 사용량 수신 회귀 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T223813-823ad84b27ab.md) | 0.11.1 기준본과 사용량 수신 빌드 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T223832-66bb6223d1cf.md) | 동결 지문 정합화 뒤 사용량 회귀 | 252da27aa9326126dc55c33f5f0922b1134c98b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T223945-7021c6f52248.md) | 사용량 CLI 설치 경계와 원문 보존 회귀 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224013-7101ac7cbcc8.md) | 사용량 수신 Rust 정적 검사 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224054-283c332cb450.md) | 사용량 수신 정적 지적 수정 확인 | 9fbb6457a1f9fc4b1e9bc35f94b2cfdc3d9a67be | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224213-7606c68c8eec.md) | 검색 도우미 종료 진단 회귀 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224242-79bcaa9c149b.md) | 공통 프로세스 실행기의 기존 회귀 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224334-4c9b553c0d88.md) | 도우미 진단 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224354-06118f0c8715.md) | 검색 도우미 최종 정적 검사 | a1bf7969094c954cf87f3378e8636b4a9792af54 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224523-e3ef645c8ecf.md) | 호스트 기능 명세 2와 구형 서명 호환 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224607-85c6b8d92b7c.md) | 호스트 명세와 CLI 활성화 경계 회귀 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T224610-aacfb836f841.md) | 호스트 기능 형식 2 정적 검사 | 3f4223e0d33f714b9b6bd67746ae2f3dae15e927 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225346-5dfd2d20b477.md) | 자동 의미 관계의 범위와 원자 적용 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T225517-8969e205b94a.md) | 관계 분석 명령과 저장 후 대기 연결 빌드 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225557-335dfa3e13fe.md) | 관계 분석 CLI 자료형 정합화 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225738-0c91346c2636.md) | 저장 후 자동 관계 준비·적용·오류 복구 CLI 검증 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T225843-a8db74bf96a1.md) | 자동 관계 분석과 저장 경계 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230035-58ecb362f7ed.md) | 자동 관계 분석 최종 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T230152-c52c869cdb56.md) | 소스·소비자·기밀 경계와 자동 관계 전체 CLI 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230258-a3ef92b07e84.md) | 소스 분리와 관계 분석 수용 자료 수정 확인 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230405-ab8b00586551.md) | 관계 저장 경쟁·근거·삭제 반례 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230419-39540b829bdd.md) | 자동 관계 기능과 스킬 투영 계약 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230658-8cec11f761b8.md) | 관계 대상 변경의 증분 동등성 회귀 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T230906-9e00b907ec77.md) | 관계 증분 보강 최종 정적 검사 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T231056-cef9fc7be6d1.md) | 자동 관계 기능 최종 정적 검사와 형식 확인 | 4b8f1a067a55e161b3c52b2c932aedbf610285bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T231826-b6f476a8043c.md) | 부모·자식 토큰 합산과 예산 초과 보존 회귀 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T231950-5f5530e9754b.md) | 실제 보존 수치의 초과 계측과 무변경 CLI 검증 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232132-67aa66013072.md) | 토큰 진단 라우팅과 과거 초과 수치 재현 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232327-da1c4d99ff26.md) | 계측 기준값과 전체 자식 합산 반례 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232335-e51c8bee8bd7.md) | 토큰 집계와 진단 CLI 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232535-39c3d817a87b.md) | 토큰 계측 최종 정적 검사 | 0ea1d359d73dd291c696fdf9f491badf80aa421e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T232957-0e90cbc543c4.md) | 미지원 호스트의 진단 보존과 활성화 거부 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233128-f7618f5fe937.md) | 미지원 제어의 상세 진단 회귀 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233143-6b0ae475ffeb.md) | 호스트 지원 진단 정적 검사 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T233153-e07a35a526eb.md) | 지원 진단 최종 정적 검사 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T233233-813c5ec93398.md) | 호스트 기능 진단의 거부 정보 검증 | 577a84e2069fe7ea27a0421d75c624760c5c1b78 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233655-49008c3a04fb.md) | 0.11.1 사용자 기준본 수용 등록 검사 | 861c1f0c0b9a9fb9c4d837ba4e9437c7822dd9b4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261004T233905-66497218b357.md) | 플러그인 번호 정합화 뒤 역사 사용자 갱신 회귀 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T234405-e91e07610e6b.md) | 0.11.1 스킬 이력 포함 실제 갱신 회귀 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T234702-5542649fbf2c.md) | 0.11.1 역사 스킬 등록부와 렌더링 검사 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T234715-f5cf56aafaba.md) | 동결 프로젝트 원본 렌더링 회귀 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T235153-d27a4e9d0adb.md) | 최근 안정판 두 버전의 스킬 역사 수용 | e1e39171c807ef172b005668349b8c849e8e37e2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261004T235707-13ed196229ec.md) | Graphify 0.9.76 후보의 격리 평가와 유지 판정 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000006-9aed15ff4773.md) | Graphify 후보의 고정 해시 환경에서 코드 추출 검증 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000048-97eb31992219.md) | Graphify 추가 수정 이름 변경 삭제의 전체 재생성 대조 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000129-d35ee21fb844.md) | Graphify 후보 동등성 실패의 양쪽 지문과 출하 제외 판정 | 3bcc0504fcedfead0c1527eee229f4b4f184bffa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000320-1e981edfc956.md) | 의미 관계의 제한된 관련 문서와 미전달 대상 거부 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000347-febf19965084.md) | 관련 문서 전달 후 의미 관계 CLI 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000427-9229df942767.md) | 관련 문서 변경 후 지식 명령 전체 회귀 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000438-52ce01ec2ca6.md) | 관련 문서 경계 변경의 Rust 정적 검사 | da1ad75e6af779c4f59e47bbaaf58c24a08195a8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T000657-691c3a9102e2.md) | 0.11.2 배포 자료와 이전 버전 갱신 계약 검사 | 7aeb8807602213061ffa2f48cf794e05e892fe2b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T000747-db1521ee98fd.md) | 0.11.2 통합 Rust 전체 회귀 | 2561eaea8505818566f135fa3739a12907895838 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T000936-0531165b06e7.md) | 다음 버전의 과거 전체 기준본 갱신 회귀 수정 | 2561eaea8505818566f135fa3739a12907895838 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T001042-bf1dc318bec7.md) | 실제 과거 배포 기준본과 위조 거부의 갱신 회귀 | 2561eaea8505818566f135fa3739a12907895838 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T001204-fc0a30aaf3c3.md) | 구버전 시험 수정 뒤 전체 Rust 검증 | c5b393e8d39b67192dd260dca13e03274bfb6059 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T001412-8778a3710c0d.md) | 갱신 엔진 통합 실패의 정확한 원인 확인 | c5b393e8d39b67192dd260dca13e03274bfb6059 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T001455-4ae94a206af8.md) | 0.11.1 공개 표면 등록 후 갱신 엔진 회귀 | c5b393e8d39b67192dd260dca13e03274bfb6059 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T001530-07674db4cfb2.md) | 시험 자료의 공개 배포 혼동 방지 표식 검증 | b9dcc811620b423ecd7c7bf7004aedc2f6170607 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T001601-7e8a194178b0.md) | 고유 5만 청크의 실제 CLI 색인과 관계 준비 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T001633-350ddbef60f1.md) | 비밀값 오인 없는 고유 5만 정본의 색인과 관계 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002217-7e08f6a4b7ba.md) | 500개 정본 안의 서로 다른 5만 청크 성능 측정 | e5699f3dd5709083b5ff64785065a839449b00a2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002424-64a4cd7b53ef.md) | 관련 문서 변경 후 실제 의미 관계 CLI 계약 검사 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002530-1ca8a7154ce8.md) | 현재 Codex가 검토할 제한된 관계 분석 입력 준비 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002602-9fe3da09535f.md) | 현재 Codex가 검토한 실제 추정 관계의 적용과 원문 보존 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002614-94857ff3b643.md) | 0.11.2 고정 직접 사실 30개와 근거 관계 30개의 CLI 수용 | 274d74457927bb4b8ec7fc3380ebb2c3f1f1b7c2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T002716-002a33bdb436.md) | Python conformance: contract | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T003733-06d6b5ae1759.md) | 같은 실행 파일의 직접 읽기와 Windows 샌드박스 읽기 비교 | bd74955fd1d99e8d785c517c35a71ceafe2146cb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T004000-ec9afad7ad40.md) | 통합 검사의 지식 라이브러리 전체 회귀 | 0717d2cf35a48eba96414e0976ae2d67f4ff5238 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T004111-0265cd204e71.md) | Python conformance: integration | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T004930-c90f8c4fc747.md) | 공개 배포와 일치하는 기존 0.11.1 CLI의 격리 표본 생성 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005007-395ee448a6e3.md) | npm 연결 스크립트 뒤의 실제 공개 0.11.1 실행 파일로 표본 생성 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005047-08f702f35bce.md) | 0.11.1 포함 모든 공개 이전 설치의 갱신과 중단 복구 검증 | dff397825665119ecf3e2610894a182593d676e0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005551-e7f1135919d5.md) | 발표 자료 폐기 결정과 이력 보존 회귀 | 1ae86f7c36901a8c4e3352cce1d0a78596157115 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T005609-c84c5897ce6a.md) | Python conformance: security | b2abc1da5fb31d01f5f4b4a73b615063fbce35cc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T010048-f9bca27e894b.md) | Python conformance: documentation | 0264da756650ed31a8e6d4915d5b854443da2a63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T010228-d3fcdf20ef5a.md) | Python conformance: release | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T010551-99e4c0e03733.md) | 공개 0.11.1과 다음 목표의 스킬 호환 목록 검사 | ce977abd3eda54d59953bf89620d3ade1334de5b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T010754-ca1301507570.md) | 구현과 갱신 보완 후 Rust 전체 정적 검사 | fc6dcfe3d771fcdc21098dce08ab4792e033cb45 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T011222-1d4d41ae61bc.md) | 정본 삭제 뒤 오래된 관계 개수와 정리 요청의 회귀 재현 | 3bc7994c9e34b1a57c30d2683c8e5b7181f0f918 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T011322-a8d9081f2cde.md) | 삭제된 관계의 상태 노출 차단과 빈 정리 적용 검증 | f46701e74df15e86bc258e52f6405bd2d3df2c2b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T011502-255541b64528.md) | 삭제 관계 정리 경로의 Rust 정적 검사 | f46701e74df15e86bc258e52f6405bd2d3df2c2b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T011743-f04f9e140c40.md) | 빈 관계 정리 스킬과 현재 투영의 실행 계약 검증 | 0026a1f85832736ab9b7326f037811cc1f5a1a63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T012252-91ecb364fc24.md) | 빈 정리 지시와 스킬 투영의 직접 회귀 검증 | 0026a1f85832736ab9b7326f037811cc1f5a1a63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T012637-c76a8f519f2d.md) | 파일 수집과 동일 내용 재수집의 관계 처리 검증 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T012808-0da2bf26ebfd.md) | 정상 지식 저장 구조를 갖춘 파일 수집 관계 회귀 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T012952-491948cd08ed.md) | 파일 수집 뒤 관계 알림의 Rust 정적 검사 | bd99a41de60090693c708ec4dfd261af01d238dc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T014034-6fb8fc7689ee.md) | 출처 지문 정합화 뒤 전체 관계 CLI와 고정 질문 재검증 | 355a66483fb42f28184538c313ebc440f9ae394a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T014450-9c8c32c27bdb.md) | Source Wiki와 소비자 및 전역의 고정 질문 각10개 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T014813-e34cc360c90c.md) | 원래 제목과 요약을 모두 보존한 세 범위 질문 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T014955-bda35394bf5d.md) | 세 범위 관계 질문 해석 수정 빌드 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015024-79e8a070147f.md) | 세 범위의 관계 질문과 지목한 양 끝 문서의 근거 대조 | d06b1f9c1bc88de1fbe49afa9c4ad5517d93e5ba | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015405-d0bdef86524d.md) | 활성 범위의 실제 저장 알림에 따른 현재 호스트 분석 준비 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T015511-f42e2e7b2da0.md) | 현재 Codex의 저장 알림 뒤 근거 관계 적용과 원문 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T015601-3d4e10aa68d3.md) | 저장 알림 뒤 현재 호스트의 관계 적용과 검색 색인 보존 | e8ad797dd5f3dc98b6441d8775f7ac90bbcb3335 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T093719-ccd3c12c7102.md) | 0.12.0 새 기능 버전 분류 회귀 | 18521646764e2e522aae2e4dab9938ab14d3644c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T094249-88e78a9b336d.md) | 기본 활성 소진 보호와 기존 사용량 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094429-2e51a6ecdcc1.md) | 모든 사용량 창 보존과 독립 소진 보호 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T094607-c8526b7be427.md) | 소진 보호 CLI 입력과 기존 사용량 계약 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094715-bb6e23c6655f.md) | 소진 보호 Rust·정적 분석·공개 명령 계약 검증 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T094857-7b6b1f6920bf.md) | 소진 보호 실행 결합·정적 분석·CLI 최종 회귀 | 21c04bf6464d64bc4b93481fb14d2cbbc06e713a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T095232-aac048701a5e.md) | 소진 보호 스킬과 세 호스트 투영 일치 검사 | c1f91110a4aa5a3772c63d8b823f078f43c6c729 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T100257-fe7d1aae3703.md) | 0.12.0 전체 Rust 구현·이전 설치 갱신 통합 검사 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T100510-de16141ba0b9.md) | 두 보호의 명시적 제외와 일회 실행 허가 회귀 | f8b82cdac8eea52d307a3f219a0b24b5d3cc69f9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T100638-e62417ca0584.md) | 0.12.0 전체 Rust 최종 통합·호환 검사 | 537880d96968ebde38ae5c9739fc96530a395bb6 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T101340-4cec91f2bd90.md) | 고정 Linux 컨테이너의 사용량·그래프·설치·갱신 수용 | effac2dc117dc51b3f468c2f6a2f4e1280323838 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T102645-4b6ec67944a6.md) | Linux 버전 정합화·격리 실행 경로 보완 뒤 관련 수용 | 62fc40317888d5c28fc190d7de007361cba25319 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T104818-684766d0fed1.md) | Linux 로컬 실행 파일로 같은 관계·설치 수용 재검증 | bccec7509cc065a3a13d6f5b47864e57e23c0fea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T105935-426f2f479d29.md) | Linux 임시 문서·색인의 네이티브 파일 시스템 수용 | eb5d2eee9350c41c9d535cd331c3ea4914b0b4c4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T111202-d9e0f13362b4.md) | Python conformance: documentation, security, contract, integration, release | 86138911b3c143cf61c39c98c0b4091a1003cb64 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T111346-bc2a5fff7117.md) | Python conformance: documentation, security, contract, integration, release | 59c1a69f3c889173191e4dbdde0085859b629ed1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T111738-be60f2a537f8.md) | 모든 사용량 창의 손상·중복 차단 보안 계약 | 6ce65580a42dfec7545993b984043d3988488892 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T111944-69d7a5350029.md) | Python conformance: security | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T112105-e8d4381182eb.md) | Python conformance: contract | 4bb2763157baf0201a66bfc2c5bcabb52d0a086c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T113337-868ffe0daa7d.md) | 다중 창 이력의 왕복·단일 창 호환·작업 재개 계약 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T113411-500a0c5fa7c7.md) | Windows에서도 유효한 다중 창 이력 왕복과 재개 회귀 | 43db96f323d95ced6a8a2877bb126c0dc622a00c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T113705-377d26193411.md) | 다중 창 이력 보완 뒤 전체 Rust·정적 분석 검증 | 35317b78346ee2558183c9edbe1089aec97d7865 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T113840-99e7dbb7892e.md) | 정확한 소진 값 보존과 전체 Rust 최종 검증 | 35317b78346ee2558183c9edbe1089aec97d7865 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T114206-372a7cb08419.md) | Python conformance: contract | 4a70bfccee612e1cee2beb8741ec2d85b8de74fa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T115235-a5b966567d5a.md) | 최종 지식 지문과 고정 관계 질문 검사 | 050a9badde4b2efaa5c02dfdc9f271cda2cca820 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T115418-7584f00c6d1c.md) | Python conformance: integration | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T120101-8844a52a92c0.md) | Python conformance: release | 9f7824d4e239c7609e1babb19c28735067f1c4b8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T120356-19a43709c352.md) | 최종 다중 창 이력의 Linux 재개 계약 | 02399695893c9431c74b5028f5c806b6ddb62cc1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T120948-938f2b336ed0.md) | Linux 실행 가능한 격리 시험 폴더의 최종 이력 재개 계약 | 2ccd8b174fd9ceb9b33903a25a9f7d555ae5073c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T123618-134bbfd64c59.md) | Rust 1.99 규칙과 관계 빈 목록 시험 정합화 | f10db689cb3664087bdb276daf48695a87ecfe2a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T155250-67d7e0be3d70.md) | 공개 Windows 시험 바이너리의 소진 보호 계약 | ef026a39112c9e971242d349417099a911d9bdd3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184239-0a4193b1d8e8.md) | 승인한 실제 호스트 검사의 공개 바이너리 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184911-a67e783e9ec1.md) | 실제 호스트 CLI 콘솔의 고정 격리 도구 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T184507-022a391f6bda.md) | 승인 뒤 현재 CLI의 Windows 샌드박스 읽기 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184601-3e91fa6d6af3.md) | 현재 CLI로 승인된 Windows 샌드박스 읽기 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185121-eb719fd25bd8.md) | 승인한 공식 Windows elevated 샌드박스 복구 요청 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185157-f9d0a4de8e19.md) | 공식 복구 뒤 동일 제한 조건의 Windows 샌드박스 읽기 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185958-f281e9686c22.md) | 공식 복구 뒤 실제 설치 경로와 동일 실행 파일의 권한 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T190930-9e869a976d6f.md) | 공식 앱 서버의 읽기 전용 Windows 실행 경로 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T191524-e7aa1aaf7851.md) | 공식 읽기 전용 권한 목록으로 Windows 실행 경로 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194028-bda307593acd.md) | 현재 공식 서버의 실제 버전과 권한 목록 진단 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194532-ab8c9f72f5c4.md) | 현재 호스트가 제공한 정확한 권한 식별자 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194725-77bc7e6c1d15.md) | 호스트가 제공한 읽기 전용 권한의 실제 Windows 실행 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T195003-d5e379e3f233.md) | Windows가 지원하는 읽기 전용 실행 요청의 실제 대조 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T195044-c6f965a420fc.md) | 제한된 Windows 요청에서 미지원 출력 인자를 제거한 읽기 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T195617-f42c059165d9.md) | 데이터 제공 거부 선택의 실제 화면과 초기 실행 완료 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T201820-29287087047d.md) | 승인한 관리자 실행 뒤 일반 사용자 조건의 Windows 샌드박스 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T204743-1d495d6ab88d.md) | 시험판 출처 필드와 안정판 인증 경계의 변경 영역 Rust 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T205048-7c3abb489819.md) | 시험판 패키지 출처와 기존 안정판 기준본의 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205253-36ca0d9dcc5c.md) | 시험판 출처와 안정판 기준본 인증의 수정 후 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205534-bf62d16d4a9a.md) | 시험판 패키지 출처와 기준본 지문의 실제 생성 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T205926-229632320317.md) | 시험판 출처와 안정판 인증 변경의 정적 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T205949-400ebea32855.md) | 시험판 출처 변경의 정적 검사 보완 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T210318-873e610c969b.md) | 실제 기준본 읽기에 시험판 출처 검사를 연결한 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T211025-2df4b9bc75ea.md) | 시험 패키지 실제 바이너리의 과거 시험판 거부와 안정판 이식 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T211530-f56b9bdb9427.md) | 생성한 시험판 출처와 변조 거부의 실제 CLI 계약 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T212039-c73bd7aad95c.md) | 시험 패키지 출처를 포함한 전체 Rust 회귀와 정적 검사 | 8aefd94546860569fcb5337105381f065b3f887a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T214615-184e974a7e26.md) | 시험판 출처 수정의 전체 Python 다섯 검사 묶음 | 87ada8af7018827cf9f8525a6cf69e7a440e2ce5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T185832-2a7e2fd44a94.md) | 승인한 Antigravity 실제 상태 표시 전달과 설정 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185906-f8104f9806c5.md) | Antigravity 실제 콘솔의 상태 표시 전달과 안전한 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T190542-6836a8753995.md) | 현재 CLI 초기 색상 안내를 통과한 상태 표시 전달 검사 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T191529-d6a891117cca.md) | Antigravity 초기 안내의 필요한 사용자 선택 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192301-081d1937a076.md) | 선택형 데이터 제공을 끈 Antigravity 실제 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192745-6b31b3d75dfc.md) | 데이터 제공 해제의 화면 갱신 뒤 Antigravity 전달 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T193823-530986daf50e.md) | 실제 콘솔 화면 상태의 고정 해석 도구 준비 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194536-136ba760d9f4.md) | 실제 화면 해석으로 Antigravity 초기 안내와 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T202027-b4b8b4ce6e1a.md) | 수집 동의 해제를 확인한 Antigravity 초기 안내 완료와 전달 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T203031-fe9a67e63b84.md) | 수집 해제 뒤 완료 버튼을 선택한 실제 Antigravity 전달 확인 | 2dd0fe438d57290d31616d2ccf16939bcfab0ea1 | Windows-11-10.0.26300-SP0 |

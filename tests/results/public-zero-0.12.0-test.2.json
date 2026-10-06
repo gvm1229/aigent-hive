@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "package_version": "0.12.0-test.2",
+  "source_commit": "876491d6ea0e614ce01ec4162a7895ce7798e8d1",
+  "operating_system": "Windows",
+  "host": "Codex",
+  "binary_sha256": "ee2df10a1fbee9b7ed8a80b44db117abbdbb3a5d6c31485eaed69da19eabf0ae",
+  "exit_code": 0,
+  "scope": "Public binary with synthetic quota, session, reset, and explicit opt-out contracts; no actual quota exhaustion or live host interruption; installed user version unchanged.",
+  "tests_run": 29,
+  "passed": 28,
+  "skipped": 1,
+  "skip_reason": "POSIX-specific symlink fixture unavailable on Windows",
+  "command": [
+    "python",
+    "-m",
+    "unittest",
+    "-v",
+    "tests.conformance.contracts.test_usage_control"
+  ],
+  "binary_binding": "HIVE_BIN points to the exact npm win32-x64 package in the isolated test root"
+}
