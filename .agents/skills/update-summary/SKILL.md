@@ -24,10 +24,11 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 
 ## Approved reference (required)
 
-Before drafting any update note, read the [maintainer-approved 0.10.0 example](../../../docs/releases/0.10.0.subscriber.ko.md).
-The maintainer approved this exact wording on 2026-09-01 as the primary editorial reference.
-Use its feature-led headlines, core technical names, natural Korean, and nested examples/limits.
-Its approved flat layout remains historical evidence; use the sectioned format above for new copy.
+Before drafting any update note, read the [concise 0.11.1 example](../../../docs/releases/0.11.1.subscriber.ko.md)
+as the tone reference. Use its short semantic noun phrases and clear nested benefits/limits.
+Also read the [maintainer-approved 0.10.0 example](../../../docs/releases/0.10.0.subscriber.ko.md),
+approved on 2026-09-01, for feature positioning and core technical names. Do not copy its
+conversational endings. Preserve both historical examples; use the sectioned format above for new copy.
 Apply the feature-positioning and output rules below as the final review checklist; revise any
 draft that makes a new capability sound pre-existing or hides it behind setup guidance.
 Transfer the approach, not its versions, features, figures, or fixed bullet count. Reverify every
@@ -56,7 +57,7 @@ the banner or summary.
 ## Output rules
 
 - Use Korean for the title and bullets unless the requester explicitly selects another output language.
-- Use natural, confident Korean with readable sentences; do not copy terse internal checklist wording. For an agent's separate review, use `리뷰` rather than presenting a `검토자` as the feature.
+- Use concise, natural semantic noun phrases for both main and child bullets, ending with words such as `추가`, `수정`, `개선`, `보존`, `지원`, or `확인`. Do not use polite or declarative sentence endings such as `~습니다`, `~합니다`, or `~됩니다`, and do not mechanically replace them with `~함` or `~음`. Keep the user's benefit, choices, costs, numbers, conditions and safety limits explicit; avoid cryptic internal checklist wording. For an agent's separate review, use `리뷰` rather than presenting a `검토자` as the feature.
 - Every bullet must state the subscriber benefit or changed capability; do not expose implementation, process, or publication details as an improvement.
 - Preserve the three category labels and their order. Headings and separators count toward the same 2,000-character message limit. Do not repeat an item in multiple sections.
 - Do not place the banner image or a webhook URL in the subscriber summary file.
