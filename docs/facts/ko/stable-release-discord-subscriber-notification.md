@@ -16,8 +16,9 @@ sources:
   - "repo:scripts/publish-stable-discord-update.py#sha256:04e76513d36ede4c84e57d01b4a22335ac19ba0bab2bc604c9af1f7cab5f348c"
   - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
+  - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:db4abad72eba0d76187c8abff5f7791f455cf88b"
+reviewed_revision: "git:456e507860ad43d9c2ed1f69a6304e7802e1a8a5"
 status: active
 ---
 
@@ -26,4 +27,4 @@ status: active
 안정판게시전 승인문구·외부지문검증필수, 전송생략/false의게시거부. GitHub정식출시 성공뒤배너·그다음안내문전송. 시험판전송·webhook값출력 제외.
 버전별원문·승인파일·외부지문대조, 전체2,000자한계·주/하위목록 보존. 기존승인목록형식과 순서맞는새기능/수정/개선의비어있지않은섹션·구분선 허용, 본문재작성 없음.
 명시적문구승인뒤 기존gh로지문등록만수행, 재작성·출시·전송 없음. 동일지문실패재시도, 변경문구는새승인필수.
-복구는 공개안정판·성공게시 확인. 새승인main/develop본문·지문별중복차단, 재게시 제외. 0.12.0의두전송수락 확인.
+복구는 공개안정판·성공게시 확인. 새승인main/develop본문·지문별중복차단, 재게시 제외. 0.12.0의870자섹션본문·배너 수락.

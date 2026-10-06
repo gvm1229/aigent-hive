@@ -13,8 +13,9 @@ sources:
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
   - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
   - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
+  - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [public-skill-identity, source-development, v0-9-full-release]
-reviewed_revision: "git:2d59ff6bd00e1f7c3f44d0744700a736bfdb7a3d"
+reviewed_revision: "git:456e507860ad43d9c2ed1f69a6304e7802e1a8a5"
 status: active
 ---
 

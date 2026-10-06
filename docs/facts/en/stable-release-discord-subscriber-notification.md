@@ -16,11 +16,12 @@ sources:
   - "repo:scripts/publish-stable-discord-update.py#sha256:04e76513d36ede4c84e57d01b4a22335ac19ba0bab2bc604c9af1f7cab5f348c"
   - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
+  - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:db4abad72eba0d76187c8abff5f7791f455cf88b"
+reviewed_revision: "git:456e507860ad43d9c2ed1f69a6304e7802e1a8a5"
 status: active
 ---
 
 # Stable Release Discord Subscriber Notification
 
-Stable publication requires approved copy/external digest before uploads; disabled notification blocks publication. After GitHub Release success, send banner then summary. Tests send nothing; never print webhook URLs. Validate versioned copy/sidecar/external digest and the entire 2,000-character limit without reformatting. Accept historic flat lists and ordered nonempty new-feature/fix/improvement sections with separators. Registration needs wording approval/existing gh; it never rewrites, publishes or sends. Retry the same digest; changed copy needs new approval. Recovery binds stable publication. Approved main/develop revisions use digest-scoped duplicate guards; no republishing. 0.12.0 recovery accepted both requests.
+Stable publication requires approved copy/external digest before uploads; disabled notification blocks publication. After GitHub Release success, send banner then summary. Tests send nothing; never print webhook URLs. Validate versioned copy/sidecar/external digest and the entire 2,000-character limit without reformatting. Accept historic flat lists and ordered nonempty new-feature/fix/improvement sections with separators. Registration needs wording approval/existing gh; it never rewrites, publishes or sends. Retry the same digest; changed copy needs new approval. Recovery binds stable publication. Approved main/develop revisions use digest-scoped duplicate guards; no republishing. 0.12.0 sectioned 870-character copy accepted.
