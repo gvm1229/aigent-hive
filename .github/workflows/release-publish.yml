@@ -52,6 +52,7 @@ jobs:
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
       CHANNEL: ${{ inputs.channel }}
+      SEND_SUBSCRIBER_UPDATE: ${{ inputs.send_subscriber_update }}
     permissions:
       actions: read
       contents: write
@@ -78,6 +79,10 @@ jobs:
               prerelease=true
               ;;
             stable)
+              if [ "$SEND_SUBSCRIBER_UPDATE" != true ]; then
+                echo 'Stable publication requires the approved subscriber update and notification enabled.' >&2
+                exit 2
+              fi
               [[ "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
               test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
               branch=main

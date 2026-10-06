@@ -227,3 +227,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.11.1 시험 정리](plans/active/test-cleanup-0.11.1.md)·[승인된 공지](releases/0.11.1.subscriber.ko.md)
 
 - [0.12.0 정식 게시의 독립 확인](../tests/results/stable-release-0.12.0.md)
+- [0.12.0 Discord 누락 공지 복구](plans/0.12.0-discord-recovery.md)

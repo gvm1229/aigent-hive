@@ -1,0 +1,119 @@
+name: Recover stable Discord notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_version:
+        description: Published stable version whose approved notification was skipped
+        required: true
+        type: string
+      publication_run_id:
+        description: Successful main publication run with a skipped Discord send
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: stable-discord-notification-${{ inputs.product_version }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Verify and send skipped stable notification
+    runs-on: ubuntu-24.04
+    environment:
+      name: release-publication
+      deployment: false
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+    steps:
+      - name: Bind explicit request to a published stable release and skipped send
+        id: contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$PRODUCT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$PUBLICATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          release=$(gh release view "v$PRODUCT_VERSION" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,isPrerelease,targetCommitish)
+          test "$(jq -r .tagName <<<"$release")" = "v$PRODUCT_VERSION"
+          test "$(jq -r .isDraft <<<"$release")" = false
+          test "$(jq -r .isPrerelease <<<"$release")" = false
+          source_sha=$(jq -r .targetCommitish <<<"$release")
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          publication=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID")
+          test "$(jq -r .name <<<"$publication")" = 'Publish npm distribution'
+          test "$(jq -r .event <<<"$publication")" = workflow_dispatch
+          test "$(jq -r .head_branch <<<"$publication")" = main
+          test "$(jq -r .status <<<"$publication")" = completed
+          test "$(jq -r .conclusion <<<"$publication")" = success
+          test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"
+          jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID/jobs?per_page=100")
+          skipped=$(jq '[.jobs[].steps[] | select(.name == "Send stable Discord banner and subscriber update" and .conclusion == "skipped")] | length' <<<"$jobs")
+          test "$skipped" = 1
+          delivered=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=stable-discord-notification-$PRODUCT_VERSION&per_page=1")
+          if [ "$(jq -r .total_count <<<"$delivered")" != 0 ]; then
+            echo 'This version already has a notification receipt; duplicate send refused.' >&2
+            exit 3
+          fi
+          printf 'source_sha=%s\n' "$source_sha" >>"$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.contract.outputs.source_sha }}
+      - name: Verify the published source and approved notification
+        env:
+          RELEASE_SOURCE_SHA: ${{ steps.contract.outputs.source_sha }}
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SOURCE_SHA"
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
+            --banner docs/assets/branding/hive-readme-banner-ko.png \
+            --validate-only
+      - name: Send the approved banner and subscriber update
+        env:
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
+        run: |
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
+            --banner docs/assets/branding/hive-readme-banner-ko.png
+      - name: Record successful delivery without webhook or message bodies
+        env:
+          RELEASE_SOURCE_SHA: ${{ steps.contract.outputs.source_sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          version = os.environ['PRODUCT_VERSION']
+          summary = Path(f'docs/releases/{version}.subscriber.ko.md').read_bytes()
+          banner = Path('docs/assets/branding/hive-readme-banner-ko.png').read_bytes()
+          receipt = {
+              'schema_version': 1, 'status': 'sent', 'product_version': version,
+              'publication_run_id': int(os.environ['PUBLICATION_RUN_ID']),
+              'notification_run_id': int(os.environ['GITHUB_RUN_ID']),
+              'release_source_sha': os.environ['RELEASE_SOURCE_SHA'],
+              'summary_sha256': hashlib.sha256(summary).hexdigest(),
+              'banner_sha256': hashlib.sha256(banner).hexdigest(),
+              'summary_characters': len(summary.decode().replace('\r\n', '\n').strip()),
+              'accepted_requests': 2, 'webhook_recorded': False,
+              'limits': 'Discord accepted banner and summary requests; recipient reading is not verified.',
+          }
+          Path('notification-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: stable-discord-notification-${{ inputs.product_version }}
+          path: notification-receipt.json
+          if-no-files-found: error

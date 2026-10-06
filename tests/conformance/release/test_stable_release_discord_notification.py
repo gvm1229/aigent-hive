@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import runpy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -345,3 +346,69 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         )
         release = next(step for step in steps if step.get("name") == "Create annotated channel tag and GitHub Release")
         self.assertNotIn("send_subscriber_update", release.get("if", ""))
+
+    def test_stable_publication_rejects_missing_or_disabled_notification_before_publish(self) -> None:
+        workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+        job = workflow["jobs"]["publish"]
+        contract = job["steps"][0]["run"]
+        if os.name == "nt":
+            git = shutil.which("git")
+            shell = Path(git).parent.parent / "bin/bash.exe" if git else None
+            if shell is None or not shell.is_file():
+                self.skipTest("Git Bash is required for the publication shell contract")
+        else:
+            shell = shutil.which("bash")
+            if not shell:
+                self.skipTest("Bash is required for the publication shell contract")
+        for channel, selected, allowed in (
+            ("stable", "", False), ("stable", "false", False),
+            ("stable", "true", True), ("test", "false", True),
+        ):
+            with self.subTest(channel=channel, selected=selected):
+                environment = dict(os.environ, PRODUCT_VERSION="0.12.0",
+                    PACKAGE_VERSION="0.12.0" if channel == "stable" else "0.12.0-test.3",
+                    RUN_ID="1", CHANNEL=channel, SEND_SUBSCRIBER_UPDATE=selected,
+                    GITHUB_OUTPUT="/dev/null")
+                result = subprocess.run([str(shell), "-e", "-c", contract],
+                    env=environment, capture_output=True, text=True, check=False, timeout=10)
+                self.assertEqual(result.returncode == 0, allowed)
+        steps = job["steps"]
+        approval = next(step for step in steps if step.get("name") == "Validate stable Discord subscriber update")
+        self.assertEqual(approval["if"], "${{ inputs.channel == 'stable' }}")
+        self.assertIn("AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST", approval["env"])
+        self.assertLess(steps.index(approval), next(i for i, step in enumerate(steps)
+            if step.get("name") == "Publish npm package family through trusted publishing"))
+
+
+class StableNotificationRecoveryWorkflow(unittest.TestCase):
+    def test_recovery_binds_main_published_stable_and_successfully_skipped_send(self) -> None:
+        path = ROOT / ".github/workflows/release-discord-notification.yml"
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        job = workflow["jobs"]["notify"]
+        self.assertEqual(job["environment"]["name"], "release-publication")
+        self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
+        contract = job["steps"][0]["run"]
+        for boundary in (
+            'test "$GITHUB_REF" = refs/heads/main',
+            'test "$(jq -r .isPrerelease <<<"$release")" = false',
+            'test "$(jq -r .conclusion <<<"$publication")" = success',
+            'test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"',
+            '.conclusion == "skipped"',
+            'duplicate send refused',
+        ):
+            self.assertIn(boundary, contract)
+        checkout = job["steps"][1]
+        self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.source_sha }}")
+
+    def test_recovery_validates_before_sending_and_never_republishes(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["notify"]["steps"]
+        validation = steps[2]["run"]
+        delivery = steps[3]["run"]
+        self.assertIn("--validate-only", validation)
+        self.assertIn("--summary-approval", delivery)
+        self.assertNotIn("--validate-only", delivery)
+        for step in steps:
+            command = step.get("run", "")
+            for forbidden in ("npm publish", "gh release create", "git push", "gh secret"):
+                self.assertNotIn(forbidden, command)
