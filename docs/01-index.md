@@ -232,3 +232,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [업데이트 안내문 종류별 섹션 형식](plans/update-summary-sections.md)
 - [0.12.0 섹션 형식 안내문 미리보기](releases/0.12.0.subscriber.sectioned-preview.ko.md)
 - [0.12.0 섹션 공지 실제 전송](../tests/results/discord-sectioned-notification-0.12.0.md)
+- [0.12.0 명사형 안내문 수정 초안](releases/0.12.0.subscriber.concise-preview.ko.md)
