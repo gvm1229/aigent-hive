@@ -48,6 +48,10 @@ if (-not $ConfirmStopSessions) { throw 'Actual session interruption requires -Co
 if ($CollectorTask -notmatch '^AigentHive-UsageAcceptance-[a-f0-9]{16}$') { throw 'Execute only through the independent acceptance collector task' }
 $monitorEnabled = $false
 $result = @{schema_version=1;phase='started';host='Windows Codex';synthetic_reset=$true;real_provider_reset=$false;installed_to_real_user_root=$false;started_at=[DateTime]::UtcNow.ToString('o')}
+function Acceptance-ExitCode($record) {
+    if($record.phase -eq 'passed-local-session-interruption' -and $record.fixture_task_removed){return 0}
+    return 1
+}
 function Record { [IO.File]::WriteAllText($reportPath,($result | ConvertTo-Json -Depth 15),$utf8) }
 function Read-State {
     for($attempt=0;$attempt -lt 6;$attempt++) {
@@ -106,13 +110,13 @@ try {
     $monitorEnabled = $true
     $sampleAfter = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $statePath = Join-Path $fixture '.hive\runtime\usage-monitor\state.json'
-    $deadline = [DateTime]::UtcNow.AddSeconds(75)
+    $deadline = [DateTime]::UtcNow.AddSeconds(360)
     do {
         Start-Sleep -Milliseconds 250
         if (Test-Path -LiteralPath $statePath) { $state = Read-State }
-    } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 4 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
+    } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 20 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
     if (-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
-    if ($state.observation_count -lt 4 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Four fresh observations and a live desktop session are required'}
+    if ($state.observation_count -lt 20 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Twenty fresh observations and a live desktop session are required'}
     $result.phase='armed';$result.first_observation=$state.last_success;$result.observation_count=$state.observation_count;Record
     if ($WaitForTrigger) {
         $deadline=[DateTime]::UtcNow.AddMinutes(3)
@@ -207,3 +211,5 @@ try {
         }
     }
 }
+
+exit (Acceptance-ExitCode $result)

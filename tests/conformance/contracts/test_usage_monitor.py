@@ -273,6 +273,19 @@ if(-not $text.Contains('작업 중단 확인 — Codex 앱 유지') -or -not $te
 """
         self.assertTrue(self.powershell(source)["test_history_explicit"])
 
+    def test_acceptance_failure_is_a_nonzero_command_result(self):
+        path=str(ROOT / 'scripts/qualify-usage-monitor.ps1').replace("'","''")
+        source="$ErrorActionPreference='Stop';$tokens=$null;$errors=$null;"+(
+            "$tree=[Management.Automation.Language.Parser]::ParseFile('"+path+"',[ref]$tokens,[ref]$errors);if($errors){throw 'Acceptance script parsing failed'};"
+            "$tree.FindAll({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst]},$false)|ForEach-Object{Invoke-Expression $_.Extent.Text};\n"
+        )+r"""
+if((Acceptance-ExitCode @{phase='failed';fixture_task_removed=$true}) -ne 1){throw 'Failed acceptance returned success'}
+if((Acceptance-ExitCode @{phase='passed-local-session-interruption';fixture_task_removed=$false}) -ne 1){throw 'Incomplete cleanup returned success'}
+if((Acceptance-ExitCode @{phase='passed-local-session-interruption';fixture_task_removed=$true}) -ne 0){throw 'Completed acceptance returned failure'}
+@{failure_reported=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["failure_reported"])
+
 
 if __name__ == "__main__":
     unittest.main()
