@@ -6,9 +6,9 @@
 - [x] [RST121-001] 공유 상태·15초 관측·30초 관측 공백 중단
   - state: complete; evidence: repo:docs/research/reset-stop-0.12.1.md#sha256:cbcbfa10d7a8f3e1fea863eeec4d541a14c03969f41b71f5e9988368612dc418
 - [ ] [RST121-002] Windows 정확한 앱 식별·비상 종료·알림·설치·명시 재개
-  - state: agent-owned; depends: RST121-001
+  - state: awaiting-external-evidence; depends: RST121-001; owner: 독립 Windows 수용 검사기; reason: 격리 감시 등록·실제 앱 종료 결과 대기
 - [ ] [RST121-003] 행동 회귀·현재 앱 수용·근거 기록
-  - state: agent-owned; depends: RST121-002
+  - state: awaiting-external-evidence; depends: RST121-002; owner: 독립 검사기와 Codex 수동 재시작 뒤 검토; reason: 앱 종료 후 저장한 결과의 새 확인 필요
 
 ## 결정과 권한
 
@@ -38,3 +38,9 @@
 ## 구현 근거
 
 - [Windows 구현·검증](../../research/reset-stop-0.12.1.md). RST121-002의 코드 구현·운영체제 표본 통과, 실제 예약·앱 수용은 마지막 단계
+
+## 실제 수용 인계
+
+- 독립 예약 검사기 등록 완료, 마지막 실행만 대기. 시험용 하위 작업 2개는 파일 변경 없이 대기
+- 결과: `tests/work/usage-monitor-acceptance/20261015-reset-stop/result.json`. 현재 사용자 설치 변경 없음
+- Codex 수동 재시작 뒤 결과·실제 프로세스 종료·시험 예약 작업 제거 확인, 미완료 기준의 완료 여부 재판정

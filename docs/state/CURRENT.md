@@ -14,9 +14,9 @@
 - 구현 목표: `0.12.1`
 - 현재 등록 항목: 3/5 완료
 
-- `agent-owned`: `RST121-002`, `RST121-003`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: 없음
+- `awaiting-external-evidence`: `RST121-002`, `RST121-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -73,3 +73,10 @@
 - [검증 근거](../research/reset-stop-0.12.1.md): 제품 `f70fc5d7`·독립 검사기 `eb62d9db`
 - Windows CLI 506개·감시기 최종 12개·운영체제 표본 4개 통과. 세부 제외·실패 복구는 근거 참조
 - 실제 사용자 0.12.0 설치 유지. 실제 앱 수용은 독립 검사기의 결과 기록 뒤 사용자 수동 재시작 필요
+
+## 실제 앱 중단 수용 인계
+
+- 독립 예약 검사기 등록 완료. 마지막 시작 뒤 현재 Codex 종료 예정, 수동 앱 재시작 필요
+- 실행 정보: `.agents/work/reset-stop-acceptance.json`, 결과: `tests/work/usage-monitor-acceptance/20261015-reset-stop/result.json`
+- 재시작 뒤 실제 결과 확인·임시 예약 작업 제거·RST121-002–003 갱신. 시험 실패 또는 미확인 상태의 완료 처리 금지
+- 목표 설치 0.12.1의 실제 사용자 설치·상시 등록은 버전별 승인 대기. 현재 0.12.0 유지
