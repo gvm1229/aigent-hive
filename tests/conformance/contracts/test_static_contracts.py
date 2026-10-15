@@ -231,7 +231,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
         behavior = directive_text(".agents/directives/01-behavior.md")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("Prompt-refine is for explicit prompt", behavior)
+        self.assertIn("Prompt-refine requires explicit prompt", behavior)
         self.assertNotIn("Automatically load installed `aigent-hive:prompt-refine`", behavior)
         self.assertIn("Source Wiki lookup", behavior)
         self.assertIn("hive source-wiki query --target", agents)
@@ -271,7 +271,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for required in (
             "all todos",
             "until completion",
-            "a progress report, failure or node stop is not",
+            "reports, failures and node stops are not",
             "awaiting-user-authority",
             "awaiting-external-evidence",
         ):
@@ -281,7 +281,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Remaining Agent-Owned Actions", session)
         self.assertIn("active manifest", session)
         self.assertIn("zero independent agent-owned criteria", " ".join(behavior.split()))
-        self.assertIn("Stop only for user cancel/interrupt, exact user-owned manual action", behavior)
+        self.assertIn("Stop only for user cancel/interrupt, exact manual", behavior)
         self.assertIn("Codex restart", behavior)
         self.assertIn("Stable authority is version-specific", behavior)
         self.assertIn("Stable tags, protected main integration", agents)
