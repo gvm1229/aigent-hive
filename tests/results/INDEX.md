@@ -1357,3 +1357,15 @@
 | [passed](runs/20261015T162119-4650e89fe980.md) | 실제 수용 실패와 검사 명령 종료 코드 일치 회귀 | f7922b335bcf4cd3ab58eeff576b4d90f8bb6316 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T162222-e0cb09060237.md) | 세션 중단 보정 뒤 Windows CLI 전체 회귀 | 8f2d7121058024bb4118ae036c6878cc7eae75de | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T162311-a3abac17c16b.md) | 전체 확인 표시 보정 뒤 독립 수용 준비 | 8f2d7121058024bb4118ae036c6878cc7eae75de | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T162409-8e0c4848fae0.md) | 실제 Windows 앱 유지와 진행 중 작업 중단 독립 수용 | 8f2d7121058024bb4118ae036c6878cc7eae75de | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T164647-5d469cdf0073.md) | 정본 밖 옛 실행 제외와 응답 유실 뒤 실제 중단 확인 회귀 | 96dbc673b95f52a32bd2dd5c6a48894084e50019 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T164729-3fa97da78da9.md) | 현재 실행 선택 보정 뒤 실제 앱 읽기와 정적 검사 빌드 | 96dbc673b95f52a32bd2dd5c6a48894084e50019 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T165014-a82a14badaed.md) | 수용 실패의 부분 근거 보존과 검사기 정상 종료 회귀 | a033d3630fd62e0fbf4f3e65c9d0fdcd577f5206 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T165045-88bf35b00857.md) | 정본 실행 선택 보정의 실제 중단 수용 준비 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T165143-5bec004a949a.md) | 실제 Windows 앱 유지와 진행 중 작업 중단 독립 수용 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T175918-7e31ba6a7efb.md) | 미검증 앱 제어의 실행 활성화와 정상 표시 차단 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T180009-e9d4deb72f41.md) | 실제 앱 접근 없는 직접 제어 스크립트 차단 회귀 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T180118-ab4099d4e7e8.md) | 앱 제어 차단의 정적 검사와 실행 파일 고정 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T180241-1f0f96e2f152.md) | 비활성 미리보기와 앱 접근 없는 실행 차단 최종 검증 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+
+제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증

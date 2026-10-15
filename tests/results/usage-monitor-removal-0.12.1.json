@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "Windows 11 x64; installed CLI restoration and offline control-disable verification",
+  "source_commit": "d878b8d78591c10b13681aba6f5c541134021bbd",
+  "installed_cli": "0.12.0",
+  "active_monitor_tasks": 0,
+  "active_monitor_processes": 0,
+  "automatic_installation": false,
+  "source_activation_available": false,
+  "enable_exit_code": 3,
+  "run_exit_code": 3,
+  "runtime_unchanged": true,
+  "offline_rust_passed": 17,
+  "offline_windows_passed": 19,
+  "native_sensor_default_ignored": 1,
+  "live_app_control_executed": false,
+  "complete_original_session_stop_acceptance": false,
+  "app_exit_cause": "unconfirmed",
+  "inactive_files_pending_removal": 14,
+  "deletion_result": "blocked by automatic policy; no detailed reason returned; no alternate deletion attempted",
+  "preserved": "canonical user knowledge, preferences and saved project work",
+  "limits": [
+    "No proof of safe live Windows session interruption",
+    "No proof of immediate server processing or billing cutoff",
+    "No remote/cloud/other-OS support"
+  ],
+  "evidence": [
+    "tests/results/runs/20261015T175918-7e31ba6a7efb.md",
+    "tests/results/runs/20261015T180009-e9d4deb72f41.md",
+    "tests/results/runs/20261015T180241-1f0f96e2f152.md"
+  ]
+}
