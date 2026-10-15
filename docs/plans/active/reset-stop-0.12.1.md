@@ -4,7 +4,7 @@
 > Scope: product
 
 - [x] [RST121-001] 공유 상태·15초 관측·30초 관측 공백 중단
-  - state: complete; evidence: repo:docs/research/reset-stop-0.12.1.md#sha256:d0076864e79fe533c3afeb882d7e7f1c120ecf38b4bb9c18aa7364aa30ebbf93
+  - state: complete; evidence: repo:docs/research/reset-stop-0.12.1.md#sha256:5189f1b7a53bc4aeb115ae508c658376f0a68f1fc1be5bb57accd485ed04b3d3
 - [ ] [RST121-002] Windows 정확한 앱 식별·비상 종료·알림·설치·명시 재개
   - state: awaiting-external-evidence; depends: RST121-001; owner: 독립 Windows 수용 검사기; reason: 격리 감시 등록·실제 앱 종료 결과 대기
 - [ ] [RST121-003] 행동 회귀·현재 앱 수용·근거 기록
