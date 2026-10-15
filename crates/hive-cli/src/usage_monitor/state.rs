@@ -253,7 +253,8 @@ impl MonitorState {
                 self.baseline.iter().any(|old| {
                     same_window(item, old)
                         && (item.measured_at_unix_seconds < old.measured_at_unix_seconds
-                            || item.resets_at_unix_seconds.saturating_add(2) < old.resets_at_unix_seconds)
+                            || item.resets_at_unix_seconds.saturating_add(2)
+                                < old.resets_at_unix_seconds)
                 })
             }) {
                 return Err(invalid("usage observation moved backwards"));
@@ -263,7 +264,8 @@ impl MonitorState {
                 self.baseline.iter().any(|old| {
                     same_window(item, old)
                         && item.measured_at_unix_seconds >= old.resets_at_unix_seconds
-                        && item.resets_at_unix_seconds > old.resets_at_unix_seconds.saturating_add(2)
+                        && item.resets_at_unix_seconds
+                            > old.resets_at_unix_seconds.saturating_add(2)
                 })
             });
             if rollover || detect_usage_reset(current, &self.baseline).is_some() {
@@ -276,7 +278,11 @@ impl MonitorState {
             if let Some(old) = self.baseline.iter().find(|old| same_window(item, old)) {
                 // Native reset timestamps are rounded from a countdown and can move by a second.
                 // Keep the period anchor stable; this never suppresses a remaining-quota increase.
-                if item.resets_at_unix_seconds.abs_diff(old.resets_at_unix_seconds) <= 2 {
+                if item
+                    .resets_at_unix_seconds
+                    .abs_diff(old.resets_at_unix_seconds)
+                    <= 2
+                {
                     item.resets_at_unix_seconds = old.resets_at_unix_seconds;
                 }
             }
@@ -380,7 +386,9 @@ mod tests {
         let mut state = MonitorState::new();
         state.observe(&sample(80.0, 100, 200), 100).unwrap();
         for (measured, reset) in [(115, 199), (130, 201), (145, 198)] {
-            state.observe(&sample(70.0, measured, reset), measured).unwrap();
+            state
+                .observe(&sample(70.0, measured, reset), measured)
+                .unwrap();
             assert_eq!(state.baseline[0].resets_at_unix_seconds, 200);
             assert!(state.incident.is_none());
         }

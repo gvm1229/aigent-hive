@@ -220,6 +220,27 @@ if(-not $rejected){throw 'Foreign task accepted'}
 """
             self.assertTrue(self.powershell(source)["rejected"])
 
+    def test_background_catalog_requires_owner_confirmation(self):
+        source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding="utf-8")
+        body=source.split("} elseif ($request.method -eq 'thread-owner-discovery') {",1)[1].split("} elseif",1)[0]
+        setup="$tracked=0;$catalogReady=$true;$request=@{thread='fixture'};function Track($id){$script:tracked++}\n"
+        for response, expected, healthy in [
+            ("@{resultType='error';error='no-client-found'}",0,True),
+            ("@{resultType='success';handledByClientId='owner'}",1,True),
+            ("@{resultType='error';error='timeout'}",0,False),
+        ]:
+            result=self.powershell(setup+"$message="+response+"\n"+body+"\n@{tracked=$tracked;healthy=$catalogReady}|ConvertTo-Json -Compress")
+            self.assertEqual(result["tracked"],expected)
+            self.assertEqual(result["healthy"],healthy)
+
+    def test_background_catalog_rejects_duplicate_and_invalid_identifiers(self):
+        source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding="utf-8")
+        body=source.split("} elseif ($command.operation -eq 'discover') {",1)[1].split("} elseif",1)[0]
+        setup="$clock=[Diagnostics.Stopwatch]::StartNew();$catalogQueue=[Collections.Generic.Queue[string]]::new();$pending=@{};$sessions=@{};\n"
+        for identities in ["@('bad')", "@('01234567-0123-0123-0123-0123456789ab','01234567-0123-0123-0123-0123456789ab')"]:
+            code=setup+"$command=@{valid=$true;ids="+identities+"};$rejected=$false;try {\n"+body+"\n}catch{$rejected=$true};@{rejected=$rejected}|ConvertTo-Json -Compress"
+            self.assertTrue(self.powershell(code)["rejected"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -111,11 +111,12 @@ impl MonitorSensor {
         result
     }
 
-    fn read_inner(
+    fn ensure_connection(
         &mut self,
         started: Instant,
         timeout: Duration,
-    ) -> Result<NormalizedSnapshot, SensorError> {
+        output_limit: usize,
+    ) -> Result<(), SensorError> {
         if self.connection.is_none() {
             let executable = qualify_program("codex")?;
             let output = SystemCommandRunner.run(
@@ -134,7 +135,7 @@ impl MonitorSensor {
             let stdin = child.stdin.take().ok_or(SensorError::Failed)?;
             let stdout = child.stdout.take().ok_or(SensorError::Failed)?;
             let stderr = child.stderr.take().ok_or(SensorError::Failed)?;
-            let responses = spawn_jsonl_reader(stdout, OUTPUT_LIMIT);
+            let responses = spawn_jsonl_reader(stdout, output_limit);
             // This connection is retired before its bounded lifetime output budget is exhausted.
             let _stderr = super::spawn_bounded_reader(stderr, OUTPUT_LIMIT);
             self.connection = Some(MonitorConnection {
@@ -159,6 +160,98 @@ impl MonitorSensor {
                 &serde_json::json!({"method":"initialized","params":{}}),
             )?;
         }
+        Ok(())
+    }
+
+    /// Metadata-only discovery. No thread is loaded, resumed, or sent a model request.
+    pub(crate) fn desktop_thread_ids(&mut self) -> Result<Vec<String>, SensorError> {
+        if self
+            .connection
+            .as_ref()
+            .is_some_and(|c| c.opened.elapsed() >= Duration::from_secs(15))
+        {
+            self.connection = None;
+        }
+        let result = self.desktop_thread_ids_inner();
+        if result.is_err() {
+            self.connection = None;
+        }
+        result
+    }
+
+    fn desktop_thread_ids_inner(&mut self) -> Result<Vec<String>, SensorError> {
+        let started = Instant::now();
+        let timeout = Duration::from_secs(5);
+        self.ensure_connection(started, timeout, 32 * OUTPUT_LIMIT)?;
+        let connection = self.connection.as_mut().ok_or(SensorError::Failed)?;
+        verify_executable_identity(&connection.executable)?;
+        let mut ids = std::collections::BTreeSet::new();
+        for archived in [false, true] {
+            let mut cursor = Value::Null;
+            let mut cursors = std::collections::HashSet::new();
+            loop {
+                let response = monitor_request(
+                    connection,
+                    "thread/list",
+                    &serde_json::json!({
+                        "limit":100,"sortKey":"updated_at","useStateDbOnly":true,"archived":archived,
+                        "sourceKinds":["cli","vscode","exec","appServer","subAgent","subAgentReview","subAgentCompact","subAgentThreadSpawn","subAgentOther","unknown"],
+                        "cursor":cursor
+                    }),
+                    started,
+                    timeout,
+                )?;
+                let page = response
+                    .get("data")
+                    .and_then(Value::as_array)
+                    .ok_or(SensorError::Malformed)?;
+                if page.len() > 100 {
+                    return Err(SensorError::OutputTooLarge);
+                }
+                for thread in page {
+                    let id = thread
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .ok_or(SensorError::Malformed)?;
+                    if id.len() != 36
+                        || !id.bytes().enumerate().all(|(i, b)| {
+                            if [8, 13, 18, 23].contains(&i) {
+                                b == b'-'
+                            } else {
+                                b.is_ascii_hexdigit() && !b.is_ascii_uppercase()
+                            }
+                        })
+                    {
+                        return Err(SensorError::Malformed);
+                    }
+                    ids.insert(id.to_owned());
+                    if ids.len() > 4096 {
+                        return Err(SensorError::OutputTooLarge);
+                    }
+                }
+                cursor = response.get("nextCursor").cloned().unwrap_or(Value::Null);
+                if cursor.is_null() {
+                    break;
+                }
+                let text = cursor
+                    .as_str()
+                    .filter(|s| s.len() <= 4096)
+                    .ok_or(SensorError::Malformed)?;
+                if !cursors.insert(text.to_owned()) {
+                    return Err(SensorError::Malformed);
+                }
+            }
+        }
+        verify_executable_identity(&connection.executable)?;
+        Ok(ids.into_iter().collect())
+    }
+
+    fn read_inner(
+        &mut self,
+        started: Instant,
+        timeout: Duration,
+    ) -> Result<NormalizedSnapshot, SensorError> {
+        self.ensure_connection(started, timeout, OUTPUT_LIMIT)?;
         let connection = self.connection.as_mut().ok_or(SensorError::Failed)?;
         verify_executable_identity(&connection.executable)?;
         let account = monitor_request(

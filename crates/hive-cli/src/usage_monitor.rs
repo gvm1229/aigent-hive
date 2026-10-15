@@ -799,6 +799,7 @@ mod tests {
             if packet["connected"] == true
                 && packet["unknown_sessions"] == 0
                 && packet["known_sessions"].as_u64().unwrap_or_default() > 0
+                && packet["active_turns"].as_u64().unwrap_or_default() > 0
             {
                 println!(
                     "qualified desktop: sessions={}, active={}, app_alive={}",
@@ -808,6 +809,23 @@ mod tests {
                 break;
             }
         }
+    }
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "read-only local catalog must include the actual current session"]
+    fn live_desktop_catalog_includes_current_background_session() {
+        let mut reader = crate::usage::MonitorSensor::new();
+        let began = Instant::now();
+        let ids = reader
+            .desktop_thread_ids()
+            .expect("complete local thread catalog");
+        let current = std::env::var("CODEX_THREAD_ID").expect("active host session");
+        assert!(ids.contains(&current));
+        println!(
+            "catalog: {} identities, {} ms, current session present",
+            ids.len(),
+            began.elapsed().as_millis()
+        );
     }
     #[cfg(windows)]
     #[test]
@@ -821,8 +839,16 @@ mod tests {
             let elapsed = began.elapsed();
             assert!(elapsed < Duration::from_secs(5));
             let current = snapshot.core_snapshots();
-            println!("observation timestamps: {:?}", current.iter().map(|s| (s.measured_at_unix_seconds, s.resets_at_unix_seconds)).collect::<Vec<_>>());
-            state.observe(&current, now()).expect("live observation accepted by monitor state");
+            println!(
+                "observation timestamps: {:?}",
+                current
+                    .iter()
+                    .map(|s| (s.measured_at_unix_seconds, s.resets_at_unix_seconds))
+                    .collect::<Vec<_>>()
+            );
+            state
+                .observe(&current, now())
+                .expect("live observation accepted by monitor state");
             println!("native observation {index}: {} ms", elapsed.as_millis());
             if index < 3 {
                 thread::sleep(Duration::from_secs(15).saturating_sub(began.elapsed()));

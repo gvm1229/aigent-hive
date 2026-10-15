@@ -15,7 +15,8 @@ public sealed class HiveDesktopPipe : IDisposable {
     [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint pid);
     readonly NamedPipeClientStream pipe = new NamedPipeClientStream(".", "codex-ipc", PipeDirection.InOut, PipeOptions.Asynchronous);
-    readonly BlockingCollection<string> frames = new BlockingCollection<string>(8);
+    readonly BlockingCollection<string> frames = new BlockingCollection<string>(64);
+    long bufferedBytes;
     public uint ServerPid;
     public volatile bool Alive = true;
     public HiveDesktopPipe() {
@@ -33,10 +34,10 @@ public sealed class HiveDesktopPipe : IDisposable {
             int size = BitConverter.ToInt32(Exact(4), 0);
             if (size < 2 || size > 16777216) throw new IOException("Invalid desktop frame size");
             string frame = new UTF8Encoding(false, true).GetString(Exact(size));
-            if (!frames.TryAdd(frame)) throw new IOException("Desktop queue overflow");
+            if (Interlocked.Add(ref bufferedBytes, frame.Length * 2L) > 33554432 || !frames.TryAdd(frame)) throw new IOException("Desktop queue overflow");
         } } catch { Alive = false; }
     }
-    public string Poll() { string value; return frames.TryTake(out value) ? value : null; }
+    public string Poll() { string value; if (!frames.TryTake(out value)) return null; Interlocked.Add(ref bufferedBytes, -value.Length * 2L); return value; }
     public void Send(string value) {
         byte[] bytes = Encoding.UTF8.GetBytes(value);
         if (bytes.Length > 16384) throw new IOException("Oversized control request");
@@ -50,7 +51,7 @@ public sealed class HiveDesktopInput {
     public volatile bool Alive = true;
     public HiveDesktopInput() { var thread = new Thread(ReadLoop); thread.IsBackground = true; thread.Start(); }
     void ReadLoop() { try { string line; while ((line = Console.In.ReadLine()) != null) {
-        if (line.Length > 1024 || !commands.TryAdd(line)) break;
+        if (line.Length > 262144 || !commands.TryAdd(line)) break;
     } } finally { Alive = false; } }
     public string Poll() { string value; return commands.TryTake(out value) ? value : null; }
 }
@@ -77,6 +78,11 @@ try {
     $sessions = @{}
     $pending = @{}
     $stop = $null
+    $catalogReady = $false
+    $catalogFault = $false
+    $catalogQueue = [Collections.Generic.Queue[string]]::new()
+    $catalogSeen = @{}
+    $catalogAt = -10000L
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $lastPublish = -1000L
     function Send($value) { $pipe.Send((ConvertTo-Json -InputObject $value -Depth 12 -Compress)) }
@@ -89,6 +95,14 @@ try {
     }
     function Follow([string]$id) {
         Send @{type='broadcast';sourceClientId=$client;method='thread-stream-following-changed';version=1;params=@{hostId='local';conversationId=$id;following=$true}}
+    }
+    function Track([string]$id) {
+        if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$') {throw 'Invalid desktop thread identity'}
+        if (-not $sessions.ContainsKey($id)) {
+            if ($sessions.Count -ge 4096) {throw 'Too many desktop sessions'}
+            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';snapshotAt=-2000L}
+            Follow $id
+        }
     }
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
@@ -116,7 +130,6 @@ try {
         foreach ($turn in $turns) { $session.statuses[[string]$turn.turnId]=[string]$turn.status }
         $session.runtime=[string]$state.threadRuntimeStatus.type
         $session.goal=[string]$state.threadGoal.status
-        $session.title=[string]$state.title
         $session.ready=$true;$session.dirty=$false;$session.snapshotAt=$clock.ElapsedMilliseconds
         # No prompt, tool output, history item, or file path is retained in this client.
     }
@@ -135,6 +148,9 @@ try {
                     if ($request.method -eq 'initialize') {
                         if ($message.resultType -ne 'success' -or -not $message.result.clientId) { throw 'Desktop registration failed' }
                         $client=[string]$message.result.clientId
+                    } elseif ($request.method -eq 'thread-owner-discovery') {
+                        if ($message.resultType -eq 'success' -and $message.handledByClientId) {Track $request.thread}
+                        elseif ($message.resultType -ne 'error' -or $message.error -ne 'no-client-found') {$catalogReady=$false;$catalogFault=$true}
                     } elseif ($request.method -eq 'thread-follower-interrupt-turn') {
                         $session=$sessions[$request.thread]
                         $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
@@ -147,12 +163,7 @@ try {
                     if ($message.method -eq 'thread-stream-following-changed' -and $message.version -eq 1 -and
                         $message.params.hostId -eq 'local' -and $message.params.following -eq $true) {
                         $id=[string]$message.params.conversationId
-                        if ($id -notmatch '^[a-f0-9-]{36}$') { throw 'Invalid desktop thread identity' }
-                        if (-not $sessions.ContainsKey($id)) {
-                            if ($sessions.Count -ge 1024) { throw 'Too many desktop sessions' }
-                            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';title='';snapshotAt=-2000L}
-                            Follow $id
-                        } else {$sessions[$id].dirty=$true}
+                        Track $id
                     } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
                 }
             }
@@ -166,10 +177,26 @@ try {
                     if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
                     $stop=@{digest=[string]$command.incident;detected_ms=$detected;settled=$false;targeted=@{};request_ms=$null}
                 }
+            } elseif ($command.operation -eq 'discover') {
+                $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
+                if ($catalogReady -and $catalogQueue.Count -eq 0 -and @($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count -eq 0) {
+                    if (@($command.ids).Count -gt 4096) {throw 'Catalog exceeds session limit'}
+                    $catalogSeen=@{};$catalogFault=$false
+                    foreach ($id in @($command.ids)) {
+                        if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or $catalogSeen.ContainsKey($id)) {throw 'Invalid catalog identity'}
+                        $catalogSeen[$id]=$true
+                        if (-not $sessions.ContainsKey($id)) {$catalogQueue.Enqueue($id)}
+                    }
+                }
             } elseif ($command.operation -eq 'clear') { $stop=$null }
             else { throw 'Invalid desktop control operation' }
         }
-        foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { $pending.Remove($id) } }
+        foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { if($pending[$id].method -eq 'thread-owner-discovery'){$catalogReady=$false;$catalogFault=$true};$pending.Remove($id) } }
+        if ($clock.ElapsedMilliseconds-$catalogAt -gt 8000) {$catalogReady=$false;$catalogFault=$true}
+        $available=16-@($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count
+        while ($client -ne 'initializing-client' -and $available -gt 0 -and $catalogQueue.Count -gt 0) {
+            $id=$catalogQueue.Dequeue();Request 'thread-owner-discovery' @{hostId='local';conversationId=$id} 1 '' $id;$available--
+        }
         foreach ($session in @($sessions.Values)) {
             if (($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) -or $clock.ElapsedMilliseconds - $session.snapshotAt -gt 5000) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
             if ($null -ne $stop -and $session.ready -and ($session.active.Count -gt 0 -or $session.goal -eq 'active') -and
@@ -186,6 +213,8 @@ try {
         }
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
             $activeCount=0;$unknown=0
+            if(-not $catalogReady -or $catalogFault){$unknown++}
+            $unknown += $catalogQueue.Count + @($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count
             foreach ($session in $sessions.Values) { $activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++} }
             $receipt=$null
             if ($null -ne $stop) {

@@ -36,7 +36,32 @@ impl Desktop {
     }
 }
 
+fn catalog_worker() -> Receiver<Value> {
+    let (send, receive) = mpsc::sync_channel(1);
+    thread::spawn(move || {
+        let mut reader = crate::usage::MonitorSensor::new();
+        loop {
+            let started = Instant::now();
+            let value = match reader.desktop_thread_ids() {
+                Ok(ids) => json!({"operation":"discover","valid":true,"ids":ids}),
+                Err(_) => json!({"operation":"discover","valid":false,"ids":[]}),
+            };
+            if matches!(
+                send.try_send(value),
+                Err(mpsc::TrySendError::Disconnected(_))
+            ) {
+                return;
+            }
+            thread::sleep(Duration::from_secs(1).saturating_sub(started.elapsed()));
+        }
+    });
+    receive
+}
+
 fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
+    let catalogs = catalog_worker();
+    let mut catalog = json!({"operation":"discover","valid":false,"ids":[]});
+    let mut catalog_at = Instant::now();
     let mut pending = json!({"operation":"clear"});
     loop {
         if let Ok(command) = commands.try_recv() {
@@ -82,6 +107,7 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
         let started = Instant::now();
         let mut last_packet = started;
         let mut sent = Value::Null;
+        let mut sent_catalog = Value::Null;
         loop {
             while let Ok(command) = commands.try_recv() {
                 pending = command;
@@ -94,6 +120,23 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
                     break;
                 }
                 sent = pending.clone();
+            }
+            let mut refreshed = false;
+            while let Ok(value) = catalogs.try_recv() {
+                catalog = value;
+                catalog_at = Instant::now();
+                refreshed = true;
+            }
+            if catalog_at.elapsed() >= Duration::from_secs(8) {
+                catalog = json!({"operation":"discover","valid":false,"ids":[]});
+            }
+            if refreshed || catalog != sent_catalog {
+                let mut bytes = serde_json::to_vec(&catalog).unwrap_or_default();
+                bytes.push(b'\n');
+                if stdin.write_all(&bytes).is_err() {
+                    break;
+                }
+                sent_catalog = catalog.clone();
             }
             while let Ok(packet) = lines.try_recv() {
                 last_packet = Instant::now();
