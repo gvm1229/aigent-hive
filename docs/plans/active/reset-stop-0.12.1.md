@@ -4,11 +4,11 @@
 > Scope: product
 
 - [x] [RST121-001] 공유 상태·15초 관측·30초 관측 공백 중단
-  - state: complete; evidence: repo:docs/research/reset-stop-0.12.1.md#sha256:cbcbfa10d7a8f3e1fea863eeec4d541a14c03969f41b71f5e9988368612dc418
+  - state: complete; evidence: repo:docs/research/reset-stop-0.12.1.md#sha256:d0076864e79fe533c3afeb882d7e7f1c120ecf38b4bb9c18aa7364aa30ebbf93
 - [ ] [RST121-002] Windows 정확한 앱 식별·비상 종료·알림·설치·명시 재개
   - state: awaiting-external-evidence; depends: RST121-001; owner: 독립 Windows 수용 검사기; reason: 격리 감시 등록·실제 앱 종료 결과 대기
 - [ ] [RST121-003] 행동 회귀·현재 앱 수용·근거 기록
-  - state: awaiting-external-evidence; depends: RST121-002; owner: 독립 검사기와 Codex 수동 재시작 뒤 검토; reason: 앱 종료 후 저장한 결과의 새 확인 필요
+  - state: awaiting-external-evidence; depends: RST121-002; owner: 독립 검사기와 Codex 수동 재시작 뒤 검토; reason: 앱 종료·조건부 설치 뒤 저장한 두 결과의 새 확인 필요
 
 ## 결정과 권한
 
@@ -44,3 +44,10 @@
 - 독립 예약 검사기 등록 완료, 마지막 실행만 대기. 시험용 하위 작업 2개는 파일 변경 없이 대기
 - 결과: `tests/work/usage-monitor-acceptance/20261015-reset-stop/result.json`. 현재 사용자 설치 변경 없음
 - Codex 수동 재시작 뒤 결과·실제 프로세스 종료·시험 예약 작업 제거 확인, 미완료 기준의 완료 여부 재판정
+
+## 재개와 조건부 설치 승인
+
+- 2026-10-15 사용자 승인: 수정한 앱 중단 시험과 검증 완료, 통과 뒤 0.12.1 설치·상시 감시 활성화. 현재 앱 종료 허용
+- 기존 npm 네이티브 파일의 지문·원복 백업 보존, 0.12.1 로컬 빌드 명시. 공개 배포나 설치 소유자 변경 제외
+- 순서: 수정한 원자 교체 표본 확인 → 고정한 0.12.1 로컬 바이너리의 사용자 설치 미리보기 → 독립 실제 중단 재시험 → 성공 때만 관리된 바이너리 활성화·사용자 설치·감시 등록·생존 검증
+- 실패 시 실제 사용자 설치 진행 금지. 통과와 설치 결과의 별도 영수증, Codex가 닫혀도 독립 단계 지속

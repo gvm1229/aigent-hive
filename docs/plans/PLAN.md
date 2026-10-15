@@ -9,7 +9,7 @@
 
 ## 현재 요청과 경계
 
-- 사용자 승인: 0.12.1 수정 버전의 하네스 규칙 구현·검증. 게시·설치 제외
+- 사용자 승인: 0.12.1 수정 버전의 하네스 규칙 구현·검증. 앱 중단 시험 통과 뒤 0.12.1 로컬 설치·상시 감시 승인, 게시 제외
 - 작업 브랜치 develop, Windows Codex. 이전 작업의 변경 보존
 - [결정](../decisions/steering-preservation.md)·[0.12.0 완료 계획](../archive/plans/0.12.0-complete.md)
 - [이전 미완료 9개](backlog/0.12.0-deferred-host-acceptance.md): 기존 후속 이관 유지, 이번 범위 편입 없음
