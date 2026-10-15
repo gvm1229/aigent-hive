@@ -41,6 +41,7 @@ EXPECTED_ACTIONS = {
     "ShowUsageStatus",
     "SetUsageThreshold",
     "ControlUsageSession",
+    "ManageUsageMonitor",
     "CaptureUsage",
     "InstallUsageFallback",
     "AnswerSimpleQuestion",

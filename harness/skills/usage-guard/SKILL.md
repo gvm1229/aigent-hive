@@ -56,3 +56,20 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - CodexBar installation is the sole optional fallback install action. It is allowed only through the exact consented CLI flow in the sensor reference and a qualified package-manager adapter.
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Source development uses this installed product contract and global threshold. Never create a second source Skill, Python guard, watcher, or source-local threshold state.
+
+## Windows live interruption (0.12.1)
+
+`hive usage monitor --help` exposes the installed version's monitor commands. Only its confirmed
+installation may create the current-user scheduled monitor. First show `preview --user-root
+<user-root> --output json`; `enable` requires that exact `--confirm <preview_digest>` and
+`--confirm-app-termination`. Do not infer current-version installation authority.
+
+This narrow Windows Codex protection exception permits the installed monitor, not this Skill,
+to observe every 15 seconds and terminate authenticated local Codex app processes after reset
+or 30 seconds without a valid observation. Other chats in that app also stop. It never starts
+model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.
+
+Use `status` to distinguish configured, healthy, halted, termination-unverified, and notification
+states. A global incident survives app restart and session opt-outs. Explicit `acknowledge` with
+its exact `--incident` plus fresh usage clears only that incident; it never resumes model work.
+`disable` removes only the owned scheduled task and retains incident evidence and staged bytes.

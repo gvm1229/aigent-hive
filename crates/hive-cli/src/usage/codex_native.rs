@@ -32,6 +32,15 @@ pub(super) fn read(
     requested_account_digest: Option<&str>,
     now: SystemTime,
 ) -> Result<NormalizedSnapshot, SensorError> {
+    read_with_timeout(requested_account_digest, now, APP_SERVER_TIMEOUT)
+}
+
+pub(super) fn read_with_timeout(
+    requested_account_digest: Option<&str>,
+    now: SystemTime,
+    timeout: Duration,
+) -> Result<NormalizedSnapshot, SensorError> {
+    let started = Instant::now();
     let executable = qualify_program("codex")?;
     let version_output = SystemCommandRunner.run(
         &executable,
@@ -44,7 +53,10 @@ pub(super) fn read(
     }
     let version = parse_version(&version_output.stdout)?;
     verify_executable_identity(&executable)?;
-    let (account, limits) = exchange(&executable)?;
+    let remaining = timeout
+        .checked_sub(started.elapsed())
+        .ok_or(SensorError::Timeout)?;
+    let (account, limits) = exchange_with_timeout(&executable, remaining)?;
     verify_executable_identity(&executable)?;
     normalize(
         &account,
@@ -55,7 +67,10 @@ pub(super) fn read(
     )
 }
 
-fn exchange(executable: &super::QualifiedExecutable) -> Result<(Value, Value), SensorError> {
+fn exchange_with_timeout(
+    executable: &super::QualifiedExecutable,
+    timeout: Duration,
+) -> Result<(Value, Value), SensorError> {
     let mut child = Command::new(&executable.path)
         .args(["app-server", "--stdio"])
         .stdin(Stdio::piped())
@@ -75,7 +90,7 @@ fn exchange(executable: &super::QualifiedExecutable) -> Result<(Value, Value), S
     let responses = spawn_jsonl_reader(stdout, OUTPUT_LIMIT);
     let stderr_reader = super::spawn_bounded_reader(stderr, OUTPUT_LIMIT);
     let started = Instant::now();
-    let timeout = command_timeout(APP_SERVER_TIMEOUT);
+    let timeout = command_timeout(timeout);
     let result = (|| {
         send(
             &mut stdin,

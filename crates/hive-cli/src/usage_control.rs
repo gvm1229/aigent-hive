@@ -300,6 +300,7 @@ pub(crate) fn dispatch_preflight(
 
 /// Reread mutable policy and session records immediately before an authorization is published.
 pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result<(), AdapterError> {
+    crate::usage_monitor::check_dispatch(preflight.arguments.user_root.as_deref())?;
     if preflight.result.exit_code != 0 {
         return Err(AdapterError::Safety(
             "blocked preflight cannot authorize dispatch".to_owned(),
@@ -1279,6 +1280,7 @@ fn enforce_captured(
     trace: &mut EnforcementTrace,
     validate_observation: &mut impl FnMut(&usage::NormalizedSnapshot) -> Result<(), AdapterError>,
 ) -> Result<ActionResult, AdapterError> {
+    crate::usage_monitor::check_dispatch(arguments.user_root.as_deref())?;
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let mut config = read_effective_config(
         &target,
