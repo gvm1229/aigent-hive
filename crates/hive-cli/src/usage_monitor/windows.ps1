@@ -78,7 +78,8 @@ try {
                     if ($null -eq $state.incident) {$label.Text="중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.";return}
                     if ($state.incident.digest -ne $request.incident) {$label.Text='새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.';return}
                     $reason=switch ($state.incident.reason) {'usage-reset' {'사용량 초기화 감지'} 'sensor-unresponsive' {'30초 동안 정상 사용량 조회 없음'} default {'감시 상태 오류'}}
-                    $status=if ($state.incident.stop_confirmed) {'작업 중단 확인 — Codex 앱 유지'} elseif ($state.incident.stop_error) {'작업 중단 확인 실패 — Codex 앱 유지'} else {'작업 중단 확인 대기 — Codex 앱 유지'}
+                    $appText=if ($state.app_alive) {'Codex 앱 유지'} else {'앱 생존 확인 필요'}
+                    $status=$(if ($state.incident.stop_confirmed) {'작업 중단 확인'} elseif ($state.incident.stop_error) {'작업 중단 확인 실패'} else {'작업 중단 확인 대기'})+' — '+$appText
                     $connection=if ($state.control_connected) {'연결됨'} else {'연결 확인 필요'}
                     $label.Text=$reason+"`r`n`r`n"+$status+"`r`n중단 대상: "+$state.incident.targeted_turns+" / 확인: "+$state.incident.confirmed_turns+"`r`n현재 실행 중: "+$state.active_turns+" / 제어 연결: "+$connection+"`r`n`r`n명시 확인 전 보호 잠금 유지. 창을 닫아도 작업 재개 없음."
                 } catch {$label.Text=$baseMessage+"`r`n상태를 읽을 수 없습니다. 중단 성공 여부를 확인해 주세요."}

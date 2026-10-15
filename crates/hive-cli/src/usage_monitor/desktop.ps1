@@ -150,7 +150,9 @@ try {
             $command=$line | ConvertFrom-Json
             if ($command.operation -eq 'stop' -and $command.incident -match '^sha256:[a-f0-9]{64}$') {
                 if ($null -eq $stop -or $stop.digest -ne $command.incident) {
-                    $stop=@{digest=[string]$command.incident;at=$clock.ElapsedMilliseconds;targeted=@{};request_ms=$null}
+                    $detected=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
+                    $stop=@{digest=[string]$command.incident;detected_ms=$detected;settled=$false;targeted=@{};request_ms=$null}
                 }
             } elseif ($command.operation -eq 'clear') { $stop=$null }
             else { throw 'Invalid desktop control operation' }
@@ -162,12 +164,12 @@ try {
                 $clock.ElapsedMilliseconds - $session.lastStop -ge 1000) {
                 foreach ($turn in $session.active) {
                     $key=$session.id + ':' + $turn
-                    if (-not $stop.targeted.ContainsKey($key)) { $stop.at=$clock.ElapsedMilliseconds;$stop.request_ms=$null }
+                    if (-not $stop.targeted.ContainsKey($key) -and $stop.settled) { $stop.detected_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();$stop.request_ms=$null;$stop.settled=$false }
                     $stop.targeted[$key]=@{thread=$session.id;turn=$turn}
                 }
                 Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
                 $session.lastStop=$clock.ElapsedMilliseconds
-                if ($null -eq $stop.request_ms) { $stop.request_ms=$clock.ElapsedMilliseconds-$stop.at }
+                if ($null -eq $stop.request_ms) { $stop.request_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms }
             }
         }
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
@@ -182,7 +184,8 @@ try {
                 }
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
-                $receipt=@{app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=$clock.ElapsedMilliseconds-$stop.at;request_ms=$stop.request_ms}
+                $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
+                $receipt=@{app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms;request_ms=$stop.request_ms}
             }
             $stopping=($null -ne $stop -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
             $packet=@{control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}

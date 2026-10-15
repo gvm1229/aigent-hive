@@ -25,10 +25,10 @@ impl Desktop {
         }
     }
 
-    pub fn stop(&self, digest: &str) {
-        let _ = self
-            .commands
-            .try_send(json!({"operation":"stop","incident":digest}));
+    pub fn stop(&self, digest: &str, detected_at_ms: Option<u64>) {
+        let _ = self.commands.try_send(
+            json!({"operation":"stop","incident":digest,"detected_at_ms":detected_at_ms}),
+        );
     }
 
     pub fn clear(&self) {

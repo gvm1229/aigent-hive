@@ -94,6 +94,8 @@ pub(super) struct Incident {
     pub confirmed_turns: u64,
     #[serde(default)]
     pub confirmed_stop: Option<SessionStopReceipt>,
+    #[serde(default)]
+    pub last_verified_session_scope: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -135,9 +137,9 @@ impl Incident {
         self.stop_confirmed = verified
             && (elapsed <= 5000 && request <= 2000
                 || self
-                    .confirmed_stop
+                    .last_verified_session_scope
                     .as_ref()
-                    .is_some_and(|r| r.scope_digest == scope));
+                    .is_some_and(|saved| saved == scope));
         self.stop_error = if self.stop_confirmed {
             None
         } else if elapsed > 5000 {
@@ -146,6 +148,7 @@ impl Incident {
             None
         };
         if verified && elapsed <= 5000 && request <= 2000 {
+            self.last_verified_session_scope = Some(scope.into());
             self.confirmed_stop.get_or_insert(SessionStopReceipt {
                 completed_at: at,
                 scope_digest: scope.into(),
@@ -194,6 +197,7 @@ impl MonitorState {
             targeted_turns: 0,
             confirmed_turns: 0,
             confirmed_stop: None,
+            last_verified_session_scope: None,
         });
     }
 

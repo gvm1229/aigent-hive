@@ -536,7 +536,7 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         .ok()
         .flatten()
         .unwrap_or_else(|| sha256_digest(b"monitor-state-repair-required"));
-        desktop.stop(&incident);
+        desktop.stop(&incident, Some(now().saturating_mul(1000)));
         if fault_notice.as_deref() != Some(incident.as_str()) {
             let _notice =
                 platform::notify("monitor-fault", false, &incident, root.requested_path());
@@ -644,7 +644,10 @@ fn dispatch_halt(
             return Ok(());
         };
         if sent_incident.as_deref() != Some(incident.digest.as_str()) {
-            desktop.stop(&incident.digest);
+            desktop.stop(
+                &incident.digest,
+                Some(incident.detected_at.saturating_mul(1000)),
+            );
             *sent_incident = Some(incident.digest.clone());
         }
         if should_notify {
