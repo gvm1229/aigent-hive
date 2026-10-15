@@ -116,8 +116,8 @@ if($LASTEXITCODE -ne 0){throw 'Legacy PowerShell path forwarding failed'}
 
     def test_desktop_snapshot_extracts_current_turn_without_retaining_history(self):
         source=self.desktop_functions()+r"""
-$clock=[Diagnostics.Stopwatch]::StartNew()
-$sessions=@{fixture=@{id='fixture';ready=$false;dirty=$true;active=@();statuses=@{}}}
+$clock=[Diagnostics.Stopwatch]::StartNew();$stop=New-Stop 'fixture' 1
+$sessions=@{fixture=@{id='fixture';subscribed=$true;ready=$false;dirty=$true;active=@();statuses=@{}}}
 $snapshot=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='snapshot';conversationState=[pscustomobject]@{
  id='fixture';hostId='local';turns=@();title='fixture';threadRuntimeStatus=@{type='active'};threadGoal=@{status='active'}
  turnHistory=@{kind='canonical';history=@{islands=@(@{entries=@(@{value='one'},@{value='two'})});entitiesByKey=[pscustomobject]@{one=@{turnId='old';status='completed';items=@('not retained')};two=@{turnId='current';status='inProgress';items=@('not retained')}}}}
@@ -137,7 +137,8 @@ if($sessions.fixture.active.Count -ne 0 -or $sessions.fixture.statuses.current -
     def test_reasoning_text_deltas_do_not_trigger_full_history_resubscription(self):
         source=self.desktop_functions()+r"""
 $clock=[Diagnostics.Stopwatch]::StartNew()
-$sessions=@{fixture=@{id='fixture';ready=$true;dirty=$false}}
+$stop=New-Stop 'fixture' 1
+$sessions=@{fixture=@{id='fixture';subscribed=$true;ready=$true;dirty=$false}}
 $value=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='patches';patches=@(@{path=@('turnHistory','history','entitiesByKey','current','items',0,'text');op='replace';value='delta'})}}
 Snapshot $value
 if($sessions.fixture.dirty){throw 'Text delta caused a history resubscription'}
@@ -151,7 +152,8 @@ if(-not $sessions.fixture.dirty){throw 'Turn status change was lost'}
     def test_wrong_desktop_snapshot_cannot_confirm_a_different_session(self):
         source=self.desktop_functions()+r"""
 $clock=[Diagnostics.Stopwatch]::StartNew()
-$sessions=@{fixture=@{id='fixture';ready=$false}}
+$stop=New-Stop 'fixture' 1
+$sessions=@{fixture=@{id='fixture';subscribed=$true;ready=$false}}
 $snapshot=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='snapshot';conversationState=@{id='different';hostId='local'}}}
 try {Snapshot $snapshot;throw 'Wrong session accepted'} catch {if($_.Exception.Message -notmatch 'Mismatched desktop snapshot'){throw}}
 if($sessions.fixture.ready){throw 'Wrong session changed readiness'}
@@ -202,6 +204,24 @@ foreach($root in $data.roots) {
 """
         self.assertTrue(self.powershell(source)["valid"])
 
+    def test_unresponsive_pipe_writer_times_out_without_contacting_the_app(self):
+        source=(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').read_text(encoding='utf-8')
+        declaration=source.split("Add-Type -TypeDefinition @'",1)[1].split("'@",1)[0]
+        declaration=declaration.replace('"codex-ipc"','"hive-write-test-" + System.Diagnostics.Process.GetCurrentProcess().Id')
+        fixture="$ErrorActionPreference='Stop'\nAdd-Type -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
+$name='hive-write-test-'+$PID
+$server=[IO.Pipes.NamedPipeServerStream]::new($name,[IO.Pipes.PipeDirection]::InOut,1,[IO.Pipes.PipeTransmissionMode]::Byte,[IO.Pipes.PipeOptions]::Asynchronous,4096,4096)
+$waiting=$server.WaitForConnectionAsync();$client=[HiveDesktopPipe]::new();$null=$waiting.GetAwaiter().GetResult();$client.Start()
+try {
+ $clock=[Diagnostics.Stopwatch]::StartNew();$timedOut=$false
+ try {1..64|ForEach-Object {$client.Send(('x'*16300))}}
+ catch {if($_.Exception.ToString() -notmatch 'Desktop write timeout'){throw};$timedOut=$true}
+ if(-not $timedOut -or $client.Alive -or $clock.ElapsedMilliseconds -gt 2500){throw 'Blocked writer escaped its bounded deadline'}
+ @{writer_bounded=$true;fixture_pipe_only=$true}|ConvertTo-Json -Compress
+} finally {$client.Dispose();$server.Dispose()}
+"""
+        self.assertTrue(self.powershell(fixture)["writer_bounded"])
+
     def test_register_collision_and_foreign_task_removal_are_refused(self):
         # Real task registration is not needed to prove that foreign tasks stay untouched.
         script = self.adapter_functions().replace("exit 1", "throw")
@@ -249,7 +269,7 @@ $sessions=@{owned=@{ready=$true}}
 $catalogChecked=@{old=$clock.ElapsedMilliseconds}
 $catalogQueue=@('old','new');$pending=@{refresh=@{method='thread-owner-discovery';thread='old'}}
 if((Count-Unqualified) -ne 1){throw 'Previously qualified absence became unknown again'}
-$catalogChecked.old=$clock.ElapsedMilliseconds-8001
+$catalogChecked.old=$clock.ElapsedMilliseconds-20001
 if((Count-Unqualified) -ne 2){throw 'Expired qualification was accepted'}
 @{refresh_preserved=$true;expiration_enforced=$true}|ConvertTo-Json -Compress
 """
@@ -315,6 +335,113 @@ if(Confirmed-Target $target 100){throw 'Running turn confirmed'}
 @{fresh_completion=$true;stale_rejected=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["stale_rejected"])
+
+    def offline_controller(self) -> str:
+        return self.desktop_functions()+r"""
+$clock=[Diagnostics.Stopwatch]::StartNew();$sessions=@{};$stop=$null
+$actions=[Collections.Generic.List[object]]::new()
+function Send($value){$actions.Add(@{kind='follow';id=$value.params.conversationId;following=$value.params.following})}
+function Request([string]$method,$params,[int]$version,[string]$target,[string]$thread){
+ if($method -ne 'thread-follower-interrupt-turn' -or $params.mode -ne 'user-stop'){throw 'Unexpected control operation'}
+ $actions.Add(@{kind='interrupt';id=$thread})
+}
+$one='01234567-0123-0123-0123-0123456789ab'
+$two='01234567-0123-0123-0123-0123456789ac'
+$child='01234567-0123-0123-0123-0123456789ad'
+"""
+
+    def test_normal_tracking_has_no_history_subscriptions_or_stop_requests(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two;Track $one
+1..20|ForEach-Object {Advance-Stop}
+if($actions.Count -ne 0 -or $sessions.Count -ne 2){throw 'Normal monitoring contacted thread history'}
+if($sessions[$one].ready -or $sessions[$one].subscribed){throw 'Unobserved activity was presented as observed'}
+@{metadata_only=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["metadata_only"])
+
+    def test_all_stop_requests_precede_snapshots_without_waiting_for_activity(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two;Track $child
+$stop=New-Stop 'fixture' ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+Advance-Stop
+if($actions.Count -ne 6){throw 'Missing session or child control'}
+foreach($action in $actions.GetRange(0,3)){if($action.kind -ne 'interrupt'){throw 'History read delayed another stop request'}}
+foreach($action in $actions.GetRange(3,3)){if($action.kind -ne 'follow' -or -not $action.following){throw 'Missing bounded verification'}}
+if($stop.targeted.Count -ne 0){throw 'Idle sessions were counted as interrupted work'}
+@{requests_first=$true;no_fake_targets=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["requests_first"])
+
+    def test_response_target_is_bound_to_incident_and_requires_fresh_completion(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' 1
+$response=@{resultType='success';result=@{ok=$true;interruptedTurnId='actual'}}
+Interrupt-Response @{thread=$one;incident='stale'} $response
+if($stop.targeted.Count -ne 0){throw 'Stale incident response changed new state'}
+Interrupt-Response @{thread=$one;incident='fixture'} $response
+if($stop.targeted.Count -ne 1){throw 'Actual interrupted turn was omitted'}
+$target=$stop.targeted[$one+':actual']
+if(Confirmed-Target $target $stop.began){throw 'Response alone was treated as completion'}
+$sessions[$one].ready=$true;$sessions[$one].observedAt=$clock.ElapsedMilliseconds
+$sessions[$one].statuses=@{actual='interrupted'};$sessions[$one].goal='paused'
+if(-not (Confirmed-Target $target $stop.began)){throw 'Fresh native completion was not accepted'}
+Release-Subscriptions;$stop=$null
+Interrupt-Response @{thread=$one;incident='fixture'} $response
+if($null -ne $stop){throw 'A delayed response recreated a cleared incident'}
+@{incident_bound=$true;completion_required=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["completion_required"])
+
+    def test_verification_unsubscribes_at_deadline_and_does_not_loop_history(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two;$stop=New-Stop 'fixture' 1;Advance-Stop
+$initial=@($actions|Where-Object {$_.kind -eq 'follow' -and $_.following}).Count
+1..10|ForEach-Object {$sessions[$one].dirty=$true;Advance-Stop}
+if(@($actions|Where-Object {$_.kind -eq 'follow' -and $_.following}).Count -ne $initial){throw 'Unbounded history refresh'}
+$stop.verifyUntil=$clock.ElapsedMilliseconds-1;Advance-Stop
+if($sessions[$one].subscribed -or $sessions[$two].subscribed){throw 'Deadline left subscriptions open'}
+if(@($actions|Where-Object {$_.kind -eq 'follow' -and -not $_.following}).Count -ne 2){throw 'Missing unsubscribe'}
+$count=$actions.Count
+1..10|ForEach-Object {Advance-Stop}
+if($actions.Count -ne $count){throw 'Expired verification restarted by itself'}
+$snapshot=@{hostId='local';conversationId=$one;change=@{type='snapshot';conversationState=@{id='wrong'}}}
+Snapshot $snapshot
+if($sessions[$one].ready){throw 'Late unrequested snapshot changed verification'}
+@{deadline_closed=$true;no_history_loop=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["deadline_closed"])
+
+    def test_new_run_while_latched_gets_bounded_check_without_rewriting_deadline(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' 100;$stop.verifyUntil=$clock.ElapsedMilliseconds-1
+$oldBegan=$stop.began
+$response=@{resultType='success';result=@{ok=$true;interruptedTurnId='new-run'}}
+Interrupt-Response @{thread=$one;incident='fixture'} $response
+if($stop.verifyUntil -le $clock.ElapsedMilliseconds -or $stop.verifyUntil -gt $clock.ElapsedMilliseconds+5000){throw 'New verification not bounded'}
+if($stop.began -ne $oldBegan -or $stop.detected_ms -ne 100){throw 'First interruption deadline rewritten'}
+$until=$stop.verifyUntil
+Interrupt-Response @{thread=$one;incident='fixture'} $response
+if($stop.verifyUntil -ne $until){throw 'Duplicate response extended verification'}
+Advance-Stop;Release-Subscriptions;$stop=$null;$count=$actions.Count;Advance-Stop
+if($sessions[$one].subscribed -or $actions.Count -ne $count){throw 'Acknowledgement left control active'}
+@{new_run_checked=$true;original_deadline_kept=$true;clear_releases=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["original_deadline_kept"])
+
+    def test_late_discovered_session_cannot_hide_behind_first_fast_request(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+Advance-Stop
+if($stop.request_ms -gt 1000){throw 'Fixture first request unexpectedly late'}
+# Advance only the incident age, without sleeping or contacting the app.
+$stop.age_at_begin=2500
+Track $two;Advance-Stop
+if($stop.request_ms -lt 2500){throw 'Later session request omitted from timing'}
+$stop.verifyUntil=$clock.ElapsedMilliseconds-1;Release-Subscriptions
+@{all_requests_timed=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["all_requests_timed"])
 
     def test_direct_desktop_script_is_disabled_before_loading_native_pipe_code(self):
         path=str(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').replace("'","''")

@@ -589,6 +589,8 @@ fn record_control(
     with_state(root, |s| {
         s.control_connected = control_connected;
         s.control_stopping = packet["control_stopping"] == true;
+        s.activity_observed_at =
+            (control_connected && packet["activity_observed"] == true).then(now);
         s.app_alive = active;
         if !control_connected {
             if let Some(i) = s.incident.as_mut() {

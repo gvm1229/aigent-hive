@@ -36,8 +36,9 @@ impl Desktop {
     }
 }
 
-fn catalog_worker() -> Receiver<Value> {
+fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
     let (send, receive) = mpsc::sync_channel(1);
+    let (refresh, requests) = mpsc::sync_channel(1);
     thread::spawn(move || {
         let mut reader = crate::usage::MonitorSensor::new();
         loop {
@@ -52,14 +53,23 @@ fn catalog_worker() -> Receiver<Value> {
             ) {
                 return;
             }
-            thread::sleep(Duration::from_secs(1).saturating_sub(started.elapsed()));
+            if let Err(mpsc::RecvTimeoutError::Disconnected) =
+                requests.recv_timeout(Duration::from_secs(15).saturating_sub(started.elapsed()))
+            {
+                return;
+            }
         }
     });
-    receive
+    (receive, refresh)
+}
+
+fn write_command(writer: &mut impl Write, value: &Value) -> std::io::Result<()> {
+    serde_json::to_writer(&mut *writer, value).map_err(std::io::Error::other)?;
+    writer.write_all(b"\n")
 }
 
 fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
-    let catalogs = catalog_worker();
+    let (catalogs, refresh) = catalog_worker();
     let mut catalog = json!({"operation":"discover","valid":false,"ids":[]});
     let mut catalog_at = Instant::now();
     let mut pending = json!({"operation":"clear"});
@@ -113,10 +123,12 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
                 pending = command;
             }
             if pending != sent {
+                if pending["operation"] == "stop" {
+                    // Interrupt cached owners now; refresh metadata without delaying cancellation.
+                    let _ = refresh.try_send(());
+                }
                 // Only one small bounded command is outstanding per incident transition.
-                let mut bytes = serde_json::to_vec(&pending).unwrap_or_default();
-                bytes.push(b'\n');
-                if stdin.write_all(&bytes).is_err() {
+                if write_command(&mut stdin, &pending).is_err() {
                     break;
                 }
                 sent = pending.clone();
@@ -127,13 +139,11 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
                 catalog_at = Instant::now();
                 refreshed = true;
             }
-            if catalog_at.elapsed() >= Duration::from_secs(8) {
+            if catalog_at.elapsed() >= Duration::from_secs(20) {
                 catalog = json!({"operation":"discover","valid":false,"ids":[]});
             }
             if refreshed || catalog != sent_catalog {
-                let mut bytes = serde_json::to_vec(&catalog).unwrap_or_default();
-                bytes.push(b'\n');
-                if stdin.write_all(&bytes).is_err() {
+                if write_command(&mut stdin, &catalog).is_err() {
                     break;
                 }
                 sent_catalog = catalog.clone();

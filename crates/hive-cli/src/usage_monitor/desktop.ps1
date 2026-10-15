@@ -42,8 +42,12 @@ public sealed class HiveDesktopPipe : IDisposable {
     public void Send(string value) {
         byte[] bytes = Encoding.UTF8.GetBytes(value);
         if (bytes.Length > 16384) throw new IOException("Oversized control request");
-        byte[] header = BitConverter.GetBytes(bytes.Length);
-        pipe.Write(header, 0, 4); pipe.Write(bytes, 0, bytes.Length); pipe.Flush();
+        byte[] frame = new byte[bytes.Length + 4];
+        Buffer.BlockCopy(BitConverter.GetBytes(bytes.Length), 0, frame, 0, 4);
+        Buffer.BlockCopy(bytes, 0, frame, 4, bytes.Length);
+        var write = pipe.WriteAsync(frame, 0, frame.Length);
+        if (!write.Wait(500)) { Alive = false; pipe.Dispose(); throw new IOException("Desktop write timeout"); }
+        write.GetAwaiter().GetResult();
     }
     public void Dispose() { Alive = false; pipe.Dispose(); frames.Dispose(); }
 }
@@ -94,25 +98,78 @@ try {
         $id = [Guid]::NewGuid().ToString()
         $value = @{type='request';requestId=$id;sourceClientId=$client;method=$method;params=$params;version=$version;timeoutMs=1800}
         if ($target) { $value.targetClientId=$target }
-        $pending[$id]=@{method=$method;thread=$thread;at=$clock.ElapsedMilliseconds}
+        $pending[$id]=@{method=$method;thread=$thread;at=$clock.ElapsedMilliseconds;incident=if($null -ne $stop){$stop.digest}else{''}}
         Send $value
     }
-    function Follow([string]$id) {
-        Send @{type='broadcast';sourceClientId=$client;method='thread-stream-following-changed';version=1;params=@{hostId='local';conversationId=$id;following=$true}}
+    function Follow([string]$id, [bool]$following=$true) {
+        Send @{type='broadcast';sourceClientId=$client;method='thread-stream-following-changed';version=1;params=@{hostId='local';conversationId=$id;following=$following}}
+        $sessions[$id].subscribed=$following
     }
     function Track([string]$id) {
         if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$') {throw 'Invalid desktop thread identity'}
         if (-not $sessions.ContainsKey($id)) {
             if ($sessions.Count -ge 4096) {throw 'Too many desktop sessions'}
-            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';snapshotAt=-2000L;observedAt=-1L}
-            Follow $id
+            $sessions[$id]=@{id=$id;ready=$false;dirty=$false;subscribed=$false;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;incident='';runtime='unknown';goal='';snapshotAt=-2000L;observedAt=-1L}
+        }
+    }
+    function New-Stop([string]$digest,[long]$detected) {
+        $began=$clock.ElapsedMilliseconds
+        $age=[Math]::Max([long]0,[long]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$detected))
+        return @{began=$began;verifyUntil=$began+5000;digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
+    }
+    function Stop-Age {return $stop.age_at_begin+$clock.ElapsedMilliseconds-$stop.began}
+    function Release-Subscriptions {
+        foreach($session in @($sessions.Values)) {
+            if($session.subscribed){Follow $session.id $false}
+        }
+    }
+    function Register-Target([string]$id,[string]$turn,[long]$requestedAt=-1) {
+        if($null -eq $stop -or $turn -notmatch '^[A-Za-z0-9_-]{1,128}$'){return}
+        $key=$id+':'+$turn
+        if($stop.targeted.ContainsKey($key)){return}
+        $stop.targeted[$key]=@{thread=$id;turn=$turn}
+        if($requestedAt -ge 0){$stop.request_ms=[Math]::Max([long]$stop.request_ms,$stop.age_at_begin+$requestedAt-$stop.began)}
+        $stop.settled=$false
+        if($clock.ElapsedMilliseconds -ge $stop.verifyUntil) {
+            # A new run while latched gets one bounded check, never a rewritten first deadline.
+            $stop.verifyUntil=$clock.ElapsedMilliseconds+5000
+            foreach($session in $sessions.Values){$session.ready=$false;$session.dirty=$true}
+        }
+    }
+    function Interrupt-Response($request,$message) {
+        $session=$sessions[$request.thread]
+        if($null -eq $session -or $null -eq $stop -or $request.incident -ne $stop.digest){return}
+        $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
+        if($session.lastResponse -eq 'accepted') {Register-Target $request.thread ([string]$message.result.interruptedTurnId) $request.at}
+        $session.dirty=$true
+    }
+    function Advance-Stop {
+        if($null -eq $stop){return}
+        foreach($session in @($sessions.Values)) {
+            if($clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
+                # Cancellation precedes history reads, including sessions with no prior snapshot.
+                Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
+                $session.lastStop=$clock.ElapsedMilliseconds
+                if($session.incident -ne $stop.digest){
+                    $stop.request_ms=[Math]::Max([long]$stop.request_ms,(Stop-Age))
+                    $session.ready=$false;$session.incident=$stop.digest
+                }
+            }
+        }
+        foreach($session in @($sessions.Values)) {
+            if($clock.ElapsedMilliseconds -ge $stop.verifyUntil -or $stop.settled) {
+                if($session.subscribed){Follow $session.id $false}
+            } elseif(-not $session.subscribed -or ($session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000)) {
+                Follow $session.id
+                $session.snapshotAt=$clock.ElapsedMilliseconds
+            }
         }
     }
     function Count-Unqualified {
         $count=0
         foreach ($id in $catalogSeen.Keys) {
             if (-not $sessions.ContainsKey($id) -and
-                (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -gt 8000)) {$count++}
+                (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -ge 20000)) {$count++}
         }
         return $count
     }
@@ -159,6 +216,7 @@ try {
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
         $session=$sessions[[string]$snapshot.conversationId]
+        if($null -eq $stop -or -not $session.subscribed -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil){return}
         if ($snapshot.change.type -ne 'snapshot') {
             # Content deltas must not cause repeated full-history snapshots during reasoning.
             foreach ($patch in @($snapshot.change.patches)) {
@@ -177,6 +235,7 @@ try {
         $turns=@(Visible-Turns $state)
         $session.active=@()
         if($turns.Count -gt 0 -and $turns[-1].status -eq 'inProgress') {$session.active=@([string]$turns[-1].turnId)}
+        foreach($turn in $session.active){Register-Target $session.id $turn $session.lastStop}
         $session.statuses=@{}
         foreach($turn in $turns){$session.statuses[[string]$turn.turnId]=[string]$turn.status}
         $session.observedAt=$clock.ElapsedMilliseconds
@@ -188,6 +247,7 @@ try {
     Request 'initialize' @{clientType='aigent-hive-usage-monitor'} 0 '' ''
     $inputReader=[HiveDesktopInput]::new()
     while ($pipe.Alive -and $inputReader.Alive -and -not $pin.HasExited) {
+        $drainUntil=$clock.ElapsedMilliseconds+20
         for ($count=0; $count -lt 32; $count++) {
             $frame=$pipe.Poll();if ($null -eq $frame) { break }
             $message=$frame | ConvertFrom-Json
@@ -205,10 +265,7 @@ try {
                         elseif ($message.resultType -eq 'error' -and $message.error -eq 'no-client-found') {$catalogChecked[$request.thread]=$clock.ElapsedMilliseconds}
                         else {$catalogReady=$false;$catalogFault=$true;$catalogRoundFault=$true}
                     } elseif ($request.method -eq 'thread-follower-interrupt-turn') {
-                        $session=$sessions[$request.thread]
-                        $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
-                        $session.interruptedTurn=[string]$message.result.interruptedTurnId
-                        $session.dirty=$true
+                        Interrupt-Response $request $message
                     }
                 }
                 'broadcast' {
@@ -216,10 +273,13 @@ try {
                     if ($message.method -eq 'thread-stream-following-changed' -and $message.version -eq 1 -and
                         $message.params.hostId -eq 'local' -and $message.params.following -eq $true) {
                         $id=[string]$message.params.conversationId
-                        Track $id
+                        if($id -match '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and -not $sessions.ContainsKey($id) -and -not $catalogSeen.ContainsKey($id)) {
+                            $catalogSeen[$id]=$true;$catalogQueue.Enqueue($id)
+                        }
                     } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
                 }
             }
+            if($clock.ElapsedMilliseconds -ge $drainUntil){break}
         }
         $line=$inputReader.Poll()
         if ($null -ne $line) {
@@ -228,7 +288,8 @@ try {
                 if ($null -eq $stop -or $stop.digest -ne $command.incident) {
                     $detected=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                     if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
-                    $stop=@{began=$clock.ElapsedMilliseconds;digest=[string]$command.incident;detected_ms=$detected;settled=$false;targeted=@{};request_ms=$null}
+                    Release-Subscriptions
+                    $stop=New-Stop ([string]$command.incident) $detected
                 }
             } elseif ($command.operation -eq 'discover') {
                 $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
@@ -241,11 +302,13 @@ try {
                         if (-not $sessions.ContainsKey($id)) {$catalogQueue.Enqueue($id)}
                     }
                 }
-            } elseif ($command.operation -eq 'clear') { $stop=$null }
+            } elseif ($command.operation -eq 'clear') {Release-Subscriptions;$stop=$null}
             else { throw 'Invalid desktop control operation' }
         }
         foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { if($pending[$id].method -eq 'thread-owner-discovery'){$catalogReady=$false;$catalogFault=$true;$catalogRoundFault=$true};$pending.Remove($id) } }
-        if ($clock.ElapsedMilliseconds-$catalogAt -gt 8000) {$catalogReady=$false;$catalogFault=$true}
+        if ($clock.ElapsedMilliseconds-$catalogAt -ge 20000) {$catalogReady=$false;$catalogFault=$true}
+        # Do not spend the interruption deadline draining a large ownership catalog.
+        Advance-Stop
         $available=16-@($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count
         while ($client -ne 'initializing-client' -and $available -gt 0 -and $catalogQueue.Count -gt 0) {
             $id=$catalogQueue.Dequeue();Request 'thread-owner-discovery' @{hostId='local';conversationId=$id} 1 '' $id;$available--
@@ -254,25 +317,13 @@ try {
             $catalogInProgress=$false
             if (-not $catalogRoundFault) {$catalogFault=$false}
         }
-        foreach ($session in @($sessions.Values)) {
-            if (($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) -or $clock.ElapsedMilliseconds - $session.snapshotAt -gt 5000) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
-            if ($null -ne $stop -and $session.ready -and ($session.active.Count -gt 0 -or $session.goal -eq 'active') -and
-                $clock.ElapsedMilliseconds - $session.lastStop -ge 1000) {
-                foreach ($turn in $session.active) {
-                    $key=$session.id + ':' + $turn
-                    if (-not $stop.targeted.ContainsKey($key) -and $stop.settled) { $stop.detected_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();$stop.request_ms=$null;$stop.settled=$false }
-                    $stop.targeted[$key]=@{thread=$session.id;turn=$turn}
-                }
-                Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
-                $session.lastStop=$clock.ElapsedMilliseconds
-                if ($null -eq $stop.request_ms) { $stop.request_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms }
-            }
-        }
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
             $activeCount=0;$unknown=0
             if(-not $catalogReady -or $catalogFault){$unknown++}
             $unknown += Count-Unqualified
-            foreach ($session in $sessions.Values) { $activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++} }
+            foreach ($session in $sessions.Values) {
+                if($null -ne $stop){$activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++}}
+            }
             $receipt=$null
             if ($null -ne $stop) {
                 $confirmed=0
@@ -283,10 +334,11 @@ try {
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
-                $receipt=@{unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms;request_ms=$stop.request_ms}
+                if($stop.settled){Release-Subscriptions}
+                $receipt=@{unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
             }
             $stopping=($null -ne $stop -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
-            $packet=@{control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
+            $packet=@{activity_observed=($null -ne $stop -and $unknown -eq 0);control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
             [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
             $lastPublish=$clock.ElapsedMilliseconds
         }

@@ -60,6 +60,8 @@ pub(super) struct MonitorState {
     #[serde(default)]
     pub active_turns: u64,
     #[serde(default)]
+    pub activity_observed_at: Option<u64>,
+    #[serde(default)]
     pub known_sessions: u64,
     #[serde(default)]
     pub unknown_sessions: u64,
@@ -318,6 +320,7 @@ impl MonitorState {
         fresh.control_stopping = self.control_stopping;
         fresh.app_alive = self.app_alive;
         fresh.active_turns = self.active_turns;
+        fresh.activity_observed_at = self.activity_observed_at;
         fresh.known_sessions = self.known_sessions;
         fresh.unknown_sessions = self.unknown_sessions;
         *self = fresh;
@@ -484,7 +487,7 @@ mod tests {
         let mut c = Cadence::new();
         c.begin(D::ZERO);
         assert!(!c.blind(D::from_millis(59_999)));
-        assert!(c.blind(D::from_secs(60)));
+        assert!(c.blind(D::from_mins(1)));
     }
     #[test]
     fn failed_retries_do_not_extend_blind_deadline_but_fresh_success_does() {
