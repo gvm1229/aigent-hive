@@ -55,7 +55,11 @@ canonical_path() {
   python3 - "$1" <<'PY'
 import os
 import sys
-print(os.path.realpath(sys.argv[1]))
+resolved = os.path.realpath(sys.argv[1])
+# MSYS command lookup can omit .exe although Python uses native Windows paths.
+if os.name == "nt" and not os.path.isfile(resolved) and os.path.isfile(resolved + ".exe"):
+    resolved += ".exe"
+print(resolved)
 PY
 }
 
