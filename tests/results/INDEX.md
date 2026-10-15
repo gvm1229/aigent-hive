@@ -1367,5 +1367,19 @@
 | [passed](runs/20261015T180009-e9d4deb72f41.md) | 실제 앱 접근 없는 직접 제어 스크립트 차단 회귀 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T180118-ab4099d4e7e8.md) | 앱 제어 차단의 정적 검사와 실행 파일 고정 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T180241-1f0f96e2f152.md) | 비활성 미리보기와 앱 접근 없는 실행 차단 최종 검증 | 6109e8d1d63a98eadc74b43640e91da16fb7d881 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T220914-2549b7460e28.md) | 첫 차수 지침 범위 분리 회귀 | 06ee58f66527e648484eedcfc85fe7f958cd7ab3 | Windows-11-10.0.26300-SP0 |
+| [tests-passed-receipt-write-failed](runs/20261015T220944-f4a1fc1b2df5.md) | 첫 차수 지침 투영 계약 | 06ee58f66527e648484eedcfc85fe7f958cd7ab3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221237-f6cbcd5ff3b9.md) | 60초 관측 공백과 정상 조회 복구 회귀 | b0eb4810e2d45532e424ce294c248038daf34e81 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221310-83aee0ee9643.md) | 60초 보호 이유와 기존 Windows 모의 회귀 | b0eb4810e2d45532e424ce294c248038daf34e81 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221559-00f180371daa.md) | 사건별 한정 구독 Windows 모의 회귀 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221655-baf9e7d47ede.md) | 평상시 구독 없음과 사건별 중단 순서 회귀 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221800-e779cdaf2525.md) | 한정 제어의 전체 요청 시한과 현재 상태 회귀 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T221831-48b671e46c62.md) | 사건별 제어와 늦은 대상 요청 Windows 모의 검증 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T221852-d1b6e011926b.md) | 사건별 세션 제어 정적 컴파일 검사 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T221956-70d79f2939d0.md) | PowerShell 큰 사건 시각과 25개 한정 제어 회귀 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T222036-5ee97f6040ad.md) | 한정 제어 최종 Rust 검사 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T222105-a9e877cb3692.md) | 26개 Windows 모의 제어와 막힌 파이프 쓰기 제한 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
+
+첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
