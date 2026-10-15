@@ -82,6 +82,9 @@ try {
     $catalogFault = $false
     $catalogQueue = [Collections.Generic.Queue[string]]::new()
     $catalogSeen = @{}
+    $catalogChecked = @{}
+    $catalogInProgress = $false
+    $catalogRoundFault = $false
     $catalogAt = -10000L
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $lastPublish = -1000L
@@ -103,6 +106,14 @@ try {
             $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';snapshotAt=-2000L}
             Follow $id
         }
+    }
+    function Count-Unqualified {
+        $count=0
+        foreach ($id in $catalogSeen.Keys) {
+            if (-not $sessions.ContainsKey($id) -and
+                (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -gt 8000)) {$count++}
+        }
+        return $count
     }
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
@@ -149,8 +160,9 @@ try {
                         if ($message.resultType -ne 'success' -or -not $message.result.clientId) { throw 'Desktop registration failed' }
                         $client=[string]$message.result.clientId
                     } elseif ($request.method -eq 'thread-owner-discovery') {
-                        if ($message.resultType -eq 'success' -and $message.handledByClientId) {Track $request.thread}
-                        elseif ($message.resultType -ne 'error' -or $message.error -ne 'no-client-found') {$catalogReady=$false;$catalogFault=$true}
+                        if ($message.resultType -eq 'success' -and $message.handledByClientId) {Track $request.thread;$catalogChecked[$request.thread]=$clock.ElapsedMilliseconds}
+                        elseif ($message.resultType -eq 'error' -and $message.error -eq 'no-client-found') {$catalogChecked[$request.thread]=$clock.ElapsedMilliseconds}
+                        else {$catalogReady=$false;$catalogFault=$true;$catalogRoundFault=$true}
                     } elseif ($request.method -eq 'thread-follower-interrupt-turn') {
                         $session=$sessions[$request.thread]
                         $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
@@ -179,9 +191,9 @@ try {
                 }
             } elseif ($command.operation -eq 'discover') {
                 $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
-                if ($catalogReady -and $catalogQueue.Count -eq 0 -and @($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count -eq 0) {
+                if ($catalogReady -and -not $catalogInProgress) {
                     if (@($command.ids).Count -gt 4096) {throw 'Catalog exceeds session limit'}
-                    $catalogSeen=@{};$catalogFault=$false
+                    $catalogSeen=@{};$catalogInProgress=$true;$catalogRoundFault=$false
                     foreach ($id in @($command.ids)) {
                         if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or $catalogSeen.ContainsKey($id)) {throw 'Invalid catalog identity'}
                         $catalogSeen[$id]=$true
@@ -191,11 +203,15 @@ try {
             } elseif ($command.operation -eq 'clear') { $stop=$null }
             else { throw 'Invalid desktop control operation' }
         }
-        foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { if($pending[$id].method -eq 'thread-owner-discovery'){$catalogReady=$false;$catalogFault=$true};$pending.Remove($id) } }
+        foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { if($pending[$id].method -eq 'thread-owner-discovery'){$catalogReady=$false;$catalogFault=$true;$catalogRoundFault=$true};$pending.Remove($id) } }
         if ($clock.ElapsedMilliseconds-$catalogAt -gt 8000) {$catalogReady=$false;$catalogFault=$true}
         $available=16-@($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count
         while ($client -ne 'initializing-client' -and $available -gt 0 -and $catalogQueue.Count -gt 0) {
             $id=$catalogQueue.Dequeue();Request 'thread-owner-discovery' @{hostId='local';conversationId=$id} 1 '' $id;$available--
+        }
+        if ($catalogInProgress -and $catalogQueue.Count -eq 0 -and @($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count -eq 0) {
+            $catalogInProgress=$false
+            if (-not $catalogRoundFault) {$catalogFault=$false}
         }
         foreach ($session in @($sessions.Values)) {
             if (($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) -or $clock.ElapsedMilliseconds - $session.snapshotAt -gt 5000) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
@@ -214,7 +230,7 @@ try {
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
             $activeCount=0;$unknown=0
             if(-not $catalogReady -or $catalogFault){$unknown++}
-            $unknown += $catalogQueue.Count + @($pending.Values | Where-Object method -eq 'thread-owner-discovery').Count
+            $unknown += Count-Unqualified
             foreach ($session in $sessions.Values) { $activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++} }
             $receipt=$null
             if ($null -ne $stop) {
@@ -226,7 +242,7 @@ try {
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
-                $receipt=@{app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms;request_ms=$stop.request_ms}
+                $receipt=@{unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$stop.detected_ms;request_ms=$stop.request_ms}
             }
             $stopping=($null -ne $stop -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
             $packet=@{control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}

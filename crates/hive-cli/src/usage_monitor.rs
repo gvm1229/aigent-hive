@@ -790,7 +790,8 @@ mod tests {
     #[ignore = "read-only qualification against the currently running Windows desktop"]
     fn live_desktop_connection_observes_active_sessions_without_stopping_them() {
         let desktop = desktop::Desktop::start();
-        let deadline = Instant::now() + Duration::from_secs(8);
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let mut consecutive = 0;
         loop {
             let packet = desktop
                 .events
@@ -806,7 +807,12 @@ mod tests {
                     packet["known_sessions"], packet["active_turns"], packet["app_alive"]
                 );
                 assert_eq!(packet["app_alive"], true);
-                break;
+                consecutive += 1;
+                if consecutive >= 12 {
+                    break;
+                }
+            } else {
+                consecutive = 0;
             }
         }
     }

@@ -42,6 +42,27 @@ function Read-StatusState([string]$path) {
     }
 }
 
+function Format-ProtectionStatus($state,[string]$incident,[bool]$isTest,[bool]$enabled) {
+    $scope=if($isTest){'격리 시험 — 실제 할당량 초기화가 아닌 시험 신호'}else{'사용량 보호'}
+    $monitor=if($enabled){'감시 실행 중'}else{'감시 꺼짐 — 이전 중단 기록'}
+    $header=$scope+"`r`n"+$monitor+"`r`n`r`n"
+    if($null -eq $state.incident){return $header+'중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.'}
+    if($state.incident.digest -ne $incident){return $header+'새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.'}
+    $reason=switch($state.incident.reason){'usage-reset'{'사용량 초기화 감지'}'sensor-unresponsive'{'30초 동안 정상 사용량 조회 없음'}default{'감시 상태 오류'}}
+    $app=if($state.app_alive){'Codex 앱 유지'}else{'앱 생존 확인 필요'}
+    $status=$(if($state.incident.stop_confirmed){'작업 중단 확인'}elseif($state.incident.stop_error){'작업 중단 확인 실패'}else{'작업 중단 확인 대기'})+' — '+$app
+    $detail=switch($state.incident.stop_error){
+        'session-scope-unverified'{'대상 작업의 중단과 별도로, 전체 대화 확인을 5초 안에 마치지 못했습니다.'}
+        'session-stop-request-late'{'2초 안에 중단 요청을 보내지 못했습니다.'}
+        'session-stop-unconfirmed'{'5초 안에 전체 중단을 확인하지 못했습니다.'}
+        'desktop-control-unavailable'{'앱의 제어 연결을 확인하지 못했습니다.'}
+        default{''}
+    }
+    $connection=if($state.control_connected){'연결됨'}else{'연결 확인 필요'}
+    $when=[DateTimeOffset]::FromUnixTimeSeconds([long]$state.incident.detected_at).ToLocalTime().ToString('yyyy-MM-dd HH:mm:ss')
+    return $header+$reason+"`r`n사건 시각: "+$when+"`r`n`r`n"+$status+"`r`n중단 대상: "+$state.incident.targeted_turns+' / 확인: '+$state.incident.confirmed_turns+"`r`n현재 실행 중: "+$state.active_turns+' / 제어 연결: '+$connection+"`r`n대상 확인 대기: "+$state.unknown_sessions+"`r`n"+$detail+"`r`n`r`n명시 확인 전 보호 잠금 유지. 창을 닫아도 작업 재개 없음."
+}
+
 try {
     switch ($request.operation) {
         'inspect' {
@@ -76,10 +97,12 @@ try {
             Add-Type -AssemblyName System.Drawing
             $form=[Windows.Forms.Form]::new()
             $form.Text='Aigent Hive — 사용량 보호 상태'
-            $form.Width=680;$form.Height=360;$form.StartPosition='CenterScreen'
+            $form.Width=760;$form.Height=540;$form.StartPosition='CenterScreen'
             $label=[Windows.Forms.Label]::new();$label.Dock='Fill';$label.Padding=[Windows.Forms.Padding]::new(20)
             $label.Font=[Drawing.Font]::new('Malgun Gothic',11)
-            $baseMessage=[string]$request.message
+            $isTest=$false
+            try {$manifest=Read-StatusState (Join-Path ([string]$request.user_root) '.hive/install/codex.json');$isTest=($manifest.acceptance_fixture -eq $true)}catch{}
+            $baseMessage=$(if($isTest){'격리 시험 — 실제 할당량 초기화가 아닌 시험 신호'+"`r`n"}else{''})+[string]$request.message
             $label.Text=$baseMessage
             $form.Controls.Add($label)
             $button=[Windows.Forms.Button]::new();$button.Text='창 닫기 (작업 재개 없음)';$button.Dock='Bottom';$button.Height=38
@@ -89,13 +112,8 @@ try {
             $timer.Add_Tick({
                 try {
                     $state=Read-StatusState $statePath
-                    if ($null -eq $state.incident) {$label.Text="중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.";return}
-                    if ($state.incident.digest -ne $request.incident) {$label.Text='새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.';return}
-                    $reason=switch ($state.incident.reason) {'usage-reset' {'사용량 초기화 감지'} 'sensor-unresponsive' {'30초 동안 정상 사용량 조회 없음'} default {'감시 상태 오류'}}
-                    $appText=if ($state.app_alive) {'Codex 앱 유지'} else {'앱 생존 확인 필요'}
-                    $status=$(if ($state.incident.stop_confirmed) {'작업 중단 확인'} elseif ($state.incident.stop_error) {'작업 중단 확인 실패'} else {'작업 중단 확인 대기'})+' — '+$appText
-                    $connection=if ($state.control_connected) {'연결됨'} else {'연결 확인 필요'}
-                    $label.Text=$reason+"`r`n`r`n"+$status+"`r`n중단 대상: "+$state.incident.targeted_turns+" / 확인: "+$state.incident.confirmed_turns+"`r`n현재 실행 중: "+$state.active_turns+" / 제어 연결: "+$connection+"`r`n`r`n명시 확인 전 보호 잠금 유지. 창을 닫아도 작업 재개 없음."
+                    $config=Read-StatusState (Join-Path ([string]$request.user_root) '.hive/runtime/usage-monitor/config.json')
+                    $label.Text=Format-ProtectionStatus $state ([string]$request.incident) $isTest ([bool]$config.enabled)
                 } catch {$label.Text=$baseMessage+"`r`n상태를 읽을 수 없습니다. 중단 성공 여부를 확인해 주세요."}
             })
             $form.Add_Shown({[Console]::Out.WriteLine('{"notified":true}');[Console]::Out.Flush();$timer.Start()})

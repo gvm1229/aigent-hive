@@ -223,7 +223,7 @@ if(-not $rejected){throw 'Foreign task accepted'}
     def test_background_catalog_requires_owner_confirmation(self):
         source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding="utf-8")
         body=source.split("} elseif ($request.method -eq 'thread-owner-discovery') {",1)[1].split("} elseif",1)[0]
-        setup="$tracked=0;$catalogReady=$true;$request=@{thread='fixture'};function Track($id){$script:tracked++}\n"
+        setup="$clock=[Diagnostics.Stopwatch]::StartNew();$catalogChecked=@{};$tracked=0;$catalogReady=$true;$request=@{thread='fixture'};function Track($id){$script:tracked++}\n"
         for response, expected, healthy in [
             ("@{resultType='error';error='no-client-found'}",0,True),
             ("@{resultType='success';handledByClientId='owner'}",1,True),
@@ -240,6 +240,38 @@ if(-not $rejected){throw 'Foreign task accepted'}
         for identities in ["@('bad')", "@('01234567-0123-0123-0123-0123456789ab','01234567-0123-0123-0123-0123456789ab')"]:
             code=setup+"$command=@{valid=$true;ids="+identities+"};$rejected=$false;try {\n"+body+"\n}catch{$rejected=$true};@{rejected=$rejected}|ConvertTo-Json -Compress"
             self.assertTrue(self.powershell(code)["rejected"])
+
+    def test_confirmed_absent_owner_is_not_a_new_unknown_during_refresh(self):
+        source=self.desktop_functions()+r"""
+$clock=[Diagnostics.Stopwatch]::StartNew()
+$catalogSeen=@{old=$true;new=$true;owned=$true}
+$sessions=@{owned=@{ready=$true}}
+$catalogChecked=@{old=$clock.ElapsedMilliseconds}
+$catalogQueue=@('old','new');$pending=@{refresh=@{method='thread-owner-discovery';thread='old'}}
+if((Count-Unqualified) -ne 1){throw 'Previously qualified absence became unknown again'}
+$catalogChecked.old=$clock.ElapsedMilliseconds-8001
+if((Count-Unqualified) -ne 2){throw 'Expired qualification was accepted'}
+@{refresh_preserved=$true;expiration_enforced=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["expiration_enforced"])
+
+    def test_status_distinguishes_test_history_from_live_protection(self):
+        path=str(SCRIPT).replace("'","''")
+        source="$ErrorActionPreference='Stop';$tokens=$null;$errors=$null;"+(
+            "$tree=[Management.Automation.Language.Parser]::ParseFile('"+path+"',[ref]$tokens,[ref]$errors);if($errors){throw 'Status script parsing failed'};"
+            "$tree.FindAll({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst]},$false)|ForEach-Object{Invoke-Expression $_.Extent.Text};\n"
+        )+r"""
+$state=[pscustomobject]@{app_alive=$true;control_connected=$true;active_turns=0;unknown_sessions=2;incident=[pscustomobject]@{
+ digest='fixture';reason='usage-reset';detected_at=100;stop_confirmed=$false;stop_error='session-scope-unverified';targeted_turns=1;confirmed_turns=1
+}}
+$text=Format-ProtectionStatus $state 'fixture' $true $false
+foreach($expected in @('격리 시험','시험 신호','감시 꺼짐','이전 중단 기록','사건 시각','전체 대화 확인을 5초','대상 확인 대기: 2')){if(-not $text.Contains($expected)){throw 'Missing status distinction'}}
+$state.incident.stop_confirmed=$true;$state.incident.stop_error=$null;$state.unknown_sessions=0
+$text=Format-ProtectionStatus $state 'fixture' $false $true
+if(-not $text.Contains('작업 중단 확인 — Codex 앱 유지') -or -not $text.Contains('감시 실행 중') -or $text.Contains('격리 시험')){throw 'Live protection status mislabeled'}
+@{test_history_explicit=$true;live_confirmation_visible=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["test_history_explicit"])
 
 
 if __name__ == "__main__":

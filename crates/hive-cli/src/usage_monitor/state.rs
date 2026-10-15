@@ -133,7 +133,9 @@ impl Incident {
             && packet["verified"] == true
             && self.targeted_turns > 0
             && self.targeted_turns == self.confirmed_turns
-            && packet["app_alive"] == true;
+            && packet["app_alive"] == true
+            && packet["unknown_sessions"] == 0
+            && packet["active_turns"] == 0;
         self.stop_confirmed = verified
             && (elapsed <= 5000 && request <= 2000
                 || self
@@ -142,6 +144,10 @@ impl Incident {
                     .is_some_and(|saved| saved == scope));
         self.stop_error = if self.stop_confirmed {
             None
+        } else if elapsed > 5000 && packet["unknown_sessions"].as_u64().unwrap_or(1) > 0 {
+            Some("session-scope-unverified".into())
+        } else if request > 2000 && elapsed > 2000 {
+            Some("session-stop-request-late".into())
         } else if elapsed > 5000 {
             Some("session-stop-unconfirmed".into())
         } else {
@@ -354,7 +360,7 @@ mod tests {
         let mut state = MonitorState::new();
         state.halt("usage-reset", 100);
         let incident = state.incident.as_mut().unwrap();
-        let mut packet = serde_json::json!({"scope_digest":format!("sha256:{}","a".repeat(64)),"targeted":2,"confirmed":1,"verified":true,"elapsed_ms":100,"request_ms":10,"app_alive":true});
+        let mut packet = serde_json::json!({"scope_digest":format!("sha256:{}","a".repeat(64)),"targeted":2,"confirmed":1,"verified":true,"elapsed_ms":100,"request_ms":10,"app_alive":true,"unknown_sessions":0,"active_turns":0});
         incident.record_session_stop(&packet, 101);
         assert!(!incident.stop_confirmed);
         packet["confirmed"] = serde_json::json!(2);
@@ -366,6 +372,14 @@ mod tests {
         incident.record_session_stop(&packet, 106);
         assert!(!incident.stop_confirmed);
         assert!(incident.confirmed_stop.is_none());
+        packet["unknown_sessions"] = serde_json::json!(1);
+        incident.record_session_stop(&packet, 106);
+        assert_eq!(
+            incident.stop_error.as_deref(),
+            Some("session-scope-unverified")
+        );
+        assert!(!incident.stop_confirmed);
+        packet["unknown_sessions"] = serde_json::json!(0);
         packet["elapsed_ms"] = serde_json::json!(200);
         incident.record_session_stop(&packet, 101);
         assert!(incident.stop_confirmed);
