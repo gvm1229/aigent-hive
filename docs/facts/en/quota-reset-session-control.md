@@ -5,7 +5,7 @@ topic_slug: quota-reset-session-control
 language: en
 counterpart: ../ko/quota-reset-session-control.md
 title: "Session-Bound Reset-Only Control"
-summary: "Session-only interruption preserves the app, visible reasons, and exact acknowledgement boundaries."
+summary: "Windows control stays disabled until safe session-only interruption is qualified."
 tags: [reset, session, usage]
 aliases: []
 sources:

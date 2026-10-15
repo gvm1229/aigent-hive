@@ -5,7 +5,7 @@ topic_slug: quota-reset-session-control
 language: ko
 counterpart: ../en/quota-reset-session-control.md
 title: "현재 작업의 초기화 감지 전용 제어"
-summary: "앱 유지·세션 중단·원인 표시와 정확한 사건 확인의 경계"
+summary: "안전한 세션 중단의 실제 수용 전 Windows 제어 비활성"
 tags: [reset, session, usage]
 aliases: []
 sources:
