@@ -8,8 +8,8 @@ $utf8=New-Object Text.UTF8Encoding($false)
 $approval=[IO.File]::ReadAllText($Request) | ConvertFrom-Json
 $acceptance=[IO.File]::ReadAllText($AcceptanceResult) | ConvertFrom-Json
 if ($approval.product_version -ne '0.12.1' -or -not $approval.install_after_pass -or -not $approval.always_on) { throw 'Missing exact conditional installation authority' }
-if ($acceptance.phase -ne 'passed-local-app-termination' -or -not $acceptance.incident.confirmed_termination -or
-    $acceptance.incident.confirmed_termination.targeted_processes -lt 1 -or -not $acceptance.fixture_task_removed) { throw 'App-stop acceptance and fixture cleanup must pass before installation' }
+if ($acceptance.phase -ne 'passed-local-session-interruption' -or -not $acceptance.incident.confirmed_stop -or
+    $acceptance.incident.confirmed_stop.targeted_turns -lt 1 -or -not $acceptance.app_preserved -or -not $acceptance.stop_reason_visible -or -not $acceptance.fixture_task_removed) { throw 'App-stop acceptance and fixture cleanup must pass before installation' }
 $source=[IO.Path]::GetFullPath($approval.source_root).TrimEnd('\')
 $userRoot=[IO.Path]::GetFullPath($approval.user_root).TrimEnd('\')
 $binary=[IO.Path]::GetFullPath($approval.binary)
@@ -59,6 +59,13 @@ try {
     $previousDevBinary=$env:AIGENT_HIVE_DEV_BINARY
     try {
         $env:AIGENT_HIVE_DEV_BINARY=$binary
+        $activationState=Join-Path $userRoot '.hive\dev-install'
+        if(Test-Path -LiteralPath $activationState) {
+            $activeDigest=([IO.File]::ReadAllText((Join-Path $activationState 'developer-sha256'))).Trim()
+            if((Hash-File $native) -ne $activeDigest){throw 'Existing developer activation changed; no replacement'}
+            & $approval.git_bash --noprofile --norc (Join-Path $source 'scripts\invoke-dev-install.sh') rollback (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') $activationState $approval.python_directory
+            if($LASTEXITCODE -ne 0){throw 'Managed prior developer activation rollback failed'}
+        }
         & $approval.git_bash --noprofile --norc (Join-Path $source 'scripts\invoke-dev-install.sh') global (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') (Join-Path $userRoot '.hive\dev-install') $approval.python_directory
         if($LASTEXITCODE -ne 0){throw 'Managed developer binary activation failed'}
     } finally {
@@ -79,16 +86,16 @@ try {
     $result.canonical_preservation_verified=$true
     $result.phase='enabling-always-on';Record
     $preview=Run-Hive -arguments @('usage','monitor','preview','--user-root',$userRoot,'--output','json')
-    $enabled=Run-Hive -arguments @('usage','monitor','enable','--user-root',$userRoot,'--confirm',$preview.data.preview_digest,'--confirm-app-termination','--output','json')
+    $enabled=Run-Hive -arguments @('usage','monitor','enable','--user-root',$userRoot,'--confirm',$preview.data.preview_digest,'--confirm-session-interruption','--output','json')
     $result.monitor_task=$enabled.data.task_name
-    $deadline=[DateTime]::UtcNow.AddSeconds(20)
+    $deadline=[DateTime]::UtcNow.AddSeconds(75)
     do {
         Start-Sleep -Seconds 1
         $status=Run-Hive -arguments @('usage','monitor','status','--user-root',$userRoot,'--output','json')
         $heartbeat=[long]$status.data.state.heartbeat
-    } while(($heartbeat -eq 0) -and [DateTime]::UtcNow -lt $deadline)
-    if(-not $status.data.configuration.enabled -or $status.data.state.incident -or $heartbeat -eq 0 -or
-        ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds()-$heartbeat) -gt 5){throw 'Always-on controller did not become ready'}
+        if($status.data.state.incident){throw 'Always-on protection halted during readiness verification'}
+    } while((-not $status.data.monitoring_verified -or $status.data.state.observation_count -lt 4) -and [DateTime]::UtcNow -lt $deadline)
+    if(-not $status.data.configuration.enabled -or -not $status.data.monitoring_verified -or $status.data.state.observation_count -lt 4){throw 'Four real observations and desktop control did not become ready'}
     $task=Get-ScheduledTask -TaskName $result.monitor_task
     if($task.State -ne 'Running' -or @($task.Triggers).Count -lt 1){throw 'Always-on task is not running with a login trigger'}
     $probe=Run-Hive -arguments @('usage','probe-native','--host','codex','--output','json')
@@ -101,7 +108,7 @@ try {
     $result.completed_at=[DateTime]::UtcNow.ToString('o');Record
     try {
         $notice=New-Object -ComObject WScript.Shell
-        $null=$notice.Popup('앱 종료 검증과 0.12.1 로컬 설치, 상시 감시 등록이 끝났습니다. Codex를 다시 열어 주세요.',10,'Aigent Hive',64)
+        $null=$notice.Popup('앱 종료 검증과 0.12.1 로컬 설치, 상시 감시 등록이 끝났습니다. Codex 앱을 유지한 작업 중단을 확인했습니다.',10,'Aigent Hive',64)
     } catch { } # The persisted receipt remains authoritative if desktop notifications are unavailable.
 } catch {
     $result.error=$_.Exception.Message;$result.phase='failed';$result.completed_at=[DateTime]::UtcNow.ToString('o');Record
