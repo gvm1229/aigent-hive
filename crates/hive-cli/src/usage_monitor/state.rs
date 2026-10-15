@@ -61,7 +61,47 @@ pub(super) struct Incident {
     pub termination_elapsed_ms: Option<u64>,
     #[serde(default)]
     pub targeted_processes: Option<u64>,
+    #[serde(default)]
+    pub last_verified_scope: Option<String>,
+    #[serde(default)]
+    pub confirmed_termination: Option<TerminationReceipt>,
     pub notification: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct TerminationReceipt {
+    pub completed_at: u64,
+    pub scope_digest: String,
+    pub targeted_processes: u64,
+    pub elapsed_ms: u64,
+}
+
+impl Incident {
+    pub fn record_termination(
+        &mut self,
+        scope: String,
+        verified: bool,
+        targeted: Option<u64>,
+        elapsed: Option<u64>,
+        at: u64,
+    ) {
+        self.targeted_processes = targeted;
+        self.termination_elapsed_ms = elapsed;
+        self.termination_verified = verified
+            && targeted.is_some_and(|count| count > 0)
+            && elapsed.is_some_and(|ms| ms <= 5000);
+        if self.termination_verified {
+            self.last_verified_scope = Some(scope.clone());
+            self.confirmed_termination
+                .get_or_insert(TerminationReceipt {
+                    completed_at: at,
+                    scope_digest: scope,
+                    targeted_processes: targeted.unwrap_or_default(),
+                    elapsed_ms: elapsed.unwrap_or_default(),
+                });
+        }
+    }
 }
 
 impl MonitorState {
@@ -92,6 +132,8 @@ impl MonitorState {
             termination_verified: false,
             termination_elapsed_ms: None,
             targeted_processes: None,
+            last_verified_scope: None,
+            confirmed_termination: None,
             notification: "pending".to_owned(),
         });
     }

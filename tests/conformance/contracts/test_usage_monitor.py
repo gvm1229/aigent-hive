@@ -124,6 +124,28 @@ try {
 """
         self.assertTrue(self.powershell(source)["preserved"])
 
+    def test_child_exit_racing_kill_is_verified_by_its_final_handle_state(self):
+        fake = r"""
+class AlreadyExitedProcess {
+ [int]$Id=123
+ [bool]$HasExited=$false
+ [void]Kill() { $this.HasExited=$true;throw 'Exited between HasExited and Kill' }
+ [bool]WaitForExit([int]$timeout) { return $this.HasExited }
+ [void]Dispose() { }
+}
+function Pin-Processes($tree) { return ,@([AlreadyExitedProcess]::new()) }
+"""
+        script=self.adapter_functions().replace("try {\n    switch ($request.operation) {",fake+"\ntry {\n    switch ($request.operation) {")
+        result=self.powershell("$request=[pscustomobject]@{operation='halt';roots=@()}\n"+script)
+        self.assertTrue(result["verified"])
+        self.assertEqual(result["survivor_count"],0)
+        self.assertGreater(result["failure_count"],0)
+        # A failed cancellation with a genuinely live handle must still fail closed.
+        live_script=script.replace("$this.HasExited=$true;throw", "throw")
+        live=self.powershell("$request=[pscustomobject]@{operation='halt';roots=@()}\n"+live_script)
+        self.assertFalse(live["verified"])
+        self.assertEqual(live["survivor_count"],1)
+
     def test_discovered_current_app_identities_round_trip_to_exact_handle_time(self):
         source = "$request=[pscustomobject]@{operation='inspect'}\n$raw = & {\n" + self.adapter_functions() + r"""
 }

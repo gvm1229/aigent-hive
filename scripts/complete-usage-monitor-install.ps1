@@ -8,7 +8,8 @@ $utf8=New-Object Text.UTF8Encoding($false)
 $approval=[IO.File]::ReadAllText($Request) | ConvertFrom-Json
 $acceptance=[IO.File]::ReadAllText($AcceptanceResult) | ConvertFrom-Json
 if ($approval.product_version -ne '0.12.1' -or -not $approval.install_after_pass -or -not $approval.always_on) { throw 'Missing exact conditional installation authority' }
-if ($acceptance.phase -ne 'passed-local-app-termination' -or -not $acceptance.incident.termination_verified -or -not $acceptance.fixture_task_removed) { throw 'App-stop acceptance and fixture cleanup must pass before installation' }
+if ($acceptance.phase -ne 'passed-local-app-termination' -or -not $acceptance.incident.confirmed_termination -or
+    $acceptance.incident.confirmed_termination.targeted_processes -lt 1 -or -not $acceptance.fixture_task_removed) { throw 'App-stop acceptance and fixture cleanup must pass before installation' }
 $source=[IO.Path]::GetFullPath($approval.source_root).TrimEnd('\')
 $userRoot=[IO.Path]::GetFullPath($approval.user_root).TrimEnd('\')
 $binary=[IO.Path]::GetFullPath($approval.binary)

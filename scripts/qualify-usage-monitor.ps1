@@ -92,8 +92,9 @@ try {
     do {
         Start-Sleep -Milliseconds 100
         $state = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json
-    } while ((-not $state.incident.termination_verified) -and [DateTime]::UtcNow -lt $deadline)
-    if ($state.incident.reason -ne 'usage-reset' -or -not $state.incident.termination_verified) { throw 'Actual local termination not verified' }
+    } while ((-not $state.incident.confirmed_termination) -and [DateTime]::UtcNow -lt $deadline)
+    if ($state.incident.reason -ne 'usage-reset' -or -not $state.incident.confirmed_termination -or
+        $state.incident.confirmed_termination.targeted_processes -lt 1) { throw 'Actual local termination not verified' }
     $result.incident = $state.incident
     $result.phase='passed-local-app-termination'
     $result.completed_at=[DateTime]::UtcNow.ToString('o')

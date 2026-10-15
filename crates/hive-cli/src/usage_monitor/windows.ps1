@@ -116,7 +116,9 @@ try {
                 catch { $failures += [int]$process.Id }
             }
             $survivors = @($pins | Where-Object { -not $_.HasExited })
-            $result = @{ verified = ($pins.Count -gt 0 -and $survivors.Count -eq 0 -and $failures.Count -eq 0); targeted = $pins.Count;
+            # Parent exit can race a child's Kill call. Its error is diagnostic; the held
+            # process handle's final exited state is the actual cancellation receipt.
+            $result = @{ verified = ($pins.Count -gt 0 -and $survivors.Count -eq 0); targeted = $pins.Count;
                 survivor_count = $survivors.Count; failure_count = $failures.Count; method = 'windows-emergency'; elapsed_ms = $started.ElapsedMilliseconds }
             foreach ($process in $pins) { $process.Dispose() }
             Emit $result

@@ -466,6 +466,17 @@ fn stop_incident(
     roots: &Value,
     incident: &state::Incident,
 ) -> Result<(bool, bool), AdapterError> {
+    stop_incident_with(root, roots, incident, |request| {
+        platform::call(request, Duration::from_secs(5))
+    })
+}
+
+fn stop_incident_with(
+    root: &PinnedTarget,
+    roots: &Value,
+    incident: &state::Incident,
+    halt: impl FnOnce(&Value) -> Result<Value, AdapterError>,
+) -> Result<(bool, bool), AdapterError> {
     with_state(root, |state| {
         let Some(current) = state
             .incident
@@ -474,11 +485,16 @@ fn stop_incident(
         else {
             return Ok((false, false));
         };
+        let scope_digest = sha256_digest(&serialize(roots)?);
+        // A process identity that has exited cannot return. Ignore an inspection completed
+        // before our stop; a restarted app has a different PID/creation-time scope.
+        if current.termination_verified
+            && current.last_verified_scope.as_deref() == Some(scope_digest.as_str())
+        {
+            return Ok((false, true));
+        }
         let outcome = if roots.as_array().is_some_and(|r| !r.is_empty()) {
-            platform::call(
-                &json!({"operation":"halt","roots":roots}),
-                Duration::from_secs(5),
-            )
+            halt(&json!({"operation":"halt","roots":roots}))
         } else {
             Err(error(
                 "no authenticated app process identities; halt unverified",
@@ -489,17 +505,16 @@ fn stop_incident(
             .ok()
             .and_then(|v| v["verified"].as_bool())
             .unwrap_or(false);
-        current.termination_elapsed_ms =
-            outcome.as_ref().ok().and_then(|v| v["elapsed_ms"].as_u64());
-        current.targeted_processes = outcome.as_ref().ok().and_then(|v| v["targeted"].as_u64());
+        let elapsed = outcome.as_ref().ok().and_then(|v| v["elapsed_ms"].as_u64());
+        let targeted = outcome.as_ref().ok().and_then(|v| v["targeted"].as_u64());
+        current.record_termination(scope_digest, verified, targeted, elapsed, now());
         let notify = current.notification == "pending";
         current.stop_method = "windows-emergency".into();
-        current.termination_verified = verified;
         if notify {
             current.notification = "requested".into();
         }
         state.heartbeat = now();
-        Ok((notify, verified))
+        Ok((notify, current.termination_verified))
     })
 }
 
@@ -663,5 +678,37 @@ mod tests {
         assert!(enable(&root, preview["preview_digest"].as_str().unwrap()).is_err());
         assert!(!temp.path().join(CONFIG).exists());
         assert!(!temp.path().join(BASE).join("bin").exists());
+    }
+
+    #[test]
+    fn usage_monitor_exit_receipt_survives_stale_inspection_but_restart_is_stopped_again() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let incident = with_state(&root, |s| {
+            s.halt("usage-reset", 100);
+            Ok(s.incident.clone().unwrap())
+        })
+        .unwrap();
+        let scope = json!([{"pid":1,"created_ticks":100}]);
+        let result = stop_incident_with(&root, &scope, &incident, |_| {
+            Ok(json!({"verified":true,"targeted":3,"elapsed_ms":200}))
+        })
+        .unwrap();
+        assert_eq!(result, (true, true));
+        let duplicate = stop_incident_with(&root, &scope, &incident, |_| {
+            panic!("must not retry an exited identity")
+        })
+        .unwrap();
+        assert_eq!(duplicate, (false, true));
+        let restarted = json!([{"pid":1,"created_ticks":200}]);
+        let failed = stop_incident_with(&root, &restarted, &incident, |_| {
+            Ok(json!({"verified":false,"targeted":1,"elapsed_ms":400}))
+        })
+        .unwrap();
+        assert_eq!(failed, (false, false));
+        let saved: MonitorState = load(&root, STATE).unwrap().unwrap();
+        let saved = saved.incident.unwrap();
+        assert!(!saved.termination_verified);
+        assert_eq!(saved.confirmed_termination.unwrap().targeted_processes, 3);
     }
 }
