@@ -59,7 +59,7 @@ try {
     $previousDevBinary=$env:AIGENT_HIVE_DEV_BINARY
     try {
         $env:AIGENT_HIVE_DEV_BINARY=$binary
-        & $approval.git_bash --noprofile --norc -c 'export PATH="$(cygpath -u "$1"):$(cygpath -u "$4"):$PATH"; exec sh "$(cygpath -u "$2")" --global --state-dir "$(cygpath -u "$3")"' -- (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') (Join-Path $userRoot '.hive\dev-install') $approval.python_directory
+        & $approval.git_bash --noprofile --norc (Join-Path $source 'scripts\invoke-dev-install.sh') global (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') (Join-Path $userRoot '.hive\dev-install') $approval.python_directory
         if($LASTEXITCODE -ne 0){throw 'Managed developer binary activation failed'}
     } finally {
         if($null -eq $previousDevBinary){Remove-Item Env:AIGENT_HIVE_DEV_BINARY -ErrorAction SilentlyContinue}else{$env:AIGENT_HIVE_DEV_BINARY=$previousDevBinary}

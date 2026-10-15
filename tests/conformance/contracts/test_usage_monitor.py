@@ -81,6 +81,20 @@ try {
 """.replace("'HELPER'", "'" + helper + "'")
         self.assertTrue(self.powershell(source)["rejected"])
 
+    def test_legacy_powershell_passes_spaced_paths_without_nested_shell_code(self):
+        wrapper=str(ROOT / 'scripts/invoke-dev-install.sh').replace("'","''")
+        source=r"""
+$ErrorActionPreference='Stop'
+$directory=Join-Path $PSScriptRoot 'folder with spaces'
+$null=New-Item -ItemType Directory -Path $directory
+$stub=Join-Path $directory 'installer.sh'
+$body='[ "$1" = "--sandbox" ] || exit 8' + "`n" + '[ "$2" = "--state-dir" ] || exit 9' + "`n" + 'printf ''{"passed":true}\n'''
+[IO.File]::WriteAllText($stub,$body,[Text.UTF8Encoding]::new($false))
+& 'C:\Program Files\Git\bin\bash.exe' --noprofile --norc 'WRAPPER' sandbox $directory $stub (Join-Path $directory 'state') $directory
+if($LASTEXITCODE -ne 0){throw 'Legacy PowerShell path forwarding failed'}
+""".replace("'WRAPPER'","'"+wrapper+"'")
+        self.assertTrue(self.powershell(source)["passed"])
+
     def test_emergency_stop_terminates_own_fixture_tree_and_preserves_unrelated_process(self):
         script = self.adapter_functions()
         source = r"""$ErrorActionPreference='Stop'
