@@ -1342,3 +1342,10 @@
 | [passed](runs/20261015T143806-24c0c16501ae.md) | 원자 교체 중 상태 읽기의 짧은 재시도 회귀 | 4c450ac666a9570b1cf9b8c65638237b32a8caf0 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T144024-23e4bd45e074.md) | 상태 교체 순간의 공유 읽기·재시도 Windows 회귀 | 4c450ac666a9570b1cf9b8c65638237b32a8caf0 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T145309-133d26197def.md) | 상태 읽기 보정 뒤 정적 검사와 수용 바이너리 고정 | c4ec13f214300d9a8fa841f7fc3bf3e8d46114f0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T151321-e2882cb7bfbc.md) | 세션 중단 수용 검사기의 실제 셸 종료 판정 보강 | 460a516be421e4e736e20dc2d4b66d5ea19036dd | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T151612-1383508ef7a3.md) | 현재 사용량 연속 관측의 상태 비교 실패 재현 | 06e25e0152a797ad58998a8a76ec723b43c6088f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T151928-296d4118012d.md) | 예정 시각 초 단위 오차와 실제 정상 관측 네 번 검증 | 06e25e0152a797ad58998a8a76ec723b43c6088f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T152225-cfcc477dfb59.md) | 화면 밖 대화 발견과 현재 앱 제어 연결 실제 읽기 검증 | 59f24e4e28d8bc7dfc7ff48b306b943962dd8bf1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T152340-40da5a59c424.md) | 화면 밖 대화 목록의 소유자 확인과 잘못된 식별자 거부 | 59f24e4e28d8bc7dfc7ff48b306b943962dd8bf1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T152410-9a7bb66ddd97.md) | 화면 밖 세션 발견 회귀 정적 검사와 수용 바이너리 생성 | 59f24e4e28d8bc7dfc7ff48b306b943962dd8bf1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T152614-3e318ef3f3cb.md) | 화면 밖 대화와 시각 오차 보정 뒤 독립 수용 준비 | d45519f1fd185b3c64bcdb80f7601833065beb93 | Windows-11-10.0.26300-SP0 |
