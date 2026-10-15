@@ -134,6 +134,20 @@ if($sessions.fixture.active.Count -ne 0 -or $sessions.fixture.statuses.current -
         self.assertTrue(result["interruption_observed"])
         self.assertTrue(result["history_discarded"])
 
+    def test_reasoning_text_deltas_do_not_trigger_full_history_resubscription(self):
+        source=self.desktop_functions()+r"""
+$clock=[Diagnostics.Stopwatch]::StartNew()
+$sessions=@{fixture=@{id='fixture';ready=$true;dirty=$false}}
+$value=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='patches';patches=@(@{path=@('turnHistory','history','entitiesByKey','current','items',0,'text');op='replace';value='delta'})}}
+Snapshot $value
+if($sessions.fixture.dirty){throw 'Text delta caused a history resubscription'}
+$value.change.patches=@(@{path=@('turnHistory','history','entitiesByKey','current','status');op='replace';value='interrupted'})
+Snapshot $value
+if(-not $sessions.fixture.dirty){throw 'Turn status change was lost'}
+@{content_ignored=$true;status_observed=$true} | ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["status_observed"])
+
     def test_wrong_desktop_snapshot_cannot_confirm_a_different_session(self):
         source=self.desktop_functions()+r"""
 $clock=[Diagnostics.Stopwatch]::StartNew()

@@ -93,7 +93,19 @@ try {
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
         $session=$sessions[[string]$snapshot.conversationId]
-        if ($snapshot.change.type -ne 'snapshot') { $session.dirty=$true;return }
+        if ($snapshot.change.type -ne 'snapshot') {
+            # Content deltas must not cause repeated full-history snapshots during reasoning.
+            foreach ($patch in @($snapshot.change.patches)) {
+                $path=@($patch.path)
+                if ($path.Count -gt 0 -and $path[0] -is [string] -and $path[0].StartsWith('/')) {$path=@($path[0].TrimStart('/').Split('/'))}
+                if ($path.Count -eq 0) {continue}
+                $root=[string]$path[0];$leaf=[string]$path[-1]
+                if ($root -in @('threadRuntimeStatus','threadGoal') -or
+                    ($root -eq 'turnHistory' -and ($path.Count -le 4 -or ($path.Count -eq 5 -and $leaf -in @('status','turnId')))) -or
+                    ($root -eq 'turns' -and ($path.Count -le 2 -or ($path.Count -eq 3 -and $leaf -in @('status','turnId'))))) {$session.dirty=$true;break}
+            }
+            return
+        }
         $state=$snapshot.change.conversationState
         if ($state.id -ne $session.id -or $state.hostId -ne 'local') { throw 'Mismatched desktop snapshot' }
         $entities=@($state.turns)
@@ -140,7 +152,7 @@ try {
                             if ($sessions.Count -ge 1024) { throw 'Too many desktop sessions' }
                             $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';title='';snapshotAt=-2000L}
                             Follow $id
-                        }
+                        } else {$sessions[$id].dirty=$true}
                     } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
                 }
             }
@@ -159,7 +171,7 @@ try {
         }
         foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { $pending.Remove($id) } }
         foreach ($session in @($sessions.Values)) {
-            if ($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
+            if (($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) -or $clock.ElapsedMilliseconds - $session.snapshotAt -gt 5000) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
             if ($null -ne $stop -and $session.ready -and ($session.active.Count -gt 0 -or $session.goal -eq 'active') -and
                 $clock.ElapsedMilliseconds - $session.lastStop -ge 1000) {
                 foreach ($turn in $session.active) {
