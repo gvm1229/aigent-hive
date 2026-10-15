@@ -10,8 +10,7 @@ use std::time::{Duration, Instant};
 
 pub(super) const SCRIPT: &str = include_str!("windows.ps1");
 
-/// Every invocation is bounded; model calls and credentials are never accepted here.
-pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterError> {
+pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     if !cfg!(windows) {
         return Err(AdapterError::Unsupported(
             "live usage interruption supports Windows Codex only".into(),
@@ -20,12 +19,13 @@ pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterE
     let system_root =
         std::env::var_os("SystemRoot").ok_or_else(|| failure("SystemRoot missing"))?;
     let executable = Path::new(&system_root).join("System32/WindowsPowerShell/v1.0/powershell.exe");
-    let encoded = base64::engine::general_purpose::STANDARD.encode(
-        SCRIPT
-            .encode_utf16()
-            .flat_map(u16::to_le_bytes)
-            .collect::<Vec<_>>(),
-    );
+    // UTF-8 payload avoids Windows' 32767-character process argument limit. The
+    // bootstrap and embedded source are fixed product bytes, never user input.
+    let encoded = base64::engine::general_purpose::STANDARD.encode(script.as_bytes());
+    let bootstrap = format!("& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}'))))");
+    if bootstrap.len() > 30000 {
+        return Err(failure("embedded Windows adapter exceeds launch limit"));
+    }
     let mut command = Command::new(executable);
     command
         .args([
@@ -34,8 +34,8 @@ pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterE
             "-NonInteractive",
             "-WindowStyle",
             "Hidden",
-            "-EncodedCommand",
-            &encoded,
+            "-Command",
+            &bootstrap,
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -45,7 +45,12 @@ pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterE
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x0800_0000);
     }
-    let mut child = command
+    Ok(command)
+}
+
+/// Every invocation is bounded; model calls and credentials are never accepted here.
+pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterError> {
+    let mut child = command(SCRIPT)?
         .spawn()
         .map_err(|_| failure("cannot start Windows monitor adapter"))?;
     let mut input = child
@@ -100,28 +105,44 @@ pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterE
     }
 }
 
-pub(super) fn notify(reason: &str, success: bool, incident: &str) -> mpsc::Receiver<bool> {
+pub(super) fn notify(
+    reason: &str,
+    success: bool,
+    incident: &str,
+    root: &Path,
+) -> mpsc::Receiver<bool> {
     let message = notification_message(reason, success);
+    let root = root.to_path_buf();
+    let incident = incident.to_owned();
     let message = format!("{message}\n재개: hive usage monitor acknowledge --user-root <사용자 루트> --incident {incident} --output json");
     // The UI notification must never delay termination or its controller heartbeat.
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
-        let _ = tx.send(
-            call(
-                &json!({"operation":"notify", "message":message}),
-                Duration::from_mins(5),
-            )
-            .is_ok(),
-        );
+        let delivered = (|| {
+            let mut child = command(SCRIPT).ok()?.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+            let request = json!({"operation":"notify","message":message,"user_root":root,"incident":incident});
+            child.stdin.take()?.write_all(&serde_json::to_vec(&request).ok()?).ok()?;
+            let stdout = child.stdout.take()?;
+            let (send, ready) = mpsc::channel();
+            thread::spawn(move || {
+                use std::io::BufRead;
+                let mut line = String::new();
+                let _ = std::io::BufReader::new(stdout).take(1024).read_line(&mut line);
+                let _ = send.send(line.contains("notified"));
+            });
+            if ready.recv_timeout(Duration::from_secs(5)).ok() == Some(true) { Some(()) }
+            else { let _ = child.kill(); let _ = child.wait(); None }
+        })().is_some();
+        let _ = tx.send(delivered);
     });
     rx
 }
 
 fn notification_message(reason: &str, success: bool) -> &'static str {
     if !success && reason == "sensor-unresponsive" {
-        "사용량 감지기가 30초 동안 응답하지 않아 사용량 한도 보호를 우선해 중단을 요청했지만, 일부 실행의 종료를 확인하지 못했습니다. Codex를 직접 종료해 주세요."
+        "사용량 감지기가 30초 동안 응답하지 않아 사용량 한도 보호를 우선해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if !success {
-        "사용량 보호 중단을 요청했지만 일부 실행의 종료를 확인하지 못했습니다. Codex를 직접 종료해 주세요."
+        "사용량 보호를 위해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if reason == "sensor-unresponsive" {
         "사용량 감지기가 30초 동안 응답하지 않아, 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
     } else if reason == "usage-reset" {

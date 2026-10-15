@@ -67,23 +67,167 @@ pub(super) fn read_with_timeout(
     )
 }
 
+/// One subscription-authenticated, non-inference reader owned by the monitor worker.
+/// Reuse avoids paying CLI startup and shutdown costs for every five-second observation.
+pub(crate) struct MonitorSensor {
+    connection: Option<MonitorConnection>,
+}
+
+struct MonitorConnection {
+    executable: super::QualifiedExecutable,
+    version: String,
+    child: Child,
+    stdin: ChildStdin,
+    responses: Receiver<Result<Value, SensorError>>,
+    opened: Instant,
+    next_id: u64,
+}
+
+impl Drop for MonitorConnection {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+impl MonitorSensor {
+    pub fn new() -> Self {
+        Self { connection: None }
+    }
+
+    pub fn read(&mut self) -> Result<NormalizedSnapshot, SensorError> {
+        if self
+            .connection
+            .as_ref()
+            .is_some_and(|c| c.opened.elapsed() >= Duration::from_mins(4))
+        {
+            self.connection = None;
+        }
+        let started = Instant::now();
+        let result = self.read_inner(started, Duration::from_secs(5));
+        if result.is_err() {
+            self.connection = None;
+        }
+        result
+    }
+
+    fn read_inner(
+        &mut self,
+        started: Instant,
+        timeout: Duration,
+    ) -> Result<NormalizedSnapshot, SensorError> {
+        if self.connection.is_none() {
+            let executable = qualify_program("codex")?;
+            let output = SystemCommandRunner.run(
+                &executable,
+                &["--version"],
+                timeout.saturating_sub(started.elapsed()),
+                OUTPUT_LIMIT,
+            )?;
+            if !output.success {
+                return Err(SensorError::Failed);
+            }
+            let version = parse_version(&output.stdout)?;
+            let mut child = app_server_command(&executable)
+                .spawn()
+                .map_err(|_| SensorError::Failed)?;
+            let stdin = child.stdin.take().ok_or(SensorError::Failed)?;
+            let stdout = child.stdout.take().ok_or(SensorError::Failed)?;
+            let stderr = child.stderr.take().ok_or(SensorError::Failed)?;
+            let responses = spawn_jsonl_reader(stdout, OUTPUT_LIMIT);
+            // This connection is retired before its bounded lifetime output budget is exhausted.
+            let _stderr = super::spawn_bounded_reader(stderr, OUTPUT_LIMIT);
+            self.connection = Some(MonitorConnection {
+                executable,
+                version,
+                child,
+                stdin,
+                responses,
+                opened: Instant::now(),
+                next_id: 1,
+            });
+            let connection = self.connection.as_mut().ok_or(SensorError::Failed)?;
+            monitor_request(
+                connection,
+                "initialize",
+                &serde_json::json!({"clientInfo":{"name":"aigent-hive-usage-monitor","version":env!("CARGO_PKG_VERSION")}}),
+                started,
+                timeout,
+            )?;
+            send(
+                &mut connection.stdin,
+                &serde_json::json!({"method":"initialized","params":{}}),
+            )?;
+        }
+        let connection = self.connection.as_mut().ok_or(SensorError::Failed)?;
+        verify_executable_identity(&connection.executable)?;
+        let account = monitor_request(
+            connection,
+            "account/read",
+            &serde_json::json!({"refreshToken":false}),
+            started,
+            timeout,
+        )?;
+        let limits = monitor_request(
+            connection,
+            "account/rateLimits/read",
+            &Value::Null,
+            started,
+            timeout,
+        )?;
+        verify_executable_identity(&connection.executable)?;
+        normalize(
+            &account,
+            &limits,
+            &connection.version,
+            None,
+            unix_seconds(SystemTime::now())?,
+        )
+    }
+}
+
+fn monitor_request(
+    connection: &mut MonitorConnection,
+    method: &str,
+    params: &Value,
+    started: Instant,
+    timeout: Duration,
+) -> Result<Value, SensorError> {
+    let id = connection.next_id;
+    connection.next_id += 1;
+    send(
+        &mut connection.stdin,
+        &serde_json::json!({"method":method,"id":id,"params":params}),
+    )?;
+    await_response(&connection.responses, id, started, timeout)
+}
+
+fn app_server_command(executable: &super::QualifiedExecutable) -> Command {
+    let mut command = Command::new(&executable.path);
+    command
+        .args(["app-server", "--stdio"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000);
+    }
+    command
+}
+
 fn exchange_with_timeout(
     executable: &super::QualifiedExecutable,
     timeout: Duration,
 ) -> Result<(Value, Value), SensorError> {
-    let mut child = Command::new(&executable.path)
-        .args(["app-server", "--stdio"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                SensorError::Unavailable
-            } else {
-                SensorError::Failed
-            }
-        })?;
+    let mut child = app_server_command(executable).spawn().map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            SensorError::Unavailable
+        } else {
+            SensorError::Failed
+        }
+    })?;
     let mut stdin = child.stdin.take().ok_or(SensorError::Failed)?;
     let stdout = child.stdout.take().ok_or(SensorError::Failed)?;
     let stderr = child.stderr.take().ok_or(SensorError::Failed)?;

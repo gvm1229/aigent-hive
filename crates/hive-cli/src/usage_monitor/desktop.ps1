@@ -1,0 +1,201 @@
+# Version-qualified desktop coordination client. No app files, settings, or processes are changed.
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.IO.Pipes;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Collections.Concurrent;
+public sealed class HiveDesktopPipe : IDisposable {
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint pid);
+    readonly NamedPipeClientStream pipe = new NamedPipeClientStream(".", "codex-ipc", PipeDirection.InOut, PipeOptions.Asynchronous);
+    readonly BlockingCollection<string> frames = new BlockingCollection<string>(8);
+    public uint ServerPid;
+    public volatile bool Alive = true;
+    public HiveDesktopPipe() {
+        pipe.Connect(700);
+        if (!GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out ServerPid)) throw new IOException("Cannot identify desktop peer");
+    }
+    public void Start() { var thread = new Thread(ReadLoop); thread.IsBackground = true; thread.Start(); }
+    byte[] Exact(int size) {
+        byte[] bytes = new byte[size]; int offset = 0;
+        while (offset < size) { int n = pipe.Read(bytes, offset, size - offset); if (n == 0) throw new EndOfStreamException(); offset += n; }
+        return bytes;
+    }
+    void ReadLoop() {
+        try { while (Alive) {
+            int size = BitConverter.ToInt32(Exact(4), 0);
+            if (size < 2 || size > 16777216) throw new IOException("Invalid desktop frame size");
+            string frame = new UTF8Encoding(false, true).GetString(Exact(size));
+            if (!frames.TryAdd(frame)) throw new IOException("Desktop queue overflow");
+        } } catch { Alive = false; }
+    }
+    public string Poll() { string value; return frames.TryTake(out value) ? value : null; }
+    public void Send(string value) {
+        byte[] bytes = Encoding.UTF8.GetBytes(value);
+        if (bytes.Length > 16384) throw new IOException("Oversized control request");
+        byte[] header = BitConverter.GetBytes(bytes.Length);
+        pipe.Write(header, 0, 4); pipe.Write(bytes, 0, bytes.Length); pipe.Flush();
+    }
+    public void Dispose() { Alive = false; pipe.Dispose(); frames.Dispose(); }
+}
+public sealed class HiveDesktopInput {
+    readonly BlockingCollection<string> commands = new BlockingCollection<string>(4);
+    public volatile bool Alive = true;
+    public HiveDesktopInput() { var thread = new Thread(ReadLoop); thread.IsBackground = true; thread.Start(); }
+    void ReadLoop() { try { string line; while ((line = Console.In.ReadLine()) != null) {
+        if (line.Length > 1024 || !commands.TryAdd(line)) break;
+    } } finally { Alive = false; } }
+    public string Poll() { string value; return commands.TryTake(out value) ? value : null; }
+}
+'@
+$pipe = $null
+try {
+    $pipe = [HiveDesktopPipe]::new()
+    $peer = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $pipe.ServerPid)
+    $packages = @(Get-AppxPackage -Name OpenAI.Codex | Where-Object PublisherId -eq '2p2nqsd0c76g0')
+    $matching = @($packages | Where-Object {
+        $peer.ExecutablePath -and $peer.ExecutablePath.StartsWith(([IO.Path]::GetFullPath($_.InstallLocation).TrimEnd('\') + '\'), [StringComparison]::OrdinalIgnoreCase)
+    })
+    $owner = Invoke-CimMethod -InputObject $peer -MethodName GetOwner
+    if ($matching.Count -ne 1 -or $peer.Name -ne 'ChatGPT.exe' -or $owner.ReturnValue -ne 0 -or
+        ($owner.Domain + '\' + $owner.User) -ne [Security.Principal.WindowsIdentity]::GetCurrent().Name) { throw 'Untrusted desktop pipe peer' }
+    # This private coordination protocol is qualified only for this exact tested package.
+    if ([string]$matching[0].Version -ne '26.1007.9446.0') { throw 'Desktop version requires control qualification' }
+    $pin = [Diagnostics.Process]::GetProcessById([int]$pipe.ServerPid)
+    $null = $pin.Handle
+    if ($pin.MainModule.FileName -ne $peer.ExecutablePath -or
+        [Math]::Abs(($pin.StartTime.ToUniversalTime() - $peer.CreationDate.ToUniversalTime()).TotalMilliseconds) -gt 1) { throw 'Desktop peer identity changed' }
+    $pipe.Start()
+    $client = 'initializing-client'
+    $sessions = @{}
+    $pending = @{}
+    $stop = $null
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    $lastPublish = -1000L
+    function Send($value) { $pipe.Send((ConvertTo-Json -InputObject $value -Depth 12 -Compress)) }
+    function Request([string]$method, $params, [int]$version, [string]$target, [string]$thread) {
+        $id = [Guid]::NewGuid().ToString()
+        $value = @{type='request';requestId=$id;sourceClientId=$client;method=$method;params=$params;version=$version;timeoutMs=1800}
+        if ($target) { $value.targetClientId=$target }
+        $pending[$id]=@{method=$method;thread=$thread;at=$clock.ElapsedMilliseconds}
+        Send $value
+    }
+    function Follow([string]$id) {
+        Send @{type='broadcast';sourceClientId=$client;method='thread-stream-following-changed';version=1;params=@{hostId='local';conversationId=$id;following=$true}}
+    }
+    function Snapshot($snapshot) {
+        if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
+        $session=$sessions[[string]$snapshot.conversationId]
+        if ($snapshot.change.type -ne 'snapshot') { $session.dirty=$true;return }
+        $state=$snapshot.change.conversationState
+        if ($state.id -ne $session.id -or $state.hostId -ne 'local') { throw 'Mismatched desktop snapshot' }
+        $entities=@($state.turns)
+        if ($state.turnHistory.history.entitiesByKey) { $entities += @($state.turnHistory.history.entitiesByKey.PSObject.Properties | ForEach-Object {$_.Value}) }
+        $turns=@($entities | Where-Object { $_.turnId -and $_.status })
+        $session.active=@($turns | Where-Object status -eq 'inProgress' | ForEach-Object {[string]$_.turnId})
+        $session.statuses=@{}
+        foreach ($turn in $turns) { $session.statuses[[string]$turn.turnId]=[string]$turn.status }
+        $session.runtime=[string]$state.threadRuntimeStatus.type
+        $session.goal=[string]$state.threadGoal.status
+        $session.title=[string]$state.title
+        $session.ready=$true;$session.dirty=$false;$session.snapshotAt=$clock.ElapsedMilliseconds
+        # No prompt, tool output, history item, or file path is retained in this client.
+    }
+    Request 'initialize' @{clientType='aigent-hive-usage-monitor'} 0 '' ''
+    $inputReader=[HiveDesktopInput]::new()
+    while ($pipe.Alive -and $inputReader.Alive -and -not $pin.HasExited) {
+        for ($count=0; $count -lt 32; $count++) {
+            $frame=$pipe.Poll();if ($null -eq $frame) { break }
+            $message=$frame | ConvertFrom-Json
+            switch ($message.type) {
+                'client-discovery-request' { Send @{type='client-discovery-response';requestId=$message.requestId;response=@{canHandle=$false}} }
+                'response' {
+                    $request=$pending[[string]$message.requestId]
+                    if ($null -eq $request) { continue }
+                    $pending.Remove([string]$message.requestId)
+                    if ($request.method -eq 'initialize') {
+                        if ($message.resultType -ne 'success' -or -not $message.result.clientId) { throw 'Desktop registration failed' }
+                        $client=[string]$message.result.clientId
+                    } elseif ($request.method -eq 'thread-follower-interrupt-turn') {
+                        $session=$sessions[$request.thread]
+                        $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
+                        $session.interruptedTurn=[string]$message.result.interruptedTurnId
+                        $session.dirty=$true
+                    }
+                }
+                'broadcast' {
+                    if ($message.sourceClientId -eq $client) { continue }
+                    if ($message.method -eq 'thread-stream-following-changed' -and $message.version -eq 1 -and
+                        $message.params.hostId -eq 'local' -and $message.params.following -eq $true) {
+                        $id=[string]$message.params.conversationId
+                        if ($id -notmatch '^[a-f0-9-]{36}$') { throw 'Invalid desktop thread identity' }
+                        if (-not $sessions.ContainsKey($id)) {
+                            if ($sessions.Count -ge 1024) { throw 'Too many desktop sessions' }
+                            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';title='';snapshotAt=-2000L}
+                            Follow $id
+                        }
+                    } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
+                }
+            }
+        }
+        $line=$inputReader.Poll()
+        if ($null -ne $line) {
+            $command=$line | ConvertFrom-Json
+            if ($command.operation -eq 'stop' -and $command.incident -match '^sha256:[a-f0-9]{64}$') {
+                if ($null -eq $stop -or $stop.digest -ne $command.incident) {
+                    $stop=@{digest=[string]$command.incident;at=$clock.ElapsedMilliseconds;targeted=@{};request_ms=$null}
+                }
+            } elseif ($command.operation -eq 'clear') { $stop=$null }
+            else { throw 'Invalid desktop control operation' }
+        }
+        foreach ($id in @($pending.Keys)) { if ($clock.ElapsedMilliseconds - $pending[$id].at -gt 2000) { $pending.Remove($id) } }
+        foreach ($session in @($sessions.Values)) {
+            if ($session.dirty -and $clock.ElapsedMilliseconds - $session.snapshotAt -gt 200) { Follow $session.id;$session.snapshotAt=$clock.ElapsedMilliseconds }
+            if ($null -ne $stop -and $session.ready -and ($session.active.Count -gt 0 -or $session.goal -eq 'active') -and
+                $clock.ElapsedMilliseconds - $session.lastStop -ge 1000) {
+                foreach ($turn in $session.active) {
+                    $key=$session.id + ':' + $turn
+                    if (-not $stop.targeted.ContainsKey($key)) { $stop.at=$clock.ElapsedMilliseconds;$stop.request_ms=$null }
+                    $stop.targeted[$key]=@{thread=$session.id;turn=$turn}
+                }
+                Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
+                $session.lastStop=$clock.ElapsedMilliseconds
+                if ($null -eq $stop.request_ms) { $stop.request_ms=$clock.ElapsedMilliseconds-$stop.at }
+            }
+        }
+        if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
+            $activeCount=0;$unknown=0
+            foreach ($session in $sessions.Values) { $activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++} }
+            $receipt=$null
+            if ($null -ne $stop) {
+                $confirmed=0
+                foreach ($target in $stop.targeted.Values) {
+                    $session=$sessions[$target.thread]
+                    if ($session.lastResponse -eq 'accepted' -and $session.statuses[$target.turn] -eq 'interrupted' -and $session.goal -ne 'active') { $confirmed++ }
+                }
+                $hash=[Security.Cryptography.SHA256]::Create()
+                try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
+                $receipt=@{app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=$clock.ElapsedMilliseconds-$stop.at;request_ms=$stop.request_ms}
+            }
+            $stopping=($null -ne $stop -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
+            $packet=@{control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
+            [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
+            $lastPublish=$clock.ElapsedMilliseconds
+        }
+        Start-Sleep -Milliseconds 20
+    }
+} catch {
+    # Stable error class only: no native payload, prompts, or host paths in durable state.
+    [Console]::Out.WriteLine('{"schema_version":1,"connected":false,"app_alive":true,"error":"desktop-control-unavailable"}')
+    exit 1
+} finally {
+    if ($null -ne $pipe) { $pipe.Dispose() }
+    if ($null -ne $pin) { $pin.Dispose() }
+}

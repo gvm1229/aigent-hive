@@ -27,32 +27,7 @@ function App-Roots {
     }
     return @{ roots = @($roots); rows = @($rows) }
 }
-function Pin-Processes($tree) {
-    $selected = @{}
-    foreach ($root in $tree.roots) { $selected[[int]$root.ProcessId] = $root }
-    do {
-        $changed = $false
-        foreach ($row in $tree.rows) {
-            if (-not $selected.ContainsKey([int]$row.ProcessId) -and $selected.ContainsKey([int]$row.ParentProcessId)) {
-                $parent = $selected[[int]$row.ParentProcessId]
-                if ($row.CreationDate -ge $parent.CreationDate) { $selected[[int]$row.ProcessId] = $row; $changed = $true }
-            }
-        }
-    } while ($changed)
-    $pins = @()
-    foreach ($row in $selected.Values) {
-        try {
-            $process = [Diagnostics.Process]::GetProcessById([int]$row.ProcessId)
-            # Opening a handle pins the process object; PID reuse cannot change the target.
-            $null = $process.Handle
-            if ([Math]::Abs(($process.StartTime.ToUniversalTime() - $row.CreationDate.ToUniversalTime()).TotalMilliseconds) -gt 1) {
-                $process.Dispose(); throw 'Process identity changed'
-            }
-            $pins += $process
-        } catch [ArgumentException] { } # Already exited before pinning.
-    }
-    return ,$pins
-}
+
 try {
     switch ($request.operation) {
         'inspect' {
@@ -82,63 +57,35 @@ try {
             }
             Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; native_control = 'unavailable'; identity = 'current-user-OpenAI.Codex-package' }
         }
-        'halt' {
-            $started = [Diagnostics.Stopwatch]::StartNew()
-            # Discovery was performed before the incident. Revalidate cached identities using
-            # held handles; package/owner discovery must not delay the emergency stop.
-            $rows = @(Get-CimInstance Win32_Process)
-            $roots = @()
-            foreach ($cached in @($request.roots)) {
-                if (-not $cached) { continue }
-                try {
-                    $process = [Diagnostics.Process]::GetProcessById([int]$cached.pid)
-                    $null = $process.Handle
-                    if ($process.StartTime.ToUniversalTime().Ticks -ne [long]$cached.created_ticks -or
-                        $process.MainModule.FileName -ne [string]$cached.executable) { throw 'Cached process identity changed' }
-                    $row = @($rows | Where-Object { [int]$_.ProcessId -eq [int]$cached.pid })
-                    if ($row.Count -eq 1) { $roots += $row[0] }
-                    $process.Dispose()
-                } catch [ArgumentException] { }
-            }
-            $tree = @{ roots = $roots; rows = $rows }
-            $pins = Pin-Processes $tree
-            $failures = @()
-            # Stop roots first to prevent respawning workers, then every pinned descendant.
-            $rootIds = @($tree.roots | ForEach-Object { [int]$_.ProcessId })
-            $ordered = @($pins | Sort-Object @{ Expression = { if ($rootIds -contains $_.Id) { 0 } else { 1 } } })
-            foreach ($process in $ordered) {
-                try { if (-not $process.HasExited) { $process.Kill() } }
-                catch { $failures += [int]$process.Id }
-            }
-            foreach ($process in $ordered) {
-                $left = [Math]::Max(0, 4500 - [int]$started.ElapsedMilliseconds)
-                try { if (-not $process.WaitForExit($left)) { $failures += [int]$process.Id } }
-                catch { $failures += [int]$process.Id }
-            }
-            $survivors = @($pins | Where-Object { -not $_.HasExited })
-            # Parent exit can race a child's Kill call. Its error is diagnostic; the held
-            # process handle's final exited state is the actual cancellation receipt.
-            $result = @{ verified = ($pins.Count -gt 0 -and $survivors.Count -eq 0); targeted = $pins.Count;
-                survivor_count = $survivors.Count; failure_count = $failures.Count; method = 'windows-emergency'; elapsed_ms = $started.ElapsedMilliseconds }
-            foreach ($process in $pins) { $process.Dispose() }
-            Emit $result
-        }
         'notify' {
-            # A separate notification process survives the terminated desktop application.
-            $message = [string]$request.message
-            try {
-                $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
-                $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
-                $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-                $escaped = [Security.SecurityElement]::Escape($message)
-                $xml.LoadXml('<toast><visual><binding template="ToastGeneric"><text>Aigent Hive</text><text>' + $escaped + '</text></binding></visual></toast>')
-                $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Aigent Hive').Show($toast)
-            } catch {
-                Add-Type -AssemblyName System.Windows.Forms
-                $null = [System.Windows.Forms.MessageBox]::Show($message, 'Aigent Hive', 'OK', 'Warning')
-            }
-            Emit @{ notified = $true }
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+            $form=[Windows.Forms.Form]::new()
+            $form.Text='Aigent Hive — 사용량 보호 상태'
+            $form.Width=680;$form.Height=360;$form.StartPosition='CenterScreen'
+            $label=[Windows.Forms.Label]::new();$label.Dock='Fill';$label.Padding=[Windows.Forms.Padding]::new(20)
+            $label.Font=[Drawing.Font]::new('Malgun Gothic',11)
+            $baseMessage=[string]$request.message
+            $label.Text=$baseMessage
+            $form.Controls.Add($label)
+            $button=[Windows.Forms.Button]::new();$button.Text='창 닫기 (작업 재개 없음)';$button.Dock='Bottom';$button.Height=38
+            $button.Add_Click({$form.Close()});$form.Controls.Add($button)
+            $statePath=Join-Path ([string]$request.user_root) '.hive/runtime/usage-monitor/state.json'
+            $timer=[Windows.Forms.Timer]::new();$timer.Interval=1000
+            $timer.Add_Tick({
+                try {
+                    $state=[IO.File]::ReadAllText($statePath) | ConvertFrom-Json
+                    if ($null -eq $state.incident) {$label.Text="중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.";return}
+                    if ($state.incident.digest -ne $request.incident) {$label.Text='새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.';return}
+                    $reason=switch ($state.incident.reason) {'usage-reset' {'사용량 초기화 감지'} 'sensor-unresponsive' {'30초 동안 정상 사용량 조회 없음'} default {'감시 상태 오류'}}
+                    $status=if ($state.incident.stop_confirmed) {'작업 중단 확인 — Codex 앱 유지'} elseif ($state.incident.stop_error) {'작업 중단 확인 실패 — Codex 앱 유지'} else {'작업 중단 확인 대기 — Codex 앱 유지'}
+                    $connection=if ($state.control_connected) {'연결됨'} else {'연결 확인 필요'}
+                    $label.Text=$reason+"`r`n`r`n"+$status+"`r`n중단 대상: "+$state.incident.targeted_turns+" / 확인: "+$state.incident.confirmed_turns+"`r`n현재 실행 중: "+$state.active_turns+" / 제어 연결: "+$connection+"`r`n`r`n명시 확인 전 보호 잠금 유지. 창을 닫아도 작업 재개 없음."
+                } catch {$label.Text=$baseMessage+"`r`n상태를 읽을 수 없습니다. 중단 성공 여부를 확인해 주세요."}
+            })
+            $form.Add_Shown({[Console]::Out.WriteLine('{"notified":true}');[Console]::Out.Flush();$timer.Start()})
+            $null=$form.ShowDialog()
+            $timer.Dispose();$form.Dispose()
         }
         'register' {
             $taskName = [string]$request.task_name

@@ -62,14 +62,15 @@ Enforce or control only the installed Hive usage policy and the current host ses
 `hive usage monitor --help` exposes the installed version's monitor commands. Only its confirmed
 installation may create the current-user scheduled monitor. First show `preview --user-root
 <user-root> --output json`; `enable` requires that exact `--confirm <preview_digest>` and
-`--confirm-app-termination`. Do not infer current-version installation authority.
+`--confirm-session-interruption`. Do not infer current-version installation authority.
 
 This narrow Windows Codex protection exception permits the installed monitor, not this Skill,
-to observe every 15 seconds and terminate authenticated local Codex app processes after reset
-or 30 seconds without a valid observation. Other chats in that app also stop. It never starts
+to observe every 15 seconds and interrupt local desktop sessions after reset or 30 seconds
+without a valid observation. Keep the app open with a persistent reason/status window. Never
+terminate the app when control is unavailable. Only a qualified desktop version may connect. It never starts
 model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.
 
-Use `status` to distinguish configured, healthy, halted, termination-unverified, and notification
+Use `status` to distinguish configured, healthy, halted, interruption-unverified, and notification
 states. A global incident survives app restart and session opt-outs. Explicit `acknowledge` with
 its exact `--incident` plus fresh usage clears only that incident; it never resumes model work.
 `disable` removes only the owned scheduled task and retains incident evidence and staged bytes.

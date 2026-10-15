@@ -17,6 +17,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod codex_native;
+pub(crate) use codex_native::MonitorSensor;
 
 pub(crate) fn monitor_snapshot() -> Result<NormalizedSnapshot, SensorError> {
     codex_native::read_with_timeout(None, SystemTime::now(), Duration::from_secs(5))
@@ -348,19 +349,24 @@ impl CommandRunner for SystemCommandRunner {
         output_limit: usize,
     ) -> Result<CommandOutput, SensorError> {
         verify_executable_identity(program)?;
-        let mut child = Command::new(&program.path)
+        let mut command = Command::new(&program.path);
+        command
             .args(arguments)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|error| {
-                if error.kind() == io::ErrorKind::NotFound {
-                    SensorError::Unavailable
-                } else {
-                    SensorError::Failed
-                }
-            })?;
+            .stderr(Stdio::piped());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x0800_0000);
+        }
+        let mut child = command.spawn().map_err(|error| {
+            if error.kind() == io::ErrorKind::NotFound {
+                SensorError::Unavailable
+            } else {
+                SensorError::Failed
+            }
+        })?;
         let stdout = child.stdout.take().ok_or(SensorError::Failed)?;
         let stderr = child.stderr.take().ok_or(SensorError::Failed)?;
         let stdout_reader = spawn_bounded_reader(stdout, output_limit);

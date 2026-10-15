@@ -47,6 +47,24 @@ pub(super) struct MonitorState {
     pub last_success: Option<u64>,
     pub heartbeat: u64,
     pub incident: Option<Incident>,
+    #[serde(default)]
+    pub observation_count: u64,
+    #[serde(default)]
+    pub last_query_error: Option<String>,
+    #[serde(default)]
+    pub query_elapsed_ms: Option<u64>,
+    #[serde(default)]
+    pub control_connected: bool,
+    #[serde(default)]
+    pub control_stopping: bool,
+    #[serde(default)]
+    pub active_turns: u64,
+    #[serde(default)]
+    pub known_sessions: u64,
+    #[serde(default)]
+    pub unknown_sessions: u64,
+    #[serde(default)]
+    pub app_alive: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -66,6 +84,27 @@ pub(super) struct Incident {
     #[serde(default)]
     pub confirmed_termination: Option<TerminationReceipt>,
     pub notification: String,
+    #[serde(default)]
+    pub stop_confirmed: bool,
+    #[serde(default)]
+    pub stop_error: Option<String>,
+    #[serde(default)]
+    pub targeted_turns: u64,
+    #[serde(default)]
+    pub confirmed_turns: u64,
+    #[serde(default)]
+    pub confirmed_stop: Option<SessionStopReceipt>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SessionStopReceipt {
+    pub completed_at: u64,
+    pub scope_digest: String,
+    pub targeted_turns: u64,
+    pub elapsed_ms: u64,
+    pub request_ms: u64,
+    pub app_alive: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -78,28 +117,43 @@ pub(super) struct TerminationReceipt {
 }
 
 impl Incident {
-    pub fn record_termination(
-        &mut self,
-        scope: String,
-        verified: bool,
-        targeted: Option<u64>,
-        elapsed: Option<u64>,
-        at: u64,
-    ) {
-        self.targeted_processes = targeted;
-        self.termination_elapsed_ms = elapsed;
-        self.termination_verified = verified
-            && targeted.is_some_and(|count| count > 0)
-            && elapsed.is_some_and(|ms| ms <= 5000);
-        if self.termination_verified {
-            self.last_verified_scope = Some(scope.clone());
-            self.confirmed_termination
-                .get_or_insert(TerminationReceipt {
-                    completed_at: at,
-                    scope_digest: scope,
-                    targeted_processes: targeted.unwrap_or_default(),
-                    elapsed_ms: elapsed.unwrap_or_default(),
-                });
+    pub fn record_session_stop(&mut self, packet: &serde_json::Value, at: u64) {
+        self.stop_method = "desktop-session-interrupt".into();
+        self.targeted_turns = packet["targeted"].as_u64().unwrap_or_default();
+        self.confirmed_turns = packet["confirmed"].as_u64().unwrap_or_default();
+        let elapsed = packet["elapsed_ms"].as_u64().unwrap_or(u64::MAX);
+        let request = packet["request_ms"].as_u64().unwrap_or(u64::MAX);
+        let scope = packet["scope_digest"].as_str().unwrap_or_default();
+        let scope_valid = scope.len() == 71
+            && scope.starts_with("sha256:")
+            && scope[7..].bytes().all(|b| b.is_ascii_hexdigit());
+        let verified = scope_valid
+            && packet["verified"] == true
+            && self.targeted_turns > 0
+            && self.targeted_turns == self.confirmed_turns
+            && packet["app_alive"] == true;
+        self.stop_confirmed = verified
+            && (elapsed <= 5000 && request <= 2000
+                || self
+                    .confirmed_stop
+                    .as_ref()
+                    .is_some_and(|r| r.scope_digest == scope));
+        self.stop_error = if self.stop_confirmed {
+            None
+        } else if elapsed > 5000 {
+            Some("session-stop-unconfirmed".into())
+        } else {
+            None
+        };
+        if verified && elapsed <= 5000 && request <= 2000 {
+            self.confirmed_stop.get_or_insert(SessionStopReceipt {
+                completed_at: at,
+                scope_digest: scope.into(),
+                targeted_turns: self.targeted_turns,
+                elapsed_ms: elapsed,
+                request_ms: request,
+                app_alive: true,
+            });
         }
     }
 }
@@ -135,6 +189,11 @@ impl MonitorState {
             last_verified_scope: None,
             confirmed_termination: None,
             notification: "pending".to_owned(),
+            stop_confirmed: false,
+            stop_error: None,
+            targeted_turns: 0,
+            confirmed_turns: 0,
+            confirmed_stop: None,
         });
     }
 
@@ -210,6 +269,7 @@ impl MonitorState {
         self.account_digest = Some(first.account_scope_digest.clone());
         self.baseline = current.to_vec();
         self.last_success = Some(now);
+        self.observation_count = self.observation_count.saturating_add(1);
         Ok(())
     }
 
@@ -226,6 +286,13 @@ impl MonitorState {
         let mut fresh = Self::new();
         fresh.observe(current, now)?;
         fresh.generation = self.generation;
+        fresh.heartbeat = self.heartbeat;
+        fresh.control_connected = self.control_connected;
+        fresh.control_stopping = self.control_stopping;
+        fresh.app_alive = self.app_alive;
+        fresh.active_turns = self.active_turns;
+        fresh.known_sessions = self.known_sessions;
+        fresh.unknown_sessions = self.unknown_sessions;
         *self = fresh;
         Ok(())
     }
@@ -261,6 +328,38 @@ mod tests {
             resets_at_unix_seconds: reset,
             source_confidence: SourceConfidence::High,
         }]
+    }
+    #[test]
+    fn session_stop_requires_actual_interruption_app_survival_and_bounded_confirmation() {
+        let mut state = MonitorState::new();
+        state.halt("usage-reset", 100);
+        let incident = state.incident.as_mut().unwrap();
+        let mut packet = serde_json::json!({"scope_digest":format!("sha256:{}","a".repeat(64)),"targeted":2,"confirmed":1,"verified":true,"elapsed_ms":100,"request_ms":10,"app_alive":true});
+        incident.record_session_stop(&packet, 101);
+        assert!(!incident.stop_confirmed);
+        packet["confirmed"] = serde_json::json!(2);
+        packet["app_alive"] = serde_json::json!(false);
+        incident.record_session_stop(&packet, 101);
+        assert!(!incident.stop_confirmed);
+        packet["app_alive"] = serde_json::json!(true);
+        packet["elapsed_ms"] = serde_json::json!(5001);
+        incident.record_session_stop(&packet, 106);
+        assert!(!incident.stop_confirmed);
+        assert!(incident.confirmed_stop.is_none());
+        packet["elapsed_ms"] = serde_json::json!(200);
+        incident.record_session_stop(&packet, 101);
+        assert!(incident.stop_confirmed);
+        packet["elapsed_ms"] = serde_json::json!(6000);
+        incident.record_session_stop(&packet, 107);
+        assert!(incident.stop_confirmed);
+        packet["scope_digest"] = serde_json::json!(format!("sha256:{}", "b".repeat(64)));
+        incident.record_session_stop(&packet, 108);
+        assert!(!incident.stop_confirmed);
+        assert_eq!(incident.confirmed_stop.as_ref().unwrap().elapsed_ms, 200);
+        packet["targeted"] = serde_json::json!(0);
+        packet["confirmed"] = serde_json::json!(0);
+        incident.record_session_stop(&packet, 109);
+        assert!(!incident.stop_confirmed);
     }
     #[test]
     fn first_baseline_then_refill_latches_across_restart() {

@@ -95,70 +95,84 @@ if($LASTEXITCODE -ne 0){throw 'Legacy PowerShell path forwarding failed'}
 """.replace("'WRAPPER'","'"+wrapper+"'")
         self.assertTrue(self.powershell(source)["passed"])
 
-    def test_emergency_stop_terminates_own_fixture_tree_and_preserves_unrelated_process(self):
-        script = self.adapter_functions()
-        source = r"""$ErrorActionPreference='Stop'
-$fixture = Start-Process $env:ComSpec -ArgumentList '/c ping 127.0.0.1 -n 60 >nul' -WindowStyle Hidden -PassThru
-$unrelated = Start-Process $env:ComSpec -ArgumentList '/c ping 127.0.0.1 -n 60 >nul' -WindowStyle Hidden -PassThru
-try {
-  Start-Sleep -Milliseconds 500
-  $request = [pscustomobject]@{operation='halt'; roots=@(@{pid=$fixture.Id;created_ticks=$fixture.StartTime.ToUniversalTime().Ticks;executable=$fixture.MainModule.FileName})}
-""" + script + r"""
-  if (-not $fixture.WaitForExit(1000)) { throw 'Fixture parent still alive' }
-  if ($unrelated.HasExited) { throw 'Unrelated process was terminated' }
-} finally {
-  foreach($p in @($fixture,$unrelated)) {
-    try { $children=Get-CimInstance Win32_Process -Filter "ParentProcessId=$($p.Id)"; foreach($c in $children){Stop-Process -Id $c.ProcessId -Force -ErrorAction SilentlyContinue}; if(-not $p.HasExited){$p.Kill()} } catch{}
-  }
-}
-"""
-        result = self.powershell(source)
-        self.assertTrue(result["verified"])
-        self.assertGreaterEqual(result["targeted"], 2)
-        self.assertEqual(result["survivor_count"], 0)
-        self.assertLess(result["elapsed_ms"], 5000)
+    def desktop_functions(self) -> str:
+        path=ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1"
+        return "$ErrorActionPreference='Stop'\n$tokens=$null;$errors=$null\n" + (
+            "$tree=[Management.Automation.Language.Parser]::ParseFile('" + str(path).replace("'", "''")
+            + "',[ref]$tokens,[ref]$errors)\nif($errors){throw 'Desktop script parsing failed'}\n"
+            + "$tree.FindAll({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst]},$false) | ForEach-Object {Invoke-Expression $_.Extent.Text}\n"
+        )
 
-    def test_reused_pid_identity_is_rejected_before_killing(self):
-        script = self.adapter_functions().replace("exit 1", "throw")
-        source = r"""
-$ErrorActionPreference='Stop'
-$fixture=Start-Process $env:ComSpec -ArgumentList '/c ping 127.0.0.1 -n 60 >nul' -WindowStyle Hidden -PassThru
-try {
-  $request=[pscustomobject]@{operation='halt'; roots=@(@{pid=$fixture.Id;created_ticks=1;executable=$fixture.MainModule.FileName})}
-  $rejected=$false
-  try {
-""" + script + r"""
-  } catch { $rejected=$true }
-  if (-not $rejected -or $fixture.HasExited) { throw 'Wrong identity was not safely rejected' }
-  @{rejected=$true;preserved=$true} | ConvertTo-Json -Compress
-} finally {
-  $children=Get-CimInstance Win32_Process -Filter "ParentProcessId=$($fixture.Id)"; foreach($c in $children){Stop-Process -Id $c.ProcessId -Force -ErrorAction SilentlyContinue}
-  if(-not $fixture.HasExited){$fixture.Kill()}
+    def test_former_app_termination_operation_is_rejected(self):
+        script=self.adapter_functions().replace("exit 1", "throw")
+        source="$request=[pscustomobject]@{operation='halt';roots=@()}\ntry {\n"+script+r"""
+ throw 'Former termination operation remained available'
+} catch {
+ if($_.Exception.Message -notmatch 'Unsupported monitor operation'){throw}
+ @{rejected=$true} | ConvertTo-Json -Compress
 }
 """
-        self.assertTrue(self.powershell(source)["preserved"])
+        self.assertTrue(self.powershell(source)["rejected"])
 
-    def test_child_exit_racing_kill_is_verified_by_its_final_handle_state(self):
-        fake = r"""
-class AlreadyExitedProcess {
- [int]$Id=123
- [bool]$HasExited=$false
- [void]Kill() { $this.HasExited=$true;throw 'Exited between HasExited and Kill' }
- [bool]WaitForExit([int]$timeout) { return $this.HasExited }
- [void]Dispose() { }
-}
-function Pin-Processes($tree) { return ,@([AlreadyExitedProcess]::new()) }
+    def test_desktop_snapshot_extracts_current_turn_without_retaining_history(self):
+        source=self.desktop_functions()+r"""
+$clock=[Diagnostics.Stopwatch]::StartNew()
+$sessions=@{fixture=@{id='fixture';ready=$false;dirty=$true;active=@();statuses=@{}}}
+$snapshot=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='snapshot';conversationState=[pscustomobject]@{
+ id='fixture';hostId='local';turns=@();title='fixture';threadRuntimeStatus=@{type='active'};threadGoal=@{status='active'}
+ turnHistory=@{history=@{entitiesByKey=[pscustomobject]@{one=@{turnId='old';status='completed';items=@('not retained')};two=@{turnId='current';status='inProgress';items=@('not retained')}}}}
+}}}
+Snapshot $snapshot
+if(-not $sessions.fixture.ready -or $sessions.fixture.active.Count -ne 1 -or $sessions.fixture.active[0] -ne 'current'){throw 'Active turn omitted'}
+if($sessions.fixture.ContainsKey('items') -or $sessions.fixture.ContainsKey('turnHistory')){throw 'History retained'}
+$snapshot.change.conversationState.turnHistory.history.entitiesByKey.two.status='interrupted'
+Snapshot $snapshot
+if($sessions.fixture.active.Count -ne 0 -or $sessions.fixture.statuses.current -ne 'interrupted'){throw 'Interruption was not observed'}
+@{active_extracted=$true;interruption_observed=$true;history_discarded=$true} | ConvertTo-Json -Compress
 """
-        script=self.adapter_functions().replace("try {\n    switch ($request.operation) {",fake+"\ntry {\n    switch ($request.operation) {")
-        result=self.powershell("$request=[pscustomobject]@{operation='halt';roots=@()}\n"+script)
-        self.assertTrue(result["verified"])
-        self.assertEqual(result["survivor_count"],0)
-        self.assertGreater(result["failure_count"],0)
-        # A failed cancellation with a genuinely live handle must still fail closed.
-        live_script=script.replace("$this.HasExited=$true;throw", "throw")
-        live=self.powershell("$request=[pscustomobject]@{operation='halt';roots=@()}\n"+live_script)
-        self.assertFalse(live["verified"])
-        self.assertEqual(live["survivor_count"],1)
+        result=self.powershell(source)
+        self.assertTrue(result["interruption_observed"])
+        self.assertTrue(result["history_discarded"])
+
+    def test_wrong_desktop_snapshot_cannot_confirm_a_different_session(self):
+        source=self.desktop_functions()+r"""
+$clock=[Diagnostics.Stopwatch]::StartNew()
+$sessions=@{fixture=@{id='fixture';ready=$false}}
+$snapshot=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='snapshot';conversationState=@{id='different';hostId='local'}}}
+try {Snapshot $snapshot;throw 'Wrong session accepted'} catch {if($_.Exception.Message -notmatch 'Mismatched desktop snapshot'){throw}}
+if($sessions.fixture.ready){throw 'Wrong session changed readiness'}
+@{rejected=$true} | ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["rejected"])
+
+    def test_desktop_pipe_handles_split_frames_and_rejects_oversized_frames(self):
+        source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding='utf-8')
+        declaration=source.split("Add-Type -TypeDefinition @'",1)[1].split("'@",1)[0]
+        declaration=declaration.replace('"codex-ipc"','"hive-frame-test-" + System.Diagnostics.Process.GetCurrentProcess().Id')
+        fixture="$ErrorActionPreference='Stop'\nAdd-Type -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
+$name='hive-frame-test-'+$PID
+$server=[IO.Pipes.NamedPipeServerStream]::new($name,[IO.Pipes.PipeDirection]::InOut,1,[IO.Pipes.PipeTransmissionMode]::Byte,[IO.Pipes.PipeOptions]::Asynchronous)
+$waiting=$server.WaitForConnectionAsync()
+$client=[HiveDesktopPipe]::new();$null=$waiting.GetAwaiter().GetResult();$client.Start()
+try {
+ $bytes=[Text.Encoding]::UTF8.GetBytes('{"fixture":true}')
+ $header=[BitConverter]::GetBytes([int]$bytes.Length)
+ $server.Write($header,0,2);$server.Flush();Start-Sleep -Milliseconds 20
+ if($null -ne $client.Poll()){throw 'Partial header delivered'}
+ $server.Write($header,2,2);$server.Write($bytes,0,3);$server.Flush();Start-Sleep -Milliseconds 20
+ if($null -ne $client.Poll()){throw 'Partial body delivered'}
+ $server.Write($bytes,3,$bytes.Length-3);$server.Flush()
+ $deadline=[DateTime]::UtcNow.AddSeconds(2);$frame=$null
+ do {Start-Sleep -Milliseconds 10;$frame=$client.Poll()} while($null -eq $frame -and [DateTime]::UtcNow -lt $deadline)
+ if(-not ($frame|ConvertFrom-Json).fixture){throw 'Complete frame missing'}
+ $bad=[BitConverter]::GetBytes([int]16777217);$server.Write($bad,0,4);$server.Flush()
+ $deadline=[DateTime]::UtcNow.AddSeconds(2)
+ while($client.Alive -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 10}
+ if($client.Alive){throw 'Oversized frame accepted'}
+ @{split_frame_verified=$true;oversized_rejected=$true} | ConvertTo-Json -Compress
+} finally {$client.Dispose();$server.Dispose()}
+"""
+        self.assertTrue(self.powershell(fixture)["oversized_rejected"])
 
     def test_discovered_current_app_identities_round_trip_to_exact_handle_time(self):
         source = "$request=[pscustomobject]@{operation='inspect'}\n$raw = & {\n" + self.adapter_functions() + r"""
