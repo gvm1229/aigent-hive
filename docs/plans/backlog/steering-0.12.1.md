@@ -1,7 +1,10 @@
 # 추가 지시 보존과 충돌 확인
 
 > Plan version: 0.12.1
-> Scope: product
+> Scope: deferred
+
+- 2026-10-16 범위 정정: 0.12.1 첫 차수 제외, 같은 버전의 후속 차수 대기. 아래 완료 표시는 이전 로컬 구현·검증의 역사적 근거
+- 제품 변경 `dcc0d242`의 전역·프로젝트 지침과 설치 회귀는 첫 차수에서 분리. 소스 작업의 사용자 지시 보존 규칙 유지. 후속 재적용 때 새 검증 필요
 
 - [x] [STR121-001] 프로젝트·전역 지침의 이전 지시 보존과 충돌 확인
   - state: complete; evidence: repo:docs/research/steering-preservation-0.12.1.md#sha256:f7857c23d4ee8fc5291c2f3571d32848a5988689be21ff7d82321829d0b0dc74

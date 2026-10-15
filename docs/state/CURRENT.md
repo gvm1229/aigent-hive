@@ -5,27 +5,26 @@
 - 공개 안정판: `0.12.0`
 - 현재 사용자 CLI: `0.12.0` 관리된 실행 파일 원복, 기존 지식·선호 유지
 - 수용한 공개 시험: `0.12.0-test.3`
-- 단계: 2026-10-15 추가 지시 보존·충돌 확인 로컬 구현·검증 완료
+- 단계: 2026-10-16 첫 차수 세션 중단·60초 관측 공백 보호의 오프라인 수정
 - 정본: [활성 계획](../plans/PLAN.md)·[출시 순서](../plans/0.12.0-stable-release.md)·[범위 결정](../decisions/ADR-0025-0.11.2-scope.md)
 
 ## 생성된 현재 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.12.1`
-- 현재 등록 항목: 3/5 완료
+- 현재 등록 항목: 0/3 완료
 
-- `agent-owned`: 없음
-- `awaiting-user-authority`: `RST121-002`
+- `agent-owned`: `RST121-001`, `RST121-002`
+- `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `RST121-003`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 이번 작업
 
-- [구현 계획](../plans/active/steering-0.12.1.md)·[결정](../decisions/steering-preservation.md)
-- 새 지시의 기본 추가, 명시적 교체 범위 한정, 충돌 질문 후 해당 작업 대기
-- [검증 근거](../research/steering-preservation-0.12.1.md): Windows 전역 170개·프로젝트 68개·정적 계약 23개 통과
-- 게시·설치·실제 호스트 대화 수용 제외
+- [첫 차수 계획](../plans/active/reset-stop-0.12.1.md): 실제 초기화 즉시 세션 중단, 정상 조회 부재 60초 뒤 보호 중단, Codex 앱 유지
+- 실제 앱 접근·중단 시험·설치 비활성 유지, 평상시 기록 구독 제거와 사건별 한정 확인의 모의 검증
+- [추가 지시 보존](../plans/backlog/steering-0.12.1.md): 이전 구현 근거 보존, 첫 차수 제품 제외·후속 차수 대기. 현재 소스 작업의 지시 보존 규칙 유지
 
 ## 안정판 게시
 
