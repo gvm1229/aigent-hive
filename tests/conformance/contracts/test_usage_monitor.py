@@ -120,7 +120,7 @@ $clock=[Diagnostics.Stopwatch]::StartNew()
 $sessions=@{fixture=@{id='fixture';ready=$false;dirty=$true;active=@();statuses=@{}}}
 $snapshot=[pscustomobject]@{hostId='local';conversationId='fixture';change=[pscustomobject]@{type='snapshot';conversationState=[pscustomobject]@{
  id='fixture';hostId='local';turns=@();title='fixture';threadRuntimeStatus=@{type='active'};threadGoal=@{status='active'}
- turnHistory=@{history=@{entitiesByKey=[pscustomobject]@{one=@{turnId='old';status='completed';items=@('not retained')};two=@{turnId='current';status='inProgress';items=@('not retained')}}}}
+ turnHistory=@{kind='canonical';history=@{islands=@(@{entries=@(@{value='one'},@{value='two'})});entitiesByKey=[pscustomobject]@{one=@{turnId='old';status='completed';items=@('not retained')};two=@{turnId='current';status='inProgress';items=@('not retained')}}}}
 }}}
 Snapshot $snapshot
 if(-not $sessions.fixture.ready -or $sessions.fixture.active.Count -ne 1 -or $sessions.fixture.active[0] -ne 'current'){throw 'Active turn omitted'}
@@ -285,6 +285,33 @@ if((Acceptance-ExitCode @{phase='passed-local-session-interruption';fixture_task
 @{failure_reported=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["failure_reported"])
+
+    def test_turn_store_orphans_and_old_progress_do_not_become_current_runs(self):
+        source=self.desktop_functions()+r"""
+$state=[pscustomobject]@{turns=@();turnHistory=@{kind='canonical';history=@{
+ islands=@(@{entries=@(@{value='old'},@{value='latest'})})
+ entitiesByKey=[pscustomobject]@{orphan=@{turnId='orphan';status='inProgress'};old=@{turnId='old';status='inProgress'};latest=@{turnId='latest';status='interrupted'}}
+}}}
+$turns=@(Visible-Turns $state)
+if($turns.Count -ne 2 -or $turns[-1].turnId -ne 'latest' -or $turns[-1].status -ne 'interrupted'){throw 'Unreferenced or older turn selected'}
+$state.turns=@([pscustomobject]@{turnId='new';status='inProgress'})
+$turns=@(Visible-Turns $state)
+if($turns[-1].turnId -ne 'new'){throw 'New legacy overlay omitted'}
+@{canonical_membership=$true;latest_only=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["canonical_membership"])
+
+    def test_fresh_native_interruption_is_confirmation_even_without_response(self):
+        source=self.desktop_functions()+r"""
+$sessions=@{fixture=@{ready=$true;observedAt=200;statuses=@{current='interrupted'};goal='paused';lastResponse='failed'}}
+$target=@{thread='fixture';turn='current'}
+if(-not (Confirmed-Target $target 100)){throw 'Native completion required a lost response'}
+if(Confirmed-Target $target 201){throw 'Stale snapshot confirmed interruption'}
+$sessions.fixture.statuses.current='inProgress'
+if(Confirmed-Target $target 100){throw 'Running turn confirmed'}
+@{fresh_completion=$true;stale_rejected=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["stale_rejected"])
 
 
 if __name__ == "__main__":

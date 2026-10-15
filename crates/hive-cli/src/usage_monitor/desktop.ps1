@@ -103,7 +103,7 @@ try {
         if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$') {throw 'Invalid desktop thread identity'}
         if (-not $sessions.ContainsKey($id)) {
             if ($sessions.Count -ge 4096) {throw 'Too many desktop sessions'}
-            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';snapshotAt=-2000L}
+            $sessions[$id]=@{id=$id;ready=$false;dirty=$true;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;interruptedTurn='';runtime='unknown';goal='';snapshotAt=-2000L;observedAt=-1L}
             Follow $id
         }
     }
@@ -114,6 +114,46 @@ try {
                 (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -gt 8000)) {$count++}
         }
         return $count
+    }
+    function Visible-Turns($state) {
+        $canonical=@()
+        if ($state.turnHistory.kind -eq 'canonical') {
+            $history=$state.turnHistory.history
+            if ($null -eq $history.islands) {throw 'Missing canonical turn order'}
+            foreach ($island in @($history.islands)) {
+                foreach ($entry in @($island.entries)) {
+                    $property=$history.entitiesByKey.PSObject.Properties[[string]$entry.value]
+                    if ($null -eq $property) {throw 'Missing canonical turn entity'}
+                    $turn=$property.Value
+                    if ($turn.turnId -and $turn.status) {$canonical+=@($turn)}
+                }
+            }
+        } else {return @($state.turns | Where-Object {$_.turnId -and $_.status})}
+        $known=@{};foreach($turn in $canonical){$known[[string]$turn.turnId]=$true}
+        $incoming=@{};$before=@{};$buffer=[Collections.Generic.List[object]]::new()
+        foreach($turn in @($state.turns)) {
+            if(-not $turn.turnId -or -not $turn.status){continue}
+            $id=[string]$turn.turnId;$incoming[$id]=$turn
+            if($known.ContainsKey($id)) {
+                if($buffer.Count -gt 0){$before[$id]=@($before[$id])+@($buffer.ToArray());$buffer.Clear()}
+            } else {$buffer.Add($turn)}
+        }
+        $ordered=[Collections.Generic.List[object]]::new()
+        foreach($turn in $canonical) {
+            $id=[string]$turn.turnId
+            foreach($extra in @($before[$id])){if($null -ne $extra){$ordered.Add($extra)}}
+            $status=[string]$turn.status;$overlay=$incoming[$id]
+            if($null -ne $overlay -and -not ($status -ne 'inProgress' -and $overlay.status -eq 'inProgress' -and
+                ($null -ne $turn.itemsPagination -or $null -ne $overlay.itemsPagination))) {$status=[string]$overlay.status}
+            $ordered.Add([pscustomobject]@{turnId=$id;status=$status})
+        }
+        foreach($extra in $buffer){$ordered.Add($extra)}
+        return $ordered.ToArray()
+    }
+    function Confirmed-Target($target,[long]$began) {
+        $session=$sessions[$target.thread]
+        return ($session.ready -and $session.observedAt -ge $began -and
+            $session.statuses[$target.turn] -eq 'interrupted' -and $session.goal -ne 'active')
     }
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
@@ -133,12 +173,12 @@ try {
         }
         $state=$snapshot.change.conversationState
         if ($state.id -ne $session.id -or $state.hostId -ne 'local') { throw 'Mismatched desktop snapshot' }
-        $entities=@($state.turns)
-        if ($state.turnHistory.history.entitiesByKey) { $entities += @($state.turnHistory.history.entitiesByKey.PSObject.Properties | ForEach-Object {$_.Value}) }
-        $turns=@($entities | Where-Object { $_.turnId -and $_.status })
-        $session.active=@($turns | Where-Object status -eq 'inProgress' | ForEach-Object {[string]$_.turnId})
+        $turns=@(Visible-Turns $state)
+        $session.active=@()
+        if($turns.Count -gt 0 -and $turns[-1].status -eq 'inProgress') {$session.active=@([string]$turns[-1].turnId)}
         $session.statuses=@{}
-        foreach ($turn in $turns) { $session.statuses[[string]$turn.turnId]=[string]$turn.status }
+        foreach($turn in $turns){$session.statuses[[string]$turn.turnId]=[string]$turn.status}
+        $session.observedAt=$clock.ElapsedMilliseconds
         $session.runtime=[string]$state.threadRuntimeStatus.type
         $session.goal=[string]$state.threadGoal.status
         $session.ready=$true;$session.dirty=$false;$session.snapshotAt=$clock.ElapsedMilliseconds
@@ -187,7 +227,7 @@ try {
                 if ($null -eq $stop -or $stop.digest -ne $command.incident) {
                     $detected=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                     if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
-                    $stop=@{digest=[string]$command.incident;detected_ms=$detected;settled=$false;targeted=@{};request_ms=$null}
+                    $stop=@{began=$clock.ElapsedMilliseconds;digest=[string]$command.incident;detected_ms=$detected;settled=$false;targeted=@{};request_ms=$null}
                 }
             } elseif ($command.operation -eq 'discover') {
                 $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
@@ -237,7 +277,7 @@ try {
                 $confirmed=0
                 foreach ($target in $stop.targeted.Values) {
                     $session=$sessions[$target.thread]
-                    if ($session.lastResponse -eq 'accepted' -and $session.statuses[$target.turn] -eq 'interrupted' -and $session.goal -ne 'active') { $confirmed++ }
+                    if (Confirmed-Target $target $stop.began) { $confirmed++ }
                 }
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
