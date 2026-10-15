@@ -56,7 +56,19 @@ try {
     switch ($request.operation) {
         'inspect' {
             $tree = App-Roots
-            $roots = @($tree.roots | ForEach-Object { @{ pid = [int]$_.ProcessId; created_ticks = $_.CreationDate.ToUniversalTime().Ticks; executable = $_.ExecutablePath } })
+            $roots = @()
+            foreach ($root in $tree.roots) {
+                try {
+                    $pinned = [Diagnostics.Process]::GetProcessById([int]$root.ProcessId)
+                    $null = $pinned.Handle
+                    if ([Math]::Abs(($pinned.StartTime.ToUniversalTime() - $root.CreationDate.ToUniversalTime()).TotalMilliseconds) -gt 1 -or
+                        $pinned.MainModule.FileName -ne $root.ExecutablePath) { throw 'App identity changed during discovery' }
+                    # CIM timestamps can lose sub-microsecond precision. Cache the handle's
+                    # exact ticks so the later strict PID-reuse check compares like with like.
+                    $roots += @{ pid = [int]$root.ProcessId; created_ticks = $pinned.StartTime.ToUniversalTime().Ticks; executable = $pinned.MainModule.FileName }
+                    $pinned.Dispose()
+                } catch [ArgumentException] { }
+            }
             $callerWithinApp = $false
             if ($request.caller_pid) {
                 $cursor = [int]$request.caller_pid

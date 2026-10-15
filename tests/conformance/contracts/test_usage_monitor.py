@@ -72,6 +72,20 @@ try {
 """
         self.assertTrue(self.powershell(source)["preserved"])
 
+    def test_discovered_current_app_identities_round_trip_to_exact_handle_time(self):
+        source = "$request=[pscustomobject]@{operation='inspect'}\n$raw = & {\n" + self.adapter_functions() + r"""
+}
+$data=$raw | ConvertFrom-Json
+foreach($root in $data.roots) {
+  try {
+    $p=[Diagnostics.Process]::GetProcessById([int]$root.pid)
+    if($p.StartTime.ToUniversalTime().Ticks -ne [long]$root.created_ticks){throw 'Precision lost in cached identity'}
+  } catch [ArgumentException] { }
+}
+@{valid=$true;scope='read-only-app-discovery'} | ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["valid"])
+
     def test_register_collision_and_foreign_task_removal_are_refused(self):
         # Real task registration is not needed to prove that foreign tasks stay untouched.
         script = self.adapter_functions().replace("exit 1", "throw")
