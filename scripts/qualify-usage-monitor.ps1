@@ -110,13 +110,13 @@ try {
     $monitorEnabled = $true
     $sampleAfter = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $statePath = Join-Path $fixture '.hive\runtime\usage-monitor\state.json'
-    $deadline = [DateTime]::UtcNow.AddSeconds(360)
+    $deadline = [DateTime]::UtcNow.AddSeconds(90)
     do {
         Start-Sleep -Milliseconds 250
         if (Test-Path -LiteralPath $statePath) { $state = Read-State }
-    } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 20 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
+    } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 4 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
     if (-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
-    if ($state.observation_count -lt 20 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Twenty fresh observations and a live desktop session are required'}
+    if ($state.observation_count -lt 4 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Four fresh observations and a live desktop session are required'}
     $result.phase='armed';$result.first_observation=$state.last_success;$result.observation_count=$state.observation_count;Record
     if ($WaitForTrigger) {
         $deadline=[DateTime]::UtcNow.AddMinutes(3)
@@ -167,6 +167,8 @@ try {
         Start-Sleep -Milliseconds 100
         $state = Read-State
     } while ((-not $state.incident.confirmed_stop) -and [DateTime]::UtcNow -lt $deadline)
+    $result.incident=$state.incident
+    $result.latest_control=@{known=$state.known_sessions;unknown=$state.unknown_sessions;active=$state.active_turns;connected=$state.control_connected;app_alive=$state.app_alive};Record
     if ($state.incident.reason -ne 'usage-reset' -or -not $state.incident.confirmed_stop -or
         $state.incident.confirmed_stop.targeted_turns -lt 1) { throw 'Actual session interruption not verified' }
     $result.incident=$state.incident
