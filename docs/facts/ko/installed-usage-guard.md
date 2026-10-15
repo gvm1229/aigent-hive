@@ -10,7 +10,7 @@ tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:dc9e92ed1cb85336da05c2f030e20efcdebf15b60751b90777a2307ec8cefef4"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b991ea10a2319c71ab62dea0c9ad3442dea2779d92e2d1bc215df1478077c6b4"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
 reviewed_revision: "git:eb62d9db75f946f948b4dada89fa141654e80135"
 status: active
@@ -23,4 +23,4 @@ status: active
 - 미설정 폴더의 대상별 검사·제어·실행 상태 생성 없음, 설정 없이 쓰는 스킬 유지
 - 세션 제어는 정확한 설정 대상에 결합. 무관하게 손상된 작업 그래프 CURRENT 보존, 권한 근거 제외
 - 소스 작업 시작 전 1회 검사. 별도 소스 감시기·도구마다 반복 검사 금지
-- 별도 설치한 0.12.1 Windows 감시기는 미설정 폴더의 채팅까지 앱 전체 보호. 해당 폴더의 소비자 상태 생성 없음
+- 0.12.1의 폴더 간 Windows 감시 미검증·비활성. 활성화 거부, 무관한 폴더의 소비자 상태 생성 없음
