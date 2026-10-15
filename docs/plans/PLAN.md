@@ -1,7 +1,7 @@
 # Aigent Hive 활성 계획
 
-> Revision: 401
-> 기준일: 2026-10-15
+> Revision: 402
+> 기준일: 2026-10-16
 > Product version: `0.12.1`
 > 공개 Stable: `0.12.0`
 > 현재 단계: 앱 유지와 실행 중 세션 중단 구현
