@@ -42,7 +42,7 @@
 ## 실제 수용 인계
 
 - 독립 예약 검사기 등록 완료, 마지막 실행만 대기. 시험용 하위 작업 2개는 파일 변경 없이 대기
-- 결과: `tests/work/usage-monitor-acceptance/20261015-reset-stop/result.json`. 현재 사용자 설치 변경 없음
+- 결과: `tests/work/usage-monitor-acceptance/20261015-confirmed-stop/result.json`. 현재 사용자 설치 변경 없음
 - Codex 수동 재시작 뒤 결과·실제 프로세스 종료·시험 예약 작업 제거 확인, 미완료 기준의 완료 여부 재판정
 
 ## 재개와 조건부 설치 승인

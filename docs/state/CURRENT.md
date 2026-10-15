@@ -77,7 +77,7 @@
 ## 실제 앱 중단 수용 인계
 
 - 독립 예약 검사기 등록 완료. 마지막 시작 뒤 현재 Codex 종료 예정, 수동 앱 재시작 필요
-- 실행 정보: `.agents/work/reset-stop-acceptance.json`, 결과: `tests/work/usage-monitor-acceptance/20261015-reset-stop/result.json`
+- 실행 정보: `.agents/work/reset-stop-acceptance.json`, 결과: `tests/work/usage-monitor-acceptance/20261015-confirmed-stop/result.json`
 - 재시작 뒤 실제 결과 확인·임시 예약 작업 제거·RST121-002–003 갱신. 시험 실패 또는 미확인 상태의 완료 처리 금지
 - 0.12.1 실제 사용자 로컬 설치·상시 등록은 앱 종료 시험 통과 조건으로 승인. 현재 적용 전 0.12.0 유지
 
