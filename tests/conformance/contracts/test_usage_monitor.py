@@ -313,6 +313,12 @@ if(Confirmed-Target $target 100){throw 'Running turn confirmed'}
 """
         self.assertTrue(self.powershell(source)["stale_rejected"])
 
+    def test_direct_desktop_script_is_disabled_before_loading_native_pipe_code(self):
+        path=str(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').replace("'","''")
+        source="$ErrorActionPreference='Stop';$blocked=$false;try {& '"+path+"'}catch{if($_.Exception.Message -match 'Unqualified desktop control disabled'){$blocked=$true}else{throw}};"
+        source+="if(-not $blocked -or ('HiveDesktopPipe' -as [type])){throw 'Desktop transport was loaded'};@{blocked_before_native_code=$true}|ConvertTo-Json -Compress"
+        self.assertTrue(self.powershell(source)["blocked_before_native_code"])
+
 
 if __name__ == "__main__":
     unittest.main()

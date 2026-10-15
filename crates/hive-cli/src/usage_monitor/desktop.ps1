@@ -1,5 +1,6 @@
 # Version-qualified desktop coordination client. No app files, settings, or processes are changed.
 $ErrorActionPreference = 'Stop'
+throw 'Unqualified desktop control disabled; do not contact the Codex app'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)

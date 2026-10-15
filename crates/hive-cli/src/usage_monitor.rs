@@ -163,6 +163,9 @@ pub(crate) fn check_dispatch(user_root: Option<&Path>) -> Result<(), AdapterErro
             "shared usage monitor halt requires exact incident acknowledgement",
         ));
     }
+    if config.enabled {
+        require_app_safe_control()?;
+    }
     if config.enabled && (!state.control_connected || state.control_stopping) {
         return Err(error(
             "usage monitor desktop control has not released the session",
@@ -304,7 +307,7 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
             let state: MonitorState = load(&root, STATE)?.unwrap_or_else(MonitorState::new);
             Ok(
                 json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
-                "monitoring_verified": configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
+                "automatic_control_available":false,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
                     && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.incident.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
                 "scope":"local-windows-codex","server_billing_interruption_verified":false}),
             )
@@ -364,13 +367,14 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
     })
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
-    let config = configuration(root)?;
+    let mut config = configuration(root)?;
+    config.enabled = false;
     let mut data = json!({"configuration":config,"adapter_digest":sha256_digest(platform::SCRIPT.as_bytes()),
         "poll_seconds":POLL_SECONDS,"sample_timeout_seconds":5,"retry_seconds":2,"unresponsive_seconds":BLIND_SECONDS,
-        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":true,"app_preserved":true,"qualified_desktop_package_version":"26.1007.9446.0",
-        "changed_paths":[CONFIG,STATE,config.executable],"scheduled_task_operation":"register-current-user-at-logon-and-start",
+        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":false,"app_preserved":null,"qualified_desktop_package_version":null,"candidate_desktop_package_version":"26.1007.9446.0","automatic_control_available":false,
+        "changed_paths":[],"scheduled_task_operation":"none-unqualified",
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
-        "supports_current_os":cfg!(windows),"remote_execution_supported":false});
+        "supports_current_os":false,"remote_execution_supported":false});
     let digest = sha256_digest(&serialize(&data)?);
     data["preview_digest"] = json!(digest);
     Ok(data)
@@ -384,7 +388,13 @@ fn task_request(config: &Configuration, operation: &str) -> Value {
         });
     json!({"operation":operation,"task_name":config.task_name,"executable":executable,"arguments":arguments})
 }
+fn require_app_safe_control() -> Result<(), AdapterError> {
+    Err(error(
+        "desktop app control is unqualified and disabled; no automatic activation",
+    ))
+}
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
+    require_app_safe_control()?;
     let _control = lock(root, "control.lock")?;
     if preview(root.requested_path())?["preview_digest"].as_str() != Some(confirm) {
         return Err(error("preview digest changed"));
@@ -511,6 +521,7 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    require_app_safe_control()?;
     let _lease = lock(root, "controller.lock")?;
     let config: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor has not been enabled"))?;
@@ -785,53 +796,19 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(windows)]
     #[test]
-    #[ignore = "read-only qualification against the currently running Windows desktop"]
-    fn live_desktop_connection_observes_active_sessions_without_stopping_them() {
-        let desktop = desktop::Desktop::start();
-        let deadline = Instant::now() + Duration::from_secs(20);
-        let mut consecutive = 0;
-        loop {
-            let packet = desktop
-                .events
-                .recv_timeout(deadline.saturating_duration_since(Instant::now()))
-                .unwrap();
-            if packet["connected"] == true
-                && packet["unknown_sessions"] == 0
-                && packet["known_sessions"].as_u64().unwrap_or_default() > 0
-                && packet["active_turns"].as_u64().unwrap_or_default() > 0
-            {
-                println!(
-                    "qualified desktop: sessions={}, active={}, app_alive={}",
-                    packet["known_sessions"], packet["active_turns"], packet["app_alive"]
-                );
-                assert_eq!(packet["app_alive"], true);
-                consecutive += 1;
-                if consecutive >= 12 {
-                    break;
-                }
-            } else {
-                consecutive = 0;
-            }
-        }
-    }
-    #[cfg(windows)]
-    #[test]
-    #[ignore = "read-only local catalog must include the actual current session"]
-    fn live_desktop_catalog_includes_current_background_session() {
-        let mut reader = crate::usage::MonitorSensor::new();
-        let began = Instant::now();
-        let ids = reader
-            .desktop_thread_ids()
-            .expect("complete local thread catalog");
-        let current = std::env::var("CODEX_THREAD_ID").expect("active host session");
-        assert!(ids.contains(&current));
-        println!(
-            "catalog: {} identities, {} ms, current session present",
-            ids.len(),
-            began.elapsed().as_millis()
-        );
+    fn unqualified_control_cannot_activate_or_run_or_report_supported() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let view = preview(temporary.path()).unwrap();
+        assert_eq!(view["automatic_control_available"], false);
+        assert_eq!(view["session_interrupt"], false);
+        assert_eq!(view["configuration"]["enabled"], false);
+        assert_eq!(view["changed_paths"], json!([]));
+        assert_eq!(view["supports_current_os"], false);
+        assert!(enable(&root, view["preview_digest"].as_str().unwrap()).is_err());
+        assert!(controller(&root).is_err());
+        assert!(!temporary.path().join(".hive").exists());
     }
     #[cfg(windows)]
     #[test]
@@ -901,7 +878,7 @@ mod tests {
             .is_none());
     }
     #[test]
-    fn fresh_usage_does_not_authorize_work_or_report_health_until_control_is_released() {
+    fn fresh_usage_cannot_authorize_unqualified_control_even_after_release() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         std::fs::create_dir_all(temporary.path().join(".hive/config")).unwrap();
@@ -943,8 +920,8 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        assert!(check_dispatch(Some(temporary.path())).is_ok());
-        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], true);
+        assert!(check_dispatch(Some(temporary.path())).is_err());
+        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], false);
     }
     #[test]
     fn shared_incident_blocks_even_when_monitor_disabled() {
