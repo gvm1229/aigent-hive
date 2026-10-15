@@ -814,12 +814,15 @@ mod tests {
     #[ignore = "four real native observations, fifteen seconds between starts"]
     fn live_monitor_sensor_sustains_four_fresh_observations() {
         let mut sensor = crate::usage::MonitorSensor::new();
+        let mut state = MonitorState::new();
         for index in 0..4 {
             let began = Instant::now();
             let snapshot = sensor.read().expect("live bounded native observation");
             let elapsed = began.elapsed();
             assert!(elapsed < Duration::from_secs(5));
-            assert!(!snapshot.core_snapshots().is_empty());
+            let current = snapshot.core_snapshots();
+            println!("observation timestamps: {:?}", current.iter().map(|s| (s.measured_at_unix_seconds, s.resets_at_unix_seconds)).collect::<Vec<_>>());
+            state.observe(&current, now()).expect("live observation accepted by monitor state");
             println!("native observation {index}: {} ms", elapsed.as_millis());
             if index < 3 {
                 thread::sleep(Duration::from_secs(15).saturating_sub(began.elapsed()));

@@ -253,7 +253,7 @@ impl MonitorState {
                 self.baseline.iter().any(|old| {
                     same_window(item, old)
                         && (item.measured_at_unix_seconds < old.measured_at_unix_seconds
-                            || item.resets_at_unix_seconds < old.resets_at_unix_seconds)
+                            || item.resets_at_unix_seconds.saturating_add(2) < old.resets_at_unix_seconds)
                 })
             }) {
                 return Err(invalid("usage observation moved backwards"));
@@ -263,7 +263,7 @@ impl MonitorState {
                 self.baseline.iter().any(|old| {
                     same_window(item, old)
                         && item.measured_at_unix_seconds >= old.resets_at_unix_seconds
-                        && item.resets_at_unix_seconds > old.resets_at_unix_seconds
+                        && item.resets_at_unix_seconds > old.resets_at_unix_seconds.saturating_add(2)
                 })
             });
             if rollover || detect_usage_reset(current, &self.baseline).is_some() {
@@ -271,7 +271,17 @@ impl MonitorState {
             }
         }
         self.account_digest = Some(first.account_scope_digest.clone());
-        self.baseline = current.to_vec();
+        let mut next = current.to_vec();
+        for item in &mut next {
+            if let Some(old) = self.baseline.iter().find(|old| same_window(item, old)) {
+                // Native reset timestamps are rounded from a countdown and can move by a second.
+                // Keep the period anchor stable; this never suppresses a remaining-quota increase.
+                if item.resets_at_unix_seconds.abs_diff(old.resets_at_unix_seconds) <= 2 {
+                    item.resets_at_unix_seconds = old.resets_at_unix_seconds;
+                }
+            }
+        }
+        self.baseline = next;
         self.last_success = Some(now);
         self.observation_count = self.observation_count.saturating_add(1);
         Ok(())
@@ -364,6 +374,20 @@ mod tests {
         packet["confirmed"] = serde_json::json!(0);
         incident.record_session_stop(&packet, 109);
         assert!(!incident.stop_confirmed);
+    }
+    #[test]
+    fn countdown_rounding_is_fresh_but_cannot_drift_the_period_anchor() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(80.0, 100, 200), 100).unwrap();
+        for (measured, reset) in [(115, 199), (130, 201), (145, 198)] {
+            state.observe(&sample(70.0, measured, reset), measured).unwrap();
+            assert_eq!(state.baseline[0].resets_at_unix_seconds, 200);
+            assert!(state.incident.is_none());
+        }
+        assert_eq!(state.last_success, Some(145));
+        assert!(state.observe(&sample(60.0, 160, 197), 160).is_err());
+        state.observe(&sample(99.0, 160, 199), 160).unwrap();
+        assert_eq!(state.incident.unwrap().reason, "usage-reset");
     }
     #[test]
     fn first_baseline_then_refill_latches_across_restart() {
