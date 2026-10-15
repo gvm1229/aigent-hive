@@ -5,18 +5,18 @@ topic_slug: steering-preservation
 language: en
 counterpart: ../ko/steering-preservation.md
 title: "Follow-up instruction preservation"
-summary: "Hive 0.12.1 projects additive steering and conflict clarification rules."
+summary: "Consumer delivery is deferred beyond 0.12.1 iteration 1; source rules remain."
 tags: [agent, directives]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/user_directives.rs#sha256:e3f955e48e354aaac598a5237679689fb7c827366574d9330bc6dd4b661735ea"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4795665ae984b818ed5781b43884bec10088ddb64287465dcbfafbed81b965a0"
-  - "repo:harness/directives/00-project-harness.md#sha256:ee4f9721824c4caad76c21b7d43e04f708637f3df96a095bf8058ef46b122ace"
+  - "repo:.agents/directives/references/follow-up-instructions.md#sha256:e06c604bfc0f46b38c7affdc30c5a56e71945c340618f7167a96ad69f40c7ea9"
+  - "repo:docs/plans/backlog/steering-0.12.1.md#sha256:0d2c963c6af27ad7e137efcdc42f6c2ff16fe59634e6274c2e6652caa8fbd5ce"
+  - "repo:docs/research/steering-preservation-0.12.1.md#sha256:f7857c23d4ee8fc5291c2f3571d32848a5988689be21ff7d82321829d0b0dc74"
 links: [agent-autonomous-continuation]
-reviewed_revision: "git:29e5241e0983e13d222703731533b43409327e6a"
+reviewed_revision: "git:7673c0ca72551d413d7f9e41f00d88c3f388b027"
 status: active
 ---
 
 # Follow-up instruction preservation
 
-The maintainer requested preservation of earlier steering. Hive 0.12.1 adds the rule to project directives and English/Korean global guidance. New messages add by default; explicit replacement changes only the named scope. An implicit conflict requires a choice before the affected action, while independent work continues. Cancellation is immediate. Existing summaries retain unresolved conditions. Windows tests cover delivery to three host projections with Wiki disabled, not live model adherence or universal tool interception.
+The maintainer requested preservation of earlier instructions. Messages add by default; explicit replacement affects only its named scope. An implicit conflict requires a choice before dependent action; independent work continues. Cancellation is immediate and summaries preserve unresolved conditions. These source rules remain. The consumer directive and bilingual global guidance changes from dcc0d242 are excluded from 0.12.1 iteration 1 and deferred to a later iteration. Earlier Windows delivery tests across three hosts remain historical evidence, not current consumer delivery, live model compliance or universal tool interception.

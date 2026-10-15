@@ -5,12 +5,12 @@ topic_slug: installed-usage-guard
 language: en
 counterpart: ../ko/installed-usage-guard.md
 title: "Installed Guard Target Boundary"
-summary: "Per-target enforcement applies to Hive targets; the separately installed Windows monitor protects the Codex app across folders."
+summary: "Per-target checks remain active; the 0.12.1 Windows monitor is unqualified and disabled."
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:b991ea10a2319c71ab62dea0c9ad3442dea2779d92e2d1bc215df1478077c6b4"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:c51194775aaf8b9f4b0c34ffabdbbdd09768fb0758bdd54251d6f3d1a6f259b0"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
 reviewed_revision: "git:eb62d9db75f946f948b4dada89fa141654e80135"
 status: active
