@@ -28,6 +28,20 @@ function App-Roots {
     return @{ roots = @($roots); rows = @($rows) }
 }
 
+function Read-StatusState([string]$path) {
+    for($attempt=0;$attempt -lt 3;$attempt++) {
+        try {
+            $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+            try {
+                if($stream.Length -gt 65536){throw 'Monitor state exceeds its limit'}
+                $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::UTF8,$true)
+                try {return ($reader.ReadToEnd() | ConvertFrom-Json)} finally {$reader.Dispose()}
+            } finally {$stream.Dispose()}
+        }
+        catch {if($attempt -eq 2){throw};Start-Sleep -Milliseconds 20}
+    }
+}
+
 try {
     switch ($request.operation) {
         'inspect' {
@@ -74,7 +88,7 @@ try {
             $timer=[Windows.Forms.Timer]::new();$timer.Interval=1000
             $timer.Add_Tick({
                 try {
-                    $state=[IO.File]::ReadAllText($statePath) | ConvertFrom-Json
+                    $state=Read-StatusState $statePath
                     if ($null -eq $state.incident) {$label.Text="중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.";return}
                     if ($state.incident.digest -ne $request.incident) {$label.Text='새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.';return}
                     $reason=switch ($state.incident.reason) {'usage-reset' {'사용량 초기화 감지'} 'sensor-unresponsive' {'30초 동안 정상 사용량 조회 없음'} default {'감시 상태 오류'}}

@@ -43,7 +43,12 @@ function Preserved-Digests {
     return $result
 }
 function Run-Hive([string[]]$arguments) {
-    $raw=& $native @arguments
+    $raw=$null
+    for($attempt=0;$attempt -lt 3;$attempt++) {
+        $raw=& $native @arguments
+        if($LASTEXITCODE -eq 0 -or $arguments[0] -ne 'usage' -or $arguments[2] -ne 'status'){break}
+        Start-Sleep -Milliseconds 25
+    }
     if($LASTEXITCODE -ne 0){throw ('Hive step failed: '+$arguments[0]+' '+$arguments[1])}
     return ($raw | ConvertFrom-Json)
 }

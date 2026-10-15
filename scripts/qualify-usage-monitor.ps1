@@ -49,6 +49,20 @@ if ($CollectorTask -notmatch '^AigentHive-UsageAcceptance-[a-f0-9]{16}$') { thro
 $monitorEnabled = $false
 $result = @{schema_version=1;phase='started';host='Windows Codex';synthetic_reset=$true;real_provider_reset=$false;installed_to_real_user_root=$false;started_at=[DateTime]::UtcNow.ToString('o')}
 function Record { [IO.File]::WriteAllText($reportPath,($result | ConvertTo-Json -Depth 15),$utf8) }
+function Read-State {
+    for($attempt=0;$attempt -lt 6;$attempt++) {
+        try {
+            $stream=[IO.File]::Open($statePath,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+            try {
+                if($stream.Length -gt 65536){throw 'Monitor state exceeds its limit'}
+                $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::UTF8,$true)
+                try {return ($reader.ReadToEnd() | ConvertFrom-Json)} finally {$reader.Dispose()}
+            } finally {$stream.Dispose()}
+        }
+        catch {if($attempt -eq 5){throw};Start-Sleep -Milliseconds 20}
+    }
+}
+
 if ($ExpectedAppPid -lt 1 -or $ExpectedAppTicks -lt 1) {throw 'Exact original app identity is required'}
 $appPin=[Diagnostics.Process]::GetProcessById($ExpectedAppPid)
 $null=$appPin.Handle
@@ -95,7 +109,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddSeconds(75)
     do {
         Start-Sleep -Milliseconds 250
-        if (Test-Path -LiteralPath $statePath) { $state = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json }
+        if (Test-Path -LiteralPath $statePath) { $state = Read-State }
     } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 4 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
     if (-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
     if ($state.observation_count -lt 4 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Four fresh observations and a live desktop session are required'}
@@ -121,7 +135,7 @@ try {
     } while (-not $held -and [DateTime]::UtcNow -lt $deadline)
     if (-not $held) { throw 'Cannot pin fixture state for synthetic reset' }
     try {
-        $state = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json
+        $state = Read-State
         if ($state.incident) { throw 'An independent incident is already pending' }
         $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         foreach ($snapshot in $state.baseline) {
@@ -138,7 +152,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddSeconds(35)
     do {
         Start-Sleep -Milliseconds 100
-        $state = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json
+        $state = Read-State
     } while ((-not $state.incident.confirmed_stop) -and [DateTime]::UtcNow -lt $deadline)
     if ($state.incident.reason -ne 'usage-reset' -or -not $state.incident.confirmed_stop -or
         $state.incident.confirmed_stop.targeted_turns -lt 1) { throw 'Actual session interruption not verified' }
@@ -162,7 +176,7 @@ try {
     Record
     # Preserve the latch long enough to observe that the monitor does not resume Codex itself.
     Start-Sleep -Seconds 5
-    $after=[IO.File]::ReadAllText($statePath) | ConvertFrom-Json
+    $after=Read-State
     if (-not $after.incident -or $after.active_turns -gt 0) {throw 'Session resumed while protection was latched'}
     $result.no_automatic_resume=$true;Record
 } catch {

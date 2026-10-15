@@ -62,7 +62,15 @@ fn load<T: serde::de::DeserializeOwned>(
     root: &PinnedTarget,
     path: &str,
 ) -> Result<Option<T>, AdapterError> {
-    root.read_optional(Path::new(path), 65536)?
+    let mut observed = root.read_optional(Path::new(path), 65536);
+    for _ in 0..2 {
+        if matches!(&observed, Ok(Some(_))) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(20));
+        observed = root.read_optional(Path::new(path), 65536);
+    }
+    observed?
         .map(|bytes| {
             serde_json::from_value(
                 crate::usage::parse_strict_native_json(&bytes)
