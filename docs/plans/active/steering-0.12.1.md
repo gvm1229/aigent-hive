@@ -3,10 +3,10 @@
 > Plan version: 0.12.1
 > Scope: product
 
-- [ ] [STR121-001] 프로젝트·전역 지침의 이전 지시 보존과 충돌 확인
-  - state: agent-owned
-- [ ] [STR121-002] 양언어·호스트 투영 및 관련 회귀 검증
-  - state: agent-owned; depends: STR121-001
+- [x] [STR121-001] 프로젝트·전역 지침의 이전 지시 보존과 충돌 확인
+  - state: complete; evidence: repo:docs/research/steering-preservation-0.12.1.md#sha256:f7857c23d4ee8fc5291c2f3571d32848a5988689be21ff7d82321829d0b0dc74
+- [x] [STR121-002] 양언어·호스트 투영 및 관련 회귀 검증
+  - state: complete; depends: STR121-001; evidence: repo:docs/research/steering-preservation-0.12.1.md#sha256:f7857c23d4ee8fc5291c2f3571d32848a5988689be21ff7d82321829d0b0dc74
 
 ## 범위와 결정
 
@@ -30,3 +30,8 @@
 - 완료 기준: 지정된 규칙의 모든 투영 전달, 관련 검사 통과, 근거·미검증 범위 기록
 - 실패 시 해당 수정만 교정, 기존 사용자 변경·과거 출시 자료 보존
 - 실행 환경: Windows Codex. Linux·macOS 실행 및 자연어 충돌의 완전 탐지 미증명
+
+## 최종 근거
+
+- [Windows 구현·검증](../../research/steering-preservation-0.12.1.md): 전역 170개·프로젝트 68개·정적 계약 23개 통과
+- 제품 규칙의 로컬 구현 완료, 공개 패키지 수용·현재 사용자 설치·실제 모델 준수의 증명 제외

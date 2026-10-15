@@ -5,16 +5,16 @@
 - 공개 안정판: `0.12.0`
 - 현재 사용자 설치: `0.12.0`
 - 수용한 공개 시험: `0.12.0-test.3`
-- 단계: 2026-10-15 추가 지시 보존·충돌 확인 구현
+- 단계: 2026-10-15 추가 지시 보존·충돌 확인 로컬 구현·검증 완료
 - 정본: [활성 계획](../plans/PLAN.md)·[출시 순서](../plans/0.12.0-stable-release.md)·[범위 결정](../decisions/ADR-0025-0.11.2-scope.md)
 
 ## 생성된 현재 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.12.1`
-- 현재 등록 항목: 0/2 완료
+- 현재 등록 항목: 2/2 완료
 
-- `agent-owned`: `STR121-001`, `STR121-002`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -24,6 +24,7 @@
 
 - [구현 계획](../plans/active/steering-0.12.1.md)·[결정](../decisions/steering-preservation.md)
 - 새 지시의 기본 추가, 명시적 교체 범위 한정, 충돌 질문 후 해당 작업 대기
+- [검증 근거](../research/steering-preservation-0.12.1.md): Windows 전역 170개·프로젝트 68개·정적 계약 23개 통과
 - 게시·설치·실제 호스트 대화 수용 제외
 
 ## 안정판 게시

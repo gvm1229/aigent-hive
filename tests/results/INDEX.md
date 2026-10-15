@@ -1252,21 +1252,31 @@
 | [passed](runs/20261005T123618-134bbfd64c59.md) | Rust 1.99 규칙과 관계 빈 목록 시험 정합화 | f10db689cb3664087bdb276daf48695a87ecfe2a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T155250-67d7e0be3d70.md) | 공개 Windows 시험 바이너리의 소진 보호 계약 | ef026a39112c9e971242d349417099a911d9bdd3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T184239-0a4193b1d8e8.md) | 승인한 실제 호스트 검사의 공개 바이너리 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T184911-a67e783e9ec1.md) | 실제 호스트 CLI 콘솔의 고정 격리 도구 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T184507-022a391f6bda.md) | 승인 뒤 현재 CLI의 Windows 샌드박스 읽기 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T184601-3e91fa6d6af3.md) | 현재 CLI로 승인된 Windows 샌드박스 읽기 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T184911-a67e783e9ec1.md) | 실제 호스트 CLI 콘솔의 고정 격리 도구 준비 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T185121-eb719fd25bd8.md) | 승인한 공식 Windows elevated 샌드박스 복구 요청 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T185157-f9d0a4de8e19.md) | 공식 복구 뒤 동일 제한 조건의 Windows 샌드박스 읽기 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261005T185832-2a7e2fd44a94.md) | 승인한 Antigravity 실제 상태 표시 전달과 설정 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T185906-f8104f9806c5.md) | Antigravity 실제 콘솔의 상태 표시 전달과 안전한 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T185958-f281e9686c22.md) | 공식 복구 뒤 실제 설치 경로와 동일 실행 파일의 권한 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T190542-6836a8753995.md) | 현재 CLI 초기 색상 안내를 통과한 상태 표시 전달 검사 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T190930-9e869a976d6f.md) | 공식 앱 서버의 읽기 전용 Windows 실행 경로 대조 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T191524-e7aa1aaf7851.md) | 공식 읽기 전용 권한 목록으로 Windows 실행 경로 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T191529-d6a891117cca.md) | Antigravity 초기 안내의 필요한 사용자 선택 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192301-081d1937a076.md) | 선택형 데이터 제공을 끈 Antigravity 실제 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T192745-6b31b3d75dfc.md) | 데이터 제공 해제의 화면 갱신 뒤 Antigravity 전달 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T193823-530986daf50e.md) | 실제 콘솔 화면 상태의 고정 해석 도구 준비 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T194028-bda307593acd.md) | 현재 공식 서버의 실제 버전과 권한 목록 진단 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T194532-ab8c9f72f5c4.md) | 현재 호스트가 제공한 정확한 권한 식별자 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T194536-136ba760d9f4.md) | 실제 화면 해석으로 Antigravity 초기 안내와 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T194725-77bc7e6c1d15.md) | 호스트가 제공한 읽기 전용 권한의 실제 Windows 실행 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T195003-d5e379e3f233.md) | Windows가 지원하는 읽기 전용 실행 요청의 실제 대조 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T195044-c6f965a420fc.md) | 제한된 Windows 요청에서 미지원 출력 인자를 제거한 읽기 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T195617-f42c059165d9.md) | 데이터 제공 거부 선택의 실제 화면과 초기 실행 완료 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T201820-29287087047d.md) | 승인한 관리자 실행 뒤 일반 사용자 조건의 Windows 샌드박스 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T202027-b4b8b4ce6e1a.md) | 수집 동의 해제를 확인한 Antigravity 초기 안내 완료와 전달 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T203031-fe9a67e63b84.md) | 수집 해제 뒤 완료 버튼을 선택한 실제 Antigravity 전달 확인 | 2dd0fe438d57290d31616d2ccf16939bcfab0ea1 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T204743-1d495d6ab88d.md) | 시험판 출처 필드와 안정판 인증 경계의 변경 영역 Rust 검사 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261005T205048-7c3abb489819.md) | 시험판 패키지 출처와 기존 안정판 기준본의 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T205253-36ca0d9dcc5c.md) | 시험판 출처와 안정판 기준본 인증의 수정 후 Rust 회귀 | 8b29ffd0bf508a3830ee384bd6a0ecf88531de65 | Windows-11-10.0.26300-SP0 |
@@ -1277,14 +1287,9 @@
 | [passed](runs/20261005T211025-2df4b9bc75ea.md) | 시험 패키지 실제 바이너리의 과거 시험판 거부와 안정판 이식 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T211530-f56b9bdb9427.md) | 생성한 시험판 출처와 변조 거부의 실제 CLI 계약 | f8df9ca2c3e94a47f08989d56d056697a4028534 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261005T212039-c73bd7aad95c.md) | 시험 패키지 출처를 포함한 전체 Rust 회귀와 정적 검사 | 8aefd94546860569fcb5337105381f065b3f887a | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T214615-184e974a7e26.md) | 시험판 출처 수정의 전체 Python 다섯 검사 묶음 | 87ada8af7018827cf9f8525a6cf69e7a440e2ce5 | Windows-11-10.0.26300-SP0 |
-| [failed](runs/20261005T185832-2a7e2fd44a94.md) | 승인한 Antigravity 실제 상태 표시 전달과 설정 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T185906-f8104f9806c5.md) | Antigravity 실제 콘솔의 상태 표시 전달과 안전한 복원 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T190542-6836a8753995.md) | 현재 CLI 초기 색상 안내를 통과한 상태 표시 전달 검사 | 2eb492a65978fc20c1074fa91c5e179221ef00f8 | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T191529-d6a891117cca.md) | Antigravity 초기 안내의 필요한 사용자 선택 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T192301-081d1937a076.md) | 선택형 데이터 제공을 끈 Antigravity 실제 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T192745-6b31b3d75dfc.md) | 데이터 제공 해제의 화면 갱신 뒤 Antigravity 전달 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T193823-530986daf50e.md) | 실제 콘솔 화면 상태의 고정 해석 도구 준비 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T194536-136ba760d9f4.md) | 실제 화면 해석으로 Antigravity 초기 안내와 콜백 확인 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T202027-b4b8b4ce6e1a.md) | 수집 동의 해제를 확인한 Antigravity 초기 안내 완료와 전달 검사 | a61640de3d445f97085828c6547d79d30f247eea | Windows-11-10.0.26300-SP0 |
-| [passed](runs/20261005T203031-fe9a67e63b84.md) | 수집 해제 뒤 완료 버튼을 선택한 실제 Antigravity 전달 확인 | 2dd0fe438d57290d31616d2ccf16939bcfab0ea1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261005T214615-184e974a7e26.md) | Python conformance: documentation, security, contract, integration, release | 87ada8af7018827cf9f8525a6cf69e7a440e2ce5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T060926-619f69f7b09b.md) | 추가 지시의 양언어 호스트 투영 회귀 | 9b12d9daea1b7d205e156051ec2eabe82d1a95ed | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T061041-58fd1f9c2b2b.md) | 추가 지시 전역 지침과 설치 회귀 | 9b12d9daea1b7d205e156051ec2eabe82d1a95ed | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T061134-0613cb8babf1.md) | 0.12.1 추가 지시 및 설치 회귀 | dcc0d2422b36d2c56df41a076573ad580f85cb2b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T061258-88bc5a112d8a.md) | 0.12.1 플러그인 버전 정합화와 지침 설치 회귀 | dcc0d2422b36d2c56df41a076573ad580f85cb2b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T061355-4f7f83331ed7.md) | 0.12.1 프로젝트 하네스 생성 회귀 | 29e5241e0983e13d222703731533b43409327e6a | Windows-11-10.0.26300-SP0 |
