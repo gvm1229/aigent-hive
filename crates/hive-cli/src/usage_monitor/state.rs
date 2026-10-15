@@ -4,7 +4,7 @@ use hive_core::usage_guard::{detect_usage_reset, UsageSnapshot};
 use serde::{Deserialize, Serialize};
 
 pub(super) const POLL_SECONDS: u64 = 15;
-pub(super) const BLIND_SECONDS: u64 = 30;
+pub(super) const BLIND_SECONDS: u64 = 60;
 
 /// Monotonic controller deadlines, independent of the sensor worker and wall clock.
 pub(super) struct Cadence {
@@ -74,6 +74,7 @@ pub(super) struct Incident {
     pub reason: String,
     pub detected_at: u64,
     pub stop_method: String,
+    // Read-only compatibility for earlier incidents. No app-termination action exists.
     pub termination_verified: bool,
     #[serde(default)]
     pub termination_elapsed_ms: Option<u64>,
@@ -477,11 +478,41 @@ mod tests {
         c.begin(D::from_secs(15));
         c.complete(D::from_secs(20), false);
         assert_eq!(c.next_sample, D::from_secs(22));
-        assert!(!c.blind(D::from_secs(33)));
-        assert!(c.blind(D::from_secs(34)));
+        assert!(!c.blind(D::from_millis(63_999)));
+        assert!(c.blind(D::from_secs(64)));
         // A permanently unresponsive worker never advances the independent blind deadline.
         let mut c = Cadence::new();
         c.begin(D::ZERO);
-        assert!(c.blind(D::from_secs(30)));
+        assert!(!c.blind(D::from_millis(59_999)));
+        assert!(c.blind(D::from_secs(60)));
+    }
+    #[test]
+    fn failed_retries_do_not_extend_blind_deadline_but_fresh_success_does() {
+        use std::time::Duration as D;
+        let mut c = Cadence::new();
+        for at in [0, 7, 14, 21, 28, 35, 42, 49, 56] {
+            c.begin(D::from_secs(at));
+            c.complete(D::from_secs(at + 5), false);
+        }
+        assert!(c.blind(D::from_secs(61)));
+        c.complete(D::from_secs(62), true);
+        assert!(!c.blind(D::from_millis(121_999)));
+        assert!(c.blind(D::from_secs(122)));
+    }
+    #[test]
+    fn invalid_observation_cannot_postpone_protective_stop() {
+        use std::time::Duration as D;
+        let mut c = Cadence::new();
+        let mut state = MonitorState::new();
+        state.observe(&sample(80.0, 100, 300), 100).unwrap();
+        c.complete(D::from_secs(1), true);
+        for at in [116, 131, 146, 160] {
+            let accepted = state.observe(&sample(70.0, 100, 300), at).is_ok();
+            assert!(!accepted);
+            c.complete(D::from_secs(at - 100), accepted);
+        }
+        assert!(c.blind(D::from_secs(61)));
+        state.halt("sensor-unresponsive", 161);
+        assert_eq!(state.incident.unwrap().reason, "sensor-unresponsive");
     }
 }

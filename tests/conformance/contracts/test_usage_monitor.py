@@ -269,6 +269,9 @@ foreach($expected in @('격리 시험','시험 신호','감시 꺼짐','이전 �
 $state.incident.stop_confirmed=$true;$state.incident.stop_error=$null;$state.unknown_sessions=0
 $text=Format-ProtectionStatus $state 'fixture' $false $true
 if(-not $text.Contains('작업 중단 확인 — Codex 앱 유지') -or -not $text.Contains('감시 실행 중') -or $text.Contains('격리 시험')){throw 'Live protection status mislabeled'}
+$state.incident.reason='sensor-unresponsive'
+$text=Format-ProtectionStatus $state 'fixture' $false $true
+if(-not $text.Contains('60초 동안 정상 사용량 조회 없음') -or $text.Contains('사용량 초기화 감지')){throw 'Observation gap was mislabeled as reset'}
 @{test_history_explicit=$true;live_confirmation_visible=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["test_history_explicit"])

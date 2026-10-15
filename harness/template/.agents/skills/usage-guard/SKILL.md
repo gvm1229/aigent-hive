@@ -65,7 +65,7 @@ installation may create the current-user scheduled monitor. First show `preview 
 `--confirm-session-interruption`. Do not infer current-version installation authority.
 
 This narrow Windows Codex protection exception permits the installed monitor, not this Skill,
-to observe every 15 seconds and interrupt local desktop sessions after reset or 30 seconds
+to observe every 15 seconds and interrupt local desktop sessions after reset or 60 seconds
 without a valid observation. Keep the app open with a persistent reason/status window. Never
 terminate the app when control is unavailable. Only a qualified desktop version may connect. It never starts
 model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.

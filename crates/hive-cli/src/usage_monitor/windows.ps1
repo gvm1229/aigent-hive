@@ -48,7 +48,7 @@ function Format-ProtectionStatus($state,[string]$incident,[bool]$isTest,[bool]$e
     $header=$scope+"`r`n"+$monitor+"`r`n`r`n"
     if($null -eq $state.incident){return $header+'중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.'}
     if($state.incident.digest -ne $incident){return $header+'새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.'}
-    $reason=switch($state.incident.reason){'usage-reset'{'사용량 초기화 감지'}'sensor-unresponsive'{'30초 동안 정상 사용량 조회 없음'}default{'감시 상태 오류'}}
+    $reason=switch($state.incident.reason){'usage-reset'{'사용량 초기화 감지'}'sensor-unresponsive'{'60초 동안 정상 사용량 조회 없음'}default{'감시 상태 오류'}}
     $app=if($state.app_alive){'Codex 앱 유지'}else{'앱 생존 확인 필요'}
     $status=$(if($state.incident.stop_confirmed){'작업 중단 확인'}elseif($state.incident.stop_error){'작업 중단 확인 실패'}else{'작업 중단 확인 대기'})+' — '+$app
     $detail=switch($state.incident.stop_error){

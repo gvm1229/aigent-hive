@@ -140,11 +140,11 @@ pub(super) fn notify(
 
 fn notification_message(reason: &str, success: bool) -> &'static str {
     if !success && reason == "sensor-unresponsive" {
-        "사용량 감지기가 30초 동안 응답하지 않아 사용량 한도 보호를 우선해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
+        "사용량 감지기가 60초 동안 응답하지 않아 사용량 한도 보호를 우선해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if !success {
         "사용량 보호를 위해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if reason == "sensor-unresponsive" {
-        "사용량 감지기가 30초 동안 응답하지 않아, 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
+        "사용량 감지기가 60초 동안 응답하지 않아, 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
     } else if reason == "usage-reset" {
         "사용량 초기화를 감지하여 새 할당량 보호를 위해 Codex 작업을 중단했습니다."
     } else {
@@ -163,7 +163,7 @@ mod tests {
     fn usage_monitor_unresponsive_notice_explains_protection_even_if_stop_is_unverified() {
         for stopped in [true, false] {
             let text = notification_message("sensor-unresponsive", stopped);
-            assert!(text.contains("30초"));
+            assert!(text.contains("60초"));
             assert!(text.contains("사용량 한도 보호"));
             assert_eq!(text.contains("중단했습니다"), stopped);
         }
