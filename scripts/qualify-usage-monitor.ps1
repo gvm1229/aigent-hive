@@ -102,7 +102,7 @@ try {
     $preview = & $hivePath usage monitor preview --user-root $fixture --output json | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Monitor preview failed' }
     $enabled = & $hivePath usage monitor enable --user-root $fixture --confirm $preview.data.preview_digest --confirm-session-interruption --output json | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0) { throw 'Isolated monitor enable failed' }
+    if ($LASTEXITCODE -ne 0) { throw ('Isolated monitor enable failed: '+($enabled | ConvertTo-Json -Compress -Depth 6)) }
     $monitorEnabled = $true
     $sampleAfter = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $statePath = Join-Path $fixture '.hive\runtime\usage-monitor\state.json'
@@ -120,6 +120,15 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $fixture 'trigger.json'))) {throw 'Session-stop trigger deadline elapsed'}
     }
 
+
+    $shellReceipt=Join-Path $fixture 'long-shell.json'
+    if(-not (Test-Path -LiteralPath $shellReceipt)){throw 'Live long shell receipt is required'}
+    $shell=[IO.File]::ReadAllText($shellReceipt) | ConvertFrom-Json
+    $shellPin=[Diagnostics.Process]::GetProcessById([int]$shell.pid)
+    $null=$shellPin.Handle
+    if($shellPin.StartTime.ToUniversalTime().Ticks -ne [long]$shell.created_ticks -or $shellPin.HasExited -or
+       [DateTime]::UtcNow.AddSeconds(90) -ge [DateTime]::Parse([string]$shell.natural_end_at).ToUniversalTime()) {throw 'Long shell is absent, reused, or too near natural completion'}
+    $result.long_shell_alive_before_reset=$true;Record
 
     # Alter only historical evidence inside this disposable fixture. The next measurement is
     # obtained through the real native sensor and evaluated by the unmodified shipping engine.
@@ -162,13 +171,10 @@ try {
     $deadline=[DateTime]::UtcNow.AddSeconds(8)
     do {$result.stop_reason_visible=Find-StopReason; if(-not $result.stop_reason_visible){Start-Sleep -Milliseconds 200}} while(-not $result.stop_reason_visible -and [DateTime]::UtcNow -lt $deadline)
     if (-not $result.stop_reason_visible) {throw 'Persistent reason and confirmed status were not visible'}
-    $shellReceipt=Join-Path $fixture 'long-shell.json'
-    if(Test-Path -LiteralPath $shellReceipt) {
-        $shell=[IO.File]::ReadAllText($shellReceipt) | ConvertFrom-Json
-        try {$p=[Diagnostics.Process]::GetProcessById([int]$shell.pid);$null=$p.Handle;$result.long_shell_stopped=($p.StartTime.ToUniversalTime().Ticks -ne [long]$shell.created_ticks -or $p.HasExited);$p.Dispose()}
-        catch [ArgumentException] {$result.long_shell_stopped=$true}
-        if(-not $result.long_shell_stopped){throw 'Long shell work survived the session interruption'}
-    }
+    $shellPin.Refresh()
+    $result.long_shell_stopped=$shellPin.HasExited
+    $result.long_shell_before_natural_end=([DateTime]::UtcNow -lt [DateTime]::Parse([string]$shell.natural_end_at).ToUniversalTime())
+    if(-not $result.long_shell_stopped -or -not $result.long_shell_before_natural_end){throw 'Long shell was not interrupted before its natural completion'}
     $result.message='사용량 초기화 감지로 실행 중인 작업 중단 확인. Codex 앱 유지와 중단 이유·상태 표시 확인.'
     $result.phase='passed-local-session-interruption'
     $result.completed_at=[DateTime]::UtcNow.ToString('o')
