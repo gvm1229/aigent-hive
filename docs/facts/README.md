@@ -21,7 +21,6 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
-| 데스크톱 앱 전환 조사 | [en](en/hive-desktop-feasibility.md) | [ko](ko/hive-desktop-feasibility.md) |
 | 안정판만의 이전 버전 호환성 | [en](en/stable-only-backward-compatibility.md) | [ko](ko/stable-only-backward-compatibility.md) |
 | 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
 | 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
