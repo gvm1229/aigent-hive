@@ -108,13 +108,13 @@ try {
     $result.completed_at=[DateTime]::UtcNow.ToString('o');Record
     try {
         $notice=New-Object -ComObject WScript.Shell
-        $null=$notice.Popup('앱 종료 검증과 0.12.1 로컬 설치, 상시 감시 등록이 끝났습니다. Codex 앱을 유지한 작업 중단을 확인했습니다.',10,'Aigent Hive',64)
+        $null=$notice.Popup('시험용 신호로 작업 중단과 Codex 앱 유지를 확인했습니다. 0.12.1 로컬 설치와 상시 감시 등록도 완료했습니다. 작업은 자동으로 재개하지 않습니다.',10,'Aigent Hive',64)
     } catch { } # The persisted receipt remains authoritative if desktop notifications are unavailable.
 } catch {
     $result.error=$_.Exception.Message;$result.phase='failed';$result.completed_at=[DateTime]::UtcNow.ToString('o');Record
     try {
         $notice=New-Object -ComObject WScript.Shell
-        $null=$notice.Popup(('앱 종료 검증 뒤 설치를 완료하지 못했습니다. 결과 확인: '+$report),10,'Aigent Hive',48)
+        $null=$notice.Popup(('작업 중단 검증 뒤 설치를 완료하지 못했습니다. 결과 확인: '+$report),10,'Aigent Hive',48)
     } catch { }
     exit 1
 }
