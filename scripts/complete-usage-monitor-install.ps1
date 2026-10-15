@@ -98,7 +98,15 @@ try {
     $result.backup_expires_at=[DateTime]::UtcNow.AddDays(7).ToString('o')
     $result.phase='passed-installed-always-on'
     $result.completed_at=[DateTime]::UtcNow.ToString('o');Record
+    try {
+        $notice=New-Object -ComObject WScript.Shell
+        $null=$notice.Popup('앱 종료 검증과 0.12.1 로컬 설치, 상시 감시 등록이 끝났습니다. Codex를 다시 열어 주세요.',10,'Aigent Hive',64)
+    } catch { } # The persisted receipt remains authoritative if desktop notifications are unavailable.
 } catch {
     $result.error=$_.Exception.Message;$result.phase='failed';$result.completed_at=[DateTime]::UtcNow.ToString('o');Record
+    try {
+        $notice=New-Object -ComObject WScript.Shell
+        $null=$notice.Popup(('앱 종료 검증 뒤 설치를 완료하지 못했습니다. 결과 확인: '+$report),10,'Aigent Hive',48)
+    } catch { }
     exit 1
 }
