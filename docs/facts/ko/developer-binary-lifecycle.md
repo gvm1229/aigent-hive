@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/build.rs#sha256:a3b83a223dd02e759bdee84a5e1848f01f614834177d6a91de8d23d073feebff"
   - "repo:crates/hive-cli/src/main.rs#sha256:e71b5c908435cda30208af5119f184e80d84b9a9d44934cec5ae7b64af95eee7"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4795665ae984b818ed5781b43884bec10088ddb64287465dcbfafbed81b965a0"
-  - "repo:scripts/dev-install.sh#sha256:675d29e359a127a994d3b7904d3c842b3dafd884b8e28659a0d2b21ef3fc2a79"
+  - "repo:scripts/dev-install.sh#sha256:6b9454df5ac9abecff21c3a8a45c3c840d32dcee5d00d1f2c87170e2fd5d7b33"
 links: [interactive-binary-update, source-development, version-policy]
 reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
 status: active
