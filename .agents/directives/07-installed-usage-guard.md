@@ -27,7 +27,7 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
 - Native sensor first; CodexBar only as separately consented failure fallback. No credentials,
   provider calls, CLI reinstall or OMX/OMC.
 - The approved 0.12.1 `hive usage monitor` alone may create a version-confirmed installed Windows
-  monitor and terminate authenticated local Codex package processes after reset or 30 seconds
-  without valid usage. No ad-hoc watcher or other host-process signal. Preview and version-specific
+  monitor and interrupt authenticated desktop sessions after reset or 30 seconds without valid
+  usage. Keep the Codex app open. No app termination, ad-hoc watcher, or other host-process signal. Preview and version-specific
   install approval remain required. Shared incidents require exact acknowledgement and fresh usage;
   session-only acknowledgement cannot clear them.
