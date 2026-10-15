@@ -50,13 +50,14 @@ try {
     $enabled = & $hivePath usage monitor enable --user-root $fixture --confirm $preview.data.preview_digest --confirm-app-termination --output json | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Isolated monitor enable failed' }
     $monitorEnabled = $true
+    $sampleAfter = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $statePath = Join-Path $fixture '.hive\runtime\usage-monitor\state.json'
     $deadline = [DateTime]::UtcNow.AddSeconds(35)
     do {
         Start-Sleep -Milliseconds 250
         if (Test-Path -LiteralPath $statePath) { $state = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json }
-    } while ((-not $state.last_success) -and [DateTime]::UtcNow -lt $deadline)
-    if (-not $state.last_success -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
+    } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter) -and [DateTime]::UtcNow -lt $deadline)
+    if (-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
     $result.phase='armed'; $result.first_observation=$state.last_success; Record
 
     # Alter only historical evidence inside this disposable fixture. The next measurement is
@@ -80,7 +81,8 @@ try {
         }
         $temporary = Join-Path $fixture 'synthetic-state.json'
         [IO.File]::WriteAllText($temporary,($state | ConvertTo-Json -Depth 15),$utf8)
-        [IO.File]::Replace($temporary,$statePath,$null)
+        # Windows PowerShell can coerce a null string argument to an illegal empty backup path.
+        [IO.File]::Replace($temporary,$statePath,(Join-Path $fixture 'state-before-injection.json'))
     } finally { $held.Dispose() }
     $result.phase='reset-injected';$result.injected_at=[DateTime]::UtcNow.ToString('o');Record
     $deadline = [DateTime]::UtcNow.AddSeconds(35)
