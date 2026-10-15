@@ -10,7 +10,7 @@ tags: [agent, directives]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:e3f955e48e354aaac598a5237679689fb7c827366574d9330bc6dd4b661735ea"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:7b8afc5527b300e665054ccd0f1fc6f34df02fee75e5e87f7198100cfd55caa9"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:4795665ae984b818ed5781b43884bec10088ddb64287465dcbfafbed81b965a0"
   - "repo:harness/directives/00-project-harness.md#sha256:ee4f9721824c4caad76c21b7d43e04f708637f3df96a095bf8058ef46b122ace"
 links: [agent-autonomous-continuation]
 reviewed_revision: "git:29e5241e0983e13d222703731533b43409327e6a"

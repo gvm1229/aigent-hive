@@ -9,13 +9,13 @@ summary: "A preserving uninstall removes Hive-owned transient and retired projec
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:7b8afc5527b300e665054ccd0f1fc6f34df02fee75e5e87f7198100cfd55caa9"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:4795665ae984b818ed5781b43884bec10088ddb64287465dcbfafbed81b965a0"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
 links: [global-onboarding, knowledge-preservation, release-verification]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:eb62d9db75f946f948b4dada89fa141654e80135"
 status: active
 ---
 
@@ -28,3 +28,5 @@ status: active
 - The exact 44-leaf fixture and the `0.9.1` Windows preserving reinstall both converged to zero
   retired empty `agents/` leaves and zero empty transaction directories.
 - Keep `.hive/dev-install` as separate developer rollback state.
+
+In 0.12.1, an enabled usage monitor blocks uninstall until its owned scheduled task is disabled.

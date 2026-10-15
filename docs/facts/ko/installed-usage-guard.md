@@ -5,23 +5,22 @@ topic_slug: installed-usage-guard
 language: ko
 counterpart: ../en/installed-usage-guard.md
 title: "설치 guard 대상 경계"
-summary: "설정 완료 Hive project와 Hive source에만 설치 guard 적용, non-Hive folder 전체 비활성."
+summary: "Hive 대상별 검사와 별도 Windows 앱 전체 감시의 적용 범위"
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:41e5712b85c91de0f0df5505e999b245e60a530d5764f8cf4a35c285b8c4f730"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:916836c260db60424f19f6540ee5855e490e896f3681b658b07c8d1c063ddc05"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:f1a23a8779e4272fd852313360653f4078bcabd1290c4bebda9c8b0589d077fc"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
+reviewed_revision: "git:eb62d9db75f946f948b4dada89fa141654e80135"
 status: active
 ---
 
-# 설치 guard 대상 경계
+# 설치 보호의 대상 경계
 
-- 단일 구현: 설치 product `usage-guard`
-- 설정 완료 Hive project: `max(global, project)`, project-local session state 허용
-- Aigent Hive source: global threshold와 user-root runtime, source `.hive/` 생성 `0건`
-- 자체 `AGENTS.md`만 보유한 folder·빈 folder: enforce·threshold mutation·session override·halt·runtime `0건`
-- Non-Hive setup-free Skill: 사용 가능
-- Session control: explicit configured target 사용, 무관한 malformed graph `CURRENT.md` 보존·authority 미사용
-- Source task: 시작 preflight 1회, Python watcher·tool 경계 반복 gate·삭제 test의 CI 호출 `0건`
+- 설치 제품의 단일 사용량 보호. 설정한 프로젝트는 전역·프로젝트 하한 중 큰 값
+- 소스는 전역 하한·사용자 루트 실행 상태 사용, 소스 내부 소비자 상태 생성 금지
+- 미설정 폴더의 대상별 검사·제어·실행 상태 생성 없음, 설정 없이 쓰는 스킬 유지
+- 세션 제어는 정확한 설정 대상에 결합. 무관하게 손상된 작업 그래프 CURRENT 보존, 권한 근거 제외
+- 소스 작업 시작 전 1회 검사. 별도 소스 감시기·도구마다 반복 검사 금지
+- 별도 설치한 0.12.1 Windows 감시기는 미설정 폴더의 채팅까지 앱 전체 보호. 해당 폴더의 소비자 상태 생성 없음

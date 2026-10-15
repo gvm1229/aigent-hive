@@ -9,9 +9,9 @@ summary: "Qualified host-native usage sensors take priority over the optional Co
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:a21d2797007b8b826e639cd77c3c42a2ab630586815ec37883899b77afdbcf41"
-  - "repo:crates/hive-cli/src/usage.rs#sha256:08df602b839ca6ced6cd1571c37111b300853def9bba4e25c9c24774453535f6"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:41e5712b85c91de0f0df5505e999b245e60a530d5764f8cf4a35c285b8c4f730"
+  - "repo:crates/hive-cli/src/main.rs#sha256:e71b5c908435cda30208af5119f184e80d84b9a9d44934cec5ae7b64af95eee7"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:599c23c46abb772600e13e124134ea1d195d663ba005c26ea224fff0c54fff1d"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
