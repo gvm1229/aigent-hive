@@ -1293,3 +1293,18 @@
 | [failed](runs/20261015T061134-0613cb8babf1.md) | 0.12.1 추가 지시 및 설치 회귀 | dcc0d2422b36d2c56df41a076573ad580f85cb2b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T061258-88bc5a112d8a.md) | 0.12.1 플러그인 버전 정합화와 지침 설치 회귀 | dcc0d2422b36d2c56df41a076573ad580f85cb2b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T061355-4f7f83331ed7.md) | 0.12.1 프로젝트 하네스 생성 회귀 | 29e5241e0983e13d222703731533b43409327e6a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T064715-39c3f3ac0361.md) | 초기화 감시기 Rust 행동 검사 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T065057-ae7155e59a06.md) | 감시기 공유 상태·간격 회귀 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T065226-85599a2e6036.md) | 감시기 CLI 통합 빌드 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T065345-b755a5aa9880.md) | 사용량 보호 전체 CLI 회귀 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T065550-6d4fe7ed7836.md) | 감시기 Rust 정적 검사 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T065723-90a7eccf9c5b.md) | 감시기 후속 회귀·정적 검사 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T065844-55a017eff675.md) | 감시기 후속 회귀·엄격한 정적 검사 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T070203-fc0036cd4e4e.md) | 최종 감시기 회귀와 엄격한 정적 검사 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T070328-b73b59c251db.md) | 최종 감시기 단위 검사와 설치 버전 경계 | bec5d826fba0ae7bcf32cd6168e5efe63b805cf4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T070611-512b418c595c.md) | 커밋한 감시기 수용 바이너리 빌드 | f70fc5d70791bb9ba8c329aaf0215645dc40ffbb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261015T070723-8b99981889b5.md) | 실제 앱 중단 수용의 격리 준비 | f70fc5d70791bb9ba8c329aaf0215645dc40ffbb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T070743-07781a2bc424.md) | 실제 앱 중단 수용의 격리 준비 재검사 | f70fc5d70791bb9ba8c329aaf0215645dc40ffbb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T071236-a2a7b3e9739d.md) | 앱 식별 보정 뒤 수용 바이너리 빌드 | 2173b12412e926d5a7b95420525cefe94934ec85 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T071340-1c002d8f9c85.md) | 조회 불응 중단 알림의 원인 보존 검사 | 2173b12412e926d5a7b95420525cefe94934ec85 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T071429-a1d0b14053e3.md) | 실제 수용용 최종 바이너리 고정 | b95126fe7a40746e576aa4b9a1416d2c80c5a65b | Windows-11-10.0.26300-SP0 |

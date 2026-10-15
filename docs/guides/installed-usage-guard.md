@@ -134,3 +134,36 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 - Windows·Codex 개발 검증: Rust 사용량102개·공개 명령28개 통과, Windows 링크 시험1개 제외. 합성 측정·파일·제어 결합의 증명
 - 실제 계정의 0% 소진·유료 전환 시험 미실행, 계정 비용 발생 시험 제외. 지원 중단 연결 없는 진행 중 호스트 호출·Hive 밖 호출의 크레딧 사용 방지 보장 제외
 - 현재 설치 0.11.1과 개발 0.12.0 구분. 도움말의 새 명령 지원 확인 선행, 현재 사용자 설치 승인 별도
+
+## 0.12.1 Windows 실행 중 보호
+
+- 개발 구현: `hive usage monitor`. 기존 시작 전 검사와 별도의 설치형 감시, 모델 호출 없음
+- 15초 조회 시작 간격, 조회 제한 5초, 실패 후 2초 재시도, 정상 관측 공백 30초 뒤 보호 중단
+- 초기화 감지와 계정·집계 구간별 공유 상태. 첫 관측은 기준 수립, 새 채팅·앱 재시작으로 중단 해제 불가
+- 현재 사용자 OpenAI.Codex 패키지와 생성 시각·부모 관계·프로세스 핸들의 확인 뒤 앱 전체 비상 종료
+- Windows 앱 밖 알림. 조회 불응 시 사용량 한도 보호를 우선한 중단 사유 안내
+- 원격·클라우드·다른 OS 실행과 서버 측 사용량 반영의 즉시 종료 보장 제외. 새 할당량 소비 1~2% 상한 보장 제외
+
+설치 전 변경 명세와 지문 조회:
+
+```text
+hive usage monitor preview --user-root <user-root> --output json
+hive usage monitor enable --user-root <user-root> --confirm <preview_digest> --confirm-app-termination --output json
+hive usage monitor status --user-root <user-root> --output json
+```
+
+- `enable` 전 현재 사용자 Codex 설치의 Hive 제품 버전과 감시기 버전 일치 필수. 이전 설치에서 새 감시기만 덧붙이는 처리 거부
+- `enable`: 현재 사용자 로그인 때 시작하는 작업 등록, 검증한 실행 파일의 사용자 루트 내부 복사, 즉시 시작. 버전별 설치 승인 필요
+- 실행 위치: `.hive/runtime/usage-monitor/`. `config.json`·`state.json`·잠금 파일·지문별 `bin/` 실행 파일
+- `monitoring_verified`: 설정만으로 활성 판정 금지, 최근 관측과 감시기 생존 표시 필요
+
+명시적 재개와 감시 해제:
+
+```text
+hive usage monitor acknowledge --user-root <user-root> --incident <incident_digest> --output json
+hive usage monitor disable --user-root <user-root> --output json
+```
+
+- `acknowledge`: 정확한 사건 지문과 새 관측 필수, 자동 작업 재개 없음. 기존 잔여량 하한·0% 보호 유지
+- `disable`: 이름·실행 파일·인수가 모두 일치하는 소유 작업만 중지·제거. 사건 근거·복사한 실행 파일 보존
+- 실제 앱 종료 수용과 설치 여부는 현재 버전의 별도 근거 참조. 구현 코드만으로 현재 설치본의 보호 활성 주장 금지
