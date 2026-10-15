@@ -11,7 +11,7 @@ aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:2aaad6ac2375e212caa3bfc5d612f04e2d2c585e1a2560a294d8f4029613e566"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:dc9e92ed1cb85336da05c2f030e20efcdebf15b60751b90777a2307ec8cefef4"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b991ea10a2319c71ab62dea0c9ad3442dea2779d92e2d1bc215df1478077c6b4"
   - "repo:tests/results/public-zero-0.12.0-test.2.json#sha256:f64d29840b056f157c60f0a5f6556c2e5b62990beb8c9c6bfb3285b4aafd7354"
 links: [installed-usage-guard, quota-reset-session-control]
 reviewed_revision: "git:16c01d6b233c96ee107914eeca730e3636c5440b"
@@ -25,4 +25,4 @@ status: active
 - 별도 확인의 제외: 정확한 현재 호스트·대화·프로세스만 적용, 다른 결합 기본 활성
 - 단순 재개·초기화 확인으로 소진 해제 불가. 새 양수 관측의 해제와 초기화 보호의 별도 확인 구분
 - Windows 공개0.12.0-test.2 합성28개 통과·POSIX 링크1개 제외. 실제 유료 전환 방지·진행 중 호스트 중단·유료 설정 변경 미증명
-- 현재 사용자 설치0.11.1 보존
+- 해당 시험 당시 사용자 설치0.11.1 보존, 현재 설치와 구분
