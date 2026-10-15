@@ -29,6 +29,58 @@ class WindowsUsageMonitor(unittest.TestCase):
         # Exercise production functions and switch without accepting arbitrary product targets.
         return source.replace("$request = [Console]::In.ReadToEnd() | ConvertFrom-Json", "# request supplied by the fixture")
 
+    def deployment_functions(self) -> str:
+        path = ROOT / "scripts/complete-usage-monitor-install.ps1"
+        return "$ErrorActionPreference='Stop'\n$tokens=$null;$errors=$null\n" + (
+            "$tree=[Management.Automation.Language.Parser]::ParseFile('" + str(path).replace("'", "''")
+            + "',[ref]$tokens,[ref]$errors)\n"
+            + "if($errors){throw 'Deployment script parsing failed'}\n"
+            + "$tree.FindAll({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst]},$false) | ForEach-Object {Invoke-Expression $_.Extent.Text}\n"
+        )
+
+    def test_deployment_cli_forwards_the_complete_argument_array(self):
+        source = self.deployment_functions() + r"""
+function FakeHive { $global:forwarded=@($args);$global:LASTEXITCODE=0;'{"status":"success","code":"fixture"}' }
+$native='FakeHive'
+$value=Run-Hive -arguments @('usage','monitor','status','--output','json')
+if($forwarded.Count -ne 5 -or $forwarded[4] -ne 'json'){throw 'Arguments were lost'}
+@{forwarded=$true;code=$value.code} | ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["forwarded"])
+
+    def test_deployment_preservation_hashes_cover_nested_canonical_knowledge(self):
+        source = self.deployment_functions() + r"""
+$userRoot=Join-Path $PSScriptRoot 'user'
+try {
+ $null=New-Item -ItemType Directory -Path (Join-Path $userRoot '.hive/config'),(Join-Path $userRoot '.hive/knowledge/nested') -Force
+ [IO.File]::WriteAllText((Join-Path $userRoot '.hive/config/user-setup.yml'),'kept')
+ [IO.File]::WriteAllText((Join-Path $userRoot '.hive/knowledge/nested/claim.md'),'canonical')
+ $before=Preserved-Digests
+ $after=Preserved-Digests
+ if($before.Count -ne 2 -or $before['.hive\knowledge\nested\claim.md'] -ne $after['.hive\knowledge\nested\claim.md']){throw 'Missing protected bytes'}
+ @{preserved=$true} | ConvertTo-Json -Compress
+} finally { } # The Python TemporaryDirectory owns fixture cleanup.
+"""
+        self.assertTrue(self.powershell(source)["preserved"])
+
+    def test_deployment_cannot_run_after_a_failed_app_stop(self):
+        helper = str(ROOT / "scripts/complete-usage-monitor-install.ps1").replace("'", "''")
+        source = r"""
+$ErrorActionPreference='Stop'
+$request=Join-Path $PSScriptRoot 'request.json'
+$result=Join-Path $PSScriptRoot 'result.json'
+[IO.File]::WriteAllText($request,'{"product_version":"0.12.1","install_after_pass":true,"always_on":true}')
+[IO.File]::WriteAllText($result,'{"phase":"failed"}')
+try {
+ & 'HELPER' -Request $request -AcceptanceResult $result
+ throw 'Conditional installation gate was bypassed'
+} catch {
+ if($_.Exception.Message -notmatch 'App-stop acceptance'){throw}
+ @{rejected=$true} | ConvertTo-Json -Compress
+}
+""".replace("'HELPER'", "'" + helper + "'")
+        self.assertTrue(self.powershell(source)["rejected"])
+
     def test_emergency_stop_terminates_own_fixture_tree_and_preserves_unrelated_process(self):
         script = self.adapter_functions()
         source = r"""$ErrorActionPreference='Stop'

@@ -5,11 +5,14 @@ param(
     [Parameter(Mandatory=$true)][string]$FixtureRoot,
     [switch]$Execute,
     [switch]$ConfirmStopCodex,
-    [string]$CollectorTask
+    [string]$CollectorTask,
+    [string]$InstallRequest
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $utf8 = New-Object Text.UTF8Encoding($false)
+[Console]::OutputEncoding=$utf8
+[Console]::InputEncoding=$utf8
 $source = [IO.Path]::GetFullPath($SourceRoot).TrimEnd('\')
 $fixture = [IO.Path]::GetFullPath($FixtureRoot).TrimEnd('\')
 $allowed = Join-Path $source 'tests\work\usage-monitor-acceptance'
@@ -106,6 +109,13 @@ try {
         $result.fixture_task_removed=($LASTEXITCODE -eq 0)
         Record
     }
+}
+try {
+    if ($InstallRequest -and $result.phase -eq 'passed-local-app-termination' -and $result.fixture_task_removed) {
+        & (Join-Path $source 'scripts\complete-usage-monitor-install.ps1') -Request $InstallRequest -AcceptanceResult $reportPath
+        if($LASTEXITCODE -ne 0){throw 'Conditional always-on installation failed; inspect its receipt'}
+    }
+} finally {
     if ($CollectorTask -match '^AigentHive-UsageAcceptance-[a-f0-9]{16}$') {
         $task=Get-ScheduledTask -TaskName $CollectorTask -ErrorAction SilentlyContinue
         if ($task -and $task.Description -eq 'Aigent Hive disposable usage acceptance collector') {
