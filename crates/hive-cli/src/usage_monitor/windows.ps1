@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
 function Emit($value) { ConvertTo-Json -InputObject $value -Depth 12 -Compress }
 function App-Roots {

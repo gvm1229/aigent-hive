@@ -101,15 +101,7 @@ pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterE
 }
 
 pub(super) fn notify(reason: &str, success: bool, incident: &str) -> mpsc::Receiver<bool> {
-    let message = if !success {
-        "사용량 보호 중단을 요청했지만 일부 실행의 종료를 확인하지 못했습니다. Codex를 직접 종료해 주세요."
-    } else if reason == "sensor-unresponsive" {
-        "사용량 감지기가 30초 동안 응답하지 않아, 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
-    } else if reason == "usage-reset" {
-        "사용량 초기화를 감지하여 새 할당량 보호를 위해 Codex 작업을 중단했습니다."
-    } else {
-        "사용량 감시기 상태 오류로 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
-    };
+    let message = notification_message(reason, success);
     let message = format!("{message}\n재개: hive usage monitor acknowledge --user-root <사용자 루트> --incident {incident} --output json");
     // The UI notification must never delay termination or its controller heartbeat.
     let (tx, rx) = mpsc::channel();
@@ -125,6 +117,34 @@ pub(super) fn notify(reason: &str, success: bool, incident: &str) -> mpsc::Recei
     rx
 }
 
+fn notification_message(reason: &str, success: bool) -> &'static str {
+    if !success && reason == "sensor-unresponsive" {
+        "사용량 감지기가 30초 동안 응답하지 않아 사용량 한도 보호를 우선해 중단을 요청했지만, 일부 실행의 종료를 확인하지 못했습니다. Codex를 직접 종료해 주세요."
+    } else if !success {
+        "사용량 보호 중단을 요청했지만 일부 실행의 종료를 확인하지 못했습니다. Codex를 직접 종료해 주세요."
+    } else if reason == "sensor-unresponsive" {
+        "사용량 감지기가 30초 동안 응답하지 않아, 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
+    } else if reason == "usage-reset" {
+        "사용량 초기화를 감지하여 새 할당량 보호를 위해 Codex 작업을 중단했습니다."
+    } else {
+        "사용량 감시기 상태 오류로 사용량 한도 보호를 우선하여 Codex 작업을 중단했습니다."
+    }
+}
+
 fn failure(message: &str) -> AdapterError {
     AdapterError::Safety(message.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::notification_message;
+    #[test]
+    fn usage_monitor_unresponsive_notice_explains_protection_even_if_stop_is_unverified() {
+        for stopped in [true, false] {
+            let text = notification_message("sensor-unresponsive", stopped);
+            assert!(text.contains("30초"));
+            assert!(text.contains("사용량 한도 보호"));
+            assert_eq!(text.contains("중단했습니다"), stopped);
+        }
+    }
 }
