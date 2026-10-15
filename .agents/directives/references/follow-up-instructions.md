@@ -15,4 +15,3 @@
   recover it or ask before the affected action; never invent consent. Do not store raw transcripts.
 - This is a host instruction, not a semantic detector or tool interception guarantee. Respect
   higher-priority host instructions and existing authority boundaries.
-
