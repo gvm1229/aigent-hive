@@ -29,7 +29,7 @@ limits. Check comprehension. Explicit audience/detail requests override this def
   or deletion over new infrastructure. Finish safe in-scope work before asking for a material
   choice, credential, irreversible/publication authority or exact manual action.
 
-Follow-ups: read [rule](../../harness/directives/00-project-harness.md#follow-up-instructions-and-conflicts).
+Follow-ups: read [rule](references/follow-up-instructions.md).
 
 ## Continuation and closure
 

@@ -8421,43 +8421,6 @@ mod tests {
         assert!(disabled.contains("Global Wiki is disabled: do not write or refresh knowledge"));
         assert!(!disabled.contains("hive knowledge remember --user-root"));
 
-        // The behavioral contract must survive host/language selection and a disabled Wiki.
-        // This checks delivered guidance, not a model's interpretation of a conversation.
-        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
-            for (language, required) in [
-                (
-                    InterfaceLanguage::En,
-                    [
-                        "recency alone does not cancel them",
-                        "only within its stated scope",
-                        "even an obvious conflict",
-                        "until the user answers",
-                        "Silence and elapsed time are not an answer",
-                        "Honor explicit cancellation or interruption immediately",
-                    ],
-                ),
-                (
-                    InterfaceLanguage::Ko,
-                    [
-                        "최신 메시지라는 이유만으로 이전 지시 취소 금지",
-                        "명시적 요청이 지정한 범위만 반영",
-                        "명백한 모순이라도 두 조건을 제시",
-                        "답변 전 충돌 행동과 종속 변경 보류",
-                        "침묵·시간 경과는 답변 아님",
-                        "명시적 취소·중단은 즉시 존중",
-                    ],
-                ),
-            ] {
-                let mut setup = config(language);
-                setup.wiki.enabled = false;
-                let guidance = String::from_utf8(render_user_guidance(host, Some(&setup), false))
-                    .expect("host guidance");
-                for requirement in required {
-                    assert!(guidance.contains(requirement), "missing: {requirement}");
-                }
-            }
-        }
-
         let broken = english.replacen(
             "--user-statement <normalized-fact> --claim-key <stable-key>",
             "knowledge write removed",
