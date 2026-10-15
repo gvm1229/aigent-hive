@@ -1349,3 +1349,11 @@
 | [passed](runs/20261015T152340-40da5a59c424.md) | 화면 밖 대화 목록의 소유자 확인과 잘못된 식별자 거부 | 59f24e4e28d8bc7dfc7ff48b306b943962dd8bf1 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T152410-9a7bb66ddd97.md) | 화면 밖 세션 발견 회귀 정적 검사와 수용 바이너리 생성 | 59f24e4e28d8bc7dfc7ff48b306b943962dd8bf1 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T152614-3e318ef3f3cb.md) | 화면 밖 대화와 시각 오차 보정 뒤 독립 수용 준비 | d45519f1fd185b3c64bcdb80f7601833065beb93 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T152819-c9b8e4ff9601.md) | 실제 Windows 앱 유지와 진행 중 작업 중단 독립 수용 | 6f56bb131b3c866689085fceef5a180454ed4971 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T161712-b4865c56f974.md) | 과거 대화의 재조회 중 실제 중단 확인 누락 회귀 | 6e7cd9fa80b0cd05157caa27c13854dbffa6284c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T161817-3fe5beffa7ef.md) | 중단 확인 지연과 전체 대상 미확인의 독립 판정 회귀 | 6e7cd9fa80b0cd05157caa27c13854dbffa6284c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T161846-c95a34ec9971.md) | 시험 기록과 실제 감시 상태의 표시 구분 Windows 회귀 | 6e7cd9fa80b0cd05157caa27c13854dbffa6284c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T161923-9fefead3b736.md) | 반복 목록 조회 중 현재 앱 대상 확인의 지속 정상 상태 검증 | 6e7cd9fa80b0cd05157caa27c13854dbffa6284c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T162119-4650e89fe980.md) | 실제 수용 실패와 검사 명령 종료 코드 일치 회귀 | f7922b335bcf4cd3ab58eeff576b4d90f8bb6316 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T162222-e0cb09060237.md) | 세션 중단 보정 뒤 Windows CLI 전체 회귀 | 8f2d7121058024bb4118ae036c6878cc7eae75de | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261015T162311-a3abac17c16b.md) | 전체 확인 표시 보정 뒤 독립 수용 준비 | 8f2d7121058024bb4118ae036c6878cc7eae75de | Windows-11-10.0.26300-SP0 |
