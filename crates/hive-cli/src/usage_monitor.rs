@@ -297,7 +297,7 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
             Ok(
                 json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
                 "monitoring_verified": configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
-                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.incident.is_none() && state.control_connected && state.unknown_sessions == 0,
+                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.incident.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
                 "scope":"local-windows-codex","server_billing_interruption_verified":false}),
             )
         }
@@ -856,6 +856,52 @@ mod tests {
             .unwrap()
             .incident
             .is_none());
+    }
+    #[test]
+    fn fresh_usage_does_not_authorize_work_or_report_health_until_control_is_released() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        std::fs::create_dir_all(temporary.path().join(".hive/config")).unwrap();
+        std::fs::write(
+            temporary.path().join(".hive/config/user-setup.yml"),
+            b"schema_version: 1\n",
+        )
+        .unwrap();
+        write(
+            &root,
+            CONFIG,
+            &configuration(root.requested_path()).unwrap(),
+        )
+        .unwrap();
+        with_state(&root, |s| {
+            s.last_success = Some(now());
+            s.heartbeat = now();
+            Ok(())
+        })
+        .unwrap();
+        assert!(check_dispatch(Some(temporary.path())).is_err());
+        with_state(&root, |s| {
+            s.control_connected = true;
+            s.control_stopping = true;
+            Ok(())
+        })
+        .unwrap();
+        let args = vec![
+            "status".into(),
+            "--user-root".into(),
+            temporary.path().to_string_lossy().into_owned(),
+            "--output".into(),
+            "json".into(),
+        ];
+        assert!(check_dispatch(Some(temporary.path())).is_err());
+        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], false);
+        with_state(&root, |s| {
+            s.control_stopping = false;
+            Ok(())
+        })
+        .unwrap();
+        assert!(check_dispatch(Some(temporary.path())).is_ok());
+        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], true);
     }
     #[test]
     fn shared_incident_blocks_even_when_monitor_disabled() {
