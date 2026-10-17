@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "scope": "exact synthetic test incident, disabled fixture; no global incident or controller change",
+  "wrong_incident_refused": true,
+  "acknowledged": true,
+  "auto_resume": false,
+  "fresh_usage_verified": true,
+  "fixture_incident_cleared": true,
+  "same_current_turns_and_statuses": true,
+  "roles_after": {
+    "parent": "running",
+    "shell": "interrupted",
+    "reasoning": "interrupted"
+  },
+  "active_controller_release_tested": false,
+  "phase": "passed-exact-acknowledgement-without-resume"
+}

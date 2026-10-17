@@ -10,8 +10,8 @@
     "session_interruption": false,
     "monitor_started": false,
     "host": "Windows Codex",
-    "notice_sha256": "fab36e1a3f81854c756352e54712399638ee65b98679942a9fba91fd7dbc98f8",
-    "shown_ms": 875,
+    "notice_sha256": "3b1736683dd3f8bbaa98352b084ae9a6c24de66ccb3c9edc7894c35aa24b4137",
+    "shown_ms": 844,
     "closed_by_own_button": true,
     "incident_unchanged": true,
     "original_codex_app_preserved": true,
@@ -28,9 +28,9 @@
       "close_with": "button",
       "image_size": [
         822,
-        935
+        1007
       ],
-      "image_sha256": "e7fbd004856dcca2170cce268deb03bc8c8c843634bd364a462c7e345f8f62f0"
+      "image_sha256": "c4ee63a6957ccfd9a2b8c5e4944c184ec9f7b43f3cef730d7258afa13b0e0ab0"
     },
     {
       "case": "gap",
@@ -42,9 +42,9 @@
       "close_with": "button",
       "image_size": [
         822,
-        935
+        1007
       ],
-      "image_sha256": "84aad2599357483623d617070ee7c07c781b8fd98cf909e41a0f3c48203da004"
+      "image_sha256": "a3137d2c279a3fc4b7e6ee7ba9737ea997ded506cda217de4ce56ba905b6fd37"
     },
     {
       "case": "partial",
@@ -56,9 +56,9 @@
       "close_with": "button",
       "image_size": [
         672,
-        1169
+        1241
       ],
-      "image_sha256": "a3a09eaf23456e360f4358636b9bfa4e1e5b16613211ca1ff433078b41fcd932"
+      "image_sha256": "5ecce9829b793468ec58309cccda1b256d3538668300ffefcb2dd94c2244d3ce"
     },
     {
       "case": "ack",
@@ -72,7 +72,7 @@
         672,
         1142
       ],
-      "image_sha256": "a7c7e1badfba2e72a4cebfcbd303654da2a68b2bc338c4aeb386e3d813aad2fc"
+      "image_sha256": "eefb3a74de16546aae50da54785ddd09a98f1f8553e9f6abff208bafde17900a"
     },
     {
       "case": "unavailable",
@@ -86,7 +86,7 @@
         672,
         1169
       ],
-      "image_sha256": "74a73a2721af1df6d769384caf584e370d4a69d542881f681cd5592ba49ac681"
+      "image_sha256": "bcf6ab62e8762210d35bf73370248adef370586e344918ab6dd5365b8c0cd804"
     },
     {
       "case": "reset",
@@ -98,13 +98,13 @@
       "close_with": "escape",
       "image_size": [
         672,
-        1137
+        1007
       ],
-      "image_sha256": "f41d88911df3cf350eedb320d20fdd778937179d185d3c48b5b3decea64f1cd4"
+      "image_sha256": "21d7a53b9882319bcae3584578d9c53c5c9384b32f1a1e7beacf8cc4174d4fda"
     }
   ],
-  "unit_cases": 11,
-  "windows_adapter_cases": 30,
+  "unit_cases": 15,
+  "windows_adapter_cases": 32,
   "rust_monitor_cases": 25,
   "rust_monitor_ignored": 1,
   "clippy": "passed",
@@ -117,6 +117,8 @@
     "WPF UI entrypoint, native UI Automation close, actual 144 DPI and 460/560 logical widths.",
     "Esc event routing was tested without sending physical keyboard input.",
     "96/192 DPI, other operating systems, integrated new-binary reset, server processing and billing cutoff were not tested.",
-    "Previous live halt evidence is separate; full automatic confirmation remains incomplete."
-  ]
+    "Previous live halt evidence is separate; full automatic confirmation remains incomplete.",
+    "The real system clipboard was not modified by automated tests; command quoting and stale incident rejection are covered."
+  ],
+  "resume_route": "Copy only, then explicit external PowerShell acknowledgement and fresh usage; no model required."
 }

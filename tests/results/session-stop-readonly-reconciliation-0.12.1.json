@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "scope": "retrospective exact native events for currently app-owned threads; no new stop request",
+  "original_automatic_confirmation_passed": false,
+  "current_owner_count": 10,
+  "active_before_detected_second": 4,
+  "all_reconstructed_active_turns_interrupted_within_five_seconds": true,
+  "subjects": [
+    {
+      "role": "reasoning",
+      "thread_digest": "sha256:63fbd0ffd455b72c8b6ce25c9b24416f851deabede84799891285e66f669b35e",
+      "turn_digest": "sha256:87917b37b119889d6eab66cdd654bd2bf1829f3d4e208ddfd1b52c2e920af2e1",
+      "started_before_detection": "2026-10-17T19:26:52.596Z",
+      "finish_kind": "turn_aborted",
+      "native_marker_at": "2026-10-17T19:30:50.283Z",
+      "elapsed_from_detected_second_ms": 283,
+      "interrupted_within_five_seconds": true
+    },
+    {
+      "role": "shell",
+      "thread_digest": "sha256:9ba27c1a8dc20178352c031edd8035d3a8a5e8e42dcb1e9e12a463e333d3f54e",
+      "turn_digest": "sha256:6ceb21393161b0e5b0988f490ddbc18a4ae22346d54132209ff470e430faf549",
+      "started_before_detection": "2026-10-17T19:26:49.077Z",
+      "finish_kind": "turn_aborted",
+      "native_marker_at": "2026-10-17T19:30:50.305Z",
+      "elapsed_from_detected_second_ms": 305,
+      "interrupted_within_five_seconds": true
+    },
+    {
+      "role": "other-owned-session",
+      "thread_digest": "sha256:49741b714bdd69f537a9daa760c918128522611a198dd680e5e138ba8708bc96",
+      "turn_digest": "sha256:29c78fdef2d89e6d8bf999c302db159badd359d94cc500c3e33c4ec3a67a7d1f",
+      "started_before_detection": "2026-10-17T19:20:47.156Z",
+      "finish_kind": "turn_aborted",
+      "native_marker_at": "2026-10-17T19:30:50.297Z",
+      "elapsed_from_detected_second_ms": 297,
+      "interrupted_within_five_seconds": true
+    },
+    {
+      "role": "parent",
+      "thread_digest": "sha256:88b3269d5a26ebf4cd5800daaa51ff4f6de1f133d01f07f62477ac02e163dd81",
+      "turn_digest": "sha256:ec7978805d24c99feddad85e102fc848d360e600ed0bcfd152a865b55bd5c1a3",
+      "started_before_detection": "2026-10-17T19:20:36.228Z",
+      "finish_kind": "turn_aborted",
+      "native_marker_at": "2026-10-17T19:30:50.306Z",
+      "elapsed_from_detected_second_ms": 306,
+      "interrupted_within_five_seconds": true
+    }
+  ],
+  "limits": "Current ownership was read after the trial. This does not replace the failed live aggregate receipt or prove ownership at the detection instant."
+}
