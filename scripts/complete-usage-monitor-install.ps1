@@ -13,6 +13,12 @@ function Hash-File([string]$path) {
     try { return [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($stream)).Replace('-','').ToLower() }
     finally { $stream.Dispose() }
 }
+function Parse-DeveloperDigest([string]$text) {
+    $value=$text.Trim()
+    if($value -cmatch '^\\[a-f0-9]{64}$'){$value=$value.Substring(1)}
+    if($value -cnotmatch '^[a-f0-9]{64}$'){throw 'Malformed developer activation digest'}
+    return $value
+}
 function Accepts-OneShotEvidence($record,$authority) {
     if($record.desktop_version -ne '26.1013.4894.0' -or $record.product_version -ne '0.12.1' -or
        $record.binary_sha256 -ne $authority.binary_sha256 -or -not $record.app_preserved -or -not $record.fixture_task_removed -or
@@ -194,7 +200,7 @@ try {
         $env:AIGENT_HIVE_DEV_BINARY=$binary
         $activationState=Join-Path $userRoot '.hive\dev-install'
         if(Test-Path -LiteralPath $activationState) {
-            $activeDigest=([IO.File]::ReadAllText((Join-Path $activationState 'developer-sha256'))).Trim()
+            $activeDigest=Parse-DeveloperDigest ([IO.File]::ReadAllText((Join-Path $activationState 'developer-sha256')))
             if((Hash-File $native) -ne $activeDigest){throw 'Existing developer activation changed; no replacement'}
             & $approval.git_bash --noprofile --norc (Join-Path $source 'scripts\invoke-dev-install.sh') rollback (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') $activationState $approval.python_directory
             if($LASTEXITCODE -ne 0){throw 'Managed prior developer activation rollback failed'}

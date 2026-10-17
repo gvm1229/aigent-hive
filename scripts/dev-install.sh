@@ -45,9 +45,9 @@ esac
 
 sha256_file() {
   if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | awk '{print $1}'
+    shasum -a 256 < "$1" | awk '{print $1}'
   else
-    sha256sum "$1" | awk '{print $1}'
+    sha256sum < "$1" | awk '{print $1}'
   fi
 }
 
@@ -124,6 +124,14 @@ rollback() {
   }
   target=$(cat "$target_file")
   expected=$(cat "$digest_file")
+  # Older GNU output escaped a native Windows filename with one leading backslash.
+  case "$expected" in
+    \\*) expected=${expected#?} ;;
+  esac
+  case "$expected" in
+    ''|*[!0-9a-f]*) echo "invalid developer digest" >&2; exit 3 ;;
+  esac
+  [ "${#expected}" -eq 64 ] || { echo "invalid developer digest" >&2; exit 3; }
   [ -f "$target" ] && [ ! -L "$target" ] || {
     echo "active Hive target is missing or no longer a regular file: $target" >&2
     exit 3
