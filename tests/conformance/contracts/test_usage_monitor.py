@@ -442,6 +442,35 @@ if(Confirmed-Target $stop.targeted[$one+':actual'] $stop.began){throw 'Active go
 """
         self.assertTrue(self.powershell(source)["actual_target_kept"])
 
+    def test_idle_and_duplicate_stop_replies_do_not_invalidate_confirmed_state(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' 1
+$request=@{thread=$one;incident='fixture'}
+$actual=@{resultType='success';result=@{ok=$true;interruptedTurnId='actual'}}
+Interrupt-Response $request $actual
+$sessions[$one].ready=$true;$sessions[$one].dirty=$false
+$sessions[$one].observedAt=$clock.ElapsedMilliseconds;$sessions[$one].goal='paused';$sessions[$one].statuses=@{actual='interrupted'}
+1..10|ForEach-Object {
+ Interrupt-Response $request @{resultType='success';result=@{ok=$true;interruptedTurnId=$null}}
+ Interrupt-Response $request $actual
+}
+if($sessions[$one].dirty -or $stop.targeted.Count -ne 1){throw 'No-op replies invalidated an observed stop'}
+@{no_op_preserved=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["no_op_preserved"])
+
+    def test_unread_session_is_checked_before_refreshing_an_earlier_session(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two;$stop=New-Stop 'fixture' 1;Advance-Stop
+$first=@($sessions.Values|Where-Object subscribed -eq $true)[0]
+$second=@($sessions.Values|Where-Object subscribed -eq $false)[0]
+$first.ready=$true;$first.dirty=$true;$first.snapshotAt=-2000
+Advance-Stop
+if(-not $second.subscribed -or -not $first.ready){throw 'Repeated first read starved an unread session'}
+@{unread_not_starved=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["unread_not_starved"])
+
     def test_new_run_while_latched_gets_bounded_check_without_rewriting_deadline(self):
         source=self.offline_controller()+r"""
 Track $one;$stop=New-Stop 'fixture' 100;$stop.verifyUntil=$clock.ElapsedMilliseconds-1

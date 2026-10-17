@@ -150,8 +150,10 @@ try {
         $session=$sessions[$request.thread]
         if($null -eq $session -or $null -eq $stop -or $request.incident -ne $stop.digest){return}
         $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
-        if($message.resultType -eq 'success' -and $message.result.ok) {Register-Target $request.thread ([string]$message.result.interruptedTurnId) $request.at}
-        $session.dirty=$true
+        $turn=[string]$message.result.interruptedTurnId
+        $fresh=$turn -and -not $stop.targeted.ContainsKey($request.thread+':'+$turn)
+        if($message.resultType -eq 'success' -and $message.result.ok) {Register-Target $request.thread $turn $request.at}
+        if($fresh -or $session.lastResponse -eq 'failed'){$session.dirty=$true}
     }
     function Advance-Stop {
         if($null -eq $stop){return}
@@ -165,13 +167,13 @@ try {
                 }
             }
         }
-        # First replies carry the exact interrupted IDs; large snapshots must follow them.
         if((Stop-Age) -lt 1800 -and @($sessions.Values | Where-Object lastResponse -eq 'none').Count -gt 0){return}
         $waiting=@($sessions.Values | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
+        $unread=@($sessions.Values | Where-Object ready -eq $false).Count -gt 0
         foreach($session in @($sessions.Values)) {
             if($clock.ElapsedMilliseconds -ge $stop.verifyUntil -or $stop.settled) {
                 if($session.subscribed){Follow $session.id $false}
-            } elseif(-not $waiting -and (-not $session.subscribed -or ($session.ready -and $session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000))) {
+            } elseif(-not $waiting -and (-not $session.subscribed -or (-not $unread -and $session.ready -and $session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000))) {
                 Follow $session.id
                 $session.ready=$false;$waiting=$true;$session.snapshotAt=$clock.ElapsedMilliseconds
             }
