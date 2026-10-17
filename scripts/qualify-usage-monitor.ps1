@@ -75,7 +75,9 @@ $package=@(Get-AppxPackage -Name OpenAI.Codex | Where-Object PublisherId -eq '2p
 if ($package.Count -ne 1 -or $appPin.StartTime.ToUniversalTime().Ticks -ne $ExpectedAppTicks -or
     -not $appPin.MainModule.FileName.StartsWith(([string]$package[0].InstallLocation+'\'),[StringComparison]::OrdinalIgnoreCase)) {throw 'Original app identity differs'}
 $result.desktop_version=[string]$package[0].Version
-$result.binary_sha256=(Get-FileHash -LiteralPath $hivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$stream=[IO.File]::OpenRead($hivePath)
+try {$result.binary_sha256=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($stream)).Replace('-','').ToLowerInvariant()}
+finally {$stream.Dispose()}
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
