@@ -9,7 +9,7 @@ summary: "Hive passes ordinary Windows paths to Claude plugin commands and retai
 tags: [claude, installation, windows]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage.rs#sha256:b08b99a665d4baa609dc973dccee52abfd63a639e6b31a908f50f6762bcb0c9a"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:8803080ae2d51f233c0258b2c9896c5c4777ea7176a05afc496f3de185cecf80"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:9a2ca4c65c5b7880464c7804d224cad91de28493eaf189aa63b1ed439806dde1"
   - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:f7f2d78da2e843f3a75267a106251eb26af09f22773bf67ec8f7bc2cca7f8c60"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"

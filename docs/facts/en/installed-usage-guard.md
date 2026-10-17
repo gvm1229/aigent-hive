@@ -5,14 +5,14 @@ topic_slug: installed-usage-guard
 language: en
 counterpart: ../ko/installed-usage-guard.md
 title: "Installed Guard Target Boundary"
-summary: "Per-target checks remain active; the 0.12.1 Windows monitor is unqualified and disabled."
+summary: "Per-target checks remain active; qualified Windows monitoring is locally installed."
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:b6df0ad8e439ecfeb01d93e827e4d0f9b54ff8194d52149c41a3869f689ee6e0"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:369a6681fcc7415c711ab7d5b9d1dae879b9d6fc188261af10a4ffcb5327a6f2"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:eb62d9db75f946f948b4dada89fa141654e80135"
+reviewed_revision: "git:da2797509ea7e0ef94783877e3c2cb69c6bfd490"
 status: active
 ---
 
@@ -23,4 +23,4 @@ status: active
 - Non-Hive folders receive no per-target enforcement, controls or runtime; setup-free Skills remain available.
 - Session controls require an exact configured target. Unrelated damaged graph CURRENT is preserved and non-authoritative.
 - Source tasks run one start preflight; no source-local Python watcher or repeated tool gate.
-- The 0.12.1 cross-folder Windows monitor is unqualified and disabled; it cannot activate or create consumer state in unrelated folders.
+- The 0.12.1 Windows monitor is locally installed and enabled on Codex 26.1013.4894.0. It stops runs once without a resume lock; unrelated folders receive no consumer state.

@@ -5,22 +5,21 @@ topic_slug: usage-stop-notice
 language: ko
 counterpart: ../en/usage-stop-notice.md
 title: "사용량 보호 중단 안내"
-summary: "제품 안내 창의 원인·상태·재개 설명과 실제 Windows 표시 검증"
+summary: "공식 로고와 닫기만 제공하는 Windows 알림"
 tags: [notice, usage, windows]
 aliases: []
 sources:
-  - "repo:docs/research/usage-stop-notice-0.12.1.md#sha256:c8b0b2678355ce54e64eed1d2e0100049c54bd59548947f6f1eb37d637455568"
+  - "repo:docs/research/usage-stop-notice-0.12.1.md#sha256:58148052d858dec443c5d8231c0ad91c7748dfd8e54e2a5b5939e6fc5790cffd"
+  - "repo:tests/results/usage-stop-notice-only-windows-0.12.1.json#sha256:89acbc9c15cf5c0988ff69f823cdee69894f07957898d4f80d689609b64e8c4c"
   - "repo:tests/results/usage-stop-notice-windows-0.12.1.json#sha256:12746751e84b05243501dab68a86f2ba228424ac13d00fb12f9768c0ceefadf0"
 links: [installed-usage-guard, quota-reset-session-control]
-reviewed_revision: "git:d6c851d2dee4cea3e4d48c6f30c96d24f8c678c0"
+reviewed_revision: "git:da2797509ea7e0ef94783877e3c2cb69c6bfd490"
 status: active
 ---
 
 # 사용량 보호 중단 안내
 
-- 0.12.1 제품의 별도 Windows 안내 창. Hive의 중단 원인·확인 상태·앱 유지·직접 재개 방법 표시
-- 외부 PowerShell의 정확한 재개 확인 명령 복사, 창 안의 실행 없음
-- 실제 제품의 시험 표식 제외. 닫기는 창만 닫는 동작, 사건 확인·보호 해제·작업 재개 없음
-- 초기화·60초 조회 공백·부분 확인·읽기 실패·확인 완료의 구분, 원래 이유 보존
-- Windows 144 DPI·560/460 폭 표시, 진입844ms·접근성 닫기·Esc 경로·사건 보존 통과
-- 표시만 검증, 실제 중단·설치와 다른 OS·96/192 DPI·실제 키보드 입력의 증명 제외
+- 0.12.1 Windows 알림 전용 창: 공식 Hive 로고·중단 이유·확인 상태·앱 유지·감지 시각·Codex 직접 재개 안내
+- 닫기만 제공. 명령 복사·사건 확인·잠금·해제·작업 실행 기능 없음, 창 닫기의 사건 보존·자동 재개 없음
+- 초기화·60초 조회 공백·부분 확인·읽기 실패의 구분. 현재 Windows 144 DPI·560/460 폭·13개 회귀·실제 표시·접근성 닫기와 원래 Codex 앱 유지 확인
+- 추가 실제 중단·실제 키보드·96/192 DPI·다른 OS의 증명 제외
