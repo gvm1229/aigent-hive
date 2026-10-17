@@ -1379,7 +1379,13 @@
 | [passed](runs/20261015T221956-70d79f2939d0.md) | PowerShell 큰 사건 시각과 25개 한정 제어 회귀 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T222036-5ee97f6040ad.md) | 한정 제어 최종 Rust 검사 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261015T222105-a9e877cb3692.md) | 26개 Windows 모의 제어와 막힌 파이프 쓰기 제한 | 9fc3c04eee0d6c66b8110b7f64cea55bd46c6de2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T181547-e569f8201e54.md) | 새 앱 버전 고정과 단일 대상 범위 모의 회귀 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T181636-e930a1bac701.md) | 현재 앱 단일 시험 세션의 기록 없는 연결 확인 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T181706-f4d0241cf405.md) | 현재 앱에 표시한 단일 시험 세션의 연결 재검증 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T181721-c62e3e1a17b2.md) | 현재 Windows 앱을 유지한 단일 시험 세션 실제 중단 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
 
 첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
+
+현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
