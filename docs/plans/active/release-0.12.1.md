@@ -4,10 +4,15 @@
 > Scope: release
 
 - [ ] [REL121-001] 폐기한 재개 차단의 역사 코드·재현·복구 문서
+  - state: agent-owned; owner: Codex; reason: 과거 코드·복구 경로 확인과 문서 작성
 - [ ] [REL121-002] 세션 중단·알림만의 제품 범위와 출시 자료 검증
+  - state: agent-owned; owner: Codex; reason: 필수 이전 버전 자료와 출시 입력 준비
 - [ ] [REL121-003] 공개 0.12.1-test.1 게시·정확 산출물 수용
+  - state: agent-owned; depends: REL121-002; owner: Codex; reason: 공개 후보·게시·독립 수용 대기
 - [ ] [REL121-004] 구독 안내 문구 승인·안정판 문서·보호 main 통합
+  - state: agent-owned; depends: REL121-003; owner: Codex; reason: 문구 승인 요청과 독립 통합 준비 진행
 - [ ] [REL121-005] 0.12.1 안정판 게시·독립 공개 조회·출시 기록
+  - state: agent-owned; depends: REL121-004; owner: Codex; reason: 수용·통합 뒤 승인된 안정판 게시
 
 ## 목적·승인·제외
 

@@ -13,7 +13,7 @@
 - 구현 목표: `0.12.1`
 - 현재 등록 항목: 3/8 완료
 
-- `agent-owned`: 과거 잠금 재현 문서·출시 자료·공개 시험 수용·보호 통합·안정판 게시
+- `agent-owned`: `REL121-001`, `REL121-002`, `REL121-003`, `REL121-004`, `REL121-005`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
