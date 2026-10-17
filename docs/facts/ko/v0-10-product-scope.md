@@ -13,9 +13,9 @@ sources:
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:d84549268a83748e23da88c1e9c1d51163776e9511b258feb2b79c3318239e09"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
-  - "repo:docs/public-stable-release.json#sha256:8d8d43f32d759200094f2773662f88559fdd028793448b435a8c8f0c16f3235b"
+  - "repo:docs/public-stable-release.json#sha256:97f9eab19f9bb17554db37c4cc811e10a59beea61c680aa0ae1a108c04862d2e"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
-reviewed_revision: "git:8a1e2b93fc5e1bf59ea54bdd7bfb4eb6bd63f6da"
+reviewed_revision: "git:9c98d50fda7f2ad4b3011f5697cee950a1b2847f"
 status: active
 ---
 
