@@ -9,7 +9,8 @@ param(
     [string]$InstallRequest,
     [int]$ExpectedAppPid,
     [long]$ExpectedAppTicks,
-    [switch]$WaitForTrigger
+    [switch]$WaitForTrigger,
+    [string]$PythonExe='python'
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -73,6 +74,8 @@ $null=$appPin.Handle
 $package=@(Get-AppxPackage -Name OpenAI.Codex | Where-Object PublisherId -eq '2p2nqsd0c76g0')
 if ($package.Count -ne 1 -or $appPin.StartTime.ToUniversalTime().Ticks -ne $ExpectedAppTicks -or
     -not $appPin.MainModule.FileName.StartsWith(([string]$package[0].InstallLocation+'\'),[StringComparison]::OrdinalIgnoreCase)) {throw 'Original app identity differs'}
+$result.desktop_version=[string]$package[0].Version
+$result.binary_sha256=(Get-FileHash -LiteralPath $hivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -82,7 +85,7 @@ public static class HiveAcceptanceWindow {
 "@
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-function Find-StopReason {
+function Find-StopReason([string]$phrase='사용량 초기화 감지',[bool]$confirmed=$true) {
     try {
         $condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,'Aigent Hive — 사용량 보호 상태')
         $windows=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,$condition)
@@ -95,11 +98,77 @@ function Find-StopReason {
             $controls=$window.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
             foreach ($control in $controls) {
                 $text=$control.Current.Name
-                if ($text -and $text.Contains('사용량 초기화 감지') -and $text.Contains('작업 중단 확인 — Codex 앱 유지') -and -not $control.Current.IsOffscreen) {return $true}
+                if ($text -and $text.Contains($phrase) -and (-not $confirmed -or $text.Contains('작업 중단 확인 — Codex 앱 유지')) -and -not $control.Current.IsOffscreen) {return $true}
             }
         }
     } catch { }
     return $false
+}
+function Verify-NativeSubjects([string]$baseline,[string]$output) {
+    $raw=& $PythonExe (Join-Path $source 'scripts/qualify-session-events.py') verify --subjects $baseline --output $output
+    return ($raw | ConvertFrom-Json)
+}
+function Acknowledge-TestIncident {
+    $pending=Read-State
+    if(-not $pending.incident){throw 'Expected exact disposable test incident'}
+    $raw=& $hivePath usage monitor acknowledge --user-root $fixture --incident $pending.incident.digest --output json
+    if($LASTEXITCODE -ne 0){throw 'Exact test acknowledgement with fresh usage failed'}
+    $receipt=$raw | ConvertFrom-Json
+    if(-not $receipt.data.acknowledged -or (Read-State).incident){throw 'Test latch did not clear'}
+    if($receipt.data.PSObject.Properties['controller_release_verified'] -and -not $receipt.data.controller_release_verified){throw 'Test controller did not release its stop requests'}
+    return $receipt.data
+}
+function Test-ObservationGap {
+    $configPath=Join-Path $fixture '.hive/runtime/usage-monitor/config.json'
+    $approvedConfig=[IO.File]::ReadAllBytes($configPath)
+    $config=[Text.Encoding]::UTF8.GetString($approvedConfig) | ConvertFrom-Json
+    $null=& $hivePath usage monitor disable --user-root $fixture --output json
+    if($LASTEXITCODE -ne 0){throw 'Cannot stop the owned fixture controller for recovery test'}
+    $deadline=[DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $old=@(Get-CimInstance Win32_Process | Where-Object {$_.ExecutablePath -eq $config.executable})
+        if($old.Count -gt 0){Start-Sleep -Milliseconds 100}
+    } while($old.Count -gt 0 -and [DateTime]::UtcNow -lt $deadline)
+    if($old.Count -gt 0){throw 'Previous fixture controller did not release its lease'}
+    # Restore the same approved fixture configuration to exercise controller restart.
+    # The real user root is never changed; only this child gets the failed proxy.
+    [IO.File]::WriteAllBytes($configPath,$approvedConfig)
+    $runner=Join-Path $fixture 'blocked-query-runner.ps1'
+    $body=@'
+$ErrorActionPreference='Stop'
+$env:HTTPS_PROXY='http://127.0.0.1:1'
+$env:HTTP_PROXY='http://127.0.0.1:1'
+$env:ALL_PROXY='http://127.0.0.1:1'
+$env:NO_PROXY=''
+& 'BINARY' usage monitor run --user-root 'ROOT' --output json
+exit $LASTEXITCODE
+'@
+    $body=$body.Replace('BINARY',([string]$config.executable).Replace("'","''")).Replace('ROOT',$fixture.Replace("'","''"))
+    [IO.File]::WriteAllText($runner,$body,$utf8)
+    $powershell=Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    $gap=Start-Process -FilePath $powershell -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-File',('"'+$runner+'"')) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $fixture 'gap-stdout.log') -RedirectStandardError (Join-Path $fixture 'gap-stderr.log')
+    try {
+        $result.phase='sensor-gap-running';Record
+        $deadline=[DateTime]::UtcNow.AddSeconds(75)
+        do {
+            Start-Sleep -Milliseconds 100
+            $current=Read-State
+            if($gap.HasExited){throw 'Observation-gap controller exited unexpectedly'}
+        } while(-not $current.incident -and [DateTime]::UtcNow -lt $deadline)
+        if($current.incident.reason -ne 'sensor-unresponsive'){throw 'Actual usage query failure did not produce the protective stop'}
+        $seconds=[long]$current.incident.detected_at-[long]$current.last_success
+        if($seconds -lt 60 -or $seconds -gt 70){throw 'Observation-gap protective deadline was outside 60 to 70 seconds'}
+        $deadline=[DateTime]::UtcNow.AddSeconds(8)
+        do {$visible=Find-StopReason '60초 동안 정상 사용량 조회 없음' $false;if(-not $visible){Start-Sleep -Milliseconds 100}} while(-not $visible -and [DateTime]::UtcNow -lt $deadline)
+        if(-not $visible){throw 'Actual observation-gap reason was not visible'}
+        $result.sensor_gap=@{reason=$current.incident.reason;gap_seconds=$seconds;reason_visible=$visible;query_error=$current.last_query_error;active_turns=$current.active_turns;scope='real failed native reads while test models already stopped; running-work interruption proven by reset trial'}
+        Record
+    } finally {
+        $null=& $hivePath usage monitor disable --user-root $fixture --output json
+        if($LASTEXITCODE -ne 0){throw 'Observation-gap fixture cleanup failed'}
+        if(-not $gap.WaitForExit(5000)){throw 'Observation-gap controller did not stop after disable'}
+    }
+    $result.sensor_gap_acknowledgement=Acknowledge-TestIncident
 }
 try {
     Record
@@ -116,13 +185,24 @@ try {
         if (Test-Path -LiteralPath $statePath) { $state = Read-State }
     } while ((-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.observation_count -lt 4 -or -not $state.control_connected -or $state.unknown_sessions -gt 0) -and [DateTime]::UtcNow -lt $deadline)
     if (-not $state.last_success -or $state.last_success -lt $sampleAfter -or $state.incident) { throw 'Monitor did not establish a valid initial baseline' }
-    if ($state.observation_count -lt 4 -or -not $state.control_connected -or $state.known_sessions -lt 1) {throw 'Four fresh observations and a live desktop session are required'}
+    if ($state.observation_count -lt 4 -or -not $state.control_connected -or $state.known_sessions -lt 1 -or $state.unknown_sessions -gt 0) {throw 'Four fresh observations and a fully known desktop scope are required'}
     $result.phase='armed';$result.first_observation=$state.last_success;$result.observation_count=$state.observation_count;Record
     if ($WaitForTrigger) {
         $deadline=[DateTime]::UtcNow.AddMinutes(3)
         while (-not (Test-Path -LiteralPath (Join-Path $fixture 'trigger.json')) -and [DateTime]::UtcNow -lt $deadline) {Start-Sleep -Milliseconds 100}
         if (-not (Test-Path -LiteralPath (Join-Path $fixture 'trigger.json'))) {throw 'Session-stop trigger deadline elapsed'}
     }
+
+    $subjects=Join-Path $fixture 'subjects.json'
+    $subjectBaseline=Join-Path $fixture 'subject-baseline.json'
+    $deadline=[DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $beforeRaw=& $PythonExe (Join-Path $source 'scripts/qualify-session-events.py') capture --subjects $subjects --output $subjectBaseline
+        $before=$beforeRaw | ConvertFrom-Json
+        if(-not $before.verified){Start-Sleep -Milliseconds 100}
+    } while(-not $before.verified -and [DateTime]::UtcNow -lt $deadline)
+    if(-not $before.verified -or @($before.subjects).Count -lt 3 -or @($before.subjects | Where-Object tool_free_required -eq $true).Count -lt 1){throw 'Parent, long reasoning and long shell subjects must all be running'}
+    $result.subjects_before=$before;Record
 
 
     $shellReceipt=Join-Path $fixture 'long-shell.json'
@@ -172,6 +252,17 @@ try {
     if ($state.incident.reason -ne 'usage-reset' -or -not $state.incident.confirmed_stop -or
         $state.incident.confirmed_stop.targeted_turns -lt 1) { throw 'Actual session interruption not verified' }
     $result.incident=$state.incident
+    $deadlineMs=[long]$state.incident.detected_at*1000+5000
+    do {
+        $native=Verify-NativeSubjects $subjectBaseline (Join-Path $fixture 'subject-interruption.json')
+        if(-not $native.verified){Start-Sleep -Milliseconds 50}
+    } while(-not $native.verified -and [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -lt $deadlineMs)
+    if(-not $native.verified){throw 'Native interruption of every exact test turn was not observed'}
+    foreach($subject in $native.subjects) {
+        $at=[DateTimeOffset]::Parse([string]$subject.native_marker_at).ToUnixTimeMilliseconds()
+        if($at -lt [long]$state.incident.detected_at*1000 -or $at -gt $deadlineMs){throw 'A native test turn missed the 5 second interruption deadline'}
+    }
+    $result.subjects_interrupted=$native;Record
     $result.app_preserved=(-not $appPin.HasExited -and $appPin.StartTime.ToUniversalTime().Ticks -eq $ExpectedAppTicks -and [HiveAcceptanceWindow]::IsWindowVisible($appPin.MainWindowHandle))
     if (-not $result.app_preserved) {throw 'Original Codex app window did not survive'}
     $deadline=[DateTime]::UtcNow.AddSeconds(8)
@@ -181,6 +272,8 @@ try {
     $result.long_shell_stopped=$shellPin.HasExited
     $result.long_shell_before_natural_end=([DateTime]::UtcNow -lt [DateTime]::Parse([string]$shell.natural_end_at).ToUniversalTime())
     if(-not $result.long_shell_stopped -or -not $result.long_shell_before_natural_end){throw 'Long shell was not interrupted before its natural completion'}
+    $result.long_shell_exit_ms=[DateTimeOffset]::new($shellPin.ExitTime.ToUniversalTime()).ToUnixTimeMilliseconds()-[long]$state.incident.detected_at*1000
+    if($result.long_shell_exit_ms -gt 5000){throw 'Long shell missed the 5 second local stop deadline'}
     $result.message='사용량 초기화 감지로 실행 중인 작업 중단 확인. Codex 앱 유지와 중단 이유·상태 표시 확인.'
     $result.phase='passed-local-session-interruption'
     $result.completed_at=[DateTime]::UtcNow.ToString('o')
@@ -190,7 +283,15 @@ try {
     Start-Sleep -Seconds 5
     $after=Read-State
     if (-not $after.incident -or $after.active_turns -gt 0) {throw 'Session resumed while protection was latched'}
+    if(-not (Verify-NativeSubjects $subjectBaseline (Join-Path $fixture 'subject-latched.json')).verified){throw 'A native test subject resumed while latched'}
     $result.no_automatic_resume=$true;Record
+    $result.reset_acknowledgement=Acknowledge-TestIncident
+    Start-Sleep -Seconds 2
+    if(-not (Verify-NativeSubjects $subjectBaseline (Join-Path $fixture 'subject-after-ack.json')).verified){throw 'Acknowledgement automatically resumed model work'}
+    $result.acknowledgement_does_not_resume=$true;Record
+    Test-ObservationGap
+    if($appPin.HasExited){throw 'Original app did not survive observation-gap test'}
+    $result.phase='passed-local-session-interruption';Record
 } catch {
     $result.phase='failed';$result.error=$_.Exception.Message;$result.completed_at=[DateTime]::UtcNow.ToString('o');Record
 } finally {
@@ -202,9 +303,14 @@ try {
 }
 try {
     if ($InstallRequest -and $result.phase -eq 'passed-local-session-interruption' -and $result.fixture_task_removed) {
+        $result.installation_phase='installing';Record
         & (Join-Path $source 'scripts\complete-usage-monitor-install.ps1') -Request $InstallRequest -AcceptanceResult $reportPath
         if($LASTEXITCODE -ne 0){throw 'Conditional always-on installation failed; inspect its receipt'}
+        if($appPin.HasExited){throw 'Original app did not survive installation and monitoring'}
+        $result.installation_phase='passed-installed-always-on';$result.installed_to_real_user_root=$true;Record
     }
+} catch {
+    $result.phase='failed';$result.installation_phase='failed';$result.error=$_.Exception.Message;Record
 } finally {
     if ($CollectorTask -match '^AigentHive-UsageAcceptance-[a-f0-9]{16}$') {
         $task=Get-ScheduledTask -TaskName $CollectorTask -ErrorAction SilentlyContinue
