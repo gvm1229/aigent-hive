@@ -1,6 +1,6 @@
 # Explicit usage control
 
-Read before any threshold, disable, enable, toggle, or reset acknowledgement operation.
+Read before any threshold, disable, enable, or toggle operation.
 
 7. Perform at most the explicitly requested control mutation:
    - A global threshold requires explicit global intent and an integer from 1 through 99:
@@ -38,17 +38,10 @@ Read before any threshold, disable, enable, toggle, or reset acknowledgement ope
    fresh `hive.usage-allowed`; limited, unknown, or policy-changed results remain blocked. Never
    disable the session merely to acknowledge a changed threshold.
 
-## Quota reset acknowledgement
+## Quota reset stop
 
-- A `hive.usage-reset` stop persists across repeated enforcement and process restarts. Do not retry sensing to clear it.
-- Only after the user explicitly acknowledges the reported reset and requests continuation, use the current halt's `reset_acknowledgement_digest` (or `status`'s `halt_digest`):
-
-  ```text
-  hive usage session --target <hive-target> --host <host> --user-root <user-root> --session-id <current-session-id> --process-id <current-process-id> --action acknowledge-reset --confirm-reset <halt-digest> --output json
-  ```
-
-- Use installed help first; older releases may not support this action. Never substitute session disable or direct marker editing.
-- Immediately run `enforce` with the same exact binding and available account digest. Acknowledgement keeps the threshold guard enabled and does not authorize work or dispatch. Proceed only after fresh `hive.usage-allowed`; all blocked outcomes remain stops.
+- A reset stops the current request only. A new user request uses fresh sensing; no acknowledgement or unlock is required. Normal thresholds and zero-quota protection still apply.
+- A monitor incident is a reason/status record, not dispatch authority or a resume lock. Users may resume directly in Codex. The notice only closes; it never starts or controls work.
 
 ## Reset-only session control
 
@@ -60,7 +53,7 @@ Read before any threshold, disable, enable, toggle, or reset acknowledgement ope
 
 - Restore reset detection with `--action enable-reset-guard`, without the disable confirmation. Both actions require the overall usage guard to remain enabled.
 - These actions preserve the global settings and threshold guard. Missing or low usage still blocks work. Other hosts, sessions, and processes do not inherit the opt-out; changing the general guard does not silently clear a current reset-only preference.
-- A pending reset must first use the exact acknowledgement procedure above. Reset-only disable cannot clear a reset halt or a damaged marker.
+- Reset-only disable never repairs a damaged marker. Use fresh enforce after repairing damaged state.
 - After either successful action, run one same-binding `enforce`. Continue only after fresh `hive.usage-allowed`. Control success never grants dispatch authority or supplies periodic monitoring.
 - Do not use general `disable` or `toggle` for a reset-only request. A bare continuation request authorizes neither kind of bypass.
 
@@ -82,8 +75,8 @@ Read before any threshold, disable, enable, toggle, or reset acknowledgement ope
   to be bypassed. Warn that the opt-out permits work that may use paid account credits.
 - Exhaustion returns exit `3` and `hive.usage-quota-exhausted`. Stop Hive-controlled work, keep the
   halt receipt, and report the exhausted window. A bare continue does not remove the stop.
-  A fresh positive observation can clear exhaustion; a quota increase can still require the separate
-  reset acknowledgement while ordinary protection is enabled.
+  A fresh positive observation can clear exhaustion; a newly detected quota increase can stop that
+  request once while ordinary protection is enabled. The next request remeasures without a resume lock.
 - Report `zero_quota_guard_enabled` and `active_turn_interruption_verified`. Do not promise live
   interruption, stop a host process, or change provider billing settings.
 

@@ -19,10 +19,6 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 mod codex_native;
 pub(crate) use codex_native::MonitorSensor;
 
-pub(crate) fn monitor_snapshot() -> Result<NormalizedSnapshot, SensorError> {
-    codex_native::read_with_timeout(None, SystemTime::now(), Duration::from_secs(5))
-}
-
 const CODEXBAR_VERSION: &str = "0.45.2";
 const VERSION_TIMEOUT: Duration = Duration::from_secs(5);
 const USAGE_TIMEOUT: Duration = Duration::from_mins(1);

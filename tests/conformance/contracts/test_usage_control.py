@@ -1209,42 +1209,19 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 4)
         self.assertEqual(json.loads(marker_path.read_text(encoding="utf-8"))["decision"], "usage-reset")
 
-        reset_bytes = marker_path.read_bytes()
-        for sensor_case in ("allow", "threshold"):
-            again, again_result = self.invoke(*arguments, sensor_case=sensor_case,
-                extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log)})
-            self.assertEqual(again.returncode, 3)
-            self.assertEqual(again_result["code"], "hive.usage-reset")
-            self.assertEqual(marker_path.read_bytes(), reset_bytes)
-        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 4)
-
+        # A fresh request can proceed without acknowledging or disabling protection.
+        resumed, resumed_result = self.invoke(*arguments, sensor_case="allow",
+            extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log)})
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(resumed_result["code"], "hive.usage-allowed")
+        self.assertEqual(json.loads(marker_path.read_text(encoding="utf-8"))["decision"], "observed")
+        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 6)
         restarted = list(arguments)
         restarted[restarted.index("--process-id") + 1] = "915"
-        restarted_process, restarted_result = self.invoke(*restarted, sensor_case="allow")
-        self.assertEqual(restarted_process.returncode, 3)
-        self.assertEqual(restarted_result["code"], "hive.usage-reset")
-        self.assertEqual(marker_path.read_bytes(), reset_bytes)
-        shown, shown_result = self.invoke("usage", "status", "--target", str(self.consumer),
-            "--session-id", "session-limited", "--process-id", "915")
-        self.assertEqual(shown.returncode, 3)
-        self.assertEqual(shown_result["data"]["halt_decision"], "usage-reset")
-
-        confirmation = repeated_result["data"]["reset_acknowledgement_digest"]
-        command = ("usage", "session", "--target", str(self.consumer), "--session-id",
-                   "session-limited", "--process-id", "902", "--action", "acknowledge-reset")
-        wrong, wrong_result = self.invoke(*command, "--confirm-reset", "sha256:" + "0" * 64)
-        self.assertNotEqual(wrong.returncode, 0)
-        self.assertEqual(wrong_result["changed_paths"], [])
-        self.assertEqual(marker_path.read_bytes(), reset_bytes)
-        acknowledged, ack = self.invoke(*command, "--confirm-reset", confirmation)
-        self.assertEqual(acknowledged.returncode, 0, acknowledged.stderr)
-        self.assertEqual(ack["code"], "hive.usage-reset-acknowledged")
-        self.assertTrue(ack["data"]["guard_enabled"])
-        self.assertTrue(ack["data"]["session_recheck_required"])
-        self.assertFalse(ack["data"]["authorizes_dispatch"])
-        replay, _ = self.invoke(*command, "--confirm-reset", confirmation)
-        self.assertNotEqual(replay.returncode, 0)
-        limited_again, limited_result = self.invoke(*arguments, sensor_case="threshold")
+        process, result = self.invoke(*restarted, sensor_case="allow")
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(result["code"], "hive.usage-allowed")
+        limited_again, limited_result = self.invoke(*restarted, sensor_case="threshold")
         self.assertEqual(limited_again.returncode, 3)
         self.assertEqual(limited_result["code"], "hive.usage-limited")
 
@@ -1286,12 +1263,11 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         reset, result = self.invoke("usage", "enforce", *binding, sensor_case="remaining-increase")
         self.assertEqual(reset.returncode, 3, reset.stderr)
         self.assertEqual(result["code"], "hive.usage-reset")
-        before = snapshot_tree(self.consumer)
-        refused, result = self.invoke("usage", "session", *binding,
+        changed, result = self.invoke("usage", "session", *binding,
             "--action", "disable-reset-guard", "--confirm-reset-guard-disable")
-        self.assertEqual(refused.returncode, 3, refused.stderr)
-        self.assertEqual(result["changed_paths"], [])
-        self.assertEqual(snapshot_tree(self.consumer), before)
+        self.assertEqual(changed.returncode, 0, changed.stderr)
+        self.assertTrue(result["data"]["guard_enabled"])
+        self.assertFalse(result["data"]["quota_reset_guard_enabled"])
 
     def test_reset_only_confirmation_cannot_disable_the_whole_guard(self) -> None:
         binding = ("--target", str(self.consumer), "--session-id", "reset-consent",

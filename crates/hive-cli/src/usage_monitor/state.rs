@@ -61,6 +61,8 @@ pub(super) struct MonitorState {
     pub heartbeat: u64,
     pub incident: Option<Incident>,
     #[serde(default)]
+    pub sensor_outage_stopped_at: Option<u64>,
+    #[serde(default)]
     pub observation_count: u64,
     #[serde(default)]
     pub observation_watch_started_at: Option<u64>,
@@ -88,6 +90,10 @@ pub(super) struct MonitorState {
 #[serde(deny_unknown_fields)]
 pub(super) struct Incident {
     pub digest: String,
+    #[serde(default)]
+    pub stop_dispatched_at: Option<u64>,
+    #[serde(default)]
+    pub stop_finished_at: Option<u64>,
     pub reason: String,
     pub detected_at: u64,
     pub stop_method: String,
@@ -138,6 +144,12 @@ pub(super) struct TerminationReceipt {
 
 impl Incident {
     pub fn record_session_stop(&mut self, packet: &serde_json::Value, at: u64) {
+        if self.stop_finished_at.is_some() {
+            return;
+        }
+        if packet["finished"] == true {
+            self.stop_finished_at = Some(at);
+        }
         self.stop_method = "desktop-session-interrupt".into();
         self.targeted_turns = packet["targeted"].as_u64().unwrap_or_default();
         self.confirmed_turns = packet["confirmed"].as_u64().unwrap_or_default();
@@ -188,7 +200,7 @@ impl Incident {
 impl MonitorState {
     pub fn new() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             ..Self::default()
         }
     }
@@ -210,9 +222,6 @@ impl MonitorState {
     }
 
     pub fn halt(&mut self, reason: &str, now: u64) {
-        if self.incident.is_some() {
-            return;
-        }
         self.generation = self.generation.saturating_add(1);
         let digest = sha256_digest(
             format!(
@@ -223,6 +232,8 @@ impl MonitorState {
         );
         self.incident = Some(Incident {
             digest,
+            stop_dispatched_at: None,
+            stop_finished_at: None,
             reason: reason.to_owned(),
             detected_at: now,
             stop_method: "pending".to_owned(),
@@ -277,8 +288,10 @@ impl MonitorState {
             .as_ref()
             .is_some_and(|account| account != &first.account_scope_digest)
         {
+            self.account_digest = Some(first.account_scope_digest.clone());
+            self.baseline = current.to_vec();
             return Err(invalid(
-                "usage account changed; explicit acknowledgement required",
+                "usage account changed; awaiting another fresh observation",
             ));
         }
         if !self.baseline.is_empty() {
@@ -328,34 +341,50 @@ impl MonitorState {
             }
         }
         self.baseline = next;
+        self.sensor_outage_stopped_at = None;
         self.last_success = Some(now);
         self.observation_count = self.observation_count.saturating_add(1);
         Ok(())
     }
 
-    pub fn acknowledge(
-        &mut self,
-        expected: &str,
-        current: &[UsageSnapshot],
-        now: u64,
-    ) -> Result<(), AdapterError> {
-        if self.incident.as_ref().map(|i| i.digest.as_str()) != Some(expected) {
-            return Err(invalid("confirmation does not match the pending incident"));
+    pub fn observation_blind(&mut self, at: u64) {
+        if self.sensor_outage_stopped_at.is_none() {
+            self.halt("sensor-unresponsive", at);
+            self.sensor_outage_stopped_at = Some(at);
         }
-        // Account changes can only be accepted at this explicit incident boundary.
-        let mut fresh = Self::new();
-        fresh.observe(current, now)?;
-        fresh.generation = self.generation;
-        fresh.heartbeat = self.heartbeat;
-        fresh.control_connected = self.control_connected;
-        fresh.control_stopping = self.control_stopping;
-        fresh.app_alive = self.app_alive;
-        fresh.active_turns = self.active_turns;
-        fresh.activity_observed_at = self.activity_observed_at;
-        fresh.known_sessions = self.known_sessions;
-        fresh.unknown_sessions = self.unknown_sessions;
-        *self = fresh;
-        Ok(())
+    }
+
+    pub fn controller_fault(&mut self, at: u64) -> Option<String> {
+        if self.incident.as_ref().is_some_and(|incident| {
+            incident.reason == "monitor-fault"
+                && self
+                    .last_success
+                    .is_none_or(|good| good <= incident.detected_at)
+        }) {
+            return None;
+        }
+        self.halt("monitor-fault", at);
+        let incident = self.incident.as_mut()?;
+        incident.stop_dispatched_at = Some(at);
+        Some(incident.digest.clone())
+    }
+
+    pub fn migrate(&mut self) -> Result<(), AdapterError> {
+        match self.schema_version {
+            1 => {
+                // Earlier notices are history, never permission to stop a resumed run.
+                if let Some(incident) = &mut self.incident {
+                    incident.stop_dispatched_at = Some(incident.detected_at);
+                    incident.stop_finished_at = Some(incident.detected_at);
+                    self.sensor_outage_stopped_at =
+                        (incident.reason == "sensor-unresponsive").then_some(incident.detected_at);
+                }
+                self.schema_version = 2;
+                Ok(())
+            }
+            2 => Ok(()),
+            _ => Err(invalid("unsupported monitor state")),
+        }
     }
 }
 
@@ -447,22 +476,21 @@ mod tests {
         assert_eq!(state.incident.unwrap().reason, "usage-reset");
     }
     #[test]
-    fn first_baseline_then_refill_latches_across_restart() {
+    fn refill_history_does_not_latch_and_a_new_refill_creates_a_new_event() {
         let mut s = MonitorState::new();
         s.observe(&sample(1.0, 100, 200), 100).unwrap();
         assert!(s.incident.is_none());
         s.observe(&sample(99.0, 115, 300), 115).unwrap();
+        s.incident.as_mut().unwrap().stop_dispatched_at = Some(115);
+        let digest = s.incident.as_ref().unwrap().digest.clone();
         let saved = serde_json::to_vec(&s).unwrap();
         let mut s: MonitorState = serde_json::from_slice(&saved).unwrap();
-        let digest = s.incident.as_ref().unwrap().digest.clone();
         s.observe(&sample(98.0, 130, 300), 130).unwrap();
         assert_eq!(s.incident.as_ref().unwrap().digest, digest);
-        assert!(s
-            .acknowledge("wrong", &sample(98.0, 130, 300), 130)
-            .is_err());
-        s.acknowledge(&digest, &sample(98.0, 130, 300), 130)
-            .unwrap();
-        assert!(s.incident.is_none());
+        assert!(s.incident.as_ref().unwrap().stop_dispatched_at.is_some());
+        s.observe(&sample(99.0, 145, 300), 145).unwrap();
+        assert_ne!(s.incident.as_ref().unwrap().digest, digest);
+        assert!(s.incident.as_ref().unwrap().stop_dispatched_at.is_none());
     }
     #[test]
     fn rollover_detects_reset_even_when_new_quota_already_spent() {
@@ -494,13 +522,48 @@ mod tests {
         assert_eq!(s.last_success, Some(100));
     }
     #[test]
-    fn incident_creation_is_idempotent() {
+    fn continuous_sensor_outage_stops_once_until_fresh_recovery() {
         let mut s = MonitorState::new();
-        s.halt("sensor-unresponsive", 130);
-        let d = s.incident.clone().unwrap().digest;
-        s.halt("usage-reset", 140);
+        s.observation_blind(160);
+        let digest = s.incident.as_ref().unwrap().digest.clone();
+        let saved = serde_json::to_vec(&s).unwrap();
+        let mut s: MonitorState = serde_json::from_slice(&saved).unwrap();
+        s.observation_blind(300);
         assert_eq!(s.generation, 1);
-        assert_eq!(s.incident.unwrap().digest, d);
+        assert_eq!(s.incident.as_ref().unwrap().digest, digest);
+        s.observe(&sample(90.0, 301, 900), 301).unwrap();
+        s.observation_blind(361);
+        assert_eq!(s.generation, 2);
+        assert_ne!(s.incident.as_ref().unwrap().digest, digest);
+    }
+
+    #[test]
+    fn legacy_incidents_migrate_to_history_without_replay_or_acknowledgement() {
+        let mut s = MonitorState::new();
+        s.halt("usage-reset", 100);
+        s.schema_version = 1;
+        s.migrate().unwrap();
+        let incident = s.incident.as_ref().unwrap();
+        assert!(incident.stop_dispatched_at.is_some() && incident.stop_finished_at.is_some());
+        assert_eq!(s.schema_version, 2);
+        s.migrate().unwrap();
+        assert_eq!(s.generation, 1);
+    }
+    #[test]
+    fn persistent_controller_fault_is_not_replayed_after_recovery_or_restart() {
+        let mut state = MonitorState::new();
+        let first = state.controller_fault(100).unwrap();
+        let mut state: MonitorState =
+            serde_json::from_slice(&serde_json::to_vec(&state).unwrap()).unwrap();
+        assert!(state
+            .incident
+            .as_ref()
+            .unwrap()
+            .stop_dispatched_at
+            .is_some());
+        assert!(state.controller_fault(110).is_none());
+        state.last_success = Some(120);
+        assert_ne!(state.controller_fault(130).unwrap(), first);
     }
     #[test]
     fn slow_query_does_not_add_another_fifteen_seconds() {

@@ -68,14 +68,48 @@ fn write_command(writer: &mut impl Write, value: &Value) -> std::io::Result<()> 
     writer.write_all(b"\n")
 }
 
+fn unix_ms() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(u128::MAX, |at| at.as_millis())
+}
+
+fn release_control(pending: &Value, delivered: Option<&str>, reconnect: bool, at: u128) -> bool {
+    pending["operation"] == "stop"
+        && (reconnect && pending["incident"].as_str() == delivered
+            || pending["detected_at_ms"].as_u64().is_none_or(|detected| {
+                at < u128::from(detected) || at >= u128::from(detected) + 5500
+            }))
+}
+
+fn read_packets(stdout: impl Read, send_lines: &SyncSender<Value>) {
+    let mut reader = BufReader::new(stdout);
+    loop {
+        let mut line = Vec::new();
+        let result = reader.by_ref().take(16385).read_until(b'\n', &mut line);
+        if !matches!(result, Ok(1..)) || line.len() > 16384 {
+            return;
+        }
+        let value = crate::usage::parse_strict_native_json(&line);
+        let Ok(value) = value else { return };
+        if send_lines.send(value).is_err() {
+            return;
+        }
+    }
+}
+
 fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
     let (catalogs, refresh) = catalog_worker();
     let mut catalog = json!({"operation":"discover","valid":false,"ids":[]});
     let mut catalog_at = Instant::now();
     let mut pending = json!({"operation":"clear"});
+    let mut delivered_incident: Option<String> = None;
     loop {
         if let Ok(command) = commands.try_recv() {
             pending = command;
+        }
+        if release_control(&pending, delivered_incident.as_deref(), true, unix_ms()) {
+            pending = json!({"operation":"clear"});
         }
         let Ok(mut builder) = platform::command(SCRIPT) else {
             return;
@@ -99,21 +133,7 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
             return;
         };
         let (send_lines, lines) = mpsc::sync_channel(8);
-        thread::spawn(move || {
-            let mut reader = BufReader::new(stdout);
-            loop {
-                let mut line = Vec::new();
-                let result = reader.by_ref().take(16385).read_until(b'\n', &mut line);
-                if !matches!(result, Ok(1..)) || line.len() > 16384 {
-                    return;
-                }
-                let value = crate::usage::parse_strict_native_json(&line);
-                let Ok(value) = value else { return };
-                if send_lines.send(value).is_err() {
-                    return;
-                }
-            }
-        });
+        thread::spawn(move || read_packets(stdout, &send_lines));
         let started = Instant::now();
         let mut last_packet = started;
         let mut sent = Value::Null;
@@ -121,6 +141,9 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
         loop {
             while let Ok(command) = commands.try_recv() {
                 pending = command;
+            }
+            if release_control(&pending, delivered_incident.as_deref(), false, unix_ms()) {
+                pending = json!({"operation":"clear"});
             }
             if pending != sent {
                 if pending["operation"] == "stop" {
@@ -130,6 +153,9 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
                 // Only one small bounded command is outstanding per incident transition.
                 if write_command(&mut stdin, &pending).is_err() {
                     break;
+                }
+                if pending["operation"] == "stop" {
+                    delivered_incident = pending["incident"].as_str().map(str::to_owned);
                 }
                 sent = pending.clone();
             }
@@ -174,6 +200,30 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
 
 #[cfg(all(test, windows))]
 mod tests {
+    #[test]
+    fn one_shot_delivery_is_not_replayed_after_reconnect_or_its_deadline() {
+        let event =
+            serde_json::json!({"operation":"stop","incident":"event","detected_at_ms":10000});
+        assert!(!super::release_control(&event, None, false, 10010));
+        assert!(!super::release_control(&event, Some("event"), false, 10010));
+        assert!(super::release_control(&event, Some("event"), true, 10010));
+        assert!(!super::release_control(&event, Some("older"), true, 10010));
+        assert!(super::release_control(&event, None, false, 15500));
+        assert!(super::release_control(&event, None, false, 9999));
+        assert!(super::release_control(
+            &serde_json::json!({"operation":"stop"}),
+            None,
+            false,
+            10010
+        ));
+        assert!(!super::release_control(
+            &serde_json::json!({"operation":"clear"}),
+            None,
+            true,
+            10010
+        ));
+    }
+
     #[test]
     fn production_adapter_fits_the_windows_launch_budget() {
         assert!(super::platform::command(super::SCRIPT).is_ok());

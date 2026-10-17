@@ -119,7 +119,8 @@ try {
     function New-Stop([string]$digest,[long]$detected) {
         $began=$clock.ElapsedMilliseconds
         $age=[Math]::Max([long]0,[long]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$detected))
-        return @{began=$began;verifyUntil=$began+5000;digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
+        $eligible=@{};foreach($id in @($sessions.Keys)+@($catalogSeen.Keys)){if($id){$eligible[$id]=$true}}
+        return @{eligible=$eligible;requested=@{};began=$began;verifyUntil=$began+[Math]::Max(0,5000-$age);digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
     }
     function Stop-Age {return $stop.age_at_begin+$clock.ElapsedMilliseconds-$stop.began}
     function Release-Subscriptions {
@@ -131,20 +132,8 @@ try {
         if($null -eq $stop -or $turn -notmatch '^[A-Za-z0-9_-]{1,128}$'){return}
         $key=$id+':'+$turn
         if($stop.targeted.ContainsKey($key)){return}
-        if($stop.settled) {
-            $stop.targeted=@{}
-            $stop.began=if($requestedAt -ge 0){$requestedAt}else{$clock.ElapsedMilliseconds}
-            $stop.age_at_begin=0;$stop.request_ms=0;$stop.verifyUntil=$stop.began+5000
-            foreach($session in $sessions.Values){$session.ready=$false;$session.dirty=$true}
-        }
         $stop.targeted[$key]=@{thread=$id;turn=$turn}
         if($requestedAt -ge 0){$stop.request_ms=[Math]::Max([long]$stop.request_ms,$stop.age_at_begin+$requestedAt-$stop.began)}
-        $stop.settled=$false
-        if($clock.ElapsedMilliseconds -ge $stop.verifyUntil) {
-            # A new run while latched gets one bounded check, never a rewritten first deadline.
-            $stop.verifyUntil=$clock.ElapsedMilliseconds+5000
-            foreach($session in $sessions.Values){$session.ready=$false;$session.dirty=$true}
-        }
     }
     function Interrupt-Response($request,$message) {
         $session=$sessions[$request.thread]
@@ -155,10 +144,12 @@ try {
         if($message.resultType -eq 'success' -and $message.result.ok) {Register-Target $request.thread $turn $request.at}
         if($fresh -or $session.lastResponse -eq 'failed'){$session.dirty=$true}
     }
+    function Stop-Finished {return ($null -ne $stop -and ($stop.settled -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil))}
     function Advance-Stop {
         if($null -eq $stop){return}
         foreach($session in @($sessions.Values)) {
-            if($clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
+            if($stop.eligible.ContainsKey($session.id) -and -not $stop.requested.ContainsKey($session.id) -and $clock.ElapsedMilliseconds -lt $stop.verifyUntil) {
+                $stop.requested[$session.id]=$true;
                 Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
                 $session.lastStop=$clock.ElapsedMilliseconds
                 if($session.incident -ne $stop.digest){
@@ -350,9 +341,9 @@ try {
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
                 if($stop.settled){Release-Subscriptions}
-                $receipt=@{unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
+                $receipt=@{finished=(Stop-Finished);unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
             }
-            $stopping=($null -ne $stop -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
+            $stopping=(($null -ne $stop -and -not (Stop-Finished)) -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
             $packet=@{activity_observed=($null -ne $stop -and $unknown -eq 0);control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
             [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
             $lastPublish=$clock.ElapsedMilliseconds

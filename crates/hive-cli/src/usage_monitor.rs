@@ -24,7 +24,7 @@ const BASE: &str = ".hive/runtime/usage-monitor";
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
 const DESKTOP_VERSION: &str = "26.1013.4894.0";
-const HELP: &str = "hive usage monitor preview|enable|disable|status|acknowledge --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] [--incident <digest>] --output json\n";
+const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -134,55 +134,10 @@ fn with_state<T>(
 ) -> Result<T, AdapterError> {
     let _lock = lock(root, "state.lock")?;
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
-    if state.schema_version != 1 {
-        return Err(error("unsupported monitor state"));
-    }
+    state.migrate()?;
     let result = apply(&mut state)?;
     write(root, STATE, &state)?;
     Ok(result)
-}
-
-/// Called by both initial enforce and the final authorization check. No bypass by a new chat.
-pub(crate) fn check_dispatch(user_root: Option<&Path>) -> Result<(), AdapterError> {
-    let default_root =
-        std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from);
-    let Some(path) = user_root.or(default_root.as_deref()) else {
-        return Ok(());
-    };
-    let root = PinnedTarget::open_usage(path)?;
-    let Some(config): Option<Configuration> = load(&root, CONFIG)? else {
-        return Ok(());
-    };
-    let state: MonitorState = load(&root, STATE)?.unwrap_or_else(MonitorState::new);
-    if config.schema_version != 1
-        || state.schema_version != 1
-        || state.incident.is_some()
-        || state.heartbeat > now()
-        || state.last_success.is_some_and(|at| at > now())
-    {
-        return Err(error(
-            "shared usage monitor halt requires exact incident acknowledgement",
-        ));
-    }
-    if config.enabled {
-        require_app_safe_control()?;
-    }
-    if config.enabled
-        && (!state.control_connected || state.control_stopping || state.unknown_sessions > 0)
-    {
-        return Err(error(
-            "usage monitor desktop control has not released the session",
-        ));
-    }
-    if config.enabled
-        && (state
-            .last_success
-            .is_none_or(|at| now().saturating_sub(at) >= BLIND_SECONDS)
-            || now().saturating_sub(state.heartbeat) >= BLIND_SECONDS)
-    {
-        return Err(error("usage monitor has no fresh observation or heartbeat"));
-    }
-    Ok(())
 }
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
@@ -208,10 +163,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         ),
     };
     if result.exit_code == 0
-        && matches!(
-            args.first().map(String::as_str),
-            Some("enable" | "disable" | "acknowledge")
-        )
+        && matches!(args.first().map(String::as_str), Some("enable" | "disable"))
     {
         result.changed_paths = result
             .data
@@ -253,15 +205,11 @@ fn response(
 
 fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
     let action = args.first().map(String::as_str).unwrap_or_default();
-    if !matches!(
-        action,
-        "preview" | "enable" | "disable" | "status" | "acknowledge" | "run"
-    ) {
+    if !matches!(action, "preview" | "enable" | "disable" | "status" | "run") {
         return Err(AdapterError::Input(HELP.into()));
     }
     let mut root = None;
     let mut confirm = None;
-    let mut incident = None;
     let mut terminate = false;
     let mut output = false;
     let mut index = 1;
@@ -281,7 +229,6 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
         match option {
             "--user-root" if root.is_none() => root = Some(PathBuf::from(value)),
             "--confirm" if confirm.is_none() => confirm = Some(value.as_str()),
-            "--incident" if incident.is_none() => incident = Some(value.as_str()),
             "--output" if !output && value == "json" => output = true,
             _ => {
                 return Err(AdapterError::Input(
@@ -296,7 +243,6 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
     }
     if (action == "enable") != (confirm.is_some() && terminate)
         || (action != "enable" && (confirm.is_some() || terminate))
-        || (action == "acknowledge") != incident.is_some()
     {
         return Err(error("monitor confirmation does not match action"));
     }
@@ -311,13 +257,12 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
             Ok(
                 json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
                 "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
-                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.incident.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
-                "scope":"local-windows-codex","server_billing_interruption_verified":false}),
+                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
+                "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
             )
         }
         "enable" => enable(&root, confirm.unwrap_or_default()),
         "disable" => disable(&root),
-        "acknowledge" => acknowledge(&root, incident.unwrap_or_default()),
         "run" => controller(&root),
         _ => unreachable!(),
     }
@@ -490,38 +435,6 @@ fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
     write(root, CONFIG, &config)?;
     Ok(json!({"enabled":false,"incident_preserved":true,"changed_paths":[CONFIG]}))
 }
-fn acknowledge(root: &PinnedTarget, incident: &str) -> Result<Value, AdapterError> {
-    // Lock covers sampling too: no concurrent reset can be cleared by this acknowledgement.
-    let mut receipt = with_state(root, |state| {
-        if state.incident.as_ref().map(|i| i.digest.as_str()) != Some(incident) {
-            return Err(error("wrong incident digest"));
-        }
-        let snapshots = crate::usage::monitor_snapshot()
-            .map_err(|_| error("fresh usage observation failed; halt retained"))?
-            .core_snapshots();
-        state.acknowledge(incident, &snapshots, now())?;
-        Ok(
-            json!({"acknowledged":true,"auto_resume":false,"generation":state.generation,"changed_paths":[STATE]}),
-        )
-    })?;
-    if load::<Configuration>(root, CONFIG)?.is_some_and(|c| c.enabled) {
-        let deadline = Instant::now() + Duration::from_secs(3);
-        let released = loop {
-            let state: MonitorState =
-                load(root, STATE)?.ok_or_else(|| error("monitor state disappeared"))?;
-            if state.control_connected && !state.control_stopping {
-                break true;
-            }
-            if Instant::now() >= deadline {
-                break false;
-            }
-            thread::sleep(Duration::from_millis(50));
-        };
-        receipt["controller_release_verified"] = json!(released);
-    }
-    Ok(receipt)
-}
-
 type SampleResult = Result<Vec<UsageSnapshot>, crate::usage::SensorError>;
 fn sensor_worker() -> mpsc::SyncSender<mpsc::SyncSender<SampleResult>> {
     let (tx, rx) = mpsc::sync_channel::<mpsc::SyncSender<SampleResult>>(1);
@@ -576,20 +489,19 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         if let Ok(value) = controller_loop(root, active, &desktop) {
             return Ok(value);
         }
-        let incident = with_state(root, |s| {
-            s.halt("monitor-fault", now());
-            Ok(s.incident.as_ref().map(|i| i.digest.clone()))
-        })
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| sha256_digest(b"monitor-state-repair-required"));
-        desktop.stop(&incident, Some(now().saturating_mul(1000)));
-        if fault_notice.as_deref() != Some(incident.as_str()) {
+        let incident = match with_state(root, |s| Ok(s.controller_fault(now()))) {
+            Ok(value) => value,
+            Err(_) => fault_notice
+                .is_none()
+                .then(|| sha256_digest(b"monitor-state-repair-required")),
+        };
+        if let Some(incident) = incident {
+            desktop.stop(&incident, Some(now().saturating_mul(1000)));
             let _notice =
                 platform::notify("monitor-fault", false, &incident, root.requested_path());
             fault_notice = Some(incident);
         }
-        // Keep session cancellation alive even when persistent state cannot be read.
+        // Recover observation without repeatedly stopping user-resumed work.
         thread::sleep(Duration::from_secs(2));
     }
 }
@@ -621,7 +533,7 @@ fn record_control(
             (control_connected && packet["activity_observed"] == true).then(now);
         s.app_alive = active;
         if !control_connected {
-            if let Some(i) = s.incident.as_mut() {
+            if let Some(i) = s.incident.as_mut().filter(|i| i.stop_finished_at.is_none()) {
                 i.stop_confirmed = false;
                 i.stop_error = Some("desktop-control-unavailable".into());
             }
@@ -666,6 +578,10 @@ fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, Adapter
         let Some(current) = s.incident.as_mut().filter(|i| i.digest == digest) else {
             return Ok(None);
         };
+        if current.stop_dispatched_at.is_some() {
+            return Ok(None);
+        }
+        current.stop_dispatched_at = Some(now());
         let notify = current.notification == "pending";
         if notify {
             current.notification = "requested".into();
@@ -799,7 +715,7 @@ fn controller_loop(
         }
         if active && cadence.blind(tick.duration_since(started)) {
             with_state(root, |state| {
-                state.halt("sensor-unresponsive", now());
+                state.observation_blind(now());
                 Ok(())
             })?;
         }
@@ -895,7 +811,7 @@ mod tests {
         }
     }
     #[test]
-    fn acknowledgement_lock_and_stale_incident_cannot_create_another_halt() {
+    fn dispatch_claim_is_atomic_and_never_replays_the_same_event() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         let incident = with_state(&root, |s| {
@@ -908,7 +824,7 @@ mod tests {
         assert!(record_control(&root, &json!({"control_stopping":false}), true, true).is_ok());
         drop(held);
         assert_eq!(claim_halt(&root, &incident).unwrap(), Some(true));
-        assert_eq!(claim_halt(&root, &incident).unwrap(), Some(false));
+        assert_eq!(claim_halt(&root, &incident).unwrap(), None);
         with_state(&root, |s| {
             s.incident = None;
             Ok(())
@@ -922,101 +838,14 @@ mod tests {
             .is_none());
     }
     #[test]
-    fn fresh_usage_cannot_bypass_control_release_or_unverified_scope() {
-        let temporary = tempfile::tempdir().unwrap();
-        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
-        std::fs::create_dir_all(temporary.path().join(".hive/config")).unwrap();
-        std::fs::write(
-            temporary.path().join(".hive/config/user-setup.yml"),
-            b"schema_version: 1\n",
-        )
-        .unwrap();
-        write(
-            &root,
-            CONFIG,
-            &configuration(root.requested_path()).unwrap(),
-        )
-        .unwrap();
-        with_state(&root, |s| {
-            s.last_success = Some(now());
-            s.heartbeat = now();
-            Ok(())
-        })
-        .unwrap();
-        assert!(check_dispatch(Some(temporary.path())).is_err());
-        with_state(&root, |s| {
-            s.control_connected = true;
-            s.control_stopping = true;
-            Ok(())
-        })
-        .unwrap();
-        let args = vec![
-            "status".into(),
-            "--user-root".into(),
-            temporary.path().to_string_lossy().into_owned(),
-            "--output".into(),
-            "json".into(),
-        ];
-        assert!(check_dispatch(Some(temporary.path())).is_err());
-        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], false);
-        with_state(&root, |s| {
-            s.control_stopping = false;
-            Ok(())
-        })
-        .unwrap();
-        assert_eq!(
-            check_dispatch(Some(temporary.path())).is_ok(),
-            cfg!(windows)
-        );
-        assert_eq!(
-            parse_and_run(&args).unwrap()["monitoring_verified"],
-            cfg!(windows)
-        );
-        with_state(&root, |s| {
-            s.unknown_sessions = 1;
-            Ok(())
-        })
-        .unwrap();
-        assert!(check_dispatch(Some(temporary.path())).is_err());
-        assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], false);
-    }
-    #[test]
-    fn shared_incident_blocks_even_when_monitor_disabled() {
-        let temp = tempfile::tempdir().unwrap();
-        let root = PinnedTarget::open_usage(temp.path()).unwrap();
-        let mut config = configuration(root.requested_path()).unwrap();
-        config.enabled = false;
-        write(&root, CONFIG, &config).unwrap();
-        with_state(&root, |state| {
-            state.halt("usage-reset", 100);
-            Ok(())
-        })
-        .unwrap();
-        assert!(check_dispatch(Some(temp.path())).is_err());
-    }
-    #[test]
-    fn duplicate_controllers_cannot_hold_same_lease() {
-        let temp = tempfile::tempdir().unwrap();
-        let root = PinnedTarget::open_usage(temp.path()).unwrap();
-        let lease = lock(&root, "controller.lock").unwrap();
-        assert!(lock(&root, "controller.lock").is_err());
-        drop(lease);
-        assert!(lock(&root, "controller.lock").is_ok());
-    }
-
-    #[test]
-    fn enabling_against_an_older_install_cannot_register_a_task_or_stage_a_binary() {
-        let temp = tempfile::tempdir().unwrap();
-        let root = PinnedTarget::open_usage(temp.path()).unwrap();
-        std::fs::create_dir_all(temp.path().join(".hive/install")).unwrap();
-        std::fs::write(
-            temp.path().join(".hive/install/codex.json"),
-            br#"{"product_version":"0.12.0"}"#,
-        )
-        .unwrap();
-        let preview = preview(root.requested_path()).unwrap();
-        assert!(enable(&root, preview["preview_digest"].as_str().unwrap()).is_err());
-        assert!(!temp.path().join(CONFIG).exists());
-        assert!(!temp.path().join(BASE).join("bin").exists());
+    fn no_monitor_event_is_a_dispatch_permission_or_resume_lock() {
+        let source = include_str!("usage_control.rs");
+        assert!(!source.contains("usage_monitor::check_dispatch"));
+        assert!(!HELP.contains("acknowledge"));
+        for args in [vec!["acknowledge"], vec!["status", "--incident", "old"]] {
+            assert!(
+                parse_and_run(&args.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err()
+            );
+        }
     }
 }

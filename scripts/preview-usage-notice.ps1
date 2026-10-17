@@ -4,7 +4,6 @@ param(
     [Parameter(Mandatory=$true)][string]$FixtureRoot,
     [ValidateSet('reset','gap','partial','ack','unavailable')][string]$Case='reset',
     [ValidateRange(460,900)][int]$Width=560,
-    [switch]$ExpandDetails,
     [switch]$CloseAfterCapture,
     [ValidateSet('button','escape')][string]$CloseWith='button'
 )
@@ -44,9 +43,6 @@ $context=@{incident=$incident.digest;reason=$incident.reason;detected_at=$incide
 $logo=[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $source 'harness/plugins/aigent-hive/assets/hive-logo-plugin.png')))
 $window=New-NoticeWindow $context $fixture $logo
 $window.Width=$Width
-if($ExpandDetails){
-    $window.FindName('Details').Parent.Parent.IsExpanded=$true
-}
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
 using System;

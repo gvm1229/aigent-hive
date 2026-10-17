@@ -70,11 +70,11 @@ CASE
         self.assertIn("확인하지 못했습니다", view["StatusDetail"])
         self.assertIn("확인  3개", view["Details"])
 
-    def test_acknowledgement_preserves_original_cause_and_manual_resume(self):
+    def test_missing_record_does_not_claim_unlock_or_change_the_original_cause(self):
         view = self.view("$null=Get-NoticeView $state $context $true;$state.incident=$null;Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
         self.assertEqual(view["Reason"], "사용량 초기화 감지")
-        self.assertEqual(view["Status"], "보호 잠금 해제")
-        self.assertIn("직접", view["Next"])
+        self.assertEqual(view["Status"], "이전 중단 안내")
+        self.assertIn("Codex", view["Next"])
         self.assertIn("자동으로", view["Automatic"])
 
     def test_read_failure_does_not_look_like_acknowledgement(self):
@@ -100,7 +100,7 @@ CASE
 
     def test_empty_work_is_distinct_from_confirmed_interruption(self):
         view = self.view("$state.incident.stop_confirmed=$false;$state.incident.targeted_turns=0;$state.incident.confirmed_turns=0;Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
-        self.assertEqual(view["Status"], "현재 실행 중인 작업이 없습니다")
+        self.assertEqual(view["Status"], "감지 당시 실행 중인 작업이 없었습니다")
         self.assertNotEqual(view["Tone"], "success")
 
     def test_other_guard_errors_do_not_invent_a_sixty_second_gap(self):
@@ -125,24 +125,19 @@ $partial=Matches-StopReason @('사용량 초기화','일부 중단 상태의 확
         self.assertTrue(result["separate_controls"])
         self.assertTrue(result["partial_rejected"])
 
-    def test_resume_command_quotes_the_root_without_executing_it(self):
-        result = self.view("@{command=(Get-ResumeCommand \"C:\\Users\\O'Neil `$value\" ('sha256:'+('a'*64)))}|ConvertTo-Json -Compress")
-        self.assertIn("--user-root 'C:\\Users\\O''Neil $value'", result["command"])
-        self.assertIn("--incident 'sha256:", result["command"])
-
-    def test_invalid_incident_cannot_be_copied_as_a_command(self):
-        result = self.view("@{rejected=($null -eq (Get-ResumeCommand 'C:\\Users\\fixture' 'invalid;other'))}|ConvertTo-Json -Compress")
-        self.assertTrue(result["rejected"])
-
-    def test_copy_is_available_only_for_the_exact_pending_incident(self):
-        result = self.view("$context.incident='sha256:'+('a'*64);$state.incident.digest=$context.incident;$pending=Get-NoticeView $state $context $true;$state.incident=$null;$cleared=Get-NoticeView $state $context $true;@{pending=$pending.CanCopy;cleared=$cleared.CanCopy}|ConvertTo-Json -Compress")
-        self.assertTrue(result["pending"])
-        self.assertFalse(result["cleared"])
-
-    def test_resume_instructions_do_not_depend_on_a_running_agent(self):
-        result = self.view("Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
-        self.assertIn("Codex 밖의 PowerShell", result["Next"])
-        self.assertNotIn("Codex에", result["Next"])
+    def test_notice_has_only_close_and_no_resume_mutation_or_command(self):
+        result = self.view("$logo=[Convert]::ToBase64String([IO.File]::ReadAllBytes('" + str(ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png").replace("'", "''") + "'));"
+                           "$window=New-NoticeWindow $context 'C:\\Users\\fixture' $logo;"
+                           "$nodes=[Collections.Generic.List[object]]::new();"
+                           "function Visit($node){if($node -isnot [Windows.DependencyObject]){return};if($node -is [Windows.Controls.Button]){$nodes.Add($node.Content)};"
+                           "foreach($child in [Windows.LogicalTreeHelper]::GetChildren($node)){Visit $child}};"
+                           "$window.ApplyTemplate()|Out-Null;Visit $window;"
+                           "@{buttons=@($nodes.ToArray());next=(Get-NoticeView $state $context $true).Next}|ConvertTo-Json -Compress")
+        self.assertEqual(result["buttons"], ["안내 닫기"])
+        self.assertIn("재개하거나 새 메시지", result["next"])
+        source = NOTICE.read_text(encoding="utf-8")
+        for removed in ("Get-ResumeCommand", "Clipboard", "CanCopy", "보호 잠금", "Start-Process", "acknowledge"):
+            self.assertNotIn(removed, source)
 
 
 if __name__ == "__main__":

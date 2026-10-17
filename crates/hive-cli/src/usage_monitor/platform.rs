@@ -10,7 +10,8 @@ use std::time::{Duration, Instant};
 
 pub(super) const SCRIPT: &str = include_str!("windows.ps1");
 const NOTICE: &str = include_str!("notice.ps1");
-const LOGO: &[u8] = include_bytes!("../../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
+const LOGO: &[u8] =
+    include_bytes!("../../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
 
 pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     if !cfg!(windows) {

@@ -32,7 +32,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
-   Supply the exposed active account digest; omit only for one unambiguous locally sensed account. `enforce` remeasures ordinary halts, including earlier-process and legacy markers. A reset halt requires explicit acknowledgement under [control procedures](references/control.md). Exit `3`, limited, unknown, or reset results block dispatch. Do not run `enforce` for quick answers, manual work, or other non-dispatch actions except the required same-session recheck after a threshold change or reset acknowledgement. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
+   Supply the exposed active account digest; omit only for one unambiguous locally sensed account. `enforce` remeasures all previous halts, including reset, earlier-process and legacy markers. A reset stops one request; it never creates a resume lock. Exit `3`, limited, unknown, or reset results block dispatch. Do not run `enforce` for quick answers, manual work, or other non-dispatch actions except the required same-session recheck after a threshold change. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 5. If native sensing is unavailable or unsupported, read [sensor fallback](references/sensors.md). Never install a fallback without explicit current-action acceptance.
 6. Before any explicitly requested threshold or session control, read [control procedures](references/control.md). Never guess a percentage or infer bypass from a bare continue, resume, finish, urgency, or an active run.
 7. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a same-binding `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. Ordinary disable still requires a fresh zero-quota check. Only explicit opt-outs from both safeguards bypass sensing; neither control grants dispatch authority.
@@ -70,7 +70,10 @@ without a valid observation. Keep the app open with a persistent reason/status w
 terminate the app when control is unavailable. Only a qualified desktop version may connect. It never starts
 model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.
 
-Use `status` to distinguish configured, healthy, halted, interruption-unverified, and notification
-states. A global incident survives app restart and session opt-outs. Explicit `acknowledge` with
-its exact `--incident` plus fresh usage clears only that incident; it never resumes model work.
-`disable` removes only the owned scheduled task and retains incident evidence and staged bytes.
+Use `status` to distinguish configuration, observation health, and the last interruption result.
+A reset stops the sessions present at detection once. A continuous 60-second observation gap
+also stops once until sensing recovers. Incident records persist as history, never as resume
+locks. Users can resume or send a new message directly in Codex. The official-logo notice
+only explains the cause and status and has one close button. It never executes a command,
+acknowledges, unlocks, or resumes work. `disable` removes only the owned scheduled task and
+retains incident evidence and staged bytes. Existing thresholds and zero-quota checks remain.
