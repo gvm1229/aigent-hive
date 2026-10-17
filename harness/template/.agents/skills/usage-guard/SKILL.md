@@ -57,7 +57,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Source development uses this installed product contract and global threshold. Never create a second source Skill, Python guard, watcher, or source-local threshold state.
 
-## Windows live interruption (0.12.1)
+## Windows live interruption (0.13.0)
 
 `hive usage monitor --help` exposes the installed version's monitor commands. Only its confirmed
 installation may create the current-user scheduled monitor. First show `preview --user-root
