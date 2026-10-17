@@ -8,14 +8,88 @@ $utf8=New-Object Text.UTF8Encoding($false)
 $approval=[IO.File]::ReadAllText($Request) | ConvertFrom-Json
 $acceptance=[IO.File]::ReadAllText($AcceptanceResult) | ConvertFrom-Json
 if ($approval.product_version -ne '0.12.1' -or -not $approval.install_after_pass -or -not $approval.always_on) { throw 'Missing exact conditional installation authority' }
-if ($acceptance.phase -ne 'passed-local-session-interruption' -or -not $acceptance.incident.confirmed_stop -or
-    $acceptance.incident.confirmed_stop.targeted_turns -lt 1 -or -not $acceptance.app_preserved -or -not $acceptance.stop_reason_visible -or -not $acceptance.fixture_task_removed -or
-    -not $acceptance.subjects_interrupted.verified -or @($acceptance.subjects_interrupted.subjects).Count -lt 3 -or
-    @($acceptance.subjects_interrupted.subjects | Where-Object tool_free_required -eq $true).Count -lt 1 -or
-    -not $acceptance.no_automatic_resume -or -not $acceptance.acknowledgement_does_not_resume -or
-    -not $acceptance.sensor_gap.reason_visible -or $acceptance.sensor_gap.gap_seconds -lt 60 -or $acceptance.sensor_gap.gap_seconds -gt 70 -or
-    -not $acceptance.sensor_gap_acknowledgement.acknowledged -or $acceptance.desktop_version -ne '26.1013.4894.0' -or
-    $acceptance.binary_sha256 -ne $approval.binary_sha256) { throw 'Session-stop acceptance and fixture cleanup must pass before installation' }
+function Hash-File([string]$path) {
+    $stream=[IO.File]::OpenRead($path)
+    try { return [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($stream)).Replace('-','').ToLower() }
+    finally { $stream.Dispose() }
+}
+function Accepts-StopEvidence($record,$authority) {
+    if($record.desktop_version -ne '26.1013.4894.0' -or $record.binary_sha256 -ne $authority.binary_sha256 -or
+       -not $record.app_preserved -or -not $record.fixture_task_removed){return $false}
+    if($record.phase -eq 'passed-local-session-interruption') {
+        return ($record.incident.confirmed_stop -and $record.incident.confirmed_stop.targeted_turns -ge 1 -and
+            $record.stop_reason_visible -and $record.subjects_interrupted.verified -and @($record.subjects_interrupted.subjects).Count -ge 3 -and
+            @($record.subjects_interrupted.subjects|Where-Object tool_free_required -eq $true).Count -ge 1 -and
+            $record.no_automatic_resume -and $record.acknowledgement_does_not_resume -and $record.sensor_gap.reason_visible -and
+            $record.sensor_gap.gap_seconds -ge 60 -and $record.sensor_gap.gap_seconds -le 70 -and $record.sensor_gap_acknowledgement.acknowledged)
+    }
+    if($record.phase -ne 'passed-qualified-components' -or $record.qualification_method -ne 'live-native-stop-plus-current-readonly-confirmation' -or
+       $record.product_version -ne '0.12.1' -or $record.original_live_aggregate_passed -ne $false -or
+       $record.original_live_trial_phase -ne 'failed' -or $record.new_live_stop_requests_sent -ne 0){return $false}
+    # Reuse live actuation only with exact source, binary and independent confirmation evidence.
+    $sourceRoot=[IO.Path]::GetFullPath([string]$authority.source_root).TrimEnd('\')
+    $names=@('session-stop-native-subjects','session-stop-readonly-reconciliation','session-stop-readonly-confirmation',
+        'session-stop-component-code','session-stop-sensor-failure','session-stop-acknowledgement','usage-stop-notice-windows','session-adapter-latch-windows')
+    if(@($record.evidence).Count -ne $names.Count){return $false}
+    $data=@{}
+    foreach($name in $names) {
+        $relative='tests/results/'+$name+'-0.12.1.json'
+        $items=@($record.evidence|Where-Object path -eq $relative)
+        if($items.Count -ne 1){return $false}
+        $path=Join-Path $sourceRoot $relative
+        if((Get-Item -LiteralPath $path).Attributes -band [IO.FileAttributes]::ReparsePoint){return $false}
+        if((Hash-File $path) -ne $items[0].sha256){return $false}
+        $data[$name]=[IO.File]::ReadAllText($path)|ConvertFrom-Json
+    }
+    $subjects=$data['session-stop-native-subjects'];$native=$data['session-stop-readonly-reconciliation'];$read=$data['session-stop-readonly-confirmation']
+    if(-not $subjects.before.verified -or -not $subjects.after.verified -or @($subjects.after.subjects).Count -lt 3 -or
+       @($subjects.after.subjects|Where-Object {$_.role -eq 'reasoning' -and $_.tool_free_required -and $_.tool_free_after_capture}).Count -lt 1 -or
+       -not $native.all_reconstructed_active_turns_interrupted_within_five_seconds -or $native.original_automatic_confirmation_passed -ne $false){return $false}
+    $nativeKeys=@($native.subjects|ForEach-Object {$_.thread_digest+':'+$_.turn_digest}|Sort-Object)
+    $readKeys=@($read.confirmed_targets|Where-Object {$_.fresh -and $_.status -eq 'interrupted'}|ForEach-Object {$_.thread_digest+':'+$_.turn_digest}|Sort-Object)
+    if($nativeKeys.Count -lt 3 -or ($nativeKeys -join '|') -ne ($readKeys -join '|') -or $read.expected_targets -ne $nativeKeys.Count -or
+       $read.expected_confirmed -ne $nativeKeys.Count -or $read.ready -ne $read.known -or $read.native_stop_requests_sent -ne 0 -or
+       -not $read.read_only -or $read.elapsed_ms -lt 1 -or $read.elapsed_ms -gt 5000 -or
+       @($native.subjects|Where-Object {$_.elapsed_from_detected_second_ms -lt 0 -or $_.elapsed_from_detected_second_ms -gt 2000}).Count -gt 0){return $false}
+    $bound=($native.subjects|Measure-Object elapsed_from_detected_second_ms -Maximum).Maximum
+    if($record.live_native_turn_count -ne $nativeKeys.Count -or $record.readonly_confirmation_count -ne $read.expected_confirmed -or
+       $record.readonly_confirmation_ms -ne $read.elapsed_ms -or $record.live_interruption_upper_bound_ms -ne $bound -or
+       $record.request_upper_bound_from_native_abort_ms -ne $bound){return $false}
+    $code=$data['session-stop-component-code'];$empty='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+    if(-not $code.native_stop_and_identity_unchanged -or -not $code.all_checked_parts_match -or
+       $code.candidate_binary_sha256 -ne $record.binary_sha256 -or $code.old_desktop.stop_dispatch -eq $empty -or
+       $code.old_desktop.stop_dispatch -ne $code.current_desktop.stop_dispatch -or
+       $code.old_desktop.outside_verification -ne $code.current_desktop.outside_verification){return $false}
+    $immutable=@('crates/hive-cli/src/usage_monitor.rs','crates/hive-cli/src/usage_monitor/desktop.rs','crates/hive-cli/src/usage_monitor/state.rs',
+        'crates/hive-cli/src/usage.rs','crates/hive-cli/src/usage/codex_native.rs','platform::command','platform::call',
+        'previous-desktop-embedded','candidate-desktop-embedded','candidate-notice-embedded')
+    foreach($part in $immutable){if($code.immutable_rust_and_embedded_parts.$part -ne $true){return $false}}
+    foreach($part in @('inspect','unregister','default','register','App-Roots','Emit','start')) {
+        if($code.old_tasks.$part -notmatch '^[a-f0-9]{64}$' -or $code.old_tasks.$part -ne $code.current_tasks.$part){return $false}
+    }
+    $parts=@('usage_monitor.rs','usage_monitor/desktop.rs','usage_monitor/state.rs','usage.rs','usage/codex_native.rs',
+        'usage_monitor/platform.rs','usage_monitor/desktop.ps1','usage_monitor/windows.ps1','usage_monitor/notice.ps1')
+    if(@($record.source_hashes.PSObject.Properties).Count -ne $parts.Count){return $false}
+    foreach($part in $parts) {
+        $relative='crates/hive-cli/src/'+$part
+        $text=[IO.File]::ReadAllText((Join-Path $sourceRoot $relative),[Text.Encoding]::UTF8).Replace("`r`n","`n")
+        $sha=[Security.Cryptography.SHA256]::Create()
+        try {$digest=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+        if($record.source_hashes.$relative -ne $digest -or $code.source_hashes.$relative -ne $digest){return $false}
+    }
+    $gap=$data['session-stop-sensor-failure'];$ack=$data['session-stop-acknowledgement'];$notice=$data['usage-stop-notice-windows'];$release=$data['session-adapter-latch-windows']
+    if($gap.phase -ne 'passed-readonly-sensor-failure-and-recovery' -or $gap.gap_seconds -lt 60 -or $gap.failed_read_count -lt 3 -or
+       $gap.initial_normal_code -ne 'hive.usage-native-available' -or $gap.recovery_code -ne 'hive.usage-native-available' -or
+       @($gap.failed_reads|Where-Object exit -eq 0).Count -gt 0 -or $gap.session_interruption -ne $false -or
+       -not $ack.wrong_incident_refused -or -not $ack.acknowledged -or $ack.auto_resume -ne $false -or
+       -not $ack.fresh_usage_verified -or -not $ack.fixture_incident_cleared -or -not $ack.same_current_turns_and_statuses -or
+       $notice.entrypoint.phase -ne 'passed-display-only-entrypoint' -or $notice.entrypoint.shown_ms -gt 5000 -or
+       -not $notice.entrypoint.closed_by_own_button -or -not $notice.entrypoint.incident_unchanged -or
+       -not $notice.entrypoint.original_codex_app_preserved -or $notice.entrypoint.notice_sha256 -ne $code.notice_source_sha256 -or
+       -not $release.subscriptions_released -or -not $release.app_preserved){return $false}
+    return $true
+}
+if(-not (Accepts-StopEvidence $acceptance $approval)){throw 'Session-stop acceptance and fixture cleanup must pass before installation'}
 $source=[IO.Path]::GetFullPath($approval.source_root).TrimEnd('\')
 $userRoot=[IO.Path]::GetFullPath($approval.user_root).TrimEnd('\')
 $binary=[IO.Path]::GetFullPath($approval.binary)
@@ -23,11 +97,6 @@ $native=[IO.Path]::GetFullPath($approval.native_binary)
 $report=[IO.Path]::GetFullPath($approval.report)
 if (-not $binary.StartsWith($source+'\target\debug\',[StringComparison]::OrdinalIgnoreCase) -or
     -not $report.StartsWith($source+'\.agents\work\',[StringComparison]::OrdinalIgnoreCase)) { throw 'Deployment paths differ from approved source ownership' }
-function Hash-File([string]$path) {
-    $stream=[IO.File]::OpenRead($path)
-    try { return [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($stream)).Replace('-','').ToLower() }
-    finally { $stream.Dispose() }
-}
 function Preserved-Digests {
     $result=@{}
     foreach($relative in @('.hive\config\user-setup.yml','.hive\config\user-feature-answers.yml','.hive\config\user-preferences.json')) {
