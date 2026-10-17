@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "phase": "passed-local-source-qualification",
+  "product_version": "0.13.0",
+  "public_test_version": "0.13.0-test.1",
+  "host_os": "Windows 11 x64",
+  "desktop_version": "26.1013.4894.0",
+  "local_source_binary_sha256": "240ecdc64c1a13acd91b9efd95707280cc8bc4a33e490e6a9a8271d421dafcde",
+  "public_artifact_tested": false,
+  "new_live_stop_requests_sent": 0,
+  "resume_lock": false,
+  "activation": "explicit-opt-in; existing choice preserved",
+  "version_policy_exception": false,
+  "rust_workspace": {
+    "passed": 1027,
+    "ignored": 5,
+    "strict_clippy": "passed",
+    "rustfmt": "passed"
+  },
+  "affected_regressions": {
+    "tests_run": 54,
+    "passed": 51,
+    "skipped": 3,
+    "skip_reasons": [
+      "symlink fixture is POSIX-specific",
+      "FIFO no-read evidence is POSIX-specific",
+      "portable unprivileged directory symlink unavailable"
+    ]
+  },
+  "qualified_prototype": "0.12.1-dev",
+  "prototype_code_record": "tests/results/session-stop-one-shot-code-0.12.1.json",
+  "qualified_prototype_source_commit": "da2797509ea7e0ef94783877e3c2cb69c6bfd490",
+  "prototype_interruption_and_notice_git_bytes_identical": {
+    "crates/hive-cli/src/usage_monitor.rs": true,
+    "crates/hive-cli/src/usage_monitor/desktop.rs": true,
+    "crates/hive-cli/src/usage_monitor/state.rs": true,
+    "crates/hive-cli/src/usage.rs": true,
+    "crates/hive-cli/src/usage/codex_native.rs": true,
+    "crates/hive-cli/src/usage_control.rs": true,
+    "crates/hive-cli/src/usage_monitor/platform.rs": true,
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": true,
+    "crates/hive-cli/src/usage_monitor/windows.ps1": true,
+    "crates/hive-cli/src/usage_monitor/notice.ps1": true,
+    "harness/plugins/aigent-hive/assets/hive-logo-plugin.png": true
+  },
+  "source_comparison_method": "Canonical Git blobs; platform Windows PS1 checkout CRLF differs from its canonical LF bytes.",
+  "scope": [
+    "one-shot-session-interruption",
+    "notification-only-window"
+  ],
+  "limits": [
+    "Public package acceptance remains pending.",
+    "Prior real native stops and actual notice display are prototype component evidence, not a new 0.13 integrated live-stop trial.",
+    "No app termination, lock, provider-refill or server/billing-cutoff guarantee; no other OS/remote/cloud interruption support."
+  ]
+}

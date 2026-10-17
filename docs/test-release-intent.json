@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
-  "product_version": "0.12.0",
-  "package_version": "0.12.0-test.3",
+  "product_version": "0.13.0",
+  "package_version": "0.13.0-test.1",
   "plan_ids": [
-    "QLF120-006"
+    "RST121-001",
+    "RST121-002",
+    "RST121-003"
   ],
-  "product_tree_sha256": "sha256:aa9793423ad8b7bd9dd82553189bc1d8cf8ea2e5442ce6a3528580e818307098"
+  "product_tree_sha256": "sha256:f1c14a3998bc456ead2a201274a357255533dfa9d457ddc9ea090c016f9d4c3d"
 }

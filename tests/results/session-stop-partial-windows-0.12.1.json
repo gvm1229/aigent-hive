@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "host": "Windows Codex",
+  "desktop_version": "26.1013.4894.0",
+  "synthetic_reset": true,
+  "real_provider_reset": false,
+  "product_acceptance": "failed",
+  "failure_reason": "Actual session interruption not verified",
+  "installation_performed": false,
+  "app_preservation": "user-observed; same GUI process verified after stop",
+  "native_exact_subjects": [
+    {
+      "role": "parent",
+      "thread_digest": "sha256:88b3269d5a26ebf4cd5800daaa51ff4f6de1f133d01f07f62477ac02e163dd81",
+      "turn_digest": "sha256:2b780878cd860788467f3301f5d5555161835270fc5af505dc085d39ece5ebbf",
+      "native_status": "interrupted",
+      "native_marker_at": "2026-10-17T19:19:22.725Z",
+      "elapsed_from_detected_second_ms": 1725,
+      "tool_free_after_capture": true
+    },
+    {
+      "role": "shell",
+      "thread_digest": "sha256:9ba27c1a8dc20178352c031edd8035d3a8a5e8e42dcb1e9e12a463e333d3f54e",
+      "turn_digest": "sha256:6059223cddb7f44ded2658a769f0df7eee1542aed043a79864219d663cf14b03",
+      "native_status": "interrupted",
+      "native_marker_at": "2026-10-17T19:19:22.720Z",
+      "elapsed_from_detected_second_ms": 1720,
+      "tool_free_after_capture": true
+    },
+    {
+      "role": "reasoning",
+      "thread_digest": "sha256:63fbd0ffd455b72c8b6ce25c9b24416f851deabede84799891285e66f669b35e",
+      "turn_digest": "sha256:d890330c5ddd6a3410fb2e93cb2b50f8291d266004c4fe03e3773fb25130cf12",
+      "native_status": "interrupted",
+      "native_marker_at": "2026-10-17T19:19:22.713Z",
+      "elapsed_from_detected_second_ms": 1713,
+      "tool_free_after_capture": true
+    }
+  ],
+  "claim_limit": "Exact earlier turn markers only; current resumed root turn is different. Product-wide confirmation and shell exit timing did not pass."
+}

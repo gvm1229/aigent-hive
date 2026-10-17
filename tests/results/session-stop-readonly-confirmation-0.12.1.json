@@ -1,0 +1,40 @@
+{
+  "native_stop_requests_sent": 0,
+  "elapsed_ms": 1180,
+  "ready": 10,
+  "expected_targets": 4,
+  "suppressed_stop_calls": 20,
+  "max_frame_bytes": 12709861,
+  "known": 10,
+  "read_only": true,
+  "pipe_error": "",
+  "expected_confirmed": 4,
+  "confirmed_targets": [
+    {
+      "thread_digest": "sha256:63fbd0ffd455b72c8b6ce25c9b24416f851deabede84799891285e66f669b35e",
+      "turn_digest": "sha256:87917b37b119889d6eab66cdd654bd2bf1829f3d4e208ddfd1b52c2e920af2e1",
+      "status": "interrupted",
+      "fresh": true
+    },
+    {
+      "thread_digest": "sha256:9ba27c1a8dc20178352c031edd8035d3a8a5e8e42dcb1e9e12a463e333d3f54e",
+      "turn_digest": "sha256:6ceb21393161b0e5b0988f490ddbc18a4ae22346d54132209ff470e430faf549",
+      "status": "interrupted",
+      "fresh": true
+    },
+    {
+      "thread_digest": "sha256:49741b714bdd69f537a9daa760c918128522611a198dd680e5e138ba8708bc96",
+      "turn_digest": "sha256:29c78fdef2d89e6d8bf999c302db159badd359d94cc500c3e33c4ec3a67a7d1f",
+      "status": "interrupted",
+      "fresh": true
+    },
+    {
+      "thread_digest": "sha256:88b3269d5a26ebf4cd5800daaa51ff4f6de1f133d01f07f62477ac02e163dd81",
+      "turn_digest": "sha256:ec7978805d24c99feddad85e102fc848d360e600ed0bcfd152a865b55bd5c1a3",
+      "status": "interrupted",
+      "fresh": true
+    }
+  ],
+  "current_work_not_stopped": true,
+  "scope": "Fresh confirmation of historical exact turns; current user-resumed work was not interrupted."
+}

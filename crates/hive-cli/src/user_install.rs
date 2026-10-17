@@ -677,6 +677,17 @@ fn execute_uninstall(
     arguments: &UserUninstallArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    if let Some(bytes) = read_optional_regular(
+        &arguments.root_cap,
+        Path::new(".hive/runtime/usage-monitor/config.json"),
+        65_536,
+    )? {
+        let configuration: serde_json::Value = serde_json::from_slice(&bytes)
+            .map_err(|_| InstallError::Conflict("usage monitor configuration is damaged; disable its owned scheduled task before uninstall".into()))?;
+        if configuration["enabled"] != false {
+            return Err(InstallError::Conflict("disable the usage monitor before uninstall so its scheduled task cannot become orphaned".into()));
+        }
+    }
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
     for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
@@ -7500,6 +7511,23 @@ mod tests {
         UserUninstallArguments {
             root_cap: open_user_root(&user_root).expect("pinned user root"),
         }
+    }
+
+    #[test]
+    fn uninstall_refuses_to_orphan_an_enabled_usage_monitor() {
+        let temporary = tempdir().expect("tempdir");
+        let config = temporary
+            .path()
+            .join(".hive/runtime/usage-monitor/config.json");
+        fs::create_dir_all(config.parent().unwrap()).unwrap();
+        fs::write(&config, br#"{"enabled":true}"#).unwrap();
+        let runner = FakeRunner::new();
+        let error = execute_uninstall(&uninstall_args(temporary.path()), &runner)
+            .err()
+            .expect("enabled monitor must block uninstall");
+        assert!(error.message().contains("disable the usage monitor"));
+        assert!(runner.calls.lock().unwrap().is_empty());
+        assert!(config.exists());
     }
 
     #[test]

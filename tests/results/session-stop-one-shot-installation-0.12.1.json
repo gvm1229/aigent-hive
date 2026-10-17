@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "phase": "passed-installed-always-on",
+  "product_version": "0.12.1",
+  "package_identity": "0.12.1-dev",
+  "installed_binary_sha256": "932010d898fb339084f00077da3b6749bfdc36c561640069d26569b0014b62b3",
+  "canonical_preservation_verified": true,
+  "protected_file_count": 567,
+  "always_on_enabled": true,
+  "fresh_observation_count": 6,
+  "control_connected": true,
+  "unknown_sessions": 0,
+  "resume_lock": false,
+  "actual_live_halt_repeated": false,
+  "host": "Windows 11 x64 / Codex 26.1013.4894.0",
+  "completed_at": "2026-10-17T21:15:09.5570140Z",
+  "scope_limits": [
+    "Local developer build; no public stable publication.",
+    "No new live halt after the user ended interruption tests.",
+    "Actual provider refill and server billing cutoff are unverified."
+  ]
+}

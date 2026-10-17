@@ -2139,7 +2139,7 @@ class Phase4Contracts(unittest.TestCase):
             self.assertEqual(payload["changed_paths"], [])
             self.assertEqual(snapshot_tree(self.target), before)
 
-    def test_session_reset_blocks_automatic_resume_until_exact_acknowledgement(self) -> None:
+    def test_session_reset_stops_once_and_fresh_resume_needs_no_acknowledgement(self) -> None:
         target = self.fresh_target("bound-reset")
         self.ensure_handoff(target)
         process, payload = self.checkpoint(target, self.checkpoint_request(state="executing", continuation={
@@ -2154,35 +2154,24 @@ class Phase4Contracts(unittest.TestCase):
         reset, reset_payload = self.run_cli(*args,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
         self.assertEqual(reset.returncode,3)
         self.assertEqual(reset_payload["code"],"hive.usage-reset")
-        before = snapshot_tree(target)
+        self.assertNotIn("reset_acknowledgement_digest",reset_payload["data"])
         calls = sensor_log.read_bytes()
-        stopped, stopped_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
-            account_digest=USAGE_ACCOUNT_DIGEST,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
-        self.assertEqual(stopped.returncode,3)
-        self.assertEqual(stopped_payload["code"],"hive.usage-reset")
-        self.assertEqual(stopped_payload["data"]["dispatch_briefs"],[])
-        self.assertEqual(stopped_payload["changed_paths"],[])
-        self.assertEqual(snapshot_tree(target),before)
-        self.assertEqual(sensor_log.read_bytes(),calls)
-        other, other_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
-            account_digest=USAGE_ACCOUNT_DIGEST,session_id="another-session")
-        self.assertEqual(other.returncode,3)
-        self.assertEqual(other_payload["changed_paths"],[])
-        self.assertEqual(snapshot_tree(target),before)
-        ack, ack_payload = self.run_cli("usage","session","--target",target,"--session-id","fixture-session",
-            "--process-id","4242","--action","acknowledge-reset","--confirm-reset",
-            reset_payload["data"]["reset_acknowledgement_digest"],"--output","json")
-        self.assert_success(ack,ack_payload)
         resumed, resumed_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
             account_digest=USAGE_ACCOUNT_DIGEST,extra_environment=self.fake_codexbar_environment("allow",log=sensor_log))
         self.assert_success(resumed,resumed_payload)
         self.assertEqual(resumed_payload["data"]["usage_guard"]["outcome"],"authorized")
-        self.assertEqual(len(sensor_log.read_bytes().splitlines())-len(calls.splitlines()),2)
+        self.assertGreater(len(sensor_log.read_bytes().splitlines()),len(calls.splitlines()))
         receipt = next(target.glob(".hive/runtime/dispatch-authorizations/*.json"))
         record = json.loads(receipt.read_text(encoding="utf-8"))
         self.assertEqual(record["schema_version"],2)
         self.assertEqual(record["session_guard_digest"],resumed_payload["data"]["usage_guard"]["session_guard_digest"])
         self.assertNotIn("fixture-session",receipt.read_text(encoding="utf-8"))
+        before = snapshot_tree(target)
+        other, other_payload = self.resume(target,CAPABILITIES["codex-omx"],dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,session_id="another-session")
+        self.assertEqual(other.returncode,3)
+        self.assertEqual(other_payload["changed_paths"],[])
+        self.assertEqual(snapshot_tree(target),before)
 
     def test_automatic_resume_uses_the_shared_global_threshold_when_bound(self) -> None:
         target = self.fresh_target("bound-global-threshold")
@@ -2256,14 +2245,8 @@ class Phase4Contracts(unittest.TestCase):
                 )
                 self.assertEqual(second_payload["data"]["dispatch_briefs"], [])
                 if case == "remaining-increase":
-                    acknowledgement = second_payload["data"]["usage_guard"]["preflight"]["reset_acknowledgement_digest"]
-                    acknowledged, acknowledged_payload = self.run_cli(
-                        "usage", "session", "--target", str(target), "--host", "codex",
-                        "--session-id", "fixture-session", "--process-id", "4242",
-                        "--action", "acknowledge-reset", "--confirm-reset", acknowledgement,
-                        "--output", "json",
-                    )
-                    self.assert_success(acknowledged, acknowledged_payload)
+                    self.assertNotIn("reset_acknowledgement_digest",second_payload["data"]["usage_guard"]["preflight"])
+                    # The next fresh observation permits resume without lifting a lock.
                     resumed, resumed_payload = self.resume(
                         target, CAPABILITIES["codex-omx"], dispatch_intent="automatic",
                         account_digest=USAGE_ACCOUNT_DIGEST,

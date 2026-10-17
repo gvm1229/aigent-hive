@@ -1,0 +1,96 @@
+# Embedded, fixed Windows adapter. Requests are JSON on stdin, never shell fragments.
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
+$request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+function Emit($value) { ConvertTo-Json -InputObject $value -Depth 12 -Compress }
+function App-Roots {
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $packages = @(Get-AppxPackage -Name 'OpenAI.Codex' | Where-Object { $_.PublisherId -eq '2p2nqsd0c76g0' })
+    $rows = @(Get-CimInstance Win32_Process)
+    $byId = @{}
+    foreach ($item in $rows) { $byId[[int]$item.ProcessId] = $item }
+    $roots = @()
+    foreach ($row in $rows) {
+        if ($row.Name -ne 'ChatGPT.exe' -or -not $row.ExecutablePath) { continue }
+        $parentRow = $byId[[int]$row.ParentProcessId]
+        if ($parentRow -and $parentRow.Name -eq 'ChatGPT.exe' -and $parentRow.ExecutablePath -eq $row.ExecutablePath) { continue }
+        $matched = @($packages | Where-Object {
+            $root = [IO.Path]::GetFullPath($_.InstallLocation).TrimEnd('\') + '\'
+            $row.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)
+        })
+        if ($matched.Count -ne 1) { continue }
+        $owner = Invoke-CimMethod -InputObject $row -MethodName GetOwner
+        if ($owner.ReturnValue -ne 0 -or ($owner.Domain + '\' + $owner.User) -ne $identity) { continue }
+        $roots += $row
+    }
+    $version=if($packages.Count -eq 1){[string]$packages[0].Version}else{$null}
+    return @{ roots = @($roots); rows = @($rows); desktop_package_version=$version }
+}
+
+try {
+    switch ($request.operation) {
+        'inspect' {
+            $tree = App-Roots
+            $roots = @()
+            foreach ($root in $tree.roots) {
+                try {
+                    $pinned = [Diagnostics.Process]::GetProcessById([int]$root.ProcessId)
+                    $null = $pinned.Handle
+                    if ([Math]::Abs(($pinned.StartTime.ToUniversalTime() - $root.CreationDate.ToUniversalTime()).TotalMilliseconds) -gt 1 -or
+                        $pinned.MainModule.FileName -ne $root.ExecutablePath) { throw 'App identity changed during discovery' }
+                    # CIM timestamps can lose sub-microsecond precision. Cache the handle's
+                    # exact ticks so the later strict PID-reuse check compares like with like.
+                    $roots += @{ pid = [int]$root.ProcessId; created_ticks = $pinned.StartTime.ToUniversalTime().Ticks; executable = $pinned.MainModule.FileName }
+                    $pinned.Dispose()
+                } catch [ArgumentException] { }
+            }
+            $callerWithinApp = $false
+            if ($request.caller_pid) {
+                $cursor = [int]$request.caller_pid
+                for ($depth = 0; $depth -lt 64; $depth++) {
+                    if (@($tree.roots | Where-Object { [int]$_.ProcessId -eq $cursor }).Count -gt 0) { $callerWithinApp = $true; break }
+                    $row = @($tree.rows | Where-Object { [int]$_.ProcessId -eq $cursor })
+                    if ($row.Count -ne 1 -or [int]$row[0].ParentProcessId -eq $cursor) { break }
+                    $cursor = [int]$row[0].ParentProcessId
+                }
+            }
+            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; identity = 'current-user-OpenAI.Codex-package' }
+        }
+        'register' {
+            $taskName = [string]$request.task_name
+            if ($taskName -notmatch '^AigentHive-UsageMonitor-[a-f0-9]{16}$') { throw 'Invalid owned task name' }
+            $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $exe = [string]$request.executable
+            $args = [string]$request.arguments
+            $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            if ($existing) { throw 'Task already exists; disable the owned monitor before replacing it' }
+            $action = New-ScheduledTaskAction -Execute $exe -Argument $args
+            $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
+            $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
+            $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+            $null = Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Aigent Hive version-bound Codex usage protection'
+            Emit @{ registered = $true }
+        }
+        'start' {
+            Start-ScheduledTask -TaskName ([string]$request.task_name)
+            Emit @{ started = $true }
+        }
+        'unregister' {
+            $taskName = [string]$request.task_name
+            if ($taskName -notmatch '^AigentHive-UsageMonitor-[a-f0-9]{16}$') { throw 'Invalid owned task name' }
+            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            if ($task) {
+                if ($task.Description -ne 'Aigent Hive version-bound Codex usage protection' -or @($task.Actions).Count -ne 1 -or
+                    $task.Actions[0].Execute -ne $request.executable -or $task.Actions[0].Arguments -ne $request.arguments) {
+                    throw 'Owned task identity differs; no removal'
+                }
+                Stop-ScheduledTask -TaskName $taskName
+                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+            }
+            Emit @{ removed = $true }
+        }
+        default { throw 'Unsupported monitor operation' }
+    }
+} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }

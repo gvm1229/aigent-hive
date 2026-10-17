@@ -5,22 +5,22 @@ topic_slug: installed-usage-guard
 language: en
 counterpart: ../ko/installed-usage-guard.md
 title: "Installed Guard Target Boundary"
-summary: "The installed guard applies only to configured Hive projects and the Hive source workspace; non-Hive folders remain entirely inactive."
+summary: "Per-target checks remain active; qualified Windows monitoring is locally installed."
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:41e5712b85c91de0f0df5505e999b245e60a530d5764f8cf4a35c285b8c4f730"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:916836c260db60424f19f6540ee5855e490e896f3681b658b07c8d1c063ddc05"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:369a6681fcc7415c711ab7d5b9d1dae879b9d6fc188261af10a4ffcb5327a6f2"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
+reviewed_revision: "git:da2797509ea7e0ef94783877e3c2cb69c6bfd490"
 status: active
 ---
 
 # Installed Guard Target Boundary
 
-- Installed product: sole usage-guard implementation
-- Configured Hive project: `max(global, project)` and project-local session state
-- Aigent Hive source: global threshold·user-root runtime·source `.hive/` files `0건`
-- Non-Hive folder: enforcement·threshold mutation·session override·halt·runtime `0건`; setup-free Skills available
-- Session control: explicit configured target only; unrelated malformed graph `CURRENT.md` preserved and non-authoritative
-- Source task: one start preflight; Python watcher·repeated tool gate·removed source-guard CI `0건`
+- Installed product owns usage enforcement; configured projects use max(global, project).
+- Source uses global thresholds and user-root runtime; no source consumer state.
+- Non-Hive folders receive no per-target enforcement, controls or runtime; setup-free Skills remain available.
+- Session controls require an exact configured target. Unrelated damaged graph CURRENT is preserved and non-authoritative.
+- Source tasks run one start preflight; no source-local Python watcher or repeated tool gate.
+- The 0.12.1 Windows monitor is locally installed and enabled on Codex 26.1013.4894.0. It stops runs once without a resume lock; unrelated folders receive no consumer state.

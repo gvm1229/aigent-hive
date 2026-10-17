@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scope": "native query reads only; no controller, desktop stop or notification",
+  "session_interruption": false,
+  "initial_normal_code": "hive.usage-native-available",
+  "gap_seconds": 69.359,
+  "failed_read_count": 5,
+  "failed_reads": [
+    {
+      "elapsed_seconds": 12.265,
+      "exit": -1,
+      "code": "owned-query-timeout"
+    },
+    {
+      "elapsed_seconds": 26.5,
+      "exit": -1,
+      "code": "owned-query-timeout"
+    },
+    {
+      "elapsed_seconds": 40.812,
+      "exit": -1,
+      "code": "owned-query-timeout"
+    },
+    {
+      "elapsed_seconds": 55.078,
+      "exit": -1,
+      "code": "owned-query-timeout"
+    },
+    {
+      "elapsed_seconds": 69.359,
+      "exit": -1,
+      "code": "owned-query-timeout"
+    }
+  ],
+  "recovery_code": "hive.usage-native-available",
+  "phase": "passed-readonly-sensor-failure-and-recovery",
+  "actual_guard_stop_dispatched": false
+}

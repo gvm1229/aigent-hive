@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "host": "Windows 11 x64",
+  "checks": [
+    {
+      "name": "rustfmt",
+      "exit": 0,
+      "seconds": 1.578,
+      "summary": []
+    },
+    {
+      "name": "cli",
+      "exit": 0,
+      "seconds": 89.969,
+      "summary": [
+        "test result: ok. 523 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 38.67s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.89s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s"
+      ]
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "seconds": 10.0,
+      "summary": []
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "seconds": 14.844,
+      "summary": []
+    },
+    {
+      "name": "delivery",
+      "exit": 0,
+      "seconds": 18.765,
+      "summary": [
+        "test result: ok. 26 passed; 0 failed; 1 ignored; 0 measured; 498 filtered out; finished in 1.34s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "windows",
+      "exit": 0,
+      "seconds": 13.719,
+      "summary": [
+        "Ran 33 tests in 13.590s",
+        "OK"
+      ]
+    },
+    {
+      "name": "notice",
+      "exit": 0,
+      "seconds": 4.422,
+      "summary": [
+        "Ran 13 tests in 4.323s",
+        "OK"
+      ]
+    },
+    {
+      "name": "preflight",
+      "exit": 0,
+      "seconds": 10.844,
+      "summary": [
+        "Ran 30 tests in 10.550s"
+      ]
+    },
+    {
+      "name": "display",
+      "exit": 0,
+      "seconds": 10.891,
+      "summary": []
+    }
+  ],
+  "actual_new_session_stop": false,
+  "scope": "Current source regression, build and display. No new live interruption; previous live native stop is separate evidence."
+}

@@ -42,6 +42,7 @@ mod update_discovery;
 mod usage;
 mod usage_control;
 mod usage_install;
+mod usage_monitor;
 mod user_directives;
 mod user_install;
 mod user_setup;
@@ -78,6 +79,7 @@ USAGE:
     hive policy evaluate --input <json> --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
+    hive usage monitor preview|enable|disable|status --user-root <dir> --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
@@ -300,6 +302,9 @@ enum ParsedUsageArguments {
 }
 
 fn run_usage(arguments: &[String]) -> ExitCode {
+    if arguments.first().map(String::as_str) == Some("monitor") {
+        return usage_monitor::run(&arguments[1..]);
+    }
     if matches!(
         arguments.first().map(String::as_str),
         Some("enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")

@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.12.0 release-date=2026-10-06 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -88,6 +88,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.11.1`](releases/0.11.1.md) | Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정 |
 | [`0.11.0`](releases/0.11.0.md) | 정식 출시: Hook 보호·긴 대화 지침 복구·프로젝트 갱신·사용량 리셋 중단 |
@@ -98,6 +99,15 @@ current catalog.
 | [`0.10.0`](releases/0.10.0.md) | 벡터 검색·지식 graph·컴퓨터 간 지식 이전·한국어 품질·검증형 작업 흐름 |
 | [`0.10.1`](releases/0.10.1.md) | 일반 harness migration·사용량 기준 즉시 재평가 |
 | [`0.10.3`](releases/0.10.3.md) | 전역 `hive update` 수렴·새 질문 대기와 자동 재개·지침 품질 개선 |
+
+## 세션 중단 0.13.0 관련 문서
+
+- [공개 시험 수용](research/public-test-0.13.0.md)·[정식 출시 실행](plans/0.13.0-stable-release.md)
+- [0.13.0 출시 검증](research/release-0.13.0.md)
+- [0.13.0 출시 노트](releases/0.13.0.md)·[승인한 구독 안내](releases/0.13.0.subscriber.ko.md)
+- [과거 재개 차단 재현](research/codex-resume-lock-reference.md)·[초기 중단 조사](research/reset-stop-0.12.1.md)
+- [중단 경계 결정](decisions/reset-stop-boundary.md)·[안내 창 검증 계획](plans/validation/usage-stop-notice-0.12.1.md)
+- [이전 0.11.1 출시 실행](plans/0.11.1-stable-release.md)
 
 ## Research
 
@@ -229,3 +239,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.12.0 정식 게시의 독립 확인](../tests/results/stable-release-0.12.0.md)
 - [0.12.0 Discord 누락 공지 복구](plans/0.12.0-discord-recovery.md)
 - [0.12.0 Discord 실제 전송 확인](../tests/results/discord-notification-0.12.0.md)
+- [업데이트 안내문 종류별 섹션 형식](plans/update-summary-sections.md)
+- [0.12.0 섹션 형식 안내문 미리보기](releases/0.12.0.subscriber.sectioned-preview.ko.md)
+- [0.12.0 섹션 공지 실제 전송](../tests/results/discord-sectioned-notification-0.12.0.md)
+- [0.12.0 명사형 안내문 수정 초안](releases/0.12.0.subscriber.concise-preview.ko.md)

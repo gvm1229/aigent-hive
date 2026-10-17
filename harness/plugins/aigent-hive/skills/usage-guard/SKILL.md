@@ -32,7 +32,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
-   Supply the exposed active account digest; omit only for one unambiguous locally sensed account. `enforce` remeasures ordinary halts, including earlier-process and legacy markers. A reset halt requires explicit acknowledgement under [control procedures](references/control.md). Exit `3`, limited, unknown, or reset results block dispatch. Do not run `enforce` for quick answers, manual work, or other non-dispatch actions except the required same-session recheck after a threshold change or reset acknowledgement. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
+   Supply the exposed active account digest; omit only for one unambiguous locally sensed account. `enforce` remeasures all previous halts, including reset, earlier-process and legacy markers. A reset stops one request; it never creates a resume lock. Exit `3`, limited, unknown, or reset results block dispatch. Do not run `enforce` for quick answers, manual work, or other non-dispatch actions except the required same-session recheck after a threshold change. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 5. If native sensing is unavailable or unsupported, read [sensor fallback](references/sensors.md). Never install a fallback without explicit current-action acceptance.
 6. Before any explicitly requested threshold or session control, read [control procedures](references/control.md). Never guess a percentage or infer bypass from a bare continue, resume, finish, urgency, or an active run.
 7. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a same-binding `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. Ordinary disable still requires a fresh zero-quota check. Only explicit opt-outs from both safeguards bypass sensing; neither control grants dispatch authority.
@@ -56,3 +56,24 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - CodexBar installation is the sole optional fallback install action. It is allowed only through the exact consented CLI flow in the sensor reference and a qualified package-manager adapter.
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Source development uses this installed product contract and global threshold. Never create a second source Skill, Python guard, watcher, or source-local threshold state.
+
+## Windows live interruption (0.13.0)
+
+`hive usage monitor --help` exposes the installed version's monitor commands. Only its confirmed
+installation may create the current-user scheduled monitor. First show `preview --user-root
+<user-root> --output json`; `enable` requires that exact `--confirm <preview_digest>` and
+`--confirm-session-interruption`. Do not infer current-version installation authority.
+
+This narrow Windows Codex protection exception permits the installed monitor, not this Skill,
+to observe every 15 seconds and interrupt local desktop sessions after reset or 60 seconds
+without a valid observation. Keep the app open with a persistent reason/status window. Never
+terminate the app when control is unavailable. Only a qualified desktop version may connect. It never starts
+model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.
+
+Use `status` to distinguish configuration, observation health, and the last interruption result.
+A reset stops the sessions present at detection once. A continuous 60-second observation gap
+also stops once until sensing recovers. Incident records persist as history, never as resume
+locks. Users can resume or send a new message directly in Codex. The official-logo notice
+only explains the cause and status and has one close button. It never executes a command,
+acknowledges, unlocks, or resumes work. `disable` removes only the owned scheduled task and
+retains incident evidence and staged bytes. Existing thresholds and zero-quota checks remain.

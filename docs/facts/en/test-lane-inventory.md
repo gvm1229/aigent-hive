@@ -13,11 +13,11 @@ sources:
   - "repo:docs/guides/test-lanes.md#sha256:ac5e2863835c6c3605986ff71600d6b6a626676dc745a781cc2d0e18a28fa451"
   - "repo:scripts/test-lanes.py#sha256:5bc7694c5e1f399880069d16edbde37b85c741dadc5d6252892ebd5142cea8b1"
   - "repo:scripts/test_artifacts.py#sha256:832d67312bf54707ea0e3acfce37189cc733180819e41fdc9ca9c21bf04957d0"
-  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:ee867fcea43cd0eaa70d4e855c40f451eb9f8b58364f643769c0fd9884f1d4bf"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:d6b780ea86a3b69a0b822f9b227a5a3e0004ca0d36f7da3e87d401b15b4e973a"
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:81d38458c1fb4e2b0ad406bac350d06b5df34b57de31d729509f726402e9b319"
-  - "repo:tests/conformance/lanes.toml#sha256:28e9d1ab7c0edb9325c4f923708982f21be0f963395f8cc27ca67df38abd065a"
+  - "repo:tests/conformance/lanes.toml#sha256:ebb52408e72acc7e3dffface4f5694e14749eb204c882eda821a5392408b111f"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:a7766827a25ced9deec765503bc5c46290dbdf8d"
+reviewed_revision: "git:6cee0fc8998d4b1b25eaed092f1a252b7144b210"
 status: active
 ---
 

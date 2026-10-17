@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "previous_binary_sha256": "21c9754a93770950b669e526e0c3139c91e20263fc1f1fb36d2d2975eb231719",
+  "candidate_binary_sha256": "dc26bf4ad24105bcbb2f4b55c7cb1ad121abdbe3e0e2f8834034b7edffbc5fc3",
+  "baseline_revision": "df60a4ea1c2f71b62075177d501cd9c7a9ef9170",
+  "immutable_rust_and_embedded_parts": {
+    "crates/hive-cli/src/usage_monitor.rs": true,
+    "crates/hive-cli/src/usage_monitor/desktop.rs": true,
+    "crates/hive-cli/src/usage_monitor/state.rs": true,
+    "crates/hive-cli/src/usage.rs": true,
+    "crates/hive-cli/src/usage/codex_native.rs": true,
+    "platform::command": true,
+    "platform::call": true,
+    "previous-desktop-embedded": true,
+    "candidate-desktop-embedded": true,
+    "candidate-notice-embedded": true
+  },
+  "all_checked_parts_match": true,
+  "current_tasks": {
+    "inspect": "7ea69deb95a952029c363888b673e3408fed8df98ea33ef5d668564739b18a12",
+    "unregister": "52dd006ba1e5764554a6029012d98bbf2f0a4177f60973464a4340aebe85502e",
+    "default": "991f666c8d85908e68678b0f920b316481571b7c00bc8c84b3f2b85847d9a508",
+    "register": "1343ce2b589d9e85e1f50a2518ab25b25972b6e9901b9db30afbe8381fcea565",
+    "App-Roots": "93637b4022582242bb8ca680f43fccdfeab48cfce31e9b0a4e6e7eafa8888a26",
+    "Emit": "8e83234e6d05ba9a79a46a3b26fd53d9d038cf4f0ca287f3432aaef2c59bcd2b",
+    "start": "1f6499036807583b52e0a513164428b700789cff1ad9637bccb27a2a41438c13"
+  },
+  "old_tasks": {
+    "inspect": "7ea69deb95a952029c363888b673e3408fed8df98ea33ef5d668564739b18a12",
+    "unregister": "52dd006ba1e5764554a6029012d98bbf2f0a4177f60973464a4340aebe85502e",
+    "default": "991f666c8d85908e68678b0f920b316481571b7c00bc8c84b3f2b85847d9a508",
+    "register": "1343ce2b589d9e85e1f50a2518ab25b25972b6e9901b9db30afbe8381fcea565",
+    "App-Roots": "93637b4022582242bb8ca680f43fccdfeab48cfce31e9b0a4e6e7eafa8888a26",
+    "Emit": "8e83234e6d05ba9a79a46a3b26fd53d9d038cf4f0ca287f3432aaef2c59bcd2b",
+    "start": "1f6499036807583b52e0a513164428b700789cff1ad9637bccb27a2a41438c13"
+  },
+  "native_stop_and_identity_unchanged": true,
+  "old_desktop": {
+    "outside_verification": "2b2ab73499b57080415c3c3704c3b3a096941939a54b356b59a5ae7d39fa8bb3",
+    "stop_dispatch": "afced96194fef181ad3ca2a3834a721eb2c78003425a1653903e8bffa5bc0862"
+  },
+  "current_desktop": {
+    "outside_verification": "2b2ab73499b57080415c3c3704c3b3a096941939a54b356b59a5ae7d39fa8bb3",
+    "stop_dispatch": "afced96194fef181ad3ca2a3834a721eb2c78003425a1653903e8bffa5bc0862"
+  },
+  "source_hashes": {
+    "crates/hive-cli/src/usage_monitor.rs": "361357e42576b8cbb6f01ee77a6eb0474cc6af4dcb68ddc6d18ede18208bd764",
+    "crates/hive-cli/src/usage_monitor/desktop.rs": "ed6fddf9f62d502946a8cd80cd37839ad497827d500d59a24b7fc5ddc93ea089",
+    "crates/hive-cli/src/usage_monitor/state.rs": "4ef948e0b4201c4ac5a2864174c58f5d3ba07a3c54eaeafe75c075e4d870a59a",
+    "crates/hive-cli/src/usage.rs": "b08b99a665d4baa609dc973dccee52abfd63a639e6b31a908f50f6762bcb0c9a",
+    "crates/hive-cli/src/usage/codex_native.rs": "186e0a0dd88ee16535278073890ce4b901aad773e26b322282c5f696a62230d2",
+    "crates/hive-cli/src/usage_monitor/platform.rs": "28a0b315845fef5fb6bf431977cf83e869a9dc08d676731375894f5824aedbd9",
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "0f64e73c9db0a72ac1c0321b334c07cb4a2d40de347da3c2ade955527e182318",
+    "crates/hive-cli/src/usage_monitor/windows.ps1": "07dab8014f6c0ae51667b32e98ac33a1861e7ef13f9f3a406e670a865e8868a5",
+    "crates/hive-cli/src/usage_monitor/notice.ps1": "3b1736683dd3f8bbaa98352b084ae9a6c24de66ccb3c9edc7894c35aa24b4137"
+  },
+  "notice_source_sha256": "3b1736683dd3f8bbaa98352b084ae9a6c24de66ccb3c9edc7894c35aa24b4137"
+}

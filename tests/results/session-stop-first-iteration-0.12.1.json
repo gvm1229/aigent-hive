@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "version": "0.12.1",
+  "iteration": 1,
+  "source_commit": "fbbe411305969fc90133c8b119cb14f71b8467d2",
+  "host": "Windows Codex",
+  "os": "Windows 11",
+  "scope": "offline source and isolated local mock pipes",
+  "app_contact": false,
+  "live_session_stop_verified": false,
+  "monitor_enabled": false,
+  "installation_performed": false,
+  "release_qualification_complete": false,
+  "reset_trigger": "observed refill or confirmed window rollover",
+  "observation_gap_seconds": 60,
+  "app_termination_fallback": false,
+  "checks": {
+    "rust_monitor": {
+      "passed": 19,
+      "ignored": 1,
+      "reason": "real native observations excluded"
+    },
+    "windows_mock": {
+      "passed": 26,
+      "failed": 0
+    },
+    "skill_contract": {
+      "passed": 8
+    },
+    "user_guidance": {
+      "passed": 1
+    },
+    "context_projection": {
+      "passed": 34,
+      "skipped": 3,
+      "reason": "one Windows symlink creation unavailable; POSIX FIFO and unprivileged directory symlink cases excluded",
+      "wrapper_exit_code": 1
+    },
+    "clippy": "passed",
+    "rustfmt": "passed"
+  },
+  "unproven": [
+    "current Windows desktop interruption and UI survival",
+    "long reasoning, shell and subagent interruption on current app",
+    "actual allocation reset",
+    "other operating systems, remote and cloud runs",
+    "server processing and billing stop time"
+  ],
+  "inactive_legacy_payloads": {
+    "binaries": 10,
+    "helpers": 4,
+    "deleted": false,
+    "reason": "previous automatic approval rejection; no workaround attempted"
+  },
+  "runs": [
+    {
+      "path": "tests/results/runs/20261015T220914-2549b7460e28.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "첫 차수 지침 범위 분리 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T220944-f4a1fc1b2df5.md",
+      "status": "tests-passed-receipt-write-failed",
+      "exit_code": 1,
+      "purpose": "첫 차수 지침 투영 계약"
+    },
+    {
+      "path": "tests/results/runs/20261015T221237-f6cbcd5ff3b9.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "60초 관측 공백과 정상 조회 복구 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T221310-83aee0ee9643.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "60초 보호 이유와 기존 Windows 모의 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T221559-00f180371daa.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "사건별 한정 구독 Windows 모의 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T221655-baf9e7d47ede.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "평상시 구독 없음과 사건별 중단 순서 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T221800-e779cdaf2525.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "한정 제어의 전체 요청 시한과 현재 상태 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T221831-48b671e46c62.md",
+      "status": "failed",
+      "exit_code": 1,
+      "purpose": "사건별 제어와 늦은 대상 요청 Windows 모의 검증"
+    },
+    {
+      "path": "tests/results/runs/20261015T221852-d1b6e011926b.md",
+      "status": "failed",
+      "exit_code": 101,
+      "purpose": "사건별 세션 제어 정적 컴파일 검사"
+    },
+    {
+      "path": "tests/results/runs/20261015T221956-70d79f2939d0.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "PowerShell 큰 사건 시각과 25개 한정 제어 회귀"
+    },
+    {
+      "path": "tests/results/runs/20261015T222036-5ee97f6040ad.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "한정 제어 최종 Rust 검사"
+    },
+    {
+      "path": "tests/results/runs/20261015T222105-a9e877cb3692.md",
+      "status": "passed",
+      "exit_code": 0,
+      "purpose": "26개 Windows 모의 제어와 막힌 파이프 쓰기 제한"
+    }
+  ],
+  "source_sha256": {
+    "crates/hive-cli/src/usage_monitor.rs": "87fcbc7b005837f38639ceef43113c232ed5742298886caea92c009c9921d5cd",
+    "crates/hive-cli/src/usage_monitor/desktop.rs": "c6b8590a14a933b76afb0da57d8c66a4965991175066df5e958b8858a72709e7",
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "ac6b2bafb909ef4afc591b16555346a15004b318fc6439de559e928f3d53ee99",
+    "crates/hive-cli/src/usage_monitor/state.rs": "91ab7f3d580cbc6f69a945072be09820c321c58ebcb247df033c5df88d85854b",
+    "tests/conformance/contracts/test_usage_monitor.py": "a18b3dde56be54c008fcee0f8424684680e8249d6e4a15be81d8e8867a26f86d"
+  }
+}

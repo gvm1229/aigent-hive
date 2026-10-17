@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "phase": "passed-qualified-components",
+  "qualification_method": "live-native-stop-plus-current-readonly-confirmation",
+  "product_version": "0.12.1",
+  "desktop_version": "26.1013.4894.0",
+  "binary_sha256": "dc26bf4ad24105bcbb2f4b55c7cb1ad121abdbe3e0e2f8834034b7edffbc5fc3",
+  "fixture_task_removed": true,
+  "app_preserved": true,
+  "original_live_aggregate_passed": false,
+  "original_live_trial_phase": "failed",
+  "original_live_subjects_verified": true,
+  "live_native_turn_count": 4,
+  "live_interruption_upper_bound_ms": 306,
+  "request_upper_bound_from_native_abort_ms": 306,
+  "readonly_confirmation_count": 4,
+  "readonly_confirmation_ms": 1180,
+  "new_live_stop_requests_sent": 0,
+  "source_hashes": {
+    "crates/hive-cli/src/usage_monitor.rs": "361357e42576b8cbb6f01ee77a6eb0474cc6af4dcb68ddc6d18ede18208bd764",
+    "crates/hive-cli/src/usage_monitor/desktop.rs": "ed6fddf9f62d502946a8cd80cd37839ad497827d500d59a24b7fc5ddc93ea089",
+    "crates/hive-cli/src/usage_monitor/state.rs": "4ef948e0b4201c4ac5a2864174c58f5d3ba07a3c54eaeafe75c075e4d870a59a",
+    "crates/hive-cli/src/usage.rs": "b08b99a665d4baa609dc973dccee52abfd63a639e6b31a908f50f6762bcb0c9a",
+    "crates/hive-cli/src/usage/codex_native.rs": "186e0a0dd88ee16535278073890ce4b901aad773e26b322282c5f696a62230d2",
+    "crates/hive-cli/src/usage_monitor/platform.rs": "28a0b315845fef5fb6bf431977cf83e869a9dc08d676731375894f5824aedbd9",
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "0f64e73c9db0a72ac1c0321b334c07cb4a2d40de347da3c2ade955527e182318",
+    "crates/hive-cli/src/usage_monitor/windows.ps1": "07dab8014f6c0ae51667b32e98ac33a1861e7ef13f9f3a406e670a865e8868a5",
+    "crates/hive-cli/src/usage_monitor/notice.ps1": "3b1736683dd3f8bbaa98352b084ae9a6c24de66ccb3c9edc7894c35aa24b4137"
+  },
+  "evidence": [
+    {
+      "path": "tests/results/session-stop-native-subjects-0.12.1.json",
+      "sha256": "b39033d180eb4a63923bb9a412176fbf06d8589700d689061eab5f9f7fb45f21"
+    },
+    {
+      "path": "tests/results/session-stop-readonly-reconciliation-0.12.1.json",
+      "sha256": "b1e69e568af615214e5fbb247f7abaa6dcfacfdb6bd19d4aa944cc8059fd229e"
+    },
+    {
+      "path": "tests/results/session-stop-readonly-confirmation-0.12.1.json",
+      "sha256": "a5671686cda5cd90f95a19eec3cab0bbb12ac63bfb9337e5d8a915249a32ae03"
+    },
+    {
+      "path": "tests/results/session-stop-component-code-0.12.1.json",
+      "sha256": "ffcced8034d487e6544d468f99364b3b2fbc16fa9af5ba976bed2f21a9c76f07"
+    },
+    {
+      "path": "tests/results/session-stop-sensor-failure-0.12.1.json",
+      "sha256": "a9ae2e4039837be99bcdcf5864fa2b1b5ce6bb88d50245b0f38ab614a0acff08"
+    },
+    {
+      "path": "tests/results/session-stop-acknowledgement-0.12.1.json",
+      "sha256": "82a442b82d20ac871f6fbb82a8bc12766d30819cd5e3c3ad0213e587c95284a8"
+    },
+    {
+      "path": "tests/results/usage-stop-notice-windows-0.12.1.json",
+      "sha256": "12746751e84b05243501dab68a86f2ba228424ac13d00fb12f9768c0ceefadf0"
+    },
+    {
+      "path": "tests/results/session-adapter-latch-windows-0.12.1.json",
+      "sha256": "f22b0a6a65fe3d2197972ef342a59fc67081c9dfb7c0dcd649c61db1672b0259"
+    }
+  ],
+  "verification_limits": [
+    "Original live aggregate receipt remains failed; this is component qualification.",
+    "No new integrated live halt after confirmation/UI fixes; actuation and sensor/control sources match the live-test binary.",
+    "Native long-shell task interruption is verified; exact OS process exit within five seconds was not measured.",
+    "No remote/cloud/other OS/provider refill/server billing-cutoff qualification."
+  ]
+}

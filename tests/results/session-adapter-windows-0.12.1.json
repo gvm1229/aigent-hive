@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "phase": "passed-scoped-interruption",
+  "scope": "single-test-thread",
+  "target_digest": "sha256:d50efcafc41886480bfa64e46ceb08cba98702d53a37600b7080f234e95c6a65",
+  "adapter_sha256": "6712b23685dce072e0f2d4370db1097dcbff95b678f13b721221790624963e86",
+  "app_pid": 46652,
+  "package_version": "26.1013.4894.0",
+  "model_started": false,
+  "interrupt_requested": true,
+  "last_packet": {
+    "server_pid": 46652,
+    "schema_version": 1,
+    "unknown_sessions": 0,
+    "app_alive": true,
+    "active_turns": 0,
+    "control_stopping": false,
+    "connected": true,
+    "known_sessions": 1,
+    "activity_observed": false,
+    "stop": null
+  },
+  "metadata_only_ready": true,
+  "confirmed_stop": {
+    "confirmed": 1,
+    "incident": "sha256:04900059b101c7df89122743090d6b3b56cb33a840f18d3dd86d1aeeca3bc8ff",
+    "unknown_sessions": 0,
+    "scope_digest": "sha256:6527272614ed11f377cf44d927ae44a44a27b31588702ce8056fc110aa54f0eb",
+    "app_alive": true,
+    "active_turns": 0,
+    "request_ms": 52,
+    "targeted": 1,
+    "elapsed_ms": 307,
+    "verified": true
+  },
+  "subscriptions_released": true,
+  "app_preserved": true,
+  "host": "Windows Codex",
+  "scope_limit": "single visible test session; global monitor, long tools and installation unproven"
+}

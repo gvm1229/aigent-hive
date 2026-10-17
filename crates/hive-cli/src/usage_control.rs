@@ -28,7 +28,7 @@ USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|acknowledge-reset|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] [--confirm-reset <halt-digest>] --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] --output json
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
     hive usage summarize-tokens --request <normalized-events.json> --output json
 ";
@@ -68,7 +68,6 @@ struct SessionArguments {
     confirm_disable: bool,
     confirm_reset_guard_disable: bool,
     confirm_zero_quota_guard_disable: bool,
-    confirm_reset: Option<String>,
 }
 
 #[derive(Debug)]
@@ -432,7 +431,6 @@ enum SessionAction {
     Enable,
     Disable,
     Toggle,
-    AcknowledgeReset,
     EnableResetGuard,
     DisableResetGuard,
     EnableZeroQuotaGuard,
@@ -965,7 +963,6 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
             "--user-root",
             "--host",
             "--action",
-            "--confirm-reset",
         ],
         true,
     )?;
@@ -973,14 +970,13 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         "enable" => SessionAction::Enable,
         "disable" => SessionAction::Disable,
         "toggle" => SessionAction::Toggle,
-        "acknowledge-reset" => SessionAction::AcknowledgeReset,
         "enable-reset-guard" => SessionAction::EnableResetGuard,
         "disable-reset-guard" => SessionAction::DisableResetGuard,
         "enable-zero-quota-guard" => SessionAction::EnableZeroQuotaGuard,
         "disable-zero-quota-guard" => SessionAction::DisableZeroQuotaGuard,
         _ => {
             return Err(AdapterError::Input(
-                "--action must be enable, disable, toggle, acknowledge-reset, enable-reset-guard, disable-reset-guard, enable-zero-quota-guard, or disable-zero-quota-guard".to_owned(),
+                "--action must be enable, disable, toggle, enable-reset-guard, disable-reset-guard, enable-zero-quota-guard, or disable-zero-quota-guard".to_owned(),
             ));
         }
     };
@@ -1006,7 +1002,6 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
             "disable-zero-quota-guard requires only --confirm-zero-quota-guard-disable".to_owned(),
         ));
     }
-    let confirm_reset = optional(&options, "--confirm-reset").map(str::to_owned);
     let confirm_reset_guard_disable = options
         .iter()
         .any(|(option, _)| *option == "--confirm-reset-guard-disable");
@@ -1020,16 +1015,6 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
             "disable-reset-guard requires only --confirm-reset-guard-disable; other actions cannot use this confirmation".to_owned(),
         ));
     }
-    if (action == SessionAction::AcknowledgeReset) != confirm_reset.is_some()
-        || confirm_reset
-            .as_deref()
-            .is_some_and(|digest| !is_sha256_digest(digest))
-        || (action == SessionAction::AcknowledgeReset && confirm_disable)
-    {
-        return Err(AdapterError::Input(
-            "acknowledge-reset requires only the exact --confirm-reset halt digest".to_owned(),
-        ));
-    }
     Ok(SessionArguments {
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
@@ -1039,7 +1024,6 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
         confirm_disable,
         confirm_reset_guard_disable,
         confirm_zero_quota_guard_disable,
-        confirm_reset,
     })
 }
 
@@ -1234,7 +1218,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "the usage threshold changed; run enforce for this session without disabling the safeguard"
                 .to_owned()
         } else if halted && pending_reset {
-            "the quota reset requires explicit acknowledgement followed by fresh enforce".to_owned()
+            "the quota reset stopped the previous request; a new request rechecks fresh usage"
+                .to_owned()
         } else if halted {
             "run enforce to recheck current usage without disabling the safeguard".to_owned()
         } else {
@@ -1331,20 +1316,9 @@ fn enforce_captured(
         });
     }
 
-    // Ordinary halts need fresh observations. A reset records an unacknowledged user decision.
-    // Process restarts do not clear a pending reset. Ordinary halts remeasure without disabling
-    // protection. The exact snapshot remains the compare-and-swap input for later replacement.
+    // Every new request remeasures. A previous reset is history, not a resume lock.
     let halt = load_halt(runtime, &binding)?;
-
     trace.halt_digest = runtime_digest(halt.snapshot.bytes());
-    if config.quota_reset_guard_enabled
-        && halt
-            .marker
-            .as_ref()
-            .is_some_and(|marker| marker.decision == "usage-reset")
-    {
-        return Ok(halted_result(&binding, &halt, false));
-    }
 
     let mut attempts = 0_u8;
     let observation = loop {
@@ -1421,7 +1395,7 @@ fn enforce_captured(
             && halt
                 .marker
                 .as_ref()
-                .is_none_or(|marker| marker.decision == "observed")
+                .is_none_or(|marker| matches!(marker.decision.as_str(), "observed" | "usage-reset"))
         {
             let marker = HaltMarker {
                 schema_version: 2,
@@ -1773,6 +1747,11 @@ fn observe_usage(
         && config.quota_reset_guard_enabled
         && decision.is_none()
         && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
+        && !crate::usage_monitor::reset_already_dispatched(
+            target,
+            &core_snapshots,
+            previous_snapshots,
+        )
     {
         decision = Some("usage-reset");
     }
@@ -2117,7 +2096,6 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
             "decision": marker.decision,
-            "reset_acknowledgement_digest": (marker.decision == "usage-reset").then(|| halt.bytes.as_deref().map(sha256_digest)).flatten(),
             "selected_window": marker.selected_window,
             "threshold_remaining_percent": marker.threshold_remaining_percent,
             "policy_digest": marker.policy_digest,
@@ -2225,59 +2203,6 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
     })
 }
 
-fn acknowledge_reset(
-    runtime: &PinnedTarget,
-    binding: &SessionBinding,
-    confirmation: Option<&str>,
-) -> Result<ActionResult, AdapterError> {
-    let halt = load_halt(runtime, binding)?;
-    let mut marker = halt
-        .marker
-        .clone()
-        .filter(|marker| marker.decision == "usage-reset")
-        .ok_or_else(|| {
-            AdapterError::Safety("no pending quota reset for this session".to_owned())
-        })?;
-    if halt.bytes.as_deref().map(sha256_digest).as_deref() != confirmation {
-        return Err(AdapterError::Safety(
-            "reset confirmation differs from the current halt".to_owned(),
-        ));
-    }
-    // Keep the post-reset baseline. Acknowledgement neither disables the threshold guard nor
-    // claims fresh usage; the caller must run enforce again before doing work.
-    "observed".clone_into(&mut marker.decision);
-    marker.process_id = binding.process_id;
-    marker.revision = marker
-        .revision
-        .checked_add(1)
-        .ok_or_else(|| AdapterError::Safety("usage revision exhausted".to_owned()))?;
-    let bytes =
-        serde_json::to_vec(&marker).map_err(|error| AdapterError::Internal(error.to_string()))?;
-    let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &bytes)?;
-    let locator = portable_relative_path(&halt.relative);
-    Ok(ActionResult {
-        schema_version: 1,
-        action: "ControlUsageSession",
-        status: "success",
-        exit_code: 0,
-        code: "hive.usage-reset-acknowledged",
-        message:
-            "quota reset acknowledged; fresh enforce is required and the safeguard remains enabled"
-                .to_owned(),
-        changed_paths: changed.then(|| locator.clone()).into_iter().collect(),
-        evidence: vec![Evidence {
-            kind: "file",
-            locator,
-            digest: sha256_digest(&bytes),
-        }],
-        next_action: None,
-        data: Some(
-            json!({"guard_enabled":true,"session_recheck_required":true,"authorizes_dispatch":false,
-            "host_scope":binding.host_scope,"session_id_digest":binding.session_digest,"process_id":binding.process_id}),
-        ),
-    })
-}
-
 #[allow(clippy::too_many_lines)]
 fn control_session(arguments: &SessionArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
@@ -2330,13 +2255,10 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
                 ));
             }
             let halt = load_halt(runtime, &binding)?;
-            if halt.state == OverrideState::Damaged
-                || halt
-                    .marker
-                    .as_ref()
-                    .is_some_and(|marker| marker.decision == "usage-reset")
-            {
-                return Err(AdapterError::Safety("acknowledge the pending reset or repair the damaged halt before reset-only disable".to_owned()));
+            if halt.state == OverrideState::Damaged {
+                return Err(AdapterError::Safety(
+                    "repair the damaged halt before reset-only disable".to_owned(),
+                ));
             }
         } else if !config.quota_reset_guard_enabled {
             return Err(AdapterError::Safety(
@@ -2345,16 +2267,8 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
             ));
         }
     }
-    if arguments.action == SessionAction::AcknowledgeReset {
-        if !currently_enabled {
-            return Err(AdapterError::Safety(
-                "enable the usage safeguard before acknowledging a reset".to_owned(),
-            ));
-        }
-        return acknowledge_reset(runtime, &binding, arguments.confirm_reset.as_deref());
-    }
     let desired_enabled = match arguments.action {
-        SessionAction::Enable | SessionAction::AcknowledgeReset => true,
+        SessionAction::Enable => true,
         SessionAction::Disable => false,
         SessionAction::Toggle => !currently_enabled,
         SessionAction::EnableResetGuard
@@ -3300,7 +3214,6 @@ mod tests {
             confirm_disable: true,
             confirm_reset_guard_disable: false,
             confirm_zero_quota_guard_disable: false,
-            confirm_reset: None,
         })
         .expect("disable");
         assert!(super::verify_dispatch_preflight(&preflight).is_err());
@@ -3524,7 +3437,6 @@ mod tests {
             confirm_disable: false,
             confirm_reset_guard_disable: false,
             confirm_zero_quota_guard_disable: false,
-            confirm_reset: None,
         };
         assert!(control_session(&control_args).is_err());
         control_args.confirm_zero_quota_guard_disable = true;
@@ -3881,7 +3793,6 @@ usage_guard:
                 confirm_disable: true,
                 confirm_reset_guard_disable: false,
                 confirm_zero_quota_guard_disable: false,
-                confirm_reset: None,
             })
             .is_err());
             assert!(set_threshold(&ThresholdArguments {
@@ -3923,7 +3834,6 @@ usage_guard:
             confirm_disable: true,
             confirm_reset_guard_disable: false,
             confirm_zero_quota_guard_disable: false,
-            confirm_reset: None,
         })
         .expect("exact target session control");
         assert_eq!(result.code, "hive.usage-session-disabled");

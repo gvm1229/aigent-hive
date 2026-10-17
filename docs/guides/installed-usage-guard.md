@@ -42,18 +42,7 @@ Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 f
 - 첫 측정: 비교 기준만 기록. 초기화 시각 예약·외부 소식 추적 제외
 - 비교 시점: `enforce`의 새 측정. 진행 중 추론의 15초 감시·호스트 프로세스 중단은 미지원
 - 제한 표시: `status`의 `quota_reset_guard_monitoring=false`. 공개 설치본의 지원 여부와 개발 구현 구분
-- 초기화 중단: 같은 값 재조회·프로세스 변경 뒤에도 유지. 현재 중단 표식의 지문과 명시적 사용자 확인 필요
-
-초기화 사실 확인 뒤 재개 요청을 받은 경우의 개발 명령:
-
-```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action acknowledge-reset --confirm-reset <halt-digest> --output json
-```
-
-`halt-digest`는 중단 결과의 `reset_acknowledgement_digest` 또는 `status`의 `halt_digest` 값.
-확인 후 동일한 대상·세션·사용자 루트와 현재 계정 정보로 `enforce` 재실행 필수.
-확인은 잔여량 보호 해제나 작업 실행 허가와 구분. 낮거나 확인할 수 없는 잔여량은 계속 차단.
-공개 `0.10.3` 설치본에 새 명령이 있다는 가정 금지.
+- 0.12.1의 초기화 중단은 해당 요청 한 번만 적용. 다음 사용자 요청은 새 관측으로 재판정, 확인 명령·재개 잠금 없음
 
 현재 작업의 초기화 감지만 제외하는 개발 명령:
 
@@ -63,7 +52,7 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 
 - 복원: 확인 인자 없이 `--action enable-reset-guard`. 두 동작 뒤 같은 연결 정보로 `enforce` 필수
 - 전역 설정·잔여량 하한 보호 유지. 낮거나 알 수 없는 잔여량의 차단 유지
-- 기존 초기화 중단의 해제 수단에서 제외. 먼저 위의 지문 확인 절차 필요
+- 초기화 표식은 과거 관측 기록, 새 요청의 사용량 하한·0% 확인 유지
 - 다른 호스트·세션·프로세스에 제외 권한 이전 금지. 일반 보호의 켜기·끄기와 별개 설정
 - 공개 설치본의 도움말에서 지원 여부 확인. 15초 감시·진행 중 작업 중단의 구현 증명과 구분
 
@@ -134,3 +123,26 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 - Windows·Codex 개발 검증: Rust 사용량102개·공개 명령28개 통과, Windows 링크 시험1개 제외. 합성 측정·파일·제어 결합의 증명
 - 실제 계정의 0% 소진·유료 전환 시험 미실행, 계정 비용 발생 시험 제외. 지원 중단 연결 없는 진행 중 호스트 호출·Hive 밖 호출의 크레딧 사용 방지 보장 제외
 - 현재 설치 0.11.1과 개발 0.12.0 구분. 도움말의 새 명령 지원 확인 선행, 현재 사용자 설치 승인 별도
+
+## 0.12.1 Windows 세션 중단
+
+- Windows 11 x64·Codex 26.1013.4894.0의 로컬 개발 빌드 설치·상시 감시 확인. 다른 앱 버전·운영체제·원격·클라우드 미지원
+- 실제 초기화 또는 정상 조회 공백 60초 때 감지 당시 작업에 한 번 중단 요청. 같은 사건으로 사용자 재개·새 입력·앱 재시작 차단 없음
+- 시작 간격 15초·조회 제한 5초·실패 재시도 2초. 연속 실패당 한 번 중단, 정상 조회 회복 후 다음 실패 구간 감지
+- 앱 전체 종료·일시정지·호스트 프로세스 신호 없음. 현재 사용자·공식 패키지·생성 시각·보유 핸들 확인
+- 평상시 대화 기록 구독 없음. 사건 때 중단 요청 우선·5초 확인·구독 해제, 제어 연결 재시작의 과거 요청 재전송 억제
+- 사건은 원인·확인 결과의 기록. 보호 잠금·해제·확인 명령 없음, 사용자의 Codex 재개·새 메시지 허용. 이전 작업 자동 재개 없음
+- 공식 로고의 [안내 창](../research/usage-stop-notice-0.12.1.md)은 이유·상태와 닫기만 제공. 초기화와 조회 실패의 서로 다른 설명, 확인 실패의 성공 표시 금지
+- 기존 하한·0% 보호 유지. 서버 처리·과금 종료 시각과 소비 상한 보장 제외
+
+```text
+hive usage monitor preview --user-root <user-root> --output json
+hive usage monitor enable --user-root <user-root> --confirm <preview-digest> --confirm-session-interruption --output json
+hive usage monitor status --user-root <user-root> --output json
+hive usage monitor disable --user-root <user-root> --output json
+```
+
+- 설치 전 미리보기의 설정·상태·고정 실행 파일·로그인 예약 경로 확인. enable은 정확한 미리보기 지문과 버전별 설치 승인 필수
+- status의 정상 관측·제어 연결·미확인 대화 부재와 마지막 중단 결과를 구분. 지난 사건의 존재는 새 실행 차단 조건에서 제외
+- disable은 소유 예약만 제거, 사건과 고정 실행 파일 보존. 관리된 개발 설치 원복은 별도 백업 경로
+- [수용 근거와 이전 실패](../research/session-stop-0.12.1.md)·[설치 영수증](../../tests/results/session-stop-one-shot-installation-0.12.1.json). 공개 안정판은 0.12.0, 공개 0.12.1 게시 별도

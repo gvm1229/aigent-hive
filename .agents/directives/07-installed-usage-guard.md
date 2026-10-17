@@ -1,44 +1,35 @@
-# 07. Installed Product Usage Guard Directive
+# 07. Installed Usage Guard
 
-Use the installed usage policy for Hive source work. No separate source sensor, threshold,
-watcher, or halt implementation.
+Use installed Hive policy; no source-local sensor, threshold, watcher or halt fork.
 
-## Target classification
+## Scope and preflight
 
-- A target with an authenticated project `.hive/config/harness.toml` uses the greater of the
-  global threshold and its project threshold.
-- This repository's `hive-source.json` marker authorizes the installed global policy without a
-  project harness. Runtime state stays under the authenticated user root, keyed only by digests.
-- Every other folder is non-Hive. Do not invoke status, enforce, threshold, or session control;
-  create no halt marker, runtime file, or project configuration.
+- Authenticated project harness: maximum global/project threshold. `hive-source.json`: global policy,
+  explicit host, runtime under authenticated user root with digest keys. Other folders: no usage
+  controls, markers or configuration.
+- Apply explicit controls first. Source global thresholds use `hive usage threshold --user-root`.
+- Obtain the exact current host session and process from host context; never invent, reuse,
+  persist or transfer a binding. Once at source-task start:
 
-## Source task preflight
+```text
+hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
+```
 
-1. Resolve obvious threshold, disable, enable, or toggle intent before ordinary work.
-2. Global threshold intent uses `hive usage threshold --user-root <user-root>`; a source task never
-   writes a project threshold.
-3. Obtain the exact active host session identifier and process ID from host context. Never invent,
-   reuse, persist, or transfer a binding.
-4. Run exactly one installed-product preflight at the start of the source task:
+- Exit 3, limited, unknown or reset blocks the current dispatch. Allow exact controls, consented
+  fallback, a same-binding recheck after threshold change, or fresh enforcement for a new user request.
+  Continue only on fresh `hive.usage-allowed`. No recheck per tool or session-disable bypass.
+- New sessions default enabled. Installed markers and exact binding remain authoritative.
 
-   ```text
-   hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
-   ```
+## Controls and interruption
 
-5. Exit `3`, limited, unknown, or reset blocks work. Allow only exact guard control, consented
-   fallback, or one same-binding `enforce` after threshold change or explicit reset acknowledgement.
-   Acknowledgement requires installed-command support; never reconstruct state. Continue only
-   on fresh `hive.usage-allowed`, never by session disable.
-
-Do not repeat the preflight before each tool, mutation, push, or final response. Do not start a
-background watcher. The installed marker and exact binding remain authoritative; a new session
-defaults enabled.
-
-## Control and safety
-
-- A threshold change requires an explicit integer from 1 through 99 and explicit global intent.
-- A session disable requires explicit current-session intent and `--confirm-session-disable`.
-- A bare `continue`, `resume`, `finish`, urgency, or active goal does not authorize bypass.
-- Native sensing remains primary. CodexBar remains a separately consented failure-only fallback.
-- Never request credentials, reinstall a provider CLI, persist raw account or session identifiers,
-  call a provider API, invoke OMX/OMC, or signal the host process.
+- Threshold: explicit global intent and integer 1–99. Session disable: explicit current-session
+  intent plus `--confirm-session-disable`. Continue/resume, urgency and goals grant no bypass.
+- Native sensor first; CodexBar only as separately consented failure fallback. No credentials,
+  provider calls, CLI reinstall or OMX/OMC.
+- The 2026-10-18 approval covers current-Windows session-only qualification, then 0.12.1 installation
+  and always-on monitoring after acceptance. The two live stops are complete; further checks must be
+  read-only or display-only. Preserve failed aggregate evidence and installation acceptance gates.
+- Final correction: no resume lock or acknowledgement. Stop runs present at detection once;
+  never block or reinterrupt user-resumed work for that event. The official-logo notice only explains
+  cause/status and closes. Keep cadence, deduplication, fresh sensing, thresholds and zero-quota checks.
+- No app termination, unsupported-version fallback, ad-hoc watcher or other host-process signal.

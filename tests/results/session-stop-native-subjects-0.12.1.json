@@ -1,0 +1,83 @@
+{
+  "original_trial_phase": "failed",
+  "before": {
+    "schema_version": 1,
+    "mode": "capture",
+    "verified": true,
+    "subjects": [
+      {
+        "role": "parent",
+        "tool_free_required": false,
+        "thread_digest": "sha256:88b3269d5a26ebf4cd5800daaa51ff4f6de1f133d01f07f62477ac02e163dd81",
+        "turn_digest": "sha256:ec7978805d24c99feddad85e102fc848d360e600ed0bcfd152a865b55bd5c1a3",
+        "status": "running",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:20:36.228Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      },
+      {
+        "role": "shell",
+        "tool_free_required": false,
+        "thread_digest": "sha256:9ba27c1a8dc20178352c031edd8035d3a8a5e8e42dcb1e9e12a463e333d3f54e",
+        "turn_digest": "sha256:6ceb21393161b0e5b0988f490ddbc18a4ae22346d54132209ff470e430faf549",
+        "status": "running",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:26:49.077Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      },
+      {
+        "role": "reasoning",
+        "tool_free_required": true,
+        "thread_digest": "sha256:63fbd0ffd455b72c8b6ce25c9b24416f851deabede84799891285e66f669b35e",
+        "turn_digest": "sha256:87917b37b119889d6eab66cdd654bd2bf1829f3d4e208ddfd1b52c2e920af2e1",
+        "status": "running",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:26:52.596Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      }
+    ]
+  },
+  "after": {
+    "schema_version": 1,
+    "mode": "verify",
+    "verified": true,
+    "subjects": [
+      {
+        "role": "parent",
+        "tool_free_required": false,
+        "thread_digest": "sha256:88b3269d5a26ebf4cd5800daaa51ff4f6de1f133d01f07f62477ac02e163dd81",
+        "turn_digest": "sha256:ec7978805d24c99feddad85e102fc848d360e600ed0bcfd152a865b55bd5c1a3",
+        "status": "interrupted",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:30:50.306Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      },
+      {
+        "role": "shell",
+        "tool_free_required": false,
+        "thread_digest": "sha256:9ba27c1a8dc20178352c031edd8035d3a8a5e8e42dcb1e9e12a463e333d3f54e",
+        "turn_digest": "sha256:6ceb21393161b0e5b0988f490ddbc18a4ae22346d54132209ff470e430faf549",
+        "status": "interrupted",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:30:50.305Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      },
+      {
+        "role": "reasoning",
+        "tool_free_required": true,
+        "thread_digest": "sha256:63fbd0ffd455b72c8b6ce25c9b24416f851deabede84799891285e66f669b35e",
+        "turn_digest": "sha256:87917b37b119889d6eab66cdd654bd2bf1829f3d4e208ddfd1b52c2e920af2e1",
+        "status": "interrupted",
+        "same_turn": true,
+        "native_marker_at": "2026-10-17T19:30:50.283Z",
+        "tool_free_after_capture": true,
+        "verified": true
+      }
+    ]
+  }
+}
