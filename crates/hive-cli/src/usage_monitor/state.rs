@@ -63,6 +63,8 @@ pub(super) struct MonitorState {
     #[serde(default)]
     pub sensor_outage_stopped_at: Option<u64>,
     #[serde(default)]
+    pub last_reset_dispatched_at: Option<u64>,
+    #[serde(default)]
     pub observation_count: u64,
     #[serde(default)]
     pub observation_watch_started_at: Option<u64>,
@@ -369,6 +371,37 @@ impl MonitorState {
         Some(incident.digest.clone())
     }
 
+    pub fn reset_already_dispatched(
+        &self,
+        current: &[UsageSnapshot],
+        previous: &[UsageSnapshot],
+    ) -> bool {
+        let Some(at) = self
+            .last_reset_dispatched_at
+            .and_then(|at| i64::try_from(at).ok())
+        else {
+            return false;
+        };
+        !current.is_empty()
+            && current.iter().all(|fresh| {
+                let Some(old) = previous.iter().find(|old| same_window(fresh, old)) else {
+                    return false;
+                };
+                self.baseline.iter().any(|observed| {
+                    same_window(fresh, observed)
+                        && old.measured_at_unix_seconds <= at
+                        && observed.measured_at_unix_seconds >= at
+                        && fresh.measured_at_unix_seconds >= observed.measured_at_unix_seconds
+                        && fresh
+                            .resets_at_unix_seconds
+                            .abs_diff(observed.resets_at_unix_seconds)
+                            <= 2
+                        && (0.0..=100.0).contains(&observed.remaining_percent)
+                        && fresh.remaining_percent <= observed.remaining_percent
+                })
+            })
+    }
+
     pub fn migrate(&mut self) -> Result<(), AdapterError> {
         match self.schema_version {
             1 => {
@@ -376,6 +409,9 @@ impl MonitorState {
                 if let Some(incident) = &mut self.incident {
                     incident.stop_dispatched_at = Some(incident.detected_at);
                     incident.stop_finished_at = Some(incident.detected_at);
+                    if incident.reason == "usage-reset" {
+                        self.last_reset_dispatched_at = Some(incident.detected_at);
+                    }
                     self.sensor_outage_stopped_at =
                         (incident.reason == "sensor-unresponsive").then_some(incident.detected_at);
                 }
@@ -491,6 +527,19 @@ mod tests {
         s.observe(&sample(99.0, 145, 300), 145).unwrap();
         assert_ne!(s.incident.as_ref().unwrap().digest, digest);
         assert!(s.incident.as_ref().unwrap().stop_dispatched_at.is_none());
+    }
+    #[test]
+    fn a_handled_reset_does_not_stop_the_first_resumed_preflight_again() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(1.0, 100, 200), 100).unwrap();
+        state.observe(&sample(99.0, 115, 300), 115).unwrap();
+        state.last_reset_dispatched_at = Some(115);
+        assert!(state.reset_already_dispatched(&sample(98.0, 130, 300), &sample(1.0, 100, 200)));
+        assert!(!state.reset_already_dispatched(&sample(99.5, 130, 300), &sample(1.0, 100, 200)));
+        assert!(!state.reset_already_dispatched(&sample(98.0, 130, 400), &sample(1.0, 100, 200)));
+        assert!(!state.reset_already_dispatched(&sample(98.0, 145, 300), &sample(97.0, 130, 300)));
+        state.last_reset_dispatched_at = None;
+        assert!(!state.reset_already_dispatched(&sample(98.0, 130, 300), &sample(1.0, 100, 200)));
     }
     #[test]
     fn rollover_detects_reset_even_when_new_quota_already_spent() {

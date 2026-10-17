@@ -140,6 +140,20 @@ fn with_state<T>(
     Ok(result)
 }
 
+/// Deduplicate an observed refill; this never grants permission or blocks a new request.
+pub(crate) fn reset_already_dispatched(
+    root: &PinnedTarget,
+    current: &[UsageSnapshot],
+    previous: &[UsageSnapshot],
+) -> bool {
+    load::<MonitorState>(root, STATE)
+        .ok()
+        .flatten()
+        .is_some_and(|state| {
+            state.schema_version == 2 && state.reset_already_dispatched(current, previous)
+        })
+}
+
 pub(crate) fn run(args: &[String]) -> ExitCode {
     if args.is_empty() || args == ["--help"] {
         print!("{HELP}");
@@ -582,6 +596,9 @@ fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, Adapter
             return Ok(None);
         }
         current.stop_dispatched_at = Some(now());
+        if current.reason == "usage-reset" {
+            s.last_reset_dispatched_at = Some(current.detected_at);
+        }
         let notify = current.notification == "pending";
         if notify {
             current.notification = "requested".into();

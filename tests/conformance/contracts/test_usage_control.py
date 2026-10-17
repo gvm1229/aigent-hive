@@ -1225,6 +1225,28 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(limited_again.returncode, 3)
         self.assertEqual(limited_result["code"], "hive.usage-limited")
 
+    def test_first_resume_does_not_repeat_a_reset_already_handled_by_the_monitor(self) -> None:
+        arguments = ("usage", "enforce", "--target", str(self.consumer), "--session-id", "handled-reset", "--process-id", "902")
+        first, result = self.invoke(*arguments, sensor_case="allow")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        marker_path = self.consumer / result["changed_paths"][0]
+        before_reset = marker_path.read_bytes()
+        refill, result = self.invoke(*arguments, sensor_case="remaining-increase")
+        self.assertEqual(refill.returncode, 3, refill.stderr)
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        monitor = self.consumer / ".hive/runtime/usage-monitor/state.json"
+        monitor.parent.mkdir(parents=True, exist_ok=True)
+        monitor.write_text(json.dumps({"schema_version": 2, "generation": 1,
+            "baseline": marker["snapshots"], "last_reset_dispatched_at": marker["measured_at"],
+            "last_success": marker["measured_at"], "heartbeat": marker["measured_at"], "incident": None}), encoding="utf-8")
+        marker_path.write_bytes(before_reset)  # A different observer still has the old baseline.
+        resumed, result = self.invoke(*arguments, sensor_case="remaining-increase")
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(result["code"], "hive.usage-allowed")
+        limited, result = self.invoke(*arguments, sensor_case="threshold")
+        self.assertEqual(limited.returncode, 3, limited.stderr)
+        self.assertEqual(result["code"], "hive.usage-limited")
+
     def test_reset_only_opt_out_preserves_threshold_and_is_bound_to_session_process(self) -> None:
         binding = ("--target", str(self.consumer), "--session-id", "reset-only",
                    "--process-id", "902")

@@ -1747,6 +1747,11 @@ fn observe_usage(
         && config.quota_reset_guard_enabled
         && decision.is_none()
         && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
+        && !crate::usage_monitor::reset_already_dispatched(
+            target,
+            &core_snapshots,
+            previous_snapshots,
+        )
     {
         decision = Some("usage-reset");
     }
