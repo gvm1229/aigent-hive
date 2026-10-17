@@ -75,7 +75,7 @@ try {
  & 'HELPER' -Request $request -AcceptanceResult $result
  throw 'Conditional installation gate was bypassed'
 } catch {
- if($_.Exception.Message -notmatch 'App-stop acceptance'){throw}
+ if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
  @{rejected=$true} | ConvertTo-Json -Compress
 }
 """.replace("'HELPER'", "'" + helper + "'")
@@ -94,6 +94,23 @@ $body='[ "$1" = "--sandbox" ] || exit 8' + "`n" + '[ "$2" = "--state-dir" ] || e
 if($LASTEXITCODE -ne 0){throw 'Legacy PowerShell path forwarding failed'}
 """.replace("'WRAPPER'","'"+wrapper+"'")
         self.assertTrue(self.powershell(source)["passed"])
+
+    def test_legacy_partial_pass_cannot_authorize_current_installation(self):
+        helper = str(ROOT / "scripts/complete-usage-monitor-install.ps1").replace("'", "''")
+        source = r"""
+$ErrorActionPreference='Stop'
+$request=Join-Path $PSScriptRoot 'request.json';$result=Join-Path $PSScriptRoot 'result.json'
+[IO.File]::WriteAllText($request,'{"product_version":"0.12.1","install_after_pass":true,"always_on":true,"binary_sha256":"fixture"}')
+[IO.File]::WriteAllText($result,'{"phase":"passed-local-session-interruption","incident":{"confirmed_stop":{"targeted_turns":1}},"app_preserved":true,"stop_reason_visible":true,"fixture_task_removed":true}')
+try {
+ & 'HELPER' -Request $request -AcceptanceResult $result
+ throw 'Legacy partial acceptance authorized deployment'
+} catch {
+ if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
+ @{legacy_partial_rejected=$true}|ConvertTo-Json -Compress
+}
+""".replace("'HELPER'", "'" + helper + "'")
+        self.assertTrue(self.powershell(source)["legacy_partial_rejected"])
 
     def desktop_functions(self) -> str:
         path=ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1"

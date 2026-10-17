@@ -1,4 +1,4 @@
-# Nonshipping, explicitly approved local deployment after actual app-stop acceptance.
+﻿# Nonshipping, explicitly approved local deployment after actual session-stop acceptance.
 param([Parameter(Mandatory=$true)][string]$Request,[Parameter(Mandatory=$true)][string]$AcceptanceResult)
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
@@ -9,7 +9,13 @@ $approval=[IO.File]::ReadAllText($Request) | ConvertFrom-Json
 $acceptance=[IO.File]::ReadAllText($AcceptanceResult) | ConvertFrom-Json
 if ($approval.product_version -ne '0.12.1' -or -not $approval.install_after_pass -or -not $approval.always_on) { throw 'Missing exact conditional installation authority' }
 if ($acceptance.phase -ne 'passed-local-session-interruption' -or -not $acceptance.incident.confirmed_stop -or
-    $acceptance.incident.confirmed_stop.targeted_turns -lt 1 -or -not $acceptance.app_preserved -or -not $acceptance.stop_reason_visible -or -not $acceptance.fixture_task_removed) { throw 'App-stop acceptance and fixture cleanup must pass before installation' }
+    $acceptance.incident.confirmed_stop.targeted_turns -lt 1 -or -not $acceptance.app_preserved -or -not $acceptance.stop_reason_visible -or -not $acceptance.fixture_task_removed -or
+    -not $acceptance.subjects_interrupted.verified -or @($acceptance.subjects_interrupted.subjects).Count -lt 3 -or
+    @($acceptance.subjects_interrupted.subjects | Where-Object tool_free_required -eq $true).Count -lt 1 -or
+    -not $acceptance.no_automatic_resume -or -not $acceptance.acknowledgement_does_not_resume -or
+    -not $acceptance.sensor_gap.reason_visible -or $acceptance.sensor_gap.gap_seconds -lt 60 -or $acceptance.sensor_gap.gap_seconds -gt 70 -or
+    -not $acceptance.sensor_gap_acknowledgement.acknowledged -or $acceptance.desktop_version -ne '26.1013.4894.0' -or
+    $acceptance.binary_sha256 -ne $approval.binary_sha256) { throw 'Session-stop acceptance and fixture cleanup must pass before installation' }
 $source=[IO.Path]::GetFullPath($approval.source_root).TrimEnd('\')
 $userRoot=[IO.Path]::GetFullPath($approval.user_root).TrimEnd('\')
 $binary=[IO.Path]::GetFullPath($approval.binary)
@@ -53,6 +59,7 @@ function Run-Hive([string[]]$arguments) {
     return ($raw | ConvertFrom-Json)
 }
 $result=@{schema_version=1;phase='started';product_version='0.12.1';package_identity='0.12.1-dev';installed_to_real_user_root=$true;started_at=[DateTime]::UtcNow.ToString('o')}
+$activated=$false
 function Record { [IO.File]::WriteAllText($report,($result|ConvertTo-Json -Depth 12),$utf8) }
 try {
     Record
@@ -77,6 +84,7 @@ try {
         if($null -eq $previousDevBinary){Remove-Item Env:AIGENT_HIVE_DEV_BINARY -ErrorAction SilentlyContinue}else{$env:AIGENT_HIVE_DEV_BINARY=$previousDevBinary}
     }
     if((Hash-File $native) -ne $approval.binary_sha256){throw 'Activated native binary differs from accepted binary'}
+    $activated=$true
     $result.after_version=(& $native --version | Out-String).Trim()
     if($result.after_version -notmatch '^AIgent Hive v0\.12\.1-dev '){throw 'Developer product identity differs'}
     $result.phase='installing-user-projection';Record
@@ -116,7 +124,17 @@ try {
         $null=$notice.Popup('시험용 신호로 작업 중단과 Codex 앱 유지를 확인했습니다. 0.12.1 로컬 설치와 상시 감시 등록도 완료했습니다. 작업은 자동으로 재개하지 않습니다.',10,'Aigent Hive',64)
     } catch { } # The persisted receipt remains authoritative if desktop notifications are unavailable.
 } catch {
-    $result.error=$_.Exception.Message;$result.phase='failed';$result.completed_at=[DateTime]::UtcNow.ToString('o');Record
+    $result.error=$_.Exception.Message;$result.phase='failed'
+    if($activated) {
+        try {
+            $null=& $binary usage monitor disable --user-root $userRoot --output json
+            if($LASTEXITCODE -ne 0){throw 'Owned monitor rollback failed'}
+            & $approval.git_bash --noprofile --norc (Join-Path $source 'scripts\invoke-dev-install.sh') rollback (Split-Path $native) (Join-Path $source 'scripts\dev-install.sh') (Join-Path $userRoot '.hive\dev-install') $approval.python_directory
+            if($LASTEXITCODE -ne 0 -or (Hash-File $native) -ne $approval.native_sha256){throw 'Managed native rollback did not restore the original binary'}
+            $result.native_rollback_verified=$true
+        } catch {$result.rollback_error=$_.Exception.Message}
+    }
+    $result.completed_at=[DateTime]::UtcNow.ToString('o');Record
     try {
         $notice=New-Object -ComObject WScript.Shell
         $null=$notice.Popup(('작업 중단 검증 뒤 설치를 완료하지 못했습니다. 결과 확인: '+$report),10,'Aigent Hive',48)
