@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 class QualificationEvidence(unittest.TestCase):
     def evaluate(self, modification: str = "") -> bool:
         helper = str(ROOT / "scripts/complete-usage-monitor-install.ps1").replace("'", "''")
-        report = str(ROOT / "tests/results/session-stop-component-qualification-0.12.1.json").replace("'", "''")
+        report = str(ROOT / "tests/results/session-stop-one-shot-qualification-0.12.1.json").replace("'", "''")
         source = r"""
 $ErrorActionPreference='Stop'
 $tokens=$null;$errors=$null
