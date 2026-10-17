@@ -99,6 +99,13 @@ current catalog.
 | [`0.10.1`](releases/0.10.1.md) | 일반 harness migration·사용량 기준 즉시 재평가 |
 | [`0.10.3`](releases/0.10.3.md) | 전역 `hive update` 수렴·새 질문 대기와 자동 재개·지침 품질 개선 |
 
+## 세션 중단 0.12.1 관련 문서
+
+- [0.12.1 출시 노트](releases/0.12.1.md)·[승인한 구독 안내](releases/0.12.1.subscriber.ko.md)
+- [과거 재개 차단 재현](research/codex-resume-lock-reference.md)·[초기 중단 조사](research/reset-stop-0.12.1.md)
+- [중단 경계 결정](decisions/reset-stop-boundary.md)·[안내 창 검증 계획](plans/validation/usage-stop-notice-0.12.1.md)
+- [이전 0.11.1 출시 실행](plans/0.11.1-stable-release.md)
+
 ## Research
 
 - [0.11.0 공개 HTML 안내 갱신](plans/0.11.0-public-html-refresh.md): 안정판 기능·설치 경로 동기화

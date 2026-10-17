@@ -9,7 +9,7 @@ summary: "Qualified host-native usage sensors take priority over the optional Co
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:e71b5c908435cda30208af5119f184e80d84b9a9d44934cec5ae7b64af95eee7"
+  - "repo:crates/hive-cli/src/main.rs#sha256:729c7f4664b1395df0cdeb15c36edc610f59ee200bded3481698b54da6260b1d"
   - "repo:crates/hive-cli/src/usage.rs#sha256:8803080ae2d51f233c0258b2c9896c5c4777ea7176a05afc496f3de185cecf80"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"

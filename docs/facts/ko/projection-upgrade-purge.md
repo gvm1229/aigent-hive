@@ -15,7 +15,7 @@ sources:
   - "repo:crates/hive-update/src/merge.rs#sha256:a8eeefc6b27b42c7eb0c0795f4ca91b25401cbdfdd9f00064a629138a50e6283"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
-  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:461be3769de1d76f7dee1aefc4f2cae3b360a339f40b41ef13cff404f571b2dd"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5a20040c568570b7501cf6715838becb35f24adea960c4f63bd6e245b358ef13"
 links: [consumer-session-coordination, hive-preserving-uninstall]
 reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
 status: active

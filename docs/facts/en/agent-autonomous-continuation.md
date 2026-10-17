@@ -14,10 +14,10 @@ sources:
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2994d811846e136cc1ac82a8d6044ebd8eed238f0ef2f4470a33f248a6ea5ee2"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:9a2ca4c65c5b7880464c7804d224cad91de28493eaf189aa63b1ed439806dde1"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
-  - "repo:crates/hive-render/src/lib.rs#sha256:62174ca2ea76cf5c379e1638e3ef2c33cc332f3ae312f03a983711f9abe1a1d5"
+  - "repo:crates/hive-render/src/lib.rs#sha256:68ac8bfda0392ceb10346da8c137c93a946a81490f2d42c8fa071aed2c30ce41"
   - "repo:harness/directives/00-project-harness.md#sha256:6e45cc7d0b2c675107aa57003f883c0429ca16de40413e90c12c067f20d20f92"
   - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
-  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:461be3769de1d76f7dee1aefc4f2cae3b360a339f40b41ef13cff404f571b2dd"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5a20040c568570b7501cf6715838becb35f24adea960c4f63bd6e245b358ef13"
 links: [automated-user-handoff, source-development, steering-preservation]
 reviewed_revision: "git:29e5241e0983e13d222703731533b43409327e6a"
 status: active
