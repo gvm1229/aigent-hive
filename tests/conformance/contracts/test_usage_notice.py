@@ -54,6 +54,15 @@ CASE
         self.assertIn("60초", view["Explanation"])
         self.assertNotIn("초기화", view["Reason"])
 
+    def test_official_logo_is_shared_by_the_title_and_body(self):
+        path = str(ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png").replace("'", "''")
+        result = self.view("$logo=[Convert]::ToBase64String([IO.File]::ReadAllBytes('" + path + "'));"
+                           "$window=New-NoticeWindow $context 'C:\\Users\\fixture' $logo;"
+                           "@{same=[object]::ReferenceEquals($window.Icon,$window.FindName('Logo').Source);"
+                           "width=$window.Icon.PixelWidth;height=$window.Icon.PixelHeight}|ConvertTo-Json -Compress")
+        self.assertTrue(result["same"])
+        self.assertEqual((result["width"], result["height"]), (512, 512))
+
     def test_partial_confirmation_is_not_success(self):
         view = self.view("$state.incident.stop_confirmed=$false;$state.incident.stop_error='session-scope-unverified';$state.incident.confirmed_turns=3;$state.unknown_sessions=1;Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
         self.assertEqual(view["Tone"], "warning")

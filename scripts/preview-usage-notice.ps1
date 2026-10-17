@@ -41,7 +41,8 @@ function Preview-Hash([string]$path) {
 }
 $before=Preview-Hash $statePath
 $context=@{incident=$incident.digest;reason=$incident.reason;detected_at=$incident.detected_at;is_test=$false;preview=$true}
-$window=New-NoticeWindow $context $fixture
+$logo=[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $source 'harness/plugins/aigent-hive/assets/hive-logo-plugin.png')))
+$window=New-NoticeWindow $context $fixture $logo
 $window.Width=$Width
 if($ExpandDetails){
     $window.FindName('Details').Parent.Parent.IsExpanded=$true

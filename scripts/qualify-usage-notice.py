@@ -53,6 +53,7 @@ def main() -> int:
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                  creationflags=subprocess.CREATE_NO_WINDOW)
         request = {"operation": "notify", "preview": True, "user_root": str(fixture),
+                   "logo_png_base64": base64.b64encode((ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png").read_bytes()).decode(),
                    "incident": incident["digest"], "reason": incident["reason"],
                    "message": "Aigent Hive 표시 전용 미리보기. 실제 작업 중단 없음."}
         child.stdin.write(json.dumps(request).encode())

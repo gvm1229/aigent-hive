@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 pub(super) const SCRIPT: &str = include_str!("windows.ps1");
 const NOTICE: &str = include_str!("notice.ps1");
+const LOGO: &[u8] = include_bytes!("../../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
 
 pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     if !cfg!(windows) {
@@ -123,7 +124,8 @@ pub(super) fn notify(
     thread::spawn(move || {
         let delivered = (|| {
             let mut child = command(NOTICE).ok()?.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
-            let request = json!({"operation":"notify","message":message,"reason":reason,"user_root":root,"incident":incident});
+            let request = json!({"operation":"notify","message":message,"reason":reason,"user_root":root,"incident":incident,
+                "logo_png_base64":base64::engine::general_purpose::STANDARD.encode(LOGO)});
             child.stdin.take()?.write_all(&serde_json::to_vec(&request).ok()?).ok()?;
             let stdout = child.stdout.take()?;
             let (send, ready) = mpsc::channel();

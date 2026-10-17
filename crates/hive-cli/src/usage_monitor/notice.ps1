@@ -101,7 +101,7 @@ function Update-Notice($ui) {
     }
 }
 
-function New-NoticeWindow($context,[string]$root) {
+function New-NoticeWindow($context,[string]$root,[string]$logo) {
     Add-Type -AssemblyName PresentationFramework
     Add-Type -AssemblyName PresentationCore
     Add-Type -AssemblyName WindowsBase
@@ -110,10 +110,6 @@ function New-NoticeWindow($context,[string]$root) {
  Title="Aigent Hive — 사용량 보호 상태" Width="560" MinWidth="460" MinHeight="420" SizeToContent="Height"
  WindowStartupLocation="CenterScreen" ResizeMode="CanResize" Background="#FBFCFA" Foreground="#202B27"
  FontFamily="Malgun Gothic" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
- <Window.Icon><DrawingImage><DrawingImage.Drawing><DrawingGroup>
-  <GeometryDrawing Brush="#205D4B" Geometry="M16,1 L29,6 29,17 C29,25 22,29 16,32 C10,29 3,25 3,17 L3,6 Z"/>
-  <GeometryDrawing Brush="#FFFFFF" Geometry="M11,10 L14,10 14,22 11,22 Z M18,10 L21,10 21,22 18,22 Z"/>
- </DrawingGroup></DrawingImage.Drawing></DrawingImage></Window.Icon>
  <Window.Resources>
   <Style x:Key="CloseAction" TargetType="Button">
    <Setter Property="Background" Value="#205D4B"/><Setter Property="Foreground" Value="White"/>
@@ -150,9 +146,7 @@ function New-NoticeWindow($context,[string]$root) {
     </Border>
     <Grid>
      <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-     <Border Width="44" Height="44" CornerRadius="12" Background="#E6EFE9" VerticalAlignment="Top">
-      <Path Data="M7,4 L21,4 21,15 C21,21 15,24 14,24 C13,24 7,21 7,15 Z M11,9 L11,16 M17,9 L17,16" Stroke="#205D4B" StrokeThickness="1.8" StrokeLineJoin="Round" Stretch="Uniform" Width="24" Height="26"/>
-     </Border>
+     <Image x:Name="Logo" Width="44" Height="44" VerticalAlignment="Top" Stretch="Uniform" AutomationProperties.Name="Aigent Hive 공식 로고"/>
      <TextBlock x:Name="Title" Grid.Column="2" FontSize="21" FontWeight="Bold" LineHeight="31" TextWrapping="Wrap"/>
     </Grid>
     <TextBlock x:Name="Explanation" Margin="0,18,0,22" Foreground="#4E5C55" FontSize="14" LineHeight="24" TextWrapping="Wrap"/>
@@ -198,6 +192,13 @@ function New-NoticeWindow($context,[string]$root) {
 </Window>
 '@
     $window=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($xaml))
+    $stream=[IO.MemoryStream]::new([Convert]::FromBase64String($logo))
+    try {
+        $image=[Windows.Media.Imaging.BitmapImage]::new();$image.BeginInit()
+        $image.CacheOption=[Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $image.StreamSource=$stream;$image.EndInit();$image.Freeze()
+    } finally {$stream.Dispose()}
+    $window.Icon=$image;$window.FindName('Logo').Source=$image
     $window.MaxHeight=[Math]::Max(420,[Windows.SystemParameters]::WorkArea.Height-48)
     $controls=@{}
     foreach($name in @('Title','Explanation','Reason','Status','StatusDetail','App','Automatic','Next','When','Banner','BannerBox','StatusBox','Details','Footer','Close','Copy','CopyArea','CopyFeedback')){$controls[$name]=$window.FindName($name)}
@@ -230,7 +231,7 @@ function New-NoticeWindow($context,[string]$root) {
 try {
     $context=@{incident=[string]$request.incident;reason=[string]$request.reason;detected_at=0L;is_test=$false;preview=($request.preview -eq $true)}
     try {$context.is_test=(Read-NoticeState (Join-Path ([string]$request.user_root) '.hive/install/codex.json')).acceptance_fixture -eq $true}catch{}
-    $window=New-NoticeWindow $context ([string]$request.user_root)
+    $window=New-NoticeWindow $context ([string]$request.user_root) ([string]$request.logo_png_base64)
     $null=$window.ShowDialog()
 } catch {
     Add-Type -AssemblyName System.Windows.Forms
