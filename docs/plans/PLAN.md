@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 412
+> Revision: 413
 > 기준일: 2026-10-18
 > Product version: `0.13.0`
 > 공개 Stable: `0.12.0`
-> 현재 단계: 세션 중단·알림 전용 0.13.0 공개 시험·정식 출시 준비
-> 다음 공개 시험: `0.13.0-test.1`
+> 현재 단계: 공개 시험 수용 완료·승인된0.13.0 정식 출시 실행
+> 수용한 공개 시험: `0.13.0-test.1`
 
 ## 현재 요청과 경계
 
@@ -17,14 +17,16 @@
 - [결정](../decisions/steering-preservation.md)·[0.12.0 완료 계획](../archive/plans/0.12.0-complete.md)
 - [이전 미완료 9개](backlog/0.12.0-deferred-host-acceptance.md): 기존 후속 이관 유지, 이번 범위 편입 없음
 
+- 아래 완료율은 구현·시험 수용 범위. 남은 REL121-004·005는 [정식 출시 실행](0.13.0-stable-release.md)에서 추적, 게시 완료 전 단계
+
 ## Completion index
 
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 초기화 뒤 실행 중단 | 3 | 0 | 100.0% |
-| 출시 | 2 | 3 | 40.0% |
-| **현재 범위 합계** | **5** | **3** | **62.5%** |
+| 출시 | 3 | 0 | 100.0% |
+| **현재 범위 합계** | **6** | **0** | **100.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -32,7 +34,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [reset-stop-0.12.1.md](active/reset-stop-0.12.1.md) | `RST121-001–003` | 초기화 뒤 실행 중단 |
-| [release-0.13.0.md](active/release-0.13.0.md) | `REL121-001–005` | 출시 |
+| [release-0.13.0.md](active/release-0.13.0.md) | `REL121-001–003` | 출시 |
 
 ## 초기화 뒤 중단 조사·계획
 

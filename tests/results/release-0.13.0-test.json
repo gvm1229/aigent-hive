@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "phase": "accepted-public-test",
+  "product_version": "0.13.0",
+  "package_version": "0.13.0-test.1",
+  "source_commit": "2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe",
+  "product_tree_sha256": "sha256:f1c14a3998bc456ead2a201274a357255533dfa9d457ddc9ea090c016f9d4c3d",
+  "ci_run_id": 39075370983,
+  "candidate_run_id": 39076283927,
+  "initial_publication_run_id": 39077706691,
+  "initial_publication_result": "failed-registry-tag-observation",
+  "publication_run_id": 39078104599,
+  "acceptance_run_id": 39078351729,
+  "public_registry_verification": {
+    "schema_version": 1,
+    "product_version": "0.13.0",
+    "package_version": "0.13.0-test.1",
+    "phase": "passed-independent-public-verification",
+    "channel": "test",
+    "source_commit": "2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe",
+    "release_url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.13.0-test.1",
+    "github_prerelease": true,
+    "github_asset_count": 25,
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-svKffdFIENJbMWHu/ZWaO6dAiG8waRebdKEMPUs33KK4xhSZrGrpNK+qjDgn9tSdiyzVN/XvjABItA/nGi1aWg==",
+        "archive_sha256": "cb73ef0898ec8d6ce9a57cea82e13eecf75142e45da563ccab3a7c23b5263b1c",
+        "github_asset_sha256": "sha256:cb73ef0898ec8d6ce9a57cea82e13eecf75142e45da563ccab3a7c23b5263b1c",
+        "length": 17181,
+        "asset": "aigent-hive-0.13.0-test.1.tgz"
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-tmqL1LdNHqfC0IVtAFgEDlU4N4Em7iMXlpKx7yMlztntH0awess3GmsxQn73SAID+j61GqB//VUD2u77TneCww==",
+        "archive_sha256": "1f2ed08104b3596d6970ea0a67ff7a72b184b25ab443149b0a08c850ea98d051",
+        "github_asset_sha256": "sha256:1f2ed08104b3596d6970ea0a67ff7a72b184b25ab443149b0a08c850ea98d051",
+        "length": 10547967,
+        "asset": "aigent-hive-darwin-arm64-0.13.0-test.1.tgz"
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-329jRHsCVpidimVBAtcivH2p6d89toyzclt/fhXk7M4t6FLi4nDqCN2SgAetfYB12MpjkOKR6Azd7ImEh82wnA==",
+        "archive_sha256": "8b4b0512a996de1253e30ae1149aef27ef3e351e371abb657ba6ea9888f2795c",
+        "github_asset_sha256": "sha256:8b4b0512a996de1253e30ae1149aef27ef3e351e371abb657ba6ea9888f2795c",
+        "length": 11306753,
+        "asset": "aigent-hive-darwin-x64-0.13.0-test.1.tgz"
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-58F/hele1lYtt3vzw14sl66naJBvLkRDskTsNPbtKDVVIjo5MEFEU+uPyk5hiluXLuQWsvuc/xLtkwE8BG8ehA==",
+        "archive_sha256": "92e90581b21ef5804371369000a486a07544e574b9c3f2f41ccd95e55cf70faa",
+        "github_asset_sha256": "sha256:92e90581b21ef5804371369000a486a07544e574b9c3f2f41ccd95e55cf70faa",
+        "length": 11435499,
+        "asset": "aigent-hive-linux-arm64-0.13.0-test.1.tgz"
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-Z3NDhHUIfG9qpkBJxHspBum8j0kfcAeqpr8+0om6Z1IlNtXA5pk2uTqxnChY7A/GuBqu3uq+IMWc/n1pZyvQcA==",
+        "archive_sha256": "ff75462a99a41bb5ef686e176b39fe8c194a92b5bb82e89882c5eb492adc5453",
+        "github_asset_sha256": "sha256:ff75462a99a41bb5ef686e176b39fe8c194a92b5bb82e89882c5eb492adc5453",
+        "length": 11911748,
+        "asset": "aigent-hive-linux-x64-0.13.0-test.1.tgz"
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.0-test.1",
+        "latest": "0.12.0",
+        "test": "0.13.0-test.1",
+        "dist_integrity": "sha512-SDqjtUue4M4C7LhV5rudr5/4+3roxUPh2zf9Z20RPXtIQGqChVRSQQBHvj5QHicvCq5DxXfSu2zK+o9bxwy+2g==",
+        "archive_sha256": "31563bb512392872d66e793974a39fca1eb28a1699e075c2ebf119cc6fcc4a66",
+        "github_asset_sha256": "sha256:31563bb512392872d66e793974a39fca1eb28a1699e075c2ebf119cc6fcc4a66",
+        "length": 10907378,
+        "asset": "aigent-hive-win32-x64-0.13.0-test.1.tgz"
+      }
+    ],
+    "limits": [
+      "Registry versions, tags, asset bytes and source verified; functional acceptance is a separate result."
+    ]
+  },
+  "acceptance_hosts": [
+    {
+      "platform": "win32-x64",
+      "all_workflow_steps": "passed",
+      "binary_version": "AIgent Hive v0.13.0-test #1 \u00b7 developer test build (released 2026-10-18)",
+      "korean_receipt_sha256": "606cb1d2c2130df21fc98c6b94f6fbd4ffd82999d88b0de3ad0b754015b862aa",
+      "vector_onboarding_receipt_sha256": "c2cd7fe3f3db9b12bc6223c53cd8842736e429ebac5336399d61beff4214ec16",
+      "vector_runtime_receipt_sha256": "c3329346e8f424c34d8ffd05563d3d4ece9b23b64af6427039ee74ac91df68f3",
+      "provider_api_calls": 0,
+      "api_keys_read": 0
+    },
+    {
+      "platform": "darwin-arm64",
+      "all_workflow_steps": "passed",
+      "binary_version": "AIgent Hive v0.13.0-test #1 \u00b7 developer test build (released 2026-10-18)",
+      "korean_receipt_sha256": "24ee29c2211ca2ec16935f1ab3c38308f1f6e2a87e2af71b1a049d1b11e28d53",
+      "vector_onboarding_receipt_sha256": "def101e5987ad123c6e9b611a37fced6eaf9398f38844b242bd5fafb1fac8b66",
+      "vector_runtime_receipt_sha256": "d15dc988a26910e165bf9042eba113e4a498f400946171616d47d518b0f9b2d1",
+      "provider_api_calls": 0,
+      "api_keys_read": 0
+    },
+    {
+      "platform": "linux-x64",
+      "all_workflow_steps": "passed",
+      "binary_version": "AIgent Hive v0.13.0-test #1 \u00b7 developer test build (released 2026-10-18)",
+      "korean_receipt_sha256": "24ee29c2211ca2ec16935f1ab3c38308f1f6e2a87e2af71b1a049d1b11e28d53",
+      "vector_onboarding_receipt_sha256": "def101e5987ad123c6e9b611a37fced6eaf9398f38844b242bd5fafb1fac8b66",
+      "vector_runtime_receipt_sha256": "66421ca10974da3986f8ef9f547f9057a994d26d1cefe728942f1da01fbb7225",
+      "provider_api_calls": 0,
+      "api_keys_read": 0
+    }
+  ],
+  "current_windows_readonly": {
+    "schema_version": 1,
+    "phase": "passed-current-windows-public-readonly",
+    "product_version": "0.13.0",
+    "package_version": "0.13.0-test.1",
+    "source_commit": "2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe",
+    "host_os": "Windows 11 x64",
+    "desktop_version": "26.1013.4894.0",
+    "public_binary_sha256": "d0e27ead03f060961a732d74944aa6484a3b729d88f2f0f2130a082c091756fb",
+    "isolated_npm_install": true,
+    "public_archive_binary_identical": true,
+    "version_label": "AIgent Hive v0.13.0-test #1 \u00b7 developer test build (released 2026-10-18)",
+    "read_only_checks": {
+      "native": {
+        "code": "hive.usage-native-available",
+        "elapsed_ms": 906,
+        "changed_paths": []
+      },
+      "status": {
+        "code": "hive.usage-monitor-complete",
+        "elapsed_ms": 16,
+        "changed_paths": [],
+        "existing_monitor_verified": true
+      },
+      "preview": {
+        "code": "hive.usage-monitor-complete",
+        "elapsed_ms": 31,
+        "changed_paths": []
+      }
+    },
+    "monitor_opt_in_default_inactive": true,
+    "existing_monitor_config_unchanged": true,
+    "original_codex_app_preserved": true,
+    "embedded_payloads": {
+      "crates/hive-cli/src/usage_monitor/desktop.ps1": true,
+      "crates/hive-cli/src/usage_monitor/notice.ps1": true,
+      "crates/hive-cli/src/usage_monitor/windows.ps1": true,
+      "official_logo": true
+    },
+    "new_session_stop_requests": 0,
+    "real_user_installation": false,
+    "limits": [
+      "Read-only current-app sensing and monitor inspection; no new integrated live-stop or notice-display trial.",
+      "Prior native-stop and actual notice evidence is retained separately with unchanged control/notice Git sources."
+    ]
+  },
+  "limits": [
+    "Three-OS package acceptance is distinct from live Codex session interruption support.",
+    "Prior real native-stop and notice display components remain the live evidence; no new integrated 0.13 live stop, provider refill, remote/cloud or other-OS interruption is claimed."
+  ]
+}

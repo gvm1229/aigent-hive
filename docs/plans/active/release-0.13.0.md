@@ -6,13 +6,9 @@
 - [x] [REL121-001] 폐기한 재개 차단의 역사 코드·재현·복구 문서
   - state: complete; evidence: repo:docs/research/codex-resume-lock-reference.md#sha256:1770e8379d94ab3ceae4c08c85e403ede1dba93c521e2ca7c88d3b96017bf3e9
 - [x] [REL121-002] 세션 중단·알림만의 제품 범위와 출시 자료 검증
-  - state: complete; evidence: repo:docs/research/release-0.13.0.md#sha256:2179351916477c5606006a5c08cf69d99e9155a80d5abca87acb69d45adbe5cf
-- [ ] [REL121-003] 공개 0.13.0-test.1 게시·정확 산출물 수용
-  - state: agent-owned; depends: REL121-002; owner: Codex; reason: 공개 후보·게시·독립 수용 대기
-- [ ] [REL121-004] 구독 안내 문구 승인·안정판 문서·보호 main 통합
-  - state: agent-owned; depends: REL121-003; owner: Codex; reason: 문구 승인 요청과 독립 통합 준비 진행
-- [ ] [REL121-005] 0.13.0 안정판 게시·독립 공개 조회·출시 기록
-  - state: agent-owned; depends: REL121-004; owner: Codex; reason: 수용·통합 뒤 승인된 안정판 게시
+  - state: complete; evidence: repo:docs/research/release-0.13.0.md#sha256:fbdd1a5c8e306a8af4e54cc12306d9da35a41ba71ea7493adbc4de424be8f1a2
+- [x] [REL121-003] 공개 0.13.0-test.1 게시·정확 산출물 수용
+  - state: complete; evidence: repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9
 
 ## 목적·승인·제외
 
@@ -54,19 +50,9 @@
 - 기록: 후보·게시·수용 run ID, source SHA, 제품/산출물 지문, OS·실제 실행·미증명 범위를 research/results·accepted registry에 저장
 - 실패: 후보 실패와 게시 성공 구분. 제품·설치·메타데이터·수용 수정이면 다음 허용 시험 번호로 계획 갱신 후 재검증
 
-### REL121-004 — 안정판 입력과 보호 통합
+## 승인된 게시 실행
 
-- 의존: 시험 수용 완료. 정확 구독 안내 승인 뒤 sha256 sidecar·register-stable-summary-approval.py 실행, 승인 전 발송 없음
-- README5개·public-stable-release·CURRENT·PLAN을 수용한 범위에 맞춤. 기존 docs/01-index.md 사용자 변경은 해당 변경과 분리한 부분만 반영
-- develop push·CI, develop→main PR·필수 Protected merge gate의 일반 병합. 보호 우회 없음
-- 완료: 정확 main SHA·CI 성공, 시험 대비 제품 지문 동일, 미완료 구현 0건. 출시 단계 자체의 미래 게시 항목과 구현 결손 구분
-
-### REL121-005 — 안정판 게시와 종료
-
-- main의 Release candidate: product/package0.13.0,stable,date2026-10-18,promoted_test_version·acceptance_run_id 고정
-- 성공 후보로 publication, 승인한 구독 공지 전송 true. 여섯 npm latest0.13.0·GitHub 정식 v0.13.0·소스·지문·시험 태그 유지 독립 확인
-- 기록·Source Wiki·문서 검사·목적별 커밋·원격 반영. 생성 시험 자료는 소유권·보존 정책에 따라 정리, 다른 작업 변경 보존
-- 부분 게시: 기존 후보 지문 대조 복구만, 공개 버전 덮어쓰기 금지. 필수 외부 승인/권한만 해당 단계 대기, 독립 작업 지속
+- REL121-004·005의 순서·담당·현재 상태는 [정식 출시 실행](../0.13.0-stable-release.md)으로 이동. 구현·수용 완료와 게시 완료를 구분, 실행 전 완료 표시 없음
 
 ## 완료 기준
 
