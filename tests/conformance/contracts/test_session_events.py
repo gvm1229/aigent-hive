@@ -52,3 +52,10 @@ class SessionEvents(unittest.TestCase):
     def test_old_or_quoted_abort_does_not_stop_the_current_turn(self):
         state = self.state([self.marker("task_started"), self.marker("turn_aborted", "old"), {"type": "response_item", "payload": {"type": "message", "text": json.dumps(self.marker("turn_aborted"))}}])
         self.assertEqual(state["status"], "running")
+
+    def test_waiting_in_a_tool_cannot_qualify_as_tool_free_reasoning(self):
+        rows=[self.marker("task_started"),{"type":"response_item","payload":{"type":"custom_tool_call","call_id":"pending"}}]
+        subject={"thread":"fixture","tool_free":True}
+        self.assertFalse(EVENTS.evaluate(subject,self.state(rows),True)["verified"])
+        rows.append({"type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"pending"}})
+        self.assertTrue(EVENTS.evaluate(subject,self.state(rows),True)["verified"])

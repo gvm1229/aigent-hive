@@ -32,13 +32,14 @@ def scan_turn(path: Path) -> dict:
     status = "missing"
     tool_calls = 0
     marker_at = None
+    pending = set()
     with path.open("rb") as stream:
         while line := stream.readline(1048576):
             if not line.endswith(b"\n"):
                 while line and not line.endswith(b"\n"):
                     line = stream.readline(1048576)
                 continue
-            if b'"event_msg"' not in line and b'"function_call"' not in line and b'"custom_tool_call"' not in line:
+            if b'"event_msg"' not in line and b'function_call' not in line and b'custom_tool_call' not in line:
                 continue
             try:
                 item = json.loads(line)
@@ -52,6 +53,7 @@ def scan_turn(path: Path) -> dict:
                     status = "running"
                     tool_calls = 0
                     marker_at = item.get("timestamp")
+                    pending.clear()
                 elif payload.get("turn_id") == turn:
                     if kind == "turn_aborted":
                         status = "interrupted"
@@ -61,7 +63,11 @@ def scan_turn(path: Path) -> dict:
                         marker_at = item.get("timestamp")
             elif item.get("type") == "response_item" and kind in ("function_call", "custom_tool_call") and turn:
                 tool_calls += 1
-    return {"turn_id": turn, "status": status, "tool_calls": tool_calls, "marker_at": marker_at}
+                pending.add(payload.get("call_id"))
+            elif item.get("type") == "response_item" and kind in ("function_call_output", "custom_tool_call_output"):
+                pending.discard(payload.get("call_id"))
+    return {"turn_id": turn, "status": status, "tool_calls": tool_calls,
+            "pending_tools": len(pending), "marker_at": marker_at}
 
 
 def subject_state(thread: str) -> dict:
@@ -85,15 +91,20 @@ def subject_state(thread: str) -> dict:
 
 def evaluate(subject: dict, current: dict, capture: bool) -> dict:
     same_turn = capture or current["turn_id"] == subject["turn_id"]
-    tool_free = not subject.get("tool_free") or current["tool_calls"] == subject.get("tool_calls", 0)
+    tool_free = not subject.get("tool_free") or (
+        current.get("pending_tools", 0) == 0 if capture
+        else current["tool_calls"] == subject.get("tool_calls", 0)
+    )
     expected = "running" if capture else "interrupted"
     return {
+        "role": subject.get("role", "unspecified"),
+        "tool_free_required": bool(subject.get("tool_free")),
         "thread_digest": digest(subject["thread"]),
         "turn_digest": digest(current["turn_id"] or "missing"),
         "status": current["status"], "same_turn": same_turn,
         "native_marker_at": current.get("marker_at"),
         "tool_free_after_capture": tool_free,
-        "verified": current["status"] == expected and same_turn and (capture or tool_free),
+        "verified": current["status"] == expected and same_turn and tool_free,
     }
 
 
@@ -110,6 +121,11 @@ def main() -> int:
     subjects = json.loads(source.read_text(encoding="utf-8-sig"))["subjects"]
     if not 2 <= len(subjects) <= 8 or len({s["thread"] for s in subjects}) != len(subjects):
         parser.error("Expected two to eight distinct acceptance subjects")
+    roles={s.get("role") for s in subjects}
+    if not {"parent","reasoning","shell"}.issubset(roles) or not roles.issubset({"parent","reasoning","shell","subagent"}):
+        parser.error("Exact parent, tool-free reasoning and shell roles required")
+    if any(s.get("role")=="reasoning" and s.get("tool_free") is not True for s in subjects):
+        parser.error("Reasoning subject must prove tool-free execution")
     results = []
     bindings = []
     capture = args.mode == "capture"
