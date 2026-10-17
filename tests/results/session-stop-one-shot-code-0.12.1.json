@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "previous_binary_sha256": "dc26bf4ad24105bcbb2f4b55c7cb1ad121abdbe3e0e2f8834034b7edffbc5fc3",
+  "candidate_binary_sha256": "2741f1e112ef3cdee6a60f3c89fac60eeb5566d79e0421df04a48707034ce3b3",
+  "native_stop_primitive_unchanged": true,
+  "identity_unchanged": true,
+  "candidate_scripts_and_logo_embedded": true,
+  "native_request_sha256": "7463ae0bf513b3b8d479935a0b6dd16abb97a99386c12f387c5887c5b494e7b4",
+  "unchanged_functions": {
+    "Request": true,
+    "Track": true,
+    "Follow": true,
+    "Visible-Turns": true,
+    "Snapshot": true,
+    "Confirmed-Target": true
+  },
+  "source_hashes": {
+    "crates/hive-cli/src/usage_monitor.rs": "87860dcbf75abf7e5736342b2710004dfd2ff5d63b53d890f109984e6d8f06d0",
+    "crates/hive-cli/src/usage_monitor/desktop.rs": "849cd9177033050e4cc99cdd5abcbf1dea6e541396ea05f746fa3b3462968dbd",
+    "crates/hive-cli/src/usage_monitor/state.rs": "536d4739d3bc1daa3f9909f700bcf8f10310d3b870968cd2510886cf8f988641",
+    "crates/hive-cli/src/usage.rs": "8803080ae2d51f233c0258b2c9896c5c4777ea7176a05afc496f3de185cecf80",
+    "crates/hive-cli/src/usage/codex_native.rs": "186e0a0dd88ee16535278073890ce4b901aad773e26b322282c5f696a62230d2",
+    "crates/hive-cli/src/usage_control.rs": "6529696a7fc69e16ecffb3adeaa7cab206d2c24f6dab26b64b0e1bb611158214",
+    "crates/hive-cli/src/usage_monitor/platform.rs": "5983230b82b022ba902329ab2ac2c9db1213ebcfde3a18ba9ab0182a621220e3",
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "4c283db89066f295738ebc39b8da71faed536723e630170c4f67466412a5309f",
+    "crates/hive-cli/src/usage_monitor/windows.ps1": "07dab8014f6c0ae51667b32e98ac33a1861e7ef13f9f3a406e670a865e8868a5",
+    "crates/hive-cli/src/usage_monitor/notice.ps1": "3a403c6ef7d3bc8313dc6be421fb423afdf0e194ab9edd2427282203a9c64b04",
+    "harness/plugins/aigent-hive/assets/hive-logo-plugin.png": "d132e2c654cf3eb5077a57ea178f1714666ce240820b102308929dac1f5d3c93",
+    "harness/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/plugins/aigent-hive/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/plugins/aigent-hive/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.agents/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/template/.agents/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.claude/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/template/.claude/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.hive/config/active-skills.yml.jinja": "c659d95c2934eada3d3eb0a2b8565a2826ffa155ab87d110e79e3921cacc89cc"
+  },
+  "change_scope": [
+    "One request per owner known at detection; no repeat stops or permission gate.",
+    "Bounded five-second confirmation and transport expiry/reconnect suppression.",
+    "Persistent event history and continuous outage deduplication, no acknowledgement.",
+    "Official-logo notification-only window with one close button."
+  ]
+}

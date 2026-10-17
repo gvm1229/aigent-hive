@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "phase": "passed-notification-only-display",
+  "host": "Windows 11 x64",
+  "desktop_version": "26.1013.4894.0",
+  "entrypoint": {
+    "schema_version": 1,
+    "preview_only": true,
+    "session_interruption": false,
+    "monitor_started": false,
+    "host": "Windows Codex",
+    "notice_sha256": "3a403c6ef7d3bc8313dc6be421fb423afdf0e194ab9edd2427282203a9c64b04",
+    "shown_ms": 890,
+    "closed_by_own_button": true,
+    "incident_unchanged": true,
+    "original_codex_app_preserved": true,
+    "phase": "passed-display-only-entrypoint"
+  },
+  "render_cases": [
+    {
+      "case": "reset",
+      "logical_width": 560,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_sha256": "eaf95bbcf4f843ccbdbcad09442fd5ac91a233c10e6fcae10abbd858c7cb01f3"
+    },
+    {
+      "case": "gap",
+      "logical_width": 560,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_sha256": "aa4b13433552665203960f2d859683d07d2e0b333860e8fda95187132ba0c7bf"
+    },
+    {
+      "case": "partial",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_sha256": "72ac815451766a4519e655ed15081349caeb458c0e54b182ae402ddaddde6877"
+    },
+    {
+      "case": "ack",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_sha256": "94b9577bf3a80539e38b067b357734c3548bc2a50b1053a9bbe4f83555f59455"
+    },
+    {
+      "case": "unavailable",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_sha256": "61c2f5c2dcf488f931add5480af3911758c008e4b298c4b7f01b191c875dd3ab"
+    },
+    {
+      "case": "reset",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "escape",
+      "image_sha256": "eaf2aab33e461b4482cca2ef3261df873912055c29d489949fe5421688d41814"
+    }
+  ],
+  "unit_cases": 13,
+  "button_count": 1,
+  "resume_lock": false,
+  "official_logo_sha256": "d132e2c654cf3eb5077a57ea178f1714666ce240820b102308929dac1f5d3c93",
+  "resume_route": "Direct resume or a new message in Codex; no unlock or shell command.",
+  "scope_limits": [
+    "Display and mock tests only; no new live halt.",
+    "Actual 144 DPI; no 96/192 DPI or physical keyboard injection.",
+    "Closing the notice preserves state and the original Codex app."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "phase": "passed-qualified-one-shot",
+  "qualification_method": "live-stop-primitive-plus-one-shot-regression",
+  "desktop_version": "26.1013.4894.0",
+  "product_version": "0.12.1",
+  "binary_sha256": "2741f1e112ef3cdee6a60f3c89fac60eeb5566d79e0421df04a48707034ce3b3",
+  "app_preserved": true,
+  "fixture_task_removed": true,
+  "resume_lock": false,
+  "notice_button_count": 1,
+  "new_live_stop_requests_sent": 0,
+  "original_live_aggregate_passed": false,
+  "readonly_confirmation_count": 4,
+  "source_hashes": {
+    "crates/hive-cli/src/usage_monitor.rs": "87860dcbf75abf7e5736342b2710004dfd2ff5d63b53d890f109984e6d8f06d0",
+    "crates/hive-cli/src/usage_monitor/desktop.rs": "849cd9177033050e4cc99cdd5abcbf1dea6e541396ea05f746fa3b3462968dbd",
+    "crates/hive-cli/src/usage_monitor/state.rs": "536d4739d3bc1daa3f9909f700bcf8f10310d3b870968cd2510886cf8f988641",
+    "crates/hive-cli/src/usage.rs": "8803080ae2d51f233c0258b2c9896c5c4777ea7176a05afc496f3de185cecf80",
+    "crates/hive-cli/src/usage/codex_native.rs": "186e0a0dd88ee16535278073890ce4b901aad773e26b322282c5f696a62230d2",
+    "crates/hive-cli/src/usage_control.rs": "6529696a7fc69e16ecffb3adeaa7cab206d2c24f6dab26b64b0e1bb611158214",
+    "crates/hive-cli/src/usage_monitor/platform.rs": "5983230b82b022ba902329ab2ac2c9db1213ebcfde3a18ba9ab0182a621220e3",
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "4c283db89066f295738ebc39b8da71faed536723e630170c4f67466412a5309f",
+    "crates/hive-cli/src/usage_monitor/windows.ps1": "07dab8014f6c0ae51667b32e98ac33a1861e7ef13f9f3a406e670a865e8868a5",
+    "crates/hive-cli/src/usage_monitor/notice.ps1": "3a403c6ef7d3bc8313dc6be421fb423afdf0e194ab9edd2427282203a9c64b04",
+    "harness/plugins/aigent-hive/assets/hive-logo-plugin.png": "d132e2c654cf3eb5077a57ea178f1714666ce240820b102308929dac1f5d3c93",
+    "harness/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/plugins/aigent-hive/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/plugins/aigent-hive/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.agents/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/template/.agents/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.claude/skills/usage-guard/SKILL.md": "c1eb63ec2e495884fc6bce51a8a75f1101307c52d97379342e5c0a730cb4295f",
+    "harness/template/.claude/skills/usage-guard/references/control.md": "7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+    "harness/template/.hive/config/active-skills.yml.jinja": "c659d95c2934eada3d3eb0a2b8565a2826ffa155ab87d110e79e3921cacc89cc"
+  },
+  "evidence": [
+    {
+      "path": "tests/results/session-stop-component-qualification-0.12.1.json",
+      "sha256": "3dfae5566bed8dac12d8c3e8b033040b5e71bd8930110e687055dcfad15bbb29"
+    },
+    {
+      "path": "tests/results/session-stop-one-shot-code-0.12.1.json",
+      "sha256": "4c68c1e154549373263ad75a0154cf37704627b785eb9ce4c89815614197228a"
+    },
+    {
+      "path": "tests/results/session-stop-one-shot-checks-0.12.1.json",
+      "sha256": "03ded94a06ff373a1c0db39f3adad182d5da6060b4732311fb5cf1f60c3dc6c3"
+    },
+    {
+      "path": "tests/results/usage-stop-notice-only-windows-0.12.1.json",
+      "sha256": "f593a86efcb833bc691f74ff3ab386b7277cba797d99ca14316014dcd0b4e29c"
+    }
+  ],
+  "verification_limits": [
+    "Previous four native turns actually stopped in 283–306ms; old aggregate failure remains unchanged.",
+    "The one-shot lifetime is verified by current Windows mocks and Rust tests, not another live halt.",
+    "Previous read-only exact-turn confirmation was 4/4 in 1180ms.",
+    "Native shell task cancellation verified earlier; exact OS child exit within five seconds is unmeasured.",
+    "No remote/cloud/other OS, provider refill, server processing or billing cutoff claim."
+  ]
+}
