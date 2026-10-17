@@ -15,8 +15,8 @@ Use installed Hive policy; no source-local sensor, threshold, watcher or halt fo
 hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
 ```
 
-- Exit 3, limited, unknown or reset blocks work. Allow exact controls, consented fallback, or one
-  same-binding recheck after threshold change or installed-command reset acknowledgement.
+- Exit 3, limited, unknown or reset blocks the current dispatch. Allow exact controls, consented
+  fallback, a same-binding recheck after threshold change, or fresh enforcement for a new user request.
   Continue only on fresh `hive.usage-allowed`. No recheck per tool or session-disable bypass.
 - New sessions default enabled. Installed markers and exact binding remain authoritative.
 
@@ -26,16 +26,10 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
   intent plus `--confirm-session-disable`. Continue/resume, urgency and goals grant no bypass.
 - Native sensor first; CodexBar only as separately consented failure fallback. No credentials,
   provider calls, CLI reinstall or OMX/OMC.
-- The 2026-10-18 user request authorizes session-only qualification on the current Windows app,
-  then installation and always-on monitoring for 0.12.1 only after acceptance passes. Use the saved
-  qualification plan: static protocol check, a scoped adapter test, then isolated monitor acceptance.
-  Keep global monitoring off until acceptance. Unsupported app versions fail closed without app exit.
-  App termination, ad-hoc watchers and other host-process signals remain forbidden.
-  Existing installed thresholds and zero-quota checks remain active.
-- The user's final 2026-10-18 correction removes resume locks and incident acknowledgement from
-  this feature. Stop the runs present at detection once; never block or reinterrupt a user-resumed
-  run for that same event. The official-logo notice only explains cause/status and closes.
-  Preserve observation cadence, deduplication, fresh sensor validation and existing quota floors.
-- After the two 2026-10-18 live stops, the user ended further live interruption tests and requested
-  the production notice UI. Use display-only and read-only checks; never interrupt current work
-  to test its appearance. Preserve failed automatic-confirmation evidence and conditional install gates.
+- The 2026-10-18 approval covers current-Windows session-only qualification, then 0.12.1 installation
+  and always-on monitoring after acceptance. The two live stops are complete; further checks must be
+  read-only or display-only. Preserve failed aggregate evidence and installation acceptance gates.
+- Final correction: no resume lock or acknowledgement. Stop runs present at detection once;
+  never block or reinterrupt user-resumed work for that event. The official-logo notice only explains
+  cause/status and closes. Keep cadence, deduplication, fresh sensing, thresholds and zero-quota checks.
+- No app termination, unsupported-version fallback, ad-hoc watcher or other host-process signal.

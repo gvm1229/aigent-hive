@@ -42,18 +42,7 @@ Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 f
 - 첫 측정: 비교 기준만 기록. 초기화 시각 예약·외부 소식 추적 제외
 - 비교 시점: `enforce`의 새 측정. 진행 중 추론의 15초 감시·호스트 프로세스 중단은 미지원
 - 제한 표시: `status`의 `quota_reset_guard_monitoring=false`. 공개 설치본의 지원 여부와 개발 구현 구분
-- 초기화 중단: 같은 값 재조회·프로세스 변경 뒤에도 유지. 현재 중단 표식의 지문과 명시적 사용자 확인 필요
-
-초기화 사실 확인 뒤 재개 요청을 받은 경우의 개발 명령:
-
-```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action acknowledge-reset --confirm-reset <halt-digest> --output json
-```
-
-`halt-digest`는 중단 결과의 `reset_acknowledgement_digest` 또는 `status`의 `halt_digest` 값.
-확인 후 동일한 대상·세션·사용자 루트와 현재 계정 정보로 `enforce` 재실행 필수.
-확인은 잔여량 보호 해제나 작업 실행 허가와 구분. 낮거나 확인할 수 없는 잔여량은 계속 차단.
-공개 `0.10.3` 설치본에 새 명령이 있다는 가정 금지.
+- 0.12.1의 초기화 중단은 해당 요청 한 번만 적용. 다음 사용자 요청은 새 관측으로 재판정, 확인 명령·재개 잠금 없음
 
 현재 작업의 초기화 감지만 제외하는 개발 명령:
 
@@ -63,7 +52,7 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 
 - 복원: 확인 인자 없이 `--action enable-reset-guard`. 두 동작 뒤 같은 연결 정보로 `enforce` 필수
 - 전역 설정·잔여량 하한 보호 유지. 낮거나 알 수 없는 잔여량의 차단 유지
-- 기존 초기화 중단의 해제 수단에서 제외. 먼저 위의 지문 확인 절차 필요
+- 초기화 표식은 과거 관측 기록, 새 요청의 사용량 하한·0% 확인 유지
 - 다른 호스트·세션·프로세스에 제외 권한 이전 금지. 일반 보호의 켜기·끄기와 별개 설정
 - 공개 설치본의 도움말에서 지원 여부 확인. 15초 감시·진행 중 작업 중단의 구현 증명과 구분
 
@@ -135,28 +124,25 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 - 실제 계정의 0% 소진·유료 전환 시험 미실행, 계정 비용 발생 시험 제외. 지원 중단 연결 없는 진행 중 호스트 호출·Hive 밖 호출의 크레딧 사용 방지 보장 제외
 - 현재 설치 0.11.1과 개발 0.12.0 구분. 도움말의 새 명령 지원 확인 선행, 현재 사용자 설치 승인 별도
 
-## 0.12.1 Windows 세션 중단 — 전체 수용 대기
+## 0.12.1 Windows 세션 중단
 
-- 현재 앱 26.1013.4894.0의 단일 대화·잠금 중 새 실행 중단과 앱 창 유지 통과. 전체 감시·긴 셸·추론·지속 표시·설치는 별도 수용 대기
-- 설치 CLI는 0.12.0, 전역 감시는 비활성. 2026-10-18 승인한 전체 시험 통과 후에만 0.12.1-dev 설치·상시 감시
-- 앱 전체 종료·일시정지·다른 프로세스 신호 경로 없음. 검증한 공식 Windows 패키지·현재 사용자·생성 시각·보유 핸들 검사, 다른 버전 거부
-- 조회 시작 간격 15초·제한 5초·실패 재시도 2초·정상 관측 공백 60초. 실제 초기화 즉시 중단, 조회 실패와 이유 구분. 별도 비추론 조회·제어부로 모델 검사 의존 제거
-- 평상시 기록 구독 없음. 사건 때 소유 대화에 중단 요청 우선, 5초 확인 뒤 구독 해제. 유휴 상태·응답 성공을 실제 중단으로 계산 금지
-- 계정·사용량 묶음·구간별 공유 상태와 사건 보존. 첫 관측은 기준 수립, 새 채팅·앱 재시작으로 잠금 해제 불가. 제어부 재시작 뒤 60초 시한 연장 금지
-- 정확한 사건 확인·새 관측·제어부 해제 후 잠금 해제, 이전 작업 자동 재개 없음. 상태 창의 원인·대상 확인·앱 생존·실패 구분, 확인 후에도 원래 중단 이유 보존
-- 기존 시작 전 하한·0% 보호 유지. 원격·클라우드·다른 OS 미지원, 서버 처리·과금 즉시 종료와 소비 상한 보장 제외
-
-개발 CLI 인터페이스:
+- Windows 11 x64·Codex 26.1013.4894.0의 로컬 개발 빌드 설치·상시 감시 확인. 다른 앱 버전·운영체제·원격·클라우드 미지원
+- 실제 초기화 또는 정상 조회 공백 60초 때 감지 당시 작업에 한 번 중단 요청. 같은 사건으로 사용자 재개·새 입력·앱 재시작 차단 없음
+- 시작 간격 15초·조회 제한 5초·실패 재시도 2초. 연속 실패당 한 번 중단, 정상 조회 회복 후 다음 실패 구간 감지
+- 앱 전체 종료·일시정지·호스트 프로세스 신호 없음. 현재 사용자·공식 패키지·생성 시각·보유 핸들 확인
+- 평상시 대화 기록 구독 없음. 사건 때 중단 요청 우선·5초 확인·구독 해제, 제어 연결 재시작의 과거 요청 재전송 억제
+- 사건은 원인·확인 결과의 기록. 보호 잠금·해제·확인 명령 없음, 사용자의 Codex 재개·새 메시지 허용. 이전 작업 자동 재개 없음
+- 공식 로고의 [안내 창](../research/usage-stop-notice-0.12.1.md)은 이유·상태와 닫기만 제공. 초기화와 조회 실패의 서로 다른 설명, 확인 실패의 성공 표시 금지
+- 기존 하한·0% 보호 유지. 서버 처리·과금 종료 시각과 소비 상한 보장 제외
 
 ```text
 hive usage monitor preview --user-root <user-root> --output json
 hive usage monitor enable --user-root <user-root> --confirm <preview-digest> --confirm-session-interruption --output json
 hive usage monitor status --user-root <user-root> --output json
-hive usage monitor acknowledge --user-root <user-root> --incident <incident-digest> --output json
 hive usage monitor disable --user-root <user-root> --output json
 ```
 
-- 설치 전 preview에서 사용자 루트의 설정·상태·고정 실행 파일과 로그인 예약 경로 확인. enable은 정확한 미리보기 지문과 명시적 세션 중단 승인 필수
-- status의 monitoring_verified는 새 정상 관측·제어 연결·미확인 대화 부재·사건 부재까지 검사. 설정의 활성 값만으로 정상 판정 금지
-- disable은 이름·실행 파일·인수가 일치한 소유 예약만 제거, 사건·비활성 파일 보존. 관리된 개발 설치 원복은 별도 백업 경로 사용
-- [현재 근거와 이전 실패](../research/session-stop-0.12.1.md)·[수용·설치 순서](../plans/validation/session-stop-0.12.1-windows.md). 공개 0.12.0에는 개발 monitor 명령 없음
+- 설치 전 미리보기의 설정·상태·고정 실행 파일·로그인 예약 경로 확인. enable은 정확한 미리보기 지문과 버전별 설치 승인 필수
+- status의 정상 관측·제어 연결·미확인 대화 부재와 마지막 중단 결과를 구분. 지난 사건의 존재는 새 실행 차단 조건에서 제외
+- disable은 소유 예약만 제거, 사건과 고정 실행 파일 보존. 관리된 개발 설치 원복은 별도 백업 경로
+- [수용 근거와 이전 실패](../research/session-stop-0.12.1.md)·[설치 영수증](../../tests/results/session-stop-one-shot-installation-0.12.1.json). 공개 안정판은 0.12.0, 공개 0.12.1 게시 별도
