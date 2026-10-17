@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "product_version": "0.12.1",
-  "package_version": "0.12.1-test.1",
+  "product_version": "0.13.0",
+  "package_version": "0.13.0-test.1",
   "plan_ids": [
     "RST121-001",
     "RST121-002",
     "RST121-003"
   ],
-  "product_tree_sha256": "sha256:4a6a7daf265153ba191d32fa4053dd27d58ff5b2a7f1165e913e4d14f3f52db5"
+  "product_tree_sha256": "sha256:f1c14a3998bc456ead2a201274a357255533dfa9d457ddc9ea090c016f9d4c3d"
 }
