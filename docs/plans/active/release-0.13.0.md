@@ -41,6 +41,7 @@
 - 회귀에서 확인한 추가 필수 연결: hive-projection/src/lib.rs의 historical_builtin_skills 지원 목록·예상 개수에0.12.0/28 등록. 기존 정확 목록 검사 유지, 미등록 버전 허용 확대 없음
 - 첫 원격 CI의 시작 전 거부: 새 검사4개가 lanes.toml에 미등록. developer_digest·monitor_qualification·session_events·usage_notice를 기존 contract 묶음에 등록, 전체 파일의 한 차례 배정 검사 유지. 제품 지문 변경 없음
 - 전체 계약의 옛 잠금 가정2개를 감지 시 거부·새 정상 관측 뒤 재개 허용으로 수정. run_role_contracts의 기록 변조·관측 역행 거부는 유지, 지식 관계 검사의 출처 지문 실패는 같은 문서 정합화로 해결
+- 과거 설치 검사9개는 정확 검증 커밋의 자료에 결합. 현재0.13.0 소스에 옛 설치 승인을 재사용하는 경우 거부, 설치 보호 코드 변경 없음
 - 이전 버전 실제 표본: 공개 npm0.12.0의 무결성 검증한 Windows 실행 파일을 격리 폴더에만 추출, 기존 합성 설정으로 setup 수행. tests/fixtures/project-predecessors/0.12.0/public-stable에 개인 경로 없는 고정 ZIP·원본 지문 보존. 현재 설치 변경 없이 기존 qualify-project-predecessors.py의 갱신·원복·복구 검사에 사용
 - 검증: 버전·기준본 범위·안정판 Skill·출시 노트·제품 범위 검사, 필요한 Rust/설치 회귀. 실패 시 제품 수정은 첫 공개 시험 전에 완료
 - 완료: 현재 제품 지문과 완료 RST121 3개를 test-release-intent에 고정, 로컬 검사 통과. 다음 단계의 정확 소스 CI 통과 뒤에만 후보 생성
