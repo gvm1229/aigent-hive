@@ -171,3 +171,11 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
         thread::sleep(Duration::from_secs(1));
     }
 }
+
+#[cfg(all(test, windows))]
+mod tests {
+    #[test]
+    fn production_adapter_fits_the_windows_launch_budget() {
+        assert!(super::platform::command(super::SCRIPT).is_ok());
+    }
+}

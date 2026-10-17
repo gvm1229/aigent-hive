@@ -23,6 +23,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 const BASE: &str = ".hive/runtime/usage-monitor";
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
+const DESKTOP_VERSION: &str = "26.1013.4894.0";
 const HELP: &str = "hive usage monitor preview|enable|disable|status|acknowledge --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] [--incident <digest>] --output json\n";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -166,7 +167,9 @@ pub(crate) fn check_dispatch(user_root: Option<&Path>) -> Result<(), AdapterErro
     if config.enabled {
         require_app_safe_control()?;
     }
-    if config.enabled && (!state.control_connected || state.control_stopping) {
+    if config.enabled
+        && (!state.control_connected || state.control_stopping || state.unknown_sessions > 0)
+    {
         return Err(error(
             "usage monitor desktop control has not released the session",
         ));
@@ -307,7 +310,7 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
             let state: MonitorState = load(&root, STATE)?.unwrap_or_else(MonitorState::new);
             Ok(
                 json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
-                "automatic_control_available":false,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
+                "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
                     && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.incident.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
                 "scope":"local-windows-codex","server_billing_interruption_verified":false}),
             )
@@ -368,13 +371,19 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
     let mut config = configuration(root)?;
-    config.enabled = false;
+    let available = cfg!(windows);
+    config.enabled = available;
+    let changed = if available {
+        vec![json!(CONFIG), json!(STATE), json!(config.executable)]
+    } else {
+        vec![]
+    };
     let mut data = json!({"configuration":config,"adapter_digest":sha256_digest(platform::SCRIPT.as_bytes()),
         "poll_seconds":POLL_SECONDS,"sample_timeout_seconds":5,"retry_seconds":2,"unresponsive_seconds":BLIND_SECONDS,
-        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":false,"app_preserved":null,"qualified_desktop_package_version":null,"candidate_desktop_package_version":"26.1007.9446.0","automatic_control_available":false,
-        "changed_paths":[],"scheduled_task_operation":"none-unqualified",
+        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"automatic_control_available":available,
+        "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
-        "supports_current_os":false,"remote_execution_supported":false});
+        "supports_current_os":available,"remote_execution_supported":false});
     let digest = sha256_digest(&serialize(&data)?);
     data["preview_digest"] = json!(digest);
     Ok(data)
@@ -389,9 +398,22 @@ fn task_request(config: &Configuration, operation: &str) -> Value {
     json!({"operation":operation,"task_name":config.task_name,"executable":executable,"arguments":arguments})
 }
 fn require_app_safe_control() -> Result<(), AdapterError> {
-    Err(error(
-        "desktop app control is unqualified and disabled; no automatic activation",
-    ))
+    if cfg!(windows) {
+        Ok(())
+    } else {
+        Err(AdapterError::Unsupported(
+            "session interruption supports Windows Codex only".into(),
+        ))
+    }
+}
+fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
+    if inspection["desktop_package_version"] == DESKTOP_VERSION {
+        Ok(())
+    } else {
+        Err(error(
+            "installed Codex desktop version requires session-control qualification",
+        ))
+    }
 }
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     require_app_safe_control()?;
@@ -410,6 +432,10 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
             "installed Hive Codex version differs; update it before enabling the monitor",
         ));
     }
+    require_desktop_version(&platform::call(
+        &json!({"operation":"inspect"}),
+        Duration::from_secs(5),
+    )?)?;
     let config = configuration(root.requested_path())?;
     let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
         .map_err(|_| error("cannot stage monitor executable"))?;
@@ -536,6 +562,7 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         &json!({"operation":"inspect","caller_pid":std::process::id()}),
         Duration::from_secs(5),
     )?;
+    require_desktop_version(&initial)?;
     if initial["caller_within_app"] == true {
         return Err(error(
             "monitor must run independently through its scheduled task",
@@ -799,18 +826,30 @@ fn controller_loop(
 mod tests {
     use super::*;
     #[test]
-    fn unqualified_control_cannot_activate_or_run_or_report_supported() {
+    fn preview_is_nonmutating_and_activation_requires_matching_installation() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         let view = preview(temporary.path()).unwrap();
-        assert_eq!(view["automatic_control_available"], false);
-        assert_eq!(view["session_interrupt"], false);
-        assert_eq!(view["configuration"]["enabled"], false);
-        assert_eq!(view["changed_paths"], json!([]));
-        assert_eq!(view["supports_current_os"], false);
+        assert_eq!(view["automatic_control_available"], cfg!(windows));
+        assert_eq!(view["session_interrupt"], cfg!(windows));
+        assert_eq!(view["configuration"]["enabled"], cfg!(windows));
+        assert_eq!(view["supports_current_os"], cfg!(windows));
+        assert_eq!(view["emergency_termination"], false);
+        assert!(!temporary.path().join(".hive").exists());
         assert!(enable(&root, view["preview_digest"].as_str().unwrap()).is_err());
         assert!(controller(&root).is_err());
-        assert!(!temporary.path().join(".hive").exists());
+        assert!(!temporary.path().join(CONFIG).exists());
+    }
+    #[test]
+    fn desktop_package_qualification_is_exact() {
+        assert!(
+            require_desktop_version(&json!({"desktop_package_version":DESKTOP_VERSION})).is_ok()
+        );
+        for version in ["26.1007.9446.0", "26.1013.4894.1", ""] {
+            assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_err());
+        }
+        assert!(require_desktop_version(&json!({})).is_err());
+        assert!(include_str!("usage_monitor/desktop.ps1").contains(DESKTOP_VERSION));
     }
     #[cfg(windows)]
     #[test]
@@ -880,7 +919,7 @@ mod tests {
             .is_none());
     }
     #[test]
-    fn fresh_usage_cannot_authorize_unqualified_control_even_after_release() {
+    fn fresh_usage_cannot_bypass_control_release_or_unverified_scope() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         std::fs::create_dir_all(temporary.path().join(".hive/config")).unwrap();
@@ -919,6 +958,19 @@ mod tests {
         assert_eq!(parse_and_run(&args).unwrap()["monitoring_verified"], false);
         with_state(&root, |s| {
             s.control_stopping = false;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            check_dispatch(Some(temporary.path())).is_ok(),
+            cfg!(windows)
+        );
+        assert_eq!(
+            parse_and_run(&args).unwrap()["monitoring_verified"],
+            cfg!(windows)
+        );
+        with_state(&root, |s| {
+            s.unknown_sessions = 1;
             Ok(())
         })
         .unwrap();

@@ -23,7 +23,8 @@ pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     // bootstrap and embedded source are fixed product bytes, never user input.
     let encoded = base64::engine::general_purpose::STANDARD.encode(script.as_bytes());
     let bootstrap = format!("& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}'))))");
-    if bootstrap.len() > 30000 {
+    // Fixed flags and the executable path use less than the remaining 767 characters.
+    if bootstrap.len() > 32000 {
         return Err(failure("embedded Windows adapter exceeds launch limit"));
     }
     let mut command = Command::new(executable);

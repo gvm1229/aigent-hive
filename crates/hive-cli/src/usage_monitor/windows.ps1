@@ -25,7 +25,8 @@ function App-Roots {
         if ($owner.ReturnValue -ne 0 -or ($owner.Domain + '\' + $owner.User) -ne $identity) { continue }
         $roots += $row
     }
-    return @{ roots = @($roots); rows = @($rows) }
+    $version=if($packages.Count -eq 1){[string]$packages[0].Version}else{$null}
+    return @{ roots = @($roots); rows = @($rows); desktop_package_version=$version }
 }
 
 function Read-StatusState([string]$path) {
@@ -90,7 +91,7 @@ try {
                     $cursor = [int]$row[0].ParentProcessId
                 }
             }
-            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; native_control = 'unavailable'; identity = 'current-user-OpenAI.Codex-package' }
+            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; identity = 'current-user-OpenAI.Codex-package' }
         }
         'notify' {
             Add-Type -AssemblyName System.Windows.Forms
