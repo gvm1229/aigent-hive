@@ -34,7 +34,10 @@
 
 - 입력: v0.12.0..HEAD 제품 경로 비교. `main.rs` 전역 도움말의 폐기한 acknowledge 표시만 정리
 - 필수 조사: `check-release-version.sh`·`check-project-base-coverage.py`·기존 valid-0.12.0 fixture·harness/release/0.12.0. v0.12.0의 이전 버전 보존 자료와 0.12.1 migration·fixture 생성 방식 확인 후 동일 방식 적용. 새 사용자 기능 추가 없음
-- 변경: 예약한 0.12.0 프로젝트·사용자 기준본, registry, 0.12.1 release/fixture, 공개 노트·시험 의도. 기준본은 v0.12.0 원문 바이트 보존
+- 변경: 예약한 0.12.0 프로젝트·사용자 기준본과 Skill·출시 표면 목록, registry, 0.12.1 release/fixture, 공개 노트·시험 의도. 기준본은 v0.12.0 원문 바이트 보존
+- 조사 확정: 0.12.0과0.11.1 프로젝트 파일 집합 동일. hive-render/src/lib.rs의 frozen_project_base_0_11_1 매크로·부속 파일 처리를0.12.0으로 기계적 복제, registry의 새 renderer 연결. 안정판 Skill 검사 표본에도 이미 공개한0.12.0 추가
+- 회귀에서 확인한 추가 필수 연결: hive-projection/src/lib.rs의 historical_builtin_skills 지원 목록·예상 개수에0.12.0/28 등록. 기존 정확 목록 검사 유지, 미등록 버전 허용 확대 없음
+- 이전 버전 실제 표본: 공개 npm0.12.0의 무결성 검증한 Windows 실행 파일을 격리 폴더에만 추출, 기존 합성 설정으로 setup 수행. tests/fixtures/project-predecessors/0.12.0/public-stable에 개인 경로 없는 고정 ZIP·원본 지문 보존. 현재 설치 변경 없이 기존 qualify-project-predecessors.py의 갱신·원복·복구 검사에 사용
 - 검증: 버전·기준본 범위·안정판 Skill·출시 노트·제품 범위 검사, 필요한 Rust/설치 회귀. 실패 시 제품 수정은 첫 공개 시험 전에 완료
 - 완료: 현재 제품 커밋 지문과 완료 RST121 3개를 test-release-intent에 고정, 로컬 검사·정확 소스 CI 통과
 
