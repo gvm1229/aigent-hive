@@ -1,0 +1,29 @@
+{
+  "artifacts": [
+    {
+      "length": 603,
+      "path": "targets/migration-table.json",
+      "sha256": "07eaf7dc8086a9c4a3a8855a6a6f9e1c7d034e5241b070724eddab6296d19b0e"
+    },
+    {
+      "length": 5997,
+      "path": "targets/release-surface-inventory.json",
+      "sha256": "c6e83d5c23a7c2fa216847b0a614d06adffb16225268901ad184992f225ff4c5"
+    }
+  ],
+  "classification": "feature",
+  "license": "Apache-2.0",
+  "migration_table_digest": "sha256:07eaf7dc8086a9c4a3a8855a6a6f9e1c7d034e5241b070724eddab6296d19b0e",
+  "minimum_supported_harness_version": "0.8.0",
+  "minimum_updater_version": "0.9.0",
+  "product": "aigent-hive",
+  "release_sequence": 22,
+  "release_version": "0.12.1",
+  "schema_version": 1,
+  "source": {
+    "commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "repository": "https://github.com/gvm1229/aigent-hive",
+    "tag": "v0.12.1"
+  },
+  "surface_inventory_digest": "sha256:c6e83d5c23a7c2fa216847b0a614d06adffb16225268901ad184992f225ff4c5"
+}
