@@ -131,6 +131,12 @@ try {
         if($null -eq $stop -or $turn -notmatch '^[A-Za-z0-9_-]{1,128}$'){return}
         $key=$id+':'+$turn
         if($stop.targeted.ContainsKey($key)){return}
+        if($stop.settled) {
+            $stop.targeted=@{}
+            $stop.began=if($requestedAt -ge 0){$requestedAt}else{$clock.ElapsedMilliseconds}
+            $stop.age_at_begin=0;$stop.request_ms=0;$stop.verifyUntil=$stop.began+5000
+            foreach($session in $sessions.Values){$session.ready=$false;$session.dirty=$true}
+        }
         $stop.targeted[$key]=@{thread=$id;turn=$turn}
         if($requestedAt -ge 0){$stop.request_ms=[Math]::Max([long]$stop.request_ms,$stop.age_at_begin+$requestedAt-$stop.began)}
         $stop.settled=$false

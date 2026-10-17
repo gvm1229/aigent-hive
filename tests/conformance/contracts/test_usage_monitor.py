@@ -443,6 +443,19 @@ $stop.verifyUntil=$clock.ElapsedMilliseconds-1;Release-Subscriptions
 """
         self.assertTrue(self.powershell(source)["all_requests_timed"])
 
+    def test_only_a_confirmed_stop_can_start_a_new_attempt_deadline(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' 100;$stop.age_at_begin=60000
+$stop.targeted['old']=@{thread=$one;turn='old'};$stop.settled=$true
+$requestAt=$clock.ElapsedMilliseconds
+Register-Target $one 'new' $requestAt
+if($stop.targeted.Count -ne 1 -or $stop.targeted.ContainsKey('old')){throw 'New stop scope was not separated'}
+if($stop.began -ne $requestAt -or (Stop-Age) -ge 1000 -or $stop.request_ms -ne 0){throw 'New attempt inherited old timing'}
+if($stop.detected_ms -ne 100){throw 'Original incident time was rewritten'}
+@{new_attempt_timed=$true;original_incident_kept=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["new_attempt_timed"])
+
     def test_invalid_qualification_scope_is_rejected_before_native_pipe_code(self):
         path=str(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').replace("'","''")
         source="$ErrorActionPreference='Stop';$blocked=$false;try {& '"+path+"' -QualificationThread 'invalid'}catch{if($_.Exception.Message -match 'Invalid qualification scope'){$blocked=$true}else{throw}};"

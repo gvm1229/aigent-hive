@@ -21,7 +21,8 @@ pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     let executable = Path::new(&system_root).join("System32/WindowsPowerShell/v1.0/powershell.exe");
     // UTF-8 payload avoids Windows' 32767-character process argument limit. The
     // bootstrap and embedded source are fixed product bytes, never user input.
-    let encoded = base64::engine::general_purpose::STANDARD.encode(script.as_bytes());
+    let encoded =
+        base64::engine::general_purpose::STANDARD.encode(script.replace("\r\n", "\n").as_bytes());
     let bootstrap = format!("& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}'))))");
     // Fixed flags and the executable path use less than the remaining 767 characters.
     if bootstrap.len() > 32000 {
