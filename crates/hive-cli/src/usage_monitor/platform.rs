@@ -9,6 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 pub(super) const SCRIPT: &str = include_str!("windows.ps1");
+const NOTICE: &str = include_str!("notice.ps1");
 
 pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     if !cfg!(windows) {
@@ -116,13 +117,13 @@ pub(super) fn notify(
     let message = notification_message(reason, success);
     let root = root.to_path_buf();
     let incident = incident.to_owned();
-    let message = format!("{message}\n재개: hive usage monitor acknowledge --user-root <사용자 루트> --incident {incident} --output json");
-    // The UI notification must never delay termination or its controller heartbeat.
+    let reason = reason.to_owned();
+    // The separate UI must never delay interruption or the controller heartbeat.
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
         let delivered = (|| {
-            let mut child = command(SCRIPT).ok()?.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
-            let request = json!({"operation":"notify","message":message,"user_root":root,"incident":incident});
+            let mut child = command(NOTICE).ok()?.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+            let request = json!({"operation":"notify","message":message,"reason":reason,"user_root":root,"incident":incident});
             child.stdin.take()?.write_all(&serde_json::to_vec(&request).ok()?).ok()?;
             let stdout = child.stdout.take()?;
             let (send, ready) = mpsc::channel();
@@ -143,6 +144,8 @@ pub(super) fn notify(
 fn notification_message(reason: &str, success: bool) -> &'static str {
     if !success && reason == "sensor-unresponsive" {
         "사용량 감지기가 60초 동안 응답하지 않아 사용량 한도 보호를 우선해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
+    } else if !success && reason == "usage-reset" {
+        "사용량 초기화를 감지하여 새 할당량 보호를 위해 Codex 작업 중단을 요청했습니다. 앱은 유지되며, 확인 상태는 안내 창에 표시됩니다."
     } else if !success {
         "사용량 보호를 위해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if reason == "sensor-unresponsive" {
@@ -169,5 +172,21 @@ mod tests {
             assert!(text.contains("사용량 한도 보호"));
             assert_eq!(text.contains("중단했습니다"), stopped);
         }
+    }
+
+    #[test]
+    fn notice_has_its_own_bounded_windows_launch_payload() {
+        if cfg!(windows) {
+            assert!(super::command(super::SCRIPT).is_ok());
+            assert!(super::command(super::NOTICE).is_ok());
+        }
+    }
+
+    #[test]
+    fn reset_notice_names_the_cause_without_claiming_unconfirmed_success() {
+        let text = notification_message("usage-reset", false);
+        assert!(text.contains("사용량 초기화"));
+        assert!(text.contains("중단을 요청"));
+        assert!(!text.contains("중단했습니다"));
     }
 }

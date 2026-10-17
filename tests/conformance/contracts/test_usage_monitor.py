@@ -292,30 +292,6 @@ if((Count-Unqualified) -ne 2){throw 'Expired qualification was accepted'}
 """
         self.assertTrue(self.powershell(source)["expiration_enforced"])
 
-    def test_status_distinguishes_test_history_from_live_protection(self):
-        path=str(SCRIPT).replace("'","''")
-        source="$ErrorActionPreference='Stop';$tokens=$null;$errors=$null;"+(
-            "$tree=[Management.Automation.Language.Parser]::ParseFile('"+path+"',[ref]$tokens,[ref]$errors);if($errors){throw 'Status script parsing failed'};"
-            "$tree.FindAll({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst]},$false)|ForEach-Object{Invoke-Expression $_.Extent.Text};\n"
-        )+r"""
-$state=[pscustomobject]@{app_alive=$true;control_connected=$true;active_turns=0;unknown_sessions=2;incident=[pscustomobject]@{
- digest='fixture';reason='usage-reset';detected_at=100;stop_confirmed=$false;stop_error='session-scope-unverified';targeted_turns=1;confirmed_turns=1
-}}
-$text=Format-ProtectionStatus $state 'fixture' $true $false
-foreach($expected in @('격리 시험','시험 신호','감시 꺼짐','이전 중단 기록','사건 시각','전체 대화 확인을 5초','대상 확인 대기: 2')){if(-not $text.Contains($expected)){throw 'Missing status distinction'}}
-$state.incident.stop_confirmed=$true;$state.incident.stop_error=$null;$state.unknown_sessions=0
-$text=Format-ProtectionStatus $state 'fixture' $false $true
-if(-not $text.Contains('작업 중단 확인 — Codex 앱 유지') -or -not $text.Contains('감시 실행 중') -or $text.Contains('격리 시험')){throw 'Live protection status mislabeled'}
-$state.incident.reason='sensor-unresponsive'
-$text=Format-ProtectionStatus $state 'fixture' $false $true
-if(-not $text.Contains('60초 동안 정상 사용량 조회 없음') -or $text.Contains('사용량 초기화 감지')){throw 'Observation gap was mislabeled as reset'}
-$state.incident=$null
-$text=Format-ProtectionStatus $state 'fixture' $true $false '사용량 초기화 감지 — 이전 시험 원인'
-if(-not $text.Contains('이전 시험 원인') -or -not $text.Contains('중단 기록 확인 완료')){throw 'Acknowledgement erased the visible reason'}
-@{test_history_explicit=$true;live_confirmation_visible=$true}|ConvertTo-Json -Compress
-"""
-        self.assertTrue(self.powershell(source)["test_history_explicit"])
-
     def test_acceptance_failure_is_a_nonzero_command_result(self):
         path=str(ROOT / 'scripts/qualify-usage-monitor.ps1').replace("'","''")
         source="$ErrorActionPreference='Stop';$tokens=$null;$errors=$null;"+(

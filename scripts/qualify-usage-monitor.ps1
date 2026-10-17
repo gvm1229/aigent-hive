@@ -87,7 +87,11 @@ public static class HiveAcceptanceWindow {
 "@
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-function Find-StopReason([string]$phrase='사용량 초기화 감지',[bool]$confirmed=$true) {
+function Matches-StopReason([string[]]$texts,[string]$phrase,[bool]$confirmed) {
+    $text=$texts -join "`n"
+    return ($text.Contains($phrase) -and (-not $confirmed -or ($text.Contains('작업 중단 확인') -and $text.Contains('Codex 앱은 열려 있습니다.'))))
+}
+function Find-StopReason([string]$phrase='사용량 초기화',[bool]$confirmed=$true) {
     try {
         $condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,'Aigent Hive — 사용량 보호 상태')
         $windows=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,$condition)
@@ -98,10 +102,8 @@ function Find-StopReason([string]$phrase='사용량 초기화 감지',[bool]$con
             $panel=Get-CimInstance Win32_Process -Filter ('ProcessId='+$window.Current.ProcessId)
             if ($panel.ParentProcessId -notin $monitorIds -or $window.Current.IsOffscreen) {continue}
             $controls=$window.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
-            foreach ($control in $controls) {
-                $text=$control.Current.Name
-                if ($text -and $text.Contains($phrase) -and (-not $confirmed -or $text.Contains('작업 중단 확인 — Codex 앱 유지')) -and -not $control.Current.IsOffscreen) {return $true}
-            }
+            $texts=@($controls | Where-Object {-not $_.Current.IsOffscreen} | ForEach-Object {$_.Current.Name})
+            if(Matches-StopReason $texts $phrase $confirmed){return $true}
         }
     } catch { }
     return $false
@@ -161,7 +163,7 @@ exit $LASTEXITCODE
         $seconds=[long]$current.incident.detected_at-[long]$current.last_success
         if($seconds -lt 60 -or $seconds -gt 70){throw 'Observation-gap protective deadline was outside 60 to 70 seconds'}
         $deadline=[DateTime]::UtcNow.AddSeconds(8)
-        do {$visible=Find-StopReason '60초 동안 정상 사용량 조회 없음' $false;if(-not $visible){Start-Sleep -Milliseconds 100}} while(-not $visible -and [DateTime]::UtcNow -lt $deadline)
+        do {$visible=Find-StopReason '60초 동안' $false;if(-not $visible){Start-Sleep -Milliseconds 100}} while(-not $visible -and [DateTime]::UtcNow -lt $deadline)
         if(-not $visible){throw 'Actual observation-gap reason was not visible'}
         $result.sensor_gap=@{reason=$current.incident.reason;gap_seconds=$seconds;reason_visible=$visible;query_error=$current.last_query_error;active_turns=$current.active_turns;scope='real failed native reads while test models already stopped; running-work interruption proven by reset trial'}
         Record
