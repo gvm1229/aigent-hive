@@ -6,23 +6,23 @@
 
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.12.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.13.0-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.12.0 release-date=2026-10-06 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.12.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.13.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.12.0|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.13.0|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.12.0
+npm install -g aigent-hive@0.13.0
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.12.0 (released 2026-10-06)
+AIgent Hive v0.13.0 (released 2026-10-18)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.12.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.13.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.12.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.13.0/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.12.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.0/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.12.0. The stable install guidance is
+Install the current stable release 0.13.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,16 +95,19 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.12.0 주요 변경
+## 0.13.0 주요 변경
 
-- 기본 활성0% 보호 추가: 관측한 창 하나라도0%면 새 Hive 작업 차단, 일반 사용량 보호 해제와 독립. 명시적 현재 대화 제외만 허용, 새 대화에서 기본 활성. 실행 전 검사 범위, 사용량 누락·만료도 차단
-- 지식 그래프의 원문 근거·접근 권한 검증 개선, 관계 처리 실패에도 저장 원문·기존 검색·이전 정상 그래프 보존. 관계 기능은 사용자 선택·범위 승인 후 적용
-- 검색 오류 안내 개선: 시작 실패·응답 지연·잘못된 응답·비정상 종료 구분, 기존 정상 검색 데이터 보존
-- 시험판 출처 구분 개선: 정확한 시험판 번호 보존·안정판 호환 대상에서 제외, 검증 불가 변환은 기존 설정 변경 없이 거부. 0.9.1~0.11.1 공개 안정판의 고정 표본에서 사용자 수정·외부 파일 보존 갱신 확인
+- 선택형 초기화 감시 추가: 실제 사용량 초기화를 관측하면 실행 중인 로컬 Codex 작업에 한 차례 중단 요청. 15초 간격 조회, 정상 조회가 60초 동안 없을 때도 보호 중단
+- 공식 Hive 로고의 별도 알림 창 추가: 중단 이유·감지 시각·중단 확인 상태 표시. 닫기만 제공, 잠금·해제·자동 작업 재개 없음
+- Codex 앱과 저장한 파일 유지, Codex에서 직접 재개하거나 새 메시지로 작업 시작. Windows 11 x64·Codex 26.1013.4894.0 지원, 다른 운영체제·원격·클라우드 작업 중단은 미지원
+- 설치·업데이트만으로 새 감시 활성화 없음. `hive usage monitor preview`로 변경 범위를 확인한 뒤 명시적 활성화 승인, 기존 활성 선택은 유지. 사용량 하한·0% 보호 유지
+- 감지 전 새 할당량 일부 소비 가능, 서버 처리·사용량 반영의 동시 종료 보장 제외
+
+이전 개선 사항은 [0.12.0 출시 안내](../releases/0.12.0.md)에 보존.
 
 ## 지원 target
 
-| Platform | Native target | 0.12.0 근거 |
+| Platform | Native target | 0.13.0 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -113,7 +116,7 @@ an optional third-party Skill.
 | Windows x86_64 | `x86_64-pc-windows-msvc` | 공개 번호 시험판 수용 |
 
 Codex·Antigravity는 실제 host 증거가 있음. Claude Code package·projection은 fixture로
-검증했지만 실제 subscription-backed session은 미검증. Stable `0.12.0`: macOS ad-hoc signing,
+검증했지만 실제 subscription-backed session은 미검증. Stable `0.13.0`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 

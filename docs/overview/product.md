@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.12.0 release-date=2026-10-06 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
 
 ## 목적
 
@@ -62,9 +62,10 @@ provider-neutral 로컬 agent harness.
 | Persistent role·run | Role identity·handoff·criterion·owner pin과 fresh-session recovery | [Role](../architecture/role-lifecycle.md) · [Run](../architecture/run-lifecycle.md) |
 | 반복 실행 | Default-off Hive-native scheduler·receipt·cancel·team·multi-goal 계획 | [ADR-0019](../decisions/ADR-0019-hive-native-iterative-execution.md) |
 | Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Installed policy](../guides/installed-usage-guard.md) |
+| 실행 중 중단·알림 | 선택형 Windows 11 x64·Codex 26.1013.4894.0의 실제 초기화/60초 조회 공백 중단, 앱 유지·직접 재개·알림 닫기만 제공 | [0.13.0 안내](../releases/0.13.0.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.12.0` release](../releases/0.12.0.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.13.0` release](../releases/0.13.0.md) |
 
 ## Artifact 흐름
 
@@ -82,7 +83,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.12.0` (released 2026-10-06)
+- Current public stable version: `0.13.0` (released 2026-10-18)
+- `0.13.0`: 선택형 Windows Codex 실행 중단·공식 로고의 알림 전용 창, 직접 재개 지원
 - `0.12.0`: 기본 활성0% 보호·지식 관계 검증과 저장 보호·검색 오류 안내·시험판 출처 구분
 - `0.11.1`: Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정·안전 진단과 설정 복구 안내
 - `0.11.0`: 선택형 Hook 파일 보호·긴 대화 지침 복구·오래된 안정판 프로젝트 갱신·사용량 리셋 중단
