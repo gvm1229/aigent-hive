@@ -43,11 +43,11 @@ function Read-StatusState([string]$path) {
     }
 }
 
-function Format-ProtectionStatus($state,[string]$incident,[bool]$isTest,[bool]$enabled) {
+function Format-ProtectionStatus($state,[string]$incident,[bool]$isTest,[bool]$enabled,[string]$originalMessage='') {
     $scope=if($isTest){'격리 시험 — 실제 할당량 초기화가 아닌 시험 신호'}else{'사용량 보호'}
     $monitor=if($enabled){'감시 실행 중'}else{'감시 꺼짐 — 이전 중단 기록'}
     $header=$scope+"`r`n"+$monitor+"`r`n`r`n"
-    if($null -eq $state.incident){return $header+'중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.'}
+    if($null -eq $state.incident){return $header+$originalMessage+"`r`n`r`n"+'중단 기록 확인 완료. 작업은 자동으로 재개하지 않습니다.'}
     if($state.incident.digest -ne $incident){return $header+'새 보호 사건이 발생했습니다. 최신 상태 창을 확인해 주세요.'}
     $reason=switch($state.incident.reason){'usage-reset'{'사용량 초기화 감지'}'sensor-unresponsive'{'60초 동안 정상 사용량 조회 없음'}default{'감시 상태 오류'}}
     $app=if($state.app_alive){'Codex 앱 유지'}else{'앱 생존 확인 필요'}
@@ -114,7 +114,15 @@ try {
                 try {
                     $state=Read-StatusState $statePath
                     $config=Read-StatusState (Join-Path ([string]$request.user_root) '.hive/runtime/usage-monitor/config.json')
-                    $label.Text=Format-ProtectionStatus $state ([string]$request.incident) $isTest ([bool]$config.enabled)
+                    $label.Text=Format-ProtectionStatus $state ([string]$request.incident) $isTest ([bool]$config.enabled) $baseMessage
+                    if($isTest) {
+                        try {
+                            $progress=Read-StatusState (Join-Path ([string]$request.user_root) 'result.json')
+                            if($progress.installation_phase -eq 'passed-installed-always-on'){$label.Text+="`r`n`r`n실제 사용자 0.12.1 설치·상시 감시 완료. 이전 작업 자동 재개 없음."}
+                            elseif($progress.installation_phase -eq 'installing'){$label.Text+="`r`n`r`n세션 중단 검증 통과. 실제 사용자 설치·감시 확인 진행 중."}
+                            elseif($progress.phase -eq 'failed'){$label.Text+="`r`n`r`n시험 실패. 설치 완료로 처리하지 않습니다."}
+                        } catch { }
+                    }
                 } catch {$label.Text=$baseMessage+"`r`n상태를 읽을 수 없습니다. 중단 성공 여부를 확인해 주세요."}
             })
             $form.Add_Shown({[Console]::Out.WriteLine('{"notified":true}');[Console]::Out.Flush();$timer.Start()})

@@ -292,6 +292,9 @@ if(-not $text.Contains('작업 중단 확인 — Codex 앱 유지') -or -not $te
 $state.incident.reason='sensor-unresponsive'
 $text=Format-ProtectionStatus $state 'fixture' $false $true
 if(-not $text.Contains('60초 동안 정상 사용량 조회 없음') -or $text.Contains('사용량 초기화 감지')){throw 'Observation gap was mislabeled as reset'}
+$state.incident=$null
+$text=Format-ProtectionStatus $state 'fixture' $true $false '사용량 초기화 감지 — 이전 시험 원인'
+if(-not $text.Contains('이전 시험 원인') -or -not $text.Contains('중단 기록 확인 완료')){throw 'Acknowledgement erased the visible reason'}
 @{test_history_explicit=$true;live_confirmation_visible=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["test_history_explicit"])
