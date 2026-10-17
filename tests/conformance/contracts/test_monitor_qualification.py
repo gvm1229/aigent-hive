@@ -53,6 +53,12 @@ MODIFICATION
     def test_unknown_qualification_method_is_rejected(self):
         self.assertFalse(self.evaluate("$record.qualification_method='unchecked'"))
 
+    def test_a_resume_lock_cannot_be_reintroduced(self):
+        self.assertFalse(self.evaluate("$record.resume_lock=$true"))
+
+    def test_additional_notice_buttons_are_rejected(self):
+        self.assertFalse(self.evaluate("$record.notice_button_count=2"))
+
 
 if __name__ == "__main__":
     unittest.main()

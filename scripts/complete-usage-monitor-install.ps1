@@ -65,7 +65,7 @@ function Accepts-OneShotEvidence($record,$authority) {
     foreach($name in $required){$found=@($checks.checks|Where-Object name -eq $name);if($found.Count -ne 1 -or $found[0].exit -ne 0){return $false}}
     if($notice.entrypoint.phase -ne 'passed-display-only-entrypoint' -or $notice.entrypoint.shown_ms -gt 5000 -or
        -not $notice.entrypoint.incident_unchanged -or -not $notice.entrypoint.original_codex_app_preserved -or
-       -not $notice.entrypoint.closed_by_own_button -or $notice.button_count -ne 1 -or $notice.resume_lock -ne $false -or
+       -not $notice.entrypoint.closed_by_own_button -or $notice.entrypoint.close_only_window -ne $true -or $notice.button_count -ne 1 -or $notice.resume_lock -ne $false -or
        $notice.entrypoint.notice_sha256 -ne $record.source_hashes.'crates/hive-cli/src/usage_monitor/notice.ps1'){return $false}
     return $true
 }
@@ -190,6 +190,8 @@ $activated=$false
 function Record { [IO.File]::WriteAllText($report,($result|ConvertTo-Json -Depth 12),$utf8) }
 try {
     Record
+    $candidateVersion=(& $binary --version | Out-String).Trim()
+    if($LASTEXITCODE -ne 0 -or $candidateVersion -notlike 'AIgent Hive v0.12.1-dev*'){throw 'Candidate developer product identity differs; active installation unchanged'}
     if((Hash-File $binary) -ne $approval.binary_sha256 -or (Hash-File $native) -ne $approval.native_sha256) { throw 'Approved source or active native binary changed' }
     $protected=Preserved-Digests
     $result.protected_file_count=$protected.Count
