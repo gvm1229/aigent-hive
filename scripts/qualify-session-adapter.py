@@ -89,6 +89,7 @@ def main() -> int:
     parser.add_argument("--app-created-ticks", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--interrupt", action="store_true")
+    parser.add_argument("--hold-seconds", type=int, default=1, choices=range(0, 61))
     args = parser.parse_args()
     if os.name != "nt" or not re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", args.thread):
         parser.error("Exact Windows app and thread identity required")
@@ -163,7 +164,19 @@ def main() -> int:
                         raise RuntimeError("Actual interruption missed acceptance deadline")
                     record["confirmed_stop"] = stop
                     break
-            time.sleep(1)
+            record["phase"] = "holding-protection"
+            output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+            until = time.monotonic() + args.hold_seconds
+            seen = {record["confirmed_stop"]["scope_digest"]}
+            record["subsequent_stops"] = []
+            while time.monotonic() < until:
+                stop = receive(time.monotonic() + 2).get("stop") or {}
+                scope = stop.get("scope_digest")
+                if stop.get("verified") and scope not in seen:
+                    if stop.get("elapsed_ms", 99999) > 5000 or stop.get("request_ms", 99999) > 2000:
+                        raise RuntimeError("Latched restart interruption missed deadline")
+                    seen.add(scope)
+                    record["subsequent_stops"].append(stop)
             send({"operation": "clear"})
             deadline = time.monotonic() + 2
             while receive(deadline).get("control_stopping"):

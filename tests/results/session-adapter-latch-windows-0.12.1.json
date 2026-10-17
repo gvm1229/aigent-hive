@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "phase": "passed-scoped-interruption",
+  "scope": "single-test-thread",
+  "target_digest": "sha256:d50efcafc41886480bfa64e46ceb08cba98702d53a37600b7080f234e95c6a65",
+  "adapter_sha256": "4b6e8a788b28e12fc34dff7f07cdf03d98814b86b7235dec7e3ea42866deb7e9",
+  "app_pid": 46652,
+  "package_version": "26.1013.4894.0",
+  "model_started": false,
+  "interrupt_requested": true,
+  "last_packet": {
+    "server_pid": 46652,
+    "schema_version": 1,
+    "unknown_sessions": 1,
+    "app_alive": true,
+    "active_turns": 0,
+    "control_stopping": false,
+    "connected": true,
+    "known_sessions": 1,
+    "activity_observed": false,
+    "stop": null
+  },
+  "metadata_only_ready": true,
+  "confirmed_stop": {
+    "confirmed": 1,
+    "incident": "sha256:ee793132602560b7eb1c5cad9a8c9616658eeca68d5e0beb01f8a1a24eb38444",
+    "unknown_sessions": 0,
+    "scope_digest": "sha256:e99e8f1d19bf62ac3465b3e9011e3cdad4093d25963879feb928bad64612e70b",
+    "app_alive": true,
+    "active_turns": 0,
+    "request_ms": 51,
+    "targeted": 1,
+    "elapsed_ms": 313,
+    "verified": true
+  },
+  "subsequent_stops": [
+    {
+      "confirmed": 1,
+      "incident": "sha256:ee793132602560b7eb1c5cad9a8c9616658eeca68d5e0beb01f8a1a24eb38444",
+      "unknown_sessions": 0,
+      "scope_digest": "sha256:8e0d828fb9c93c29a2719280a0f4ccd54a527f64b504fd39002bde93e26a9b15",
+      "app_alive": true,
+      "active_turns": 0,
+      "request_ms": 0,
+      "targeted": 1,
+      "elapsed_ms": 136,
+      "verified": true
+    }
+  ],
+  "subscriptions_released": true,
+  "app_preserved": true,
+  "scope_limit": "single visible test session and an intentional new turn; full monitor and installation unproven"
+}
