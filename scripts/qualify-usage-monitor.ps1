@@ -1,4 +1,4 @@
-# Nonshipping Windows acceptance collector. The execute mode interrupts sessions and keeps Codex open.
+﻿# Nonshipping Windows acceptance collector. The execute mode interrupts sessions and keeps Codex open.
 param(
     [Parameter(Mandatory=$true)][string]$SourceRoot,
     [Parameter(Mandatory=$true)][string]$Hive,
