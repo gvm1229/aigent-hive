@@ -1439,6 +1439,38 @@
 | [passed](runs/20261017T202518-e6b2b219f0dc.md) | 외부 확인 명령 안내를 포함한 실제 여섯 표시·진입·닫기·앱 유지 검증 | de819bf5fb9dda8d17a23fb47eefb59bc58cbf7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T202612-6882038e2555.md) | 최종 안내 후보의 실제 시험 중단 코드·센서·제어부 동일성 확인 | de819bf5fb9dda8d17a23fb47eefb59bc58cbf7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T202616-1894f76ece15.md) | 최종 후보의 결합 수용과 근거·소스 변경 거부 검증 | de819bf5fb9dda8d17a23fb47eefb59bc58cbf7d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T203542-bf4e5b829b56.md) | 검증한 0.12.1 후보의 승인된 사용자 설치·상시 감시 독립 실행 | 85d4374a90a6ff299a08f55f0682ec61a0325505 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T204005-993aa7efd511.md) | 공식 로고 안내 회귀·표시 검증 | 85d4374a90a6ff299a08f55f0682ec61a0325505 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T204007-ebc74528f6d5.md) | 공식 로고 현재 Windows 미리보기 | 85d4374a90a6ff299a08f55f0682ec61a0325505 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T204018-5a9de8ce2482.md) | 공식 로고 안내 회귀 | 85d4374a90a6ff299a08f55f0682ec61a0325505 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T204032-847c15ddbfe3.md) | 공식 로고 현재 Windows 표시 | 85d4374a90a6ff299a08f55f0682ec61a0325505 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T204715-5e7fafd087de.md) | 잠금 없는 중단 제어 Rust 회귀 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T204725-2828cb8b2244.md) | 알림 전용 창 회귀 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261017T204814-b3f5fb270cad.md) | 한 차례 중단 Windows 제어 회귀 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T204824-91662391b6b7.md) | 알림 전용 창 동작 확인 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T204849-070427765cb3.md) | 한 차례 중단 제어 수정 회귀 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T204908-06c64ef3c066.md) | 전체 CLI의 잠금 제거·하한 보호 회귀 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T205112-2b790853b105.md) | 한 차례 중단·직접 재개·알림 전용 최종 검증 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261017T205343-0e0e29b07799.md) | 한 차례 중단·직접 재개 최종 수정 검증 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T205413-4e72a147b0f9.md) | 알림 전용·중복 중단 방지 최종 검증 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T205624-614455ff639b.md) | 알림 전용 최종 제품 검증 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T205917-8ae1f334412d.md) | 잠금 없는 세션 중단·실패 중복 방지 수용 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210150-f8268dbc5d0b.md) | 한 차례 중단 설치 근거 반례 검사 | cd0f8ac6e4d2973133728bf6b1885c024741fead | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210251-cbdcf017e749.md) | 승인한 0.12.1 알림 전용 후보 설치 시작 | ee1fdcca1dff281ddc0485b91cc96e7fc96d5fc6 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T210356-b8a3b37ce924.md) | Windows 개발 설치 지문 형식 복구 회귀 | ee1fdcca1dff281ddc0485b91cc96e7fc96d5fc6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210421-568f0341c1e5.md) | Windows 지문·이전 기록의 실제 격리 원복 회귀 | ee1fdcca1dff281ddc0485b91cc96e7fc96d5fc6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210444-a36171775253.md) | 지문 형식 복구 뒤 승인한 설치 재시도 | 46fca792ede58eb13c6691ca019f717da8bd175e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210540-c6a9371d99fa.md) | 0.12.1 개발 빌드 신원 고정 최종 검증 | 46fca792ede58eb13c6691ca019f717da8bd175e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T210842-f8d41f467bf4.md) | 감시기 처리 뒤 첫 재개 입력의 중복 중단 회귀 | 46fca792ede58eb13c6691ca019f717da8bd175e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T211152-47e3856dc115.md) | 닫기 외 창 동작 제거의 최종 표시 검증 | b0c1d256b12b9444fc19fdab166cf0e984a8ac5a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T211319-e45cbe3b439a.md) | 최종 알림 전용 설치 근거의 잠금·추가 버튼 거부 | b0c1d256b12b9444fc19fdab166cf0e984a8ac5a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T211349-5e587b4fb872.md) | 최종 0.12.1 개발 빌드 설치·상시 감시 | da2797509ea7e0ef94783877e3c2cb69c6bfd490 | Windows-11-10.0.26300-SP0 |
+
+## 0.12.1 최종 수용
+
+[한 차례 중단·직접 재개](session-stop-one-shot-qualification-0.12.1.json)·[공식 로고 알림](usage-stop-notice-only-windows-0.12.1.json)·[로컬 설치·상시 관측](session-stop-one-shot-installation-0.12.1.json). 새 실제 중단 없이 검증한 최종 제어 수명, 이전 전체 확인 실패 보존
+
+## 이전 단계의 추가 근거
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
 
