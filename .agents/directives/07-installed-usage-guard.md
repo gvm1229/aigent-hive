@@ -33,3 +33,6 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
   App termination, ad-hoc watchers and other host-process signals remain forbidden. Preserve exact
   incident acknowledgement and fresh usage requirements; session-only acknowledgement cannot clear
   shared incidents. Existing installed preflight, thresholds and zero-quota checks remain active.
+- After the two 2026-10-18 live stops, the user ended further live interruption tests and requested
+  the production notice UI. Use display-only and read-only checks; never interrupt current work
+  to test its appearance. Preserve failed automatic-confirmation evidence and conditional install gates.

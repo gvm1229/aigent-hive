@@ -4,7 +4,7 @@
 > Scope: product
 
 - [x] [RST121-001] 공유 상태·15초 관측·60초 관측 공백 중단
-  - state: complete; evidence: repo:docs/research/session-stop-0.12.1.md#sha256:c827dcadf95adf083f52ac0d466357b79acb8637e8ac9175ebfd5a088bb8c235
+  - state: complete; evidence: repo:docs/research/session-stop-0.12.1.md#sha256:89316ee7645ac9df0d5a93a480ade38314ac3970b11f3ab0fc27b029bef87527
 - [ ] [RST121-002] Windows 앱 유지·세션별 중단·원인 표시·명시 재개
   - state: agent-owned; depends: RST121-001; owner: Codex; reason: 2026-10-18 현재 Windows 앱 세션 중단·이유 표시 검증과 통과 후 설치 승인
 - [ ] [RST121-003] 행동 회귀·현재 Windows 앱 수용·근거 기록
@@ -54,3 +54,4 @@
 ## 현재 실행 순서
 
 - [Windows 수용·설치 절차](../validation/session-stop-0.12.1-windows.md)의 RST121-002 → RST121-003 순서. 앱 종료 함수 없음과 버전 고정·앱 생존을 단계마다 확인
+- 2026-10-18 두 번째 실제 중단 뒤 사용자 관측과 세 실행의 native 중단 확인. 추가 실제 중단 시험 중지, [사용자 안내 창 개선](../validation/usage-stop-notice-0.12.1.md)과 읽기 전용 확인 보정 진행
