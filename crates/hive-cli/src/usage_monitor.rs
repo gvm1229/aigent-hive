@@ -451,6 +451,7 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     platform::call(&task_request(&config, "register"), Duration::from_secs(15))?;
     with_state(root, |s| {
         s.observation_count = 0;
+        s.observation_watch_started_at = None;
         s.control_connected = false;
         s.heartbeat = 0;
         Ok(())
@@ -724,7 +725,8 @@ fn controller_loop(
 ) -> Result<Value, AdapterError> {
     let sensor = sensor_worker();
     let started = Instant::now();
-    let mut cadence = state::Cadence::new();
+    let gap = with_state(root, |state| Ok(state.observation_gap(active, now())))?;
+    let mut cadence = state::Cadence::with_gap(gap);
     let mut sample: Option<SampleWorker> = None;
     let mut inspect: Option<Receiver<Result<Value, ()>>> = None;
     let mut next_inspect = started;
@@ -814,6 +816,7 @@ fn controller_loop(
                 s.heartbeat = now();
                 s.control_connected = control_connected;
                 s.app_alive = active;
+                let _ = s.observation_gap(active, now());
                 Ok(())
             });
             last_publish = tick;

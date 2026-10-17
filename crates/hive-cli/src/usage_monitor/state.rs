@@ -10,12 +10,20 @@ pub(super) const BLIND_SECONDS: u64 = 60;
 pub(super) struct Cadence {
     pub next_sample: std::time::Duration,
     last_good: std::time::Duration,
+    prior_gap: std::time::Duration,
 }
 impl Cadence {
     pub fn new() -> Self {
         Self {
             next_sample: std::time::Duration::ZERO,
             last_good: std::time::Duration::ZERO,
+            prior_gap: std::time::Duration::ZERO,
+        }
+    }
+    pub fn with_gap(gap: std::time::Duration) -> Self {
+        Self {
+            prior_gap: gap,
+            ..Self::new()
         }
     }
     pub fn begin(&mut self, at: std::time::Duration) {
@@ -24,16 +32,21 @@ impl Cadence {
     pub fn complete(&mut self, at: std::time::Duration, success: bool) {
         if success {
             self.last_good = at;
+            self.prior_gap = std::time::Duration::ZERO;
         } else {
             self.next_sample = at + std::time::Duration::from_secs(2);
         }
     }
     pub fn idle(&mut self, at: std::time::Duration) {
         self.last_good = at;
+        self.prior_gap = std::time::Duration::ZERO;
         self.next_sample = at;
     }
     pub fn blind(&self, at: std::time::Duration) -> bool {
-        at.saturating_sub(self.last_good).as_secs() >= BLIND_SECONDS
+        at.saturating_sub(self.last_good)
+            .saturating_add(self.prior_gap)
+            .as_secs()
+            >= BLIND_SECONDS
     }
 }
 
@@ -49,6 +62,8 @@ pub(super) struct MonitorState {
     pub incident: Option<Incident>,
     #[serde(default)]
     pub observation_count: u64,
+    #[serde(default)]
+    pub observation_watch_started_at: Option<u64>,
     #[serde(default)]
     pub last_query_error: Option<String>,
     #[serde(default)]
@@ -176,6 +191,22 @@ impl MonitorState {
             schema_version: 1,
             ..Self::default()
         }
+    }
+
+    pub fn observation_gap(&mut self, active: bool, at: u64) -> std::time::Duration {
+        if !active {
+            self.observation_watch_started_at = None;
+            return std::time::Duration::ZERO;
+        }
+        let started = *self.observation_watch_started_at.get_or_insert(at);
+        let anchor = self
+            .last_success
+            .filter(|last| *last >= started)
+            .unwrap_or(started);
+        if anchor > at {
+            return std::time::Duration::from_secs(BLIND_SECONDS);
+        }
+        std::time::Duration::from_secs(at - anchor)
     }
 
     pub fn halt(&mut self, reason: &str, now: u64) {
@@ -517,5 +548,34 @@ mod tests {
         assert!(c.blind(D::from_secs(61)));
         state.halt("sensor-unresponsive", 161);
         assert_eq!(state.incident.unwrap().reason, "sensor-unresponsive");
+    }
+    #[test]
+    fn controller_restart_preserves_the_last_normal_observation_deadline() {
+        use std::time::Duration as D;
+        let mut state = MonitorState::new();
+        assert_eq!(state.observation_gap(true, 100), D::ZERO);
+        state.last_success = Some(100);
+        let bytes = serde_json::to_vec(&state).unwrap();
+        let mut restarted: MonitorState = serde_json::from_slice(&bytes).unwrap();
+        let cadence = Cadence::with_gap(restarted.observation_gap(true, 155));
+        assert!(!cadence.blind(D::from_millis(4_999)));
+        assert!(cadence.blind(D::from_secs(5)));
+        restarted.last_success = Some(156);
+        assert_eq!(restarted.observation_gap(true, 156), D::ZERO);
+    }
+    #[test]
+    fn restart_before_first_success_also_preserves_the_watch_deadline() {
+        use std::time::Duration as D;
+        let mut state = MonitorState::new();
+        state.last_success = Some(10);
+        assert_eq!(state.observation_gap(true, 100), D::ZERO);
+        let bytes = serde_json::to_vec(&state).unwrap();
+        let mut restarted: MonitorState = serde_json::from_slice(&bytes).unwrap();
+        let cadence = Cadence::with_gap(restarted.observation_gap(true, 159));
+        assert!(cadence.blind(D::from_secs(1)));
+        assert_eq!(restarted.observation_gap(false, 200), D::ZERO);
+        assert_eq!(restarted.observation_gap(true, 300), D::ZERO);
+        restarted.last_success = Some(301);
+        assert!(Cadence::with_gap(restarted.observation_gap(true, 300)).blind(D::ZERO));
     }
 }
