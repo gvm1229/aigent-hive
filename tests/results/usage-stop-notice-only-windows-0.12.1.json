@@ -9,8 +9,9 @@
     "session_interruption": false,
     "monitor_started": false,
     "host": "Windows Codex",
-    "notice_sha256": "3a403c6ef7d3bc8313dc6be421fb423afdf0e194ab9edd2427282203a9c64b04",
-    "shown_ms": 890,
+    "notice_sha256": "25203b01bb54bdcefc33d09db837a18297066eb4845ca217fade3be2e7a11d93",
+    "shown_ms": 812,
+    "close_only_window": true,
     "closed_by_own_button": true,
     "incident_unchanged": true,
     "original_codex_app_preserved": true,
@@ -25,7 +26,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "button",
-      "image_sha256": "eaf95bbcf4f843ccbdbcad09442fd5ac91a233c10e6fcae10abbd858c7cb01f3"
+      "image_sha256": "7510ad9763c2ceb08bcaabeda688e6e5b28b718d208c0495eeb62f97e181c594"
     },
     {
       "case": "gap",
@@ -35,7 +36,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "button",
-      "image_sha256": "aa4b13433552665203960f2d859683d07d2e0b333860e8fda95187132ba0c7bf"
+      "image_sha256": "7aa629967e5782d30fb98650b18080ed5a64eeb3b3d2ebd8ebb5388e19b00df7"
     },
     {
       "case": "partial",
@@ -45,7 +46,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "button",
-      "image_sha256": "72ac815451766a4519e655ed15081349caeb458c0e54b182ae402ddaddde6877"
+      "image_sha256": "f9127b41c830a7e6ba8b37e9b611a523857354d58dc689f44365ed29991e902e"
     },
     {
       "case": "ack",
@@ -55,7 +56,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "button",
-      "image_sha256": "94b9577bf3a80539e38b067b357734c3548bc2a50b1053a9bbe4f83555f59455"
+      "image_sha256": "275876bf224a6e63b38bf9dfd4cc7b49b71928179c3959111d394be34d1a4cd4"
     },
     {
       "case": "unavailable",
@@ -65,7 +66,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "button",
-      "image_sha256": "61c2f5c2dcf488f931add5480af3911758c008e4b298c4b7f01b191c875dd3ab"
+      "image_sha256": "61ba30f587d110212f71ad081378a74e1b231d453fb6a90fc24de76f2f4ff92d"
     },
     {
       "case": "reset",
@@ -75,7 +76,7 @@
       "closed": true,
       "incident_unchanged": true,
       "close_with": "escape",
-      "image_sha256": "eaf2aab33e461b4482cca2ef3261df873912055c29d489949fe5421688d41814"
+      "image_sha256": "69a165519a51b46ae283459395e9f657bb2851326b880191ed4f2c48cc305f81"
     }
   ],
   "unit_cases": 13,
