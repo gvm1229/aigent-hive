@@ -4,7 +4,7 @@
 > Scope: product
 
 - [x] [RST121-001] 공유 상태·15초 관측·60초 관측 공백 중단
-  - state: complete; evidence: repo:docs/research/session-stop-0.12.1.md#sha256:89316ee7645ac9df0d5a93a480ade38314ac3970b11f3ab0fc27b029bef87527
+  - state: complete; evidence: repo:docs/research/session-stop-0.12.1.md#sha256:d003fffb096de7ec2e1f009d0b724ec77c63d0ee1013ad0a972b614fe2937a11
 - [ ] [RST121-002] Windows 앱 유지·세션별 중단·원인 표시·명시 재개
   - state: agent-owned; depends: RST121-001; owner: Codex; reason: 2026-10-18 현재 Windows 앱 세션 중단·이유 표시 검증과 통과 후 설치 승인
 - [ ] [RST121-003] 행동 회귀·현재 Windows 앱 수용·근거 기록
