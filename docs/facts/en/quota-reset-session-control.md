@@ -5,22 +5,22 @@ topic_slug: quota-reset-session-control
 language: en
 counterpart: ../ko/quota-reset-session-control.md
 title: "Session-Bound Reset-Only Control"
-summary: "Iteration 1 uses reset or 60s observation-gap stops; desktop activation remains blocked."
+summary: "Current Windows single-session and latched restart stops pass; full acceptance and install pending."
 tags: [reset, session, usage]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:87fcbc7b005837f38639ceef43113c232ed5742298886caea92c009c9921d5cd"
-  - "repo:crates/hive-cli/src/usage_monitor/desktop.ps1#sha256:ac6b2bafb909ef4afc591b16555346a15004b318fc6439de559e928f3d53ee99"
-  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:91ab7f3d580cbc6f69a945072be09820c321c58ebcb247df033c5df88d85854b"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:361357e42576b8cbb6f01ee77a6eb0474cc6af4dcb68ddc6d18ede18208bd764"
+  - "repo:crates/hive-cli/src/usage_monitor/desktop.ps1#sha256:4b6e8a788b28e12fc34dff7f07cdf03d98814b86b7235dec7e3ea42866deb7e9"
+  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:4ef948e0b4201c4ac5a2864174c58f5d3ba07a3c54eaeafe75c075e4d870a59a"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:c45862bad77bd8cb0b9eb04691cf6161074509e7afeed1effb21cc57b03f532f"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:c51194775aaf8b9f4b0c34ffabdbbdd09768fb0758bdd54251d6f3d1a6f259b0"
-  - "repo:docs/research/session-stop-0.12.1.md#sha256:5035226eda596f7241ac9f730af31a78c72f61d2804b137849db1a572d7e1f47"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b6df0ad8e439ecfeb01d93e827e4d0f9b54ff8194d52149c41a3869f689ee6e0"
+  - "repo:docs/research/session-stop-0.12.1.md#sha256:d5a18bc4b139cd05ff96cd6c9497fe43a15b170c5eeb436523468e9115752eac"
 links: [automatic-dispatch-guard, installed-usage-guard]
-reviewed_revision: "git:7673c0ca72551d413d7f9e41f00d88c3f388b027"
+reviewed_revision: "git:583b3083b9c547fcc385249fe6892c17224fe612"
 status: active
 ---
 
 # Session-Bound Reset-Only Control
 
-The maintainer limited 0.12.1 iteration 1 to mid-turn stopping. Observed reset requests immediate interruption; 60s without valid usage also stops. Cadence: 15s starts, 5s timeout, 2s retry. Normal history subscriptions are absent; owners receive stop requests before bounded 5s verification. App termination is forbidden. Shared incidents survive opt-outs/restarts; exact acknowledgement plus fresh usage never resumes work. Thresholds/zero quota remain. Windows mocks pass; current desktop safety is unqualified, activation off and installed CLI 0.12.0. Earlier parent/subagent stops are partial evidence; app-exit causality remains unknown.
+0.12.1 iteration 1 stops sessions on observed reset or a 60s valid-observation gap. Starts: 15s; timeout: 5s; retry: 2s. Normal history subscriptions are absent; incident verification lasts at most 5s. App termination is forbidden. Shared incidents require exact acknowledgement and fresh usage; new chats and restarts cannot clear them. Work never resumes automatically. Windows Codex 26.1013.4894.0 single-session and latched restart stops pass with its window preserved. Full acceptance and installation remain pending; CLI 0.12.0 is installed and global monitoring is off. Threshold/zero-quota guards remain. Other OS, remote and cloud are unsupported; provider refill and billing cutoff are unproven.

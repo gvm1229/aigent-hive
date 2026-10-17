@@ -5,26 +5,26 @@ topic_slug: quota-reset-session-control
 language: ko
 counterpart: ../en/quota-reset-session-control.md
 title: "현재 작업의 초기화 감지 전용 제어"
-summary: "첫 차수의 실제 초기화·60초 공백 중단, 현재 앱 제어 비활성 유지"
+summary: "현재 Windows 단일 중단·재실행 차단 통과, 전체 수용·설치 대기"
 tags: [reset, session, usage]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:c18be9c1e87bb1a34d5ffeffa5aab93b2d620b86723a4ccfc05e804103b16aa8"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:87fcbc7b005837f38639ceef43113c232ed5742298886caea92c009c9921d5cd"
-  - "repo:crates/hive-cli/src/usage_monitor/desktop.ps1#sha256:ac6b2bafb909ef4afc591b16555346a15004b318fc6439de559e928f3d53ee99"
-  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:91ab7f3d580cbc6f69a945072be09820c321c58ebcb247df033c5df88d85854b"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:361357e42576b8cbb6f01ee77a6eb0474cc6af4dcb68ddc6d18ede18208bd764"
+  - "repo:crates/hive-cli/src/usage_monitor/desktop.ps1#sha256:4b6e8a788b28e12fc34dff7f07cdf03d98814b86b7235dec7e3ea42866deb7e9"
+  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:4ef948e0b4201c4ac5a2864174c58f5d3ba07a3c54eaeafe75c075e4d870a59a"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:c45862bad77bd8cb0b9eb04691cf6161074509e7afeed1effb21cc57b03f532f"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:c51194775aaf8b9f4b0c34ffabdbbdd09768fb0758bdd54251d6f3d1a6f259b0"
-  - "repo:docs/research/session-stop-0.12.1.md#sha256:5035226eda596f7241ac9f730af31a78c72f61d2804b137849db1a572d7e1f47"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b6df0ad8e439ecfeb01d93e827e4d0f9b54ff8194d52149c41a3869f689ee6e0"
+  - "repo:docs/research/session-stop-0.12.1.md#sha256:d5a18bc4b139cd05ff96cd6c9497fe43a15b170c5eeb436523468e9115752eac"
 links: [automatic-dispatch-guard, installed-usage-guard]
-reviewed_revision: "git:7673c0ca72551d413d7f9e41f00d88c3f388b027"
+reviewed_revision: "git:583b3083b9c547fcc385249fe6892c17224fe612"
 status: active
 ---
 
 # 현재 작업의 초기화 감지 전용 제어
 
-- 0.12.1 첫 차수: 세션 중단만 포함. 실제 초기화 즉시 요청·정상 조회 공백 60초 보호
-- 15초 시작·5초 제한·2초 재시도. 평상시 기록 구독 없음, 소유 대화 중단 뒤 5초 확인
-- 앱 종료 금지, 공유 사건의 정확한 확인·새 관측 필수. 대화 제외·재시작으로 잠금 해제 불가, 자동 재개 금지
-- 하한·0% 보호 유지. Windows 모의 통과, 현재 앱 수용 미완료·활성 차단·설치 CLI 0.12.0
-- 이전 부모·하위 작업 중단은 부분 근거, 앱 종료 원인 미확정
+- 0.12.1 첫 차수: 실제 초기화 즉시 세션 중단·정상 관측 공백 60초 보호
+- 15초 시작·5초 제한·2초 재시도. 평상시 기록 구독 없음, 사건 뒤 5초 확인·구독 해제
+- 앱 종료 금지. 공유 사건의 정확한 확인·새 관측 필수, 새 대화·재시작의 잠금 해제와 자동 재개 금지
+- Windows 앱 26.1013.4894.0 단일 중단·잠금 중 재실행 중단과 창 유지 통과. 전체 수용·설치 대기, 현재 CLI 0.12.0·전역 감시 비활성
+- 기존 하한·0% 보호 유지. 다른 OS·원격·클라우드 미지원, 실제 제공자 초기화·과금 종료 미증명
