@@ -1383,6 +1383,30 @@
 | [failed](runs/20261017T181636-e930a1bac701.md) | 현재 앱 단일 시험 세션의 기록 없는 연결 확인 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T181706-f4d0241cf405.md) | 현재 앱에 표시한 단일 시험 세션의 연결 재검증 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T181721-c62e3e1a17b2.md) | 현재 Windows 앱을 유지한 단일 시험 세션 실제 중단 | 8d0f81212fab8994b95f758349b67eccbfc54c32 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T182057-d502a31468ea.md) | 검증한 현재 앱 제어 활성화와 전역 보호 회귀 | 56962794e733b57e3196884d5c99c063b15d684f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T182241-1270071a3d1e.md) | 현재 앱 제어 연결·범위 확인 뒤 실행 허용 회귀와 빌드 | 56962794e733b57e3196884d5c99c063b15d684f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T182436-b97957635f02.md) | 현재 앱 감시 연결의 Windows 경로 모의 회귀 | 56962794e733b57e3196884d5c99c063b15d684f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T182718-108f4c44f3ea.md) | 잠금 중 새 실행 중단과 최초 실패 시한 보존 Windows 회귀 | 604d910fa7d3dd932fb13b725a1bece0743b4352 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T182751-fe6a3fdac87e.md) | 현재 앱에서 잠금 뒤 새 실행의 재차 중단 확인 | 604d910fa7d3dd932fb13b725a1bece0743b4352 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T182843-fd8f5ed97887.md) | 재실행 중단의 Windows 실행 인수 한도와 정적 검사·빌드 | 604d910fa7d3dd932fb13b725a1bece0743b4352 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183110-9e148797dc07.md) | 격리 프록시에서 사용량 조회 실패 유발 가능성 확인 | 5ed93fc3015f53219716c66df9c00b1463007720 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183342-2fea209e5808.md) | 감시 재시작 뒤 60초 보호 시한 보존 회귀 | 4ce1ee88f79a6b6c2163220b783af6beeb07c070 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183449-15059a925a88.md) | 실제 실행 중단 근거의 완료·재시작·도구 호출 구분 | ee12fbe10011b8f6c4c1fdadc2e097438a61b591 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183548-37fc6546d9ef.md) | 네이티브 중단 사건의 시간과 두 도구 호출 형식 확인 | ee12fbe10011b8f6c4c1fdadc2e097438a61b591 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183551-57c515f0da23.md) | 0.12.1 세션 중단 기능의 전체 CLI 회귀 | ee12fbe10011b8f6c4c1fdadc2e097438a61b591 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T183932-96a24b4eb3f4.md) | 네이티브 중단 사건과 Windows 정규화 경로의 동일 대상 확인 | ee12fbe10011b8f6c4c1fdadc2e097438a61b591 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T184302-1324e2090a75.md) | 사건 확인 뒤에도 중단 원인을 보존하는 Windows 표시 회귀 | ee12fbe10011b8f6c4c1fdadc2e097438a61b591 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T185223-f96b4d9d7783.md) | 도구 대기와 실제 도구 없는 추론의 독립 구분 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T185408-78e1f3599895.md) | 독립 현재 앱 수용 검사기의 변경 계약 회귀 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T185629-da8cc6041817.md) | 전체 세션·실패 보호·설치 승인 근거의 선행 조건 회귀 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T185726-f9b74dbc76cb.md) | 이전 부분 성공으로 새 설치를 허용하지 않는 조건 확인 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T185836-cec3bcd5f063.md) | 0.12.1 개발 설치 경로의 전체 회귀와 최종 고정 빌드 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T190548-7c7e9d4959fe.md) | 정확한 세 시험 역할과 도구 없는 추론의 설치 근거 확인 | 85c036919e0a7f82a35eeca4638b68f9fd16bdb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T191041-83a39705c2cc.md) | Windows PowerShell의 UTF-8 원인 표시와 설치 검사 실행 | 6cdf7878d3cfb9dae15c08568402fbea0eb48c5b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T191637-9a07ab50f32d.md) | 현재 Windows 앱을 유지하는 세 역할 중단과 승인 조건부 설치 수용 시작 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T191650-97bd8fc67a23.md) | Windows PowerShell 모듈 의존을 제거한 독립 수용 검사기 시작 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T191744-89b44be3a399.md) | Windows PowerShell에 파일 해시 명령이 없어도 수용 검사기를 시작하는 회귀 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T191751-dea8116925a5.md) | Windows 수용 검사기의 독립 실행과 세션 중단 계약 재검증 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
 
