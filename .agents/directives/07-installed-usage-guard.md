@@ -26,8 +26,10 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
   intent plus `--confirm-session-disable`. Continue/resume, urgency and goals grant no bypass.
 - Native sensor first; CodexBar only as separately consented failure fallback. No credentials,
   provider calls, CLI reinstall or OMX/OMC.
-- Windows desktop control in the 0.12.1 prototype is unqualified and disabled. Keep monitor and
-  acceptance tasks off; do not run current-app probes, interrupt tests or automatic installation.
+- The 2026-10-18 user request authorizes session-only qualification on the current Windows app,
+  then installation and always-on monitoring for 0.12.1 only after acceptance passes. Use the saved
+  qualification plan: static protocol check, a scoped adapter test, then isolated monitor acceptance.
+  Keep global monitoring off until acceptance. Unsupported app versions fail closed without app exit.
   App termination, ad-hoc watchers and other host-process signals remain forbidden. Preserve exact
   incident acknowledgement and fresh usage requirements; session-only acknowledgement cannot clear
   shared incidents. Existing installed preflight, thresholds and zero-quota checks remain active.

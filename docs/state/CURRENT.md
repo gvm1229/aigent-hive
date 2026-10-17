@@ -5,7 +5,7 @@
 - 공개 안정판: `0.12.0`
 - 현재 사용자 CLI: `0.12.0` 관리된 실행 파일 원복, 기존 지식·선호 유지
 - 수용한 공개 시험: `0.12.0-test.3`
-- 단계: 2026-10-16 첫 차수 오프라인 수정·모의 검증 완료, 현재 앱 수용 미완료
+- 단계: 2026-10-18 현재 Windows 앱의 단계별 세션 중단 수용·통과 후 설치
 - 정본: [활성 계획](../plans/PLAN.md)·[출시 순서](../plans/0.12.0-stable-release.md)·[범위 결정](../decisions/ADR-0025-0.11.2-scope.md)
 
 ## 생성된 현재 항목
@@ -14,16 +14,16 @@
 - 구현 목표: `0.12.1`
 - 현재 등록 항목: 1/3 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `RST121-002`, `RST121-003`
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `RST121-002`, `RST121-003`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 이번 작업
 
 - [첫 차수 계획](../plans/active/reset-stop-0.12.1.md): 실제 초기화 즉시 세션 중단, 정상 조회 부재 60초 뒤 보호 중단, Codex 앱 유지
-- 실제 앱 접근·중단 시험·설치 비활성 유지, 평상시 기록 구독 제거와 사건별 한정 확인의 모의 검증
+- 현재 앱 26.1013.4894.0의 단계별 세션 중단·이유 표시 시험 승인, 실제 통과 후 0.12.1 설치·상시 감시. 다른 기능·정식 게시 제외
 - [추가 지시 보존](../plans/backlog/steering-0.12.1.md): 이전 구현 근거 보존, 첫 차수 제품 제외·후속 차수 대기. 현재 소스 작업의 지시 보존 규칙 유지
 - `9fc3c04e`·`fbbe4113`: 60초 보호·평상시 기록 구독 제거·사건별 5초 확인·늦은 요청 시간 보존. [Windows 근거](../../tests/results/session-stop-first-iteration-0.12.1.json): Rust 19개·모의 26개·Clippy 통과, 실제 앱 세션 중단과 설치 증명 제외
 
