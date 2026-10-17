@@ -16,7 +16,7 @@ sources:
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:c45862bad77bd8cb0b9eb04691cf6161074509e7afeed1effb21cc57b03f532f"
   - "repo:docs/guides/installed-usage-guard.md#sha256:b6df0ad8e439ecfeb01d93e827e4d0f9b54ff8194d52149c41a3869f689ee6e0"
   - "repo:docs/research/session-stop-0.12.1.md#sha256:c827dcadf95adf083f52ac0d466357b79acb8637e8ac9175ebfd5a088bb8c235"
-  - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:cde4caf24f077a63c286c4494d9907380fc54369643fca2bf2eb76b97581ce88"
+  - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
 links: [automatic-dispatch-guard, installed-usage-guard]
 reviewed_revision: "git:88fb9fe4f796d8ae463481073545722c245b1b63"
 status: active
