@@ -116,6 +116,25 @@ $partial=Matches-StopReason @('사용량 초기화','일부 중단 상태의 확
         self.assertTrue(result["separate_controls"])
         self.assertTrue(result["partial_rejected"])
 
+    def test_resume_command_quotes_the_root_without_executing_it(self):
+        result = self.view("@{command=(Get-ResumeCommand \"C:\\Users\\O'Neil `$value\" ('sha256:'+('a'*64)))}|ConvertTo-Json -Compress")
+        self.assertIn("--user-root 'C:\\Users\\O''Neil $value'", result["command"])
+        self.assertIn("--incident 'sha256:", result["command"])
+
+    def test_invalid_incident_cannot_be_copied_as_a_command(self):
+        result = self.view("@{rejected=($null -eq (Get-ResumeCommand 'C:\\Users\\fixture' 'invalid;other'))}|ConvertTo-Json -Compress")
+        self.assertTrue(result["rejected"])
+
+    def test_copy_is_available_only_for_the_exact_pending_incident(self):
+        result = self.view("$context.incident='sha256:'+('a'*64);$state.incident.digest=$context.incident;$pending=Get-NoticeView $state $context $true;$state.incident=$null;$cleared=Get-NoticeView $state $context $true;@{pending=$pending.CanCopy;cleared=$cleared.CanCopy}|ConvertTo-Json -Compress")
+        self.assertTrue(result["pending"])
+        self.assertFalse(result["cleared"])
+
+    def test_resume_instructions_do_not_depend_on_a_running_agent(self):
+        result = self.view("Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn("Codex 밖의 PowerShell", result["Next"])
+        self.assertNotIn("Codex에", result["Next"])
+
 
 if __name__ == "__main__":
     unittest.main()

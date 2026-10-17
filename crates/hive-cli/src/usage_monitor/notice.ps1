@@ -31,7 +31,8 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         Reason=$reason;Status='중단 상태 확인 중';StatusDetail='앱에서 작업 중단 결과를 확인하고 있습니다.';Tone='warning'
         App=if($state.app_alive){'Codex 앱은 열려 있습니다.'}else{'Codex 앱의 상태를 확인해 주세요.'}
         Automatic='이전 작업은 자동으로 다시 시작하지 않습니다.'
-        Next='Codex에 “이번 중단을 확인하고,'+"`n"+'사용량을 다시 조회한 뒤 재개해줘”라고 요청해 주세요.'
+        Next="명령을 복사해 Codex 밖의 PowerShell에서 실행하세요.`n사용량 확인 후, 원하는 대화를 직접 재개해 주세요."
+        CanCopy=($matching -and -not $readFailed -and $current.digest -match '^sha256:[a-f0-9]{64}$')
         When=if($context.detected_at -gt 0){[DateTimeOffset]::FromUnixTimeSeconds([long]$context.detected_at).ToLocalTime().ToString('yyyy.MM.dd  HH:mm:ss')}else{'확인 중'}
         Banner=if($context.preview){'화면 미리보기 · 실제 조회나 작업 중단 없음'}elseif($context.is_test){'격리 시험 · 실제 초기화가 아닌 시험 신호'}else{''}
         Details='';Footer='창을 닫아도 작업은 재개되지 않습니다.'
@@ -43,9 +44,10 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         $view.Next="원하는 Codex 대화에서 작업을 직접 재개해 주세요.`n이 창을 닫아도 이전 작업은 자동으로 시작되지 않습니다."
     } elseif(-not $readFailed -and -not $matching) {
         $view.Status='새 보호 사건 발생';$view.StatusDetail='이 창은 이전 중단 기록입니다. 새 안내 창에서 최신 이유와 상태를 확인해 주세요.'
-        $view.Next='최신 안내 창에서 새 중단 이유를 확인한 뒤, Codex에 재개를 요청해 주세요.'
+        $view.Next="최신 안내 창에서 새 중단 기록을 확인해 주세요.`n그 창에 표시된 재개 방법을 따라 주세요."
     } elseif($readFailed) {
         $view.Status='상태를 확인할 수 없습니다';$view.StatusDetail="중단 결과를 읽지 못했습니다.`n보호 잠금이 풀린 것으로 처리하지 않습니다."
+        $view.Next="중단 기록을 다시 읽을 수 있을 때 확인해 주세요.`n현재 Codex 작업 상태를 먼저 점검해 주세요."
     } elseif($current.stop_confirmed -and $state.app_alive) {
         $view.Title=if($reset){"새 할당량을 보호하기 위해`n작업을 멈췄습니다"}else{"사용량 한도 보호를 위해`n작업을 멈췄습니다"}
         $view.Explanation=if($reset){"Aigent Hive가 사용량 초기화를 감지했습니다.`n새 할당량을 보호하기 위해 Codex 작업을 중단했습니다."}elseif($sensor){"Aigent Hive가 60초 동안 사용량을 확인하지 못했습니다.`n한도 보호를 위해 Codex 작업을 중단했습니다."}else{"Aigent Hive가 사용량 보호 상태를 확인하지 못했습니다.`n한도 보호를 위해 Codex 작업을 중단했습니다."}
@@ -64,6 +66,12 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
     return $view
 }
 
+function Get-ResumeCommand([string]$root,[string]$incident) {
+    if([string]::IsNullOrWhiteSpace($root) -or -not [IO.Path]::IsPathRooted($root) -or
+       $root.IndexOfAny([char[]](0..31)) -ge 0 -or $incident -notmatch '^sha256:[a-f0-9]{64}$'){return $null}
+    return "hive usage monitor acknowledge --user-root '"+$root.Replace("'","''")+"' --incident '"+$incident+"' --output json"
+}
+
 function Update-Notice($ui) {
     $state=$null;$enabled=$false;$readFailed=$false
     try {
@@ -75,6 +83,10 @@ function Update-Notice($ui) {
     catch {$ui.context.detected_at=0L;$view=Get-NoticeView $null $ui.context $false $true}
     foreach($name in @('Title','Explanation','Reason','Status','StatusDetail','App','Automatic','Next','When','Banner','Details','Footer')){$ui.controls[$name].Text=$view[$name]}
     $ui.controls.BannerBox.Visibility=if($view.Banner){'Visible'}else{'Collapsed'}
+    $ui.controls.CopyArea.Visibility=if($view.CanCopy){'Visible'}else{'Collapsed'}
+    if(-not $view.CanCopy){$ui.copy_feedback=''}
+    $ui.controls.CopyFeedback.Text=$ui.copy_feedback
+    $ui.controls.CopyFeedback.Visibility=if($ui.copy_feedback){'Visible'}else{'Collapsed'}
     $success=$view.Tone -eq 'success'
     $ui.controls.StatusBox.Background=if($success){'#EDF5F0'}else{'#FFF5E5'}
     $ui.controls.Status.Foreground=if($success){'#22563E'}else{'#744B13'}
@@ -120,6 +132,14 @@ function New-NoticeWindow($context,[string]$root) {
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="CopyAction" TargetType="Button" BasedOn="{StaticResource CloseAction}">
+   <Setter Property="Background" Value="#F1F4F0"/><Setter Property="Foreground" Value="#205D4B"/>
+   <Setter Property="BorderBrush" Value="#C8D4CB"/><Setter Property="Height" Value="36"/>
+   <Style.Triggers>
+    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="White"/></Trigger>
+    <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="#205D4B"/></Trigger>
+   </Style.Triggers>
+  </Style>
  </Window.Resources>
  <Grid>
   <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -148,6 +168,10 @@ function New-NoticeWindow($context,[string]$root) {
     </StackPanel>
     <TextBlock Text="다시 작업하려면" FontWeight="Bold" Margin="0,20,0,6"/>
     <TextBlock x:Name="Next" Foreground="#4E5C55" LineHeight="22" TextWrapping="Wrap"/>
+    <StackPanel x:Name="CopyArea" Margin="0,12,0,0">
+     <Button x:Name="Copy" Content="재개 명령 복사" Style="{StaticResource CopyAction}" HorizontalAlignment="Left" AutomationProperties.Name="재개 명령 복사, 명령 실행 없음"/>
+     <TextBlock x:Name="CopyFeedback" Foreground="#4E5C55" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+    </StackPanel>
     <Expander Header="상태 자세히 보기" Margin="-4,18,0,0" Foreground="#4E5C55" AutomationProperties.Name="사용량 보호 상태 자세히 보기">
      <StackPanel Margin="24,10,0,0">
       <Grid>
@@ -176,10 +200,24 @@ function New-NoticeWindow($context,[string]$root) {
     $window=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($xaml))
     $window.MaxHeight=[Math]::Max(420,[Windows.SystemParameters]::WorkArea.Height-48)
     $controls=@{}
-    foreach($name in @('Title','Explanation','Reason','Status','StatusDetail','App','Automatic','Next','When','Banner','BannerBox','StatusBox','Details','Footer','Close')){$controls[$name]=$window.FindName($name)}
+    foreach($name in @('Title','Explanation','Reason','Status','StatusDetail','App','Automatic','Next','When','Banner','BannerBox','StatusBox','Details','Footer','Close','Copy','CopyArea','CopyFeedback')){$controls[$name]=$window.FindName($name)}
     $timer=[Windows.Threading.DispatcherTimer]::new();$timer.Interval=[TimeSpan]::FromSeconds(1)
-    $ui=@{window=$window;controls=$controls;context=$context;root=$root;timer=$timer}
+    $ui=@{window=$window;controls=$controls;context=$context;root=$root;timer=$timer;copy_feedback=''}
     $window.Tag=$ui;$timer.Tag=$ui;$controls.Close.Tag=$window
+    $controls.Copy.Tag=$ui
+    $controls.Copy.Add_Click({
+        param($sender,$eventData)
+        $ui=$sender.Tag
+        try {
+            $state=Read-NoticeState (Join-Path $ui.root '.hive/runtime/usage-monitor/state.json')
+            if($state.incident.digest -ne $ui.context.incident){throw 'Incident changed'}
+            $command=Get-ResumeCommand $ui.root $ui.context.incident
+            if(-not $command){throw 'Invalid resume command'}
+            [Windows.Clipboard]::SetText($command)
+            $ui.copy_feedback='복사했습니다. Codex 밖의 PowerShell에 붙여넣어 실행하세요.'
+        } catch {$ui.copy_feedback='명령을 복사하지 못했습니다. 현재 중단 기록을 확인한 뒤 다시 눌러 주세요.'}
+        Update-Notice $ui
+    })
     $timer.Add_Tick({param($sender,$eventData) Update-Notice $sender.Tag})
     $controls.Close.Add_Click({param($sender,$eventData) $sender.Tag.Close()})
     $window.Add_PreviewKeyDown({param($sender,$eventData) if($eventData.Key -eq 'Escape'){$sender.Close();$eventData.Handled=$true}})
