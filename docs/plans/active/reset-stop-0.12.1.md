@@ -1,7 +1,9 @@
-# 초기화 감지 뒤 세션 중단 0.12.1
+# 초기화 감지 뒤 세션 중단 0.13.0
 
-> Plan version: 0.12.1
+> Plan version: 0.13.0
 > Scope: product
+
+- 공개 목표0.13.0. 기존 RST121 ID·0.12.1-dev 실측 원문·이 파일 경로는 검증 연속성을 위해 보존
 
 - [x] [RST121-001] 공유 관측·15초 조회·60초 관측 공백 중단
   - state: complete; evidence: repo:docs/research/session-stop-0.12.1.md#sha256:50b5ba7baa1b9c2ed7bf96669115860655bb2fe0b7b5d7df7ac5fa628c650437
