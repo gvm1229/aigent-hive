@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.13.0`
-- 현재 등록 항목: 4/8 완료
+- 현재 등록 항목: 5/8 완료
 
-- `agent-owned`: `REL121-002`, `REL121-003`, `REL121-004`, `REL121-005`
+- `agent-owned`: `REL121-003`, `REL121-004`, `REL121-005`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

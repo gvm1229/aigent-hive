@@ -4,9 +4,9 @@
 > Scope: release
 
 - [x] [REL121-001] 폐기한 재개 차단의 역사 코드·재현·복구 문서
-  - state: complete; evidence: repo:docs/research/codex-resume-lock-reference.md#sha256:bb99293eb9bb3a588f91783c04eb2c8eb63479097802ac87a3d548fb9a79c87b
-- [ ] [REL121-002] 세션 중단·알림만의 제품 범위와 출시 자료 검증
-  - state: agent-owned; owner: Codex; reason: 필수 이전 버전 자료와 출시 입력 준비
+  - state: complete; evidence: repo:docs/research/codex-resume-lock-reference.md#sha256:1770e8379d94ab3ceae4c08c85e403ede1dba93c521e2ca7c88d3b96017bf3e9
+- [x] [REL121-002] 세션 중단·알림만의 제품 범위와 출시 자료 검증
+  - state: complete; evidence: repo:docs/research/release-0.13.0.md#sha256:2179351916477c5606006a5c08cf69d99e9155a80d5abca87acb69d45adbe5cf
 - [ ] [REL121-003] 공개 0.13.0-test.1 게시·정확 산출물 수용
   - state: agent-owned; depends: REL121-002; owner: Codex; reason: 공개 후보·게시·독립 수용 대기
 - [ ] [REL121-004] 구독 안내 문구 승인·안정판 문서·보호 main 통합
@@ -40,9 +40,10 @@
 - 조사 확정: 0.12.0과0.11.1 프로젝트 파일 집합 동일. hive-render/src/lib.rs의 frozen_project_base_0_11_1 매크로·부속 파일 처리를0.12.0으로 기계적 복제, registry의 새 renderer 연결. 안정판 Skill 검사 표본에도 이미 공개한0.12.0 추가
 - 회귀에서 확인한 추가 필수 연결: hive-projection/src/lib.rs의 historical_builtin_skills 지원 목록·예상 개수에0.12.0/28 등록. 기존 정확 목록 검사 유지, 미등록 버전 허용 확대 없음
 - 첫 원격 CI의 시작 전 거부: 새 검사4개가 lanes.toml에 미등록. developer_digest·monitor_qualification·session_events·usage_notice를 기존 contract 묶음에 등록, 전체 파일의 한 차례 배정 검사 유지. 제품 지문 변경 없음
+- 전체 계약의 옛 잠금 가정2개를 감지 시 거부·새 정상 관측 뒤 재개 허용으로 수정. run_role_contracts의 기록 변조·관측 역행 거부는 유지, 지식 관계 검사의 출처 지문 실패는 같은 문서 정합화로 해결
 - 이전 버전 실제 표본: 공개 npm0.12.0의 무결성 검증한 Windows 실행 파일을 격리 폴더에만 추출, 기존 합성 설정으로 setup 수행. tests/fixtures/project-predecessors/0.12.0/public-stable에 개인 경로 없는 고정 ZIP·원본 지문 보존. 현재 설치 변경 없이 기존 qualify-project-predecessors.py의 갱신·원복·복구 검사에 사용
 - 검증: 버전·기준본 범위·안정판 Skill·출시 노트·제품 범위 검사, 필요한 Rust/설치 회귀. 실패 시 제품 수정은 첫 공개 시험 전에 완료
-- 완료: 현재 제품 커밋 지문과 완료 RST121 3개를 test-release-intent에 고정, 로컬 검사·정확 소스 CI 통과
+- 완료: 현재 제품 지문과 완료 RST121 3개를 test-release-intent에 고정, 로컬 검사 통과. 다음 단계의 정확 소스 CI 통과 뒤에만 후보 생성
 
 ### REL121-003 — 공개 시험과 수용
 
