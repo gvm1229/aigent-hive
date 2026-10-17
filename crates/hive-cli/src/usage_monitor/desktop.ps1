@@ -1,9 +1,13 @@
 # Version-qualified desktop coordination client. No app files, settings, or processes are changed.
+param([string]$QualificationThread='')
 $ErrorActionPreference = 'Stop'
-throw 'Unqualified desktop control disabled; do not contact the Codex app'
+if($QualificationThread -and $QualificationThread -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'){throw 'Invalid qualification scope'}
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+function Assert-DesktopVersion([string]$version) {
+    if($version -ne '26.1013.4894.0'){throw 'Desktop version requires control qualification'}
+}
 Add-Type -TypeDefinition @'
 using System;
 using System.IO;
@@ -72,8 +76,7 @@ try {
     $owner = Invoke-CimMethod -InputObject $peer -MethodName GetOwner
     if ($matching.Count -ne 1 -or $peer.Name -ne 'ChatGPT.exe' -or $owner.ReturnValue -ne 0 -or
         ($owner.Domain + '\' + $owner.User) -ne [Security.Principal.WindowsIdentity]::GetCurrent().Name) { throw 'Untrusted desktop pipe peer' }
-    # This private coordination protocol is qualified only for this exact tested package.
-    if ([string]$matching[0].Version -ne '26.1007.9446.0') { throw 'Desktop version requires control qualification' }
+    Assert-DesktopVersion ([string]$matching[0].Version)
     $pin = [Diagnostics.Process]::GetProcessById([int]$pipe.ServerPid)
     $null = $pin.Handle
     if ($pin.MainModule.FileName -ne $peer.ExecutablePath -or
@@ -106,6 +109,7 @@ try {
         $sessions[$id].subscribed=$following
     }
     function Track([string]$id) {
+        if($QualificationThread -and $id -ne $QualificationThread){return}
         if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$') {throw 'Invalid desktop thread identity'}
         if (-not $sessions.ContainsKey($id)) {
             if ($sessions.Count -ge 4096) {throw 'Too many desktop sessions'}
@@ -273,7 +277,7 @@ try {
                     if ($message.method -eq 'thread-stream-following-changed' -and $message.version -eq 1 -and
                         $message.params.hostId -eq 'local' -and $message.params.following -eq $true) {
                         $id=[string]$message.params.conversationId
-                        if($id -match '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and -not $sessions.ContainsKey($id) -and -not $catalogSeen.ContainsKey($id)) {
+                        if(( -not $QualificationThread -or $id -eq $QualificationThread) -and $id -match '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and -not $sessions.ContainsKey($id) -and -not $catalogSeen.ContainsKey($id)) {
                             $catalogSeen[$id]=$true;$catalogQueue.Enqueue($id)
                         }
                     } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
@@ -298,6 +302,7 @@ try {
                     $catalogSeen=@{};$catalogInProgress=$true;$catalogRoundFault=$false
                     foreach ($id in @($command.ids)) {
                         if ($id -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or $catalogSeen.ContainsKey($id)) {throw 'Invalid catalog identity'}
+                        if($QualificationThread -and $id -ne $QualificationThread){throw 'Catalog outside qualification scope'}
                         $catalogSeen[$id]=$true
                         if (-not $sessions.ContainsKey($id)) {$catalogQueue.Enqueue($id)}
                     }

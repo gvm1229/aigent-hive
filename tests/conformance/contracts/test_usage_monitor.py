@@ -443,11 +443,26 @@ $stop.verifyUntil=$clock.ElapsedMilliseconds-1;Release-Subscriptions
 """
         self.assertTrue(self.powershell(source)["all_requests_timed"])
 
-    def test_direct_desktop_script_is_disabled_before_loading_native_pipe_code(self):
+    def test_invalid_qualification_scope_is_rejected_before_native_pipe_code(self):
         path=str(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').replace("'","''")
-        source="$ErrorActionPreference='Stop';$blocked=$false;try {& '"+path+"'}catch{if($_.Exception.Message -match 'Unqualified desktop control disabled'){$blocked=$true}else{throw}};"
+        source="$ErrorActionPreference='Stop';$blocked=$false;try {& '"+path+"' -QualificationThread 'invalid'}catch{if($_.Exception.Message -match 'Invalid qualification scope'){$blocked=$true}else{throw}};"
         source+="if(-not $blocked -or ('HiveDesktopPipe' -as [type])){throw 'Desktop transport was loaded'};@{blocked_before_native_code=$true}|ConvertTo-Json -Compress"
         self.assertTrue(self.powershell(source)["blocked_before_native_code"])
+
+    def test_desktop_version_and_qualification_scope_are_exact(self):
+        source=self.offline_controller()+r"""
+Assert-DesktopVersion '26.1013.4894.0'
+foreach($version in @('26.1007.9446.0','26.1013.4894.1','')) {
+ $rejected=$false
+ try{Assert-DesktopVersion $version}catch{$rejected=$true}
+ if(-not $rejected){throw 'Untested desktop version accepted'}
+}
+$QualificationThread=$one
+Track $one;Track $two
+if($sessions.Count -ne 1 -or -not $sessions.ContainsKey($one)){throw 'Qualification scope escaped'}
+@{version_exact=$true;scope_exact=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["scope_exact"])
 
 
 if __name__ == "__main__":
