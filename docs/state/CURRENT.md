@@ -37,6 +37,6 @@
 
 ## 이후 범위
 
-- 다른 예정 기능은 [후속 차수](../plans/backlog/steering-0.12.1.md). 공개 시험·정식 출시는 [승인된 출시 계획](../plans/active/release-0.13.0.md), Discord 정확 문구는 승인 전 초안
+- 다른 예정 기능은 [후속 차수](../plans/backlog/steering-0.12.1.md). 공개 시험·정식 출시는 [승인된 출시 계획](../plans/active/release-0.13.0.md), 승인한529자 Discord 원문·지문 등록 완료
 - 비활성 과거 파일 14개 삭제의 이전 정책 거부는 수동 정리 범위, 활성 감시와 분리. 거부 우회 없음
 - [이전 상태 전체](../archive/state/0.12.1-before-notice-only.md)에 0.12.0 공개 게시·미완료9개·과거 복구·검증·정리 근거 보존. 다른 작업의 문서·시험 도구 변경 보존
