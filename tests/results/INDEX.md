@@ -1407,9 +1407,18 @@
 | [passed](runs/20261017T191650-97bd8fc67a23.md) | Windows PowerShell 모듈 의존을 제거한 독립 수용 검사기 시작 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261017T191744-89b44be3a399.md) | Windows PowerShell에 파일 해시 명령이 없어도 수용 검사기를 시작하는 회귀 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T191751-dea8116925a5.md) | Windows 수용 검사기의 독립 실행과 세션 중단 계약 재검증 | 583b3083b9c547fcc385249fe6892c17224fe612 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192147-16cfe307df68.md) | 전체 확인 실패 뒤 현재 대화의 읽기 전용 상태 응답 크기 진단 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192158-66cbd18a2670.md) | 현재 대화의 읽기 전용 상태 응답과 대기 연결 확인 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192256-8715e02e6fc8.md) | 중단 신호 없이 전체 앱 소유 대화의 확인 응답 처리 진단 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T192446-df5589ad0a3f.md) | 중단 응답 우선과 대형 상태의 한 번씩 확인하는 회귀 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192527-15e37a532f4f.md) | 첫 중단 응답을 먼저 보존하고 큰 상태를 차례로 확인하는 최종 회귀·빌드 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192641-ce809ad7daba.md) | 큰 상태 확인을 차례로 수행하는 수정본의 격리 수용 루트 준비 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T192847-02220ac369e7.md) | 수정본의 실제 중단과 승인 조건부 설치 독립 검사 시작 | f4fba60b00759fa30c7b5f491d5f3944bb0dc6fc | Windows-11-10.0.26300-SP0 |
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
 
 첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
 
 현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
+
+현재 앱의 첫 전체 시험: [세 역할 중단·전체 확인 실패](session-stop-partial-windows-0.12.1.json). 실제 중단과 제품 전체 확인의 구분, 설치 미실행
