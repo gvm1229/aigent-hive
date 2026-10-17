@@ -132,8 +132,9 @@ $partial=Matches-StopReason @('사용량 초기화','일부 중단 상태의 확
                            "function Visit($node){if($node -isnot [Windows.DependencyObject]){return};if($node -is [Windows.Controls.Button]){$nodes.Add($node.Content)};"
                            "foreach($child in [Windows.LogicalTreeHelper]::GetChildren($node)){Visit $child}};"
                            "$window.ApplyTemplate()|Out-Null;Visit $window;"
-                           "@{buttons=@($nodes.ToArray());next=(Get-NoticeView $state $context $true).Next}|ConvertTo-Json -Compress")
+                           "@{buttons=@($nodes.ToArray());resize=$window.ResizeMode.ToString();next=(Get-NoticeView $state $context $true).Next}|ConvertTo-Json -Compress")
         self.assertEqual(result["buttons"], ["안내 닫기"])
+        self.assertEqual(result["resize"], "NoResize")
         self.assertIn("재개하거나 새 메시지", result["next"])
         source = NOTICE.read_text(encoding="utf-8")
         for removed in ("Get-ResumeCommand", "Clipboard", "CanCopy", "보호 잠금", "Start-Process", "acknowledge"):

@@ -88,7 +88,7 @@ function New-NoticeWindow($context,[string]$root,[string]$logo) {
     [xml]$xaml=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  Title="Aigent Hive — 사용량 보호 상태" Width="560" MinWidth="460" MinHeight="420" SizeToContent="Height"
- WindowStartupLocation="CenterScreen" ResizeMode="CanResize" Background="#FBFCFA" Foreground="#202B27"
+ WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Background="#FBFCFA" Foreground="#202B27"
  FontFamily="Malgun Gothic" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
  <Window.Resources>
   <Style x:Key="CloseAction" TargetType="Button">
@@ -167,7 +167,7 @@ function New-NoticeWindow($context,[string]$root,[string]$logo) {
     $timer.Add_Tick({param($sender,$eventData) Update-Notice $sender.Tag})
     $controls.Close.Add_Click({param($sender,$eventData) $sender.Tag.Close()})
     $window.Add_PreviewKeyDown({param($sender,$eventData) if($eventData.Key -eq 'Escape'){$sender.Close();$eventData.Handled=$true}})
-    $window.Add_ContentRendered({param($sender,$eventData) Update-Notice $sender.Tag;[Console]::Out.WriteLine('{"notified":true}');[Console]::Out.Flush();$sender.Tag.timer.Start()})
+    $window.Add_ContentRendered({param($sender,$eventData) Update-Notice $sender.Tag;[Console]::Out.WriteLine((@{notified=$true;close_only=($sender.ResizeMode.ToString() -eq 'NoResize')}|ConvertTo-Json -Compress));[Console]::Out.Flush();$sender.Tag.timer.Start()})
     $window.Add_Closed({param($sender,$eventData) $sender.Tag.timer.Stop()})
     Update-Notice $ui
     return $window

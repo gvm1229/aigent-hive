@@ -64,6 +64,9 @@ def main() -> int:
         record["shown_ms"] = round((time.monotonic() - started) * 1000)
         if not packet.get("notified") or packet.get("fallback") or record["shown_ms"] > 5000:
             raise RuntimeError("Designed notice did not open within its production deadline")
+        if not packet.get("close_only"):
+            raise RuntimeError("Notice still exposes window actions other than close")
+        record["close_only_window"] = True
         user = ctypes.WinDLL("user32", use_last_error=True)
         callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
         user.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
