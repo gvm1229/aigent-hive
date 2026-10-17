@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "phase": "passed-notice-ui",
+  "host": "Windows 11 x64 Codex",
+  "desktop_version": "26.1013.4894.0",
+  "product_version": "0.12.1-dev",
+  "entrypoint": {
+    "schema_version": 1,
+    "preview_only": true,
+    "session_interruption": false,
+    "monitor_started": false,
+    "host": "Windows Codex",
+    "notice_sha256": "fab36e1a3f81854c756352e54712399638ee65b98679942a9fba91fd7dbc98f8",
+    "shown_ms": 875,
+    "closed_by_own_button": true,
+    "incident_unchanged": true,
+    "original_codex_app_preserved": true,
+    "phase": "passed-display-only-entrypoint"
+  },
+  "render_cases": [
+    {
+      "case": "reset",
+      "logical_width": 560,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_size": [
+        822,
+        935
+      ],
+      "image_sha256": "e7fbd004856dcca2170cce268deb03bc8c8c843634bd364a462c7e345f8f62f0"
+    },
+    {
+      "case": "gap",
+      "logical_width": 560,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_size": [
+        822,
+        935
+      ],
+      "image_sha256": "84aad2599357483623d617070ee7c07c781b8fd98cf909e41a0f3c48203da004"
+    },
+    {
+      "case": "partial",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_size": [
+        672,
+        1169
+      ],
+      "image_sha256": "a3a09eaf23456e360f4358636b9bfa4e1e5b16613211ca1ff433078b41fcd932"
+    },
+    {
+      "case": "ack",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_size": [
+        672,
+        1142
+      ],
+      "image_sha256": "a7c7e1badfba2e72a4cebfcbd303654da2a68b2bc338c4aeb386e3d813aad2fc"
+    },
+    {
+      "case": "unavailable",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "button",
+      "image_size": [
+        672,
+        1169
+      ],
+      "image_sha256": "74a73a2721af1df6d769384caf584e370d4a69d542881f681cd5592ba49ac681"
+    },
+    {
+      "case": "reset",
+      "logical_width": 460,
+      "actual_dpi_x": 144,
+      "actual_dpi_y": 144,
+      "closed": true,
+      "incident_unchanged": true,
+      "close_with": "escape",
+      "image_size": [
+        672,
+        1137
+      ],
+      "image_sha256": "f41d88911df3cf350eedb320d20fdd778937179d185d3c48b5b3decea64f1cd4"
+    }
+  ],
+  "unit_cases": 11,
+  "windows_adapter_cases": 30,
+  "rust_monitor_cases": 25,
+  "rust_monitor_ignored": 1,
+  "clippy": "passed",
+  "build": "passed",
+  "design_detector_findings": 0,
+  "live_session_interruption_performed": false,
+  "monitor_enabled": false,
+  "installation_performed": false,
+  "scope_limits": [
+    "WPF UI entrypoint, native UI Automation close, actual 144 DPI and 460/560 logical widths.",
+    "Esc event routing was tested without sending physical keyboard input.",
+    "96/192 DPI, other operating systems, integrated new-binary reset, server processing and billing cutoff were not tested.",
+    "Previous live halt evidence is separate; full automatic confirmation remains incomplete."
+  ]
+}

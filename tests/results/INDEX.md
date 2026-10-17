@@ -1414,6 +1414,14 @@
 | [passed](runs/20261017T192527-15e37a532f4f.md) | 첫 중단 응답을 먼저 보존하고 큰 상태를 차례로 확인하는 최종 회귀·빌드 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T192641-ce809ad7daba.md) | 큰 상태 확인을 차례로 수행하는 수정본의 격리 수용 루트 준비 | 88fb9fe4f796d8ae463481073545722c245b1b63 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T192847-02220ac369e7.md) | 수정본의 실제 중단과 승인 조건부 설치 독립 검사 시작 | f4fba60b00759fa30c7b5f491d5f3944bb0dc6fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T194456-a283d5074392.md) | 실제 중단 없이 제품 안내의 원인·확인 상태·재개 문구 회귀 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T194547-6e18a565b832.md) | 실제 Windows 안내 창 표시와 닫기의 상태 보존 확인 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T194656-3000bd7d32ef.md) | 제품 안내의 줄바꿈과 기본 정보 밀도 실제 화면 확인 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T194735-e6ea5b69b0a5.md) | Windows 144 DPI의 다섯 안내 상태·좁은 창·상세·닫기 상태 보존 실측 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T194907-0355b8017cfe.md) | 제품 안내 분리·원인 표시·닫기 불변과 Windows 실행 크기 회귀·빌드 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T194918-9e5c6b2382ed.md) | 안내 영역에 맞춘 명시 재개 검증과 전체 관련 회귀·빌드 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T195342-2f145e20ba2e.md) | 제품과 같은 표시 진입점의 5초 창 표시·실제 버튼 닫기·Codex 앱 유지 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T195433-f03309a58f0e.md) | 표시 전용 최종 세 상태·Esc 경로·중단 기록 보존과 접근성 문구 회귀 | 9f167fe63173e125174f65a5f99653b21be2f95f | Windows-11-10.0.26300-SP0 |
 
 제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
 
@@ -1422,3 +1430,5 @@
 현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
 
 현재 앱의 첫 전체 시험: [세 역할 중단·전체 확인 실패](session-stop-partial-windows-0.12.1.json). 실제 중단과 제품 전체 확인의 구분, 설치 미실행
+
+제품 사용자 안내: [Windows 표시·닫기 근거](usage-stop-notice-windows-0.12.1.json)·[실제 화면](assets/usage-stop-notice-0.12.1.png). 실제 중단 없이 검증한 안내 창
