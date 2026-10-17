@@ -248,6 +248,10 @@ try {
     do {
         Start-Sleep -Milliseconds 100
         $state = Read-State
+        if($state.incident -and -not $result.subjects_interrupted.verified) {
+            $native=Verify-NativeSubjects $subjectBaseline (Join-Path $fixture 'subject-interruption.json')
+            if($native.verified){$result.subjects_interrupted=$native;Record}
+        }
     } while ((-not $state.incident.confirmed_stop) -and [DateTime]::UtcNow -lt $deadline)
     $result.incident=$state.incident
     $result.latest_control=@{known=$state.known_sessions;unknown=$state.unknown_sessions;active=$state.active_turns;connected=$state.control_connected;app_alive=$state.app_alive};Record
@@ -255,10 +259,11 @@ try {
         $state.incident.confirmed_stop.targeted_turns -lt 1) { throw 'Actual session interruption not verified' }
     $result.incident=$state.incident
     $deadlineMs=[long]$state.incident.detected_at*1000+5000
-    do {
+    $native=$result.subjects_interrupted
+    while(-not $native.verified -and [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -lt $deadlineMs) {
         $native=Verify-NativeSubjects $subjectBaseline (Join-Path $fixture 'subject-interruption.json')
         if(-not $native.verified){Start-Sleep -Milliseconds 50}
-    } while(-not $native.verified -and [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -lt $deadlineMs)
+    }
     if(-not $native.verified){throw 'Native interruption of every exact test turn was not observed'}
     foreach($subject in $native.subjects) {
         $at=[DateTimeOffset]::Parse([string]$subject.native_marker_at).ToUnixTimeMilliseconds()
