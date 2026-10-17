@@ -150,28 +150,30 @@ try {
         $session=$sessions[$request.thread]
         if($null -eq $session -or $null -eq $stop -or $request.incident -ne $stop.digest){return}
         $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
-        if($session.lastResponse -eq 'accepted') {Register-Target $request.thread ([string]$message.result.interruptedTurnId) $request.at}
+        if($message.resultType -eq 'success' -and $message.result.ok) {Register-Target $request.thread ([string]$message.result.interruptedTurnId) $request.at}
         $session.dirty=$true
     }
     function Advance-Stop {
         if($null -eq $stop){return}
         foreach($session in @($sessions.Values)) {
             if($clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
-                # Cancellation precedes history reads, including sessions with no prior snapshot.
                 Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
                 $session.lastStop=$clock.ElapsedMilliseconds
                 if($session.incident -ne $stop.digest){
                     $stop.request_ms=[Math]::Max([long]$stop.request_ms,(Stop-Age))
-                    $session.ready=$false;$session.incident=$stop.digest
+                    $session.ready=$false;$session.lastResponse='none';$session.incident=$stop.digest
                 }
             }
         }
+        # First replies carry the exact interrupted IDs; large snapshots must follow them.
+        if((Stop-Age) -lt 1800 -and @($sessions.Values | Where-Object lastResponse -eq 'none').Count -gt 0){return}
+        $waiting=@($sessions.Values | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
         foreach($session in @($sessions.Values)) {
             if($clock.ElapsedMilliseconds -ge $stop.verifyUntil -or $stop.settled) {
                 if($session.subscribed){Follow $session.id $false}
-            } elseif(-not $session.subscribed -or ($session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000)) {
+            } elseif(-not $waiting -and (-not $session.subscribed -or ($session.ready -and $session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000))) {
                 Follow $session.id
-                $session.snapshotAt=$clock.ElapsedMilliseconds
+                $session.ready=$false;$waiting=$true;$session.snapshotAt=$clock.ElapsedMilliseconds
             }
         }
     }

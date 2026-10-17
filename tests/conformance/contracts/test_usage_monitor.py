@@ -385,9 +385,13 @@ if($sessions[$one].ready -or $sessions[$one].subscribed){throw 'Unobserved activ
 Track $one;Track $two;Track $child
 $stop=New-Stop 'fixture' ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
 Advance-Stop
-if($actions.Count -ne 6){throw 'Missing session or child control'}
+if($actions.Count -ne 3){throw 'History could delay the first interruption replies'}
 foreach($action in $actions.GetRange(0,3)){if($action.kind -ne 'interrupt'){throw 'History read delayed another stop request'}}
-foreach($action in $actions.GetRange(3,3)){if($action.kind -ne 'follow' -or -not $action.following){throw 'Missing bounded verification'}}
+foreach($session in $sessions.Values){$session.lastResponse='accepted'}
+Advance-Stop
+if($actions.Count -ne 4 -or $actions[3].kind -ne 'follow'){throw 'Verification did not start after replies'}
+1..10|ForEach-Object {Advance-Stop}
+if($actions.Count -ne 4){throw 'Multiple large snapshots were requested together'}
 if($stop.targeted.Count -ne 0){throw 'Idle sessions were counted as interrupted work'}
 @{requests_first=$true;no_fake_targets=$true}|ConvertTo-Json -Compress
 """
@@ -416,6 +420,9 @@ if($null -ne $stop){throw 'A delayed response recreated a cleared incident'}
     def test_verification_unsubscribes_at_deadline_and_does_not_loop_history(self):
         source=self.offline_controller()+r"""
 Track $one;Track $two;$stop=New-Stop 'fixture' 1;Advance-Stop
+$first=@($sessions.Values|Where-Object subscribed -eq $true)[0]
+if($null -eq $first){throw 'Missing bounded first snapshot'}
+$first.ready=$true;Advance-Stop
 $initial=@($actions|Where-Object {$_.kind -eq 'follow' -and $_.following}).Count
 1..10|ForEach-Object {$sessions[$one].dirty=$true;Advance-Stop}
 if(@($actions|Where-Object {$_.kind -eq 'follow' -and $_.following}).Count -ne $initial){throw 'Unbounded history refresh'}
@@ -425,12 +432,39 @@ if(@($actions|Where-Object {$_.kind -eq 'follow' -and -not $_.following}).Count 
 $count=$actions.Count
 1..10|ForEach-Object {Advance-Stop}
 if($actions.Count -ne $count){throw 'Expired verification restarted by itself'}
+$sessions[$one].ready=$false
 $snapshot=@{hostId='local';conversationId=$one;change=@{type='snapshot';conversationState=@{id='wrong'}}}
 Snapshot $snapshot
 if($sessions[$one].ready){throw 'Late unrequested snapshot changed verification'}
 @{deadline_closed=$true;no_history_loop=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["deadline_closed"])
+
+    def test_pending_large_snapshot_is_not_requested_again_or_fanned_out(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two;$stop=New-Stop 'fixture' 1;Advance-Stop
+$first=@($sessions.Values|Where-Object subscribed -eq $true)[0]
+$first.dirty=$true;$first.snapshotAt=-2000
+$before=$actions.Count
+1..10|ForEach-Object {Advance-Stop}
+if($actions.Count -ne $before){throw 'Unread snapshot was repeated or fanned out'}
+$first.ready=$true;$first.dirty=$false;Advance-Stop
+if(@($sessions.Values|Where-Object subscribed -eq $true).Count -ne 2){throw 'Next snapshot never started'}
+@{bounded_large_reads=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["bounded_large_reads"])
+
+    def test_goal_pause_failure_preserves_the_actual_interrupted_turn(self):
+        source=self.offline_controller()+r"""
+Track $one;$stop=New-Stop 'fixture' 1
+Interrupt-Response @{thread=$one;incident='fixture'} @{resultType='success';result=@{ok=$true;interruptedTurnId='actual';goalPauseError='fixture'}}
+if($stop.targeted.Count -ne 1 -or $sessions[$one].lastResponse -ne 'failed'){throw 'Actual interruption was lost with goal failure'}
+$sessions[$one].ready=$true;$sessions[$one].observedAt=$clock.ElapsedMilliseconds
+$sessions[$one].statuses=@{actual='interrupted'};$sessions[$one].goal='active'
+if(Confirmed-Target $stop.targeted[$one+':actual'] $stop.began){throw 'Active goal was accepted as stopped'}
+@{actual_target_kept=$true;active_goal_rejected=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["actual_target_kept"])
 
     def test_new_run_while_latched_gets_bounded_check_without_rewriting_deadline(self):
         source=self.offline_controller()+r"""
