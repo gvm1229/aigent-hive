@@ -69,16 +69,24 @@ def selected_paths(manifest: dict) -> list[dict]:
     return result
 
 
-def authenticate(root: Path, binary: Path) -> None:
-    activation = root / ".hive/dev-install"
-    target = regular(activation / "target-path").decode().strip()
-    expected = regular(activation / "developer-sha256").decode().strip()
-    if re.fullmatch(r"\\[0-9a-f]{64}", expected):
-        expected = expected[1:]
-    if not re.fullmatch(r"[0-9a-f]{64}", expected):
-        raise ValueError("invalid developer activation digest")
-    if Path(target).absolute() != binary or digest(regular(binary)) != "sha256:" + expected:
-        raise ValueError("developer activation does not bind the supplied executable")
+def authenticate(root: Path, binary: Path, validator_digest: str | None = None) -> None:
+    if validator_digest is not None:
+        # A previously authenticated release can validate its own projection after
+        # the package manager has replaced the active executable. The caller must
+        # pin that preserved binary from the earlier verified installation receipt.
+        if (not re.fullmatch(r"sha256:[0-9a-f]{64}", validator_digest)
+                or digest(regular(binary)) != validator_digest):
+            raise ValueError("preserved source validator differs from its pinned digest")
+    else:
+        activation = root / ".hive/dev-install"
+        target = regular(activation / "target-path").decode().strip()
+        expected = regular(activation / "developer-sha256").decode().strip()
+        if re.fullmatch(r"\\[0-9a-f]{64}", expected):
+            expected = expected[1:]
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise ValueError("invalid developer activation digest")
+        if Path(target).absolute() != binary or digest(regular(binary)) != "sha256:" + expected:
+            raise ValueError("developer activation does not bind the supplied executable")
     # The actual installed CLI authenticates ownership and live bytes, not JSON alone.
     command = [str(binary), "install", "--scope", "user", "--hosts", "codex",
                "--validate", "--user-root", str(root), "--output", "json"]
@@ -89,9 +97,9 @@ def authenticate(root: Path, binary: Path) -> None:
         raise ValueError("installed CLI did not authenticate the current Codex projection")
 
 
-def make_plan(root: Path, binary: Path) -> dict:
+def make_plan(root: Path, binary: Path, validator_digest: str | None = None) -> dict:
     before = regular(root / MANIFEST)
-    authenticate(root, binary)
+    authenticate(root, binary, validator_digest)
     if regular(root / MANIFEST) != before:
         raise ValueError("ownership changed during authentication")
     manifest = json.loads(before)
@@ -198,6 +206,7 @@ def main() -> None:
     parser.add_argument("--binary", type=Path)
     parser.add_argument("--backup", type=Path, required=True)
     parser.add_argument("--confirm")
+    parser.add_argument("--validator-sha256", help="pin of a preserved, previously authenticated source release executable")
     args = parser.parse_args()
     backup = args.backup.absolute()
     if args.action == "restore":
@@ -206,7 +215,7 @@ def main() -> None:
         return
     if args.user_root is None or args.binary is None:
         parser.error("--user-root and --binary are required")
-    plan = make_plan(args.user_root.absolute(), args.binary.absolute())
+    plan = make_plan(args.user_root.absolute(), args.binary.absolute(), args.validator_sha256)
     token = digest(encode(plan))
     if args.action == "stage":
         if args.confirm != token:

@@ -81,6 +81,16 @@ class DeveloperRecovery(unittest.TestCase):
             self.plan()
         self.run_mock.assert_not_called()
 
+    def test_preserved_source_validator_requires_exact_pin_and_cli_authentication(self):
+        with self.assertRaises(ValueError):
+            recovery.make_plan(self.root, self.binary, "sha256:" + "0" * 64)
+        self.run_mock.assert_not_called()
+        plan = recovery.make_plan(self.root, self.binary, recovery.digest(self.binary.read_bytes()))
+        self.assertEqual(len(plan["entries"]), 3)
+        self.run_mock.return_value = subprocess.CompletedProcess([], 3, b'{}', b'')
+        with self.assertRaises(ValueError):
+            recovery.make_plan(self.root, self.binary, recovery.digest(self.binary.read_bytes()))
+
     def test_modified_generated_file_is_rejected(self):
         (self.root / self.generated).write_bytes(b"user edit")
         with self.assertRaises(ValueError):
