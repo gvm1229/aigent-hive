@@ -93,10 +93,13 @@ scripts/dev-install.sh --sandbox
 ```
 
 출력은 공개 시험판과 구분되는 `AIgent Hive vX.Y.Z-dev · local developer build (built
-YYYY-MM-DD)` 형식. 기존 전역 `hive`를 이 개발 binary로 임시 교체하려면
-`scripts/dev-install.sh --global`, 이전 실행 파일 복구는 `scripts/dev-install.sh --rollback`을
-사용. 세 mode 모두 `~/.hive`의 preference·knowledge·index와 user directive·Skill, project
-`.hive` 생성·변경·삭제 금지.
+YYYY-MM-DD)` 형식. 개발 실행 파일은 별도 시험 폴더와 `--user-root`에서 사용. 실제 사용자
+환경의 시험은 npm으로 배포한 번호 시험판 사용, 이후 일반 `hive update`로 정식판 전환.
+
+`--global`은 빌드·파일 변경 전에 거부. 과거 감시 배포 보조 스크립트도 입력 처리 전에
+거부. `--rollback`은 과거 실행 파일만 복원하므로 사용자용 Hive 파일까지 바뀐 설치의
+전체 원복으로 취급 금지. [무삭제 복구 절차와 실제 확인](../research/developer-install-recovery.md) 참조.
+개발 빌드 확인만으로 실제 사용자의 지식·설정·실행 기록·프로젝트 `.hive` 변경 금지.
 
 ## CLI 진단 예시
 
