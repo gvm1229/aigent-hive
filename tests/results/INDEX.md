@@ -1465,6 +1465,24 @@
 | [passed](runs/20261017T211152-47e3856dc115.md) | 닫기 외 창 동작 제거의 최종 표시 검증 | b0c1d256b12b9444fc19fdab166cf0e984a8ac5a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T211319-e45cbe3b439a.md) | 최종 알림 전용 설치 근거의 잠금·추가 버튼 거부 | b0c1d256b12b9444fc19fdab166cf0e984a8ac5a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261017T211349-5e587b4fb872.md) | 최종 0.12.1 개발 빌드 설치·상시 감시 | da2797509ea7e0ef94783877e3c2cb69c6bfd490 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T215139-d12f14798089.md) | 0.12.1 공개 도움말과 감시 명령 회귀 | edc61c60488ff02667adf32f874736e14b21a983 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T215312-ce6d227a46ad.md) | 0.12.1 도움말 및 이전 안정판 renderer 결합 검증 | edc61c60488ff02667adf32f874736e14b21a983 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T215443-c6f06ec04b42.md) | 공개 0.12.0 원본 실행 파일의 격리된 갱신 표본 생성 | c7b9a1db3c704b00a95947d216fb79a96b630b94 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T215459-bc5a6febb1f7.md) | 0.12.1 출시 자료와 이전 버전 갱신·원복·세션 중단 회귀 | c7b9a1db3c704b00a95947d216fb79a96b630b94 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T215556-c561d6bcd2ed.md) | 0.12.1 이전 공개판 목록 연결 수정과 출시 재검증 | c7b9a1db3c704b00a95947d216fb79a96b630b94 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T220656-e7c1dc57c68a.md) | 0.12.1 합성 출시 자료의 공개 배포 오인 방지 표시 검증 | 462fcd3d275530bc2f28e20689965bb52e146d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T221126-04c6dc22ce8a.md) | 0.13.0 버전과 원래 기능의 전체 Rust·엄격 검사 | 4e088c9a130f0dd1fc8710767cdfdec9b425a8df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T221454-d0e5b470296e.md) | 0.13.0 표시 투영과 잠금 없는 새 관측 재개의 최종 회귀 | 4e088c9a130f0dd1fc8710767cdfdec9b425a8df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T222406-4eb65aef2179.md) | 0.13.0 출처 정합화 뒤 고정 지식 관계 질의 재검증 | 998c936422b2dd9cc2d8203ad372055d22b8bafa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T231537-0c20bf675cc1.md) | 공개 0.13.0-test.1 여섯 패키지·채널·GitHub 파일 독립 대조 | 2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261017T231634-c30f7da1dab9.md) | 공개 0.13.0-test.1 현재 Windows의 읽기 전용 감지·선택형 기본 상태·앱 유지 확인 | 2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261017T231715-bef027119f88.md) | 공개 시험판의 번호 표시 형식을 맞춘 현재 Windows 읽기 전용 확인 | 2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261018T002003-2c33138dc276.md) | 정식 0.13.0 여섯 latest·시험 표시·태그·공개 파일 독립 대조 | 1b5bffda7e25681de3217e0d3baaa88e6f18747f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261018T002017-0a5037aad6cc.md) | 정식 채널 인수를 명시한 0.13.0 공개 파일 독립 대조 | 1b5bffda7e25681de3217e0d3baaa88e6f18747f | Windows-11-10.0.26300-SP0 |
+
+## 0.13.0 정식 공개
+
+[정식 파일·채널·공지 확인](release-0.13.0-stable.md)·[공개 시험 수용](release-0.13.0-test.json)·[로컬 소스 검증](release-0.13.0-local.json). 실제 Windows 읽기 확인·기존 실제 중단 증거의 구분, 새 실시간 중단 요청 없음
 
 ## 0.12.1 최종 수용
 

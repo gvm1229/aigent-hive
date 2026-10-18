@@ -4,7 +4,7 @@
 > Scope: release
 
 - [x] [REL121-001] 폐기한 재개 차단의 역사 코드·재현·복구 문서
-  - state: complete; evidence: repo:docs/research/codex-resume-lock-reference.md#sha256:1770e8379d94ab3ceae4c08c85e403ede1dba93c521e2ca7c88d3b96017bf3e9
+  - state: complete; evidence: repo:docs/research/codex-resume-lock-reference.md#sha256:33c7e3ebaa5b92c006a52e7ea57f91aea3ac948b0af221aaa0e412d63ef6d0c9
 - [x] [REL121-002] 세션 중단·알림만의 제품 범위와 출시 자료 검증
   - state: complete; evidence: repo:docs/research/release-0.13.0.md#sha256:fbdd1a5c8e306a8af4e54cc12306d9da35a41ba71ea7493adbc4de424be8f1a2
 - [x] [REL121-003] 공개 0.13.0-test.1 게시·정확 산출물 수용
