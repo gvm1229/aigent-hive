@@ -102,6 +102,7 @@ current catalog.
 
 ## 세션 중단 0.13.0 관련 문서
 
+- [정식 출시 확인](research/stable-release-0.13.0.md)
 - [공개 시험 수용](research/public-test-0.13.0.md)·[정식 출시 실행](plans/0.13.0-stable-release.md)
 - [0.13.0 출시 검증](research/release-0.13.0.md)
 - [0.13.0 출시 노트](releases/0.13.0.md)·[승인한 구독 안내](releases/0.13.0.subscriber.ko.md)

@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 413
+> Revision: 414
 > 기준일: 2026-10-18
 > Product version: `0.13.0`
-> 공개 Stable: `0.12.0`
-> 현재 단계: 공개 시험 수용 완료·승인된0.13.0 정식 출시 실행
+> 공개 Stable: `0.13.0`
+> 현재 단계: 세션 중단·알림 전용0.13.0 정식 공개 완료
 > 수용한 공개 시험: `0.13.0-test.1`
 
 ## 현재 요청과 경계
@@ -17,7 +17,7 @@
 - [결정](../decisions/steering-preservation.md)·[0.12.0 완료 계획](../archive/plans/0.12.0-complete.md)
 - [이전 미완료 9개](backlog/0.12.0-deferred-host-acceptance.md): 기존 후속 이관 유지, 이번 범위 편입 없음
 
-- 아래 완료율은 구현·시험 수용 범위. 남은 REL121-004·005는 [정식 출시 실행](0.13.0-stable-release.md)에서 추적, 게시 완료 전 단계
+- 아래 완료율은 구현·시험 수용 범위. REL121-004·005의 정식 게시는 [실행 기록](0.13.0-stable-release.md)에서 완료 확인
 
 ## Completion index
 
