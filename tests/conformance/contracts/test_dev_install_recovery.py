@@ -1,6 +1,7 @@
 """No real installation or host control: authenticated recovery file boundaries."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -8,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
+REAL_RUN = subprocess.run
 spec = importlib.util.spec_from_file_location("dev_recovery", ROOT / "scripts/recover-dev-install.py")
 recovery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(recovery)
@@ -159,6 +161,18 @@ class DeveloperRecovery(unittest.TestCase):
             return result
         with patch.object(Path, "lstat", attributes), self.assertRaises(ValueError):
             recovery.regular(self.binary)
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows deployment entrypoint')
+    def test_legacy_deployment_stops_before_reading_or_changing_installation(self):
+        powershell = Path(os.environ['SystemRoot']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+        # The script must fail at its retirement guard before opening either input.
+        result = REAL_RUN([str(powershell), '-NoProfile', '-NonInteractive', '-File',
+                                 str(ROOT/'scripts/complete-usage-monitor-install.ps1'),
+                                 '-Request', str(self.base/'missing-request.json'),
+                                 '-AcceptanceResult', str(self.base/'missing-evidence.json')],
+                                capture_output=True, timeout=15)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b'Legacy global developer deployment is retired', result.stderr)
 
 
 if __name__ == "__main__":

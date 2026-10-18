@@ -1,5 +1,6 @@
 ﻿# Nonshipping, explicitly approved local deployment after actual session-stop acceptance.
 param([Parameter(Mandatory=$true)][string]$Request,[Parameter(Mandatory=$true)][string]$AcceptanceResult)
+throw 'Legacy global developer deployment is retired. Use a public numbered test package; existing development installations require the nondeleting recovery workflow.'
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 $utf8=New-Object Text.UTF8Encoding($false)

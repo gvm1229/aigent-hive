@@ -75,7 +75,7 @@ try {
  & 'HELPER' -Request $request -AcceptanceResult $result
  throw 'Conditional installation gate was bypassed'
 } catch {
- if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
+ if($_.Exception.Message -notmatch 'Legacy global developer deployment is retired'){throw}
  @{rejected=$true} | ConvertTo-Json -Compress
 }
 """.replace("'HELPER'", "'" + helper + "'")
@@ -106,7 +106,7 @@ try {
  & 'HELPER' -Request $request -AcceptanceResult $result
  throw 'Legacy partial acceptance authorized deployment'
 } catch {
- if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
+ if($_.Exception.Message -notmatch 'Legacy global developer deployment is retired'){throw}
  @{legacy_partial_rejected=$true}|ConvertTo-Json -Compress
 }
 """.replace("'HELPER'", "'" + helper + "'")
