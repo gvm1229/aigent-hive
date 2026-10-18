@@ -5,16 +5,16 @@
 - 공개 안정판: `0.13.0`, 수용한 공개 시험: `0.13.0-test.1`
 - 현재 사용자 설치: `0.12.1-dev` 로컬 빌드, 상시 감시 활성·로그인 자동 시작·정상 관측 확인
 - 번호 결정: 기존 버전 규칙에 따라 같은 두 기능을0.13.0으로 출시,0.12.1 예외 없음
-- 단계: 선택형 세션 중단·알림 전용0.13.0 정식 게시·독립 공개 확인·승인 공지 전송 완료
+- 단계: 정식0.13.0 게시 완료. [개발 설치 복구](../plans/active/developer-install-recovery.md) 진행, 사용자 데이터·설정 삭제 금지
 - 정본: [활성 계획](../plans/PLAN.md)·[첫 차수](../plans/active/reset-stop-0.12.1.md)
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.13.0`
-- 현재 등록 항목: 6/6 완료
+- 현재 등록 항목: 6/9 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `DEVREC-001`, `DEVREC-002`, `DEVREC-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
