@@ -11,7 +11,7 @@ usage() {
 Usage: scripts/dev-install.sh [--sandbox|--global|--rollback] [--state-dir DIR]
 
   --sandbox   Build a local developer binary only (default).
-  --global    Replace the active Hive executable after backing it up.
+  --global    Refused: use a public numbered test package for a real installation.
   --rollback  Restore the executable saved by the last --global activation.
 
 Developer builds report `AIgent Hive vX.Y.Z-dev · local developer build`, never a
@@ -38,6 +38,12 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+if [ "$mode" = global ]; then
+  echo "global developer replacement is disabled: it breaks package ownership and the stable upgrade path" >&2
+  echo "use --sandbox with an isolated --user-root, or install a public numbered test package" >&2
+  exit 3
+fi
+
 case "$state_dir" in
   /*) ;;
   *) echo "--state-dir must be absolute" >&2; exit 2 ;;
@@ -49,18 +55,6 @@ sha256_file() {
   else
     sha256sum < "$1" | awk '{print $1}'
   fi
-}
-
-canonical_path() {
-  python3 - "$1" <<'PY'
-import os
-import sys
-resolved = os.path.realpath(sys.argv[1])
-# MSYS command lookup can omit .exe although Python uses native Windows paths.
-if os.name == "nt" and not os.path.isfile(resolved) and os.path.isfile(resolved + ".exe"):
-    resolved += ".exe"
-print(resolved)
-PY
 }
 
 product_version=$(awk -F'"' '/^version = / { print $2; exit }' "$root/Cargo.toml")
@@ -161,39 +155,4 @@ case "$mode" in
     echo "canonical user data unchanged"
     exit 0
     ;;
-  global) ;;
 esac
-
-build
-active_command=$(command -v hive || true)
-[ -n "$active_command" ] || {
-  echo "no active hive command found; install a stable or test release before --global" >&2
-  exit 3
-}
-target=$(canonical_path "$active_command")
-[ -f "$target" ] && [ ! -L "$target" ] || {
-  echo "active hive command does not resolve to a regular file: $target" >&2
-  exit 3
-}
-"$active_command" --version | grep -q '^AIgent Hive v' || {
-  echo "active command is not an Aigent Hive executable: $active_command" >&2
-  exit 3
-}
-[ ! -e "$state_dir" ] || {
-  echo "a developer activation already exists at $state_dir; use --rollback first" >&2
-  exit 3
-}
-mkdir -p "$state_dir"
-[ ! -L "$state_dir" ] || { echo "developer state directory must not be a symlink" >&2; exit 3; }
-cp -p "$target" "$state_dir/original"
-printf '%s\n' "$target" >"$state_dir/target-path"
-developer_digest=$(sha256_file "$binary")
-printf '%s\n' "$developer_digest" >"$state_dir/developer-sha256"
-staged="$target.hive-dev-$$"
-trap 'rm -f "$staged"' EXIT HUP INT TERM
-cp -p "$binary" "$staged"
-mv -f "$staged" "$target"
-trap - EXIT HUP INT TERM
-"$active_command" --version
-echo "developer build activated: $target"
-echo "canonical user data unchanged; use hive install separately to preview any projection update"

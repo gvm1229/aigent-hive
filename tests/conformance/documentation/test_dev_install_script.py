@@ -25,20 +25,21 @@ class DevInstallScriptTests(unittest.TestCase):
             "~/.hive/config",
             "~/.hive/knowledge",
             "project .hive directories",
-            "use --rollback first",
+            "global developer replacement is disabled",
             "refusing rollback",
         ):
             self.assertIn(required, text)
 
     def test_script_parses_with_posix_shell(self) -> None:
-        shell = shutil.which("sh")
+        shell = "C:/Program Files/Git/bin/bash.exe" if os.name == "nt" else shutil.which("sh")
         if shell is None:
             self.skipTest("POSIX shell parser is unavailable on this host")
         subprocess.run([shell, "-n", str(SCRIPT)], check=True)
 
-    def test_global_activation_and_rollback_preserve_user_data(self) -> None:
-        if os.name == "nt":
-            self.skipTest("POSIX developer-install lifecycle is unavailable on Windows")
+    def test_global_activation_is_refused_before_build_or_mutation(self) -> None:
+        shell = ("C:/Program Files/Git/bin/bash.exe" if os.name == "nt" else shutil.which("sh"))
+        if not shell or not Path(shell).is_file():
+            self.skipTest("POSIX shell is unavailable on this host")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             home = root / "home"
@@ -69,27 +70,15 @@ class DevInstallScriptTests(unittest.TestCase):
             }
 
             activated = subprocess.run(
-                [str(SCRIPT), "--global", "--state-dir", str(state_dir)],
-                check=True,
+                [shell, str(SCRIPT), "--global", "--state-dir", str(state_dir)],
+                check=False,
                 cwd=ROOT,
-                env=environment,
+                env={**os.environ, **environment},
                 capture_output=True,
                 text=True,
             )
-            self.assertIn("developer build activated", activated.stdout)
-            self.assertIn("local developer build", hive.read_text(encoding="utf-8"))
-            self.assertTrue((state_dir / "original").is_file())
-            self.assertEqual(protected.read_text(encoding="utf-8"), "canonical knowledge")
-
-            rolled_back = subprocess.run(
-                [str(SCRIPT), "--rollback", "--state-dir", str(state_dir)],
-                check=True,
-                cwd=ROOT,
-                env=environment,
-                capture_output=True,
-                text=True,
-            )
-            self.assertIn("restored Hive executable", rolled_back.stdout)
+            self.assertEqual(activated.returncode, 3)
+            self.assertIn("global developer replacement is disabled", activated.stderr)
             self.assertIn("developer test build", hive.read_text(encoding="utf-8"))
             self.assertFalse(state_dir.exists())
             self.assertEqual(protected.read_text(encoding="utf-8"), "canonical knowledge")
