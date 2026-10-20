@@ -346,7 +346,7 @@ $two='01234567-0123-0123-0123-0123456789ac'
 $child='01234567-0123-0123-0123-0123456789ad'
 """
 
-    def test_normal_tracking_has_no_history_subscriptions_or_stop_requests(self):
+    def test_tracking_primitive_has_no_history_subscriptions_or_stop_requests(self):
         source=self.offline_controller()+r"""
 Track $one;Track $two;Track $one
 1..20|ForEach-Object {Advance-Stop}
@@ -355,6 +355,21 @@ if($sessions[$one].ready -or $sessions[$one].subscribed){throw 'Unobserved activ
 @{metadata_only=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["metadata_only"])
+
+    def test_background_snapshot_identifies_active_turn_before_any_stop_event(self):
+        source=self.offline_controller()+r"""
+Track $one
+$sessions[$one].subscribed=$true
+$snapshot=@{hostId='local';conversationId=$one;change=@{type='snapshot';conversationState=@{
+ id=$one;hostId='local';turns=@(@{turnId='still-reasoning';status='inProgress'});
+ threadRuntimeStatus=@{type='running'};threadGoal=@{status='inactive'}
+}}}
+Snapshot $snapshot
+if(-not $sessions[$one].ready -or $sessions[$one].active.Count -ne 1 -or $sessions[$one].active[0] -ne 'still-reasoning'){throw 'Running activity before a stop was ignored'}
+if($null -ne $stop -or $actions.Count -ne 0){throw 'Background activity caused an unsolicited interrupt'}
+@{active_before_stop=$true;no_interrupt=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["active_before_stop"])
 
     def test_all_stop_requests_precede_snapshots_without_waiting_for_activity(self):
         source=self.offline_controller()+r"""

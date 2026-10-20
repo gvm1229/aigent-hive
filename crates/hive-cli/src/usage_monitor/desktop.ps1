@@ -227,7 +227,7 @@ try {
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
         $session=$sessions[[string]$snapshot.conversationId]
-        if($null -eq $stop -or -not $session.subscribed -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil){return}
+        if(-not $session.subscribed -or ($null -ne $stop -and $clock.ElapsedMilliseconds -ge $stop.verifyUntil)){return}
         if ($snapshot.change.type -ne 'snapshot') {
             # Content deltas must not cause repeated full-history snapshots during reasoning.
             foreach ($patch in @($snapshot.change.patches)) {
@@ -329,7 +329,7 @@ try {
             $catalogInProgress=$false
             if (-not $catalogRoundFault) {$catalogFault=$false}
         }
-        if($null -eq $stop -or (Stop-Finished)) {
+        if($null -eq $stop) {
             foreach($session in @($sessions.Values)) {
                 if((-not $session.subscribed -or $session.dirty -or $clock.ElapsedMilliseconds-$session.snapshotAt -ge 15000) -and $clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
                     if($session.subscribed){Follow $session.id $false};Follow $session.id
