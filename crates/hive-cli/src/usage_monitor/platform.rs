@@ -14,6 +14,24 @@ const LOGO: &[u8] =
     include_bytes!("../../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
 
 pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
+    command_scoped(script, None)
+}
+
+pub(super) fn valid_thread_id(id: &str) -> bool {
+    id.len() == 36
+        && id.bytes().enumerate().all(|(index, byte)| {
+            if [8, 13, 18, 23].contains(&index) {
+                byte == b'-'
+            } else {
+                byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)
+            }
+        })
+}
+
+pub(super) fn command_scoped(script: &str, scope: Option<&str>) -> Result<Command, AdapterError> {
+    if scope.is_some_and(|id| !valid_thread_id(id)) {
+        return Err(failure("invalid qualification thread identity"));
+    }
     if !cfg!(windows) {
         return Err(AdapterError::Unsupported(
             "live usage interruption supports Windows Codex only".into(),
@@ -30,7 +48,9 @@ pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
         return Err(failure("embedded Windows adapter exceeds source limit"));
     }
     let chunks = encoded.as_bytes().chunks(16000).collect::<Vec<_>>();
-    let bootstrap = format!("$p=[Text.StringBuilder]::new();for($i=0;$i -lt {};$i++){{[void]$p.Append([Environment]::GetEnvironmentVariable('AIGENT_HIVE_FIXED_PS_'+$i))}};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p.ToString()))))",chunks.len());
+    let scope_argument =
+        scope.map_or_else(String::new, |id| format!(" -QualificationThread '{id}'"));
+    let bootstrap = format!("$p=[Text.StringBuilder]::new();for($i=0;$i -lt {};$i++){{[void]$p.Append([Environment]::GetEnvironmentVariable('AIGENT_HIVE_FIXED_PS_'+$i))}};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p.ToString())))){scope_argument}",chunks.len());
     let mut command = Command::new(executable);
     for (index, chunk) in chunks.iter().enumerate() {
         command.env(

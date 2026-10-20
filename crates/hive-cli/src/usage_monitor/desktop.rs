@@ -15,10 +15,10 @@ pub(super) struct Desktop {
 }
 
 impl Desktop {
-    pub fn start() -> Self {
+    pub fn start_scoped(qualification: Option<String>) -> Self {
         let (commands, receive) = mpsc::sync_channel(4);
         let (events, stream) = mpsc::sync_channel(16);
-        thread::spawn(move || run(&receive, &events));
+        thread::spawn(move || run(&receive, &events, qualification.as_deref()));
         Self {
             commands,
             events: stream,
@@ -40,7 +40,7 @@ impl Desktop {
     }
 }
 
-fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
+fn catalog_worker(qualification: Option<String>) -> (Receiver<Value>, SyncSender<()>) {
     let (send, receive) = mpsc::sync_channel(1);
     let (refresh, requests) = mpsc::sync_channel(1);
     thread::spawn(move || {
@@ -49,7 +49,7 @@ fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
             let started = Instant::now();
             let value = match reader.read() {
                 Ok(threads) => {
-                    json!({"operation":"discover","valid":true,"ids":threads.iter().map(|thread| &thread.id).collect::<Vec<_>>(),"contexts":threads})
+                    json!({"operation":"discover","valid":true,"ids":threads.iter().filter(|thread| qualification.as_deref().is_none_or(|id| id == thread.id)).map(|thread| &thread.id).collect::<Vec<_>>(),"contexts":threads})
                 }
                 Err(_) => json!({"operation":"discover","valid":false,"ids":[]}),
             };
@@ -104,8 +104,8 @@ fn read_packets(stdout: impl Read, send_lines: &SyncSender<Value>) {
     }
 }
 
-fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
-    let (catalogs, refresh) = catalog_worker();
+fn run(commands: &Receiver<Value>, events: &SyncSender<Value>, qualification: Option<&str>) {
+    let (catalogs, refresh) = catalog_worker(qualification.map(str::to_owned));
     let mut catalog = json!({"operation":"discover","valid":false,"ids":[]});
     let mut catalog_at = Instant::now();
     let mut pending = json!({"operation":"clear"});
@@ -117,7 +117,7 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
         if release_control(&pending, delivered_incident.as_deref(), true, unix_ms()) {
             pending = json!({"operation":"clear"});
         }
-        let Ok(mut builder) = platform::command(SCRIPT) else {
+        let Ok(mut builder) = platform::command_scoped(SCRIPT, qualification) else {
             return;
         };
         let child = builder

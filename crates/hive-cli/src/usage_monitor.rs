@@ -1,11 +1,15 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
 mod desktop;
 mod platform;
+#[cfg(debug_assertions)]
+mod qualification;
 mod sensor;
 mod state;
 mod threshold;
 mod upgrade;
 
+#[cfg(debug_assertions)]
+pub(crate) use qualification::run_qualification;
 #[cfg(debug_assertions)]
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
@@ -572,6 +576,13 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    controller_scoped(root, None)
+}
+
+fn controller_scoped(
+    root: &PinnedTarget,
+    qualification: Option<String>,
+) -> Result<Value, AdapterError> {
     require_app_safe_control()?;
     let _lease = lock(root, "controller.lock")?;
     let config: Configuration =
@@ -608,7 +619,7 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         Ok(())
     })?;
     let active = initial["app_count"].as_u64().is_none_or(|count| count > 0);
-    let desktop = desktop::Desktop::start();
+    let desktop = desktop::Desktop::start_scoped(qualification);
     let mut fault_notice = None;
     loop {
         if let Ok(value) = controller_loop(root, active, &desktop) {
