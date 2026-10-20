@@ -50,12 +50,19 @@ class ArtifactTests(unittest.TestCase):
         self.review()
         self.assertEqual("attention-required", self.manager.daily()["status"])
         self.assertTrue((self.root / "tests/work/old/data").exists())
+        evidence_before = {p.relative_to(self.root).as_posix(): p.read_bytes()
+                           for p in (self.root / "tests/results").rglob("*") if p.is_file()}
+        head_before = self.git("rev-parse", "HEAD").stdout
         result = self.manager.daily(apply=True)
         self.assertEqual("ok", result["status"])
         self.assertEqual("removed", result["cleanup"][0]["status"])
-        reports = list((self.root / "tests/results/cleanup").glob("*.md"))
+        reports = list((self.root / ".agents/work/test-artifacts/cleanup").glob("*.md"))
+        self.assertEqual(1, len(reports))
+        self.assertEqual(evidence_before, {p.relative_to(self.root).as_posix(): p.read_bytes()
+                                          for p in (self.root / "tests/results").rglob("*") if p.is_file()})
+        self.assertEqual(head_before, self.git("rev-parse", "HEAD").stdout)
         self.assertEqual("ok", self.manager.daily(apply=True)["status"])
-        self.assertEqual(reports, list((self.root / "tests/results/cleanup").glob("*.md")))
+        self.assertEqual(reports, list((self.root / ".agents/work/test-artifacts/cleanup").glob("*.md")))
         (self.root / "tests/work/unknown").mkdir()
         sentinel = self.root / "tests/work/unknown/keep"
         sentinel.write_text("keep", encoding="utf-8")
