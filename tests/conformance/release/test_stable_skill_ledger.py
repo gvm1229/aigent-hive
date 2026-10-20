@@ -39,6 +39,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             "0.11.0",
             "0.11.1",
             "0.12.0",
+            "0.13.0",
         ]
         self.github = [
             {"tagName": "v0.9.0", "isPrerelease": False},
@@ -55,6 +56,7 @@ class StableSkillLedgerContract(unittest.TestCase):
             {"tagName": "v0.11.0", "isPrerelease": False},
             {"tagName": "v0.11.1", "isPrerelease": False},
             {"tagName": "v0.12.0", "isPrerelease": False},
+            {"tagName": "v0.13.0", "isPrerelease": False},
         ]
 
     def test_public_stable_union_and_target_match_current_ledger(self) -> None:

@@ -24,3 +24,6 @@ harness/user-bases/0.12.0/** -text
 *.zip binary
 *.gz binary
 *.tar binary
+
+harness/project-bases/0.13.0/** -text
+harness/user-bases/0.13.0/** -text
