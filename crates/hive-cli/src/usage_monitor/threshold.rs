@@ -62,6 +62,8 @@ pub(super) struct Receipt {
     pub policy_digest: String,
     pub control_digest: String,
     pub account_digest: String,
+    #[serde(default)]
+    pub quota_pool: Option<String>,
     pub window: UsageWindow,
     pub remaining_percent: f64,
     pub threshold_percent: u8,
@@ -78,13 +80,14 @@ pub(super) fn observe(
     state.threshold_receipts.retain(|receipt| {
         snapshots.iter().any(|sample| {
             sample.account_scope_digest == receipt.account_digest
+                && sample.quota_pool == receipt.quota_pool
                 && sample.quota_window == receipt.window
                 && sample.remaining_percent <= f64::from(receipt.threshold_percent)
         })
     });
     let mut reached = Vec::new();
     for policy in policies {
-        if !policy.enabled {
+        if !policy.enabled && !policy.zero_enabled {
             continue;
         }
         let block = match crate::usage_control::evaluate_monitor_policy(policy, snapshots, at) {
@@ -95,10 +98,10 @@ pub(super) fn observe(
                 continue;
             }
         };
-        let Some(sample) = snapshots
-            .iter()
-            .find(|sample| sample.quota_window == block.window)
-        else {
+        let Some(sample) = snapshots.iter().find(|sample| {
+            sample.quota_window == block.window
+                && sample.remaining_percent == block.remaining_percent
+        }) else {
             continue;
         };
         let current = state.threshold_receipts.iter().position(|receipt| {
@@ -110,7 +113,9 @@ pub(super) fn observe(
             receipt.policy_digest == policy.policy_digest
                 && receipt.control_digest == policy.control_digest
                 && receipt.account_digest == sample.account_scope_digest
+                && receipt.quota_pool == sample.quota_pool
                 && receipt.window == block.window
+                && f64::from(receipt.threshold_percent) == block.threshold_percent
         }) {
             continue;
         }
@@ -127,9 +132,14 @@ pub(super) fn observe(
             policy_digest: policy.policy_digest.clone(),
             control_digest: policy.control_digest.clone(),
             account_digest: sample.account_scope_digest.clone(),
+            quota_pool: sample.quota_pool.clone(),
             window: block.window,
             remaining_percent: block.remaining_percent,
-            threshold_percent: policy.threshold,
+            threshold_percent: if block.threshold_percent == 0.0 {
+                0
+            } else {
+                policy.threshold
+            },
             confirmed: false,
         };
         reached.push(receipt.clone());
@@ -171,6 +181,7 @@ pub(super) fn handled(
             && receipt.threshold_percent == policy.threshold
             && snapshots.iter().any(|sample| {
                 sample.account_scope_digest == receipt.account_digest
+                    && sample.quota_pool == receipt.quota_pool
                     && sample.quota_window == receipt.window
                     && (sample.remaining_percent > 0.0 || !policy.zero_enabled)
                     && sample.remaining_percent <= f64::from(receipt.threshold_percent)
@@ -285,8 +296,25 @@ mod tests {
         let mut disabled = scope;
         disabled.enabled = false;
         let mut other = MonitorState::new();
-        observe(&mut other, &[disabled], &sample(0.0, 130), 130);
+        observe(
+            &mut other,
+            std::slice::from_ref(&disabled),
+            &sample(1.0, 130),
+            130,
+        );
         assert!(other.incident.is_none());
+        observe(
+            &mut other,
+            std::slice::from_ref(&disabled),
+            &sample(0.0, 131),
+            131,
+        );
+        assert!(other.incident.is_some());
+        assert_eq!(other.threshold_receipts[0].threshold_percent, 0);
+        disabled.zero_enabled = false;
+        let mut opted_out = MonitorState::new();
+        observe(&mut opted_out, &[disabled], &sample(0.0, 131), 131);
+        assert!(opted_out.incident.is_none());
     }
 
     #[test]
@@ -298,6 +326,27 @@ mod tests {
         assert_eq!(state.generation, generation);
         assert_eq!(state.incident.as_ref().unwrap().reason, "usage-reset");
         assert_eq!(state.incident.as_ref().unwrap().threshold_details.len(), 1);
+    }
+
+    #[test]
+    fn independent_zero_rearms_after_floor_and_usage_pools_do_not_share_resume_receipts() {
+        let mut state = MonitorState::new();
+        let scope = policy("one", 10);
+        let mut low = sample(8.0, 100);
+        low[0].schema_version = 2;
+        low[0].quota_pool = Some("primary".into());
+        observe(&mut state, std::slice::from_ref(&scope), &low, 100);
+        state.threshold_receipts[0].confirmed = true;
+        let generation = state.generation;
+        let mut other = low.clone();
+        other[0].quota_pool = Some("secondary".into());
+        assert!(!handled(&state, &scope, &other));
+        assert!(handled(&state, &scope, &low));
+        low[0].remaining_percent = 0.0;
+        low[0].measured_at_unix_seconds = 101;
+        observe(&mut state, &[scope], &low, 101);
+        assert!(state.generation > generation);
+        assert_eq!(state.threshold_receipts[0].threshold_percent, 0);
     }
 
     #[cfg(windows)]
