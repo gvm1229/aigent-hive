@@ -204,6 +204,9 @@ struct SetupArguments {
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = env::args().skip(1).collect();
+    if arguments == ["__usage-observation-worker"] {
+        return usage_monitor::run_worker();
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")

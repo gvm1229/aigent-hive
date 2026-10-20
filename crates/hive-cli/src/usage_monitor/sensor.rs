@@ -1,0 +1,292 @@
+//! Bounded, owned observation workers. They never attach to or signal desktop processes.
+use crate::usage::MonitorSensor;
+use hive_core::usage_guard::UsageSnapshot;
+use process_wrap::std::{ChildWrapper, CommandWrap};
+use serde::{Deserialize, Serialize};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::process::{ChildStdin, Command, ExitCode, Stdio};
+use std::sync::mpsc::{self, Receiver};
+use std::thread;
+use std::time::{Duration, Instant};
+
+const READ_TIMEOUT: Duration = Duration::from_secs(5);
+const INTERNAL: &str = "__usage-observation-worker";
+
+pub(super) fn uptime_ms() -> Option<u64> {
+    UPTIME.get().map(|(tick, started)| {
+        tick.saturating_add(u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX))
+    })
+}
+
+static UPTIME: std::sync::OnceLock<(u64, Instant)> = std::sync::OnceLock::new();
+
+pub(super) fn seed_uptime(tick: u64) {
+    let _ = UPTIME.set((tick, Instant::now()));
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Request {
+    id: u64,
+    fresh: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Response {
+    id: u64,
+    snapshots: Option<Vec<UsageSnapshot>>,
+    error: Option<String>,
+}
+
+#[derive(Debug)]
+pub(super) struct Sample {
+    pub snapshots: Result<Vec<UsageSnapshot>, String>,
+    pub source: &'static str,
+    pub primary_error: Option<String>,
+}
+
+struct Worker {
+    child: Box<dyn ChildWrapper>,
+    stdin: ChildStdin,
+    replies: Receiver<Result<Response, String>>,
+    next_id: u64,
+}
+
+impl Drop for Worker {
+    fn drop(&mut self) {
+        // Job/process-group ownership was established when this helper was spawned.
+        // Never enumerate PIDs or signal the user's Codex application.
+        let _ = self.child.start_kill();
+        let deadline = Instant::now() + Duration::from_millis(100);
+        while matches!(self.child.try_wait(), Ok(None)) && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+
+impl Worker {
+    fn start() -> Result<Self, String> {
+        let executable = std::env::current_exe().map_err(|_| "worker-executable-unavailable")?;
+        let mut command = Command::new(executable);
+        command
+            .arg(INTERNAL)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x0800_0000);
+        }
+        let mut command = CommandWrap::from(command);
+        #[cfg(windows)]
+        command.wrap(process_wrap::std::JobObject);
+        #[cfg(unix)]
+        command.wrap(process_wrap::std::ProcessGroup::leader());
+        let mut child = command.spawn().map_err(|_| "worker-spawn-failed")?;
+        let stdin = child.stdin().take().ok_or("worker-stdin-unavailable")?;
+        let stdout = child.stdout().take().ok_or("worker-stdout-unavailable")?;
+        let (send, replies) = mpsc::sync_channel(1);
+        thread::spawn(move || {
+            let mut reader = BufReader::new(stdout);
+            loop {
+                let mut line = Vec::new();
+                let read = reader.by_ref().take(16_385).read_until(b'\n', &mut line);
+                let result = if !matches!(read, Ok(1..)) {
+                    Err("observation-worker-exited".to_owned())
+                } else if line.len() > 16_384 || line.last() != Some(&b'\n') {
+                    Err("observation-worker-output-invalid".to_owned())
+                } else {
+                    crate::usage::parse_strict_native_json(&line)
+                        .map_err(|error| error.to_string())
+                        .and_then(|value| {
+                            serde_json::from_value(value)
+                                .map_err(|_| "observation-worker-protocol-invalid".to_owned())
+                        })
+                };
+                let failed = result.is_err();
+                if send.send(result).is_err() || failed {
+                    return;
+                }
+            }
+        });
+        Ok(Self {
+            child,
+            stdin,
+            replies,
+            next_id: 1,
+        })
+    }
+
+    fn read(&mut self, fresh: bool) -> Result<Vec<UsageSnapshot>, String> {
+        let id = self.next_id;
+        self.next_id = self
+            .next_id
+            .checked_add(1)
+            .ok_or("observation-id-exhausted")?;
+        serde_json::to_writer(&mut self.stdin, &Request { id, fresh })
+            .map_err(|_| "observation-write-failed")?;
+        self.stdin
+            .write_all(b"\n")
+            .map_err(|_| "observation-write-failed")?;
+        self.stdin.flush().map_err(|_| "observation-write-failed")?;
+        let response = self
+            .replies
+            .recv_timeout(READ_TIMEOUT)
+            .map_err(|_| "observation-timeout")??;
+        validate_response(response, id)
+    }
+}
+
+fn validate_response(response: Response, id: u64) -> Result<Vec<UsageSnapshot>, String> {
+    if response.id != id {
+        return Err("observation-response-id-mismatch".to_owned());
+    }
+    match (response.snapshots, response.error) {
+        (Some(snapshots), None) => Ok(snapshots),
+        (None, Some(error)) => Err(error),
+        _ => Err("observation-response-ambiguous".to_owned()),
+    }
+}
+
+pub(super) struct Reader {
+    primary: Option<Worker>,
+}
+
+impl Reader {
+    pub fn new() -> Self {
+        Self { primary: None }
+    }
+
+    pub fn read(&mut self, fresh: bool) -> Sample {
+        let primary = if fresh {
+            self.primary = None;
+            Err("independent-observation-requested".to_owned())
+        } else {
+            if self.primary.is_none() {
+                match Worker::start() {
+                    Ok(worker) => self.primary = Some(worker),
+                    Err(error) => return self.recover(error),
+                }
+            }
+            self.primary
+                .as_mut()
+                .expect("worker was created")
+                .read(false)
+        };
+        match primary {
+            Ok(snapshots) => Sample {
+                snapshots: Ok(snapshots),
+                source: "persistent",
+                primary_error: None,
+            },
+            Err(error) => self.recover(error),
+        }
+    }
+
+    fn recover(&mut self, primary_error: String) -> Sample {
+        self.primary = None;
+        let snapshots = Worker::start().and_then(|mut worker| worker.read(true));
+        Sample {
+            snapshots,
+            source: "fresh-process",
+            primary_error: Some(primary_error),
+        }
+    }
+}
+
+/// Internal JSONL protocol, deliberately outside the public monitor command grammar.
+pub(crate) fn run_worker() -> ExitCode {
+    let mut sensor = MonitorSensor::new();
+    let input = std::io::stdin();
+    let mut input = input.lock();
+    let mut output = std::io::stdout().lock();
+    loop {
+        let mut line = Vec::new();
+        if !matches!(
+            input.by_ref().take(1_025).read_until(b'\n', &mut line),
+            Ok(1..)
+        ) {
+            return ExitCode::SUCCESS;
+        }
+        if line.len() > 1_024 || line.last() != Some(&b'\n') {
+            return ExitCode::from(2);
+        }
+        let request = crate::usage::parse_strict_native_json(&line)
+            .ok()
+            .and_then(|value| serde_json::from_value::<Request>(value).ok());
+        let Some(request) = request else {
+            return ExitCode::from(2);
+        };
+        let result = if request.fresh {
+            MonitorSensor::fresh()
+        } else {
+            sensor.read()
+        };
+        let response = match result {
+            Ok(snapshot) => Response {
+                id: request.id,
+                snapshots: Some(snapshot.core_snapshots()),
+                error: None,
+            },
+            Err(error) => Response {
+                id: request.id,
+                snapshots: None,
+                error: Some(error.to_string()),
+            },
+        };
+        if serde_json::to_writer(&mut output, &response).is_err()
+            || output.write_all(b"\n").is_err()
+            || output.flush().is_err()
+        {
+            return ExitCode::from(2);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn late_or_ambiguous_replies_never_supply_an_observation() {
+        assert!(validate_response(
+            Response {
+                id: 1,
+                snapshots: Some(vec![]),
+                error: None
+            },
+            2
+        )
+        .is_err());
+        assert!(validate_response(
+            Response {
+                id: 2,
+                snapshots: Some(vec![]),
+                error: Some("failure".into())
+            },
+            2
+        )
+        .is_err());
+        assert!(validate_response(
+            Response {
+                id: 2,
+                snapshots: None,
+                error: None
+            },
+            2
+        )
+        .is_err());
+        assert_eq!(
+            validate_response(
+                Response {
+                    id: 2,
+                    snapshots: Some(vec![]),
+                    error: None
+                },
+                2
+            ),
+            Ok(vec![])
+        );
+    }
+}

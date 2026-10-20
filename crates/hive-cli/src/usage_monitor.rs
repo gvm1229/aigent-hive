@@ -1,7 +1,10 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
 mod desktop;
 mod platform;
+mod sensor;
 mod state;
+
+pub(crate) use sensor::run_worker;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -449,13 +452,13 @@ fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
     write(root, CONFIG, &config)?;
     Ok(json!({"enabled":false,"incident_preserved":true,"changed_paths":[CONFIG]}))
 }
-type SampleResult = Result<Vec<UsageSnapshot>, crate::usage::SensorError>;
-fn sensor_worker() -> mpsc::SyncSender<mpsc::SyncSender<SampleResult>> {
-    let (tx, rx) = mpsc::sync_channel::<mpsc::SyncSender<SampleResult>>(1);
+type SampleResult = sensor::Sample;
+fn sensor_worker() -> mpsc::SyncSender<(bool, mpsc::SyncSender<SampleResult>)> {
+    let (tx, rx) = mpsc::sync_channel::<(bool, mpsc::SyncSender<SampleResult>)>(1);
     thread::spawn(move || {
-        let mut sensor = crate::usage::MonitorSensor::new();
-        while let Ok(reply) = rx.recv() {
-            let _ = reply.send(sensor.read().map(|s| s.core_snapshots()));
+        let mut sensor = sensor::Reader::new();
+        while let Ok((fresh, reply)) = rx.recv() {
+            let _ = reply.send(sensor.read(fresh));
         }
     });
     tx
@@ -491,6 +494,9 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         Duration::from_secs(5),
     )?;
     require_desktop_version(&initial)?;
+    if let Some(tick) = initial["uptime_ms"].as_u64() {
+        sensor::seed_uptime(tick);
+    }
     if initial["caller_within_app"] == true {
         return Err(error(
             "monitor must run independently through its scheduled task",
@@ -573,18 +579,34 @@ fn record_control(
     })
 }
 
-fn record_sample(root: &PinnedTarget, measured: SampleResult, elapsed: u64) -> bool {
+fn record_sample(root: &PinnedTarget, measured: SampleResult, elapsed: u64) -> (bool, bool) {
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
-        let outcome = measured.map_err(|e| e.to_string()).and_then(|snapshots| {
+        state.last_query_source = Some(measured.source.to_owned());
+        state.primary_query_error = measured.primary_error;
+        let outcome = measured.snapshots.and_then(|snapshots| {
             state
-                .observe(&snapshots, now())
+                .observe_confirmed(&snapshots, now(), measured.source == "fresh-process")
                 .map_err(|e| e.message().to_owned())
         });
         state.last_query_error = outcome.as_ref().err().cloned();
-        Ok(outcome.is_ok())
+        if outcome.is_ok() {
+            state.last_success_uptime_ms = sensor::uptime_ms();
+        }
+        state.consecutive_query_failures = if outcome.is_ok() {
+            0
+        } else {
+            state.consecutive_query_failures.saturating_add(1)
+        };
+        Ok((
+            outcome.is_ok(),
+            outcome
+                .as_ref()
+                .err()
+                .is_some_and(|error| error.ends_with("requires-independent-observation")),
+        ))
     })
-    .unwrap_or(false)
+    .unwrap_or((false, false))
 }
 
 fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, AdapterError> {
@@ -651,6 +673,7 @@ fn dispatch_halt(
 
 type SampleWorker = (Instant, Receiver<SampleResult>);
 
+#[allow(clippy::too_many_lines)]
 fn controller_loop(
     root: &PinnedTarget,
     mut active: bool,
@@ -658,9 +681,12 @@ fn controller_loop(
 ) -> Result<Value, AdapterError> {
     let sensor = sensor_worker();
     let started = Instant::now();
-    let gap = with_state(root, |state| Ok(state.observation_gap(active, now())))?;
+    let gap = with_state(root, |state| {
+        Ok(state.observation_gap_monotonic(active, now(), sensor::uptime_ms()))
+    })?;
     let mut cadence = state::Cadence::with_gap(gap);
     let mut sample: Option<SampleWorker> = None;
+    let mut independent = false;
     let mut inspect: Option<Receiver<Result<Value, ()>>> = None;
     let mut next_inspect = started;
     let mut last_control = started
@@ -716,16 +742,21 @@ fn controller_loop(
         }
         if active && sample.is_none() && tick.duration_since(started) >= cadence.next_sample {
             let (tx, rx) = mpsc::sync_channel(1);
-            let _ = sensor.try_send(tx);
+            let _ = sensor.try_send((independent, tx));
             sample = Some((tick, rx));
             cadence.begin(tick.duration_since(started));
         }
         if let Some((began, rx)) = &sample {
             let result = rx.try_recv();
-            if result.is_ok() || began.elapsed() >= Duration::from_secs(5) {
+            if result.is_ok() || began.elapsed() >= Duration::from_secs(11) {
                 let elapsed = u64::try_from(began.elapsed().as_millis()).unwrap_or(u64::MAX);
-                let measured = result.unwrap_or(Err(crate::usage::SensorError::Timeout));
-                let success = record_sample(root, measured, elapsed);
+                let measured = result.unwrap_or(sensor::Sample {
+                    snapshots: Err("observation-supervisor-timeout".into()),
+                    source: "unavailable",
+                    primary_error: None,
+                });
+                let (success, needs_independent) = record_sample(root, measured, elapsed);
+                independent = needs_independent;
                 cadence.complete(tick.duration_since(started), success);
                 sample = None;
             }
@@ -749,7 +780,7 @@ fn controller_loop(
                 s.heartbeat = now();
                 s.control_connected = control_connected;
                 s.app_alive = active;
-                let _ = s.observation_gap(active, now());
+                let _ = s.observation_gap_monotonic(active, now(), sensor::uptime_ms());
                 Ok(())
             });
             last_publish = tick;

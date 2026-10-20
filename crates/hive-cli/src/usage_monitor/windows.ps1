@@ -56,7 +56,8 @@ try {
                     $cursor = [int]$row[0].ParentProcessId
                 }
             }
-            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; identity = 'current-user-OpenAI.Codex-package' }
+            $uptime=[long][Math]::Floor([Diagnostics.Stopwatch]::GetTimestamp()/([double][Diagnostics.Stopwatch]::Frequency/1000))
+            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; uptime_ms=$uptime; identity = 'current-user-OpenAI.Codex-package' }
         }
         'register' {
             $taskName = [string]$request.task_name

@@ -95,6 +95,10 @@ impl MonitorSensor {
         Self { connection: None }
     }
 
+    pub(crate) fn fresh() -> Result<NormalizedSnapshot, SensorError> {
+        read_with_timeout(None, SystemTime::now(), Duration::from_secs(5))
+    }
+
     pub fn read(&mut self) -> Result<NormalizedSnapshot, SensorError> {
         if self
             .connection
@@ -483,7 +487,10 @@ fn await_response(
             .ok_or(SensorError::Timeout)?;
         let message = receiver
             .recv_timeout(remaining)
-            .map_err(|_| SensorError::Timeout)??;
+            .map_err(|error| match error {
+                mpsc::RecvTimeoutError::Timeout => SensorError::Timeout,
+                mpsc::RecvTimeoutError::Disconnected => SensorError::Failed,
+            })??;
         let object = message.as_object().ok_or(SensorError::Malformed)?;
         let Some(response_id) = object.get("id") else {
             continue;
@@ -563,9 +570,31 @@ fn normalize(
         .and_then(|limits| limits.get("codex"))
         .filter(|value| !value.is_null());
     let selected = selected_by_id.or(legacy).ok_or(SensorError::WrongWindows)?;
-    if selected_by_id.is_some() && legacy.is_some() && selected_by_id != legacy {
-        return Err(SensorError::AmbiguousData);
+    let windows = normalize_limit_windows(selected, plan, now)?;
+    if selected_by_id.is_some() {
+        if let Some(legacy) = legacy {
+            if normalize_limit_windows(legacy, plan, now)? != windows {
+                return Err(SensorError::AmbiguousData);
+            }
+        }
     }
+    Ok(NormalizedSnapshot {
+        sensor_id: SENSOR_ID.to_owned(),
+        sensor_version: version.to_owned(),
+        provider: "codex".to_owned(),
+        account_digest,
+        measured_at: now,
+        expires_at: now.saturating_add(60),
+        source_confidence: "local".to_owned(),
+        windows,
+    })
+}
+
+fn normalize_limit_windows(
+    selected: &Value,
+    plan: &str,
+    now: u64,
+) -> Result<Vec<NormalizedWindow>, SensorError> {
     let selected = selected.as_object().ok_or(SensorError::Malformed)?;
     if selected.get("limitId").and_then(Value::as_str) != Some("codex") {
         return Err(SensorError::WrongProvider);
@@ -590,16 +619,7 @@ fn normalize(
     if windows.is_empty() {
         return Err(SensorError::WrongWindows);
     }
-    Ok(NormalizedSnapshot {
-        sensor_id: SENSOR_ID.to_owned(),
-        sensor_version: version.to_owned(),
-        provider: "codex".to_owned(),
-        account_digest,
-        measured_at: now,
-        expires_at: now.saturating_add(60),
-        source_confidence: "local".to_owned(),
-        windows,
-    })
+    Ok(windows)
 }
 
 fn normalize_window(value: &Value, now: u64) -> Result<NormalizedWindow, SensorError> {
@@ -791,6 +811,45 @@ mod tests {
         assert_eq!(
             await_response(&receiver, 3, Instant::now(), Duration::from_millis(1)),
             Err(SensorError::Timeout)
+        );
+    }
+
+    #[test]
+    fn native_connection_exit_is_not_reported_as_a_timeout() {
+        let (sender, receiver) = mpsc::sync_channel(1);
+        drop(sender);
+        assert_eq!(
+            await_response(&receiver, 1, Instant::now(), Duration::from_secs(1)),
+            Err(SensorError::Failed)
+        );
+    }
+
+    #[test]
+    fn equivalent_limit_views_ignore_unrelated_metadata_but_not_quota_values() {
+        let account =
+            json!({"account":{"type":"chatgpt","email":"test@example.invalid","planType":"pro"}});
+        let modern = json!({"limitId":"codex","planType":"pro","primary":{"usedPercent":25.0,"windowDurationMins":300,"resetsAt":2000}});
+        let mut legacy = modern.clone();
+        legacy["secondary"] = serde_json::Value::Null;
+        legacy["credits"] = json!({"hasCredits":false});
+        assert!(normalize(
+            &account,
+            &json!({"rateLimits":legacy,"rateLimitsByLimitId":{"codex":modern}}),
+            "0.160.1",
+            None,
+            1000
+        )
+        .is_ok());
+        legacy["primary"]["usedPercent"] = json!(26.0);
+        assert_eq!(
+            normalize(
+                &account,
+                &json!({"rateLimits":legacy,"rateLimitsByLimitId":{"codex":modern}}),
+                "0.160.1",
+                None,
+                1000
+            ),
+            Err(SensorError::AmbiguousData)
         );
     }
 

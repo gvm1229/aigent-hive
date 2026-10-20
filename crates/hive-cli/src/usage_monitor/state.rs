@@ -58,6 +58,10 @@ pub(super) struct MonitorState {
     pub account_digest: Option<String>,
     pub baseline: Vec<UsageSnapshot>,
     pub last_success: Option<u64>,
+    #[serde(default)]
+    pub last_success_uptime_ms: Option<u64>,
+    #[serde(default)]
+    pub watch_started_uptime_ms: Option<u64>,
     pub heartbeat: u64,
     pub incident: Option<Incident>,
     #[serde(default)]
@@ -70,6 +74,12 @@ pub(super) struct MonitorState {
     pub observation_watch_started_at: Option<u64>,
     #[serde(default)]
     pub last_query_error: Option<String>,
+    #[serde(default)]
+    pub last_query_source: Option<String>,
+    #[serde(default)]
+    pub primary_query_error: Option<String>,
+    #[serde(default)]
+    pub consecutive_query_failures: u64,
     #[serde(default)]
     pub query_elapsed_ms: Option<u64>,
     #[serde(default)]
@@ -223,6 +233,31 @@ impl MonitorState {
         std::time::Duration::from_secs(at - anchor)
     }
 
+    pub fn observation_gap_monotonic(
+        &mut self,
+        active: bool,
+        at: u64,
+        uptime: Option<u64>,
+    ) -> std::time::Duration {
+        if !active {
+            self.watch_started_uptime_ms = None;
+            return self.observation_gap(false, at);
+        }
+        if let Some(tick) = uptime {
+            let started = *self.watch_started_uptime_ms.get_or_insert(tick);
+            let anchor = self
+                .last_success_uptime_ms
+                .filter(|good| *good >= started)
+                .unwrap_or(started);
+            if tick >= anchor {
+                // Persisted monotonic readings survive helper/controller replacement.
+                return std::time::Duration::from_millis(tick - anchor);
+            }
+            // Reboot or damaged persisted ticks: require fresh data, never manufacture health.
+        }
+        self.observation_gap(true, at)
+    }
+
     pub fn halt(&mut self, reason: &str, now: u64) {
         self.generation = self.generation.saturating_add(1);
         let digest = sha256_digest(
@@ -255,7 +290,18 @@ impl MonitorState {
     }
 
     /// A baseline is historical evidence, not a reusable permission to run.
+    #[cfg(test)]
     pub fn observe(&mut self, current: &[UsageSnapshot], now: u64) -> Result<(), AdapterError> {
+        self.observe_confirmed(current, now, false)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    pub fn observe_confirmed(
+        &mut self,
+        current: &[UsageSnapshot],
+        now: u64,
+        independent: bool,
+    ) -> Result<(), AdapterError> {
         let first = current
             .first()
             .ok_or_else(|| invalid("empty observation"))?;
@@ -290,29 +336,49 @@ impl MonitorState {
             .as_ref()
             .is_some_and(|account| account != &first.account_scope_digest)
         {
-            self.account_digest = Some(first.account_scope_digest.clone());
-            self.baseline = current.to_vec();
-            return Err(invalid(
-                "usage account changed; awaiting another fresh observation",
-            ));
+            if !independent {
+                return Err(invalid("account-change-requires-independent-observation"));
+            }
+            self.baseline.clear();
         }
         if !self.baseline.is_empty() {
-            if current.len() != self.baseline.len()
+            if (current.len() != self.baseline.len()
                 || current
                     .iter()
-                    .any(|item| !self.baseline.iter().any(|old| same_window(item, old)))
+                    .any(|item| !self.baseline.iter().any(|old| same_window(item, old))))
+                && !independent
             {
-                return Err(invalid("usage window set changed"));
+                return Err(invalid(
+                    "quota-window-change-requires-independent-observation",
+                ));
             }
             if current.iter().any(|item| {
                 self.baseline.iter().any(|old| {
                     same_window(item, old)
-                        && (item.measured_at_unix_seconds < old.measured_at_unix_seconds
-                            || item.resets_at_unix_seconds.saturating_add(2)
-                                < old.resets_at_unix_seconds)
+                        && item.measured_at_unix_seconds < old.measured_at_unix_seconds
                 })
             }) {
-                return Err(invalid("usage observation moved backwards"));
+                if !independent {
+                    return Err(invalid(
+                        "measurement-time-regression-requires-independent-observation",
+                    ));
+                }
+                // The native API carries quota data, not a provider measurement timestamp.
+                // A separate fresh request confirms a corrected local clock. Do not compare
+                // reset evidence across the discarded clock epoch.
+                self.baseline.clear();
+            }
+            if current.iter().any(|item| {
+                self.baseline.iter().any(|old| {
+                    same_window(item, old)
+                        && item.resets_at_unix_seconds.saturating_add(2)
+                            < old.resets_at_unix_seconds
+                })
+            }) && !independent
+            {
+                return Err(invalid(
+                    "reset-schedule-correction-requires-independent-observation",
+                ));
             }
             // A provider-confirmed new period also detects a refill hidden by fast consumption.
             let rollover = current.iter().any(|item| {
@@ -345,6 +411,12 @@ impl MonitorState {
         self.baseline = next;
         self.sensor_outage_stopped_at = None;
         self.last_success = Some(now);
+        if self
+            .observation_watch_started_at
+            .is_some_and(|started| started > now)
+        {
+            self.observation_watch_started_at = Some(now);
+        }
         self.observation_count = self.observation_count.saturating_add(1);
         Ok(())
     }
@@ -439,6 +511,81 @@ fn invalid(message: &str) -> AdapterError {
 mod tests {
     use super::*;
     use hive_core::usage_guard::{SourceConfidence, UsageWindow};
+
+    #[test]
+    fn independent_read_confirms_schedule_corrections_without_false_blindness_or_reset() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(80.0, 100, 400), 100).unwrap();
+        let corrected = sample(79.0, 115, 390);
+        let error = state.observe(&corrected, 115).unwrap_err();
+        assert_eq!(
+            error.message(),
+            "reset-schedule-correction-requires-independent-observation"
+        );
+        assert_eq!(state.last_success, Some(100));
+        state.observe_confirmed(&corrected, 115, true).unwrap();
+        assert_eq!(state.last_success, Some(115));
+        assert_eq!(state.baseline[0].resets_at_unix_seconds, 390);
+        assert!(state.incident.is_none());
+    }
+
+    #[test]
+    fn independent_read_confirms_clock_correction_but_cannot_accept_old_data() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(80.0, 100, 400), 100).unwrap();
+        assert_eq!(
+            state
+                .observe(&sample(79.0, 90, 400), 90)
+                .unwrap_err()
+                .message(),
+            "measurement-time-regression-requires-independent-observation"
+        );
+        state
+            .observe_confirmed(&sample(79.0, 90, 400), 90, true)
+            .unwrap();
+        assert_eq!(state.last_success, Some(90));
+        assert!(state.incident.is_none());
+        assert!(state
+            .observe_confirmed(&sample(78.0, 90, 400), 110, true)
+            .is_err());
+        assert_eq!(state.last_success, Some(90));
+    }
+
+    #[test]
+    fn persisted_uptime_preserves_sixty_seconds_across_wall_clock_changes_and_restart() {
+        use std::time::Duration as D;
+        let mut state = MonitorState::new();
+        assert_eq!(
+            state.observation_gap_monotonic(true, 1000, Some(100_000)),
+            D::ZERO
+        );
+        state.last_success_uptime_ms = Some(101_000);
+        state.last_success = Some(1001);
+        let mut restarted: MonitorState =
+            serde_json::from_slice(&serde_json::to_vec(&state).unwrap()).unwrap();
+        let gap = restarted.observation_gap_monotonic(true, 500, Some(160_999));
+        assert_eq!(gap, D::from_millis(59_999));
+        assert!(!Cadence::with_gap(gap).blind(D::ZERO));
+        assert!(Cadence::with_gap(gap).blind(D::from_millis(1)));
+        assert_eq!(
+            restarted.observation_gap_monotonic(false, 500, Some(161_000)),
+            D::ZERO
+        );
+    }
+
+    #[test]
+    fn window_changes_need_a_fresh_process_and_are_not_a_permanent_sensor_failure() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(80.0, 100, 400), 100).unwrap();
+        let mut changed = sample(79.0, 115, 400);
+        let mut weekly = changed[0].clone();
+        weekly.quota_window = UsageWindow::Session;
+        changed.push(weekly);
+        assert!(state.observe(&changed, 115).is_err());
+        state.observe_confirmed(&changed, 115, true).unwrap();
+        assert_eq!(state.observation_count, 2);
+        assert!(state.incident.is_none());
+    }
     fn sample(remaining: f64, now: u64, reset: i64) -> Vec<UsageSnapshot> {
         vec![UsageSnapshot {
             schema_version: 1,
