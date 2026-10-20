@@ -1484,3 +1484,32 @@
 | [failed](runs/20261020T200140-ab5fdfa02831.md) | 0.13.1 분리 조회 작업과 관측 시계 집중 회귀 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261020T200320-26dd5263dbfb.md) | 0.13.1 독립 조회·관측 확인과 native 정규화 회귀 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261020T200429-64eda0795402.md) | 0.13.1 native 응답 동치·오류 분류 회귀와 정적 검사 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T202041-b3030e1a15b5.md) | 0.13.1 대화별 정책·범위 제한 중단 연결 컴파일 | 4286cab319594b8f3db6a8c04d332a2eadb3516a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T202302-1b19168af82d.md) | 0.13.1 하한 대상 정책과 Windows 명령 길이 회귀 | 4286cab319594b8f3db6a8c04d332a2eadb3516a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T202804-6e1327b44c78.md) | 0.13.1 하한 정책·대화별 재개·범위 제한 취소 회귀 | 4286cab319594b8f3db6a8c04d332a2eadb3516a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T203747-02bae09ee0ef.md) | 0.13.1 한 차례 하한 중단과 재개 범위 최종 회귀 | 4286cab319594b8f3db6a8c04d332a2eadb3516a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T204507-123ce8afcd02.md) | 0.13.1 대화 목록 조회도 소유 작업 프로세스로 격리 | 9c2ecf9610e30a372f4559ef0f5472fbf608ca9b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T205107-a9ed12a73ce5.md) | 0.13.1 활성 설정과 실제 감시 상태의 구분 회귀 | b14bab91b34980dcf8b65cf42f1f0c0eeb94d246 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T205956-38d90df71079.md) | 0.13.1 하한 안내·실제 감시 상태 구분 회귀 | b14bab91b34980dcf8b65cf42f1f0c0eeb94d246 | Windows-11-10.0.26300-SP0 |
+
+## 0.13.0 정식 공개
+
+[정식 파일·채널·공지 확인](release-0.13.0-stable.md)·[공개 시험 수용](release-0.13.0-test.json)·[로컬 소스 검증](release-0.13.0-local.json). 실제 Windows 읽기 확인·기존 실제 중단 증거의 구분, 새 실시간 중단 요청 없음
+
+## 0.12.1 최종 수용
+
+[한 차례 중단·직접 재개](session-stop-one-shot-qualification-0.12.1.json)·[공식 로고 알림](usage-stop-notice-only-windows-0.12.1.json)·[로컬 설치·상시 관측](session-stop-one-shot-installation-0.12.1.json). 새 실제 중단 없이 검증한 최종 제어 수명, 이전 전체 확인 실패 보존
+
+## 이전 단계의 추가 근거
+
+제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
+
+첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
+
+현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
+
+현재 앱의 첫 전체 시험: [세 역할 중단·전체 확인 실패](session-stop-partial-windows-0.12.1.json). 실제 중단과 제품 전체 확인의 구분, 설치 미실행
+
+제품 사용자 안내: [Windows 표시·닫기 근거](usage-stop-notice-windows-0.12.1.json)·[실제 화면](assets/usage-stop-notice-0.12.1.png). 실제 중단 없이 검증한 안내 창
+
+현재 Windows 결합 수용: [실제 네 실행·읽기 확인·코드 동일성](session-stop-component-qualification-0.12.1.json). 원래 자동 전체 확인 실패 보존, 새 실제 중단 없음
