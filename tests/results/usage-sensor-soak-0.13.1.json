@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scope": "Windows native reader, validation and monotonic cadence; no desktop stop",
+  "executable_sha256": "21d20b0c6d7f324cf247c313ef156ea92b19e55fe856582927526946721faaf6",
+  "started_at": "2026-10-20T21:32:24Z",
+  "elapsed_seconds": 1810.672,
+  "passed": true,
+  "build_source_revision": "275200ded52371cb47be1947546493bca39d453d",
+  "component_sources": [
+    {
+      "path": "crates/hive-cli/src/usage_monitor/sensor.rs",
+      "sha256_lf": "16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb"
+    },
+    {
+      "path": "crates/hive-cli/src/usage_monitor/state.rs",
+      "sha256_lf": "798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
+    },
+    {
+      "path": "crates/hive-cli/src/usage/codex_native.rs",
+      "sha256_lf": "dfdb3303e45f3af8c7eb277cb9200e996a3265c0937ee1a240c09b98b764369e"
+    }
+  ],
+  "observations": 115,
+  "valid_observations": 115,
+  "routes": {
+    "persistent": 114,
+    "fresh-process": 1
+  },
+  "primary_failures": {
+    "observation-worker-exited": 1
+  },
+  "final_failures": 0,
+  "false_sixty_second_gaps": 0,
+  "maximum_gap_before_read_ms": 19117,
+  "owned_query_child_identities": 8,
+  "fault_injection_verified": true,
+  "qualification_limit": "frozen debug reader/normalization/validation components, unchanged at review; no desktop interruption, provider reset, server billing or final public artifact qualification"
+}

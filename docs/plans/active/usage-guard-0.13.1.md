@@ -13,16 +13,16 @@
 
 ## 실행 항목
 
-- [ ] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
-  - state: agent-owned; owner: 현재 Codex; reason: 구현·회귀 필요
-- [ ] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
-  - state: agent-owned; depends: UG131-001; owner: 현재 Codex; reason: 구현·회귀 필요
-- [ ] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
-  - state: agent-owned; depends: UG131-002; owner: 현재 Codex; reason: 구현·회귀 필요
+- [x] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9
+- [x] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9
+- [x] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9
 - [ ] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
-  - state: agent-owned; depends: UG131-003; owner: 현재 Codex; reason: 실행 필요
+  - state: agent-owned; depends: UG131-003; owner: 현재 Codex; reason: 전체 Python·정본 회귀 확인 필요
 - [ ] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
-  - state: agent-owned; depends: UG131-004; owner: 현재 Codex; reason: 실제 실행 필요
+  - state: awaiting-user-authority; depends: UG131-004; owner: 사용자; reason: 새 시험 대화 2개 생성의 명시 승인 대기. 조회 1810초·115회 정상, 실제 중단·직접 재개는 미실행
 - [ ] [UG131-006] 공개0.13.1-test.1·격리 실제 갱신과 후속 update 수용
   - state: agent-owned; depends: UG131-005; owner: 현재 Codex; reason: 구현 수용 뒤 번호 시험 게시·확인 필요
 
@@ -43,3 +43,8 @@
 - 최소30분·여러4분 연결 교체·기본 경로 장애 후 보조 회복, 정상 자료가 있는 상태의 허위60초 중단0건. 실제 제공자 초기화·과금 종료·다른 OS 직접 중단은 증명 제외
 - `0.13.0 → 0.13.1` 활성/비활성 감시의 갱신·실패 복구·데이터 보존과 일반 `hive update` 확인. 실사용자 설치는 승인 전 격리 환경으로 검증
 - 실패는 증거 보존 뒤 입력·코드 수정으로 재검증. 지식·설정·실행 기록 삭제나 앱 종료를 복구 수단으로 사용 금지
+
+## 현재 수용 상태
+
+- 구현·모듈 회귀 3개 완료는 실제 앱의 실행 중단 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
+- 긴 추론·셸 검사기 준비 완료. 생성 승인 없는 다른 대화 전용·무관한 작업 중단 금지
