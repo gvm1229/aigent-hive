@@ -1479,25 +1479,8 @@
 | [passed](runs/20261017T231715-bef027119f88.md) | 공개 시험판의 번호 표시 형식을 맞춘 현재 Windows 읽기 전용 확인 | 2d2eb25b675679b8bff9f6cc81ecb4cdec73adbe | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261018T002003-2c33138dc276.md) | 정식 0.13.0 여섯 latest·시험 표시·태그·공개 파일 독립 대조 | 1b5bffda7e25681de3217e0d3baaa88e6f18747f | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261018T002017-0a5037aad6cc.md) | 정식 채널 인수를 명시한 0.13.0 공개 파일 독립 대조 | 1b5bffda7e25681de3217e0d3baaa88e6f18747f | Windows-11-10.0.26300-SP0 |
-
-## 0.13.0 정식 공개
-
-[정식 파일·채널·공지 확인](release-0.13.0-stable.md)·[공개 시험 수용](release-0.13.0-test.json)·[로컬 소스 검증](release-0.13.0-local.json). 실제 Windows 읽기 확인·기존 실제 중단 증거의 구분, 새 실시간 중단 요청 없음
-
-## 0.12.1 최종 수용
-
-[한 차례 중단·직접 재개](session-stop-one-shot-qualification-0.12.1.json)·[공식 로고 알림](usage-stop-notice-only-windows-0.12.1.json)·[로컬 설치·상시 관측](session-stop-one-shot-installation-0.12.1.json). 새 실제 중단 없이 검증한 최종 제어 수명, 이전 전체 확인 실패 보존
-
-## 이전 단계의 추가 근거
-
-제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
-
-첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
-
-현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
-
-현재 앱의 첫 전체 시험: [세 역할 중단·전체 확인 실패](session-stop-partial-windows-0.12.1.json). 실제 중단과 제품 전체 확인의 구분, 설치 미실행
-
-제품 사용자 안내: [Windows 표시·닫기 근거](usage-stop-notice-windows-0.12.1.json)·[실제 화면](assets/usage-stop-notice-0.12.1.png). 실제 중단 없이 검증한 안내 창
-
-현재 Windows 결합 수용: [실제 네 실행·읽기 확인·코드 동일성](session-stop-component-qualification-0.12.1.json). 원래 자동 전체 확인 실패 보존, 새 실제 중단 없음
+| [failed](runs/20261020T195643-01de33022abd.md) | 0.13.1 조회 격리·관측 보정 Rust 컴파일과 집중 시험 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T200007-3b515dcb7a6d.md) | 0.13.1 조회 오류 분리·독립 재확인·단조 시계 회귀 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T200140-ab5fdfa02831.md) | 0.13.1 분리 조회 작업과 관측 시계 집중 회귀 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T200320-26dd5263dbfb.md) | 0.13.1 독립 조회·관측 확인과 native 정규화 회귀 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T200429-64eda0795402.md) | 0.13.1 native 응답 동치·오류 분류 회귀와 정적 검사 | 769b6aa245318160895289309778cf8ec4c763c5 | Windows-11-10.0.26300-SP0 |
