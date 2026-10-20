@@ -28,11 +28,11 @@
 
 ## 현재 재사용과 추가 구현
 
-- [usage_monitor.rs](../../crates/hive-cli/src/usage_monitor.rs)의 `sensor_worker`는 기존 사용량 모듈의 `MonitorSensor`와 `core_snapshots` 사용. 별도 모델 호출로 사용량을 추정하는 새 구현 없음
+- [usage_monitor.rs](../../crates/hive-cli/src/usage_monitor.rs)의 `sensor_worker`와 격리 조회 작업은 기존 사용량 모듈의 `MonitorSensor`·`core_snapshots` 사용. 별도 모델 호출로 사용량을 추정하는 새 구현 없음
 - [state.rs](../../crates/hive-cli/src/usage_monitor/state.rs)는 공통 `UsageSnapshot`·`detect_usage_reset` 사용. 초기화 판정은 기존 초기화 보호에서 계승,0.7~0.9에 이미 같은 초기화 판정이 있었다는 주장 제외
 - 추가한 부분: 앱과 독립된 수명·조회 실패 시한, 기존 앱 연결 인증, 실제 대화·실행 식별, 직접 취소 요청, 결과 확인, 사건별 중복 억제, 별도 이유 알림
 - [desktop.ps1](../../crates/hive-cli/src/usage_monitor/desktop.ps1)의 직접 요청과 [실제 중단 확인](session-stop-0.12.1.md). 앱 종료·재개 잠금 없이 한 차례 처리
-- 현재 `observe`의 사건 조건은 초기화와 별도 관측 공백. 일반 잔여량 하한 도달을 이 직접 취소 경로에 연결하는 구현 없음. 기존 하한의 사전 검사는 유지
+- 공개0.13.0의 사건 조건은 초기화와 관측 공백, 일반 하한은 사전 검사만 적용. 후속 승인한 개발0.13.1은 공통 하한 정책을 같은 직접 취소 경로에 연결, 실제 앱 수용은 별도
 
 ## 난항의 원인과 설명 책임
 
@@ -45,4 +45,4 @@
 
 -2026-10-21 Windows에서 로컬 Git 원본과 현재 소스·기존 수용 자료의 읽기 비교. 제품·사용자 설정 변경과 새 중단 시험 없음
 - 이전 사용자의 특정 중단이 어떤 경로였는지는 해당 실행 기록 부재로 미확정. 현재 Windows native 중단의 증거는 기존 수용 자료에 한정, 다른 OS·원격·클라우드의 직접 중단 증명 제외
-- 향후 일반 하한에도 즉시 취소가 필요하면 공통 중단 경로에 하한 정책을 연결하는 별도 검토 대상. 이번 질문을 새 기능 구현·버전 승인으로 해석하지 않는 경계
+- 최초 비교 질문은 구현 승인 범위 밖. 이후 사용자가 승인한 [0.13.1 계획](../plans/active/usage-guard-0.13.1.md)에 따라 하한 연결·조회 보정 진행, [현재 검증](usage-guard-0.13.1.md)과 과거 비교의 증명 범위 분리
