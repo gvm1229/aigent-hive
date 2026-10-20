@@ -6,14 +6,33 @@ $request=[Console]::In.ReadToEnd() | ConvertFrom-Json
 if($request.operation -ne 'notify'){throw 'Unsupported notice operation'}
 
 function Read-NoticeState([string]$path) {
+    if(-not ('HiveNoticeFiles' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Text;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+public static class HiveNoticeFiles {
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern SafeFileHandle CreateFileW(string path, uint access, uint share, IntPtr security, uint mode, uint flags, IntPtr template);
+    public static string ReadText(string path) {
+        // Read-only, with delete sharing so the controller can publish atomically.
+        // SafeFileHandle avoids legacy .NET path normalization of Windows verbatim paths.
+        using(var handle=CreateFileW(path.Replace('/','\\'),0x80000000,7,IntPtr.Zero,3,0x80,IntPtr.Zero)) {
+            if(handle.IsInvalid) throw new IOException("Notice state unavailable");
+            using(var stream=new FileStream(handle,FileAccess.Read)) {
+                if(stream.Length>65536) throw new IOException("Notice state exceeds its limit");
+                using(var reader=new StreamReader(stream,Encoding.UTF8,true)) return reader.ReadToEnd();
+            }
+        }
+    }
+}
+'@
+    }
     for($attempt=0;$attempt -lt 3;$attempt++) {
         try {
-            $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
-            try {
-                if($stream.Length -gt 65536){throw 'Notice state exceeds its limit'}
-                $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::UTF8,$true)
-                try {return ($reader.ReadToEnd() | ConvertFrom-Json)} finally {$reader.Dispose()}
-            } finally {$stream.Dispose()}
+            return ([HiveNoticeFiles]::ReadText($path) | ConvertFrom-Json)
         } catch {if($attempt -eq 2){throw};Start-Sleep -Milliseconds 20}
     }
 }
@@ -39,7 +58,7 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
     }
     $thresholdText='설정한 사용량 하한에 도달했습니다.'
     if($threshold) {
-        $conditions=@($context.threshold_details | ForEach-Object {
+        $conditions=@($context.threshold_details | Where-Object {$null -ne $_} | ForEach-Object {
             $window=if($_.window -eq 'weekly'){'주간'}elseif($_.window -eq 'session'){'5시간'}else{'구독 한도'}
             '남은 사용량 {0:0.##}% / 하한 {1}% · {2}' -f [double]$_.remaining_percent,[int]$_.threshold_percent,$window
         } | Sort-Object -Unique)
@@ -85,8 +104,8 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
 function Update-Notice($ui) {
     $state=$null;$enabled=$false;$readFailed=$false
     try {
-        $state=Read-NoticeState (Join-Path $ui.root '.hive/runtime/usage-monitor/state.json')
-        $config=Read-NoticeState (Join-Path $ui.root '.hive/runtime/usage-monitor/config.json')
+        $state=Read-NoticeState ([IO.Path]::Combine($ui.root,'.hive\runtime\usage-monitor\state.json'))
+        $config=Read-NoticeState ([IO.Path]::Combine($ui.root,'.hive\runtime\usage-monitor\config.json'))
         $enabled=[bool]$config.enabled
     } catch {$readFailed=$true}
     try {$view=Get-NoticeView $state $ui.context $enabled $readFailed}
@@ -194,7 +213,7 @@ function New-NoticeWindow($context,[string]$root,[string]$logo) {
 
 try {
     $context=@{incident=[string]$request.incident;reason=[string]$request.reason;detected_at=0L;is_test=$false;preview=($request.preview -eq $true)}
-    try {$context.is_test=(Read-NoticeState (Join-Path ([string]$request.user_root) '.hive/install/codex.json')).acceptance_fixture -eq $true}catch{}
+    try {$context.is_test=(Read-NoticeState ([IO.Path]::Combine([string]$request.user_root,'.hive\install\codex.json'))).acceptance_fixture -eq $true}catch{}
     $window=New-NoticeWindow $context ([string]$request.user_root) ([string]$request.logo_png_base64)
     $null=$window.ShowDialog()
 } catch {

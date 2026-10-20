@@ -72,6 +72,22 @@ CASE
         self.assertIn('요청했습니다', view['Title'])
         self.assertNotIn('확인했습니다', view['Explanation'])
 
+    def test_missing_threshold_details_do_not_invent_zero_usage_or_floor(self):
+        view = self.view("$context.reason='usage-threshold';Get-NoticeView $null $context $false $true|ConvertTo-Json -Compress")
+        self.assertNotIn('0%', view['Explanation'])
+        self.assertEqual(view['Status'], '상태를 확인할 수 없습니다')
+
+    def test_windows_powershell_reads_verbatim_paths_with_atomic_replacement_sharing(self):
+        result = self.view(r"""
+$path=[IO.Path]::Combine($PSScriptRoot,'verbatim-state.json')
+[IO.File]::WriteAllText($path,'{"value":99}',[Text.UTF8Encoding]::new($false))
+$extended='\\?\'+[IO.Path]::GetFullPath($path)
+$normal=Read-NoticeState $path
+$verbatim=Read-NoticeState $extended
+@{normal=$normal.value;verbatim=$verbatim.value}|ConvertTo-Json -Compress
+""")
+        self.assertEqual(result, {"normal": 99, "verbatim": 99})
+
     def test_sensor_notice_keeps_the_specific_original_failure_after_recovery(self):
         view = self.view("$state.incident.reason='sensor-unresponsive';"
                          "$state.incident|Add-Member NoteProperty query_error 'observation-timeout';"
