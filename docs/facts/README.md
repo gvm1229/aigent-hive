@@ -101,6 +101,7 @@
 | Run recovery | [en](en/run-recovery.md) | [ko](ko/run-recovery.md) |
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
 | Usage guard thresholds | [en](en/usage-guard-thresholds.md) | [ko](ko/usage-guard-thresholds.md) |
+| Usage guard stop layers | [en](en/usage-guard-stop-layers.md) | [ko](ko/usage-guard-stop-layers.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Automatic numbered-test release gate | [en](en/automatic-test-release-gate.md) | [ko](ko/automatic-test-release-gate.md) |
 | Installed usage guard | [en](en/installed-usage-guard.md) | [ko](ko/installed-usage-guard.md) |
