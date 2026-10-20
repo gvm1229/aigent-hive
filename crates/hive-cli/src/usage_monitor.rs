@@ -321,21 +321,57 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
     root.read_required(Path::new(".hive/config/user-setup.yml"), 65536)?;
     match action {
         "preview" => preview(root.requested_path()),
-        "status" => {
-            let configuration: Option<Configuration> = load(&root, CONFIG)?;
-            let state: MonitorState = load(&root, STATE)?.unwrap_or_else(MonitorState::new);
-            Ok(
-                json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
-                "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
-                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
-                "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
-            )
-        }
+        "status" => monitor_status(&root),
         "enable" => enable(&root, confirm.unwrap_or_default()),
         "disable" => disable(&root),
         "run" => controller(&root),
         _ => unreachable!(),
     }
+}
+
+fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    let configuration: Option<Configuration> = load(root, CONFIG)?;
+    let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
+    let probe = configuration
+        .as_ref()
+        .zip(state.controller_pid)
+        .and_then(|(config, pid)| {
+            platform::call(
+                &json!({"operation":"session-identity","pid":pid,"executable":config.executable}),
+                Duration::from_secs(5),
+            )
+            .ok()
+        });
+    let alive = probe
+        .as_ref()
+        .and_then(|value| value["digest"].as_str())
+        .is_some_and(|digest| state.controller_identity.as_deref() == Some(digest));
+    let uptime = probe.as_ref().and_then(|value| value["uptime_ms"].as_u64());
+    let gap = state.observation_gap_monotonic(state.app_alive, now(), uptime);
+    let heartbeat_fresh = uptime.zip(state.heartbeat_uptime_ms).map_or_else(
+        || now().saturating_sub(state.heartbeat) < 5,
+        |(tick, last)| tick >= last && tick - last < 5000,
+    );
+    let observed = state.last_success.is_some() && gap.as_secs() < BLIND_SECONDS;
+    let sensor_health = if !alive {
+        "stopped"
+    } else if !state.app_alive {
+        "idle"
+    } else if !observed {
+        "blind"
+    } else if state.last_query_error.is_some() {
+        "recovering"
+    } else {
+        "healthy"
+    };
+    Ok(
+        json!({"configuration":configuration,"state":state,"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
+        "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
+        "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
+        "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+            && observed && state.last_query_error.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
+        "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
+    )
 }
 
 fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
@@ -555,6 +591,17 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
             "monitor must run independently through its scheduled task",
         ));
     }
+    let pid = std::process::id();
+    let identity = platform::call(
+        &json!({"operation":"session-identity","pid":pid,"executable":config.executable}),
+        Duration::from_secs(5),
+    )?;
+    with_state(root, |state| {
+        state.controller_pid = Some(pid);
+        state.controller_identity = identity["digest"].as_str().map(str::to_owned);
+        state.runtime_version = Some(env!("CARGO_PKG_VERSION").to_owned());
+        Ok(())
+    })?;
     let active = initial["app_count"].as_u64().is_none_or(|count| count > 0);
     let desktop = desktop::Desktop::start();
     let mut fault_notice = None;
@@ -919,6 +966,7 @@ fn controller_loop(
         if last_publish.elapsed() >= Duration::from_secs(1) {
             let _ = with_state(root, |s| {
                 s.heartbeat = now();
+                s.heartbeat_uptime_ms = sensor::uptime_ms();
                 s.control_connected = control_connected;
                 s.app_alive = active;
                 let _ = s.observation_gap_monotonic(active, now(), sensor::uptime_ms());
@@ -933,6 +981,20 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn enabled_configuration_is_not_reported_as_a_running_observer() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut config = configuration(temporary.path()).unwrap();
+        config.enabled = true;
+        write(&root, CONFIG, &config).unwrap();
+        let status = monitor_status(&root).unwrap();
+        assert_eq!(status["configuration"]["enabled"], true);
+        assert_eq!(status["controller_alive"], false);
+        assert_eq!(status["sensor_health"], "stopped");
+        assert_eq!(status["monitoring_verified"], false);
+        assert!(status["running_monitor_version"].is_null());
+    }
     #[test]
     fn preview_is_nonmutating_and_activation_requires_matching_installation() {
         let temporary = tempfile::tempdir().unwrap();

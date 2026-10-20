@@ -41,7 +41,7 @@ try {
                 if($pinned.MainModule.FileName -ne $row.ExecutablePath){throw 'Session executable changed'}
                 $identity=([string]$row.ProcessId)+'|'+$pinned.StartTime.ToUniversalTime().Ticks+'|'+$pinned.MainModule.FileName.ToLowerInvariant()
                 $hash=[Security.Cryptography.SHA256]::Create()
-                try {Emit @{digest='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)))).Replace('-','').ToLowerInvariant()}}finally{$hash.Dispose()}
+                try {Emit @{digest='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)))).Replace('-','').ToLowerInvariant();uptime_ms=[long][Math]::Floor([Diagnostics.Stopwatch]::GetTimestamp()/([double][Diagnostics.Stopwatch]::Frequency/1000))}}finally{$hash.Dispose()}
             } finally {$pinned.Dispose()}
         }
         'inspect' {

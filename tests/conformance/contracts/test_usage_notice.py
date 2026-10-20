@@ -54,6 +54,32 @@ CASE
         self.assertIn("60초", view["Explanation"])
         self.assertNotIn("초기화", view["Reason"])
 
+    def test_threshold_notice_names_the_actual_floor_window_and_stop_confirmation(self):
+        view = self.view("$state.incident.reason='usage-threshold';"
+                         "$state.incident|Add-Member NoteProperty threshold_details @(@{remaining_percent=8.0;threshold_percent=10;window='weekly'});"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('8%', view['Explanation'])
+        self.assertIn('10%', view['Explanation'])
+        self.assertIn('주간', view['Explanation'])
+        self.assertIn('Aigent Hive', view['Explanation'])
+        self.assertEqual(view['Status'], '작업 중단 확인')
+        self.assertNotIn('오류', view['Explanation'])
+
+    def test_threshold_request_does_not_claim_an_unconfirmed_stop(self):
+        view = self.view("$state.incident.reason='usage-threshold';$state.incident.stop_confirmed=$false;"
+                         "$state.incident|Add-Member NoteProperty threshold_details @(@{remaining_percent=8.0;threshold_percent=10;window='session'});"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('요청했습니다', view['Title'])
+        self.assertNotIn('확인했습니다', view['Explanation'])
+
+    def test_sensor_notice_keeps_the_specific_original_failure_after_recovery(self):
+        view = self.view("$state.incident.reason='sensor-unresponsive';"
+                         "$state.incident|Add-Member NoteProperty query_error 'observation-timeout';"
+                         "$null=Get-NoticeView $state $context $true;$state.incident=$null;"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('60초', view['Explanation'])
+        self.assertIn('제한 시간', view['Explanation'])
+
     def test_official_logo_is_shared_by_the_title_and_body(self):
         path = str(ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png").replace("'", "''")
         result = self.view("$logo=[Convert]::ToBase64String([IO.File]::ReadAllBytes('" + path + "'));"

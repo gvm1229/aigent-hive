@@ -63,6 +63,14 @@ pub(super) struct MonitorState {
     #[serde(default)]
     pub watch_started_uptime_ms: Option<u64>,
     pub heartbeat: u64,
+    #[serde(default)]
+    pub heartbeat_uptime_ms: Option<u64>,
+    #[serde(default)]
+    pub controller_pid: Option<u32>,
+    #[serde(default)]
+    pub controller_identity: Option<String>,
+    #[serde(default)]
+    pub runtime_version: Option<String>,
     pub incident: Option<Incident>,
     #[serde(default)]
     pub sensor_outage_stopped_at: Option<u64>,
@@ -142,6 +150,8 @@ pub(super) struct Incident {
     pub target_sessions: Option<Vec<String>>,
     #[serde(default)]
     pub threshold_details: Vec<super::threshold::Receipt>,
+    #[serde(default)]
+    pub query_error: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -299,6 +309,7 @@ impl MonitorState {
             last_verified_session_scope: None,
             target_sessions: None,
             threshold_details: Vec::new(),
+            query_error: self.last_query_error.clone(),
         });
     }
 

@@ -21,9 +21,10 @@ function Read-NoticeState([string]$path) {
 function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false) {
     $current=$state.incident
     $matching=($null -ne $current -and $current.digest -eq $context.incident)
-    if($matching){$context.reason=[string]$current.reason;$context.detected_at=[long]$current.detected_at}
+    if($matching){$context.reason=[string]$current.reason;$context.detected_at=[long]$current.detected_at;$context.threshold_details=@($current.threshold_details);$context.query_error=$current.query_error}
     $reset=$context.reason -eq 'usage-reset'
     $sensor=$context.reason -eq 'sensor-unresponsive'
+    $threshold=$context.reason -eq 'usage-threshold'
     $reason=if($reset){'사용량 초기화 감지'}elseif($context.reason -eq 'sensor-unresponsive'){'60초 동안 정상 사용량 조회 없음'}else{'사용량 보호 상태 확인 필요'}
     $view=@{
         Title=if($reset){"사용량 초기화를 감지해`n작업 중단을 요청했습니다"}elseif($sensor){"사용량을 확인할 수 없어`n작업 중단을 요청했습니다"}else{"사용량 보호 상태를 확인할 수 없어`n작업 중단을 요청했습니다"}
@@ -35,6 +36,18 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         When=if($context.detected_at -gt 0){[DateTimeOffset]::FromUnixTimeSeconds([long]$context.detected_at).ToLocalTime().ToString('yyyy.MM.dd  HH:mm:ss')}else{'확인 중'}
         Banner=if($context.preview){'화면 미리보기 · 실제 조회나 작업 중단 없음'}elseif($context.is_test){'격리 시험 · 실제 초기화가 아닌 시험 신호'}else{''}
         Details='';Footer='창을 닫아도 작업은 재개되지 않습니다.'
+    }
+    $thresholdText='설정한 사용량 하한에 도달했습니다.'
+    if($threshold) {
+        $conditions=@($context.threshold_details | ForEach-Object {
+            $window=if($_.window -eq 'weekly'){'주간'}elseif($_.window -eq 'session'){'5시간'}else{'구독 한도'}
+            '남은 사용량 {0:0.##}% / 하한 {1}% · {2}' -f [double]$_.remaining_percent,[int]$_.threshold_percent,$window
+        } | Sort-Object -Unique)
+        if($conditions.Count){$thresholdText=($conditions | Select-Object -First 3) -join "`n"}
+        if($conditions.Count -gt 3){$thresholdText+="`n그 밖의 적용 기준: "+($conditions.Count-3)+'개'}
+        $view.Title="설정한 사용량 하한에 도달해`n작업 중단을 요청했습니다"
+        $view.Explanation=$thresholdText+"`nAigent Hive가 해당 Codex 작업에 중단을 요청했습니다."
+        $view.Reason='설정한 사용량 하한 도달'
     }
     if(-not $readFailed -and $null -eq $current) {
         $view.Status='이전 중단 안내';$view.Tone='warning'
@@ -49,6 +62,7 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         $view.Title=if($reset){"새 할당량을 보호하기 위해`n작업을 멈췄습니다"}else{"사용량 한도 보호를 위해`n작업을 멈췄습니다"}
         $view.Explanation=if($reset){"Aigent Hive가 사용량 초기화를 감지했습니다.`n새 할당량을 보호하기 위해 Codex 작업을 중단했습니다."}elseif($sensor){"Aigent Hive가 60초 동안 사용량을 확인하지 못했습니다.`n한도 보호를 위해 Codex 작업을 중단했습니다."}else{"Aigent Hive가 사용량 보호 상태를 확인하지 못했습니다.`n한도 보호를 위해 Codex 작업을 중단했습니다."}
         $view.Status='작업 중단 확인';$view.StatusDetail='중단 대상의 실행이 멈춘 것을 확인했습니다.';$view.Tone='success'
+        if($threshold){$view.Title="설정한 사용량 하한에 도달해`n작업을 멈췄습니다";$view.Explanation=$thresholdText+"`nAigent Hive가 해당 Codex 작업의 중단을 확인했습니다."}
     } elseif($current.stop_error) {
         $view.Status='일부 중단 상태의 확인이 필요합니다'
         $view.StatusDetail=if($state.unknown_sessions -gt 0){"일부 대화의 최종 상태를 확인하지 못했습니다.`nCodex에서 해당 작업의 상태를 확인해 주세요."}else{"정해진 시간 안에 전체 중단을 확인하지 못했습니다.`nCodex에서 작업의 상태를 확인해 주세요."}
@@ -60,6 +74,11 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
     $view.Details='중단 대상  '+[long]$current.targeted_turns+'개    확인  '+[long]$current.confirmed_turns+"개`n"+
         '현재 실행  '+[long]$state.active_turns+'개    추가 확인  '+[long]$state.unknown_sessions+"개`n"+
         '앱 제어  '+$connection+'    감시  '+$monitor
+    if($sensor -and $context.query_error) {
+        $errorClass=[string]$context.query_error
+        $cause=if($errorClass -match 'timeout|timed out'){'조회가 제한 시간 안에 끝나지 않았습니다.'}elseif($errorClass -match 'exited|process failed'){'조회 프로그램이 종료되었습니다.'}elseif($errorClass -match 'account|identity'){'사용 중인 계정을 일치시켜 확인하지 못했습니다.'}elseif($errorClass -match 'regression|schedule|window'){'사용량 자료의 시각이나 구간을 다시 확인하지 못했습니다.'}else{'받은 사용량 자료를 검증하지 못했습니다.'}
+        $view.Explanation+="`n"+$cause
+    }
     return $view
 }
 

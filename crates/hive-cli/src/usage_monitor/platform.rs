@@ -151,7 +151,11 @@ pub(super) fn notify(
 }
 
 fn notification_message(reason: &str, success: bool) -> &'static str {
-    if !success && reason == "sensor-unresponsive" {
+    if !success && reason == "usage-threshold" {
+        "설정한 사용량 하한에 도달하여 해당 Codex 작업의 중단을 요청했습니다. 앱은 유지되며, 실제 중단 확인 상태는 안내 창에 표시됩니다."
+    } else if success && reason == "usage-threshold" {
+        "설정한 사용량 하한에 도달하여 해당 Codex 작업을 중단했습니다. Codex에서 직접 재개할 수 있습니다."
+    } else if !success && reason == "sensor-unresponsive" {
         "사용량 감지기가 60초 동안 응답하지 않아 사용량 한도 보호를 우선해 작업 중단을 요청했습니다. 앱은 유지되며, 중단 확인 상태는 이 창에 표시됩니다."
     } else if !success && reason == "usage-reset" {
         "사용량 초기화를 감지하여 새 할당량 보호를 위해 Codex 작업 중단을 요청했습니다. 앱은 유지되며, 확인 상태는 안내 창에 표시됩니다."
@@ -208,5 +212,15 @@ mod tests {
         assert!(text.contains("사용량 초기화"));
         assert!(text.contains("중단을 요청"));
         assert!(!text.contains("중단했습니다"));
+    }
+
+    #[test]
+    fn threshold_fallback_names_the_floor_without_inventing_a_monitor_fault() {
+        for stopped in [false, true] {
+            let text = notification_message("usage-threshold", stopped);
+            assert!(text.contains("하한"));
+            assert!(!text.contains("오류"));
+            assert_eq!(text.contains("중단했습니다"), stopped);
+        }
     }
 }
