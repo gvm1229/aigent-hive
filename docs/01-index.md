@@ -77,6 +77,7 @@ current catalog.
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Installed usage guard](guides/installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |
+| [사용량 보호와 직접 중단 비교](research/usage-guard-stop-comparison.md) | 과거 표시·다음 실행 차단과0.13.0 실행 취소의 차이 |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Release·update](guides/release-update.md) | Update·candidate·publication procedure |
 | [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
