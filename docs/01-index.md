@@ -133,7 +133,7 @@ current catalog.
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
 | [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.10.0` 대비 권장 `0.10.0` 범위 |
-| [AI_Learning 전용 일일 검토](research/ai-learning/README.md) | 기존 구현 계획과 분리한 조사·후보·일일 검토 |
+| [AI_Learning 전용 일일 검토](research/ai-learning/README.md) | 기존 구현 계획과 분리한 조사·후보·일일 검토, [시각 설명 계획](research/ai-learning/proposals/2026-10-13-visual-plan.md) |
 | [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
 | [Vector·file memory 검토](research/vector-memory-0.10-feasibility-2026-08-22.md) | Anthropic file memory·Qdrant·SQLite hybrid search |
 | [Vector 재검증 결과](research/vector-requalification-0.10-2026-08-24.md) | 50,000개 고유 embedding·증분·재개 hard gate 판정 |
