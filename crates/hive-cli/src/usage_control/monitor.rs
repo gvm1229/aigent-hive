@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug)]
 pub(crate) struct MonitorPolicy {
     pub session_digest: String,
+    pub owner_digest: String,
     pub target_digest: String,
     pub policy_digest: String,
     pub control_digest: String,
@@ -49,6 +50,7 @@ fn from_config(
 ) -> Result<MonitorPolicy, AdapterError> {
     Ok(MonitorPolicy {
         session_digest: binding.session_digest.clone(),
+        owner_digest: binding.session_digest.clone(),
         target_digest: sha256_digest(target.requested_path().to_string_lossy().as_bytes()),
         policy_digest: effective_policy_digest(config)?,
         control_digest: loaded

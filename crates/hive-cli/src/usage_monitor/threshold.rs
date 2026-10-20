@@ -45,8 +45,14 @@ pub(super) fn policies(
             errors += 1;
             continue;
         };
-        match crate::usage_control::monitor_policy(root, cwd, &session.id) {
-            Ok(Some(policy)) => policies.push(policy),
+        match crate::usage_control::monitor_policy(root, cwd, &context.id) {
+            Ok(Some(mut policy)) => {
+                // Policy belongs to the owning conversation; cancellation addresses
+                // this exact active child, never another root conversation.
+                policy.session_digest =
+                    hive_core::sha256_digest(format!("codex\0{}", session.id).as_bytes());
+                policies.push(policy);
+            }
             Ok(None) => {}
             Err(_) => errors += 1,
         }
@@ -58,6 +64,8 @@ pub(super) fn policies(
 #[serde(deny_unknown_fields)]
 pub(super) struct Receipt {
     pub session_digest: String,
+    #[serde(default)]
+    pub owner_digest: String,
     pub target_digest: String,
     pub policy_digest: String,
     pub control_digest: String,
@@ -104,6 +112,19 @@ pub(super) fn observe(
         }) else {
             continue;
         };
+        if state.threshold_receipts.iter().any(|receipt| {
+            receipt.confirmed
+                && receipt.owner_digest == policy.owner_digest
+                && receipt.target_digest == policy.target_digest
+                && receipt.policy_digest == policy.policy_digest
+                && receipt.control_digest == policy.control_digest
+                && receipt.account_digest == sample.account_scope_digest
+                && receipt.quota_pool == sample.quota_pool
+                && receipt.window == block.window
+                && f64::from(receipt.threshold_percent) == block.threshold_percent
+        }) {
+            continue;
+        }
         let current = state.threshold_receipts.iter().position(|receipt| {
             receipt.session_digest == policy.session_digest
                 && receipt.target_digest == policy.target_digest
@@ -128,6 +149,7 @@ pub(super) fn observe(
         }
         let receipt = Receipt {
             session_digest: policy.session_digest.clone(),
+            owner_digest: policy.owner_digest.clone(),
             target_digest: policy.target_digest.clone(),
             policy_digest: policy.policy_digest.clone(),
             control_digest: policy.control_digest.clone(),
@@ -174,7 +196,8 @@ pub(super) fn handled(
 ) -> bool {
     state.threshold_receipts.iter().any(|receipt| {
         receipt.confirmed
-            && receipt.session_digest == policy.session_digest
+            && (receipt.session_digest == policy.session_digest
+                || receipt.owner_digest == policy.session_digest)
             && receipt.target_digest == policy.target_digest
             && receipt.policy_digest == policy.policy_digest
             && receipt.control_digest == policy.control_digest
@@ -197,6 +220,7 @@ mod tests {
     fn policy(session: &str, threshold: u8) -> MonitorPolicy {
         MonitorPolicy {
             session_digest: sha256_digest(session.as_bytes()),
+            owner_digest: sha256_digest(session.as_bytes()),
             target_digest: sha256_digest(b"target"),
             policy_digest: sha256_digest(&[threshold]),
             control_digest: "absent".into(),
@@ -347,6 +371,27 @@ mod tests {
         observe(&mut state, &[scope], &low, 101);
         assert!(state.generation > generation);
         assert_eq!(state.threshold_receipts[0].threshold_percent, 0);
+    }
+
+    #[test]
+    fn stopped_children_allow_only_their_owner_to_resume_and_do_not_reinterrupt_new_children() {
+        let mut state = MonitorState::new();
+        let owner = policy("owner", 10);
+        let mut child = owner.clone();
+        child.session_digest = sha256_digest(b"child");
+        observe(&mut state, &[child], &sample(8.0, 100), 100);
+        state.threshold_receipts[0].confirmed = true;
+        assert!(handled(&state, &owner, &sample(8.0, 101)));
+        assert!(!handled(
+            &state,
+            &policy("unrelated", 10),
+            &sample(8.0, 101)
+        ));
+        let generation = state.generation;
+        let mut next_child = owner;
+        next_child.session_digest = sha256_digest(b"next-child");
+        observe(&mut state, &[next_child], &sample(8.0, 102), 102);
+        assert_eq!(state.generation, generation);
     }
 
     #[cfg(windows)]
