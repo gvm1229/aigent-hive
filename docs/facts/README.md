@@ -24,6 +24,7 @@
 | 과거 재개 차단 재현 | [en](en/codex-resume-lock-reference.md) | [ko](ko/codex-resume-lock-reference.md) |
 | 알림 전용 중단 안내 | [en](en/usage-stop-notice.md) | [ko](ko/usage-stop-notice.md) |
 | 추가 지시 보존의 후속 범위 | [en](en/steering-preservation.md) | [ko](ko/steering-preservation.md) |
+| 데스크톱 앱 전환 조사 | [en](en/hive-desktop-feasibility.md) | [ko](ko/hive-desktop-feasibility.md) |
 | 안정판만의 이전 버전 호환성 | [en](en/stable-only-backward-compatibility.md) | [ko](ko/stable-only-backward-compatibility.md) |
 | 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
 | 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
