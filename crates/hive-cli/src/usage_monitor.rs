@@ -5,6 +5,8 @@ mod sensor;
 mod state;
 mod threshold;
 
+#[cfg(debug_assertions)]
+pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
 
 use crate::run::{AdapterError, PinnedTarget};
@@ -699,30 +701,11 @@ fn record_sample(
 ) -> (bool, bool) {
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
-        state.last_query_source = Some(measured.source.to_owned());
-        state.primary_query_error = measured.primary_error;
-        let outcome = measured.snapshots.and_then(|snapshots| {
-            state
-                .observe_confirmed(&snapshots, now(), measured.source == "fresh-process")
-                .map_err(|e| e.message().to_owned())
-        });
-        state.last_query_error = outcome.as_ref().err().cloned();
-        if outcome.is_ok() {
-            state.last_success_uptime_ms = sensor::uptime_ms();
+        let result = state.record_query(measured, now());
+        if result.0 {
             threshold::observe(state, policies, &state.baseline.clone(), now());
         }
-        state.consecutive_query_failures = if outcome.is_ok() {
-            0
-        } else {
-            state.consecutive_query_failures.saturating_add(1)
-        };
-        Ok((
-            outcome.is_ok(),
-            outcome
-                .as_ref()
-                .err()
-                .is_some_and(|error| error.ends_with("requires-independent-observation")),
-        ))
+        Ok(result)
     })
     .unwrap_or((false, false))
 }

@@ -43,10 +43,11 @@ impl Cadence {
         self.next_sample = at;
     }
     pub fn blind(&self, at: std::time::Duration) -> bool {
+        self.gap(at).as_secs() >= BLIND_SECONDS
+    }
+    pub fn gap(&self, at: std::time::Duration) -> std::time::Duration {
         at.saturating_sub(self.last_good)
             .saturating_add(self.prior_gap)
-            .as_secs()
-            >= BLIND_SECONDS
     }
 }
 
@@ -230,6 +231,31 @@ impl Incident {
 }
 
 impl MonitorState {
+    pub fn record_query(&mut self, sample: super::sensor::Sample, at: u64) -> (bool, bool) {
+        self.last_query_source = Some(sample.source.to_owned());
+        if sample.primary_error.as_deref() != Some("independent-observation-requested") {
+            self.primary_query_error = sample.primary_error;
+        }
+        let outcome = sample.snapshots.and_then(|snapshots| {
+            self.observe_confirmed(&snapshots, at, sample.source == "fresh-process")
+                .map_err(|error| error.message().to_owned())
+        });
+        self.last_query_error = outcome.as_ref().err().cloned();
+        let success = outcome.is_ok();
+        if success {
+            self.last_success_uptime_ms = super::sensor::uptime_ms();
+        }
+        self.consecutive_query_failures = if success {
+            0
+        } else {
+            self.consecutive_query_failures.saturating_add(1)
+        };
+        let needs_independent = outcome
+            .as_ref()
+            .err()
+            .is_some_and(|error| error.ends_with("requires-independent-observation"));
+        (success, needs_independent)
+    }
     pub fn new() -> Self {
         Self {
             schema_version: 3,

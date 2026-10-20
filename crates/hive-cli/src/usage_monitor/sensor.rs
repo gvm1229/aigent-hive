@@ -209,6 +209,11 @@ impl Reader {
         Self { primary: None }
     }
 
+    #[cfg(debug_assertions)]
+    fn primary_pid(&self) -> Option<u32> {
+        self.primary.as_ref().map(|worker| worker.child.id())
+    }
+
     pub fn read(&mut self, fresh: bool) -> Sample {
         let primary = if fresh {
             self.primary = None;
@@ -242,6 +247,74 @@ impl Reader {
             snapshots,
             source: "fresh-process",
             primary_error: Some(primary_error),
+        }
+    }
+}
+
+/// Read-only source qualification: the production reader and validator, without desktop control.
+/// No settings, snapshots, account identifiers or conversation content are written or returned.
+#[cfg(debug_assertions)]
+pub(crate) fn run_supervisor() -> ExitCode {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct QualificationRequest {
+        id: u64,
+        #[serde(default)]
+        fresh: bool,
+        #[serde(default)]
+        exit_owned_reader: bool,
+    }
+    let mut reader = Reader::new();
+    let mut state = super::state::MonitorState::new();
+    let mut cadence = super::state::Cadence::new();
+    let started = Instant::now();
+    let mut independent = false;
+    let mut previous_id = 0;
+    let mut input = std::io::stdin().lock();
+    let mut output = std::io::stdout().lock();
+    loop {
+        let mut line = Vec::new();
+        if !matches!(
+            input.by_ref().take(1_025).read_until(b'\n', &mut line),
+            Ok(1..)
+        ) {
+            return ExitCode::SUCCESS;
+        }
+        let request = crate::usage::parse_strict_native_json(&line)
+            .ok()
+            .and_then(|value| serde_json::from_value::<QualificationRequest>(value).ok());
+        let Some(request) = request.filter(|request| {
+            line.len() <= 1_024 && line.last() == Some(&b'\n') && request.id > previous_id
+        }) else {
+            return ExitCode::from(2);
+        };
+        previous_id = request.id;
+        if request.exit_owned_reader {
+            if let Some(worker) = reader.primary.as_mut() {
+                // Fault injection holds only the query helper created by this reader.
+                let _ = worker.child.start_kill();
+            }
+        }
+        cadence.begin(started.elapsed());
+        let sample = reader.read(request.fresh || independent);
+        let gap_before = cadence.gap(started.elapsed());
+        let (valid, needs_independent) = state.record_query(sample, super::now());
+        independent = needs_independent;
+        cadence.complete(started.elapsed(), valid);
+        let response = serde_json::json!({
+            "id":request.id, "valid":valid, "source":state.last_query_source,
+            "primary_error":state.primary_query_error, "error":state.last_query_error,
+            "primary_worker_pid":reader.primary_pid(), "observations":state.observation_count,
+            "consecutive_failures":state.consecutive_query_failures,
+            "gap_before_ms":gap_before.as_millis(), "blind_before":gap_before.as_secs() >= super::BLIND_SECONDS,
+            "elapsed_ms":started.elapsed().as_millis(),
+            "next_in_ms":cadence.next_sample.saturating_sub(started.elapsed()).as_millis(),
+        });
+        if serde_json::to_writer(&mut output, &response).is_err()
+            || output.write_all(b"\n").is_err()
+            || output.flush().is_err()
+        {
+            return ExitCode::from(2);
         }
     }
 }

@@ -207,6 +207,10 @@ fn main() -> ExitCode {
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }
+    #[cfg(debug_assertions)]
+    if arguments == ["__usage-observation-supervisor"] {
+        return usage_monitor::run_supervisor();
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")
