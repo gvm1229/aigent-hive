@@ -140,7 +140,7 @@ fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, A
         let status = monitor_status(root)?;
         if status["controller_alive"] == true
             && status["controller_heartbeat_fresh"] == true
-            && status["running_monitor_version"] == env!("CARGO_PKG_VERSION")
+            && status["running_monitor_version"] == env!("HIVE_PACKAGE_VERSION")
         {
             if status["sensor_health"] == "idle" {
                 return Ok(

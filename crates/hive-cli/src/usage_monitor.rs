@@ -360,7 +360,9 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         || now().saturating_sub(state.heartbeat) < 5,
         |(tick, last)| tick >= last && tick - last < 5000,
     );
-    let observed = state.last_success.is_some() && gap.as_secs() < BLIND_SECONDS;
+    let observed = state.observation_count > 0
+        && state.last_success.is_some()
+        && gap.as_secs() < BLIND_SECONDS;
     let sensor_health = if !alive {
         "stopped"
     } else if !state.app_alive {
@@ -421,7 +423,7 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
     Ok(Configuration {
         schema_version: 1,
         enabled: true,
-        version: env!("CARGO_PKG_VERSION").into(),
+        version: env!("HIVE_PACKAGE_VERSION").into(),
         executable: installed_executable,
         executable_digest: digest,
         task_name: format!("AigentHive-UsageMonitor-{}", &task_key[7..23]),
@@ -475,6 +477,19 @@ fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
         ))
     }
 }
+fn prepare_activation(state: &mut MonitorState) {
+    // Only an explicit enable starts a new observation period. A controller crash
+    // or upgrade must retain its prior gap and must not gain sixty extra seconds.
+    state.observation_count = 0;
+    state.observation_watch_started_at = None;
+    state.watch_started_uptime_ms = None;
+    state.last_success_uptime_ms = None;
+    state.sensor_outage_stopped_at = None;
+    state.control_connected = false;
+    state.heartbeat = 0;
+    state.heartbeat_uptime_ms = None;
+}
+
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     require_app_safe_control()?;
     let _control = lock(root, "control.lock")?;
@@ -510,10 +525,7 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     root.publish_runtime(relative, &before, &bytes)?;
     platform::call(&task_request(&config, "register"), Duration::from_secs(15))?;
     with_state(root, |s| {
-        s.observation_count = 0;
-        s.observation_watch_started_at = None;
-        s.control_connected = false;
-        s.heartbeat = 0;
+        prepare_activation(s);
         Ok(())
     })?;
     if let Err(e) = write(root, CONFIG, &config) {
@@ -615,7 +627,7 @@ fn controller_scoped(
     with_state(root, |state| {
         state.controller_pid = Some(pid);
         state.controller_identity = identity["digest"].as_str().map(str::to_owned);
-        state.runtime_version = Some(env!("CARGO_PKG_VERSION").to_owned());
+        state.runtime_version = Some(env!("HIVE_PACKAGE_VERSION").to_owned());
         Ok(())
     })?;
     let active = initial["app_count"].as_u64().is_none_or(|count| count > 0);
@@ -978,6 +990,44 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_reenable_does_not_reuse_a_disabled_observation_gap() {
+        let mut state = MonitorState::new();
+        state.last_success = Some(100);
+        state.observation_count = 3;
+        state.watch_started_uptime_ms = Some(90_000);
+        state.last_success_uptime_ms = Some(100_000);
+        state.observation_blind(101);
+        let incident = serde_json::to_value(&state.incident).unwrap();
+        prepare_activation(&mut state);
+        assert_eq!(state.observation_count, 0);
+        assert_eq!(state.last_success, Some(100));
+        assert_eq!(serde_json::to_value(&state.incident).unwrap(), incident);
+        assert_eq!(
+            state.observation_gap_monotonic(true, 900, Some(900_000)),
+            Duration::ZERO
+        );
+        assert_eq!(
+            state.observation_gap_monotonic(true, 959, Some(959_999)),
+            Duration::from_millis(59_999)
+        );
+        assert_eq!(
+            state.observation_gap_monotonic(true, 960, Some(960_000)),
+            Duration::from_secs(BLIND_SECONDS)
+        );
+        state.observation_blind(960);
+        assert_eq!(state.generation, 2);
+        state.observation_blind(961);
+        assert_eq!(state.generation, 2);
+    }
+
+    #[test]
+    fn configured_monitor_identifies_the_actual_package_build() {
+        let temporary = tempfile::tempdir().unwrap();
+        let config = configuration(temporary.path()).unwrap();
+        assert_eq!(config.version, env!("HIVE_PACKAGE_VERSION"));
+    }
+
     #[test]
     fn enabled_configuration_is_not_reported_as_a_running_observer() {
         let temporary = tempfile::tempdir().unwrap();
