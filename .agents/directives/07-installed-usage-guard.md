@@ -33,7 +33,7 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
   never block or reinterrupt user-resumed work for that event. The official-logo notice only explains
   cause/status and closes. Keep cadence, deduplication, fresh sensing, thresholds and zero-quota checks.
 - No app termination, unsupported-version fallback, ad-hoc watcher or other host-process signal.
-- The 2026-10-21 approved 0.13.1 plan permits new scoped Windows threshold tests on designated
-  test conversations, including long reasoning, tool cancellation, direct resume and 30-minute
-  sensing. This supersedes the earlier test restriction only for those subjects. Preserve
-  opt-in monitoring, the 60-second gap, app survival, prior evidence and installation authority.
+- The approved 2026-10-21 0.13.1 plan permits designated Windows threshold subjects:
+  long reasoning, tool cancellation, direct resume and 30-minute sensing. It replaces
+  the earlier test ban only for those subjects. Keep opt-in, the 60-second gap, app
+  survival, prior evidence and version-specific installation authority.
