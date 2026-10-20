@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 416
-> 기준일: 2026-10-18
-> Product version: `0.13.0`
+> Revision: 417
+> 기준일: 2026-10-21
+> Product version: `0.13.1`
 > 공개 Stable: `0.13.0`
-> 현재 단계: 정식0.13.0 공개·현재 설치 무삭제 갱신·개발 절차 수정 완료
-> 수용한 공개 시험: `0.13.0-test.1`
+> 현재 단계: 승인한 하한 직접 중단·조회 안정성 보정 구현
+> 다음 공개 시험: `0.13.1-test.1`
 
 ## 현재 요청과 경계
 
@@ -24,19 +24,19 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 초기화 뒤 실행 중단 | 3 | 0 | 100.0% |
-| 출시 | 3 | 0 | 100.0% |
-| 비배포 개발 절차·현재 설치 무삭제 복구 | 3 | 0 | 100.0% |
-| **현재 범위 합계** | **9** | **0** | **100.0%** |
+| 승인한 하한 중단·조회·현재 앱·갱신 검증 | 0 | 6 | 0.0% |
+| **현재 범위 합계** | **0** | **6** | **0.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [reset-stop-0.12.1.md](active/reset-stop-0.12.1.md) | `RST121-001–003` | 초기화 뒤 실행 중단 |
-| [release-0.13.0.md](active/release-0.13.0.md) | `REL121-001–003` | 출시 |
-| [developer-install-recovery.md](active/developer-install-recovery.md) | `DEVREC-001–003` | 비배포 개발 절차·현재 설치 무삭제 복구 |
+| [usage-guard-0.13.1.md](active/usage-guard-0.13.1.md) | `UG131-001–006` | 승인한 하한 중단·조회·현재 앱·갱신 검증 |
+
+## 이전 완료 근거
+
+- [0.13.0 중단](active/reset-stop-0.12.1.md)·[출시](active/release-0.13.0.md)·[개발 설치 복구](active/developer-install-recovery.md): 이전9개 완료 근거 보존,0.13.1 수용 대체 제외
 
 ## 초기화 뒤 중단 조사·계획
 
