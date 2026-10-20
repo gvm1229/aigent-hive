@@ -4080,7 +4080,10 @@ fn historical_user_artifact_matches(
             hive_projection::localized_builtin_artifact(name, suffix, source, language).is_ok_and(
                 |bytes| {
                     sha256_digest(&bytes) == digest
-                        || (suffix.ends_with(".ps1")
+                        || (Path::new(suffix)
+                            .extension()
+                            .and_then(OsStr::to_str)
+                            .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
                             && sha256_digest(
                                 String::from_utf8_lossy(&bytes)
                                     .replace("\r\n", "\n")
@@ -9362,7 +9365,11 @@ mod tests {
                     DescriptorLanguage::Ko,
                 )
                 .unwrap();
-                if suffix.ends_with(".ps1") {
+                if Path::new(suffix)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+                {
                     bytes = String::from_utf8(bytes)
                         .unwrap()
                         .replace("\r\n", "\n")

@@ -78,6 +78,8 @@ pub(super) struct Receipt {
     pub confirmed: bool,
 }
 
+// The block copies the exact measured value; tolerance would select a different usage pool.
+#[allow(clippy::float_cmp, clippy::too_many_lines)]
 pub(super) fn observe(
     state: &mut MonitorState,
     policies: &[MonitorPolicy],
@@ -94,10 +96,10 @@ pub(super) fn observe(
         })
     });
     let mut reached = Vec::new();
-    for policy in policies {
-        if !policy.enabled && !policy.zero_enabled {
-            continue;
-        }
+    for policy in policies
+        .iter()
+        .filter(|policy| policy.enabled || policy.zero_enabled)
+    {
         let block = match crate::usage_control::evaluate_monitor_policy(policy, snapshots, at) {
             Ok(Some(block)) => block,
             Ok(None) => continue,

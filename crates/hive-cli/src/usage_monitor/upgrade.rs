@@ -1,5 +1,16 @@
 //! Preserve the monitor choice and history while replacing its version-bound executable/task.
-use super::*;
+use super::{
+    configuration, error, load, lock, monitor_status, now, platform, require_app_safe_control,
+    require_desktop_version, task_request, with_state, write, Configuration, BASE, CONFIG,
+};
+use crate::run::{AdapterError, PinnedTarget};
+use hive_core::sha256_digest;
+use serde_json::{json, Value};
+use std::{
+    path::Path,
+    thread,
+    time::{Duration, Instant},
+};
 
 pub(super) const JOURNAL: &str = ".hive/runtime/usage-monitor/upgrade.json";
 
@@ -151,6 +162,7 @@ fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, A
 
 #[cfg(test)]
 mod tests {
+    use super::super::{MonitorState, DESKTOP_VERSION, STATE};
     use super::*;
     use std::cell::RefCell;
 
