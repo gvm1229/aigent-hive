@@ -4,10 +4,12 @@ mod platform;
 mod sensor;
 mod state;
 mod threshold;
+mod upgrade;
 
 #[cfg(debug_assertions)]
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
+pub(crate) use upgrade::upgrade_existing;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -372,6 +374,7 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
         "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
             && observed && state.last_query_error.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
+        "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
         "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
     )
 }

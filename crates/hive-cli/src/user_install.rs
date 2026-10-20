@@ -1304,6 +1304,46 @@ fn execute_command(
     command: &UserCommandArguments,
     runner: &impl CommandRunner,
 ) -> ActionResult {
+    let mut result = execute_hosts(operation, command, runner);
+    if result.exit_code == 0
+        && operation == UserOperation::Update
+        && command.mode == UserMode::Apply
+        && command.hosts.contains(&UserHost::Codex)
+    {
+        match crate::usage_monitor::upgrade_existing(&command.user_root) {
+            Ok(Some(upgrade)) => {
+                if let Some(paths) = upgrade["changed_paths"].as_array() {
+                    result.changed_paths.extend(
+                        paths
+                            .iter()
+                            .filter_map(|path| path.as_str().map(str::to_owned)),
+                    );
+                }
+                if let Some(data) = result.data.as_mut() {
+                    data["monitor_upgrade"] = upgrade;
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                result.status = error.status();
+                result.exit_code = error.exit_code();
+                result.code = "hive.user-update-monitor-incomplete";
+                result.message = format!(
+                    "user files updated; monitor transition incomplete: {}",
+                    error.message()
+                );
+                result.next_action = Some("inspect hive usage monitor status; repair the owned task with this same version, without reinstalling or deleting user data".into());
+            }
+        }
+    }
+    result
+}
+
+fn execute_hosts(
+    operation: UserOperation,
+    command: &UserCommandArguments,
+    runner: &impl CommandRunner,
+) -> ActionResult {
     if command.hosts.len() == 1 {
         return host_arguments(command, command.hosts[0], command.mode)
             .and_then(|arguments| execute(operation, &arguments, runner))
