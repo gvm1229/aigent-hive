@@ -52,6 +52,7 @@ modules = [
   "tests.conformance.contracts.test_usage_control",
   "tests.conformance.contracts.test_usage_monitor",
   "tests.conformance.contracts.test_developer_digest",
+  "tests.conformance.contracts.test_dev_install_recovery",
   "tests.conformance.contracts.test_monitor_qualification",
   "tests.conformance.contracts.test_session_events",
   "tests.conformance.contracts.test_usage_notice",
