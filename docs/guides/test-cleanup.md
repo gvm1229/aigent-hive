@@ -24,8 +24,8 @@ python scripts/test-artifacts.py daily --apply
 ## 검토 순서
 
 1. 현재 실행 중인 시험과 재사용할 정확 경로 확인
-2. 완료 결과의 작은 Markdown·필요한 JSON만 `tests/results/`에 보존·검토·커밋
-3. 소유자·근거·현재 미사용을 확인한 정확 경로만 `review`의 `completed`로 등록
+2. 이미 Git에 보존된 시험 결과 확인, 정리 실행의 새 `tests/` 문서·커밋 생성 금지
+3. 기존 근거·소유자·현재 미사용을 확인한 정확 경로만 `review`의 `completed`로 등록, 근거 부족 시 원시 자료 보존
 4. `daily` 미리보기와 `daily --apply` 실행, 제거 경로·논리적 바이트·드라이브 여유 공간 확인
 5. 오류·미확인 소유권은 원인 조사, 단순 보존 기한 연장으로 완료 처리 금지
 
@@ -38,6 +38,7 @@ python scripts/test-artifacts.py daily --apply
 - 기존 실행기의 `CARGO_INCREMENTAL=0` 기본값으로 Rust 증분 캐시 억제, 명시 재사용 설정만 예외
 - 시험·재시도마다 새 Cargo 빌드 폴더 생성 제외
 - 빌드 폴더의 종료 검토는 관련 검사 완료·활성 설치의 별도 경로 확인 뒤 수행, 임의 `target` 하위 폴더 삭제 제외
-- 삭제 기록: `tests/results/cleanup/`, 변화 없는 반복 실행의 새 정리 기록 생성 없음
-- 결과 문서는 Git 복구 가능, 삭제된 원시 빌드·시험 환경의 직접 복구 보장 없음
+- 삭제 기록: Git에서 제외된 `.agents/work/test-artifacts/cleanup/`와 `last-cleanup.log`, `tests/` 아래 새 문서와 정리 파생 커밋 생성 금지
+- 변화 없는 반복 실행의 새 정리 기록 생성 없음
+- 기존 시험 결과는 Git 복구 가능, 정리 감사 기록은 로컬 작업 자료·Git 보존 대상 제외, 삭제된 원시 빌드·시험 환경의 직접 복구 보장 없음
 - 재생성에는 해당 소스·입력·도구 필요, 과거 통과 결과로 현재 소스 통과를 대신 증명하는 방식 제외
