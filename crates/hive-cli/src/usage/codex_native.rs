@@ -28,6 +28,14 @@ const SUPPORTED_PLANS: &[&str] = &[
     "edu",
 ];
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct MonitorThread {
+    pub id: String,
+    pub cwd: Option<std::path::PathBuf>,
+    pub parent_id: Option<String>,
+    pub thread_source: Option<String>,
+}
+
 pub(super) fn read(
     requested_account_digest: Option<&str>,
     now: SystemTime,
@@ -168,7 +176,7 @@ impl MonitorSensor {
     }
 
     /// Metadata-only discovery. No thread is loaded, resumed, or sent a model request.
-    pub(crate) fn desktop_thread_ids(&mut self) -> Result<Vec<String>, SensorError> {
+    pub(crate) fn desktop_threads(&mut self) -> Result<Vec<MonitorThread>, SensorError> {
         if self
             .connection
             .as_ref()
@@ -183,13 +191,13 @@ impl MonitorSensor {
         result
     }
 
-    fn desktop_thread_ids_inner(&mut self) -> Result<Vec<String>, SensorError> {
+    fn desktop_thread_ids_inner(&mut self) -> Result<Vec<MonitorThread>, SensorError> {
         let started = Instant::now();
         let timeout = Duration::from_secs(5);
         self.ensure_connection(started, timeout, 32 * OUTPUT_LIMIT)?;
         let connection = self.connection.as_mut().ok_or(SensorError::Failed)?;
         verify_executable_identity(&connection.executable)?;
-        let mut ids = std::collections::BTreeSet::new();
+        let mut ids = std::collections::BTreeMap::new();
         for archived in [false, true] {
             let mut cursor = Value::Null;
             let mut cursors = std::collections::HashSet::new();
@@ -228,7 +236,36 @@ impl MonitorSensor {
                     {
                         return Err(SensorError::Malformed);
                     }
-                    ids.insert(id.to_owned());
+                    let cwd = thread
+                        .get("cwd")
+                        .and_then(Value::as_str)
+                        .filter(|path| path.len() <= 32768 && !path.chars().any(char::is_control))
+                        .map(std::path::PathBuf::from)
+                        .filter(|path| path.is_absolute());
+                    let parent_id = thread
+                        .get("parentThreadId")
+                        .and_then(Value::as_str)
+                        .or_else(|| {
+                            thread
+                                .pointer("/source/subAgent/thread_spawn/parent_thread_id")
+                                .and_then(Value::as_str)
+                        })
+                        .filter(|value| value.len() == 36)
+                        .map(str::to_owned);
+                    let thread_source = thread
+                        .get("threadSource")
+                        .and_then(Value::as_str)
+                        .filter(|source| source.len() <= 64)
+                        .map(str::to_owned);
+                    ids.insert(
+                        id.to_owned(),
+                        MonitorThread {
+                            id: id.to_owned(),
+                            cwd,
+                            parent_id,
+                            thread_source,
+                        },
+                    );
                     if ids.len() > 4096 {
                         return Err(SensorError::OutputTooLarge);
                     }
@@ -247,7 +284,7 @@ impl MonitorSensor {
             }
         }
         verify_executable_identity(&connection.executable)?;
-        Ok(ids.into_iter().collect())
+        Ok(ids.into_values().collect())
     }
 
     fn read_inner(

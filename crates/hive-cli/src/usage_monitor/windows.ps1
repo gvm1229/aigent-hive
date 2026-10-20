@@ -31,6 +31,19 @@ function App-Roots {
 
 try {
     switch ($request.operation) {
+        'session-identity' {
+            $row=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$request.pid)
+            if(-not $row -or -not $row.ExecutablePath -or -not $row.ExecutablePath.Equals([string]$request.executable,[StringComparison]::OrdinalIgnoreCase)){throw 'Session process unavailable'}
+            $owner=Invoke-CimMethod -InputObject $row -MethodName GetOwner
+            if($owner.ReturnValue -ne 0 -or ($owner.Domain+'\'+$owner.User) -ne [Security.Principal.WindowsIdentity]::GetCurrent().Name){throw 'Session owner mismatch'}
+            $pinned=[Diagnostics.Process]::GetProcessById([int]$row.ProcessId);$null=$pinned.Handle
+            try {
+                if($pinned.MainModule.FileName -ne $row.ExecutablePath){throw 'Session executable changed'}
+                $identity=([string]$row.ProcessId)+'|'+$pinned.StartTime.ToUniversalTime().Ticks+'|'+$pinned.MainModule.FileName.ToLowerInvariant()
+                $hash=[Security.Cryptography.SHA256]::Create()
+                try {Emit @{digest='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)))).Replace('-','').ToLowerInvariant()}}finally{$hash.Dispose()}
+            } finally {$pinned.Dispose()}
+        }
         'inspect' {
             $tree = App-Roots
             $roots = @()

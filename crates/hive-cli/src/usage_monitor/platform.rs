@@ -22,16 +22,22 @@ pub(super) fn command(script: &str) -> Result<Command, AdapterError> {
     let system_root =
         std::env::var_os("SystemRoot").ok_or_else(|| failure("SystemRoot missing"))?;
     let executable = Path::new(&system_root).join("System32/WindowsPowerShell/v1.0/powershell.exe");
-    // UTF-8 payload avoids Windows' 32767-character process argument limit. The
-    // bootstrap and embedded source are fixed product bytes, never user input.
+    // Source bytes are fixed product data. Put bounded chunks in this child's
+    // environment so the command line stays small as the adapter grows.
     let encoded =
         base64::engine::general_purpose::STANDARD.encode(script.replace("\r\n", "\n").as_bytes());
-    let bootstrap = format!("& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}'))))");
-    // Fixed flags and the executable path use less than the remaining 767 characters.
-    if bootstrap.len() > 32000 {
-        return Err(failure("embedded Windows adapter exceeds launch limit"));
+    if encoded.len() > 262_144 {
+        return Err(failure("embedded Windows adapter exceeds source limit"));
     }
+    let chunks = encoded.as_bytes().chunks(16000).collect::<Vec<_>>();
+    let bootstrap = format!("$p=[Text.StringBuilder]::new();for($i=0;$i -lt {};$i++){{[void]$p.Append([Environment]::GetEnvironmentVariable('AIGENT_HIVE_FIXED_PS_'+$i))}};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p.ToString()))))",chunks.len());
     let mut command = Command::new(executable);
+    for (index, chunk) in chunks.iter().enumerate() {
+        command.env(
+            format!("AIGENT_HIVE_FIXED_PS_{index}"),
+            String::from_utf8_lossy(chunk).as_ref(),
+        );
+    }
     command
         .args([
             "-NoLogo",
@@ -167,6 +173,17 @@ fn failure(message: &str) -> AdapterError {
 #[cfg(test)]
 mod tests {
     use super::notification_message;
+    #[cfg(windows)]
+    #[test]
+    fn fixed_source_larger_than_the_windows_argument_limit_launches_without_truncation() {
+        let source = format!(
+            "#{}\n[Console]::Out.Write('payload-ok')",
+            "x".repeat(40_000)
+        );
+        let output = super::command(&source).unwrap().output().unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"payload-ok");
+    }
     #[test]
     fn usage_monitor_unresponsive_notice_explains_protection_even_if_stop_is_unverified() {
         for stopped in [true, false] {

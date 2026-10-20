@@ -3,6 +3,7 @@ mod desktop;
 mod platform;
 mod sensor;
 mod state;
+mod threshold;
 
 pub(crate) use sensor::run_worker;
 
@@ -138,7 +139,21 @@ fn with_state<T>(
     let _lock = lock(root, "state.lock")?;
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
     state.migrate()?;
+    let generation = state.generation;
     let result = apply(&mut state)?;
+    if state.generation != generation {
+        if let Some(incident) = state.incident.as_mut() {
+            incident.detected_at_ms = Some(
+                u64::try_from(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis(),
+                )
+                .unwrap_or(u64::MAX),
+            );
+        }
+    }
     write(root, STATE, &state)?;
     Ok(result)
 }
@@ -153,8 +168,46 @@ pub(crate) fn reset_already_dispatched(
         .ok()
         .flatten()
         .is_some_and(|state| {
-            state.schema_version == 2 && state.reset_already_dispatched(current, previous)
+            matches!(state.schema_version, 2 | 3)
+                && state.reset_already_dispatched(current, previous)
         })
+}
+
+pub(crate) fn monitor_enabled(root: &PinnedTarget) -> bool {
+    load::<Configuration>(root, CONFIG)
+        .ok()
+        .flatten()
+        .is_some_and(|configuration| configuration.enabled)
+}
+
+pub(crate) fn threshold_already_handled(
+    root: &PinnedTarget,
+    policy: &crate::usage_control::MonitorPolicy,
+    snapshots: &[UsageSnapshot],
+    automatic: bool,
+) -> bool {
+    !automatic
+        && cfg!(windows)
+        && monitor_enabled(root)
+        && load::<MonitorState>(root, STATE)
+            .ok()
+            .flatten()
+            .is_some_and(|state| {
+                state.schema_version == 3 && threshold::handled(&state, policy, snapshots)
+            })
+}
+
+pub(crate) fn session_process_identity(pid: u32) -> Option<String> {
+    use crate::usage::CommandRunner;
+    let executable = crate::usage::SystemCommandRunner.qualify("codex").ok()?;
+    platform::call(
+        &json!({"operation":"session-identity","pid":pid,"executable":executable.path()}),
+        Duration::from_secs(5),
+    )
+    .ok()?
+    .get("digest")?
+    .as_str()
+    .map(str::to_owned)
 }
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
@@ -565,6 +618,18 @@ fn record_control(
             if let Some(i) = s.incident.as_mut() {
                 if packet["stop"]["incident"].as_str() == Some(i.digest.as_str()) {
                     i.record_session_stop(&packet["stop"], now());
+                    if let Some(confirmed) = packet["stop"]["confirmed_sessions"].as_array() {
+                        for receipt in &mut s.threshold_receipts {
+                            if i.threshold_details.iter().any(|detail| {
+                                detail.session_digest == receipt.session_digest
+                                    && detail.policy_digest == receipt.policy_digest
+                            }) && confirmed.iter().any(|value| {
+                                value.as_str() == Some(receipt.session_digest.as_str())
+                            }) {
+                                receipt.confirmed = true;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -579,7 +644,12 @@ fn record_control(
     })
 }
 
-fn record_sample(root: &PinnedTarget, measured: SampleResult, elapsed: u64) -> (bool, bool) {
+fn record_sample(
+    root: &PinnedTarget,
+    measured: SampleResult,
+    elapsed: u64,
+    policies: &[crate::usage_control::MonitorPolicy],
+) -> (bool, bool) {
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
         state.last_query_source = Some(measured.source.to_owned());
@@ -592,6 +662,7 @@ fn record_sample(root: &PinnedTarget, measured: SampleResult, elapsed: u64) -> (
         state.last_query_error = outcome.as_ref().err().cloned();
         if outcome.is_ok() {
             state.last_success_uptime_ms = sensor::uptime_ms();
+            threshold::observe(state, policies, &state.baseline.clone(), now());
         }
         state.consecutive_query_failures = if outcome.is_ok() {
             0
@@ -648,9 +719,14 @@ fn dispatch_halt(
             return Ok(());
         };
         if sent_incident.as_deref() != Some(incident.digest.as_str()) {
-            desktop.stop(
+            desktop.stop_scoped(
                 &incident.digest,
-                Some(incident.detected_at.saturating_mul(1000)),
+                Some(
+                    incident
+                        .detected_at_ms
+                        .unwrap_or_else(|| incident.detected_at.saturating_mul(1000)),
+                ),
+                incident.target_sessions.as_deref(),
             );
             *sent_incident = Some(incident.digest.clone());
         }
@@ -673,6 +749,22 @@ fn dispatch_halt(
 
 type SampleWorker = (Instant, Receiver<SampleResult>);
 
+type PolicyJob = (
+    Vec<crate::usage::MonitorThread>,
+    Vec<threshold::ActiveSession>,
+    mpsc::SyncSender<(Vec<crate::usage_control::MonitorPolicy>, u64)>,
+);
+
+fn policy_worker(root: PathBuf) -> mpsc::SyncSender<PolicyJob> {
+    let (send, receive) = mpsc::sync_channel::<PolicyJob>(1);
+    thread::spawn(move || {
+        while let Ok((contexts, active, reply)) = receive.recv() {
+            let _ = reply.send(threshold::policies(&root, &contexts, &active));
+        }
+    });
+    send
+}
+
 #[allow(clippy::too_many_lines)]
 fn controller_loop(
     root: &PinnedTarget,
@@ -680,6 +772,13 @@ fn controller_loop(
     desktop: &desktop::Desktop,
 ) -> Result<Value, AdapterError> {
     let sensor = sensor_worker();
+    let policy_worker = policy_worker(root.requested_path().to_owned());
+    let mut contexts: Vec<crate::usage::MonitorThread> = Vec::new();
+    let mut sessions: Vec<threshold::ActiveSession> = Vec::new();
+    let mut policies = Vec::new();
+    let mut policy_job = None;
+    let mut next_policy = Instant::now();
+    let mut policies_at = Instant::now();
     let started = Instant::now();
     let gap = with_state(root, |state| {
         Ok(state.observation_gap_monotonic(active, now(), sensor::uptime_ms()))
@@ -727,12 +826,53 @@ fn controller_loop(
             }
         }
         while let Ok(packet) = desktop.events.try_recv() {
+            if packet["type"] == "catalog" {
+                contexts = serde_json::from_value(packet["contexts"].clone()).unwrap_or_default();
+                next_policy = tick;
+                continue;
+            }
             control_connected = packet["connected"] == true;
             if control_connected {
                 last_control = tick;
                 active = true;
+                sessions =
+                    serde_json::from_value(packet["active_sessions"].clone()).unwrap_or_default();
             }
             record_control(root, &packet, active, control_connected)?;
+        }
+        if policy_job.is_none() && tick >= next_policy {
+            let (send, receive) = mpsc::sync_channel(1);
+            let _ = policy_worker.try_send((contexts.clone(), sessions.clone(), send));
+            policy_job = Some((tick, receive));
+            next_policy = tick + Duration::from_secs(2);
+        }
+        if let Some((began, receive)) = &policy_job {
+            if let Ok((updated, errors)) = receive.try_recv() {
+                policies = updated;
+                policies_at = tick;
+                with_state(root, |state| {
+                    state.threshold_policy_errors = errors;
+                    if state
+                        .last_success
+                        .is_some_and(|at| now().saturating_sub(at) <= 5)
+                    {
+                        threshold::observe(state, &policies, &state.baseline.clone(), now());
+                    }
+                    Ok(())
+                })?;
+                policy_job = None;
+            } else if began.elapsed() >= Duration::from_secs(5) {
+                policies.clear();
+                with_state(root, |state| {
+                    state.threshold_policy_errors =
+                        u64::try_from(sessions.len()).unwrap_or(u64::MAX);
+                    Ok(())
+                })?;
+                policy_job = None;
+            }
+        }
+        if policies_at.elapsed() > Duration::from_secs(20) {
+            policies.clear();
         }
         if last_control.elapsed() >= Duration::from_secs(3) {
             control_connected = false;
@@ -755,7 +895,8 @@ fn controller_loop(
                     source: "unavailable",
                     primary_error: None,
                 });
-                let (success, needs_independent) = record_sample(root, measured, elapsed);
+                let (success, needs_independent) =
+                    record_sample(root, measured, elapsed, &policies);
                 independent = needs_independent;
                 cadence.complete(tick.duration_since(started), success);
                 sample = None;

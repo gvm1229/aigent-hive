@@ -493,6 +493,20 @@ if(@($actions|Where-Object {$_.kind -eq 'interrupt' -and $_.id -eq $two}).Count)
 """
         self.assertTrue(self.powershell(source)["new_chat_allowed"])
 
+    def test_threshold_scope_does_not_interrupt_or_wait_for_other_conversations(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two
+$stop=New-Stop 'fixture' ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()) @((Session-Digest $one))
+Advance-Stop
+if(@($actions|Where-Object kind -eq 'interrupt').Count -ne 1){throw 'Scoped threshold interrupted another conversation'}
+if(@($actions|Where-Object {$_.kind -eq 'interrupt' -and $_.id -eq $two}).Count){throw 'Other project received interruption'}
+$stop.age_at_begin=1900;$sessions[$one].lastResponse='accepted';$sessions[$two].lastResponse='none'
+Advance-Stop
+if(-not $sessions[$one].subscribed){throw 'Other conversation delayed scoped confirmation'}
+@{scope_preserved=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["scope_preserved"])
+
     def test_owner_known_at_detection_is_stopped_when_discovery_finishes(self):
         source=self.offline_controller()+r"""
 Track $one;$catalogSeen=@{};$catalogSeen[$two]=$true

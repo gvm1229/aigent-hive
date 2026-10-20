@@ -96,6 +96,10 @@ pub(super) struct MonitorState {
     pub unknown_sessions: u64,
     #[serde(default)]
     pub app_alive: bool,
+    #[serde(default)]
+    pub threshold_receipts: Vec<super::threshold::Receipt>,
+    #[serde(default)]
+    pub threshold_policy_errors: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -108,6 +112,8 @@ pub(super) struct Incident {
     pub stop_finished_at: Option<u64>,
     pub reason: String,
     pub detected_at: u64,
+    #[serde(default)]
+    pub detected_at_ms: Option<u64>,
     pub stop_method: String,
     // Read-only compatibility for earlier incidents. No app-termination action exists.
     pub termination_verified: bool,
@@ -132,6 +138,10 @@ pub(super) struct Incident {
     pub confirmed_stop: Option<SessionStopReceipt>,
     #[serde(default)]
     pub last_verified_session_scope: Option<String>,
+    #[serde(default)]
+    pub target_sessions: Option<Vec<String>>,
+    #[serde(default)]
+    pub threshold_details: Vec<super::threshold::Receipt>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -212,7 +222,7 @@ impl Incident {
 impl MonitorState {
     pub fn new() -> Self {
         Self {
-            schema_version: 2,
+            schema_version: 3,
             ..Self::default()
         }
     }
@@ -273,6 +283,7 @@ impl MonitorState {
             stop_finished_at: None,
             reason: reason.to_owned(),
             detected_at: now,
+            detected_at_ms: None,
             stop_method: "pending".to_owned(),
             termination_verified: false,
             termination_elapsed_ms: None,
@@ -286,6 +297,8 @@ impl MonitorState {
             confirmed_turns: 0,
             confirmed_stop: None,
             last_verified_session_scope: None,
+            target_sessions: None,
+            threshold_details: Vec::new(),
         });
     }
 
@@ -340,6 +353,7 @@ impl MonitorState {
                 return Err(invalid("account-change-requires-independent-observation"));
             }
             self.baseline.clear();
+            self.threshold_receipts.clear();
         }
         if !self.baseline.is_empty() {
             if (current.len() != self.baseline.len()
@@ -390,6 +404,7 @@ impl MonitorState {
                 })
             });
             if rollover || detect_usage_reset(current, &self.baseline).is_some() {
+                self.threshold_receipts.clear();
                 self.halt("usage-reset", now);
             }
         }
@@ -476,7 +491,7 @@ impl MonitorState {
 
     pub fn migrate(&mut self) -> Result<(), AdapterError> {
         match self.schema_version {
-            1 => {
+            1 | 2 => {
                 // Earlier notices are history, never permission to stop a resumed run.
                 if let Some(incident) = &mut self.incident {
                     incident.stop_dispatched_at = Some(incident.detected_at);
@@ -487,10 +502,11 @@ impl MonitorState {
                     self.sensor_outage_stopped_at =
                         (incident.reason == "sensor-unresponsive").then_some(incident.detected_at);
                 }
-                self.schema_version = 2;
+                self.schema_version = 3;
+                self.baseline.clear();
                 Ok(())
             }
-            2 => Ok(()),
+            3 => Ok(()),
             _ => Err(invalid("unsupported monitor state")),
         }
     }
@@ -741,7 +757,7 @@ mod tests {
         s.migrate().unwrap();
         let incident = s.incident.as_ref().unwrap();
         assert!(incident.stop_dispatched_at.is_some() && incident.stop_finished_at.is_some());
-        assert_eq!(s.schema_version, 2);
+        assert_eq!(s.schema_version, 3);
         s.migrate().unwrap();
         assert_eq!(s.generation, 1);
     }

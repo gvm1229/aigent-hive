@@ -116,11 +116,15 @@ try {
             $sessions[$id]=@{id=$id;ready=$false;dirty=$false;subscribed=$false;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;incident='';runtime='unknown';goal='';snapshotAt=-2000L;observedAt=-1L}
         }
     }
-    function New-Stop([string]$digest,[long]$detected) {
+    function Session-Digest([string]$id) {
+        $hash=[Security.Cryptography.SHA256]::Create()
+        try {return 'sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes(('codex'+[char]0+$id))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
+    }
+    function New-Stop([string]$digest,[long]$detected,$scope=$null) {
         $began=$clock.ElapsedMilliseconds
         $age=[Math]::Max([long]0,[long]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$detected))
-        $eligible=@{};foreach($id in @($sessions.Keys)+@($catalogSeen.Keys)){if($id){$eligible[$id]=$true}}
-        return @{eligible=$eligible;requested=@{};began=$began;verifyUntil=$began+[Math]::Max(0,5000-$age);digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
+        $eligible=@{};foreach($id in @($sessions.Keys)+@($catalogSeen.Keys)){if($id -and ($null -eq $scope -or (Session-Digest $id) -in @($scope))){$eligible[$id]=$true}}
+        return @{eligible=$eligible;scope=$scope;requested=@{};began=$began;verifyUntil=$began+[Math]::Max(0,5000-$age);digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
     }
     function Stop-Age {return $stop.age_at_begin+$clock.ElapsedMilliseconds-$stop.began}
     function Release-Subscriptions {
@@ -147,7 +151,8 @@ try {
     function Stop-Finished {return ($null -ne $stop -and ($stop.settled -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil))}
     function Advance-Stop {
         if($null -eq $stop){return}
-        foreach($session in @($sessions.Values)) {
+        $selected=@($sessions.Values | Where-Object {$stop.eligible.ContainsKey($_.id)})
+        foreach($session in $selected) {
             if($stop.eligible.ContainsKey($session.id) -and -not $stop.requested.ContainsKey($session.id) -and $clock.ElapsedMilliseconds -lt $stop.verifyUntil) {
                 $stop.requested[$session.id]=$true;
                 Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
@@ -158,10 +163,10 @@ try {
                 }
             }
         }
-        if((Stop-Age) -lt 1800 -and @($sessions.Values | Where-Object lastResponse -eq 'none').Count -gt 0){return}
-        $waiting=@($sessions.Values | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
-        $unread=@($sessions.Values | Where-Object ready -eq $false).Count -gt 0
-        foreach($session in @($sessions.Values)) {
+        if((Stop-Age) -lt 1800 -and @($selected | Where-Object lastResponse -eq 'none').Count -gt 0){return}
+        $waiting=@($selected | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
+        $unread=@($selected | Where-Object ready -eq $false).Count -gt 0
+        foreach($session in $selected) {
             if($clock.ElapsedMilliseconds -ge $stop.verifyUntil -or $stop.settled) {
                 if($session.subscribed){Follow $session.id $false}
             } elseif(-not $waiting -and (-not $session.subscribed -or (-not $unread -and $session.ready -and $session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000))) {
@@ -173,6 +178,7 @@ try {
     function Count-Unqualified {
         $count=0
         foreach ($id in $catalogSeen.Keys) {
+            if($null -ne $stop -and $null -ne $stop.scope -and -not $stop.eligible.ContainsKey($id)){continue}
             if (-not $sessions.ContainsKey($id) -and
                 (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -ge 20000)) {$count++}
         }
@@ -294,7 +300,7 @@ try {
                     $detected=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                     if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
                     Release-Subscriptions
-                    $stop=New-Stop ([string]$command.incident) $detected
+                    $stop=New-Stop ([string]$command.incident) $detected $command.scope
                 }
             } elseif ($command.operation -eq 'discover') {
                 $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
@@ -323,28 +329,38 @@ try {
             $catalogInProgress=$false
             if (-not $catalogRoundFault) {$catalogFault=$false}
         }
+        if($null -eq $stop -or (Stop-Finished)) {
+            foreach($session in @($sessions.Values)) {
+                if((-not $session.subscribed -or $session.dirty -or $clock.ElapsedMilliseconds-$session.snapshotAt -ge 15000) -and $clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
+                    if($session.subscribed){Follow $session.id $false};Follow $session.id
+                    $session.lastStop=$clock.ElapsedMilliseconds
+                }
+            }
+        }
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
             $activeCount=0;$unknown=0
-            if(-not $catalogReady -or $catalogFault){$unknown++}
+            if(($null -eq $stop -or $null -eq $stop.scope) -and (-not $catalogReady -or $catalogFault)){$unknown++}
+            if($null -ne $stop -and $null -ne $stop.scope -and $stop.eligible.Count -ne @($stop.scope).Count){$unknown++}
             $unknown += Count-Unqualified
             foreach ($session in $sessions.Values) {
-                if($null -ne $stop){$activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++}}
+                if($null -eq $stop -or $stop.eligible.ContainsKey($session.id)){$activeCount+=$session.active.Count;if ($null -ne $stop -and -not $session.ready) {$unknown++}}
             }
             $receipt=$null
             if ($null -ne $stop) {
-                $confirmed=0
+                $confirmed=0;$confirmedSessions=@()
                 foreach ($target in $stop.targeted.Values) {
                     $session=$sessions[$target.thread]
-                    if (Confirmed-Target $target $stop.began) { $confirmed++ }
+                    if (Confirmed-Target $target $stop.began) { $confirmed++;$confirmedSessions+=(Session-Digest $target.thread) }
                 }
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
                 if($stop.settled){Release-Subscriptions}
-                $receipt=@{finished=(Stop-Finished);unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
+                $receipt=@{finished=(Stop-Finished);unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;confirmed_sessions=@($confirmedSessions | Sort-Object -Unique);incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
             }
             $stopping=(($null -ne $stop -and -not (Stop-Finished)) -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
-            $packet=@{activity_observed=($null -ne $stop -and $unknown -eq 0);control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
+            $activity=@($sessions.Values | Where-Object {$_.ready -and -not $_.dirty -and $_.active.Count -gt 0} | ForEach-Object {@{id=$_.id;turn=$_.active[-1]}})
+            $packet=@{activity_observed=($unknown -eq 0);active_sessions=$activity;control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
             [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
             $lastPublish=$clock.ElapsedMilliseconds
         }

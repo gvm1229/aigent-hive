@@ -26,8 +26,12 @@ impl Desktop {
     }
 
     pub fn stop(&self, digest: &str, detected_at_ms: Option<u64>) {
+        self.stop_scoped(digest, detected_at_ms, None);
+    }
+
+    pub fn stop_scoped(&self, digest: &str, detected_at_ms: Option<u64>, scope: Option<&[String]>) {
         let _ = self.commands.try_send(
-            json!({"operation":"stop","incident":digest,"detected_at_ms":detected_at_ms}),
+            json!({"operation":"stop","incident":digest,"detected_at_ms":detected_at_ms,"scope":scope}),
         );
     }
 
@@ -43,8 +47,10 @@ fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
         let mut reader = crate::usage::MonitorSensor::new();
         loop {
             let started = Instant::now();
-            let value = match reader.desktop_thread_ids() {
-                Ok(ids) => json!({"operation":"discover","valid":true,"ids":ids}),
+            let value = match reader.desktop_threads() {
+                Ok(threads) => {
+                    json!({"operation":"discover","valid":true,"ids":threads.iter().map(|thread| &thread.id).collect::<Vec<_>>(),"contexts":threads})
+                }
                 Err(_) => json!({"operation":"discover","valid":false,"ids":[]}),
             };
             if matches!(
@@ -86,8 +92,8 @@ fn read_packets(stdout: impl Read, send_lines: &SyncSender<Value>) {
     let mut reader = BufReader::new(stdout);
     loop {
         let mut line = Vec::new();
-        let result = reader.by_ref().take(16385).read_until(b'\n', &mut line);
-        if !matches!(result, Ok(1..)) || line.len() > 16384 {
+        let result = reader.by_ref().take(262_145).read_until(b'\n', &mut line);
+        if !matches!(result, Ok(1..)) || line.len() > 262_144 {
             return;
         }
         let value = crate::usage::parse_strict_native_json(&line);
@@ -161,7 +167,10 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
             }
             let mut refreshed = false;
             while let Ok(value) = catalogs.try_recv() {
-                catalog = value;
+                let _ = events.try_send(
+                    json!({"type":"catalog","valid":value["valid"],"contexts":value["contexts"]}),
+                );
+                catalog = json!({"operation":"discover","valid":value["valid"],"ids":value["ids"]});
                 catalog_at = Instant::now();
                 refreshed = true;
             }
