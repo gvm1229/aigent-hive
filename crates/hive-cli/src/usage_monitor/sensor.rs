@@ -29,6 +29,8 @@ pub(super) fn seed_uptime(tick: u64) {
 struct Request {
     id: u64,
     fresh: bool,
+    #[serde(default)]
+    catalog: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -36,6 +38,7 @@ struct Request {
 struct Response {
     id: u64,
     snapshots: Option<Vec<UsageSnapshot>>,
+    contexts: Option<Vec<crate::usage::MonitorThread>>,
     error: Option<String>,
 }
 
@@ -92,10 +95,10 @@ impl Worker {
             let mut reader = BufReader::new(stdout);
             loop {
                 let mut line = Vec::new();
-                let read = reader.by_ref().take(16_385).read_until(b'\n', &mut line);
+                let read = reader.by_ref().take(1_048_577).read_until(b'\n', &mut line);
                 let result = if !matches!(read, Ok(1..)) {
                     Err("observation-worker-exited".to_owned())
-                } else if line.len() > 16_384 || line.last() != Some(&b'\n') {
+                } else if line.len() > 1_048_576 || line.last() != Some(&b'\n') {
                     Err("observation-worker-output-invalid".to_owned())
                 } else {
                     crate::usage::parse_strict_native_json(&line)
@@ -120,12 +123,26 @@ impl Worker {
     }
 
     fn read(&mut self, fresh: bool) -> Result<Vec<UsageSnapshot>, String> {
+        let (id, response) = self.exchange(fresh, false)?;
+        validate_response(response, id)
+    }
+
+    fn catalog(&mut self) -> Result<Vec<crate::usage::MonitorThread>, String> {
+        let (_, response) = self.exchange(false, true)?;
+        match (response.snapshots, response.contexts, response.error) {
+            (None, Some(contexts), None) => Ok(contexts),
+            (None, None, Some(error)) => Err(error),
+            _ => Err("catalog-response-ambiguous".into()),
+        }
+    }
+
+    fn exchange(&mut self, fresh: bool, catalog: bool) -> Result<(u64, Response), String> {
         let id = self.next_id;
         self.next_id = self
             .next_id
             .checked_add(1)
             .ok_or("observation-id-exhausted")?;
-        serde_json::to_writer(&mut self.stdin, &Request { id, fresh })
+        serde_json::to_writer(&mut self.stdin, &Request { id, fresh, catalog })
             .map_err(|_| "observation-write-failed")?;
         self.stdin
             .write_all(b"\n")
@@ -135,7 +152,10 @@ impl Worker {
             .replies
             .recv_timeout(READ_TIMEOUT)
             .map_err(|_| "observation-timeout")??;
-        validate_response(response, id)
+        if response.id != id {
+            return Err("observation-response-id-mismatch".into());
+        }
+        Ok((id, response))
     }
 }
 
@@ -143,15 +163,45 @@ fn validate_response(response: Response, id: u64) -> Result<Vec<UsageSnapshot>, 
     if response.id != id {
         return Err("observation-response-id-mismatch".to_owned());
     }
-    match (response.snapshots, response.error) {
-        (Some(snapshots), None) => Ok(snapshots),
-        (None, Some(error)) => Err(error),
+    match (response.snapshots, response.contexts, response.error) {
+        (Some(snapshots), None, None) => Ok(snapshots),
+        (None, None, Some(error)) => Err(error),
         _ => Err("observation-response-ambiguous".to_owned()),
     }
 }
 
 pub(super) struct Reader {
     primary: Option<Worker>,
+}
+
+pub(super) struct CatalogReader {
+    worker: Option<Worker>,
+}
+
+impl CatalogReader {
+    pub fn new() -> Self {
+        Self { worker: None }
+    }
+    pub fn read(&mut self) -> Result<Vec<crate::usage::MonitorThread>, String> {
+        if self.worker.is_none() {
+            self.worker = Some(Worker::start()?);
+        }
+        let result = self
+            .worker
+            .as_mut()
+            .expect("catalog worker was created")
+            .catalog();
+        if result.is_ok() {
+            return result;
+        }
+        self.worker = None;
+        let mut fresh = Worker::start()?;
+        let result = fresh.catalog();
+        if result.is_ok() {
+            self.worker = Some(fresh);
+        }
+        result
+    }
 }
 
 impl Reader {
@@ -219,22 +269,44 @@ pub(crate) fn run_worker() -> ExitCode {
         let Some(request) = request else {
             return ExitCode::from(2);
         };
-        let result = if request.fresh {
-            MonitorSensor::fresh()
+        if request.catalog && request.fresh {
+            return ExitCode::from(2);
+        }
+        let response = if request.catalog {
+            match sensor.desktop_threads() {
+                Ok(contexts) => Response {
+                    id: request.id,
+                    contexts: Some(contexts),
+                    snapshots: None,
+                    error: None,
+                },
+                Err(error) => Response {
+                    id: request.id,
+                    contexts: None,
+                    snapshots: None,
+                    error: Some(error.to_string()),
+                },
+            }
         } else {
-            sensor.read()
-        };
-        let response = match result {
-            Ok(snapshot) => Response {
-                id: request.id,
-                snapshots: Some(snapshot.core_snapshots()),
-                error: None,
-            },
-            Err(error) => Response {
-                id: request.id,
-                snapshots: None,
-                error: Some(error.to_string()),
-            },
+            let result = if request.fresh {
+                MonitorSensor::fresh()
+            } else {
+                sensor.read()
+            };
+            match result {
+                Ok(snapshot) => Response {
+                    id: request.id,
+                    snapshots: Some(snapshot.core_snapshots()),
+                    contexts: None,
+                    error: None,
+                },
+                Err(error) => Response {
+                    id: request.id,
+                    snapshots: None,
+                    contexts: None,
+                    error: Some(error.to_string()),
+                },
+            }
         };
         if serde_json::to_writer(&mut output, &response).is_err()
             || output.write_all(b"\n").is_err()
@@ -252,8 +324,19 @@ mod tests {
     fn late_or_ambiguous_replies_never_supply_an_observation() {
         assert!(validate_response(
             Response {
+                id: 2,
+                snapshots: Some(vec![]),
+                contexts: Some(vec![]),
+                error: None,
+            },
+            2
+        )
+        .is_err());
+        assert!(validate_response(
+            Response {
                 id: 1,
                 snapshots: Some(vec![]),
+                contexts: None,
                 error: None
             },
             2
@@ -263,6 +346,7 @@ mod tests {
             Response {
                 id: 2,
                 snapshots: Some(vec![]),
+                contexts: None,
                 error: Some("failure".into())
             },
             2
@@ -272,6 +356,7 @@ mod tests {
             Response {
                 id: 2,
                 snapshots: None,
+                contexts: None,
                 error: None
             },
             2
@@ -282,6 +367,7 @@ mod tests {
                 Response {
                     id: 2,
                     snapshots: Some(vec![]),
+                    contexts: None,
                     error: None
                 },
                 2

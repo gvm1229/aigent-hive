@@ -44,10 +44,10 @@ fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
     let (send, receive) = mpsc::sync_channel(1);
     let (refresh, requests) = mpsc::sync_channel(1);
     thread::spawn(move || {
-        let mut reader = crate::usage::MonitorSensor::new();
+        let mut reader = super::sensor::CatalogReader::new();
         loop {
             let started = Instant::now();
-            let value = match reader.desktop_threads() {
+            let value = match reader.read() {
                 Ok(threads) => {
                     json!({"operation":"discover","valid":true,"ids":threads.iter().map(|thread| &thread.id).collect::<Vec<_>>(),"contexts":threads})
                 }
