@@ -10,10 +10,10 @@ tags: [automation, behavior, handoff]
 aliases: ["todo handoff", "user-owned steps"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:94e9c3723758b46a23989ca9264b0951c4e9bf1096c7c5766d39697bf501f7e3"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:9a2ca4c65c5b7880464c7804d224cad91de28493eaf189aa63b1ed439806dde1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:d16fe3cf14d23b5781bbb960884146b17c3770916a5572215e4922a4423f28d1"
   - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
 links: [language-consistency, source-development]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 

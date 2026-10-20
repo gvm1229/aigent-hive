@@ -9,11 +9,11 @@ summary: "잠금 없는 한 차례 중단·직접 재개·Windows 검증과 로�
 tags: [reset, session, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:39d24941f041d49e4aaee3c9130d0e430a7a14a5328557701e223dc93299aa65"
-  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:7c60015123b18b54f4b2a1984839d5a3e5fc96b4935b8ded0ba7a6367d41279d"
-  - "repo:docs/decisions/reset-stop-boundary.md#sha256:3a1337362f351951f06db51fc89b8fa06eea5b458534a06a2dc45463c7766139"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:369a6681fcc7415c711ab7d5b9d1dae879b9d6fc188261af10a4ffcb5327a6f2"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:b8e7b8f90c305c715a2cd7a0e4e1fc89133ad57f8f1fbfe8aeef2e8efe62d20e"
+  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
+  - "repo:docs/decisions/reset-stop-boundary.md#sha256:66848b1bd7fc41ab22889cc999066fe237b5e35161670524eb0de01934f021be"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
   - "repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9"
   - "repo:docs/research/release-0.13.0.md#sha256:fbdd1a5c8e306a8af4e54cc12306d9da35a41ba71ea7493adbc4de424be8f1a2"
   - "repo:docs/research/session-stop-0.12.1.md#sha256:50b5ba7baa1b9c2ed7bf96669115860655bb2fe0b7b5d7df7ac5fa628c650437"
@@ -24,7 +24,7 @@ sources:
   - "repo:tests/results/session-stop-one-shot-qualification-0.12.1.json#sha256:000da296ad912dc0d30d30baed0f79f8a88193d6b09606bd75eff29e1dbe4406"
   - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
 links: [automatic-dispatch-guard, installed-usage-guard, usage-stop-notice]
-reviewed_revision: "git:38f6f050c1a8ba8261ef2045d59b5e4789c54ba9"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 

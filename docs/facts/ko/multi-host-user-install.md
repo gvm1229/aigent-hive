@@ -9,11 +9,11 @@ summary: "Hive 사용자 설치·update의 CSV·반복 host 선택과 aggregate 
 tags: [installation, multi-host, user-setup]
 aliases: ["복수 호스트 설치", "여러 호스트 설치"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:729c7f4664b1395df0cdeb15c36edc610f59ee200bded3481698b54da6260b1d"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:9a2ca4c65c5b7880464c7804d224cad91de28493eaf189aa63b1ed439806dde1"
+  - "repo:crates/hive-cli/src/main.rs#sha256:c7dfa1349f5239cd9df726f0fbf7d9a73a3da5a90218551cac420c0d7331a9bd"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:d16fe3cf14d23b5781bbb960884146b17c3770916a5572215e4922a4423f28d1"
   - "repo:docs/archive/plans/foundations/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
 links: [global-onboarding, supported-hosts]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 

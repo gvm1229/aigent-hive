@@ -9,12 +9,12 @@ summary: "The 0.12.0 safeguard blocks new Hive work at zero quota despite ordina
 tags: [exhaustion, session, usage, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:2aaad6ac2375e212caa3bfc5d612f04e2d2c585e1a2560a294d8f4029613e566"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:369a6681fcc7415c711ab7d5b9d1dae879b9d6fc188261af10a4ffcb5327a6f2"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
   - "repo:tests/results/public-zero-0.12.0-test.2.json#sha256:f64d29840b056f157c60f0a5f6556c2e5b62990beb8c9c6bfb3285b4aafd7354"
 links: [installed-usage-guard, quota-reset-session-control]
-reviewed_revision: "git:16c01d6b233c96ee107914eeca730e3636c5440b"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 

@@ -11,13 +11,13 @@ aliases: ["과거 기준본 정합성"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:30e453d8375c22b0ec9ec56998fc472dace3fff8cea63ad7ad360d5ff4c19898"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:f5c90bf5b90baef8d7a5ec2228d0d23338ea95aef2c8078b7656c4df7d6ff600"
-  - "repo:crates/hive-render/src/lib.rs#sha256:68ac8bfda0392ceb10346da8c137c93a946a81490f2d42c8fa071aed2c30ce41"
+  - "repo:crates/hive-render/src/lib.rs#sha256:f68d23e2eb431d0a36193df9c26d59db5fdc8d00afc9dc00bf1588175e486c0c"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"
   - "repo:scripts/qualify-project-predecessors.py#sha256:80f839a04103dc25d74259acd5b1daa7d933fa58e98eb605206eb1a046c67f58"
 links: [projection-upgrade-purge, update-transaction, version-policy]
-reviewed_revision: "git:e22ff9036b04535dc9a9cc542f08b20143cfe40e"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 

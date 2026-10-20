@@ -10,15 +10,15 @@ tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:30e453d8375c22b0ec9ec56998fc472dace3fff8cea63ad7ad360d5ff4c19898"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:fb83162490270dc48650dd60c0a93c321c8811915d863fd102e478f9d22967f4"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:9a2ca4c65c5b7880464c7804d224cad91de28493eaf189aa63b1ed439806dde1"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:25b021e44c37f93cf987a7cd2a67a26b20ac5d482ff1377ede9cf921f1c9fddb"
-  - "repo:crates/hive-render/src/lib.rs#sha256:68ac8bfda0392ceb10346da8c137c93a946a81490f2d42c8fa071aed2c30ce41"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:369a6681fcc7415c711ab7d5b9d1dae879b9d6fc188261af10a4ffcb5327a6f2"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:d16fe3cf14d23b5781bbb960884146b17c3770916a5572215e4922a4423f28d1"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:d9ec515a86f7c86a760de68c0b68edc70e4c11bdcb79c42524b403afd1218767"
+  - "repo:crates/hive-render/src/lib.rs#sha256:f68d23e2eb431d0a36193df9c26d59db5fdc8d00afc9dc00bf1588175e486c0c"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
   - "repo:docs/releases/0.10.3.md#sha256:94a75051e50352ff04de8e649b8382db81ee5b6b2ea95276203bdddeedcc2ea8"
-  - "repo:harness/project-bases/registry.yml#sha256:7f0314286cf0c39ce412b93d6eea31a199173632a9149ad70989e27b209d719a"
+  - "repo:harness/project-bases/registry.yml#sha256:dfd706527e2688b5c64213c1fa69f7f19dce5904ef150b54c856bc0d743050ec"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
-reviewed_revision: "git:ad412a7b2aa6bba927f5f841e0e5161f4fb60488"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 
