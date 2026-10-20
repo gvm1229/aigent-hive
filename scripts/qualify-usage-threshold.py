@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+from ctypes import wintypes
 import hashlib
 import importlib.util
 import json
@@ -30,11 +32,37 @@ def digest(value):
 def read(path):
     for attempt in range(5):
         try:
-            return json.loads(path.read_text(encoding="utf-8-sig"))
+            return json.loads(shared_read(path).decode("utf-8-sig"))
         except (OSError, ValueError):
             if attempt == 4:
                 raise
             time.sleep(0.02)
+
+
+def shared_read(path):
+    """A read-only observer must permit the controller's atomic file replacement."""
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                  ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.GetFileSizeEx.argtypes = [wintypes.HANDLE, ctypes.POINTER(ctypes.c_longlong)]
+    kernel.ReadFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD,
+                               ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = kernel.CreateFileW(str(path), 0x80000000, 7, None, 3, 0x80, None)
+    if handle == ctypes.c_void_p(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        size = ctypes.c_longlong()
+        if not kernel.GetFileSizeEx(handle, ctypes.byref(size)) or not 0 <= size.value <= 65536:
+            raise OSError("invalid bounded observer file")
+        data = ctypes.create_string_buffer(size.value)
+        count = wintypes.DWORD()
+        if not kernel.ReadFile(handle, data, size.value, ctypes.byref(count), None) or count.value != size.value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return data.raw
+    finally:
+        kernel.CloseHandle(handle)
 
 
 def notice(monitor_pid, close=False):
@@ -71,6 +99,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
     parser.add_argument("--prepare", action="store_true")
+    parser.add_argument("--hive", type=Path, default=ROOT / "target/debug/hive.exe")
     parser.add_argument("--subject")
     parser.add_argument("--role", choices=("reasoning", "shell"))
     parser.add_argument("--app-pid", type=int)
@@ -105,7 +134,9 @@ for($i=0;$i -lt 180;$i++){
         parser.error("role, approved subject and exact app identity are required")
     if not re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", args.subject):
         parser.error("exact approved test conversation required")
-    hive = ROOT / "target/debug/hive.exe"
+    hive = args.hive.resolve(strict=True)
+    if not hive.is_relative_to(ROOT / "target/debug"):
+        parser.error("source debug executable required")
     events = module("threshold_events", "qualify-session-events.py")
     pins = module("threshold_pins", "qualify-session-adapter.py")
     app = pins.AppPin(args.app_pid, args.app_created_ticks)
@@ -116,7 +147,9 @@ for($i=0;$i -lt 180;$i++){
     record = {"schema_version": 1, "phase": "waiting-subject", "role": args.role,
               "subject_digest": digest(args.subject), "synthetic_floor": 99,
               "real_provider_reset": False, "real_user_installation_changed": False,
-              "binary_sha256": hashlib.sha256(hive.read_bytes()).hexdigest()}
+              "binary_sha256": hashlib.sha256(hive.read_bytes()).hexdigest(),
+              "collector_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    component_failures = []
 
     def save():
         output.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -134,7 +167,9 @@ for($i=0;$i -lt 180;$i++){
         stable_since = None
         while time.monotonic() < deadline:
             before = native()
-            eligible = before["status"] == "running"
+            ready_path = fixture / "subject-ready.json"
+            ready = read(ready_path) if ready_path.is_file() else {}
+            eligible = before["status"] == "running" and ready.get("thread") == args.subject
             eligible &= before["pending_tools"] == 0 if args.role == "reasoning" else (fixture / "shell-child.json").is_file()
             if eligible:
                 stable_since = stable_since or time.monotonic()
@@ -183,18 +218,33 @@ for($i=0;$i -lt 180;$i++){
             raise RuntimeError("wrong reason or missed interruption deadline")
         if state.get("known_sessions") != 1 or incident.get("targeted_turns") != 1 or incident.get("confirmed_turns") != 1:
             raise RuntimeError("stop was not exactly scoped to the test conversation")
+        record.update(native_interruption_verified=True, stop_receipt=receipt,
+                      app_preserved=app.alive_and_visible(), generation=state["generation"])
+        save()
         if child:
             deadline_ms = incident["detected_at_ms"] + 5000
             while child.kernel.WaitForSingleObject(child.handle, 0) != 0 and time.time_ns() // 1_000_000 <= deadline_ms:
                 time.sleep(0.01)
             if child.kernel.WaitForSingleObject(child.handle, 0) != 0:
-                raise RuntimeError("shell child remained five seconds after detection")
-            record["shell_exit_observed_ms"] = time.time_ns() // 1_000_000 - incident["detected_at_ms"]
-        view = notice(monitor.pid)
-        if not all(view.get(key) for key in ("visible", "floor_reason", "numeric_reason", "confirmed", "close_action", "no_unlock")):
-            raise RuntimeError("exact reason/status notice not visible")
+                component_failures.append("shell child remained five seconds after detection")
+                record["shell_child_exit_verified"] = False
+            else:
+                record["shell_child_exit_verified"] = True
+                record["shell_exit_observed_ms"] = time.time_ns() // 1_000_000 - incident["detected_at_ms"]
+        until_notice = time.monotonic() + 8
+        while True:
+            view = notice(monitor.pid)
+            record["notice"] = view
+            save()
+            if all(view.get(key) for key in ("visible", "floor_reason", "numeric_reason", "confirmed", "close_action", "no_unlock")):
+                record["notice_visible_ms"] = time.time_ns() // 1_000_000 - incident["detected_at_ms"]
+                break
+            if time.monotonic() >= until_notice:
+                component_failures.append("exact reason/status notice not visible")
+                break
+            time.sleep(0.1)
         record.update(phase="awaiting-manual-resume", stop_receipt=receipt, notice=view,
-                      shell_child_exited=bool(child), app_preserved=app.alive_and_visible(),
+                      component_failures=component_failures, app_preserved=app.alive_and_visible(),
                       native_interruption_verified=True, generation=state["generation"])
         save()
         deadline = time.monotonic() + 180
@@ -218,9 +268,9 @@ for($i=0;$i -lt 180;$i++){
         stable = state_path.read_bytes()
         record["notice_closed"] = notice(monitor.pid, close=True).get("closed", False)
         record["notice_close_preserved_history"] = stable == state_path.read_bytes()
-        record.update(phase="passed", direct_resume_verified=True, repeated_stop=False,
+        record.update(phase="failed" if component_failures else "passed", direct_resume_verified=True, repeated_stop=False,
                       app_preserved=app.alive_and_visible(), monitor_removed=True)
-        return 0
+        return 1 if component_failures else 0
     except Exception as error:
         record.update(phase="failed", error=type(error).__name__ + ": " + str(error))
         return 1

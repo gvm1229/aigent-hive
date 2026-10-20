@@ -4,11 +4,47 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+@unittest.skipUnless(os.name == "nt", "Windows shared-delete observer handles")
+class ThresholdCollectorReads(unittest.TestCase):
+    def test_observer_permits_atomic_state_replacement_while_reading(self):
+        helper = runpy.run_path(str(ROOT / "scripts/qualify-usage-threshold.py"))
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.ReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD,
+                                   ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+        with tempfile.TemporaryDirectory(prefix="hive-observer-sharing-") as directory:
+            state = Path(directory) / "state.json"
+            replacement = Path(directory) / "replacement.json"
+            claimed = Path(directory) / "claimed.json"
+            state.write_bytes(b'{"generation":1}')
+            replacement.write_bytes(b'{"generation":2}')
+
+            def replace_then_read(*arguments):
+                # Hive claims the old name before publishing a new hard link.
+                # MoveFileEx replacing an open destination has different semantics.
+                state.rename(claimed)
+                os.link(replacement, state)
+                claimed.unlink()
+                return kernel.ReadFile(*arguments)
+
+            proxy = SimpleNamespace(CreateFileW=kernel.CreateFileW,
+                                    GetFileSizeEx=kernel.GetFileSizeEx,
+                                    CloseHandle=kernel.CloseHandle,
+                                    ReadFile=replace_then_read)
+            with mock.patch.object(ctypes, "WinDLL", return_value=proxy):
+                self.assertEqual(helper["shared_read"](state), b'{"generation":1}')
+            self.assertEqual(state.read_bytes(), b'{"generation":2}')
 
 
 @unittest.skipUnless(os.name == "nt", "Windows PowerShell installation evidence gate")
