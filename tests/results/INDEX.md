@@ -1491,6 +1491,29 @@
 | [passed](runs/20261020T204507-123ce8afcd02.md) | 0.13.1 대화 목록 조회도 소유 작업 프로세스로 격리 | 9c2ecf9610e30a372f4559ef0f5472fbf608ca9b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261020T205107-a9ed12a73ce5.md) | 0.13.1 활성 설정과 실제 감시 상태의 구분 회귀 | b14bab91b34980dcf8b65cf42f1f0c0eeb94d246 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261020T205956-38d90df71079.md) | 0.13.1 하한 안내·실제 감시 상태 구분 회귀 | b14bab91b34980dcf8b65cf42f1f0c0eeb94d246 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T212202-642bfcc89b68.md) | 0.13.1 버전 표기와 고정 전임 기준 검증 | 120253e74c1cb269ef3fda8944a33a2b90349cc0 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T213028-b75451f5ccb6.md) | 조회 감독 검증 재사용과 원인 보존 회귀 | b102563b6dfd5be5bd96bc36af5ee565d9d02392 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T213148-1f8df5d7bebf.md) | 30분 조회 수용용 소스 실행 파일 빌드 | b102563b6dfd5be5bd96bc36af5ee565d9d02392 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T213221-961e4501dad6.md) | 실제 Windows 사용량 30분·연결 교체·보조 조회 수용 | b102563b6dfd5be5bd96bc36af5ee565d9d02392 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T213334-f67382ee82c5.md) | 공개 0.13.0 한국어·Windows 줄바꿈의 비파괴 갱신 | 275200ded52371cb47be1947546493bca39d453d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T213449-b0b8dd6b8e26.md) | 공개판 언어·줄바꿈 인증과 비파괴 갱신 회귀 재검증 | 275200ded52371cb47be1947546493bca39d453d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T213708-d31963961e7d.md) | 활성·비활성 감시 버전 전환과 실패 시 기록 보존 | 04ff8c569cc971b64a2f0da91f38b61309463e3e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T213750-15dab4e9ff08.md) | 감시 갱신의 명시 형식 수정 뒤 재검증 | 04ff8c569cc971b64a2f0da91f38b61309463e3e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T213838-d25e61a34f56.md) | 고정 설치 입력을 갖춘 감시 전환 회귀 재검증 | 04ff8c569cc971b64a2f0da91f38b61309463e3e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T214013-d3dab7617d13.md) | 독립 영 잔량 보호와 사용량 묶음별 재개 분리 | 4792b1d9e57041033e438b25f28f8ce0c43c22f9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T214102-e32dbfbb2dbe.md) | 올바른 구간 스키마로 영 잔량·묶음 분리 재검증 | 4792b1d9e57041033e438b25f28f8ce0c43c22f9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T214251-21ac745428a3.md) | 하위 작업의 소유 대화 정책과 재개 범위 계승 | c7277d6cdeb14fc0e398661039039f714f4add68 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T214447-c56ea10f6eb2.md) | 대상 대화 한정 검사 경로와 모든 감시 회귀 | 56845b2faf0feb1456b952a65ff406d2eced63df | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T214631-1102272ab912.md) | 대화 한정 감시 경로 엄격 검사 | 56845b2faf0feb1456b952a65ff406d2eced63df | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T214812-bdb069d67c36.md) | 엄격 검사 지적 보정 뒤 재검증 | 56845b2faf0feb1456b952a65ff406d2eced63df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T214847-820529506daa.md) | 검증 보정 최종 엄격 검사 | 56845b2faf0feb1456b952a65ff406d2eced63df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215041-a024e1acfcef.md) | 중간 감시 자연어 해제·네 Skill 투영·버전 장부 검증 | bcf29aa3596489359a1fdfc22271aaf26d4bfaaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215117-63fab398fda3.md) | Windows 제어·알림 표시 회귀 | bcf29aa3596489359a1fdfc22271aaf26d4bfaaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215317-2a5d414399a0.md) | 0.13.1 전체 Rust 회귀 | 12248b81b3bd930480d29764f2e2c03a817854a6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215623-96e255fa4e98.md) | 대화별 수용 검사기의 비실행 준비 검증 | 12248b81b3bd930480d29764f2e2c03a817854a6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215647-678339b61b74.md) | 실제 공개 0.13.0 사용자 설치의 무변경 갱신 계획 확인 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T215745-3bed9542e653.md) | 현재 Windows 앱의 대화 한정 연결만 확인, 중단 없음 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T220026-debe2bca8efe.md) | Windows 전체 security 검증 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
