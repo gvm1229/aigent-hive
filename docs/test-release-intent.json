@@ -1,14 +1,15 @@
 {
   "schema_version": 1,
   "product_version": "0.13.1",
-  "package_version": "0.13.1-test.2",
+  "package_version": "0.13.1-test.3",
   "plan_ids": [
     "UG131-001",
     "UG131-002",
     "UG131-003",
     "UG131-004",
     "UG131-005",
-    "UG131-007"
+    "UG131-007",
+    "UG131-008"
   ],
-  "product_tree_sha256": "sha256:81d7e3928559af1b0f9bf0cffc8b4ac77b22e71e606593ece9cea94c02eae7ff"
+  "product_tree_sha256": "sha256:d90304f4a8af854bc05b2fb9a486e0d4efc0c4e9c43f5e035198460fa8399531"
 }
