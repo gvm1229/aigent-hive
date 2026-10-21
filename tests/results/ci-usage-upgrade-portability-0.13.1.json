@@ -25,7 +25,15 @@
   "reason": "test incorrectly required different argument strings; native executable can change while the same valid root arguments remain unchanged",
   "correction": "compare the complete executable-and-arguments action tuple; production monitor behavior is unchanged",
   "local_Windows_migration_regressions": "10 passed after correction",
-  "next_exact_CI": "required before the unpublished third public-test candidate",
+  "corrected_exact_CI": {
+    "run_id": 39616599187,
+    "source_commit": "e6c955205fba27f5742e8ca9e0968b76e0794168",
+    "result": "success",
+    "successful_jobs": 16,
+    "skipped_jobs": 1,
+    "skip_reason": "documentation-only duplicate job excluded by product risk selection",
+    "scope": "fresh Linux full unit suite, Windows/macOS smoke and selected conformance; no live AI interruption"
+  },
   "public_test_published_by_this_attempt": false,
   "actual_user_installation_changed": false
 }
