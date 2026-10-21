@@ -10,22 +10,23 @@
 - 기존 전역·프로젝트 최대 하한·대상 분류·세션별 제외·구간 선택 재사용. 감지 뒤2초 요청·5초 실행 중단 확인, 시험 밖 대화 중단 금지
 - 기본 지속 연결 실패 시 새 프로세스 일회성 보조 조회. 각5초·정상 시작15초·실패 재시도2초, 정상 관측60초 부재 때 한 번 중단. CodexBar·제공자 API·자격 증명 수집 없음
 - 제품 설치·정식 게시 승인 별도. 기존 설정·지식·사건 보존, 일반업데이트와 감시 고정 실행 파일의 버전 일치 확인
-- 10월21일 예기치 않은 앱 종료 신고: 기존·시험 감시 예약 임시 비활성화와 설정·기록 보존. 앱 충돌 기록·감시 실행 대조, 원인 미확정 상태의 실제 중단 재시험 보류
+- 10월21일 예기치 않은 앱 종료 신고: 기존 감시 예약 임시 비활성화와 설정·기록 보존. 충돌 원인의 읽기 전용 조사 계속, 사용자 재승인 범위의 지정 대화 시험만 재개
+- 사용자 선택2: 이미 시작한 일반 외부 명령의 잔존 허용. AI 대화·별도 로컬 AI 세션·하위 에이전트는 중단 대상 유지, 일반 명령 예외로 분류 금지. 앱 유지·이유 표시·직접 재개 필수
 
 ## 실행 항목
 
 - [x] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
 - [x] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
 - [x] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
 - [x] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
-- [ ] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
-  - state: awaiting-user-authority; depends: UG131-004; owner: 사용자; reason: 원래5초 셸 자식 종료 기준 유지 또는 대화 중단 범위 조정의 명시 결정 대기. 유지 시 지원된 취소 연결·실제5초 종료 필요, 별도 앱 충돌 원인 미확정
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+- [x] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
+  - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
 - [ ] [UG131-006] 공개0.13.1-test.1·격리 실제 갱신과 후속 update 수용
-  - state: awaiting-external-evidence; depends: UG131-005; owner: 현재 Windows 수용; reason: 실제 앱 수용 미달로 공개 시험·격리 공개 파일 갱신 진행 금지. 수용 뒤 현재 Codex가 수행
+  - state: agent-owned; depends: UG131-005; owner: 현재 Codex; reason: 선택2의 실제 앱 수용 통과. 다음 공개0.13.1-test.1과 격리 갱신 검증 진행, 실사용자 설치·정식 게시 승인 별도
 
 ## 구현 순서와 세부 계약
 
@@ -41,15 +42,15 @@
 
 - 변경 Rust 모듈·가까운 Python 회귀 → 엄격 Clippy·형식·전체 관련 검증. 한도 위/동일/아래·처음부터 낮음·프로젝트 차이·하위 작업·세션 제외·0%·동일 사건 재개·새 대화 차단 포함
 - 조회 경로별 실패·프로세스 정지·늦은 응답·시각 변경·계정/구간 변경·60초 경계·상태 이관. 실제 API의 일정 보정으로60초 오류가 되는 회귀 재현
-- 독립 Windows 검사기가 긴 추론과 셸의 정확한 실행 식별자·중단 사건·앱 생존·창 이유·시험 자식 종료 확인. 자연 종료와 도구 대기를 실제 추론 중단으로 계산 금지
+- 독립 Windows 검사기가 긴 추론·도구 호출의 정확한 실행 식별자·중단 사건·앱 생존·창 이유 확인. 일반 셸 자식의5초 종료는 승인한 예외로 별도 관측, 과거 실패 원본 보존. 별도 AI 대화·하위 에이전트는 정확한 실행 중단 필수. 자연 종료·도구 대기를 추론 중단으로 계산 금지
 - 최소30분·여러4분 연결 교체·기본 경로 장애 후 보조 회복, 정상 자료가 있는 상태의 허위60초 중단0건. 실제 제공자 초기화·과금 종료·다른 OS 직접 중단은 증명 제외
 - `0.13.0 → 0.13.1` 활성/비활성 감시의 갱신·실패 복구·데이터 보존과 일반 `hive update` 확인. 실사용자 설치는 승인 전 격리 환경으로 검증
 - 공개0.13.0 실행 파일로 만든 합성 프로젝트를 이전 버전 갱신 회귀 자료에 추가. 실제 사용자 폴더·설정의 복제나 개발판으로 만든 과거 자료 대체 금지
 - 실패는 증거 보존 뒤 입력·코드 수정으로 재검증. 지식·설정·실행 기록 삭제나 앱 종료를 복구 수단으로 사용 금지
-- 앱 종료 조사: Windows 11의 앱 기록·Crashpad·예약 실행 시각을 읽기 전용으로 대조. 소유 조회 작업 정리가 부모·형제 프로세스를 보존하는 회귀 확인 후 원인과 한계를 정본에 기록. 해당 조사 동안 실제 중단 호출 없이 자동 회귀·표시 검증 계속
+- 앱 종료 조사: Windows 11의 앱 기록·Crashpad·예약 실행 시각을 읽기 전용으로 대조. 소유 조회 작업 정리의 부모·형제 보존과 직전 화면 조작의 관계 확인. 재현을 위한 앱 종료·재시작·설정 변경 없이 근거·한계 기록
 
 ## 현재 수용 상태
 
-- 구현·자동 검증4개 완료는 실제 앱의 전체 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
+- 선택2의 현재 Windows 중단·알림·직접 재개·AI 하위 작업 수용 통과. 공개 시험·격리 갱신 전 전체 출시 검증 완료·실사용자 설치 주장 금지
 - 승인한 시험 대화2개만 사용. 추론 중단955ms·882ms와 같은 하한의 직접 재개 확인. 셸 대화 취소583ms·1,636ms이나 자식 프로세스5초 종료 미달; 전체 수용 실패 보존
-- 마지막 시험은 초기 연결 시간 초과로 중단 요청 전 종료. 이후 오전8시28분26초 앱 주 프로세스의 `capture_kind=crash` 기록 발견. 충돌을 일으킨 정확한 원인은 미확정
+- 과거 초기 연결 시간 초과·8시28분26초 주 프로세스 `capture_kind=crash` 기록 보존, 정확한 충돌 원인 미확정. 새 시험은8시31분 생성된 같은 앱을 유지, 긴 추론·하위 AI·셸 대화와 안내·재개 확인

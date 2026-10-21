@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
   - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:79a51f9f11e9bc01cbc97bb6d0943068f325dcac473cdf3070d9e2aee413846a"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
-  - "repo:docs/decisions/reset-stop-boundary.md#sha256:66848b1bd7fc41ab22889cc999066fe237b5e35161670524eb0de01934f021be"
+  - "repo:docs/decisions/reset-stop-boundary.md#sha256:da62eb6a722d291596514eb8a8eeb0ba5f58f80bfc503469c10318737db5e244"
   - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
   - "repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9"
   - "repo:docs/research/release-0.13.0.md#sha256:fbdd1a5c8e306a8af4e54cc12306d9da35a41ba71ea7493adbc4de424be8f1a2"
@@ -24,7 +24,7 @@ sources:
   - "repo:tests/results/session-stop-one-shot-qualification-0.12.1.json#sha256:000da296ad912dc0d30d30baed0f79f8a88193d6b09606bd75eff29e1dbe4406"
   - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
 links: [automatic-dispatch-guard, installed-usage-guard, usage-stop-notice]
-reviewed_revision: "git:bf97a4aaf3933d9c14eb265a8d4b8b2bcc02e859"
+reviewed_revision: "git:37051d042c3a7dc584484d01fc821a2be140ce03"
 status: active
 ---
 
