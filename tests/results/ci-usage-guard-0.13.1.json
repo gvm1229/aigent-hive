@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "product_target": "0.13.1",
+  "attempts": [
+    {
+      "source_commit": "688490f3aedfb77345f63ac4de1321ba3ab52276",
+      "run_id": 39522343787,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39522343787",
+      "status": "failed-jobs-preserved",
+      "failures": [
+        {
+          "host": "macos-latest",
+          "job_id": 118968936992,
+          "scope": "three injected monitor-upgrade tests",
+          "reason": "synthetic configuration used the temporary-directory alias instead of the pinned normalized root",
+          "correction_commit": "74d534d1",
+          "product_ownership_validation_weakened": false
+        },
+        {
+          "host": "ubuntu-latest",
+          "job_id": 118968937160,
+          "scope": "documentation reachability",
+          "reason": "new release review draft was not linked from the documentation graph",
+          "correction_commit": "1b6ba11d"
+        }
+      ],
+      "corrected_local_checks": {
+        "windows_upgrade_tests": 3,
+        "documentation_tests": 5,
+        "passed": true
+      }
+    }
+  ],
+  "scope_limit": "CI does not qualify direct interruption on macOS or Linux, or the remaining live Windows shell-child criterion"
+}

@@ -1536,6 +1536,7 @@
 | [passed](runs/20261021T000736-2e655df7e0c2.md) | 0.13.1 현재 소스 전체 Rust 회귀 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T000747-187e57b4cb0b.md) | 0.13.1 현재 소스 엄격 검사 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T001825-a7cd90a9c833.md) | 자연어 감시 해제의 격리 사용자 자료 준비 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T004341-f49664b13baa.md) | 감시 갱신 시험 자료의 운영체제 경로 정규화 | 688490f3aedfb77345f63ac4de1321ba3ab52276 | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
