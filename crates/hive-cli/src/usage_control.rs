@@ -1340,6 +1340,7 @@ fn enforce_captured(
             if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
                 halt.marker
                     .as_ref()
+                    .filter(|_| halt.state == OverrideState::Current)
                     .map_or(&[], |marker| marker.snapshots.as_slice())
             } else {
                 &[]
@@ -1695,7 +1696,7 @@ fn record_discord_notification(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn observe_usage(
     target: &PinnedTarget,
     config: &InstalledUsageConfig,
@@ -1765,14 +1766,23 @@ fn observe_usage(
         ),
         Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
+    // A saved observation is history after its validity expires. A fresh reading
+    // establishes the next baseline instead of inferring a refill across that gap.
+    let comparable_previous: Vec<_> = previous_snapshots
+        .iter()
+        .filter(|old| {
+            old.expires_at_unix_seconds > i64::try_from(snapshot.measured_at).unwrap_or(i64::MAX)
+        })
+        .cloned()
+        .collect();
     if threshold_enabled
         && config.quota_reset_guard_enabled
         && decision.is_none()
-        && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
+        && detect_usage_reset(&core_snapshots, &comparable_previous).is_some()
         && !crate::usage_monitor::reset_already_dispatched(
             target,
             &core_snapshots,
-            previous_snapshots,
+            &comparable_previous,
         )
     {
         decision = Some("usage-reset");

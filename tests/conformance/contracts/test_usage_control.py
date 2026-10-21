@@ -1225,6 +1225,34 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(limited_again.returncode, 3)
         self.assertEqual(limited_result["code"], "hive.usage-limited")
 
+    def test_reset_comparison_reestablishes_baseline_after_process_change_or_expiry(self) -> None:
+        for stale in ("process-changed", "expired"):
+            with self.subTest(stale=stale):
+                arguments = ["usage", "enforce", "--target", str(self.consumer),
+                             "--session-id", "stale-reset-" + stale, "--process-id", "902"]
+                first, result = self.invoke(*arguments, sensor_case="allow")
+                self.assertEqual(first.returncode, 0, first.stderr)
+                marker_path = self.consumer / result["changed_paths"][0]
+                if stale == "process-changed":
+                    arguments[-1] = "915"
+                else:
+                    marker = json.loads(marker_path.read_bytes())
+                    marker["measured_at"] -= 120
+                    for snapshot in marker["snapshots"]:
+                        snapshot["measured_at_unix_seconds"] -= 120
+                        snapshot["expires_at_unix_seconds"] -= 120
+                    marker_path.write_text(json.dumps(marker), encoding="utf-8")
+                fresh, result = self.invoke(*arguments, sensor_case="remaining-increase")
+                self.assertEqual(fresh.returncode, 0, result)
+                self.assertEqual(result["code"], "hive.usage-allowed")
+                self.assertTrue(result["data"]["quota_reset_guard_enabled"])
+                self.assertEqual(json.loads(marker_path.read_bytes())["decision"], "observed")
+                for sensor_case, code in (("threshold", "hive.usage-limited"),
+                                          ("zero", "hive.usage-quota-exhausted")):
+                    blocked, result = self.invoke(*arguments, sensor_case=sensor_case)
+                    self.assertEqual(blocked.returncode, 3, blocked.stderr)
+                    self.assertEqual(result["code"], code)
+
     def test_first_resume_does_not_repeat_a_reset_already_handled_by_the_monitor(self) -> None:
         arguments = ("usage", "enforce", "--target", str(self.consumer), "--session-id", "handled-reset", "--process-id", "902")
         first, result = self.invoke(*arguments, sensor_case="allow")
