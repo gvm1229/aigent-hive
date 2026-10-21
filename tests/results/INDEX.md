@@ -1589,6 +1589,7 @@
 | [passed](runs/20261021T134742-796b7929d88c.md) | Windows 짧은 경로 별칭과 이전 감시 인자 인증 회귀 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T135005-d883bd1e2cc0.md) | Windows 짧은 별칭 보정의 엄격 검사 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T135219-df4555aa71d1.md) | Windows 짧은 별칭 인증 보정 실행 파일 빌드 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T135330-fa9115a5519b.md) | 중단 요청 없는 최종 Windows 제어 연결과 사용량 조회 30분 확인 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T135429-0272a24c6641.md) | Windows 짧은 별칭 보정 뒤 실제 이전판 감시 보존 갱신 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T135850-6d8d5899a0b3.md) | 실제 Windows 짧은 별칭의 이전 예약을 긴 이름으로 보존 전환 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T141523-241c6809a84e.md) | 운영체제별 감시 실행 정의 차이의 이식성 회귀 | fa7cb5373526e095a7fcecbb0367f9fc4b139973 | Windows-11-10.0.26300-SP0 |
@@ -1617,6 +1618,7 @@
 
 ## 0.13.1 현재 Windows 검증
 
+- [30분 제어·사용량 조회](usage-control-sensor-soak-0.13.1.json):1,810초·정상 조회117회·조회 프로그램 교체8개·보조 복구1회·허위60초 공백0건. 앱 제어 연결 유지·앱 생존 확인, 대화 중단 요청 없는 검증
 - [운영체제별 실행 정의 비교](ci-usage-upgrade-portability-0.13.1.json): 온라인 Windows 통과, Linux·macOS의 잘못된 비교 가정 실패 보존. 전체 실행 정의 비교로 수정, 새 정확 소스 CI 필요
 - [Windows 짧은 별칭의 실제 갱신](usage-windows-short-path-0.13.1.json): 온라인 Windows 검사 실패 보존, 실제 짧은 이름의 공개0.13.0 예약을 긴 이름으로 전환. 활성·비활성·정상 조회4회·설정/기록/앱 보존 통과, 새 정확 소스 CI 별도
 - [Windows 감시 전환·긴 대화 연결](usage-windows-transition-0.13.1.json): 공개0.13.0 합성 이전판의 활성·비활성 보존 갱신과 정상 조회4회 통과, 현재 앱 유지. 실패 원본 보존, 추가 대화 중단 없음
