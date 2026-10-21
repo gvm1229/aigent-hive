@@ -1548,6 +1548,16 @@
 | [passed](runs/20261021T050329-bdf4ee302cae.md) | 공개0.13.0의 격리 npm 소유자와 사용자 자료 준비 | 86a4f10965449ff68b839fc9ec53a673d86e6a71 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T051500-fe2cdeda4b04.md) | 0.13.1 정본 갱신 경로 누락의 배포 전 회귀 | 86a4f10965449ff68b839fc9ec53a673d86e6a71 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T051618-9cc705a7b92d.md) | 0.13.1 정본 경로의 모든 공개 이전판 갱신과 실패 복구 | 86a4f10965449ff68b839fc9ec53a673d86e6a71 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T060842-eeb8588c1d55.md) | 0.13.1 첫 공개 시험판의 여섯 npm 지문과 태그 독립 확인 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261021T060911-a3d823b4e837.md) | 공개0.13.0에서 시험13.1로 감시 선택과 자료를 지키는 실제 Windows 갱신 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T062529-e4e49041ab2d.md) | 공개0.13.0 부분 선택 인증과 알려진 묶음의 변조 거부 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T062703-3171dbccc0a1.md) | 공개 시험 macOS 보조 프로그램 실패 영수증 읽기 전용 수집 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T063221-c702ca04269f.md) | 공개0.13.0 부분 사용자 설정의 정상 보존 갱신 소스 빌드 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T063242-a9998209f6fb.md) | 실제 공개0.13.0 부분 설치의 소스 갱신과 설정·지식·기록 보존 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T063350-83c62c2d9cb5.md) | 부분 선택 수정 뒤 기존 사용자 설치 인증과 변조 거부 전체 회귀 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261021T063616-b1c5589d516b.md) | 부분 선택 인증 수정의 엄격한 Rust 검사 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T065326-68f90e68908d.md) | 부분 선택 묶음 검사를 분리한 엄격 검사 재확인 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T065610-45f13cac068e.md) | 최종 부분 선택 인증의 전체 회귀와 실제 이전판 보존 갱신 | 232e1bd75bc42761a15dfe2cdd17af53e73b4885 | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
