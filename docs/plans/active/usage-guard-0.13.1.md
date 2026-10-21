@@ -15,15 +15,15 @@
 ## 실행 항목
 
 - [x] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
 - [x] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
 - [x] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
-- [ ] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
-  - state: agent-owned; depends: UG131-003; owner: 현재 Codex; reason: Windows 전체 회귀·엄격 검사 통과, 정본·원격 CI 확인 진행
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
+- [x] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1
 - [ ] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
-  - state: awaiting-external-evidence; depends: UG131-004; owner: 현재 Windows Codex 제어 연결·사용자; reason: 현재 연결의 셸 자식 취소 미지원과 앱 충돌 원인 미확정. 지원된 취소 연결·실제5초 종료, 충돌 진단 자료 필요
+  - state: awaiting-user-authority; depends: UG131-004; owner: 사용자; reason: 원래5초 셸 자식 종료 기준 유지 또는 대화 중단 범위 조정의 명시 결정 대기. 유지 시 지원된 취소 연결·실제5초 종료 필요, 별도 앱 충돌 원인 미확정
 - [ ] [UG131-006] 공개0.13.1-test.1·격리 실제 갱신과 후속 update 수용
   - state: awaiting-external-evidence; depends: UG131-005; owner: 현재 Windows 수용; reason: 실제 앱 수용 미달로 공개 시험·격리 공개 파일 갱신 진행 금지. 수용 뒤 현재 Codex가 수행
 
@@ -50,6 +50,6 @@
 
 ## 현재 수용 상태
 
-- 구현·모듈 회귀3개 완료는 실제 앱의 전체 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
+- 구현·자동 검증4개 완료는 실제 앱의 전체 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
 - 승인한 시험 대화2개만 사용. 추론 중단955ms·882ms와 같은 하한의 직접 재개 확인. 셸 대화 취소583ms·1,636ms이나 자식 프로세스5초 종료 미달; 전체 수용 실패 보존
 - 마지막 시험은 초기 연결 시간 초과로 중단 요청 전 종료. 이후 오전8시28분26초 앱 주 프로세스의 `capture_kind=crash` 기록 발견. 충돌을 일으킨 정확한 원인은 미확정

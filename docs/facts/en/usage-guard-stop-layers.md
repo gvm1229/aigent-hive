@@ -12,10 +12,10 @@ sources:
   - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:79a51f9f11e9bc01cbc97bb6d0943068f325dcac473cdf3070d9e2aee413846a"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9f00da30cddf8bbc0083c2e90786e3061fe50947cf41e183c4c8ee9bd91af5c1"
-  - "repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1"
+  - "repo:docs/research/usage-guard-0.13.1.md#sha256:9f1a3ef595af92bb0f83f0cbfda6566923a83fee832dcffaaec9fa05b92af0b1"
   - "repo:docs/research/usage-guard-stop-comparison.md#sha256:bdd17b2745522c0f5ed813a4dcf1673e0fa34185970bca7e20402f5eac55015f"
 links: [automatic-dispatch-guard, installed-usage-guard, quota-reset-session-control]
-reviewed_revision: "git:e7afab494cd37c690cf68a4bd49d90a3251e4396"
+reviewed_revision: "git:bf97a4aaf3933d9c14eb265a8d4b8b2bcc02e859"
 status: active
 ---
 

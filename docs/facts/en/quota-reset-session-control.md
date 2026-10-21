@@ -24,7 +24,7 @@ sources:
   - "repo:tests/results/session-stop-one-shot-qualification-0.12.1.json#sha256:000da296ad912dc0d30d30baed0f79f8a88193d6b09606bd75eff29e1dbe4406"
   - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
 links: [automatic-dispatch-guard, installed-usage-guard, usage-stop-notice]
-reviewed_revision: "git:e7afab494cd37c690cf68a4bd49d90a3251e4396"
+reviewed_revision: "git:bf97a4aaf3933d9c14eb265a8d4b8b2bcc02e859"
 status: active
 ---
 
