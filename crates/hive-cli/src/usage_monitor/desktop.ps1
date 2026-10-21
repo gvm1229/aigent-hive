@@ -6,7 +6,7 @@ $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
 function Assert-DesktopVersion([string]$version) {
-    if($version -ne '26.1013.4894.0'){throw 'Desktop version requires control qualification'}
+    if($version -notin @('26.1013.4894.0','26.1016.6573.0')){throw 'Desktop version requires control qualification'}
 }
 Add-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'
 using System;

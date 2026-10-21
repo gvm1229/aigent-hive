@@ -37,6 +37,7 @@ const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
 const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 const DESKTOP_VERSION: &str = "26.1013.4894.0";
+const DESKTOP_VERSIONS: &[&str] = &[DESKTOP_VERSION, "26.1016.6573.0"];
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -379,7 +380,7 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
         "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
-        "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+        "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
             && observed && state.last_query_error.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
         "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
         "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
@@ -503,7 +504,7 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
     };
     let mut data = json!({"configuration":config,"adapter_digest":sha256_digest(platform::SCRIPT.as_bytes()),
         "poll_seconds":POLL_SECONDS,"sample_timeout_seconds":5,"retry_seconds":2,"unresponsive_seconds":BLIND_SECONDS,
-        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"automatic_control_available":available,
+        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"automatic_control_available":available,
         "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
         "supports_current_os":available,"remote_execution_supported":false});
@@ -530,7 +531,10 @@ fn require_app_safe_control() -> Result<(), AdapterError> {
     }
 }
 fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
-    if inspection["desktop_package_version"] == DESKTOP_VERSION {
+    if inspection["desktop_package_version"]
+        .as_str()
+        .is_some_and(|version| DESKTOP_VERSIONS.contains(&version))
+    {
         Ok(())
     } else {
         Err(error(
@@ -1146,14 +1150,14 @@ mod tests {
     }
     #[test]
     fn desktop_package_qualification_is_exact() {
-        assert!(
-            require_desktop_version(&json!({"desktop_package_version":DESKTOP_VERSION})).is_ok()
-        );
+        for version in DESKTOP_VERSIONS {
+            assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_ok());
+            assert!(include_str!("usage_monitor/desktop.ps1").contains(version));
+        }
         for version in ["26.1007.9446.0", "26.1013.4894.1", ""] {
             assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_err());
         }
         assert!(require_desktop_version(&json!({})).is_err());
-        assert!(include_str!("usage_monitor/desktop.ps1").contains(DESKTOP_VERSION));
     }
     #[cfg(windows)]
     #[test]

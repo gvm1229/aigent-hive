@@ -599,7 +599,8 @@ if($stop.verifyUntil -ne $until -or $actions.Count -ne $count -or -not (Stop-Fin
     def test_desktop_version_and_qualification_scope_are_exact(self):
         source=self.offline_controller()+r"""
 Assert-DesktopVersion '26.1013.4894.0'
-foreach($version in @('26.1007.9446.0','26.1013.4894.1','')) {
+Assert-DesktopVersion '26.1016.6573.0'
+foreach($version in @('26.1007.9446.0','26.1013.4894.1','26.1016.6573.1','')) {
  $rejected=$false
  try{Assert-DesktopVersion $version}catch{$rejected=$true}
  if(-not $rejected){throw 'Untested desktop version accepted'}
