@@ -13,13 +13,14 @@
 ## 실행 항목
 
 - [x] [UG131-007] 부분 선택한 공개0.13.0 사용자 연동의 보존 갱신 인증
-  - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-upgrade-0.13.1.md#sha256:73992d268b0405cd8e8aeb80ecc4ad5cb1c09ce4a001b3b14cf1b9ffeb18952b
+  - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4
 
 - [x] [UG131-008] 공개0.13.0 감시 갱신과 긴 대화의 Windows 연결 호환
-  - state: complete; depends: UG131-007; evidence: repo:docs/research/usage-upgrade-0.13.1.md#sha256:73992d268b0405cd8e8aeb80ecc4ad5cb1c09ce4a001b3b14cf1b9ffeb18952b
+  - state: complete; depends: UG131-007; evidence: repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4
 
 ## Windows 경로 보정 계약
 
+- CI39608990393의 Windows 짧은 별칭·긴 이름에서 예약 지문 차이로 실패. `monitor_root_path`는 먼저 실제 긴 경로를 구하고 고정 핸들의 폴더 식별자 대조. `upgrade.rs`는 이전의 정형 실행 인자에서 원래 루트를 읽어 같은 실제 폴더인지 확인하고, 그 루트의 예약 이름과 bin 직접 자식만 인증. 임의 인자·다른 루트 거부, 이전 정의로 제거한 뒤 정규화한 새 정의 등록. 기존 비교 회귀·실제 이전판 보존 갱신·새 정확 소스 CI로 재검증, 미게시test.3 번호 유지
 - 기존 벡터 작업의 방식 재사용: 일반 Windows 경로로 다시 연 폴더와 고정한 폴더의 장치·파일 식별자 대조. 동일할 때만 프로세스용 경로 정규화, 파일 쓰기는 기존 고정 핸들과 상대 경로 사용
 - `usage_monitor.rs`의 `configuration`에서 확인한 일반 경로로 실행 파일·인자·예약 이름 산출. `upgrade.rs`는 같은 고정 루트의 두 알려진 이름만 허용하고 기존 작업의 정확한 실행 정의로 제거, 새 정의로 등록
 - 이전 실행 파일은 해당 루트의 bin 바로 아래 한 파일만 허용. 다른 폴더·부모 경로·임의 예약 이름 거부. 활성 선택·중단 기록 보존, 앱 종료·재개 잠금 없음
