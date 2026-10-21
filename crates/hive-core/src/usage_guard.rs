@@ -258,7 +258,7 @@ pub struct UsageReset {
 /// Only matching account, host, pool, and window measurements are compared. A
 /// first measurement is therefore only a baseline. Measurements that move
 /// backwards in time are ignored here and remain the responsibility of normal
-/// monotonicity validation.
+/// monotonicity validation. An expired previous observation is not a reset baseline.
 #[must_use]
 pub fn detect_usage_reset(
     current_snapshots: &[UsageSnapshot],
@@ -271,6 +271,7 @@ pub fn detect_usage_reset(
                 && raw_quota_pool(current) == raw_quota_pool(previous)
                 && current.quota_window == previous.quota_window
                 && current.measured_at_unix_seconds >= previous.measured_at_unix_seconds
+                && current.measured_at_unix_seconds < previous.expires_at_unix_seconds
                 && current.remaining_percent > previous.remaining_percent)
                 .then_some(UsageReset {
                     window: current.quota_window,
@@ -852,6 +853,22 @@ mod tests {
         assert_eq!(reset.current_percent.to_bits(), 30.1_f64.to_bits());
 
         current.account_scope_digest = "sha256:other".to_owned();
+        assert!(detect_usage_reset(&[current], &[previous]).is_none());
+    }
+
+    #[test]
+    fn reset_detection_uses_only_an_unexpired_previous_observation() {
+        let previous = scoped_snapshot("primary", UsageWindow::Session, 30.0);
+        let mut current = previous.clone();
+        current.remaining_percent = 60.0;
+        current.measured_at_unix_seconds = previous.expires_at_unix_seconds - 1;
+        current.expires_at_unix_seconds = previous.expires_at_unix_seconds + 60;
+        assert!(detect_usage_reset(
+            std::slice::from_ref(&current),
+            std::slice::from_ref(&previous)
+        )
+        .is_some());
+        current.measured_at_unix_seconds = previous.expires_at_unix_seconds;
         assert!(detect_usage_reset(&[current], &[previous]).is_none());
     }
 

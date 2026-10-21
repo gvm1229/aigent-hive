@@ -566,6 +566,16 @@ mod tests {
     use hive_core::usage_guard::{SourceConfidence, UsageWindow};
 
     #[test]
+    fn expired_balance_increase_is_not_a_refill_but_next_fresh_increase_is() {
+        let mut state = MonitorState::new();
+        state.observe(&sample(30.0, 100, 500), 100).unwrap();
+        state.observe(&sample(60.0, 161, 500), 161).unwrap();
+        assert!(state.incident.is_none());
+        state.observe(&sample(70.0, 176, 500), 176).unwrap();
+        assert_eq!(state.incident.as_ref().unwrap().reason, "usage-reset");
+    }
+
+    #[test]
     fn independent_read_confirms_schedule_corrections_without_false_blindness_or_reset() {
         let mut state = MonitorState::new();
         state.observe(&sample(80.0, 100, 400), 100).unwrap();
