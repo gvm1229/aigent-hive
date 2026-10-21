@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "phase": "passed-exact-source-CI",
+  "product_version": "0.13.1",
+  "source_commit": "7dea3ec0f840f8d6669d5b4573a82831949a2434",
+  "product_tree_sha256": "sha256:f52f565ffebb025fd2ccb55df51ce31d9fdacee57d03a453f6c5abaaecceb8f3",
+  "workflow_run_id": 39652307083,
+  "workflow_url": "https://github.com/gvm1229/aigent-hive/actions/runs/39652307083",
+  "successful_jobs": [
+    "Classify tracked change risk",
+    "Platform smoke (windows-latest)",
+    "Transfer producer (macos-latest)",
+    "Contract and Copier conformance",
+    "Platform smoke (macos-latest)",
+    "Conformance (Linux \u00b7 contract)",
+    "Conformance (Linux \u00b7 release)",
+    "Conformance (Linux \u00b7 documentation)",
+    "Transfer producer (windows-latest)",
+    "Conformance (Linux \u00b7 integration)",
+    "Rust (Linux full)",
+    "Conformance (Linux \u00b7 security)",
+    "Transfer windows-latest to macos-latest",
+    "Transfer macos-latest to windows-latest",
+    "Transfer windows-latest to ubuntu-latest",
+    "Develop push gate"
+  ],
+  "skipped_jobs": [
+    "Documentation-only conformance"
+  ],
+  "skip_reason": "product-risk push executes product checks; separate documentation-only duplicate excluded",
+  "scope": "Linux full Rust/conformance,macOS and Windows smoke,authenticated cross-host transfer checks",
+  "limits": [
+    "not publictest4 publication or public artifact acceptance",
+    "does not replace real Windows session cancellation or prove server/billing cutoff"
+  ]
+}
