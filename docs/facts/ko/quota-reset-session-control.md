@@ -5,26 +5,29 @@ topic_slug: quota-reset-session-control
 language: ko
 counterpart: ../en/quota-reset-session-control.md
 title: "현재 작업의 초기화 감지 전용 제어"
-summary: "잠금 없는 한 차례 중단·직접 재개·Windows 검증과 로컬 감시"
+summary: "0.13.1 구현의 재시작·만료 이전값 비교 제외, 하한·0% 보호 유지"
 tags: [reset, session, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:a3244ad5f0167752df83c6f0fed2a7c98cde0b949d4674dfe873140c1d8fecd5"
-  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
-  - "repo:docs/decisions/reset-stop-boundary.md#sha256:da62eb6a722d291596514eb8a8eeb0ba5f58f80bfc503469c10318737db5e244"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:97e51d9608610168c096a0ed9785482bf490cfd3ad76958ab30b3ddb523ed48b"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:700e67f2d621d40a9e718832d9b7d93c923f9ae996c36564014257f2b83f741b"
+  - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:fdbaac3fc1d9c6e8d5b52db8ca20d3e6d74de8bacc42cdd8919352c9d97512c7"
+  - "repo:crates/hive-core/src/usage_guard.rs#sha256:a96e1f7cca05d9a2d88b8990fd57adb038cd7e17b78d18efd5c3d78398f1a4b7"
+  - "repo:docs/decisions/reset-stop-boundary.md#sha256:70f9207c52da47381ef3c27af8a2df76c81e3354bff3b1394f922e4adbe765e3"
   - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
   - "repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9"
   - "repo:docs/research/release-0.13.0.md#sha256:fbdd1a5c8e306a8af4e54cc12306d9da35a41ba71ea7493adbc4de424be8f1a2"
   - "repo:docs/research/session-stop-0.12.1.md#sha256:50b5ba7baa1b9c2ed7bf96669115860655bb2fe0b7b5d7df7ac5fa628c650437"
   - "repo:docs/research/stable-release-0.13.0.md#sha256:75d8a1e6acf84fcb526d57d93166edfcfb52964591cf207fa733fe6ff3fa1b4b"
+  - "repo:docs/research/usage-preflight-baseline-0.13.1.md#sha256:28e926a63e9f99f22b8c1331956d0bdb12959af37d29c867cb7234e1ed534761"
   - "repo:docs/research/usage-stop-notice-0.12.1.md#sha256:58148052d858dec443c5d8231c0ad91c7748dfd8e54e2a5b5939e6fc5790cffd"
   - "repo:tests/results/session-stop-one-shot-code-0.12.1.json#sha256:f97ceca1df94fff473e56240f8db49dce4ffe644b455154439008e67a3c21b56"
   - "repo:tests/results/session-stop-one-shot-installation-0.12.1.json#sha256:bbc233760b14fc02ebf35467618df2e59c26bab4e549806634a3c96d058d2371"
   - "repo:tests/results/session-stop-one-shot-qualification-0.12.1.json#sha256:000da296ad912dc0d30d30baed0f79f8a88193d6b09606bd75eff29e1dbe4406"
   - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
+  - "repo:tests/results/usage-preflight-baseline-0.13.1.json#sha256:863442407f17d14fe0f89fd5c296ca8b7214361b3916b10820320df12b164c7e"
 links: [automatic-dispatch-guard, installed-usage-guard, usage-stop-notice]
-reviewed_revision: "git:96a1348bd276a6feeb215d765609d2f3e53c37e1"
+reviewed_revision: "git:724a2648f5a116878aa258996b42ee8810a8b6ec"
 status: active
 ---
 
