@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
+import tomllib
 import unittest
 import importlib.util
 from pathlib import Path
@@ -15,6 +16,24 @@ CHECKER = ROOT / "scripts/check-project-base-coverage.py"
 
 
 class ProjectBaseCoverageContract(unittest.TestCase):
+    def test_current_product_canonical_release_inputs_cover_every_predecessor(self) -> None:
+        version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
+        source = ROOT / "harness/release" / version
+        fixture = ROOT / "tests/fixtures/release/versions" / ("valid-" + version)
+        table = json.loads((source / "migration-table.json").read_bytes())
+        inventory = json.loads((source / "release-surface-inventory.json").read_bytes())
+        contract = json.loads((source / "release-contract.json").read_bytes())
+        self.assertEqual(table["target_version"], version)
+        self.assertEqual(inventory["product_version"], version)
+        self.assertEqual(contract["schema_version"], 1)
+        for name, value in (("migration-table.json", table), ("release-surface-inventory.json", inventory)):
+            self.assertEqual(json.loads((fixture / "targets" / name).read_bytes()), value)
+        manifest = json.loads((fixture / "bundle-manifest.json").read_bytes())
+        for field in ("classification", "release_sequence"):
+            self.assertEqual(contract[field], manifest[field])
+        result = self.run_checker(table)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_candidate_and_public_acceptance_require_all_predecessors(self) -> None:
         import yaml
         workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
