@@ -528,8 +528,14 @@ mod tests {
             ["inspect", "unregister", "register", "start"]
         );
         assert_ne!(
-            calls.borrow()[1]["arguments"],
-            calls.borrow()[2]["arguments"]
+            (
+                calls.borrow()[1]["executable"].clone(),
+                calls.borrow()[1]["arguments"].clone()
+            ),
+            (
+                calls.borrow()[2]["executable"].clone(),
+                calls.borrow()[2]["arguments"].clone()
+            )
         );
         assert_eq!(result["version"], env!("HIVE_PACKAGE_VERSION"));
         assert_eq!(
