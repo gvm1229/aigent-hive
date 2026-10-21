@@ -451,7 +451,9 @@ fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
     {
         use cap_fs_ext::MetadataExt;
         use std::path::{Component, Prefix};
-        let mut components = root.components();
+        let canonical =
+            std::fs::canonicalize(root).map_err(|_| error("monitor root identity unavailable"))?;
+        let mut components = canonical.components();
         let normal = match components.next() {
             Some(Component::Prefix(prefix)) => match prefix.kind() {
                 Prefix::VerbatimDisk(drive) => {

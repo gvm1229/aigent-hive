@@ -64,16 +64,7 @@ fn upgrade_with(
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
     next.enabled = old.enabled;
-    let prior_root = std::fs::canonicalize(root.requested_path())
-        .map_err(|_| error("monitor root identity unavailable"))?;
-    if old.schema_version != 1
-        || (old.task_name != next.task_name && old.task_name != monitor_task_name(&prior_root))
-        || owned_binary_relative(root, &old.executable).is_err()
-    {
-        return Err(error(
-            "existing monitor ownership is not authenticated; no task changed",
-        ));
-    }
+    authenticate_previous(root, &old, &next)?;
     let manifest: Value = load(root, ".hive/install/codex.json")?
         .ok_or_else(|| error("matching Codex installation required for monitor update"))?;
     if manifest["product_version"] != env!("CARGO_PKG_VERSION") {
@@ -154,6 +145,55 @@ fn upgrade_with(
     operation
 }
 
+fn authenticate_previous(
+    root: &PinnedTarget,
+    previous: &Configuration,
+    next: &Configuration,
+) -> Result<(), AdapterError> {
+    let root_text = previous
+        .arguments
+        .strip_prefix("usage monitor run --user-root \"")
+        .and_then(|argument| argument.strip_suffix("\" --output json"))
+        .filter(|argument| !argument.contains(['\"', '\r', '\n']))
+        .ok_or_else(|| {
+            error("existing monitor arguments are not authenticated; no task changed")
+        })?;
+    let prior_path = Path::new(root_text);
+    if !prior_path.is_absolute()
+        || monitor_root_path(prior_path)? != monitor_root_path(root.requested_path())?
+    {
+        return Err(error("existing monitor root differs; no task changed"));
+    }
+    let prior = PinnedTarget::open_usage(prior_path)?;
+    #[cfg(windows)]
+    {
+        use cap_fs_ext::MetadataExt;
+        let before = root
+            .target_dir()
+            .dir_metadata()
+            .map_err(|_| error("monitor root identity unavailable"))?;
+        let after = prior
+            .target_dir()
+            .dir_metadata()
+            .map_err(|_| error("prior monitor root identity unavailable"))?;
+        if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
+            return Err(error(
+                "existing monitor root identity differs; no task changed",
+            ));
+        }
+    }
+    if previous.schema_version != 1
+        || (previous.task_name != next.task_name
+            && previous.task_name != monitor_task_name(prior_path))
+        || owned_binary_relative(&prior, &previous.executable).is_err()
+    {
+        return Err(error(
+            "existing monitor ownership is not authenticated; no task changed",
+        ));
+    }
+    Ok(())
+}
+
 fn pause_previous(
     root: &PinnedTarget,
     previous: &Configuration,
@@ -224,7 +264,10 @@ mod tests {
         old.enabled = enabled;
         old.version = "0.13.0".into();
         old.executable = root.requested_path().join(BASE).join("bin/hive-old.exe");
-        old.arguments = "historical-owned-action".into();
+        old.arguments = format!(
+            "usage monitor run --user-root \"{}\" --output json",
+            root.requested_path().display()
+        );
         if let Some(launcher) = &mut old.launcher {
             launcher.arguments = "historical-owned-action".into();
         }
@@ -376,7 +419,13 @@ mod tests {
     fn prior_extended_task_is_removed_by_its_exact_name_before_normal_registration() {
         let (_directory, root) = fixture(true);
         let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
-        old.task_name = monitor_task_name(&std::fs::canonicalize(root.requested_path()).unwrap());
+        let extended = std::fs::canonicalize(root.requested_path()).unwrap();
+        old.task_name = monitor_task_name(&extended);
+        old.arguments = format!(
+            "usage monitor run --user-root \"{}\" --output json",
+            extended.display()
+        );
+        old.executable = extended.join(BASE).join("bin/hive-old.exe");
         let previous = old.task_name.clone();
         write(&root, CONFIG, &old).unwrap();
         let calls = RefCell::new(Vec::new());
@@ -423,6 +472,30 @@ mod tests {
                 &root,
                 |_, _| panic!("foreign task"),
                 |_, _| panic!("foreign task")
+            )
+            .is_err());
+        }
+    }
+
+    #[test]
+    fn previous_arguments_must_name_the_same_root_with_the_known_command() {
+        let (_directory, root) = fixture(false);
+        let foreign = tempfile::tempdir().unwrap();
+        let original: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        for arguments in [
+            "unrelated-command".into(),
+            format!(
+                "usage monitor run --user-root \"{}\" --output json",
+                foreign.path().display()
+            ),
+        ] {
+            let mut previous = original.clone();
+            previous.arguments = arguments;
+            write(&root, CONFIG, &previous).unwrap();
+            assert!(upgrade_with(
+                &root,
+                |_, _| panic!("untrusted arguments"),
+                |_, _| panic!("untrusted arguments")
             )
             .is_err());
         }
