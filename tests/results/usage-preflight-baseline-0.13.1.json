@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "phase": "passed-source-regression",
+  "product_version": "0.13.1",
+  "source_commit": "a54101ceca18ce5698bf66bbff7187d2e367fde5",
+  "host": "Windows11 x64",
+  "reported_incident": {
+    "installed_version": "0.13.0",
+    "current_remaining_percent": 60,
+    "process_changed": true,
+    "previous_observation_retained": false,
+    "actual_provider_reset_proven": false,
+    "fresh_followup_result": "hive.usage-allowed",
+    "settings_changed": false
+  },
+  "before_fix": {
+    "synthetic_process_changed": "hive.usage-reset; unexpected",
+    "synthetic_expired_baseline": "hive.usage-reset; unexpected"
+  },
+  "after_fix": {
+    "usage_control_tests_passed": 30,
+    "skipped": 1,
+    "skip_reason": "POSIX-only symlink fixture; current host is Windows",
+    "stale_baselines": "new valid observation establishes baseline",
+    "fresh_increase": "one reset halt then normal resume",
+    "ordinary_floor_and_zero_quota": "still block",
+    "strict": "passed",
+    "format": "passed"
+  },
+  "limits": [
+    "the overwritten original baseline is unavailable; the exact real incident cause is not established",
+    "synthetic CLI conformance does not replace desktop interruption acceptance",
+    "the installed0.13.0 executable and protection settings were not changed"
+  ]
+}
