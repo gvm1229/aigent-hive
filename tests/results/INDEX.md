@@ -1629,6 +1629,9 @@
 | [passed](runs/20261021T181016-f36bb49b097d.md) | 공유 초기화 비교의 만료 보정 최종 엄격 검사 | 94c0f2442dd14140acc5bf63d0d295f5909e63fb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T181208-c601212f9b20.md) | 공유 만료 기준의 사용량 제어와 정상 재개 최종 회귀 | 94c0f2442dd14140acc5bf63d0d295f5909e63fb | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T184526-0d5206a890bf.md) | 현재 설치의 최종 보존 갱신 미리보기만 확인 | 983a5759f1c945f72d4fa77ab9a26136fce74147 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T191018-2a9d8a4e7481.md) | 네 번째 공개 시험의 여섯 파일 지문과 태그 독립 대조 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T191121-e2eb76474e3b.md) | 네 번째 공개판의 Windows 활성 비활성 보존 갱신 수용 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T191514-8eee3f556cc5.md) | 설정 삭제 없이 실패한 시험판을 새 공개 시험판으로 복구 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
