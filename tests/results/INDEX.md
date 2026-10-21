@@ -1514,6 +1514,28 @@
 | [passed](runs/20261020T215647-678339b61b74.md) | 실제 공개 0.13.0 사용자 설치의 무변경 갱신 계획 확인 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261020T215745-3bed9542e653.md) | 현재 Windows 앱의 대화 한정 연결만 확인, 중단 없음 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261020T220026-debe2bca8efe.md) | Windows 전체 security 검증 | c797bc3d32547c0050b495124fba62a574658b7b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T221505-fcd3c37ea5d2.md) | 0.13.1 Windows 전체 Python 검증 | 3cc73126cf9e36462e3c01ac5b252f5cc3e8d3bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T221507-8a8e8e3d835a.md) | Python conformance: documentation, security, contract, integration, release | 3cc73126cf9e36462e3c01ac5b252f5cc3e8d3bb | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T222032-1504ad4be8ec.md) | 실행 전 상태 수신 보정의 현재 앱 재시험 빌드 | 3cc73126cf9e36462e3c01ac5b252f5cc3e8d3bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T222230-1dc050396318.md) | 공유 빌드 트리의 별도 출력 이름으로 현재 중단 검증 빌드 | 3cc73126cf9e36462e3c01ac5b252f5cc3e8d3bb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T225003-a3d9f7db2cdd.md) | 표시 전용 창의 실제 숫자·상태 갱신 검사 | 93674e7082f852dae442e5339b2f9b5f74d5e6d6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T231911-c9850bb36474.md) | 확장 경로 안내 보정의 현재 앱 재검증 빌드 | 34a66101b2ec242aac7fa6811d9cfb23a46480ff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T234138-0d985629670a.md) | Python conformance: integration | 34a66101b2ec242aac7fa6811d9cfb23a46480ff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T234228-b74a9b4db884.md) | 중단 검사기의 상태 읽기 공유 권한 회귀 | 34a66101b2ec242aac7fa6811d9cfb23a46480ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T234344-407b5cdb73c9.md) | 중단 검사기와 기존 설치 증거 회귀 | 34a66101b2ec242aac7fa6811d9cfb23a46480ff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T234425-253efe9279a7.md) | 조회 보조 프로세스 정리의 앱·형제 보존 확인 | 34a66101b2ec242aac7fa6811d9cfb23a46480ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T234504-888d5bc812f0.md) | 조회 정리와 보조 복구 뒤 앱·형제 보존 재확인 | edc1fbe5b85eb409cedf6db5469fe6a87f32fb12 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T234755-503bd7aa3558.md) | 감시 재활성화 시간과 실행 버전 회귀 | 209f54eab683bc52dfbc00d1e5db8e81283a0e12 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T234959-3f94e0dbe9c7.md) | 감시 재활성화와 실행 빌드 식별 회귀 재검사 | 209f54eab683bc52dfbc00d1e5db8e81283a0e12 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T235153-13dd34683396.md) | 공개 0.13.0 합성 프로젝트 갱신 자료 생성 | fe95eafb870f5cc6438ca60592c47a8f569f118a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T235211-beb822c22b9c.md) | 0.13.0 이전 안정판 전체 갱신·복구 재검사 | fe95eafb870f5cc6438ca60592c47a8f569f118a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261020T235222-ece4d1a4790b.md) | Python conformance: release | fe95eafb870f5cc6438ca60592c47a8f569f118a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T235407-6b257e478453.md) | 앱 제어 없는 확장 경로 알림 창 실표시 확인 | fe95eafb870f5cc6438ca60592c47a8f569f118a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T235603-3a2ab3994878.md) | Python conformance: release | 75d465307124a217aa1014e61ec9517af9584ca2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261020T235735-a3d2abfcc053.md) | Python conformance: contract | 75d465307124a217aa1014e61ec9517af9584ca2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T000736-2e655df7e0c2.md) | 0.13.1 현재 소스 전체 Rust 회귀 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T000747-187e57b4cb0b.md) | 0.13.1 현재 소스 엄격 검사 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T001825-a7cd90a9c833.md) | 자연어 감시 해제의 격리 사용자 자료 준비 | e7afab494cd37c690cf68a4bd49d90a3251e4396 | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
@@ -1536,3 +1558,9 @@
 제품 사용자 안내: [Windows 표시·닫기 근거](usage-stop-notice-windows-0.12.1.json)·[실제 화면](assets/usage-stop-notice-0.12.1.png). 실제 중단 없이 검증한 안내 창
 
 현재 Windows 결합 수용: [실제 네 실행·읽기 확인·코드 동일성](session-stop-component-qualification-0.12.1.json). 원래 자동 전체 확인 실패 보존, 새 실제 중단 없음
+
+## 0.13.1 현재 Windows 부분 검증
+
+- [하한 중단의 실제 부분 결과](usage-threshold-windows-0.13.1.json): 승인한 두 대화의 실패8회·조회 정리·안내 표시 근거. 셸 자식5초 종료 미달, 전체 수용 미완료
+- [자연어 감시 해제](usage-monitor-natural-disable-0.13.1.json): 정본 안내를 제공한 격리 사용자에서 감시만 비활성·일반 보호 보존. 실제 새 플러그인 설치·생존 감시 종료는 증명 제외
+- [앱 충돌 조사](../../docs/research/unexpected-codex-exit-2026-10-21.md): 주 프로세스 충돌 기록·기존 감시 임시 비활성·시험 예약과 안내 정리, 정확한 충돌 원인 미확정

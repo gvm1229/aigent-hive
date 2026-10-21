@@ -1,0 +1,400 @@
+{
+  "schema_version": 1,
+  "product_target": "0.13.1",
+  "phase": "failed-incomplete-acceptance",
+  "host_os": "Windows-11-10.0.26300-SP0",
+  "desktop_package_version": "26.1013.4894.0",
+  "scope": "two approved local test conversations; synthetic floor 99; existing native user-stop",
+  "real_provider_reset_observed": false,
+  "real_user_installation_changed": false,
+  "app_termination_requested": false,
+  "actuator_source_lf_sha256": "5168ce45044d62fa5dd4e182e95119a97e5653323b0e5902e4995ed25f83ea7b",
+  "actuator_embedded_in_qualified_binary": true,
+  "attempts": [
+    {
+      "attempt": "threshold-reasoning-01",
+      "input_sha256": "9161dfed31471d4e7b972cb88507c3b37e8b51469bd87ddc9d6dce345b2ae696",
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "binary_sha256": "dab6ae05eb4d0e2b02a6cd7a21310e46978124f3183d8843069f6b87cf2c6238",
+      "before_turn_digest": "sha256:150c599119d9044bd18f10399098d7ed2067d50fedf04c5a21e6c6bc35cf89d1",
+      "before_tool_calls": 5,
+      "tool_free_at_detection": true,
+      "error": "RuntimeError: floor stop not confirmed",
+      "controller_incident": {}
+    },
+    {
+      "attempt": "threshold-shell-01",
+      "input_sha256": "42b0f37239495001e3d784a481304c87c61f91f945dba35ca4b350e2c58ec9a9",
+      "phase": "failed",
+      "role": "shell",
+      "subject_digest": "sha256:a23b8b067b3544e545c1a2b4c0ba9dcfd2a280bae0304e30a32393651714fa93",
+      "binary_sha256": "dab6ae05eb4d0e2b02a6cd7a21310e46978124f3183d8843069f6b87cf2c6238",
+      "before_turn_digest": "sha256:ea160421e5212780bc92a33168092cf722b7db73a0d5baa4050ec0854b33e04d",
+      "before_tool_calls": 6,
+      "tool_free_at_detection": false,
+      "error": "RuntimeError: floor stop not confirmed",
+      "controller_incident": {}
+    },
+    {
+      "attempt": "threshold-reasoning-02",
+      "input_sha256": "5c0d64e55e127c91473d27526a1ed457d077cf76c06c6064cc4c47bde856cc91",
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "binary_sha256": "45063e769ee167d138c04d78ea2d39df1fd71d64dcca8ace2893d25aa9f8baca",
+      "before_turn_digest": "sha256:150c599119d9044bd18f10399098d7ed2067d50fedf04c5a21e6c6bc35cf89d1",
+      "before_tool_calls": 5,
+      "tool_free_at_detection": true,
+      "error": "RuntimeError: exact reason/status notice not visible",
+      "controller_incident": {
+        "reason": "usage-threshold",
+        "stop_confirmed": true,
+        "targeted_turns": 1,
+        "confirmed_turns": 1,
+        "detected_at_ms": 1792535054415,
+        "stop_dispatched_at": 1792535054,
+        "stop_finished_at": 1792535055,
+        "stop_method": "desktop-session-interrupt",
+        "confirmed_stop": {
+          "completed_at": 1792535055,
+          "scope_digest": "sha256:0a612d4524c06b75d67210c02a4d39475e3ebdd1c75fdf76508e196663ea00be",
+          "targeted_turns": 1,
+          "elapsed_ms": 955,
+          "request_ms": 191,
+          "app_alive": true
+        }
+      }
+    },
+    {
+      "attempt": "threshold-shell-02",
+      "input_sha256": "f298adc8ec340df80f204e9a52f342836206597d31b885e38397806d0264db8a",
+      "phase": "failed",
+      "role": "shell",
+      "subject_digest": "sha256:a23b8b067b3544e545c1a2b4c0ba9dcfd2a280bae0304e30a32393651714fa93",
+      "binary_sha256": "45063e769ee167d138c04d78ea2d39df1fd71d64dcca8ace2893d25aa9f8baca",
+      "before_turn_digest": "sha256:7057335ee76de933f1cd69735d0ffec530acbdda7c943d4409ba9ff7038bcd87",
+      "before_tool_calls": 3,
+      "tool_free_at_detection": false,
+      "error": "RuntimeError: shell child remained five seconds after detection",
+      "controller_incident": {
+        "reason": "usage-threshold",
+        "stop_confirmed": true,
+        "targeted_turns": 1,
+        "confirmed_turns": 1,
+        "detected_at_ms": 1792535096926,
+        "stop_dispatched_at": 1792535096,
+        "stop_finished_at": 1792535097,
+        "stop_method": "desktop-session-interrupt",
+        "confirmed_stop": {
+          "completed_at": 1792535097,
+          "scope_digest": "sha256:3bd22ce0853206015cb9d0cef02da4629554b79b9b69db2dcb6c5615dc65fcbb",
+          "targeted_turns": 1,
+          "elapsed_ms": 583,
+          "request_ms": 213,
+          "app_alive": true
+        }
+      }
+    },
+    {
+      "attempt": "threshold-reasoning-03",
+      "input_sha256": "5f4cf8e1f9e2fc946c86535fdf7f32418cfae4d4ab75c51726b2d2efeb8ca196",
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "binary_sha256": "45063e769ee167d138c04d78ea2d39df1fd71d64dcca8ace2893d25aa9f8baca",
+      "collector_sha256": "22921fef70d7a2b2161f1b3ae73eff45b1d2c0446e85202ca5f89ec425fa2c8c",
+      "before_turn_digest": "sha256:5df6fc4f3d166075de9218dec1f462887de9ebc933dbf04082f326895e20411f",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": true,
+      "error": "RuntimeError: floor stop not confirmed",
+      "controller_incident": {
+        "reason": "monitor-fault",
+        "stop_confirmed": false,
+        "targeted_turns": 0,
+        "confirmed_turns": 0,
+        "detected_at_ms": 1792535729088,
+        "stop_dispatched_at": 1792535729,
+        "stop_finished_at": 1792535734,
+        "stop_method": "desktop-session-interrupt",
+        "confirmed_stop": null
+      }
+    },
+    {
+      "attempt": "threshold-shell-03",
+      "input_sha256": "a6bdc3b798a338bcd47a6244d31c4eac7e08d131b2c0dfc11024f931878c9aae",
+      "phase": "failed",
+      "role": "shell",
+      "subject_digest": "sha256:a23b8b067b3544e545c1a2b4c0ba9dcfd2a280bae0304e30a32393651714fa93",
+      "binary_sha256": "45063e769ee167d138c04d78ea2d39df1fd71d64dcca8ace2893d25aa9f8baca",
+      "collector_sha256": "22921fef70d7a2b2161f1b3ae73eff45b1d2c0446e85202ca5f89ec425fa2c8c",
+      "before_turn_digest": "sha256:be42ef2ebc877b7f0fd0167c815eb67f6586f7f6ef7494b6b413805ab434a10b",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": false,
+      "native_interruption_verified": true,
+      "app_preserved": true,
+      "error": "RuntimeError: shell child remained five seconds after detection",
+      "stop_receipt": {
+        "completed_at": 1792535747,
+        "scope_digest": "sha256:7a9fb25394e8a7587858b42f3bee82037bf8a5254e0bd483d975b8b572ae18ac",
+        "targeted_turns": 1,
+        "elapsed_ms": 1636,
+        "request_ms": 302,
+        "app_alive": true
+      },
+      "controller_incident": {
+        "reason": "usage-threshold",
+        "stop_confirmed": true,
+        "targeted_turns": 1,
+        "confirmed_turns": 1,
+        "detected_at_ms": 1792535745353,
+        "stop_dispatched_at": 1792535745,
+        "stop_finished_at": 1792535747,
+        "stop_method": "desktop-session-interrupt",
+        "confirmed_stop": {
+          "completed_at": 1792535747,
+          "scope_digest": "sha256:7a9fb25394e8a7587858b42f3bee82037bf8a5254e0bd483d975b8b572ae18ac",
+          "targeted_turns": 1,
+          "elapsed_ms": 1636,
+          "request_ms": 302,
+          "app_alive": true
+        }
+      }
+    },
+    {
+      "attempt": "threshold-reasoning-04",
+      "input_sha256": "84104a5d69f9c8458edb628c461897b56b8c0e5502ca87cf4e90d4f0ba01f2c6",
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "binary_sha256": "45063e769ee167d138c04d78ea2d39df1fd71d64dcca8ace2893d25aa9f8baca",
+      "collector_sha256": "6d4b468fcc3edf6cfa69379a4382406b4597876fafea4a7e76869378f443c1ec",
+      "before_turn_digest": "sha256:85ae68d40dec941378e43019bf4fe332704f75a86c3347da2ced5e65ca02b5f3",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "app_preserved": true,
+      "direct_resume_verified": true,
+      "repeated_stop": false,
+      "monitor_removed": true,
+      "component_failures": [
+        "exact reason/status notice not visible"
+      ],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "stop_receipt": {
+        "completed_at": 1792537684,
+        "scope_digest": "sha256:5252e026230dd8665de151e2a9ad0a190d3788fd31af8b2c97f2a928594c6880",
+        "targeted_turns": 1,
+        "elapsed_ms": 882,
+        "request_ms": 268,
+        "app_alive": true
+      },
+      "notice": {
+        "confirmed": false,
+        "visible": true,
+        "no_unlock": true,
+        "numeric_reason": false,
+        "close_action": true,
+        "floor_reason": true
+      },
+      "controller_incident": {
+        "reason": "usage-threshold",
+        "stop_confirmed": true,
+        "targeted_turns": 1,
+        "confirmed_turns": 1,
+        "detected_at_ms": 1792537683086,
+        "stop_dispatched_at": 1792537683,
+        "stop_finished_at": 1792537684,
+        "stop_method": "desktop-session-interrupt",
+        "confirmed_stop": {
+          "completed_at": 1792537684,
+          "scope_digest": "sha256:5252e026230dd8665de151e2a9ad0a190d3788fd31af8b2c97f2a928594c6880",
+          "targeted_turns": 1,
+          "elapsed_ms": 882,
+          "request_ms": 268,
+          "app_alive": true
+        }
+      }
+    },
+    {
+      "attempt": "threshold-reasoning-05",
+      "input_sha256": "b61cc19a32f756b6cd054b064f948f213c0eefb8d7d41829d5c2cb750c228800",
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "binary_sha256": "83b5b33af3b76a5ca358fc3b6ae8efc8f56ee392856b77709820c0703e54e921",
+      "collector_sha256": "6d4b468fcc3edf6cfa69379a4382406b4597876fafea4a7e76869378f443c1ec",
+      "before_turn_digest": "sha256:8e9856fd1c177dd99c619cf46f519164c798b65caf4b32ab077c02646162ee57",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": true,
+      "error": "RuntimeError: scoped controller exited before stop"
+    }
+  ],
+  "components": {
+    "owned_reader_isolation_initial": {
+      "input_sha256": "7114b191022d0de740b73e33915476094596dd8f024df9729bfb1248b17f6beb",
+      "result": {
+        "schema_version": 1,
+        "scope": "read-only reader cleanup; no native interrupt",
+        "binary_sha256": "8b3ff132407f56af8604985acef6174688eb063409a3f46df89574267425d710",
+        "started_at": "2026-10-20T23:44:27Z",
+        "records": [
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 1274,
+            "error": null,
+            "gap_before_ms": 1274,
+            "id": 1,
+            "next_in_ms": 13725,
+            "observations": 1,
+            "primary_error": null,
+            "source": "persistent",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          },
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 7328,
+            "error": null,
+            "gap_before_ms": 6053,
+            "id": 2,
+            "next_in_ms": 10947,
+            "observations": 2,
+            "primary_error": "observation-worker-exited",
+            "source": "fresh-process",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          },
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 10256,
+            "error": null,
+            "gap_before_ms": 2927,
+            "id": 3,
+            "next_in_ms": 14073,
+            "observations": 3,
+            "primary_error": null,
+            "source": "persistent",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          }
+        ],
+        "phase": "failed",
+        "error": "backup path not exercised"
+      }
+    },
+    "owned_reader_isolation_corrected": {
+      "input_sha256": "eea354dadcd438481439f6343e460461642038fb6ee6655f6c0ef7c3d0af4fb2",
+      "result": {
+        "schema_version": 1,
+        "scope": "read-only reader cleanup; no native interrupt",
+        "binary_sha256": "8b3ff132407f56af8604985acef6174688eb063409a3f46df89574267425d710",
+        "started_at": "2026-10-20T23:45:06Z",
+        "records": [
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 1039,
+            "error": null,
+            "gap_before_ms": 1039,
+            "id": 1,
+            "next_in_ms": 13960,
+            "observations": 1,
+            "primary_error": null,
+            "source": "persistent",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          },
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 7011,
+            "error": null,
+            "gap_before_ms": 5971,
+            "id": 2,
+            "next_in_ms": 11029,
+            "observations": 2,
+            "primary_error": "observation-worker-exited",
+            "source": "fresh-process",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          },
+          {
+            "blind_before": false,
+            "consecutive_failures": 0,
+            "elapsed_ms": 10266,
+            "error": null,
+            "gap_before_ms": 3254,
+            "id": 3,
+            "next_in_ms": 13747,
+            "observations": 3,
+            "primary_error": null,
+            "source": "persistent",
+            "valid": true,
+            "app_preserved": true,
+            "unrelated_sibling_preserved": true
+          }
+        ],
+        "app_preserved_after_supervisor_exit": true,
+        "sibling_preserved_after_supervisor_exit": true,
+        "phase": "passed"
+      }
+    },
+    "verbatim_notice_display": {
+      "input_sha256": "9d58eb47ff03a675d5e7c2352edebc57ba9eef3a9f35a2899c3779df12e1e608",
+      "result": {
+        "scope": "display-only Windows PowerShell 5 extended-path notice",
+        "native_stop_requested": false,
+        "ready": true,
+        "before": {
+          "confirmed": false,
+          "visible": true,
+          "no_unlock": true,
+          "numeric_reason": true,
+          "close_action": true,
+          "floor_reason": true
+        },
+        "after": {
+          "confirmed": true,
+          "visible": true,
+          "no_unlock": true,
+          "numeric_reason": true,
+          "close_action": true,
+          "floor_reason": true
+        },
+        "close": {
+          "confirmed": true,
+          "visible": true,
+          "no_unlock": true,
+          "numeric_reason": true,
+          "close_action": true,
+          "closed": true,
+          "floor_reason": true
+        },
+        "phase": "passed"
+      }
+    }
+  },
+  "remaining": [
+    "shell child exit within five seconds",
+    "final end-to-end acceptance",
+    "cause of later reported application crash",
+    "public test and isolated upgrade"
+  ],
+  "limits": [
+    "component results are not aggregate acceptance",
+    "app preservation is bounded to each recorded test interval",
+    "later app crash retained in docs/research/unexpected-codex-exit-2026-10-21.md",
+    "no simultaneous server-processing or billing guarantee"
+  ]
+}
