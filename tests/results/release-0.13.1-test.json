@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.1",
+  "package_version": "0.13.1-test.1",
+  "phase": "candidate-input-corrected-publication-pending",
+  "attempts": [
+    {
+      "candidate_run_id": 39548192155,
+      "source_commit": "86a4f10965449ff68b839fc9ec53a673d86e6a71",
+      "result": "failed-unpublished",
+      "failed_job": "Every public stable predecessor recovery",
+      "reason": "canonical harness/release/0.13.1/migration-table.json was absent",
+      "correction": "canonical migration, classification and surface data added with an early current-version regression",
+      "local_verification": "13 release checks and 13 real predecessor fixture upgrades/rollback/interrupted recovery passed on Windows"
+    }
+  ],
+  "latest_before": "0.13.0",
+  "test_before": "0.13.0-test.1",
+  "real_user_installation_changed": false
+}
