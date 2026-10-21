@@ -1,7 +1,8 @@
 //! Preserve the monitor choice and history while replacing its version-bound executable/task.
 use super::{
-    configuration, error, load, lock, monitor_status, now, platform, require_app_safe_control,
-    require_desktop_version, task_request, with_state, write, Configuration, BASE, CONFIG,
+    configuration, error, load, lock, monitor_root_path, monitor_status, monitor_task_name, now,
+    platform, require_app_safe_control, require_desktop_version, task_request, with_state, write,
+    Configuration, BASE, CONFIG,
 };
 use crate::run::{AdapterError, PinnedTarget};
 use hive_core::sha256_digest;
@@ -30,13 +31,28 @@ fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError
     if sha256_digest(&bytes) != config.executable_digest {
         return Err(error("monitor executable changed during update"));
     }
-    let relative = config
-        .executable
-        .strip_prefix(root.requested_path())
-        .map_err(|_| error("upgraded monitor executable escaped user root"))?;
-    let before = root.snapshot_bounded(relative, 128 * 1024 * 1024)?;
-    root.publish_runtime(relative, &before, &bytes)?;
+    let relative = owned_binary_relative(root, &config.executable)?;
+    let before = root.snapshot_bounded(&relative, 128 * 1024 * 1024)?;
+    root.publish_runtime(&relative, &before, &bytes)?;
     Ok(())
+}
+
+fn owned_binary_relative(
+    root: &PinnedTarget,
+    executable: &Path,
+) -> Result<std::path::PathBuf, AdapterError> {
+    let normal = monitor_root_path(root.requested_path())?;
+    for spelling in [normal.as_path(), root.requested_path()] {
+        if let Ok(name) = executable.strip_prefix(spelling.join(BASE).join("bin")) {
+            let mut components = name.components();
+            if matches!(components.next(), Some(std::path::Component::Normal(_)))
+                && components.next().is_none()
+            {
+                return Ok(Path::new(BASE).join("bin").join(name));
+            }
+        }
+    }
+    Err(error("monitor executable escaped its owned bin directory"))
 }
 
 fn upgrade_with(
@@ -48,11 +64,11 @@ fn upgrade_with(
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
     next.enabled = old.enabled;
+    let prior_root = std::fs::canonicalize(root.requested_path())
+        .map_err(|_| error("monitor root identity unavailable"))?;
     if old.schema_version != 1
-        || old.task_name != next.task_name
-        || !old
-            .executable
-            .starts_with(root.requested_path().join(BASE).join("bin"))
+        || (old.task_name != next.task_name && old.task_name != monitor_task_name(&prior_root))
+        || owned_binary_relative(root, &old.executable).is_err()
     {
         return Err(error(
             "existing monitor ownership is not authenticated; no task changed",
@@ -77,12 +93,22 @@ fn upgrade_with(
                     &json!({"operation":"inspect"}),
                     Duration::from_secs(5),
                 )?)?;
-                // Exact stored action/description must match; never stop by process name.
-                call(&task_request(&old, "unregister"), Duration::from_secs(15))?;
-                journal["phase"] = json!("old-task-removed");
-                write(root, JOURNAL, &journal)?;
             }
-            write(root, CONFIG, &next)?;
+            let previous_lease = pause_previous(root, &old, Duration::from_secs(15))?;
+            if old.enabled {
+                // Exact stored action/description must match; never stop by process name.
+                if let Err(failure) =
+                    call(&task_request(&old, "unregister"), Duration::from_secs(15))
+                {
+                    write(root, CONFIG, &old)?;
+                    return Err(failure);
+                }
+                journal["phase"] = json!("old-task-removed");
+            }
+            if let Err(failure) = write(root, CONFIG, &next) {
+                write(root, CONFIG, &old)?;
+                return Err(failure);
+            }
             if old.enabled {
                 with_state(root, |state| {
                     // Preserve baseline, incidents, deduplication and manual-resume receipts.
@@ -94,6 +120,7 @@ fn upgrade_with(
                     state.heartbeat_uptime_ms = None;
                     Ok(())
                 })?;
+                drop(previous_lease);
                 call(&task_request(&next, "register"), Duration::from_secs(15))?;
                 call(&task_request(&next, "start"), Duration::from_secs(10))?;
             }
@@ -125,6 +152,30 @@ fn upgrade_with(
         // Never enable a disabled choice, discard evidence, or restart an older unsafe binary.
     }
     operation
+}
+
+fn pause_previous(
+    root: &PinnedTarget,
+    previous: &Configuration,
+    timeout: Duration,
+) -> Result<std::fs::File, AdapterError> {
+    let mut paused = previous.clone();
+    paused.enabled = false;
+    write(root, CONFIG, &paused)?;
+    let began = Instant::now();
+    loop {
+        match lock(root, "controller.lock") {
+            Ok(lease) => return Ok(lease),
+            Err(AdapterError::Conflict(_)) if began.elapsed() < timeout => {
+                thread::sleep(Duration::from_millis(50));
+            }
+            Err(failure) => {
+                // No state migration has occurred; keep the saved opt-in and old reader format.
+                write(root, CONFIG, previous)?;
+                return Err(failure);
+            }
+        }
+    }
 }
 
 fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, AdapterError> {
@@ -221,6 +272,160 @@ mod tests {
                 .unwrap()
                 .enabled
         );
+    }
+
+    #[test]
+    fn previous_reader_releases_lease_before_state_format_changes() {
+        let (_directory, root) = fixture(true);
+        let old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let old_state = json!({"schema_version":2,"legacy_only_field":"keep exactly"});
+        write(&root, STATE, &old_state).unwrap();
+        let lease = lock(&root, "controller.lock").unwrap();
+        let path = root.requested_path().to_path_buf();
+        let reader = thread::spawn(move || {
+            let pinned = PinnedTarget::open_usage(&path).unwrap();
+            let began = Instant::now();
+            while load::<Configuration>(&pinned, CONFIG)
+                .unwrap()
+                .unwrap()
+                .enabled
+            {
+                assert!(began.elapsed() < Duration::from_secs(3));
+                thread::sleep(Duration::from_millis(10));
+            }
+            assert_eq!(load::<Value>(&pinned, STATE).unwrap().unwrap(), old_state);
+            drop(lease);
+        });
+        let acquired = pause_previous(&root, &old, Duration::from_secs(4)).unwrap();
+        reader.join().unwrap();
+        assert!(lock(&root, "controller.lock").is_err());
+        drop(acquired);
+        assert!(lock(&root, "controller.lock").is_ok());
+    }
+
+    #[test]
+    fn stuck_previous_reader_preserves_choice_and_original_state() {
+        let (_directory, root) = fixture(true);
+        let old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let original: Value = load(&root, STATE).unwrap().unwrap();
+        let _lease = lock(&root, "controller.lock").unwrap();
+        assert!(pause_previous(&root, &old, Duration::ZERO).is_err());
+        assert!(
+            load::<Configuration>(&root, CONFIG)
+                .unwrap()
+                .unwrap()
+                .enabled
+        );
+        assert_eq!(load::<Value>(&root, STATE).unwrap().unwrap(), original);
+    }
+
+    #[test]
+    fn scheduler_refusal_restores_old_choice_without_migrating_state() {
+        let (_directory, root) = fixture(true);
+        let original: Value = load(&root, STATE).unwrap().unwrap();
+        assert!(upgrade_with(
+            &root,
+            |request, _| {
+                if request["operation"] == "unregister" {
+                    assert!(!load::<Configuration>(&root, CONFIG)?.unwrap().enabled);
+                    assert!(lock(&root, "controller.lock").is_err());
+                    return Err(error("injected scheduler refusal"));
+                }
+                Ok(json!({"desktop_package_version":DESKTOP_VERSION}))
+            },
+            |_, _| panic!("failed replacement cannot start health checks"),
+        )
+        .is_err());
+        assert!(
+            load::<Configuration>(&root, CONFIG)
+                .unwrap()
+                .unwrap()
+                .enabled
+        );
+        assert_eq!(load::<Value>(&root, STATE).unwrap().unwrap(), original);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn public_plain_root_and_verbatim_update_share_the_same_owned_task() {
+        let (_directory, root) = fixture(false);
+        let normal = monitor_root_path(root.requested_path()).unwrap();
+        let extended = std::fs::canonicalize(&normal).unwrap();
+        assert_eq!(
+            configuration(&normal).unwrap().task_name,
+            configuration(&extended).unwrap().task_name
+        );
+        let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        old.executable = normal.join(BASE).join("bin/hive-old.exe");
+        let task = old.task_name.clone();
+        write(&root, CONFIG, &old).unwrap();
+        upgrade_with(
+            &root,
+            |_, _| panic!("disabled choice"),
+            |_, _| panic!("disabled choice"),
+        )
+        .unwrap();
+        let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        assert_eq!(current.task_name, task);
+        assert!(current.executable.starts_with(&normal));
+        assert!(!current.executable.to_string_lossy().contains('/'));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn prior_extended_task_is_removed_by_its_exact_name_before_normal_registration() {
+        let (_directory, root) = fixture(true);
+        let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        old.task_name = monitor_task_name(&std::fs::canonicalize(root.requested_path()).unwrap());
+        let previous = old.task_name.clone();
+        write(&root, CONFIG, &old).unwrap();
+        let calls = RefCell::new(Vec::new());
+        upgrade_with(
+            &root,
+            |request, _| {
+                calls.borrow_mut().push(request.clone());
+                Ok(json!({"desktop_package_version":DESKTOP_VERSION}))
+            },
+            |_, _| Ok(json!({"fresh_observations":4})),
+        )
+        .unwrap();
+        assert_eq!(calls.borrow()[1]["task_name"], previous);
+        assert_eq!(
+            calls.borrow()[2]["task_name"],
+            configuration(root.requested_path()).unwrap().task_name
+        );
+        assert_ne!(
+            calls.borrow()[1]["task_name"],
+            calls.borrow()[2]["task_name"]
+        );
+    }
+
+    #[test]
+    fn foreign_names_and_escaping_binaries_never_reach_the_scheduler() {
+        let (_directory, root) = fixture(false);
+        let original: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        for (name, executable) in [
+            ("unrelated-task".to_owned(), original.executable.clone()),
+            (
+                original.task_name.clone(),
+                root.requested_path().join(BASE).join("bin/../foreign.exe"),
+            ),
+            (
+                original.task_name.clone(),
+                root.requested_path().join("other/hive.exe"),
+            ),
+        ] {
+            let mut changed = original.clone();
+            changed.task_name = name;
+            changed.executable = executable;
+            write(&root, CONFIG, &changed).unwrap();
+            assert!(upgrade_with(
+                &root,
+                |_, _| panic!("foreign task"),
+                |_, _| panic!("foreign task")
+            )
+            .is_err());
+        }
     }
 
     #[test]

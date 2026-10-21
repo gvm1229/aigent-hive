@@ -35,6 +35,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 const BASE: &str = ".hive/runtime/usage-monitor";
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
+const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 const DESKTOP_VERSION: &str = "26.1013.4894.0";
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
@@ -375,7 +376,7 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         "healthy"
     };
     Ok(
-        json!({"configuration":configuration,"state":state,"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
+        json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
         "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
         "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
@@ -386,6 +387,8 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
 }
 
 fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
+    let normal = monitor_root_path(root)?;
+    let root = normal.as_path();
     let executable =
         std::env::current_exe().map_err(|_| error("cannot identify monitor executable"))?;
     let digest = sha256_digest(
@@ -397,12 +400,16 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
     if root_text.contains(['"', '\r', '\n']) {
         return Err(error("invalid monitor root"));
     }
-    let task_key = sha256_digest(root_text.to_lowercase().as_bytes());
-    let installed_executable = root.join(BASE).join("bin").join(format!(
-        "hive-{}-{}.exe",
-        env!("CARGO_PKG_VERSION"),
-        &digest[7..23]
-    ));
+    let installed_executable: PathBuf = root
+        .join(BASE)
+        .join("bin")
+        .join(format!(
+            "hive-{}-{}.exe",
+            env!("CARGO_PKG_VERSION"),
+            &digest[7..23]
+        ))
+        .components()
+        .collect();
     let launch = format!(
         "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
         installed_executable.to_string_lossy().replace('\'', "''"),
@@ -426,10 +433,62 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
         version: env!("HIVE_PACKAGE_VERSION").into(),
         executable: installed_executable,
         executable_digest: digest,
-        task_name: format!("AigentHive-UsageMonitor-{}", &task_key[7..23]),
+        task_name: monitor_task_name(root),
         arguments: format!("usage monitor run --user-root \"{root_text}\" --output json"),
         launcher,
     })
+}
+
+fn monitor_task_name(root: &Path) -> String {
+    let key = sha256_digest(root.to_string_lossy().to_lowercase().as_bytes());
+    format!("AigentHive-UsageMonitor-{}", &key[7..23])
+}
+
+/// Normalize process-facing Windows names only after comparing pinned directory identities.
+#[cfg_attr(not(windows), allow(clippy::unnecessary_wraps))]
+fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
+    #[cfg(windows)]
+    {
+        use cap_fs_ext::MetadataExt;
+        use std::path::{Component, Prefix};
+        let mut components = root.components();
+        let normal = match components.next() {
+            Some(Component::Prefix(prefix)) => match prefix.kind() {
+                Prefix::VerbatimDisk(drive) => {
+                    Some(PathBuf::from(format!("{}:\\", char::from(drive))))
+                }
+                Prefix::VerbatimUNC(server, share) => {
+                    Some(PathBuf::from("\\\\").join(server).join(share))
+                }
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(mut normal) = normal {
+            for component in components {
+                if component != Component::RootDir {
+                    normal.push(component.as_os_str());
+                }
+            }
+            let expected = PinnedTarget::open_usage(root)?;
+            let actual = PinnedTarget::open_usage(&normal)?;
+            let before = expected
+                .target_dir()
+                .dir_metadata()
+                .map_err(|_| error("monitor root identity unavailable"))?;
+            let after = actual
+                .target_dir()
+                .dir_metadata()
+                .map_err(|_| error("normalized monitor root identity unavailable"))?;
+            if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
+                return Err(error(
+                    "normalized monitor root identifies another directory",
+                ));
+            }
+            return Ok(normal);
+        }
+    }
+    Ok(root.to_owned())
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
     let mut config = configuration(root)?;
@@ -588,7 +647,15 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
-    controller_scoped(root, None)
+    let mut report = json!({"started_at":now(),"pid":std::process::id(),
+        "version":env!("HIVE_PACKAGE_VERSION"),"error":null});
+    write(root, STARTUP, &report)?;
+    let result = controller_scoped(root, None);
+    if let Err(failure) = &result {
+        report["error"] = json!(failure.message());
+        let _ = write(root, STARTUP, &report);
+    }
+    result
 }
 
 fn controller_scoped(
@@ -634,6 +701,9 @@ fn controller_scoped(
     let desktop = desktop::Desktop::start_scoped(qualification);
     let mut fault_notice = None;
     loop {
+        if load::<Configuration>(root, CONFIG)?.is_some_and(|current| !current.enabled) {
+            return Ok(json!({"stopped":true}));
+        }
         if let Ok(value) = controller_loop(root, active, &desktop) {
             return Ok(value);
         }
@@ -1041,6 +1111,21 @@ mod tests {
         assert_eq!(status["sensor_health"], "stopped");
         assert_eq!(status["monitoring_verified"], false);
         assert!(status["running_monitor_version"].is_null());
+    }
+    #[test]
+    fn rejected_startup_is_visible_without_publishing_a_stop_or_changing_choice() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut config = configuration(temporary.path()).unwrap();
+        config.enabled = false;
+        write(&root, CONFIG, &config).unwrap();
+        assert!(controller(&root).is_err());
+        let status = monitor_status(&root).unwrap();
+        assert!(status["startup"]["error"].is_string());
+        assert_eq!(status["startup"]["version"], env!("HIVE_PACKAGE_VERSION"));
+        assert_eq!(status["configuration"]["enabled"], false);
+        assert!(!temporary.path().join(STATE).exists());
+        assert_eq!(status["monitoring_verified"], false);
     }
     #[test]
     fn preview_is_nonmutating_and_activation_requires_matching_installation() {
