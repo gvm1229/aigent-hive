@@ -80,6 +80,18 @@
       },
       "scope": "exact option-2 source; Linux full Rust and all conformance lanes; Windows/macOS smoke and transfers",
       "skipped": "documentation-only duplicate omitted because product lanes executed"
+    },
+    {
+      "source_commit": "d43bb9918f8dfa9a86c0f0fb2f99c2f5cb185130",
+      "run_id": 39549130916,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39549130916",
+      "status": "passed",
+      "job_results": {
+        "success": 16,
+        "skipped": 1
+      },
+      "scope": "exact option-2 source; Linux full Rust and all conformance lanes; Windows/macOS smoke and transfers",
+      "skipped": "documentation-only duplicate omitted because product lanes executed"
     }
   ],
   "scope_limit": "CI does not prove local AI interruption on other operating systems or server billing termination. Current Windows live evidence is separate; ordinary external command exit is excluded by explicit option-2 authority."
