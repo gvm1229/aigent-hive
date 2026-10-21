@@ -29,6 +29,28 @@
         "documentation_tests": 5,
         "passed": true
       }
+    },
+    {
+      "source_commit": "bf97a4aaf3933d9c14eb265a8d4b8b2bcc02e859",
+      "run_id": 39523693391,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39523693391",
+      "status": "success",
+      "passed_jobs": 16,
+      "skipped_jobs": [
+        {
+          "name": "Documentation-only conformance",
+          "reason": "product change selected the complete product lanes instead"
+        }
+      ],
+      "verified_scopes": [
+        "full Linux Rust",
+        "Windows and macOS platform smoke",
+        "Linux documentation, security, contract, integration and release conformance",
+        "Copier contract",
+        "Windows-macOS and Windows-Linux transfer checks",
+        "develop push gate"
+      ],
+      "live_windows_session_acceptance": "not covered by hosted CI"
     }
   ],
   "scope_limit": "CI does not qualify direct interruption on macOS or Linux, or the remaining live Windows shell-child criterion"
