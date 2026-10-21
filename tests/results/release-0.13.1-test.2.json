@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.1",
+  "package_version": "0.13.1-test.2",
+  "phase": "published-but-not-accepted",
+  "source_commit": "23314c44aa3a2eb6a8fe4b407cf88d07f13a1661",
+  "product_tree_sha256": "sha256:81d7e3928559af1b0f9bf0cffc8b4ac77b22e71e606593ece9cea94c02eae7ff",
+  "candidate_run_id": 39560738094,
+  "candidate_result": "success",
+  "publication_attempts": [
+    {
+      "run_id": 39563404358,
+      "result": "failed-registry-processing-after-six-accepted-uploads"
+    },
+    {
+      "run_id": 39564940601,
+      "result": "success-same-candidate-immutable-package-recovery"
+    }
+  ],
+  "public_verification": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.1",
+    "package_version": "0.13.1-test.2",
+    "source_commit": "23314c44aa3a2eb6a8fe4b407cf88d07f13a1661",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 17262,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-mLynT3ugINVwVPNmADLl1IqkdcyRGXP7ZbTW0oVqbK5s6f219s/ZLVAeyjLYArVnwKUcEN5EaYcQTqeBw00UNQ=="
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 11025910,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-vMmSseWC1jspMlSWUrADXdaJ20TvetYd4sMK8RKsbA8dsWJJf6jwquFsrJbbtXcwCp4g31nM/oe5TZHSaEnqEw=="
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 10633980,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-blYwvWbdbH7QdWWegmewxBrJUXe2VW0tNjqMqepdjM5NPAUrYNKcnuO06P47WxKNwbdsr7qbgPkC9g1JfbnQ3A=="
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 11380738,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-vp8GGPzlPpm7A8fASLzGJhgz5k2v7poPW9oWlC2FdfMl0O8Jpia0WUPjphK8XZLWabBtxs6IkW/yTDQjb8QjZA=="
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 11992291,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-dlTwCaq1dzV1XIvev86k8HMnsOqzSDoXbqKD91b+CvvArS84RKnHaKeibL8uFC3PhZ7Zi6VMnU6r76ejYTvwxA=="
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.1-test.2",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.2",
+        "tarball_length": 11499274,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-PSTCuPeaJF4PTdVlDxBp+v4JgctNIsDA9vjl203EJ1eweLQ3nrFmeR98wKgEnkSYkOZdqBKNKGnEQ7rM4nvUHg=="
+      }
+    ],
+    "github_prerelease": true,
+    "annotated_tag_source_verified": true,
+    "release_asset_count": 25,
+    "real_user_installation_changed": false,
+    "collector_sha256": "0ac382c2e00a95a8f2a8f87edc70baea05bf1ae2f1a8c174daf45fb3eb886858"
+  },
+  "public_acceptance": {
+    "run_id": 39565369210,
+    "result": "failed",
+    "Windows_x64": "passed",
+    "Linux_musl_x64": "passed",
+    "macOS_arm64": {
+      "result": "failed",
+      "job_id": 119106248047,
+      "reason": "source-wiki vector rebuild helper process-exit signal6; unchanged optional vector source; FTS remains available",
+      "proof_limit": "second repeated failure; not waived or marked accepted"
+    }
+  },
+  "isolated_Windows_upgrade": {
+    "schema_version": 1,
+    "phase": "failed",
+    "product_target": "0.13.1",
+    "package_version": "0.13.1-test.2",
+    "cases": [],
+    "registration": "isolated simulated host plugin registration; real Windows tasks and real native usage observations",
+    "real_user_installation_changed": false,
+    "app_termination_requested": false,
+    "collector_sha256": "f9795efe389c3dfc975ff78ede9373ceb71f0e96361e5cfca012ddf33f05d8ff",
+    "current_step": "public-owner-update-disabled",
+    "error_type": "RuntimeError",
+    "real_user_bytes_preserved": true,
+    "app_preserved": true
+  },
+  "upgrade_failure_reason": "user projection authentication corrected; monitor transition refused equivalent plain/verbatim Windows root; original fixture retained",
+  "next_test": "0.13.1-test.3",
+  "stable_and_real_user_installation_approved": false
+}
