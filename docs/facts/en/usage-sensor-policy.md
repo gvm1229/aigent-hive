@@ -15,11 +15,11 @@ sources:
   - "repo:crates/hive-cli/src/usage_monitor/sensor.rs#sha256:16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
-  - "repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9"
+  - "repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841"
   - "repo:tests/results/usage-sensor-soak-0.13.1.json#sha256:0765e3e50a78ec7b1d58be1fc030a0641ea82413ec1c43b46ddb335fe7079df7"
 links: [automatic-dispatch-guard, supported-hosts]
-reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
+reviewed_revision: "git:e7afab494cd37c690cf68a4bd49d90a3251e4396"
 status: active
 ---
 

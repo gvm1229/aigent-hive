@@ -9,19 +9,21 @@ summary: "과거 협력형 검사와 현재 직접 실행 취소의 보장 범�
 tags: [guard, history, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:b8e7b8f90c305c715a2cd7a0e4e1fc89133ad57f8f1fbfe8aeef2e8efe62d20e"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:79a51f9f11e9bc01cbc97bb6d0943068f325dcac473cdf3070d9e2aee413846a"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9f00da30cddf8bbc0083c2e90786e3061fe50947cf41e183c4c8ee9bd91af5c1"
-  - "repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9"
+  - "repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1"
   - "repo:docs/research/usage-guard-stop-comparison.md#sha256:bdd17b2745522c0f5ed813a4dcf1673e0fa34185970bca7e20402f5eac55015f"
 links: [automatic-dispatch-guard, installed-usage-guard, quota-reset-session-control]
-reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
+reviewed_revision: "git:e7afab494cd37c690cf68a4bd49d90a3251e4396"
 status: active
 ---
 
 # 사용량 보호의 중단 계층
 
--0.7~0.9 공개 보호는 새 자동 실행 차단. 소스 전용15초 감시는 halt.json과 다음 검사에서 중단, 추론 중 직접 취소 제외.2026년8월 제거
--0.13.0은 수집·초기화 자료 재사용, 독립 감시·Codex 직접 중단 추가. 조건: 초기화·60초 관측 공백
-- 개발0.13.1은 기존 하한도 같은 경로에 연결, 재개 허용은 소유 대화에 결합
-- 과거 검사 통과로 추론 중단 증명 불가. 새 긴 추론·도구 수용 대기, 다른 호스트 직접 중단 증명 제외
+- 0.7~0.9 공개 보호: 새 자동 실행 차단
+- 소스 전용15초 감시: halt.json과 다음 검사로 중단, 추론 중 직접 취소 제외.2026년8월 제거
+- 0.13.0 선택형: 수집·초기화 자료 재사용, 독립 감시·Codex 직접 중단. 초기화·60초 관측 공백 조건
+- 개발0.13.1: 기존 하한도 같은 경로에 연결, 재개 사건은 소유 대화에 결합
+- 현재 Windows 긴 추론·같은 하한의 직접 재개 확인. 셸 대화 취소 뒤 자식5초 종료 실패, 전체 수용 미완료
+- 과거 검사로 추론 중단 증명 불가, Windows 확인으로 다른 호스트 지원 증명 불가

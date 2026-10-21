@@ -15,17 +15,17 @@
 ## 실행 항목
 
 - [x] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9
-- [ ] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
-  - state: agent-owned; depends: UG131-001; owner: 현재 Codex; reason: 실제 앱의 중단 전 상태 수신 누락 재현, 보정·재수용 진행
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
+- [x] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
 - [x] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:20d7ea0fbdbfa3cb34bb0bd0548453660d556d628eda16a609e15a2e8ff562a9
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:0c6cf716cd863a1a15a1cb842be38302e1a8a803b068bcc2ea4e0e0b6d2316c1
 - [ ] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
-  - state: agent-owned; depends: UG131-003; owner: 현재 Codex; reason: 전체 Python·정본 회귀 확인 필요
+  - state: agent-owned; depends: UG131-003; owner: 현재 Codex; reason: Windows 전체 회귀·엄격 검사 통과, 정본·원격 CI 확인 진행
 - [ ] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
-  - state: agent-owned; depends: UG131-004; owner: 현재 Codex; reason: 긴 추론 중단·직접 재개 확인, 셸 자식 종료 미달·알림 재수용·예기치 않은 앱 종료 조사 진행
+  - state: awaiting-external-evidence; depends: UG131-004; owner: 현재 Windows Codex 제어 연결·사용자; reason: 현재 연결의 셸 자식 취소 미지원과 앱 충돌 원인 미확정. 지원된 취소 연결·실제5초 종료, 충돌 진단 자료 필요
 - [ ] [UG131-006] 공개0.13.1-test.1·격리 실제 갱신과 후속 update 수용
-  - state: agent-owned; depends: UG131-005; owner: 현재 Codex; reason: 구현 수용 뒤 번호 시험 게시·확인 필요
+  - state: awaiting-external-evidence; depends: UG131-005; owner: 현재 Windows 수용; reason: 실제 앱 수용 미달로 공개 시험·격리 공개 파일 갱신 진행 금지. 수용 뒤 현재 Codex가 수행
 
 ## 구현 순서와 세부 계약
 
@@ -35,6 +35,7 @@
 4. 대화·계정·구간·정책의 하한 사건을 기록, 정상 관측이 하한 이하인 첫 경우 포함. 기존 native user-stop 경로에 대상 대화 목록 전달. 중단된 대화의 명시적 재개에는 같은 사건의 사전 하한 차단도 억제, 자동·새 대화·0%에는 허용 승계 금지
 5. 알림에 잔량·하한·구간·정확한 중단 확인 결과 표시. 공개 명령 추가 없이 기존 상태에 경로·진단·실제 감시 버전 표시. 구버전 상태는 기록으로 이관하되 과거 사건 재전송 금지
 6. updater가 기존 활성 감시를 새 검증 실행 파일·예약 작업으로 전환하고 정상 관측 확인. 실패는 복구 또는 명시적 미완료, 성공 표시 금지. 꺼진 감시는 꺼진 상태 유지
+   - 명시적 다시 켜기만 새60초 관측 대기 시작. 예전 단조 시각·오래된 정상 조회로 즉시 중단하거나 정상 감시로 표시하는 동작 방지. 예기치 않은 재시작·갱신은 기존 공백 유지, 실행 버전에 시험판·개발판 구분 포함
 
 ## 검증과 복구
 
@@ -43,11 +44,12 @@
 - 독립 Windows 검사기가 긴 추론과 셸의 정확한 실행 식별자·중단 사건·앱 생존·창 이유·시험 자식 종료 확인. 자연 종료와 도구 대기를 실제 추론 중단으로 계산 금지
 - 최소30분·여러4분 연결 교체·기본 경로 장애 후 보조 회복, 정상 자료가 있는 상태의 허위60초 중단0건. 실제 제공자 초기화·과금 종료·다른 OS 직접 중단은 증명 제외
 - `0.13.0 → 0.13.1` 활성/비활성 감시의 갱신·실패 복구·데이터 보존과 일반 `hive update` 확인. 실사용자 설치는 승인 전 격리 환경으로 검증
+- 공개0.13.0 실행 파일로 만든 합성 프로젝트를 이전 버전 갱신 회귀 자료에 추가. 실제 사용자 폴더·설정의 복제나 개발판으로 만든 과거 자료 대체 금지
 - 실패는 증거 보존 뒤 입력·코드 수정으로 재검증. 지식·설정·실행 기록 삭제나 앱 종료를 복구 수단으로 사용 금지
 - 앱 종료 조사: Windows 11의 앱 기록·Crashpad·예약 실행 시각을 읽기 전용으로 대조. 소유 조회 작업 정리가 부모·형제 프로세스를 보존하는 회귀 확인 후 원인과 한계를 정본에 기록. 해당 조사 동안 실제 중단 호출 없이 자동 회귀·표시 검증 계속
 
 ## 현재 수용 상태
 
-- 구현·모듈 회귀2개 완료는 실제 앱의 실행 중단 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
+- 구현·모듈 회귀3개 완료는 실제 앱의 전체 수용과 별도. UG131-005·006 미완료 동안 전체 기능 완료·게시·설치 주장 금지
 - 승인한 시험 대화2개만 사용. 추론 중단955ms·882ms와 같은 하한의 직접 재개 확인. 셸 대화 취소583ms·1,636ms이나 자식 프로세스5초 종료 미달; 전체 수용 실패 보존
 - 마지막 시험은 초기 연결 시간 초과로 중단 요청 전 종료. 이후 오전8시28분26초 앱 주 프로세스의 `capture_kind=crash` 기록 발견. 충돌을 일으킨 정확한 원인은 미확정
