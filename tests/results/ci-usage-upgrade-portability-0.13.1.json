@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.1",
+  "scope": "cross-platform unit-test portability after authenticated Windows monitor path correction",
+  "source_commit": "fa7cb5373526e095a7fcecbb0367f9fc4b139973",
+  "ci_run_id": 39614369286,
+  "Windows_platform_smoke": "passed",
+  "failed_main_unit_suites": [
+    {
+      "host": "Linux GitHub runner",
+      "job_id": 119271433320,
+      "main_binary_passed": 564,
+      "main_binary_failed": 1,
+      "main_binary_ignored": 1
+    },
+    {
+      "host": "macOS GitHub runner",
+      "job_id": 119271433391,
+      "main_binary_passed": 566,
+      "main_binary_failed": 1,
+      "main_binary_ignored": 1
+    }
+  ],
+  "failed_test": "usage_monitor::upgrade::tests::enabled_update_uses_exact_old_and_new_owned_actions_and_preserves_history",
+  "reason": "test incorrectly required different argument strings; native executable can change while the same valid root arguments remain unchanged",
+  "correction": "compare the complete executable-and-arguments action tuple; production monitor behavior is unchanged",
+  "local_Windows_migration_regressions": "10 passed after correction",
+  "next_exact_CI": "required before the unpublished third public-test candidate",
+  "public_test_published_by_this_attempt": false,
+  "actual_user_installation_changed": false
+}
