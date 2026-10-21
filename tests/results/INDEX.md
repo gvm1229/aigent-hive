@@ -1586,6 +1586,11 @@
 | [passed](runs/20261021T132215-edd83c974a4b.md) | 커밋한 감시 인계 보정의 실행 파일 확정 | e3de3ae391682ec9da2b0811591cc4bd682b1e77 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T132228-662ae2a04e7e.md) | 확정한 감시 인계 코드의 공개 이전판 보존 갱신 검증 | e3de3ae391682ec9da2b0811591cc4bd682b1e77 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T132326-e28789b822ff.md) | 세 번째 공개 시험의 Windows 이전판 격리 설치 준비 | e3de3ae391682ec9da2b0811591cc4bd682b1e77 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T134742-796b7929d88c.md) | Windows 짧은 경로 별칭과 이전 감시 인자 인증 회귀 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T135005-d883bd1e2cc0.md) | Windows 짧은 별칭 보정의 엄격 검사 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T135219-df4555aa71d1.md) | Windows 짧은 별칭 인증 보정 실행 파일 빌드 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T135429-0272a24c6641.md) | Windows 짧은 별칭 보정 뒤 실제 이전판 감시 보존 갱신 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261021T135850-6d8d5899a0b3.md) | 실제 Windows 짧은 별칭의 이전 예약을 긴 이름으로 보존 전환 | 2c8c82040e2d609b138ecfe08225e0b0a60183cf | Windows-11-10.0.26300-SP0 |
 
 ## 0.13.0 정식 공개
 
@@ -1611,6 +1616,7 @@
 
 ## 0.13.1 현재 Windows 검증
 
+- [Windows 짧은 별칭의 실제 갱신](usage-windows-short-path-0.13.1.json): 온라인 Windows 검사 실패 보존, 실제 짧은 이름의 공개0.13.0 예약을 긴 이름으로 전환. 활성·비활성·정상 조회4회·설정/기록/앱 보존 통과, 새 정확 소스 CI 별도
 - [Windows 감시 전환·긴 대화 연결](usage-windows-transition-0.13.1.json): 공개0.13.0 합성 이전판의 활성·비활성 보존 갱신과 정상 조회4회 통과, 현재 앱 유지. 실패 원본 보존, 추가 대화 중단 없음
 - [두 번째 공개 시험](release-0.13.1-test.2.json): 게시·여섯 파일 대조·Windows/Linux 공개 수용 통과, 실제 Windows 갱신과macOS 벡터 실패로 수용 미완료
 - [하한 중단의 실제 부분 결과](usage-threshold-windows-0.13.1.json): 승인한 두 대화의 실패8회·조회 정리·안내 표시 근거. 셸 자식5초 종료 미달, 전체 수용 미완료
