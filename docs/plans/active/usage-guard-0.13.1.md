@@ -25,8 +25,8 @@
   - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [x] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
   - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
-- [ ] [UG131-006] 공개0.13.1-test.2·격리 실제 갱신과 후속 update 수용
-  - state: agent-owned; depends: UG131-005,UG131-007; owner: 현재 Codex; reason: test.1의 부분 선택 갱신 실패 보존. 인증 수정 뒤test.2의 공개 갱신·수용, 실사용자 설치·정식 게시 승인 별도
+- [ ] [UG131-006] 공개0.13.1-test.3·격리 실제 갱신과 후속 update 수용
+  - state: agent-owned; depends: UG131-005,UG131-007,UG131-008; owner: 현재 Codex; reason: test.1·2 갱신 실패 보존. 경로 보정 뒤test.3의 공개 갱신·수용, 실사용자 설치·정식 게시 승인 별도
 
 ## 구현 순서와 세부 계약
 
