@@ -33,6 +33,14 @@ fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError
     }
     let relative = owned_binary_relative(root, &config.executable)?;
     let before = root.snapshot_bounded(&relative, 128 * 1024 * 1024)?;
+    if let Some(installed) = before.bytes() {
+        if installed == bytes.as_slice() {
+            return Ok(());
+        }
+        return Err(error(
+            "existing version-bound monitor binary differs; no overwrite",
+        ));
+    }
     root.publish_runtime(&relative, &before, &bytes)?;
     Ok(())
 }
@@ -314,6 +322,49 @@ mod tests {
                 .unwrap()
                 .unwrap()
                 .enabled
+        );
+    }
+
+    #[test]
+    fn identical_large_monitor_binary_can_be_staged_twice_without_rewriting() {
+        let (_directory, root) = fixture(false);
+        let next = configuration(root.requested_path()).unwrap();
+        stage(&root, &next).unwrap();
+        let relative = owned_binary_relative(&root, &next.executable).unwrap();
+        let before = root.snapshot_bounded(&relative, 128 * 1024 * 1024).unwrap();
+        assert!(before.bytes().unwrap().len() > 1024 * 1024);
+        let modified = std::fs::metadata(&next.executable)
+            .unwrap()
+            .modified()
+            .unwrap();
+        stage(&root, &next).unwrap();
+        assert_eq!(
+            std::fs::metadata(&next.executable)
+                .unwrap()
+                .modified()
+                .unwrap(),
+            modified
+        );
+        assert_eq!(
+            root.snapshot_bounded(&relative, 128 * 1024 * 1024)
+                .unwrap()
+                .bytes(),
+            before.bytes()
+        );
+    }
+
+    #[test]
+    fn differing_existing_version_bound_binary_is_preserved() {
+        let (_directory, root) = fixture(false);
+        let next = configuration(root.requested_path()).unwrap();
+        let relative = owned_binary_relative(&root, &next.executable).unwrap();
+        let absent = root.snapshot(&relative).unwrap();
+        root.publish_runtime(&relative, &absent, b"preserve unexpected content")
+            .unwrap();
+        assert!(stage(&root, &next).is_err());
+        assert_eq!(
+            root.snapshot(&relative).unwrap().bytes(),
+            Some(b"preserve unexpected content".as_slice())
         );
     }
 
