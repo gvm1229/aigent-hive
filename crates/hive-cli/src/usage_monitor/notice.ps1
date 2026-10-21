@@ -68,7 +68,10 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         $view.Explanation=$thresholdText+"`nAigent Hive가 해당 Codex 작업에 중단을 요청했습니다."
         $view.Reason='설정한 사용량 하한 도달'
     }
-    if(-not $readFailed -and $null -eq $current) {
+    if(-not $readFailed -and $null -eq $current -and $context.reason -eq 'monitor-fault') {
+        $view.Status='보호 기록을 읽지 못해 중단을 요청했습니다';$view.Tone='warning'
+        $view.StatusDetail='사용량 보호 기록을 확인하지 못했습니다. 실제 중단 확인 결과는 기록하지 못했습니다.'
+    } elseif(-not $readFailed -and $null -eq $current) {
         $view.Status='이전 중단 안내';$view.Tone='warning'
         $view.StatusDetail='현재 중단 기록을 찾지 못했습니다. 아래의 원래 중단 이유를 참고해 주세요.'
     } elseif(-not $readFailed -and -not $matching) {
@@ -212,7 +215,7 @@ function New-NoticeWindow($context,[string]$root,[string]$logo) {
 }
 
 try {
-    $context=@{incident=[string]$request.incident;reason=[string]$request.reason;detected_at=0L;is_test=$false;preview=($request.preview -eq $true)}
+    $context=@{incident=[string]$request.incident;reason=[string]$request.reason;detected_at=[long]$request.detected_at;is_test=$false;preview=($request.preview -eq $true)}
     try {$context.is_test=(Read-NoticeState ([IO.Path]::Combine([string]$request.user_root,'.hive\install\codex.json'))).acceptance_fixture -eq $true}catch{}
     $window=New-NoticeWindow $context ([string]$request.user_root) ([string]$request.logo_png_base64)
     $null=$window.ShowDialog()

@@ -151,7 +151,7 @@ pub(super) fn notify(
     thread::spawn(move || {
         let delivered = (|| {
             let mut child = command(NOTICE).ok()?.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
-            let request = json!({"operation":"notify","message":message,"reason":reason,"user_root":root,"incident":incident,
+            let request = json!({"operation":"notify","message":message,"reason":reason,"user_root":root,"incident":incident,"detected_at":super::now(),
                 "logo_png_base64":base64::engine::general_purpose::STANDARD.encode(LOGO)});
             child.stdin.take()?.write_all(&serde_json::to_vec(&request).ok()?).ok()?;
             let stdout = child.stdout.take()?;

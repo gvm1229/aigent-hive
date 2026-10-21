@@ -125,6 +125,15 @@ $verbatim=Read-NoticeState $extended
         self.assertEqual(view["Status"], "상태를 확인할 수 없습니다")
         self.assertNotEqual(view["Tone"], "success")
 
+    def test_fault_without_persisted_incident_keeps_reason_time_and_uncertainty(self):
+        view = self.view("$context.reason='monitor-fault';"
+                         "$state.incident=$null;Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn("보호 기록을 읽지 못해", view["Status"])
+        self.assertIn("기록하지 못했습니다", view["StatusDetail"])
+        self.assertNotEqual(view["When"], "확인 중")
+        self.assertNotEqual(view["Tone"], "success")
+        self.assertNotIn("60초", view["Explanation"])
+
     def test_new_incident_does_not_reuse_old_confirmation(self):
         view = self.view("$state.incident.digest='other';Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
         self.assertEqual(view["Status"], "새 보호 사건 발생")
