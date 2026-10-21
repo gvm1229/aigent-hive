@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "scope": "actual installed0.13.0 user files to source13.1 dry run; no installation or scheduled task change",
+  "exit_code": 0,
+  "code": "hive.user-install-dry-run-complete",
+  "bytes_preserved": true,
+  "guard_saved_choice": true,
+  "stored_monitor_version": "0.12.1",
+  "installation_performed": false,
+  "monitor_activated": false,
+  "limit": "dry-run user projection does not validate a completed actual monitor migration",
+  "protected_roles": [
+    "user-settings",
+    "monitor-configuration",
+    "monitor-state",
+    "installed-native-executable"
+  ],
+  "limits": [
+    "only the four listed byte snapshots are compared",
+    "read-only user projection preview;not an installation,live-monitor migration or full-user-tree audit"
+  ]
+}
