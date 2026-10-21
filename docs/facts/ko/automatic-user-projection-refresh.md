@@ -12,10 +12,10 @@ sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:d62d3065eb447fe5653b11fbe396490c15471839cb4553c6a3fca1abb368baec"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:ee4aa374f3452d250a376e66c1d1d49ce28c076b95aab8a8bdb9b155e05bca7e"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
-  - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:73992d268b0405cd8e8aeb80ecc4ad5cb1c09ce4a001b3b14cf1b9ffeb18952b"
+  - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:a5e5881578cd99f1583a00c5a14bca9bc1324a48"
+reviewed_revision: "git:96a1348bd276a6feeb215d765609d2f3e53c37e1"
 status: active
 ---
 
