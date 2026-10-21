@@ -47,6 +47,7 @@ CASE
         self.assertEqual(view["Banner"], "")
         self.assertNotIn("hive usage", str(view))
         self.assertIn("자동으로", view["Automatic"])
+        self.assertIn("일반 외부 명령은 계속 실행될 수 있습니다", view["Automatic"])
 
     def test_sensor_failure_is_not_presented_as_a_reset(self):
         view = self.view("$state.incident.reason='sensor-unresponsive';Get-NoticeView $state $context $true|ConvertTo-Json -Compress")

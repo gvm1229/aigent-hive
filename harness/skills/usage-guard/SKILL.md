@@ -108,3 +108,7 @@ locks. Users can resume or send a new message directly in Codex. The official-lo
 only explains the cause and status and has one close button. It never executes a command,
 acknowledges, unlocks, or resumes work. `disable` removes only the owned scheduled task and
 retains incident evidence and staged bytes. Existing thresholds and zero-quota checks remain.
+
+Already-started ordinary external commands can continue after a chat stops. This exception does
+not cover local AI sessions or subagents: they remain interruption targets under their owner's
+policy. Never report an AI child as stopped based only on its parent turn stopping.

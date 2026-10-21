@@ -50,7 +50,7 @@ function Get-NoticeView($state,$context,[bool]$enabled,[bool]$readFailed=$false)
         Explanation=if($reset){"Aigent Hive가 사용량 초기화를 감지했습니다.`n새 할당량을 보호하기 위해 작업 중단을 요청했습니다."}elseif($sensor){"Aigent Hive가 60초 동안 사용량을 확인하지 못했습니다.`n한도 보호를 위해 작업 중단을 요청했습니다."}else{"Aigent Hive가 사용량 보호 상태를 확인하지 못했습니다.`n한도 보호를 위해 작업 중단을 요청했습니다."}
         Reason=$reason;Status='중단 상태 확인 중';StatusDetail='앱에서 작업 중단 결과를 확인하고 있습니다.';Tone='warning'
         App=if($state.app_alive){'Codex 앱은 열려 있습니다.'}else{'Codex 앱의 상태를 확인해 주세요.'}
-        Automatic='이전 작업은 자동으로 다시 시작하지 않습니다.'
+        Automatic="이전 작업은 자동으로 다시 시작하지 않습니다.`n이미 시작한 일반 외부 명령은 계속 실행될 수 있습니다."
         Next="Codex에서 원하는 대화를 재개하거나 새 메시지를 보내세요.`n별도의 확인이나 해제 절차는 없습니다."
         When=if($context.detected_at -gt 0){[DateTimeOffset]::FromUnixTimeSeconds([long]$context.detected_at).ToLocalTime().ToString('yyyy.MM.dd  HH:mm:ss')}else{'확인 중'}
         Banner=if($context.preview){'화면 미리보기 · 실제 조회나 작업 중단 없음'}elseif($context.is_test){'격리 시험 · 실제 초기화가 아닌 시험 신호'}else{''}
