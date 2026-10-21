@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.0",
+  "host": "codex",
+  "host_version_range": ">=0.145.0 <1.0.0",
+  "source_release_digest": "sha256:ea483a1ff7493cf2884e84d6112b13b38da53f49dd8aefc08e984e7e7bbe28f6",
+  "plan_digest": "sha256:7ecfcd516858d73f95b19f43d943f6b980918055640c09c2ac14e834a003fdc2",
+  "last_backup": null,
+  "guidance_path": ".codex/AGENTS.md",
+  "entries": [
+    {
+      "path": ".codex/AGENTS.md",
+      "digest": "sha256:396c0ecd58684e27103aa84d610e9e84c60e0c9a97ef15c708d77490eec014aa",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "shared-marker"
+    },
+    {
+      "path": ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
+      "digest": "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "host-adapter-metadata"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/.claude-plugin/plugin.json",
+      "digest": "sha256:f2445a2483c2d7571bfa4a6c41f4821c0892792c467c92eac7cd6de5a48e58fb",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/.codex-plugin/plugin.json",
+      "digest": "sha256:093dfdf399da4f334cece2c0fdb0873faa7cd6859f93a1432c52f33cd0b26204",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/assets/hive-logo-plugin.png",
+      "digest": "sha256:d132e2c654cf3eb5077a57ea178f1714666ce240820b102308929dac1f5d3c93",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/bin/hive-claude-usage-capture",
+      "digest": "sha256:d347a2eff52a7908b16d048e50f69abc0696699ad7b02b0d4a1bedb425a5c93b",
+      "executable": true,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/prompt-refine/SKILL.md",
+      "digest": "sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/prompt-refine/agents/openai.yaml",
+      "digest": "sha256:6334c43ca29315b9ec3f67cc44816caebe544ca54c85db05ea2c84be958d8158",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/SKILL.md",
+      "digest": "sha256:471ec9acccabedb64e01dd136a36d6f65a5959ae7bfa46005f9253c7565fb4ef",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/agents/openai.yaml",
+      "digest": "sha256:02bc45a8c4b76b46d5895a54f7a983cf28edc1912838e8210fd2d59f185d1729",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/references/control.md",
+      "digest": "sha256:7ea27aea7ce7aedad2a8aa2857377701f1b11f866bdb9b3df8f2aaa1ed56aa37",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/usage-guard/references/sensors.md",
+      "digest": "sha256:3dea9ec758313c7a05104b435b8be7566fb18b0bb1c2352c91afb82ef57700b4",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md",
+      "digest": "sha256:cf32fd58324f630d383593776f6d04cd3f9af72b7c2f125fa572c65b8303e841",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/agents/openai.yaml",
+      "digest": "sha256:0337b83eb2823cc27dd9b7dcc69c1504ef75b495d81e37f6cd708f37f302e924",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/references/language.md",
+      "digest": "sha256:2e1c11fe550fd219c5462bf9b208107ab58478769a6e5b65d62fe658a31bbf27",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/references/questions.md",
+      "digest": "sha256:1e8cc1e03bb79a3d2785991b7b52c3347fd1757f4a59253077b7c3d1e7156b0d",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/references/reconfiguration.md",
+      "digest": "sha256:ddf1a6f4d16a053ee348050938045289fd32b01ed0e9e447223d6afa4ce4d4f2",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/references/recovery.md",
+      "digest": "sha256:40f004b3c365e9b570145a339a1fed7e3d5dae2fb2275627c72c91963210f1ab",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/references/workflow.md",
+      "digest": "sha256:c1a1cc05ea9b67f090e5f55e339cde75d07846e68fcdce60e2ebb9c8812b25c8",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    },
+    {
+      "path": ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/scripts/resolve-hive.ps1",
+      "digest": "sha256:145b36e12fb3bf9fee674ecd146960415553b9f35fc0e0a84037bf26b87efb71",
+      "executable": false,
+      "unix_mode": null,
+      "ownership": "immutable-plugin-package"
+    }
+  ]
+}

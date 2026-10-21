@@ -4016,20 +4016,12 @@ fn historical_09x_user_inventory(
         }
     }
 
-    if !files.iter().all(|(relative, _)| {
-        if !historical_user_artifact_required(host, relative) {
-            return true;
-        }
-        request.installed_entries.iter().any(|entry| {
-            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
-                && historical_user_artifact_matches(
-                    request.product_version,
-                    host,
-                    &entry.path,
-                    &entry.digest,
-                )
-        })
-    }) {
+    if !historical_user_files_complete(
+        host,
+        request.product_version,
+        request.installed_entries,
+        files,
+    ) {
         return None;
     }
 
@@ -4040,6 +4032,38 @@ fn historical_09x_user_inventory(
         source_release_digest: request.source_release_digest.to_owned(),
         guidance_path: portable(request.installed_guidance_path),
         entries: request.installed_entries.to_vec(),
+    })
+}
+
+fn historical_user_files_complete(
+    host: UserHost,
+    version: &str,
+    entries: &[UserOwnershipEntry],
+    files: &[(&str, &str)],
+) -> bool {
+    // The caller authenticates every included byte. Require complete families
+    // for the user's selected Skills, plus the release's required metadata.
+    let selected_skills = entries
+        .iter()
+        .filter_map(|entry| historical_user_artifact_relative(host, &entry.path))
+        .filter_map(|relative| relative.strip_prefix("skills/")?.split_once('/'))
+        .map(|(name, _)| name)
+        .collect::<BTreeSet<_>>();
+    files.iter().all(|(relative, _)| {
+        if !historical_user_artifact_required(host, relative) {
+            return true;
+        }
+        if relative
+            .strip_prefix("skills/")
+            .and_then(|suffix| suffix.split_once('/'))
+            .is_some_and(|(name, _)| !selected_skills.contains(name))
+        {
+            return true;
+        }
+        entries.iter().any(|entry| {
+            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
+                && historical_user_artifact_matches(version, host, &entry.path, &entry.digest)
+        })
     })
 }
 
@@ -9333,6 +9357,61 @@ mod tests {
             assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
             assert_eq!(upgraded.host, host);
         }
+    }
+
+    #[test]
+    fn public_0130_selected_skills_authenticate_complete_known_families_only() {
+        let mut manifest: UserOwnershipManifest = serde_json::from_slice(include_bytes!(
+            "../../../tests/fixtures/user-predecessors/0.13.0/partial-codex-manifest.json"
+        ))
+        .unwrap();
+        assert_eq!(manifest.entries.len(), 20);
+        assert_eq!(
+            source_release_digest_from_entries(&manifest.entries),
+            manifest.source_release_digest
+        );
+        for entry in &mut manifest.entries {
+            entry.unix_mode = installed_unix_mode(entry.executable);
+        }
+        let authenticate = |entries: &[UserOwnershipEntry]| {
+            historical_09x_user_inventory(
+                UserHost::Codex,
+                &InventoryAuthentication {
+                    product_version: "0.13.0",
+                    installed_host_version_range: &manifest.host_version_range,
+                    source_release_digest: &source_release_digest_from_entries(entries),
+                    installed_entries: entries,
+                    installed_guidance_path: Path::new(&manifest.guidance_path),
+                    current_guidance_path: Path::new(&manifest.guidance_path),
+                    current_source_release_digest: "not-the-current-release",
+                    current_entries: &[],
+                    authenticated_prior: None,
+                },
+            )
+        };
+        let authenticated = authenticate(&manifest.entries).expect("real public selected install");
+        assert_user_entries_equal(&authenticated.entries, &manifest.entries);
+        let mut incomplete = manifest.entries.clone();
+        incomplete.retain(|entry| !entry.path.ends_with("user-setup/references/workflow.md"));
+        assert!(authenticate(&incomplete).is_none());
+        let mut missing_core = manifest.entries.clone();
+        missing_core.retain(|entry| !entry.path.ends_with(".codex-plugin/plugin.json"));
+        assert!(authenticate(&missing_core).is_none());
+        let mut modified = manifest.entries.clone();
+        let entry = modified
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("SKILL.md"))
+            .unwrap();
+        entry.digest = sha256_digest(b"untrusted replacement");
+        assert!(authenticate(&modified).is_none());
+        let mut unknown = manifest.entries.clone();
+        let entry = unknown
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("SKILL.md"))
+            .unwrap();
+        entry.path = ".hive/marketplaces/codex/plugins/aigent-hive/skills/unknown/SKILL.md".into();
+        unknown.sort_by(|left, right| left.path.cmp(&right.path));
+        assert!(authenticate(&unknown).is_none());
     }
 
     #[test]
