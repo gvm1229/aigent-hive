@@ -10,7 +10,7 @@ tags: [reset, session, usage]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:836d4ac233d8e719a9cd1b5a09a1deee7111a7c4e208f95f07e277fa3c899b98"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:79a51f9f11e9bc01cbc97bb6d0943068f325dcac473cdf3070d9e2aee413846a"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:09a27cf643e59088c6966d4a10e659069662860c8646db86b195f5bd1d13bafb"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:798f0e43b17f3446547899b0355cca2b177779889b1245ce4cec7dd0bfcc26de"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:da62eb6a722d291596514eb8a8eeb0ba5f58f80bfc503469c10318737db5e244"
   - "repo:docs/guides/installed-usage-guard.md#sha256:735fffd7960d1dca621b1de7bb2fa7f77ef232cda6c75c4165afda76c9f8da50"
@@ -24,7 +24,7 @@ sources:
   - "repo:tests/results/session-stop-one-shot-qualification-0.12.1.json#sha256:000da296ad912dc0d30d30baed0f79f8a88193d6b09606bd75eff29e1dbe4406"
   - "repo:tests/results/session-stop-partial-windows-0.12.1.json#sha256:1f1d27dae9ef95f345c39fa018dce9f01b752cd765d24de3609b1ac7280a4071"
 links: [automatic-dispatch-guard, installed-usage-guard, usage-stop-notice]
-reviewed_revision: "git:37051d042c3a7dc584484d01fc821a2be140ce03"
+reviewed_revision: "git:a5e5881578cd99f1583a00c5a14bca9bc1324a48"
 status: active
 ---
 

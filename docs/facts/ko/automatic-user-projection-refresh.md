@@ -12,10 +12,10 @@ sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:d62d3065eb447fe5653b11fbe396490c15471839cb4553c6a3fca1abb368baec"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:ee4aa374f3452d250a376e66c1d1d49ce28c076b95aab8a8bdb9b155e05bca7e"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ffaa44da03bc2179a4b9d7e743fb42d556506338072fe7de2d73dc3100409971"
-  - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:42922efa2e4014307f6936d18fff37cdc359c7cdd5017c3a04f752650f5ea2de"
+  - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:73992d268b0405cd8e8aeb80ecc4ad5cb1c09ce4a001b3b14cf1b9ffeb18952b"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:9fc4580a60a40af3161efb32b68726d66b41f294"
+reviewed_revision: "git:a5e5881578cd99f1583a00c5a14bca9bc1324a48"
 status: active
 ---
 
@@ -27,3 +27,5 @@ status: active
 -0.13.1은 새 사용자 갱신 실행 파일에서 활성 감시도 교체. 선택·기록 보존, 미완료 전환의 성공 표시 금지
 
 - 공개0.13.0의 부분 선택도 알려진 묶음 전체로 인증, 미선택 Skill 요구 제외. 설정·지식·기록 보존 확인
+- Windows 감시 갱신은 이전 감시기 종료 확인 뒤 기록 형식 전환, 현재 앱의 활성·비활성 보존 갱신 확인
+
