@@ -28,20 +28,28 @@ pub(crate) fn upgrade_existing(user_root: &Path) -> Result<Option<Value>, Adapte
 fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
     let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
         .map_err(|_| error("cannot stage upgraded monitor executable"))?;
-    if sha256_digest(&bytes) != config.executable_digest {
+    stage_bytes(root, config, &bytes)
+}
+
+fn stage_bytes(
+    root: &PinnedTarget,
+    config: &Configuration,
+    bytes: &[u8],
+) -> Result<(), AdapterError> {
+    if sha256_digest(bytes) != config.executable_digest {
         return Err(error("monitor executable changed during update"));
     }
     let relative = owned_binary_relative(root, &config.executable)?;
     let before = root.snapshot_bounded(&relative, 128 * 1024 * 1024)?;
     if let Some(installed) = before.bytes() {
-        if installed == bytes.as_slice() {
+        if installed == bytes {
             return Ok(());
         }
         return Err(error(
             "existing version-bound monitor binary differs; no overwrite",
         ));
     }
-    root.publish_runtime(&relative, &before, &bytes)?;
+    root.publish_runtime(&relative, &before, bytes)?;
     Ok(())
 }
 
@@ -328,8 +336,10 @@ mod tests {
     #[test]
     fn identical_large_monitor_binary_can_be_staged_twice_without_rewriting() {
         let (_directory, root) = fixture(false);
-        let next = configuration(root.requested_path()).unwrap();
-        stage(&root, &next).unwrap();
+        let bytes = vec![0x6d; 1024 * 1024 + 17];
+        let mut next = configuration(root.requested_path()).unwrap();
+        next.executable_digest = sha256_digest(&bytes);
+        stage_bytes(&root, &next, &bytes).unwrap();
         let relative = owned_binary_relative(&root, &next.executable).unwrap();
         let before = root.snapshot_bounded(&relative, 128 * 1024 * 1024).unwrap();
         assert!(before.bytes().unwrap().len() > 1024 * 1024);
@@ -337,7 +347,7 @@ mod tests {
             .unwrap()
             .modified()
             .unwrap();
-        stage(&root, &next).unwrap();
+        stage_bytes(&root, &next, &bytes).unwrap();
         assert_eq!(
             std::fs::metadata(&next.executable)
                 .unwrap()
