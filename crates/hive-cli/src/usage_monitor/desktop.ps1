@@ -8,7 +8,7 @@ $ProgressPreference = 'SilentlyContinue'
 function Assert-DesktopVersion([string]$version) {
     if($version -ne '26.1013.4894.0'){throw 'Desktop version requires control qualification'}
 }
-Add-Type -TypeDefinition @'
+Add-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -16,6 +16,80 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.Collections;
+using System.Collections.Generic;
+using System.Web.Script.Serialization;
+public static class HiveDesktopJson {
+    static IDictionary<string,object> Map(object value) { return value as IDictionary<string,object>; }
+    static object Get(object value, string key) {
+        var map=Map(value); object found;
+        return map!=null && map.TryGetValue(key,out found) ? found : null;
+    }
+    static Dictionary<string,object> Pick(object value, params string[] keys) {
+        var result=new Dictionary<string,object>(StringComparer.Ordinal);
+        var map=Map(value);
+        if(map!=null) foreach(string key in keys) if(map.ContainsKey(key)) result[key]=map[key];
+        return result;
+    }
+    static IList Array(object value) { return value as IList ?? new object[0]; }
+    static object Turn(object value) {
+        var result=Pick(value,"turnId","status");
+        if(Get(value,"itemsPagination")!=null) result["itemsPagination"]=true;
+        return result;
+    }
+    static object State(object value) {
+        var state=Pick(value,"id","hostId");
+        state["threadRuntimeStatus"]=Pick(Get(value,"threadRuntimeStatus"),"type");
+        state["threadGoal"]=Pick(Get(value,"threadGoal"),"status");
+        var turns=new List<object>();
+        foreach(object turn in Array(Get(value,"turns"))) turns.Add(Turn(turn));
+        state["turns"]=turns;
+        object original=Get(value,"turnHistory");
+        var history=Pick(original,"kind");
+        if((string)Get(original,"kind")=="canonical") {
+            object content=Get(original,"history");
+            var entities=new Dictionary<string,object>(StringComparer.Ordinal);
+            var input=Map(Get(content,"entitiesByKey"));
+            if(input==null || Get(content,"islands")==null) throw new IOException("Invalid turn order metadata");
+            foreach(var pair in input) entities[pair.Key]=Turn(pair.Value);
+            var islands=new List<object>();
+            foreach(object island in Array(Get(content,"islands"))) {
+                var entries=new List<object>();
+                foreach(object entry in Array(Get(island,"entries"))) entries.Add(Pick(entry,"value"));
+                islands.Add(new Dictionary<string,object>{{"entries",entries}});
+            }
+            history["history"]=new Dictionary<string,object>{{"entitiesByKey",entities},{"islands",islands}};
+        }
+        state["turnHistory"]=history;
+        return state;
+    }
+    public static string Compact(string frame) {
+        var json=new JavaScriptSerializer { MaxJsonLength=67108864, RecursionLimit=256 };
+        object source=json.DeserializeObject(frame);
+        var result=Pick(source,"type","requestId","sourceClientId","method","version","resultType","handledByClientId","error");
+        string type=Get(source,"type") as string;
+        if(type=="response") result["result"]=Pick(Get(source,"result"),"clientId","ok","goalPauseError","interruptedTurnId");
+        else if(type=="broadcast") {
+            object parameters=Get(source,"params");
+            var filtered=Pick(parameters,"hostId","conversationId","following");
+            if((string)Get(source,"method")=="thread-stream-state-changed") {
+                object change=Get(parameters,"change");
+                var selected=Pick(change,"type");
+                if((string)Get(change,"type")=="snapshot") selected["conversationState"]=State(Get(change,"conversationState"));
+                else {
+                    var patches=new List<object>();
+                    foreach(object patch in Array(Get(change,"patches"))) patches.Add(Pick(patch,"path"));
+                    selected["patches"]=patches;
+                }
+                filtered["change"]=selected;
+            }
+            result["params"]=filtered;
+        }
+        string output=json.Serialize(result);
+        if(Encoding.UTF8.GetByteCount(output)>262144) throw new IOException("Desktop metadata exceeds limit");
+        return output;
+    }
+}
 public sealed class HiveDesktopPipe : IDisposable {
     [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint pid);
@@ -37,8 +111,8 @@ public sealed class HiveDesktopPipe : IDisposable {
     void ReadLoop() {
         try { while (Alive) {
             int size = BitConverter.ToInt32(Exact(4), 0);
-            if (size < 2 || size > 16777216) throw new IOException("Invalid desktop frame size");
-            string frame = new UTF8Encoding(false, true).GetString(Exact(size));
+            if (size < 2 || size > 67108864) throw new IOException("Invalid desktop frame size");
+            string frame = HiveDesktopJson.Compact(new UTF8Encoding(false, true).GetString(Exact(size)));
             if (Interlocked.Add(ref bufferedBytes, frame.Length * 2L) > 33554432 || !frames.TryAdd(frame)) throw new IOException("Desktop queue overflow");
         } } catch { Alive = false; }
     }
