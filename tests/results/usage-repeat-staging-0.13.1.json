@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "phase": "passed-source-Windows",
+  "product_version": "0.13.1",
+  "behavior_commit": "85429c317d820992e24482ba7dc55adaef1bbaf1",
+  "portable_regression_commit": "d171a40275d66602d7afc576071eea482014444a",
+  "qualified_binary_digest": "sha256:1d96a56378f60e9498e6f85ff7c51bb8de10b3abc0443e9f7a23eacfd20095d1",
+  "host": "Windows11 x64 / Codex26.1013.4894.0",
+  "before_fix": "same large binary repeated staging failed the generic1MiB bound",
+  "unit_tests": {
+    "monitor_passed": 56,
+    "manual_sensor_ignored": 1,
+    "portable_migration_passed": 12,
+    "strict": "passed",
+    "format": "passed"
+  },
+  "actual_upgrade": {
+    "schema_version": 1,
+    "status": "passed",
+    "scope": "real public0.13.0 synthetic monitor choices to source; no synthetic quota signal",
+    "cases": [
+      {
+        "choice": "disabled",
+        "passed": true,
+        "short_alias_actually_used": true,
+        "old_short_alias_task_removed": true,
+        "consecutive_applies": 2,
+        "same_large_binary_preserved_without_rewrite": true,
+        "exact_source_binary_verified": true,
+        "fresh_observations": 0,
+        "running_monitor_version": null,
+        "history_and_settings_preserved": true,
+        "safety_abort": false,
+        "app_preserved": true
+      },
+      {
+        "choice": "enabled",
+        "passed": true,
+        "short_alias_actually_used": true,
+        "old_short_alias_task_removed": true,
+        "consecutive_applies": 2,
+        "same_large_binary_preserved_without_rewrite": true,
+        "exact_source_binary_verified": true,
+        "fresh_observations": 4,
+        "running_monitor_version": "0.13.1",
+        "history_and_settings_preserved": true,
+        "safety_abort": false,
+        "app_preserved": true
+      }
+    ],
+    "app_control_requested": false,
+    "real_user_installation_changed": false,
+    "app_preserved": true
+  },
+  "limits": [
+    "source proof only; publictest4 acceptance remains required",
+    "no synthetic quota signal or AI interruption; no real user installation change"
+  ]
+}
