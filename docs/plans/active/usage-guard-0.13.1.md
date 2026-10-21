@@ -16,15 +16,15 @@
 ## 실행 항목
 
 - [x] [UG131-001] 조회 작업 격리·보조 조회·정상 관측 검증 보정
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [x] [UG131-002] 대화별 정책과 하한 사건·중단·재개 연결
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [x] [UG131-003] 원인 알림·상태·감시 버전 전환·자연어 제어 지침
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [x] [UG131-004] 자동 회귀·형식·버전·갱신 보존 검증
-  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+  - state: complete; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [x] [UG131-005] 현재 Windows 긴 추론·도구 취소·직접 재개·30분 조회 수용
-  - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:a6cfb80317b25eaa2154ba52b17769ed6a85bad9e8aada46dd4a2f2e34991b65
+  - state: complete; depends: UG131-004; evidence: repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e
 - [ ] [UG131-006] 공개0.13.1-test.1·격리 실제 갱신과 후속 update 수용
   - state: agent-owned; depends: UG131-005; owner: 현재 Codex; reason: 선택2의 실제 앱 수용 통과. 다음 공개0.13.1-test.1과 격리 갱신 검증 진행, 실사용자 설치·정식 게시 승인 별도
 
@@ -37,6 +37,7 @@
 5. 알림에 잔량·하한·구간·정확한 중단 확인 결과 표시. 공개 명령 추가 없이 기존 상태에 경로·진단·실제 감시 버전 표시. 구버전 상태는 기록으로 이관하되 과거 사건 재전송 금지
 6. updater가 기존 활성 감시를 새 검증 실행 파일·예약 작업으로 전환하고 정상 관측 확인. 실패는 복구 또는 명시적 미완료, 성공 표시 금지. 꺼진 감시는 꺼진 상태 유지
    - 명시적 다시 켜기만 새60초 관측 대기 시작. 예전 단조 시각·오래된 정상 조회로 즉시 중단하거나 정상 감시로 표시하는 동작 방지. 예기치 않은 재시작·갱신은 기존 공백 유지, 실행 버전에 시험판·개발판 구분 포함
+   - 공개 준비: `harness/release/0.13.1/`의 갱신 경로·출시 분류·기능 목록 정본 생성. 기존 정본0.13.0에서 대상13.1·이전 범위 상한13.0·오류 수정 분류·순번23 적용, 시험 자료를 배포 권위로 사용하는 처리 금지. 현재 버전 정본 존재·전체 이전 공개판 경로를 자동 검사에 포함, 후보·실패 복구 재검증
 
 ## 검증과 복구
 
