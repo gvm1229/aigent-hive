@@ -169,10 +169,10 @@ mod tests {
     fn fixture(enabled: bool) -> (tempfile::TempDir, PinnedTarget) {
         let directory = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(directory.path()).unwrap();
-        let mut old = configuration(directory.path()).unwrap();
+        let mut old = configuration(root.requested_path()).unwrap();
         old.enabled = enabled;
         old.version = "0.13.0".into();
-        old.executable = directory.path().join(BASE).join("bin/hive-old.exe");
+        old.executable = root.requested_path().join(BASE).join("bin/hive-old.exe");
         old.arguments = "historical-owned-action".into();
         if let Some(launcher) = &mut old.launcher {
             launcher.arguments = "historical-owned-action".into();
@@ -253,7 +253,7 @@ mod tests {
             calls.borrow()[1]["arguments"],
             calls.borrow()[2]["arguments"]
         );
-        assert_eq!(result["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(result["version"], env!("HIVE_PACKAGE_VERSION"));
         assert_eq!(
             load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
             "complete"
