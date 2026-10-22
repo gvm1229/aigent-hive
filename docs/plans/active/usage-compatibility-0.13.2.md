@@ -14,9 +14,9 @@
 ## 실행 항목
 
 - [x] [UC132-001] 실제 통신 계약에 따른 호환 검사·상태·갱신
-  - state: complete; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:2716d8034356453e1a2ce7ebf06ea2c57f5f69bfdea5be0d6eef668fe689b2e2
+  - state: complete; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:4aa9d59691ee1a8794e87ad1c854c1406b2824a32c1650fa150f5cbefc6e66fa
 - [x] [UC132-002] 전역·프로젝트0~99% 설정과 독립 소진 보호
-  - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:2716d8034356453e1a2ce7ebf06ea2c57f5f69bfdea5be0d6eef668fe689b2e2
+  - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:4aa9d59691ee1a8794e87ad1c854c1406b2824a32c1650fa150f5cbefc6e66fa
 - [ ] [UC132-003] 현재 Windows의 초기화·5%·0% 실제 중단 수용
   - state: agent-owned; depends: UC132-001,UC132-002
 - [ ] [UC132-004] 실제 계정 초기화 관측과 중단 확인
@@ -42,3 +42,5 @@
 - Windows·현재 Codex의 실제 실행과 합성 판정 증거 분리. 실제 초기화 중단 미확인 시 외부 사건 대기, 전체 완료·정식 후보 생성 보류
 - 초기 오류·실패 자료 보존, 앱 강제 종료·사용자 기록 삭제·무검증 우회 금지. 호환 오류는 단계·원인 표시, 활성 선택 보존, 부분 갱신 성공 표시 금지
 - 종료 전 계획·현재 상태·사실·세션 예약·소유 시험 산출물 검토. 남은 Agent 소유 작업부터 계속 처리
+
+- 10월23일 추가 지시: 소진 확인 뒤 인계·지식 저장·검사·Git·정리 도구도 실행 금지. 짧은 중단 안내만 허용, 새 요청의 정상 사용량 확인 뒤 재개. 기존 명령이 남긴 중단 기록만 보존, 소진 후 추가 기록을 예외로 취급한 이번 실패의 재발 방지
