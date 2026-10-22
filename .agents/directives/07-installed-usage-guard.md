@@ -18,9 +18,9 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
 - Exit 3, limited, unknown or reset blocks the current dispatch. Allow exact controls, consented
   fallback, a same-binding recheck after threshold change, or fresh enforcement for a new user request.
   Continue only on fresh `hive.usage-allowed`. No recheck per tool or session-disable bypass.
-- On observed exhaustion, end the turn without further tools. Checkpoints, knowledge capture,
-  lint, Git, cleanup and handoff writes are deferred; they are not exceptions. Keep the guard's
-  existing receipt and give only a short halt notice. A new request requires fresh allowed usage.
+- After observed exhaustion, no further tools: defer checkpoints, knowledge capture, lint, Git,
+  cleanup and handoff. Keep the existing receipt; give only a short halt notice. New requests need
+  fresh allowed usage. Run required checks alone; inspect the result before queuing work.
 - New sessions default enabled. Installed markers and exact binding remain authoritative.
 
 ## Controls and interruption

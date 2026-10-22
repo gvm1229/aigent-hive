@@ -34,6 +34,9 @@ Zero is an enabled exhaustion floor, not a disable action. Positive subscription
 
 ## Same-session policy recheck
 
+   Run each required usage check in its own tool call. Inspect its result before starting or
+   queuing further work; do not batch it with other work, including parallel calls.
+
    When a threshold mutation returns `session_recheck_required=true` for an active task, run
    `enforce` immediately with the same exact target, host, session id, process id, user root, and
    available account digest. This recheck also applies to manual source work. Continue only after
