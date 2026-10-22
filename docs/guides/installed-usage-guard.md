@@ -61,14 +61,16 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 명시적 global 변경:
 
 ```text
-hive usage threshold --user-root <user-root> --remaining-percent <1..99> --output json
+hive usage threshold --user-root <user-root> --remaining-percent <0..99> --output json
 ```
 
 설정 완료 Hive project의 조기 중지 변경:
 
 ```text
-hive usage threshold --target <project-root> --remaining-percent <1..99> --output json
+hive usage threshold --target <project-root> --remaining-percent <0..99> --output json
 ```
+
+0.13.2의 허용 범위0~99%.0%는 비활성화가 아닌 소진 보호, 양수 할당량 실행과 크레딧 잔액에 무관한0% 차단. 더 높은 프로젝트 하한 유지.
 
 Global `20%`, project `40%`: 적용값 `40%`. Non-Hive target의 project `40%` 요청: mutation
 `0건`, 적용 threshold 없음.
