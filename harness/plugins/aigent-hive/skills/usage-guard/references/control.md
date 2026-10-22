@@ -77,6 +77,9 @@ Zero is an enabled exhaustion floor, not a disable action. Positive subscription
   to be bypassed. Warn that the opt-out permits work that may use paid account credits.
 - Exhaustion returns exit `3` and `hive.usage-quota-exhausted`. Stop Hive-controlled work, keep the
   halt receipt, and report the exhausted window. A bare continue does not remove the stop.
+  After exhaustion is observed, do not call another tool for checkpoints, knowledge capture,
+  lint, Git, cleanup, or handoff records. Defer these operations; the guard's existing receipt
+  is sufficient. End with a short halt notice. New user requests require fresh allowed usage.
   A fresh positive observation can clear exhaustion; a newly detected quota increase can stop that
   request once while ordinary protection is enabled. The next request remeasures without a resume lock.
 - Report `zero_quota_guard_enabled` and `active_turn_interruption_verified`. Do not promise live

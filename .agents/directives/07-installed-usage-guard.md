@@ -18,22 +18,21 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
 - Exit 3, limited, unknown or reset blocks the current dispatch. Allow exact controls, consented
   fallback, a same-binding recheck after threshold change, or fresh enforcement for a new user request.
   Continue only on fresh `hive.usage-allowed`. No recheck per tool or session-disable bypass.
+- On observed exhaustion, end the turn without further tools. Checkpoints, knowledge capture,
+  lint, Git, cleanup and handoff writes are deferred; they are not exceptions. Keep the guard's
+  existing receipt and give only a short halt notice. A new request requires fresh allowed usage.
 - New sessions default enabled. Installed markers and exact binding remain authoritative.
 
 ## Controls and interruption
 
-- Threshold: explicit global intent and integer 1–99. Session disable: explicit current-session
+- Threshold: explicit global intent and integer 0–99, subject to installed command support. Session disable: explicit current-session
   intent plus `--confirm-session-disable`. Continue/resume, urgency and goals grant no bypass.
 - Native sensor first; CodexBar only as separately consented failure fallback. No credentials,
   provider calls, CLI reinstall or OMX/OMC.
-- The 2026-10-18 approval covers current-Windows session-only qualification, then 0.12.1 installation
-  and always-on monitoring after acceptance. The two live stops are complete; further checks must be
-  read-only or display-only. Preserve failed aggregate evidence and installation acceptance gates.
+- The 2026-10-23 approval covers two designated Windows chats: reset, 5% and 0% stops,
+  app survival and direct resume. Synthetic readings are source-debug fixtures only.
+  Preserve failed evidence, opt-in and the 60-second gap; never deliberately drain quota.
 - Final correction: no resume lock or acknowledgement. Stop runs present at detection once;
   never block or reinterrupt user-resumed work for that event. The official-logo notice only explains
   cause/status and closes. Keep cadence, deduplication, fresh sensing, thresholds and zero-quota checks.
 - No app termination, unsupported-version fallback, ad-hoc watcher or other host-process signal.
-- The approved 2026-10-21 0.13.1 plan permits designated Windows threshold subjects:
-  long reasoning, tool cancellation, direct resume and 30-minute sensing. It replaces
-  the earlier test ban only for those subjects. Keep opt-in, the 60-second gap, app
-  survival, prior evidence and version-specific installation authority.
