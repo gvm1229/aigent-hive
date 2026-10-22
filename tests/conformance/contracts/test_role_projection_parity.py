@@ -242,6 +242,40 @@ class Phase1CopierParity(Phase1CliTestCase):
         self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
         self.assert_copier_trees_equal(rust_target, copier_target)
 
+    def test_copier_and_rust_zero_floor_trees_are_byte_equal(self) -> None:
+        copier = copier_binary()
+        self.assertIsNotNone(copier, "Copier is required for the zero-floor parity gate")
+        config_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(config_path)
+        config["usage_guard"]["stop_remaining_percent"] = 0
+        write_yaml(config_path, config)
+        answers = read_yaml(FIXTURE_ROOT / "answers-no-role-no-hook.yml")
+        answers["usage_stop_remaining_percent"] = 0
+        answer_path = self.work_root / "zero-answers.yml"
+        write_yaml(answer_path, answers)
+        copier_data = read_yaml(FIXTURE_ROOT / "copier-parity-data.yml")
+        copier_data["usage_stop_remaining_percent"] = 0
+        data_path = self.work_root / "zero-copier.yml"
+        write_yaml(data_path, copier_data)
+        rust_target = self.work_root / "zero-rust"
+        copier_target = self.work_root / "zero-copier"
+        rust_target.mkdir()
+        rust_process, _ = self.invoke_setup(
+            rust_target, answers=answer_path, capabilities="capabilities-codex-omx.json"
+        )
+        copier_process = subprocess.run(
+            [str(copier), "copy", "--trust", "--defaults", "--data-file",
+             str(data_path), str(self.copier_template_source()), str(copier_target)],
+            cwd=REPOSITORY_ROOT, check=False, text=True, capture_output=True,
+        )
+        self.assertEqual(rust_process.returncode, 0, rust_process.stderr)
+        self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
+        self.assertEqual(
+            read_yaml(rust_target / ".hive/setup-answers.yml")["usage_stop_remaining_percent"],
+            0,
+        )
+        self.assert_copier_trees_equal(rust_target, copier_target)
+
     def test_copier_and_rust_approved_hook_conditional_trees_are_byte_equal(
         self,
     ) -> None:
