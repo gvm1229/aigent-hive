@@ -1,12 +1,17 @@
-# Version-qualified desktop coordination client. No app files, settings, or processes are changed.
+# Protocol-qualified desktop coordination client. No app files or settings are changed.
 param([string]$QualificationThread='')
 $ErrorActionPreference = 'Stop'
 if($QualificationThread -and $QualificationThread -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'){throw 'Invalid qualification scope'}
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
-function Assert-DesktopVersion([string]$version) {
-    if($version -notin @('26.1013.4894.0','26.1016.6573.0')){throw 'Desktop version requires control qualification'}
+function Assert-DesktopSnapshot($state) {
+    if($null -eq $state -or $state.threadRuntimeStatus.type -isnot [string] -or
+        -not $state.threadRuntimeStatus.type -or $null -eq $state.turns) {throw 'desktop-state-shape-invalid'}
+    foreach($turn in @(Visible-Turns $state)) {
+        if($turn.turnId -notmatch '^[A-Za-z0-9_-]{1,128}$' -or
+            $turn.status -notin @('inProgress','completed','interrupted','failed')) {throw 'desktop-turn-shape-invalid'}
+    }
 }
 Add-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'
 using System;
@@ -140,6 +145,9 @@ public sealed class HiveDesktopInput {
 }
 '@
 $pipe = $null
+$compatibilityStage = 'identity'
+$desktopVersion = $null
+$script:controlFailure = $null
 try {
     $pipe = [HiveDesktopPipe]::new()
     $peer = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $pipe.ServerPid)
@@ -150,12 +158,13 @@ try {
     $owner = Invoke-CimMethod -InputObject $peer -MethodName GetOwner
     if ($matching.Count -ne 1 -or $peer.Name -ne 'ChatGPT.exe' -or $owner.ReturnValue -ne 0 -or
         ($owner.Domain + '\' + $owner.User) -ne [Security.Principal.WindowsIdentity]::GetCurrent().Name) { throw 'Untrusted desktop pipe peer' }
-    Assert-DesktopVersion ([string]$matching[0].Version)
+    $desktopVersion = [string]$matching[0].Version
     $pin = [Diagnostics.Process]::GetProcessById([int]$pipe.ServerPid)
     $null = $pin.Handle
     if ($pin.MainModule.FileName -ne $peer.ExecutablePath -or
         [Math]::Abs(($pin.StartTime.ToUniversalTime() - $peer.CreationDate.ToUniversalTime()).TotalMilliseconds) -gt 1) { throw 'Desktop peer identity changed' }
     $pipe.Start()
+    $compatibilityStage = 'initialize'
     $client = 'initializing-client'
     $sessions = @{}
     $pending = @{}
@@ -216,6 +225,10 @@ try {
     function Interrupt-Response($request,$message) {
         $session=$sessions[$request.thread]
         if($null -eq $session -or $null -eq $stop -or $request.incident -ne $stop.digest){return}
+        if($message.resultType -eq 'success' -and $message.result.ok -isnot [bool]) {throw 'desktop-interrupt-shape-invalid'}
+        if($message.resultType -ne 'success') {
+            $script:controlFailure=if($message.error -in @('request-version-mismatch','no-handler-for-request')){'desktop-interrupt-protocol-mismatch'}else{'desktop-interrupt-request-failed'}
+        }
         $session.lastResponse=if ($message.resultType -eq 'success' -and $message.result.ok -and -not $message.result.goalPauseError) { 'accepted' } else { 'failed' }
         $turn=[string]$message.result.interruptedTurnId
         $fresh=$turn -and -not $stop.targeted.ContainsKey($request.thread+':'+$turn)
@@ -317,6 +330,7 @@ try {
         }
         $state=$snapshot.change.conversationState
         if ($state.id -ne $session.id -or $state.hostId -ne 'local') { throw 'Mismatched desktop snapshot' }
+        Assert-DesktopSnapshot $state
         $turns=@(Visible-Turns $state)
         $session.active=@()
         if($turns.Count -gt 0 -and $turns[-1].status -eq 'inProgress') {$session.active=@([string]$turns[-1].turnId)}
@@ -343,8 +357,9 @@ try {
                     if ($null -eq $request) { continue }
                     $pending.Remove([string]$message.requestId)
                     if ($request.method -eq 'initialize') {
-                        if ($message.resultType -ne 'success' -or -not $message.result.clientId) { throw 'Desktop registration failed' }
+                        if ($message.resultType -ne 'success' -or $message.result.clientId -isnot [string] -or -not $message.result.clientId) { throw 'desktop-initialize-invalid' }
                         $client=[string]$message.result.clientId
+                        $compatibilityStage = 'observe'
                     } elseif ($request.method -eq 'thread-owner-discovery') {
                         if ($message.resultType -eq 'success' -and $message.handledByClientId) {Track $request.thread;$catalogChecked[$request.thread]=$clock.ElapsedMilliseconds}
                         elseif ($message.resultType -eq 'error' -and $message.error -eq 'no-client-found') {$catalogChecked[$request.thread]=$clock.ElapsedMilliseconds}
@@ -361,11 +376,15 @@ try {
                         if(( -not $QualificationThread -or $id -eq $QualificationThread) -and $id -match '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and -not $sessions.ContainsKey($id) -and -not $catalogSeen.ContainsKey($id)) {
                             $catalogSeen[$id]=$true;$catalogQueue.Enqueue($id)
                         }
-                    } elseif ($message.method -eq 'thread-stream-state-changed' -and $message.version -eq 11) { Snapshot $message.params }
+                    } elseif ($message.method -eq 'thread-stream-state-changed') {
+                        if($sessions.ContainsKey([string]$message.params.conversationId) -and $message.version -ne 11){throw 'desktop-state-version-mismatch'}
+                        Snapshot $message.params
+                    }
                 }
             }
             if($clock.ElapsedMilliseconds -ge $drainUntil){break}
         }
+        if($client -eq 'initializing-client' -and $clock.ElapsedMilliseconds -ge 2000){throw 'desktop-initialize-timeout'}
         $line=$inputReader.Poll()
         if ($null -ne $line) {
             $command=$line | ConvertFrom-Json
@@ -434,7 +453,9 @@ try {
             }
             $stopping=(($null -ne $stop -and -not (Stop-Finished)) -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
             $activity=@($sessions.Values | Where-Object {$_.ready -and -not $_.dirty -and $_.active.Count -gt 0} | ForEach-Object {@{id=$_.id;turn=$_.active[-1]}})
-            $packet=@{activity_observed=($unknown -eq 0);active_sessions=$activity;control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
+            $observed=($unknown -eq 0)
+            $packet=@{activity_observed=$observed;active_sessions=$activity;control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt;desktop_version=$desktopVersion;compatibility_stage='observe';compatibility=if($observed){'compatible'}else{'pending'};control_error=if($observed){$null}else{'desktop-observation-incomplete'}}
+            if($script:controlFailure){$packet.compatibility='incompatible';$packet.compatibility_stage='interrupt';$packet.control_error=$script:controlFailure}
             [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
             $lastPublish=$clock.ElapsedMilliseconds
         }
@@ -442,7 +463,9 @@ try {
     }
 } catch {
     # Stable error class only: no native payload, prompts, or host paths in durable state.
-    [Console]::Out.WriteLine('{"schema_version":1,"connected":false,"app_alive":true,"error":"desktop-control-unavailable"}')
+    $reason=[string]$_.Exception.Message
+    if($reason -notin @('desktop-initialize-invalid','desktop-initialize-timeout','desktop-state-version-mismatch','desktop-state-shape-invalid','desktop-turn-shape-invalid','desktop-interrupt-shape-invalid')){$reason='desktop-control-unavailable'}
+    [Console]::Out.WriteLine((@{schema_version=1;connected=$false;app_alive=$true;desktop_version=$desktopVersion;compatibility='unavailable';compatibility_stage=$compatibilityStage;control_error=$reason}|ConvertTo-Json -Compress))
     exit 1
 } finally {
     if ($null -ne $pipe) { $pipe.Dispose() }
