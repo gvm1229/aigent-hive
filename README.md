@@ -6,24 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.13.1-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.13.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.13.1` is the current public release.
+Stable `0.13.0` is the current public release.
 
 ## Install the current stable release
 
-`0.13.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.13.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.13.1
+npm install -g aigent-hive@0.13.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.13.1 (released 2026-10-21)
+AIgent Hive v0.13.0 (released 2026-10-18)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.13.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.13.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.13.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.13.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -76,7 +76,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.13.1. The stable install guidance is
+Install the current stable release 0.13.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -94,21 +94,18 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.13.1
+## What changed in 0.13.0
 
-- With midway monitoring enabled, existing guarded chats stop at the configured remaining-usage floor. AI children inherit their owning chat's policy. Codex stays open, and a direct resume or new message does not repeat the same floor stop. Independent zero-quota checks remain.
-- A failed persistent reading retries through a fresh native process. Both paths use the same provider. Keep 15-second start intervals, a five-second timeout per path and one stop after 60 continuous seconds without a valid reading.
-- Reset comparison ignores expired readings and a prior process baseline. A fresh reading establishes the next baseline after a restart. Long chats keep their usage-control connection.
-- Updates preserve knowledge, settings, incident history and the monitoring choice. Selected-Skill profiles and Windows path variants update correctly. Repeated updates reuse an identical staged executable.
-- The close-only notice shows the official logo, remaining usage, the applied floor and actual stop confirmation. Resume directly in Codex. Ask Codex to disable midway monitoring; no PowerShell entry or unlock procedure is required.
-- Direct interruption supports Windows 11 x64 with Codex 26.1013.4894.0 or 26.1016.6573.0. Already-started ordinary external commands may continue; separate local AI sessions and subagents remain interruption targets. Other operating systems, remote tasks and cloud tasks lack direct interruption support.
-- Monitoring requires explicit opt-in after `hive usage monitor preview`; installation does not enable a new monitor. Saved choices remain. Detection can consume some new quota and does not guarantee simultaneous server processing or billing termination.
+- Enable the optional reset monitor to stop local Codex tasks already running when a quota reset is observed. The monitor starts usage queries every 15 seconds and also requests one stop after 60 seconds without a valid reading. Codex stays open; resume or send a new message directly in Codex.
+- A separate notice with the official Hive logo shows why tasks stopped, when detection occurred, and whether interruption was confirmed. Its only action is closing the notice; it never unlocks or resumes work.
+- Live interruption supports Windows 11 x64 with Codex 26.1013.4894.0. Other operating systems, remote tasks and cloud tasks are outside this feature's support. Detection permits some new quota consumption and does not guarantee simultaneous server processing or billing termination.
+- Installation and updates do not enable a new monitor. Explicitly approve activation after reviewing `hive usage monitor preview`; existing activation choices are preserved. Existing quota-floor and zero-quota checks remain.
 
-Earlier improvements remain in the [0.13.0 release notes](docs/releases/0.13.0.md) and [0.12.0 release notes](docs/releases/0.12.0.md).
+Earlier improvements remain documented in the [0.12.0 release notes](docs/releases/0.12.0.md).
 
 ## Supported targets
 
-| Platform | Native target | 0.13.1 evidence |
+| Platform | Native target | 0.13.0 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -118,7 +115,7 @@ Earlier improvements remain in the [0.13.0 release notes](docs/releases/0.13.0.m
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.13.1` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.13.0` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 

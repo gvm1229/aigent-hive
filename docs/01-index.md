@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -89,7 +89,6 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
-| [`0.13.1`](releases/0.13.1.md) | 하한 직접 중단·조회 회복·보존 갱신 보정 |
 | [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.11.1`](releases/0.11.1.md) | Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정 |
@@ -247,8 +246,3 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.12.0 섹션 형식 안내문 미리보기](releases/0.12.0.subscriber.sectioned-preview.ko.md)
 - [0.12.0 섹션 공지 실제 전송](../tests/results/discord-sectioned-notification-0.12.0.md)
 - [0.12.0 명사형 안내문 수정 초안](releases/0.12.0.subscriber.concise-preview.ko.md)
-
-## 0.13.1 사용량 보호 보정
-
-- [공개 시험 수용](research/public-test-0.13.1.md)·[정식 실행](plans/0.13.1-stable-release.md)
-- [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)
