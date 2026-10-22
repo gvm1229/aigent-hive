@@ -1672,3 +1672,11 @@
 | [passed](runs/20261022T195208-96c62faa2700.md) | 0.13.2 Skill 출시 기록과 공개 이전판 검증 | c3d28fb8af2e3f0528acb8d4f08b06236d1857f6 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T195241-f157f0299b1a.md) | Python conformance: release | f08ad03a597f2ff17c20157fbe82a75ce5fea373 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T195440-09dab2185c62.md) | 검사 종료 뒤 직렬화한 0.13.2 버전 일치 확인 | f08ad03a597f2ff17c20157fbe82a75ce5fea373 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T200621-e049dbbdf2eb.md) | 공개0.13.1로 격리된 활성·비활성 갱신 입력 준비 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T200647-6c8fea148ec7.md) | 경로 확인 보정 뒤 공개0.13.1 격리 갱신 입력 준비 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T202058-929851ff770a.md) | 배포 전 외부 활성화 실패·복구 수집 절차 확인 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T202202-256c55463ac3.md) | 불완전한 이전판 등록에서 실패·복구 수집 절차 확인 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T202621-574903cf068a.md) | 현재 Codex에서 공개0.13.1 감시 갱신 실패의 격리 재현 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T204600-eff7c527b1c8.md) | 공개test.1 여섯 npm 묶음과 29개 파일의 지문·출처 독립 확인 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T204859-c2aa88f6e21a.md) | 시험판25개 파일 기준으로 test.1 공개 바이트 진단 재검증 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T205029-cc2b4f021d12.md) | 공개test.1의 실제 Windows 감시 갱신·불완전0.13.1 복구 진단 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
