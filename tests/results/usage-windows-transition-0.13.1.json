@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "status": "passed-local-source",
+  "version": "0.13.1",
+  "source_commit": "e3de3ae391682ec9da2b0811591cc4bd682b1e77",
+  "qualified_binary_digest": "sha256:fea56bd8acac5235333d2310a0fdcad5e5f10f82396d116831c03704496c1f6b",
+  "scope": "Windows11 x64 / Codex26.1013.4894.0; isolated authenticated public0.13.0 predecessor; source executable; no additional AI stop",
+  "upgrade": {
+    "schema_version": 1,
+    "status": "passed",
+    "scope": "real public0.13.0 synthetic monitor choices to source; no synthetic quota signal",
+    "cases": [
+      {
+        "choice": "disabled",
+        "passed": true,
+        "stable_task_name_preserved": true,
+        "exact_source_binary_verified": true,
+        "fresh_observations": 0,
+        "running_monitor_version": null,
+        "history_and_settings_preserved": true,
+        "safety_abort": false,
+        "app_preserved": true
+      },
+      {
+        "choice": "enabled",
+        "passed": true,
+        "stable_task_name_preserved": true,
+        "exact_source_binary_verified": true,
+        "fresh_observations": 4,
+        "running_monitor_version": "0.13.1",
+        "history_and_settings_preserved": true,
+        "safety_abort": false,
+        "app_preserved": true
+      }
+    ],
+    "app_control_requested": false,
+    "real_user_installation_changed": false,
+    "app_preserved": true
+  },
+  "missing_record_notice": {
+    "scope": "current Windows display-only missing-record fault notice",
+    "app_control_requested": false,
+    "preview": true,
+    "time_known": true,
+    "uncertainty": true,
+    "reason": true,
+    "external_command_warning": true,
+    "close_only": true,
+    "closed": true,
+    "status": "passed"
+  },
+  "long_chat_control": {
+    "before": {
+      "catalog_count": 633,
+      "max_frame_bytes": 19943687,
+      "result": "old16MiB control frame rejected; no interruption requested"
+    },
+    "after": {
+      "catalog_count": 633,
+      "max_frame_bytes": 19976860,
+      "input_bound_bytes": 67108864,
+      "retained_metadata_bound_bytes": 262144,
+      "known_chats": 2,
+      "active_turns": 2,
+      "unqualified_chats": 0,
+      "connected_seconds": 18,
+      "read_error": null,
+      "interruption_requested": false
+    }
+  },
+  "regressions": {
+    "monitor_Rust": {
+      "passed": 53,
+      "ignored": 1,
+      "ignored_reason": "real15-second observations qualified separately"
+    },
+    "migration_final_Rust": 9,
+    "Windows_adapter_and_notice": 57,
+    "strict_clippy": "passed",
+    "format": "passed"
+  },
+  "preserved_failures": [
+    {
+      "fixture": "source-monitor-path-upgrade",
+      "result": "failed; detached old reader remained after state migration; user observed stop without app exit"
+    },
+    {
+      "fixture": "source-monitor-path-handover",
+      "result": "failed; startup exit3 before observations; safety disabled fixture"
+    },
+    {
+      "fixture": "source-monitor-path-startup",
+      "result": "failed; Windows monitor adapter startup rejection; safety disabled fixture"
+    },
+    {
+      "fixture": "source-monitor-path-final",
+      "result": "failed; five valid usage readings but full-chat control disconnected; no success label"
+    },
+    {
+      "suite": "first large-stream regressions",
+      "result": "one invalid PowerShell fixture and two old extraction assumptions failed; corrected and57 passed"
+    }
+  ],
+  "limits": [
+    "not a public0.13.1-test.3 upgrade proof",
+    "no repeated actual AI interruption in this corrective phase",
+    "prior long-reasoning/tool/subagent interruption proof remains separately scoped",
+    "prior30-minute sensor proof covers unchanged reader code, not a new30-minute whole-control soak",
+    "does not prove the earlier unexpected app crash cause or simultaneous server/billing stop"
+  ],
+  "real_user_installation_changed": false,
+  "Codex_termination_requested": false
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "phase": "passed-local-Windows",
+  "product_version": "0.13.1",
+  "source_commit": "79836c715e03be0fb2e0c1a9f8ca105984ffb165",
+  "qualified_binary_digest": "sha256:49168010411c34c6692c7a6ae8c373379481cca300e5d851013661edfb961105",
+  "previous_CI_failure": {
+    "run_id": 39608990393,
+    "source_commit": "2c8c82040e2d609b138ecfe08225e0b0a60183cf",
+    "job_id": 119252643912,
+    "host": "Windows GitHub runner",
+    "test": "usage_monitor::upgrade::tests::public_plain_root_and_verbatim_update_share_the_same_owned_task",
+    "result": "failed",
+    "passed_tests": 556,
+    "failed_tests": 1,
+    "ignored_tests": 2,
+    "cause": "same directory had distinct short8.3 and canonical long spellings; task-name hashes differed"
+  },
+  "correction": "canonical long path with pinned directory identity, authentic previous quoted root arguments and exact previous task action; foreign roots/commands rejected",
+  "verification": {
+    "monitor_Rust_passed": 54,
+    "manual_sensor_test_ignored": 1,
+    "strict_clippy": "passed",
+    "format": "passed",
+    "actual_public_0130_short_alias_upgrade": {
+      "schema_version": 1,
+      "status": "passed",
+      "scope": "real public0.13.0 synthetic monitor choices to source; no synthetic quota signal",
+      "cases": [
+        {
+          "choice": "disabled",
+          "passed": true,
+          "short_alias_actually_used": true,
+          "old_short_alias_task_removed": true,
+          "exact_source_binary_verified": true,
+          "fresh_observations": 0,
+          "running_monitor_version": null,
+          "history_and_settings_preserved": true,
+          "safety_abort": false,
+          "app_preserved": true
+        },
+        {
+          "choice": "enabled",
+          "passed": true,
+          "short_alias_actually_used": true,
+          "old_short_alias_task_removed": true,
+          "exact_source_binary_verified": true,
+          "fresh_observations": 4,
+          "running_monitor_version": "0.13.1",
+          "history_and_settings_preserved": true,
+          "safety_abort": false,
+          "app_preserved": true
+        }
+      ],
+      "app_control_requested": false,
+      "real_user_installation_changed": false,
+      "app_preserved": true
+    }
+  },
+  "scope": "current Windows11 x64 / Codex26.1013.4894.0; no reset/floor injection or AI interruption requested",
+  "limitations": [
+    "next exact CI has not completed",
+    "no public test3 or real user installation performed",
+    "earlier full-control proof and ongoing30minute read-only soak are separately scoped"
+  ]
+}

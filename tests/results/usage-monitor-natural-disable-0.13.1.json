@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "product_target": "0.13.1",
+  "phase": "passed",
+  "scope": "current Windows Codex follows the canonical Skill on one natural-language disable request",
+  "desktop_package_version": "26.1013.4894.0",
+  "fixture_kind": "synthetic user root outside configured projects",
+  "starting_state": "configured enabled; no scheduled controller registered",
+  "binary_sha256": "9e48d2637bcf3e286f1a2b0d7378b9b433851700bd96e3edde3284bbc78dda7c",
+  "skill_sha256": "77f2f29250e000428320b833f40f9ee6031b67823faa1fa57b977383d5464a23",
+  "result_code": "hive.usage-monitor-complete",
+  "enabled": false,
+  "controller_alive": false,
+  "ordinary_guard_preserved": true,
+  "real_configuration_preserved": true,
+  "native_stop_requested": false,
+  "app_termination_requested": false,
+  "limits": [
+    "canonical Skill supplied explicitly; published plugin installation not tested",
+    "does not prove stopping an already-running production controller"
+  ]
+}

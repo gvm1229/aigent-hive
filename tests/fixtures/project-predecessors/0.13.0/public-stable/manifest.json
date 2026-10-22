@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.0",
+  "archive": "codex-native.zip",
+  "sha256": "12f07e687c029d52f526b42c5a4ffb0c860fb788755b1b0a6e476835c36c8022",
+  "file_count": 81,
+  "generation": "Verified public npm Windows 0.13.0 executable; synthetic setup only; no user installation or settings changed",
+  "source_asset": "npm:@aigent-hive/win32-x64@0.13.0",
+  "source_binary_sha256": "9e8f00b3ffe24807f207905637bd6ba8d8b11ac7716c4ef6cdab789c7d12e9bd",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}

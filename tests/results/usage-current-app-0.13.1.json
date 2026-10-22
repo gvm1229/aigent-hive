@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "phase": "passed-current-Windows-component-qualification",
+  "product_version": "0.13.1",
+  "host": "Windows11 x64",
+  "desktop_package_version": "26.1016.6573.0",
+  "behavior_commit": "4f690a1b53b2daf44119774be67f2013456054cf",
+  "control_source_sha256": "92de460ccf47da67d3e700554f814fdad81d788a4a282430d44906033867ac81",
+  "read_only_connection": {
+    "phase": "passed-metadata-only",
+    "app_preserved": true,
+    "interruption_requested": false
+  },
+  "native_cancellation": [
+    {
+      "schema_version": 1,
+      "phase": "passed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "synthetic_floor": 99,
+      "real_provider_reset": false,
+      "real_user_installation_changed": false,
+      "binary_sha256": "544f9f3adef1f6a40043fb1d1b206f7e5a55c017fca8aa8b3c6808292cf96fcb",
+      "collector_sha256": "3d84239c43d9a48a93a719795be9c234150b0137fef32ae6c9058d9fbd3b109d",
+      "ai_children_at_detection": 1,
+      "before_turn_digest": "sha256:c1050fa9a38e2dec3f3def7a2f503fdf3ac3385e92a9c6ddda8c326270c6490a",
+      "before_tool_calls": 5,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "stop_receipt": {
+        "completed_at": 1792604431,
+        "scope_digest": "sha256:cd35d667d8cf6e4aeeefda10978d1b88193c69a1f3f6400bd0e753d0359d3248",
+        "targeted_turns": 1,
+        "elapsed_ms": 857,
+        "request_ms": 200,
+        "app_alive": true
+      },
+      "app_preserved": true,
+      "generation": 1,
+      "ai_child_results": [
+        {
+          "thread_digest": "sha256:9293ea81f76bd386f4e505fff60a0062124dabb1af454675fb86adb1581ecc1e",
+          "turn_digest": "sha256:f95b5503f3c7bc68dce1f3e9ba4b887b15d915f9e462aad36336746a3a976621",
+          "status": "interrupted",
+          "interrupted_within_five_seconds": true,
+          "tools_unchanged": true
+        }
+      ],
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "no_unlock": true,
+        "numeric_reason": true,
+        "close_action": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 5665,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_stop": false,
+      "monitor_removed": true
+    },
+    {
+      "schema_version": 1,
+      "phase": "passed",
+      "role": "shell",
+      "subject_digest": "sha256:a23b8b067b3544e545c1a2b4c0ba9dcfd2a280bae0304e30a32393651714fa93",
+      "synthetic_floor": 99,
+      "real_provider_reset": false,
+      "real_user_installation_changed": false,
+      "binary_sha256": "544f9f3adef1f6a40043fb1d1b206f7e5a55c017fca8aa8b3c6808292cf96fcb",
+      "collector_sha256": "3d84239c43d9a48a93a719795be9c234150b0137fef32ae6c9058d9fbd3b109d",
+      "ai_children_at_detection": 0,
+      "before_turn_digest": "sha256:a58b2aaa58668969b33471c1670f84f6cc98f3af153303c530bf827eefd8fdbc",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "stop_receipt": {
+        "completed_at": 1792604535,
+        "scope_digest": "sha256:3e46d8aa6dd32d57f8aa26176f9e02c3b2799675820d952dd8ccc6c993c14dcd",
+        "targeted_turns": 1,
+        "elapsed_ms": 1257,
+        "request_ms": 482,
+        "app_alive": true
+      },
+      "app_preserved": true,
+      "generation": 1,
+      "shell_child_exit_verified": false,
+      "external_command_scope": "already-started non-AI shell may continue; explicit option-2 authority",
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "no_unlock": true,
+        "numeric_reason": true,
+        "close_action": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 6356,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_stop": false,
+      "monitor_removed": true
+    }
+  ],
+  "failed_attempts": [
+    {
+      "attempt": "attempt-1-before-subject.json",
+      "phase": "failed",
+      "error": "RuntimeError: subject did not enter required active execution",
+      "native_interruption_verified": false
+    },
+    {
+      "attempt": "attempt-2-app-child-launch.json",
+      "phase": "failed",
+      "error": "RuntimeError: scoped controller exited before stop",
+      "native_interruption_verified": false
+    }
+  ],
+  "qualification_input_failures": [
+    "first read-only pin used WMI microsecond precision; corrected to exact process handle time without weakening identity",
+    "first Windows57test command passed but evidence finalization hit a concurrent lock; preserved as failed wrapper and reran serially"
+  ],
+  "regressions": {
+    "Windows_control_notice_passed": 57,
+    "monitor_Rust_passed": 57,
+    "monitor_manual_ignored": 1,
+    "all_Rust_passed": 1064,
+    "all_Rust_ignored": 5,
+    "strict": "passed",
+    "format": "passed"
+  },
+  "old_live_handoff": "separate Codex26.1013 proof; current old0.13.0 controller is not started",
+  "limits": [
+    "control/native-read modules are qualified;later shared reset expiry correction has separate regression evidence and is not an expired-baseline soak claim",
+    "publictest4 and actual user installation not yet performed",
+    "ordinary external commands may continue;AI children are checked separately",
+    "does not establish earlier browser crash cause or simultaneous server/billing termination"
+  ],
+  "read_only_30minute_soak": {
+    "schema_version": 1,
+    "status": "passed",
+    "version": "0.13.1",
+    "host": "Windows11 x64 / Codex26.1016.6573.0",
+    "scope": "source-component control/sensing qualification; the control adapter explicitly rejects interruption requests",
+    "control": {
+      "source_adapter_sha256": "92de460ccf47da67d3e700554f814fdad81d788a4a282430d44906033867ac81",
+      "query_binary_sha256": "544f9f3adef1f6a40043fb1d1b206f7e5a55c017fca8aa8b3c6808292cf96fcb",
+      "elapsed_seconds": 1803.5,
+      "maximum_control_packet_gap_seconds": 2.547,
+      "control_connection_lost": false,
+      "catalog_errors": [],
+      "app_preserved": true
+    },
+    "control_samples": 120,
+    "catalog_requests": 120,
+    "native_sensor": {
+      "elapsed_seconds": 1802.718,
+      "readings": 115,
+      "valid_readings": 115,
+      "false_blind_deadlines": 0,
+      "query_child_identities": 8,
+      "fresh_process_readings": 1,
+      "owned_reader_faults": 1,
+      "maximum_observation_gap_ms": 19616
+    },
+    "source_digests": {
+      "crates/hive-cli/src/usage_monitor/desktop.ps1": "92de460ccf47da67d3e700554f814fdad81d788a4a282430d44906033867ac81",
+      "crates/hive-cli/src/usage_monitor/sensor.rs": "16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb",
+      "crates/hive-cli/src/usage/codex_native.rs": "dfdb3303e45f3af8c7eb277cb9200e996a3265c0937ee1a240c09b98b764369e"
+    },
+    "AI_interruption_requested": false,
+    "Codex_termination_requested": false,
+    "actual_user_installation_changed": false,
+    "limits": [
+      "does not repeat reasoning/tool/subagent interruption; that proof is separately scoped",
+      "does not qualify the unpublished test4 artifact or an actual user installation",
+      "does not establish the earlier browser crash cause or simultaneous server/billing termination"
+    ]
+  }
+}

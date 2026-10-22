@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "scope": "Windows current debug CLI; 13 authentic public predecessor fixtures; canonical release metadata",
+  "target_version": "0.13.1",
+  "app_control_requested": false,
+  "real_user_installation_changed": false,
+  "canonical_sources": {
+    "migration-table.json": "055d186b8be693b8f40bf53dba7cb5eac5cf413552112e25ca6134cee67d6312",
+    "release-contract.json": "b8bf459213bda1264ab07e651cc9768c68240c55555d269aa66ec946245fbe1e",
+    "release-surface-inventory.json": "83ed471be83b8e89dc5f2f18fc4d080c6f148dbeb9bc4f9d292f8a8dc8a348f2"
+  },
+  "qualification": {
+    "schema_version": 1,
+    "target_version": "0.13.1",
+    "binary_sha256": "92a38bd2e563be4140662e51bd547d4990e675ea27a343d370b3fb6ac4c5c24b",
+    "host_os": "nt",
+    "required_sources": [
+      "0.9.1",
+      "0.9.2",
+      "0.9.3",
+      "0.9.4",
+      "0.9.5",
+      "0.10.0",
+      "0.10.1",
+      "0.10.2",
+      "0.10.3",
+      "0.11.0",
+      "0.11.1",
+      "0.12.0",
+      "0.13.0"
+    ],
+    "results": [
+      {
+        "source_version": "0.9.1",
+        "fixture_sha256": "7cb2d0dc2e2587c905c6c596314a2a29132251371458af594cd896ce97ce83cb",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.9.2",
+        "fixture_sha256": "3d5a64de24535e1509d98410ac29bd0417156ac3f9ae008d246b46227a0767ca",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.9.3",
+        "fixture_sha256": "1bff9b4c9099b0ad35da17073913484567ad9f9a5ca9d3d3bd70ac488aba6a93",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.9.4",
+        "fixture_sha256": "040d7253406d516214bb30cf10ad29683b6e4bc1ee2274f2114e21180c66afc6",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.9.5",
+        "fixture_sha256": "836303ccd58e890687f0b60a678c2c65fb633386a5cdb271b2d7fd7e231b32c6",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.10.0",
+        "fixture_sha256": "fc14f8c4d217d3ce906b777a4e21d80483f74de457979440c7f44f592e7a06b4",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.10.1",
+        "fixture_sha256": "b6a587928e69354c044502aa615fde9bacd06ea4a31092b2082fb01ecb988436",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.10.2",
+        "fixture_sha256": "cf324093c792b3d646217c6173c9a5e3856181fb86fd438d3f6a4830c229d937",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.10.3",
+        "fixture_sha256": "0177c096085ca99ed581a1f25a41a2d44b140afc8aa22259082e2da95dd7f93e",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.11.0",
+        "fixture_sha256": "89c89379ba51255df341607b5ea57fe44ad2d0e032a3528dd96c0e42efc24aad",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.11.1",
+        "fixture_sha256": "41522df483e3b03fb64790a293642377f7fd4abe3306ba239cc1c0f6e16c677f",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.12.0",
+        "fixture_sha256": "b2feb26c2b410d50f6f86c9cb1c63647034504569018d368e90d4b866bfa41e4",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      },
+      {
+        "source_version": "0.13.0",
+        "fixture_sha256": "12f07e687c029d52f526b42c5a4ffb0c860fb788755b1b0a6e476835c36c8022",
+        "scan_preview_apply_validate_idempotence": "passed",
+        "local_and_foreign_preservation": "passed",
+        "rollback_and_interrupted_recovery": "passed"
+      }
+    ]
+  },
+  "limits": [
+    "no public 0.13.1-test.1 artifact yet",
+    "no live user monitor transition in this qualification"
+  ]
+}

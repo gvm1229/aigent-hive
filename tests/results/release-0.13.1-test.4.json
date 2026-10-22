@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "phase": "accepted-public-test",
+  "product_version": "0.13.1",
+  "package_version": "0.13.1-test.4",
+  "source_commit": "7dea3ec0f840f8d6669d5b4573a82831949a2434",
+  "product_tree_sha256": "sha256:f52f565ffebb025fd2ccb55df51ce31d9fdacee57d03a453f6c5abaaecceb8f3",
+  "exact_source_CI": 39652307083,
+  "candidate": {
+    "run_id": 39654264344,
+    "result": "success",
+    "successful_jobs": 9,
+    "stable_only_job_skipped": 1
+  },
+  "publication": [
+    {
+      "run_id": 39657123904,
+      "result": "failed tag verification after all6uploads accepted;registry processing delay"
+    },
+    {
+      "run_id": 39658406389,
+      "result": "success;recovered same immutable candidate"
+    }
+  ],
+  "independent_verification": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.1",
+    "package_version": "0.13.1-test.4",
+    "source_commit": "7dea3ec0f840f8d6669d5b4573a82831949a2434",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 17270,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-qellhqfvVfyCUquyEKAMAXG/VCLbaOEDUPChudOVMJy9mTRNGhMunXycI5u4Sye/44PxH2ppQDA0pcoyfd5bmg=="
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 11026713,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-yAAMDM1py20p89e/oCYyAd4IWXIe8lkVGypa/0pgJAQpXPy0pCJG5ouLQh2h+IAQgEpNIEJ5LApamfigzgekYw=="
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 10625111,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-Ito1LxixuqDaIzhGP2wI9pjjz6w9zbHuJ7QUDITqpZKpjeIx7EbGSkTx/RRh8VnDRNyC57tz35G4uuLPen5ctQ=="
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 11381362,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-6S0QNUby0DtONRFtt2/z+NENKTGBxFzPAeMMHBUe4GnsMikBQtA8UtaP+tf+/o1IEjC1U9tbCIb/e+RhCHMOIg=="
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 11990074,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-L3feRNuI0RO0kfcdVOitIy65luJVc39bZP4SN5w2f8tmGpC4ceJ2tKs/CvaW7YVVKkMAXqN1Xcl+7EhjEEpR0Q=="
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.1-test.4",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.4",
+        "tarball_length": 11508846,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-Xpil9Ryc7Tiof/VTs+qF5UF76GT3t6rVNa0e06crGEYiNgv+gdeu/4rHaSnUUC1L6IqpSCpwXwvw3Z5/GMToSg=="
+      }
+    ],
+    "github_prerelease": true,
+    "annotated_tag_source_verified": true,
+    "release_asset_count": 25,
+    "real_user_installation_changed": false,
+    "collector_sha256": "f216784710330089ff0261cb3a6ef664929198923c43e3c60b5d67d8a70929c4"
+  },
+  "public_runtime": {
+    "run_id": 39659417976,
+    "result": "success",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "name": "public-test-korean / Korean public test (Linux musl x64)"
+      },
+      {
+        "conclusion": "success",
+        "name": "public-test-korean / Korean public test (Windows x64)"
+      },
+      {
+        "conclusion": "success",
+        "name": "public-test-korean / Korean public test (macOS arm64)"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "macOS ${{ matrix.target }}"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "Optional vector (${{ matrix.target }})"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "Windows x86_64"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "Linux ${{ matrix.target }}"
+      }
+    ],
+    "scope": "actual public installation/update/rollback/recovery on Windowsx64,Linuxmuslx64,macOSarm64",
+    "skipped_scope": "4non-selected optional-vector/native-runtime jobs;not required public-test lane"
+  },
+  "actual_isolated_Windows_upgrade": {
+    "schema_version": 1,
+    "phase": "passed",
+    "product_target": "0.13.1",
+    "package_version": "0.13.1-test.4",
+    "cases": [
+      {
+        "choice": "disabled",
+        "passed": true,
+        "from": "0.13.0",
+        "to": "0.13.1-test.4",
+        "fixed_binary_sha256": "5438a54c9249fc50dc373c48ed7a88f7b2089d365fb9eb4d19bad243eb669160",
+        "old_task_identity_preserved": true,
+        "settings_and_knowledge_preserved": true,
+        "monitoring_verified": false,
+        "observations": 0,
+        "running_version": null,
+        "followup_test_update_success": true,
+        "app_preserved": true,
+        "incident_replayed": false,
+        "predecessor_monitor_context": {
+          "saved_choice_generated_by": "exact public0.13.0 preview and status",
+          "real_task_registered": false,
+          "previous_controller_started": false,
+          "reason": "current Codex26.1016 is outside the old0.13.0 runtime qualification",
+          "old_live_controller_handoff": "separately proven on Codex26.1013; not repeated or claimed here"
+        }
+      },
+      {
+        "choice": "enabled",
+        "passed": true,
+        "from": "0.13.0",
+        "to": "0.13.1-test.4",
+        "fixed_binary_sha256": "5438a54c9249fc50dc373c48ed7a88f7b2089d365fb9eb4d19bad243eb669160",
+        "old_task_identity_preserved": true,
+        "settings_and_knowledge_preserved": true,
+        "monitoring_verified": true,
+        "observations": 4,
+        "running_version": "0.13.1-test.4",
+        "followup_test_update_success": true,
+        "app_preserved": true,
+        "incident_replayed": false,
+        "predecessor_monitor_context": {
+          "saved_choice_generated_by": "exact public0.13.0 preview and status",
+          "real_task_registered": true,
+          "previous_controller_started": false,
+          "reason": "current Codex26.1016 is outside the old0.13.0 runtime qualification",
+          "old_live_controller_handoff": "separately proven on Codex26.1013; not repeated or claimed here"
+        }
+      }
+    ],
+    "registration": "isolated simulated host plugin registration; real Windows tasks and real native usage observations",
+    "real_user_installation_changed": false,
+    "app_termination_requested": false,
+    "collector_sha256": "703cadccc65fe4a243e764ecbb458c2cdc234ad479b6a7d59ea279fa51607947",
+    "current_step": "public-owner-update-enabled",
+    "real_user_bytes_preserved": true,
+    "app_preserved": true
+  },
+  "failed_test3_to_test4_recovery": {
+    "phase": "passed",
+    "from": "0.13.1-test.3",
+    "to": "0.13.1-test.4",
+    "predecessor_failure_preserved": true,
+    "scope": "ordinary isolated public npm update after repeated-staging failure;monitor remains disabled",
+    "real_user_installation_changed": false,
+    "Codex_termination_requested": false,
+    "fixed_binary_sha256": "5438a54c9249fc50dc373c48ed7a88f7b2089d365fb9eb4d19bad243eb669160",
+    "choice_preserved": true,
+    "settings_and_history_preserved": true,
+    "followup_test_update_success": true,
+    "default_update_success": true,
+    "default_scope": "latest stable0.13.0 is older;successful default lookup with no downgrade,not a stable13.1 install"
+  },
+  "preserved_failures": [
+    "release-0.13.1-test.json",
+    "release-0.13.1-test.2.json",
+    "release-0.13.1-test.3.json"
+  ],
+  "limits": [
+    "actual user13.1 installation and stable publication not performed",
+    "old13.0 live-reader handoff was separately proven on Codex26.1013;current saved-task migration does not repeat it",
+    "real Windows cancellation is separately source-qualified;no additional public-artifact AI interruption requested",
+    "does not prove the original browser crash cause,provider reset or simultaneous server/billing termination",
+    "other operating systems,remote and cloud direct interruption unsupported"
+  ]
+}

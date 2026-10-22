@@ -87,6 +87,8 @@ def main() -> int:
     parser.add_argument("--thread", required=True)
     parser.add_argument("--app-pid", type=int, required=True)
     parser.add_argument("--app-created-ticks", type=int, required=True)
+    parser.add_argument("--package-version", choices=("26.1013.4894.0", "26.1016.6573.0"),
+                        default="26.1013.4894.0")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--interrupt", action="store_true")
     parser.add_argument("--hold-seconds", type=int, default=1, choices=range(0, 61))
@@ -101,7 +103,7 @@ def main() -> int:
         "schema_version": 1, "phase": "started", "scope": "single-test-thread",
         "target_digest": "sha256:" + hashlib.sha256(args.thread.encode()).hexdigest(),
         "adapter_sha256": hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),
-        "app_pid": args.app_pid, "package_version": "26.1013.4894.0",
+        "app_pid": args.app_pid, "package_version": args.package_version,
         "model_started": False, "interrupt_requested": args.interrupt,
     }
     app = None

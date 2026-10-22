@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.1",
+  "package_version": "0.13.1-test.1",
+  "phase": "published-but-not-accepted",
+  "attempts": [
+    {
+      "candidate_run_id": 39548192155,
+      "source_commit": "86a4f10965449ff68b839fc9ec53a673d86e6a71",
+      "result": "failed-unpublished",
+      "failed_job": "Every public stable predecessor recovery",
+      "reason": "canonical harness/release/0.13.1/migration-table.json was absent",
+      "correction": "canonical migration, classification and surface data added with an early current-version regression",
+      "local_verification": "13 release checks and 13 real predecessor fixture upgrades/rollback/interrupted recovery passed on Windows"
+    }
+  ],
+  "latest_before": "0.13.0",
+  "test_before": "0.13.0-test.1",
+  "real_user_installation_changed": false,
+  "successful_candidate": {
+    "run_id": 39550218935,
+    "source_commit": "d43bb9918f8dfa9a86c0f0fb2f99c2f5cb185130",
+    "job_results": {
+      "success": 9,
+      "skipped": 1
+    },
+    "product_tree_sha256": "sha256:e035479888f57c23b56c7857e4a0e0236d6853d631a88f98fc711eea537a88de"
+  },
+  "publication_attempts": [
+    {
+      "run_id": 39551994530,
+      "status": "failed-before-GitHub-release",
+      "stage": "Verify npm channel tags",
+      "uploads_accepted": 6,
+      "registry_message": "Your package is being processed and may take a few minutes to become available.",
+      "unavailable_exact_versions": [
+        "@aigent-hive/win32-x64@0.13.1-test.1",
+        "@aigent-hive/darwin-x64@0.13.1-test.1"
+      ],
+      "independent_prefer_online_and_http_check": "both exact versions still404; npm status operational",
+      "all_latest_tags_preserved": "0.13.0",
+      "full_publication_confirmed": false
+    }
+  ],
+  "publication_run_id": 39553168664,
+  "publication_url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.13.1-test.1",
+  "independent_public_verification": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.1",
+    "package_version": "0.13.1-test.1",
+    "source_commit": "d43bb9918f8dfa9a86c0f0fb2f99c2f5cb185130",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 17270,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-/tts9+7X8rKw0vly9np9liLH2bzp+SC4toH4ZwpbgMZcpjvMMN4+63nLotoEgWaOUKCUBDAUKz1NnDm8GRJ0tw=="
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 11025150,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-dCnLeSoqP4wn42ldLMqDulQXeFS+K0F9hCov5k/c6uxCEQwKVBH/eYzIHq0W8iHv7QZb+Jz4owOx8lmfQy7awA=="
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 10631129,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-iWqOiW2EpJOuicuE8IkXoOfq/uS6lb6BCavBwC9mw/0opvKQLz7Wx+mPX/DHHgcLkfXiNTswm6Nq64XSnZMCdw=="
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 11381150,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-iwp03s3DW3xCFakKphQU2vKjToFxIv1mHbEoAF6ZybxMMWLFyjrHtyT07C6quBYdz3JT7QCi+nMjTnoocFl5/g=="
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 11987103,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-ktCgr5Iy1Y/yyvqg9lUtuTzoGN+pULhi3JPsPEoV1RoGnopma2YCsZ9NcTS6WbXPm3c2a3rSupkVIf5pbbnjFw=="
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.1-test.1",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.1",
+        "tarball_length": 11500823,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-6Fa3GLlX2iFJmOyYKQTgM93ST/pJNHpJJX9fL7okxjSVhjZbE3h3TJ3p+GceoQVYHhZ+ZVYvATtOrDjl99TIfA=="
+      }
+    ],
+    "github_prerelease": true,
+    "annotated_tag_source_verified": true,
+    "release_asset_count": 25,
+    "real_user_installation_changed": false,
+    "collector_sha256": "c8f682aed2fc5a2e33438e11993ffbb9120cd07b3f2dfe4fdb3a72655ebbbf03"
+  },
+  "acceptance": {
+    "run_id": 39553674579,
+    "windows": "passed",
+    "linux": "passed",
+    "macos": "failed",
+    "macos_failure": "optional vector source rebuild helper aborted with signal6; separate helper diagnostic succeeded, not a qualification pass"
+  },
+  "isolated_windows_upgrade": {
+    "status": "failed-preserved",
+    "step": "user projection authentication after npm binary replacement",
+    "reason": "authentic public0.13.0 selected3 Skills but historical validator required all Skills",
+    "real_user_installation_changed": false,
+    "data_deleted": false,
+    "next_test": "0.13.1-test.2"
+  }
+}

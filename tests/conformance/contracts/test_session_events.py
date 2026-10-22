@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("session_events", ROOT / "scripts/qualify-session-events.py")
@@ -13,6 +14,25 @@ SPEC.loader.exec_module(EVENTS)
 
 
 class SessionEvents(unittest.TestCase):
+    def test_ai_child_confirmation_requires_its_own_timely_abort(self):
+        before = {"turn_id": "child-turn", "tool_calls": 0}
+        current = {"turn_id": "child-turn", "tool_calls": 0, "status": "interrupted",
+                   "marker_at": "1970-01-01T00:00:02Z"}
+        self.assertTrue(EVENTS.ai_child_interrupted(before, current, 1000))
+        for update in ({"status": "completed"}, {"turn_id": "other"}, {"tool_calls": 1},
+                       {"marker_at": "1970-01-01T00:00:06.001Z"},
+                       {"marker_at": "1970-01-01T00:00:00.999Z"}, {"marker_at": "invalid"}):
+            self.assertFalse(EVENTS.ai_child_interrupted(before, {**current, **update}, 1000))
+
+    def test_ai_child_parent_requires_native_spawn_metadata(self):
+        for key in ("subagent", "subAgent"):
+            metadata = {"source": {key: {"thread_spawn": {"parent_thread_id": "owner"}}}}
+            with mock.patch.object(EVENTS, "subject_metadata", return_value=(Path("fixture"), metadata)):
+                self.assertEqual(EVENTS.subject_parent("child"), "owner")
+        for source in ("cli", {"subagent": "compact"}, {}):
+            with mock.patch.object(EVENTS, "subject_metadata", return_value=(Path("fixture"), {"source": source})):
+                self.assertIsNone(EVENTS.subject_parent("child"))
+
     @unittest.skipUnless(os.name == "nt", "Windows native path spellings")
     def test_native_verbatim_prefix_keeps_the_same_owned_path(self):
         path=Path(__file__).resolve()

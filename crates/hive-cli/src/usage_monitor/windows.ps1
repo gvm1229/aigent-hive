@@ -31,6 +31,19 @@ function App-Roots {
 
 try {
     switch ($request.operation) {
+        'session-identity' {
+            $row=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$request.pid)
+            if(-not $row -or -not $row.ExecutablePath -or -not $row.ExecutablePath.Equals([string]$request.executable,[StringComparison]::OrdinalIgnoreCase)){throw 'Session process unavailable'}
+            $owner=Invoke-CimMethod -InputObject $row -MethodName GetOwner
+            if($owner.ReturnValue -ne 0 -or ($owner.Domain+'\'+$owner.User) -ne [Security.Principal.WindowsIdentity]::GetCurrent().Name){throw 'Session owner mismatch'}
+            $pinned=[Diagnostics.Process]::GetProcessById([int]$row.ProcessId);$null=$pinned.Handle
+            try {
+                if($pinned.MainModule.FileName -ne $row.ExecutablePath){throw 'Session executable changed'}
+                $identity=([string]$row.ProcessId)+'|'+$pinned.StartTime.ToUniversalTime().Ticks+'|'+$pinned.MainModule.FileName.ToLowerInvariant()
+                $hash=[Security.Cryptography.SHA256]::Create()
+                try {Emit @{digest='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)))).Replace('-','').ToLowerInvariant();uptime_ms=[long][Math]::Floor([Diagnostics.Stopwatch]::GetTimestamp()/([double][Diagnostics.Stopwatch]::Frequency/1000))}}finally{$hash.Dispose()}
+            } finally {$pinned.Dispose()}
+        }
         'inspect' {
             $tree = App-Roots
             $roots = @()
@@ -56,7 +69,8 @@ try {
                     $cursor = [int]$row[0].ParentProcessId
                 }
             }
-            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; identity = 'current-user-OpenAI.Codex-package' }
+            $uptime=[long][Math]::Floor([Diagnostics.Stopwatch]::GetTimestamp()/([double][Diagnostics.Stopwatch]::Frequency/1000))
+            Emit @{ available = $true; app_count = $tree.roots.Count; roots = $roots; caller_within_app = $callerWithinApp; desktop_package_version=$tree.desktop_package_version; uptime_ms=$uptime; identity = 'current-user-OpenAI.Codex-package' }
         }
         'register' {
             $taskName = [string]$request.task_name

@@ -9,9 +9,9 @@ summary: "Rust stable·Python conformance와 Windows source 전용 PowerShell 7.
 tags: [development, toolchain]
 aliases: ["Development dependency"]
 sources:
-  - "repo:docs/guides/development.md#sha256:30435207a1dae69a6cd3bd6c2d1731af6e59bfd9372e66585a47e38eeef53728"
+  - "repo:docs/guides/development.md#sha256:e2b95c97acc5d5149c2ab7213b49638981a099c061d6fb1b40a11fdf68caec58"
 links: [crate-ownership, installed-usage-guard]
-reviewed_revision: "git:e72e2f95883ad4503335123d487405d064fb36ac"
+reviewed_revision: "git:3dd17aa264523dabaaf4e39ac0836451aa7e9edc"
 status: active
 ---
 

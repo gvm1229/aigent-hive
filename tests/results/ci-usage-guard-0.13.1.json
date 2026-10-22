@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "product_target": "0.13.1",
+  "attempts": [
+    {
+      "source_commit": "688490f3aedfb77345f63ac4de1321ba3ab52276",
+      "run_id": 39522343787,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39522343787",
+      "status": "failed-jobs-preserved",
+      "failures": [
+        {
+          "host": "macos-latest",
+          "job_id": 118968936992,
+          "scope": "three injected monitor-upgrade tests",
+          "reason": "synthetic configuration used the temporary-directory alias instead of the pinned normalized root",
+          "correction_commit": "74d534d1",
+          "product_ownership_validation_weakened": false
+        },
+        {
+          "host": "ubuntu-latest",
+          "job_id": 118968937160,
+          "scope": "documentation reachability",
+          "reason": "new release review draft was not linked from the documentation graph",
+          "correction_commit": "1b6ba11d"
+        }
+      ],
+      "corrected_local_checks": {
+        "windows_upgrade_tests": 3,
+        "documentation_tests": 5,
+        "passed": true
+      }
+    },
+    {
+      "source_commit": "bf97a4aaf3933d9c14eb265a8d4b8b2bcc02e859",
+      "run_id": 39523693391,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39523693391",
+      "status": "success",
+      "passed_jobs": 16,
+      "skipped_jobs": [
+        {
+          "name": "Documentation-only conformance",
+          "reason": "product change selected the complete product lanes instead"
+        }
+      ],
+      "verified_scopes": [
+        "full Linux Rust",
+        "Windows and macOS platform smoke",
+        "Linux documentation, security, contract, integration and release conformance",
+        "Copier contract",
+        "Windows-macOS and Windows-Linux transfer checks",
+        "develop push gate"
+      ],
+      "live_windows_session_acceptance": "not covered by hosted CI"
+    },
+    {
+      "source_commit": "b45ed70d9f75dcbfb1c05df0b8cd2b82f09a5014",
+      "run_id": 39546627967,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39546627967",
+      "status": "superseded-cancelled-with-release-failure-preserved",
+      "failures": [
+        {
+          "host": "ubuntu-latest",
+          "scope": "release-note English compatibility statement",
+          "reason": "the word may is rejected by the existing ASD-STE100 release-note checker",
+          "correction_commit": "86a4f109",
+          "product_bytes_changed_by_correction": false
+        }
+      ],
+      "local_correction_verification": "8 release-note tests passed",
+      "remaining_jobs": "superseded jobs cancelled by the configured workflow; no unchanged retry"
+    },
+    {
+      "source_commit": "86a4f10965449ff68b839fc9ec53a673d86e6a71",
+      "run_id": 39546994792,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39546994792",
+      "status": "passed",
+      "job_results": {
+        "success": 16,
+        "skipped": 1
+      },
+      "scope": "exact option-2 source; Linux full Rust and all conformance lanes; Windows/macOS smoke and transfers",
+      "skipped": "documentation-only duplicate omitted because product lanes executed"
+    },
+    {
+      "source_commit": "d43bb9918f8dfa9a86c0f0fb2f99c2f5cb185130",
+      "run_id": 39549130916,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39549130916",
+      "status": "passed",
+      "job_results": {
+        "success": 16,
+        "skipped": 1
+      },
+      "scope": "exact option-2 source; Linux full Rust and all conformance lanes; Windows/macOS smoke and transfers",
+      "skipped": "documentation-only duplicate omitted because product lanes executed"
+    },
+    {
+      "source_commit": "23314c44aa3a2eb6a8fe4b407cf88d07f13a1661",
+      "run_id": 39559387629,
+      "url": "https://github.com/gvm1229/aigent-hive/actions/runs/39559387629",
+      "status": "passed",
+      "job_results": {
+        "success": 16,
+        "skipped": 1
+      },
+      "scope": "exact option-2 source; Linux full Rust and all conformance lanes; Windows/macOS smoke and transfers",
+      "skipped": "documentation-only duplicate omitted because product lanes executed"
+    }
+  ],
+  "scope_limit": "CI does not prove local AI interruption on other operating systems or server billing termination. Current Windows live evidence is separate; ordinary external command exit is excluded by explicit option-2 authority."
+}

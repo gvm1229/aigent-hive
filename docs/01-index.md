@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -77,6 +77,7 @@ current catalog.
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Installed usage guard](guides/installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |
+| [사용량 보호와 직접 중단 비교](research/usage-guard-stop-comparison.md) | 과거 표시·다음 실행 차단과0.13.0 실행 취소의 차이 |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Release·update](guides/release-update.md) | Update·candidate·publication procedure |
 | [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
@@ -88,6 +89,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.13.1`](releases/0.13.1.md) | 하한 직접 중단·조회 회복·보존 갱신 보정 |
 | [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.11.1`](releases/0.11.1.md) | Codex 기본 스킬 중복 정리·Windows Claude 전역 설치 수정 |
@@ -133,6 +135,7 @@ current catalog.
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
 | [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.10.0` 대비 권장 `0.10.0` 범위 |
+| [AI_Learning 전용 일일 검토](research/ai-learning/README.md) | 기존 구현 계획과 분리한 조사·후보·일일 검토, [시각 설명 계획](research/ai-learning/proposals/2026-10-13-visual-plan.md) |
 | [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
 | [Vector·file memory 검토](research/vector-memory-0.10-feasibility-2026-08-22.md) | Anthropic file memory·Qdrant·SQLite hybrid search |
 | [Vector 재검증 결과](research/vector-requalification-0.10-2026-08-24.md) | 50,000개 고유 embedding·증분·재개 hard gate 판정 |
@@ -244,3 +247,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.12.0 섹션 형식 안내문 미리보기](releases/0.12.0.subscriber.sectioned-preview.ko.md)
 - [0.12.0 섹션 공지 실제 전송](../tests/results/discord-sectioned-notification-0.12.0.md)
 - [0.12.0 명사형 안내문 수정 초안](releases/0.12.0.subscriber.concise-preview.ko.md)
+
+## 0.13.1 사용량 보호 보정
+
+- [공개 시험 수용](research/public-test-0.13.1.md)·[정식 실행](plans/0.13.1-stable-release.md)
+- [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)

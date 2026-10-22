@@ -47,12 +47,55 @@ CASE
         self.assertEqual(view["Banner"], "")
         self.assertNotIn("hive usage", str(view))
         self.assertIn("자동으로", view["Automatic"])
+        self.assertIn("일반 외부 명령은 계속 실행될 수 있습니다", view["Automatic"])
 
     def test_sensor_failure_is_not_presented_as_a_reset(self):
         view = self.view("$state.incident.reason='sensor-unresponsive';Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
         self.assertIn("60초", view["Reason"])
         self.assertIn("60초", view["Explanation"])
         self.assertNotIn("초기화", view["Reason"])
+
+    def test_threshold_notice_names_the_actual_floor_window_and_stop_confirmation(self):
+        view = self.view("$state.incident.reason='usage-threshold';"
+                         "$state.incident|Add-Member NoteProperty threshold_details @(@{remaining_percent=8.0;threshold_percent=10;window='weekly'});"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('8%', view['Explanation'])
+        self.assertIn('10%', view['Explanation'])
+        self.assertIn('주간', view['Explanation'])
+        self.assertIn('Aigent Hive', view['Explanation'])
+        self.assertEqual(view['Status'], '작업 중단 확인')
+        self.assertNotIn('오류', view['Explanation'])
+
+    def test_threshold_request_does_not_claim_an_unconfirmed_stop(self):
+        view = self.view("$state.incident.reason='usage-threshold';$state.incident.stop_confirmed=$false;"
+                         "$state.incident|Add-Member NoteProperty threshold_details @(@{remaining_percent=8.0;threshold_percent=10;window='session'});"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('요청했습니다', view['Title'])
+        self.assertNotIn('확인했습니다', view['Explanation'])
+
+    def test_missing_threshold_details_do_not_invent_zero_usage_or_floor(self):
+        view = self.view("$context.reason='usage-threshold';Get-NoticeView $null $context $false $true|ConvertTo-Json -Compress")
+        self.assertNotIn('0%', view['Explanation'])
+        self.assertEqual(view['Status'], '상태를 확인할 수 없습니다')
+
+    def test_windows_powershell_reads_verbatim_paths_with_atomic_replacement_sharing(self):
+        result = self.view(r"""
+$path=[IO.Path]::Combine($PSScriptRoot,'verbatim-state.json')
+[IO.File]::WriteAllText($path,'{"value":99}',[Text.UTF8Encoding]::new($false))
+$extended='\\?\'+[IO.Path]::GetFullPath($path)
+$normal=Read-NoticeState $path
+$verbatim=Read-NoticeState $extended
+@{normal=$normal.value;verbatim=$verbatim.value}|ConvertTo-Json -Compress
+""")
+        self.assertEqual(result, {"normal": 99, "verbatim": 99})
+
+    def test_sensor_notice_keeps_the_specific_original_failure_after_recovery(self):
+        view = self.view("$state.incident.reason='sensor-unresponsive';"
+                         "$state.incident|Add-Member NoteProperty query_error 'observation-timeout';"
+                         "$null=Get-NoticeView $state $context $true;$state.incident=$null;"
+                         "Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn('60초', view['Explanation'])
+        self.assertIn('제한 시간', view['Explanation'])
 
     def test_official_logo_is_shared_by_the_title_and_body(self):
         path = str(ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png").replace("'", "''")
@@ -81,6 +124,15 @@ CASE
         view = self.view("Get-NoticeView $null $context $false $true|ConvertTo-Json -Compress")
         self.assertEqual(view["Status"], "상태를 확인할 수 없습니다")
         self.assertNotEqual(view["Tone"], "success")
+
+    def test_fault_without_persisted_incident_keeps_reason_time_and_uncertainty(self):
+        view = self.view("$context.reason='monitor-fault';"
+                         "$state.incident=$null;Get-NoticeView $state $context $true|ConvertTo-Json -Compress")
+        self.assertIn("보호 기록을 읽지 못해", view["Status"])
+        self.assertIn("기록하지 못했습니다", view["StatusDetail"])
+        self.assertNotEqual(view["When"], "확인 중")
+        self.assertNotEqual(view["Tone"], "success")
+        self.assertNotIn("60초", view["Explanation"])
 
     def test_new_incident_does_not_reuse_old_confirmation(self):
         view = self.view("$state.incident.digest='other';Get-NoticeView $state $context $true|ConvertTo-Json -Compress")

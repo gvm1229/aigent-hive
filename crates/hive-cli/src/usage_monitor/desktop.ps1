@@ -6,9 +6,9 @@ $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
 function Assert-DesktopVersion([string]$version) {
-    if($version -ne '26.1013.4894.0'){throw 'Desktop version requires control qualification'}
+    if($version -notin @('26.1013.4894.0','26.1016.6573.0')){throw 'Desktop version requires control qualification'}
 }
-Add-Type -TypeDefinition @'
+Add-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -16,6 +16,80 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.Collections;
+using System.Collections.Generic;
+using System.Web.Script.Serialization;
+public static class HiveDesktopJson {
+    static IDictionary<string,object> Map(object value) { return value as IDictionary<string,object>; }
+    static object Get(object value, string key) {
+        var map=Map(value); object found;
+        return map!=null && map.TryGetValue(key,out found) ? found : null;
+    }
+    static Dictionary<string,object> Pick(object value, params string[] keys) {
+        var result=new Dictionary<string,object>(StringComparer.Ordinal);
+        var map=Map(value);
+        if(map!=null) foreach(string key in keys) if(map.ContainsKey(key)) result[key]=map[key];
+        return result;
+    }
+    static IList Array(object value) { return value as IList ?? new object[0]; }
+    static object Turn(object value) {
+        var result=Pick(value,"turnId","status");
+        if(Get(value,"itemsPagination")!=null) result["itemsPagination"]=true;
+        return result;
+    }
+    static object State(object value) {
+        var state=Pick(value,"id","hostId");
+        state["threadRuntimeStatus"]=Pick(Get(value,"threadRuntimeStatus"),"type");
+        state["threadGoal"]=Pick(Get(value,"threadGoal"),"status");
+        var turns=new List<object>();
+        foreach(object turn in Array(Get(value,"turns"))) turns.Add(Turn(turn));
+        state["turns"]=turns;
+        object original=Get(value,"turnHistory");
+        var history=Pick(original,"kind");
+        if((string)Get(original,"kind")=="canonical") {
+            object content=Get(original,"history");
+            var entities=new Dictionary<string,object>(StringComparer.Ordinal);
+            var input=Map(Get(content,"entitiesByKey"));
+            if(input==null || Get(content,"islands")==null) throw new IOException("Invalid turn order metadata");
+            foreach(var pair in input) entities[pair.Key]=Turn(pair.Value);
+            var islands=new List<object>();
+            foreach(object island in Array(Get(content,"islands"))) {
+                var entries=new List<object>();
+                foreach(object entry in Array(Get(island,"entries"))) entries.Add(Pick(entry,"value"));
+                islands.Add(new Dictionary<string,object>{{"entries",entries}});
+            }
+            history["history"]=new Dictionary<string,object>{{"entitiesByKey",entities},{"islands",islands}};
+        }
+        state["turnHistory"]=history;
+        return state;
+    }
+    public static string Compact(string frame) {
+        var json=new JavaScriptSerializer { MaxJsonLength=67108864, RecursionLimit=256 };
+        object source=json.DeserializeObject(frame);
+        var result=Pick(source,"type","requestId","sourceClientId","method","version","resultType","handledByClientId","error");
+        string type=Get(source,"type") as string;
+        if(type=="response") result["result"]=Pick(Get(source,"result"),"clientId","ok","goalPauseError","interruptedTurnId");
+        else if(type=="broadcast") {
+            object parameters=Get(source,"params");
+            var filtered=Pick(parameters,"hostId","conversationId","following");
+            if((string)Get(source,"method")=="thread-stream-state-changed") {
+                object change=Get(parameters,"change");
+                var selected=Pick(change,"type");
+                if((string)Get(change,"type")=="snapshot") selected["conversationState"]=State(Get(change,"conversationState"));
+                else {
+                    var patches=new List<object>();
+                    foreach(object patch in Array(Get(change,"patches"))) patches.Add(Pick(patch,"path"));
+                    selected["patches"]=patches;
+                }
+                filtered["change"]=selected;
+            }
+            result["params"]=filtered;
+        }
+        string output=json.Serialize(result);
+        if(Encoding.UTF8.GetByteCount(output)>262144) throw new IOException("Desktop metadata exceeds limit");
+        return output;
+    }
+}
 public sealed class HiveDesktopPipe : IDisposable {
     [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint pid);
@@ -37,8 +111,8 @@ public sealed class HiveDesktopPipe : IDisposable {
     void ReadLoop() {
         try { while (Alive) {
             int size = BitConverter.ToInt32(Exact(4), 0);
-            if (size < 2 || size > 16777216) throw new IOException("Invalid desktop frame size");
-            string frame = new UTF8Encoding(false, true).GetString(Exact(size));
+            if (size < 2 || size > 67108864) throw new IOException("Invalid desktop frame size");
+            string frame = HiveDesktopJson.Compact(new UTF8Encoding(false, true).GetString(Exact(size)));
             if (Interlocked.Add(ref bufferedBytes, frame.Length * 2L) > 33554432 || !frames.TryAdd(frame)) throw new IOException("Desktop queue overflow");
         } } catch { Alive = false; }
     }
@@ -116,11 +190,15 @@ try {
             $sessions[$id]=@{id=$id;ready=$false;dirty=$false;subscribed=$false;active=@();statuses=@{};lastResponse='none';lastStop=-2000L;incident='';runtime='unknown';goal='';snapshotAt=-2000L;observedAt=-1L}
         }
     }
-    function New-Stop([string]$digest,[long]$detected) {
+    function Session-Digest([string]$id) {
+        $hash=[Security.Cryptography.SHA256]::Create()
+        try {return 'sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes(('codex'+[char]0+$id))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
+    }
+    function New-Stop([string]$digest,[long]$detected,$scope=$null) {
         $began=$clock.ElapsedMilliseconds
         $age=[Math]::Max([long]0,[long]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$detected))
-        $eligible=@{};foreach($id in @($sessions.Keys)+@($catalogSeen.Keys)){if($id){$eligible[$id]=$true}}
-        return @{eligible=$eligible;requested=@{};began=$began;verifyUntil=$began+[Math]::Max(0,5000-$age);digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
+        $eligible=@{};foreach($id in @($sessions.Keys)+@($catalogSeen.Keys)){if($id -and ($null -eq $scope -or (Session-Digest $id) -in @($scope))){$eligible[$id]=$true}}
+        return @{eligible=$eligible;scope=$scope;requested=@{};began=$began;verifyUntil=$began+[Math]::Max(0,5000-$age);digest=$digest;detected_ms=$detected;age_at_begin=$age;settled=$false;targeted=@{};request_ms=$null}
     }
     function Stop-Age {return $stop.age_at_begin+$clock.ElapsedMilliseconds-$stop.began}
     function Release-Subscriptions {
@@ -147,7 +225,8 @@ try {
     function Stop-Finished {return ($null -ne $stop -and ($stop.settled -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil))}
     function Advance-Stop {
         if($null -eq $stop){return}
-        foreach($session in @($sessions.Values)) {
+        $selected=@($sessions.Values | Where-Object {$stop.eligible.ContainsKey($_.id)})
+        foreach($session in $selected) {
             if($stop.eligible.ContainsKey($session.id) -and -not $stop.requested.ContainsKey($session.id) -and $clock.ElapsedMilliseconds -lt $stop.verifyUntil) {
                 $stop.requested[$session.id]=$true;
                 Request 'thread-follower-interrupt-turn' @{conversationId=$session.id;mode='user-stop'} 3 '' $session.id
@@ -158,10 +237,10 @@ try {
                 }
             }
         }
-        if((Stop-Age) -lt 1800 -and @($sessions.Values | Where-Object lastResponse -eq 'none').Count -gt 0){return}
-        $waiting=@($sessions.Values | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
-        $unread=@($sessions.Values | Where-Object ready -eq $false).Count -gt 0
-        foreach($session in @($sessions.Values)) {
+        if((Stop-Age) -lt 1800 -and @($selected | Where-Object lastResponse -eq 'none').Count -gt 0){return}
+        $waiting=@($selected | Where-Object {$_.subscribed -and -not $_.ready}).Count -gt 0
+        $unread=@($selected | Where-Object ready -eq $false).Count -gt 0
+        foreach($session in $selected) {
             if($clock.ElapsedMilliseconds -ge $stop.verifyUntil -or $stop.settled) {
                 if($session.subscribed){Follow $session.id $false}
             } elseif(-not $waiting -and (-not $session.subscribed -or (-not $unread -and $session.ready -and $session.dirty -and $clock.ElapsedMilliseconds-$session.snapshotAt -ge 1000))) {
@@ -173,6 +252,7 @@ try {
     function Count-Unqualified {
         $count=0
         foreach ($id in $catalogSeen.Keys) {
+            if($null -ne $stop -and $null -ne $stop.scope -and -not $stop.eligible.ContainsKey($id)){continue}
             if (-not $sessions.ContainsKey($id) -and
                 (-not $catalogChecked.ContainsKey($id) -or $clock.ElapsedMilliseconds-$catalogChecked[$id] -ge 20000)) {$count++}
         }
@@ -221,7 +301,7 @@ try {
     function Snapshot($snapshot) {
         if ($snapshot.hostId -ne 'local' -or -not $sessions.ContainsKey([string]$snapshot.conversationId)) { return }
         $session=$sessions[[string]$snapshot.conversationId]
-        if($null -eq $stop -or -not $session.subscribed -or $clock.ElapsedMilliseconds -ge $stop.verifyUntil){return}
+        if(-not $session.subscribed -or ($null -ne $stop -and $clock.ElapsedMilliseconds -ge $stop.verifyUntil)){return}
         if ($snapshot.change.type -ne 'snapshot') {
             # Content deltas must not cause repeated full-history snapshots during reasoning.
             foreach ($patch in @($snapshot.change.patches)) {
@@ -294,7 +374,7 @@ try {
                     $detected=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                     if ($command.detected_at_ms -gt 0) {$detected=[long]$command.detected_at_ms}
                     Release-Subscriptions
-                    $stop=New-Stop ([string]$command.incident) $detected
+                    $stop=New-Stop ([string]$command.incident) $detected $command.scope
                 }
             } elseif ($command.operation -eq 'discover') {
                 $catalogReady=($command.valid -eq $true);$catalogAt=$clock.ElapsedMilliseconds
@@ -323,28 +403,38 @@ try {
             $catalogInProgress=$false
             if (-not $catalogRoundFault) {$catalogFault=$false}
         }
+        if($null -eq $stop) {
+            foreach($session in @($sessions.Values)) {
+                if((-not $session.subscribed -or $session.dirty -or $clock.ElapsedMilliseconds-$session.snapshotAt -ge 15000) -and $clock.ElapsedMilliseconds-$session.lastStop -ge 1000) {
+                    if($session.subscribed){Follow $session.id $false};Follow $session.id
+                    $session.lastStop=$clock.ElapsedMilliseconds
+                }
+            }
+        }
         if ($client -ne 'initializing-client' -and $clock.ElapsedMilliseconds-$lastPublish -ge 250) {
             $activeCount=0;$unknown=0
-            if(-not $catalogReady -or $catalogFault){$unknown++}
+            if(($null -eq $stop -or $null -eq $stop.scope) -and (-not $catalogReady -or $catalogFault)){$unknown++}
+            if($null -ne $stop -and $null -ne $stop.scope -and $stop.eligible.Count -ne @($stop.scope).Count){$unknown++}
             $unknown += Count-Unqualified
             foreach ($session in $sessions.Values) {
-                if($null -ne $stop){$activeCount+=$session.active.Count;if (-not $session.ready) {$unknown++}}
+                if($null -eq $stop -or $stop.eligible.ContainsKey($session.id)){$activeCount+=$session.active.Count;if ($null -ne $stop -and -not $session.ready) {$unknown++}}
             }
             $receipt=$null
             if ($null -ne $stop) {
-                $confirmed=0
+                $confirmed=0;$confirmedSessions=@()
                 foreach ($target in $stop.targeted.Values) {
                     $session=$sessions[$target.thread]
-                    if (Confirmed-Target $target $stop.began) { $confirmed++ }
+                    if (Confirmed-Target $target $stop.began) { $confirmed++;$confirmedSessions+=(Session-Digest $target.thread) }
                 }
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try {$scope='sha256:'+([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes((@($stop.targeted.Keys | Sort-Object) -join '|'))))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $stop.settled=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0)
                 if($stop.settled){Release-Subscriptions}
-                $receipt=@{finished=(Stop-Finished);unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
+                $receipt=@{finished=(Stop-Finished);unknown_sessions=$unknown;active_turns=$activeCount;app_alive=$true;scope_digest=$scope;confirmed_sessions=@($confirmedSessions | Sort-Object -Unique);incident=$stop.digest;targeted=$stop.targeted.Count;confirmed=$confirmed;verified=($confirmed -gt 0 -and $confirmed -eq $stop.targeted.Count -and $activeCount -eq 0 -and $unknown -eq 0);elapsed_ms=(Stop-Age);request_ms=$stop.request_ms}
             }
             $stopping=(($null -ne $stop -and -not (Stop-Finished)) -or @($pending.Values | Where-Object method -eq 'thread-follower-interrupt-turn').Count -gt 0)
-            $packet=@{activity_observed=($null -ne $stop -and $unknown -eq 0);control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
+            $activity=@($sessions.Values | Where-Object {$_.ready -and -not $_.dirty -and $_.active.Count -gt 0} | ForEach-Object {@{id=$_.id;turn=$_.active[-1]}})
+            $packet=@{activity_observed=($unknown -eq 0);active_sessions=$activity;control_stopping=$stopping;schema_version=1;connected=$true;app_alive=$true;server_pid=$pipe.ServerPid;known_sessions=$sessions.Count;active_turns=$activeCount;unknown_sessions=$unknown;stop=$receipt}
             [Console]::Out.WriteLine((ConvertTo-Json -InputObject $packet -Depth 6 -Compress));[Console]::Out.Flush()
             $lastPublish=$clock.ElapsedMilliseconds
         }

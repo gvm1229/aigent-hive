@@ -15,10 +15,10 @@ pub(super) struct Desktop {
 }
 
 impl Desktop {
-    pub fn start() -> Self {
+    pub fn start_scoped(qualification: Option<String>) -> Self {
         let (commands, receive) = mpsc::sync_channel(4);
         let (events, stream) = mpsc::sync_channel(16);
-        thread::spawn(move || run(&receive, &events));
+        thread::spawn(move || run(&receive, &events, qualification.as_deref()));
         Self {
             commands,
             events: stream,
@@ -26,8 +26,12 @@ impl Desktop {
     }
 
     pub fn stop(&self, digest: &str, detected_at_ms: Option<u64>) {
+        self.stop_scoped(digest, detected_at_ms, None);
+    }
+
+    pub fn stop_scoped(&self, digest: &str, detected_at_ms: Option<u64>, scope: Option<&[String]>) {
         let _ = self.commands.try_send(
-            json!({"operation":"stop","incident":digest,"detected_at_ms":detected_at_ms}),
+            json!({"operation":"stop","incident":digest,"detected_at_ms":detected_at_ms,"scope":scope}),
         );
     }
 
@@ -36,15 +40,17 @@ impl Desktop {
     }
 }
 
-fn catalog_worker() -> (Receiver<Value>, SyncSender<()>) {
+fn catalog_worker(qualification: Option<String>) -> (Receiver<Value>, SyncSender<()>) {
     let (send, receive) = mpsc::sync_channel(1);
     let (refresh, requests) = mpsc::sync_channel(1);
     thread::spawn(move || {
-        let mut reader = crate::usage::MonitorSensor::new();
+        let mut reader = super::sensor::CatalogReader::new();
         loop {
             let started = Instant::now();
-            let value = match reader.desktop_thread_ids() {
-                Ok(ids) => json!({"operation":"discover","valid":true,"ids":ids}),
+            let value = match reader.read() {
+                Ok(threads) => {
+                    json!({"operation":"discover","valid":true,"ids":threads.iter().filter(|thread| qualification.as_deref().is_none_or(|id| id == thread.id)).map(|thread| &thread.id).collect::<Vec<_>>(),"contexts":threads})
+                }
                 Err(_) => json!({"operation":"discover","valid":false,"ids":[]}),
             };
             if matches!(
@@ -86,8 +92,8 @@ fn read_packets(stdout: impl Read, send_lines: &SyncSender<Value>) {
     let mut reader = BufReader::new(stdout);
     loop {
         let mut line = Vec::new();
-        let result = reader.by_ref().take(16385).read_until(b'\n', &mut line);
-        if !matches!(result, Ok(1..)) || line.len() > 16384 {
+        let result = reader.by_ref().take(262_145).read_until(b'\n', &mut line);
+        if !matches!(result, Ok(1..)) || line.len() > 262_144 {
             return;
         }
         let value = crate::usage::parse_strict_native_json(&line);
@@ -98,8 +104,8 @@ fn read_packets(stdout: impl Read, send_lines: &SyncSender<Value>) {
     }
 }
 
-fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
-    let (catalogs, refresh) = catalog_worker();
+fn run(commands: &Receiver<Value>, events: &SyncSender<Value>, qualification: Option<&str>) {
+    let (catalogs, refresh) = catalog_worker(qualification.map(str::to_owned));
     let mut catalog = json!({"operation":"discover","valid":false,"ids":[]});
     let mut catalog_at = Instant::now();
     let mut pending = json!({"operation":"clear"});
@@ -111,7 +117,7 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
         if release_control(&pending, delivered_incident.as_deref(), true, unix_ms()) {
             pending = json!({"operation":"clear"});
         }
-        let Ok(mut builder) = platform::command(SCRIPT) else {
+        let Ok(mut builder) = platform::command_scoped(SCRIPT, qualification) else {
             return;
         };
         let child = builder
@@ -161,7 +167,10 @@ fn run(commands: &Receiver<Value>, events: &SyncSender<Value>) {
             }
             let mut refreshed = false;
             while let Ok(value) = catalogs.try_recv() {
-                catalog = value;
+                let _ = events.try_send(
+                    json!({"type":"catalog","valid":value["valid"],"contexts":value["contexts"]}),
+                );
+                catalog = json!({"operation":"discover","valid":value["valid"],"ids":value["ids"]});
                 catalog_at = Instant::now();
                 refreshed = true;
             }

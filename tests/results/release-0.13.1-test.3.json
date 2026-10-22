@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.1",
+  "package_version": "0.13.1-test.3",
+  "phase": "published-but-not-accepted",
+  "source_commit": "e6c955205fba27f5742e8ca9e0968b76e0794168",
+  "product_tree_sha256": "sha256:7fe8b4d75ef24de6bff097c7a3e1df67784349c39b9ca54a4974c0182453e3da",
+  "candidate": {
+    "run_id": 39617986116,
+    "result": "success",
+    "successful_jobs": 9,
+    "skipped_jobs": 1
+  },
+  "publication": [
+    {
+      "run_id": 39620639002,
+      "result": "failed; six uploads accepted, registry processing not complete"
+    },
+    {
+      "run_id": 39623269172,
+      "result": "success; same immutable candidate recovered"
+    }
+  ],
+  "independent_verification": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.1",
+    "package_version": "0.13.1-test.3",
+    "source_commit": "e6c955205fba27f5742e8ca9e0968b76e0794168",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 17263,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-jvHnbM1CV/6H0EDE87wUFM8wvhJbMJF4BAEFeau2lRSH8y7yXLh8JHoDbuOXxzFEfe9Z5RRgXoFqjJVImLxA6A=="
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 11030089,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-f157xEYeZLYb9ErJP52lUTEYvecwuiCKqIEf6Xo6283LKzt0wQSwwpy06pgDHtRGkMGJPXHVKUlZegvR7aybhw=="
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 10637929,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-cZI0JYC8LCe+z2llGeiTdLUe7wNeNDSmLuMwkMwKFPCXmIX7jGW4KdyW/LaS4hquJQEgarSsieCZoX3s7Qr/FA=="
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 11377550,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-KQuq6RoxGHcPjds+dLNKuaZYf5SnZjvWAbIOo0ZlmO0egbx7mTN5Ynt06Ji4yIlpw6uU3biIPIJfZ1LTE/ZxfA=="
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 11989277,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-acRkiAizrfxYlTv9dF70pwYh/oyjkyxlSrEaRRuk/A9pJuvyo5Hwh69xSBixoCCPvX2bes0/kinMptwe6H2mYA=="
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.1-test.3",
+        "latest_preserved": "0.13.0",
+        "test": "0.13.1-test.3",
+        "tarball_length": 11504505,
+        "sha512_integrity_verified": true,
+        "integrity": "sha512-KbSwraRfzhm1J1tJaq/vdKjKz2ToQTemtrMoPUvJpxaNheF72nYY3LuIsspFXVAEf5agmf5h/10/KjxYT3qz+g=="
+      }
+    ],
+    "github_prerelease": true,
+    "annotated_tag_source_verified": true,
+    "release_asset_count": 25,
+    "real_user_installation_changed": false,
+    "collector_sha256": "99661ad3f1cc0ccb1c116e030ee199671a978aa998f12569f05c5d3e849e8192"
+  },
+  "public_baseline": {
+    "run_id": 39623680213,
+    "Windows_x64": "passed",
+    "Linux_musl_x64": "passed",
+    "macOS_arm64": "passed",
+    "scope": "actual public packages on3nativehosts; not a fix or waiver of the earlier macOS helper failures",
+    "skipped_jobs": 4,
+    "skip_reason": "non-public-runtime jobs excluded by requested public-test selection"
+  },
+  "actual_isolated_Windows_upgrade": {
+    "schema_version": 1,
+    "phase": "failed",
+    "product_target": "0.13.1",
+    "package_version": "0.13.1-test.3",
+    "cases": [],
+    "registration": "isolated simulated host plugin registration; real Windows tasks and real native usage observations",
+    "real_user_installation_changed": false,
+    "app_termination_requested": false,
+    "collector_sha256": "317015e59bf38a0e000ef1ebcea5488a83e3e39922e9a9820ffea0cae2c36d2a",
+    "current_step": "public-owner-update-disabled",
+    "error_type": "RuntimeError",
+    "real_user_bytes_preserved": true,
+    "app_preserved": true
+  },
+  "diagnosed_failure": "monitor binary already exists;128MiB staging observation is followed by generic1MiB re-observation, failing repeated staging of the same large executable",
+  "limits": [
+    "not an accepted upgrade",
+    "real user installation and settings were not changed",
+    "Codex remained open; no termination requested"
+  ],
+  "next_public_test": "0.13.1-test.4"
+}

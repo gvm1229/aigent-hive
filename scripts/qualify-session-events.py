@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -70,7 +71,7 @@ def scan_turn(path: Path) -> dict:
             "pending_tools": len(pending), "marker_at": marker_at}
 
 
-def subject_state(thread: str) -> dict:
+def subject_metadata(thread: str) -> tuple[Path, dict]:
     if not IDENTITY.fullmatch(thread):
         raise ValueError("Invalid acceptance thread identity")
     home = native_path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
@@ -86,7 +87,35 @@ def subject_state(thread: str) -> dict:
         metadata = json.loads(stream.readline(1048576))
     if metadata.get("type") != "session_meta" or (metadata.get("payload") or {}).get("id") != thread:
         raise ValueError("Native session metadata differs from the acceptance subject")
-    return scan_turn(path)
+    return path, metadata["payload"]
+
+
+def subject_state(thread: str) -> dict:
+    return scan_turn(subject_metadata(thread)[0])
+
+
+def subject_parent(thread: str) -> str | None:
+    _, metadata = subject_metadata(thread)
+    source = metadata.get("source")
+    if isinstance(source, dict):
+        agent = source.get("subagent") or source.get("subAgent") or {}
+        if isinstance(agent, dict):
+            spawn = agent.get("thread_spawn") or {}
+            if isinstance(spawn, dict):
+                return spawn.get("parent_thread_id")
+    return metadata.get("parent_thread_id")
+
+
+def ai_child_interrupted(before: dict, current: dict, detected_ms: int) -> bool:
+    try:
+        marker = datetime.fromisoformat(current["marker_at"].replace("Z", "+00:00"))
+        if marker.tzinfo is None:
+            return False
+        elapsed = int(marker.timestamp() * 1000) - detected_ms
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return False
+    return (current["turn_id"] == before["turn_id"] and current["status"] == "interrupted"
+            and current["tool_calls"] == before["tool_calls"] and 0 <= elapsed <= 5000)
 
 
 def evaluate(subject: dict, current: dict, capture: bool) -> dict:

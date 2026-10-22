@@ -1304,6 +1304,46 @@ fn execute_command(
     command: &UserCommandArguments,
     runner: &impl CommandRunner,
 ) -> ActionResult {
+    let mut result = execute_hosts(operation, command, runner);
+    if result.exit_code == 0
+        && operation == UserOperation::Update
+        && command.mode == UserMode::Apply
+        && command.hosts.contains(&UserHost::Codex)
+    {
+        match crate::usage_monitor::upgrade_existing(&command.user_root) {
+            Ok(Some(upgrade)) => {
+                if let Some(paths) = upgrade["changed_paths"].as_array() {
+                    result.changed_paths.extend(
+                        paths
+                            .iter()
+                            .filter_map(|path| path.as_str().map(str::to_owned)),
+                    );
+                }
+                if let Some(data) = result.data.as_mut() {
+                    data["monitor_upgrade"] = upgrade;
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                result.status = error.status();
+                result.exit_code = error.exit_code();
+                result.code = "hive.user-update-monitor-incomplete";
+                result.message = format!(
+                    "user files updated; monitor transition incomplete: {}",
+                    error.message()
+                );
+                result.next_action = Some("inspect hive usage monitor status; repair the owned task with this same version, without reinstalling or deleting user data".into());
+            }
+        }
+    }
+    result
+}
+
+fn execute_hosts(
+    operation: UserOperation,
+    command: &UserCommandArguments,
+    runner: &impl CommandRunner,
+) -> ActionResult {
     if command.hosts.len() == 1 {
         return host_arguments(command, command.hosts[0], command.mode)
             .and_then(|arguments| execute(operation, &arguments, runner))
@@ -1980,14 +2020,18 @@ fn execute(
     }
     let mut plan = match build_plan(arguments) {
         Ok(plan) => plan,
-        Err(error) if requires_preserving_reinstall(&error) => match arguments.mode {
-            UserMode::DryRun => return Ok(preserving_reinstall_dry_run(operation, arguments)),
-            UserMode::Apply => {
-                return execute_preserving_reinstall(operation, arguments, runner);
+        Err(error)
+            if operation == UserOperation::Install && requires_preserving_reinstall(&error) =>
+        {
+            match arguments.mode {
+                UserMode::DryRun => return Ok(preserving_reinstall_dry_run(operation, arguments)),
+                UserMode::Apply => {
+                    return execute_preserving_reinstall(operation, arguments, runner);
+                }
+                UserMode::Validate => return Err(error),
+                UserMode::Recover => unreachable!("recovery returns before plan construction"),
             }
-            UserMode::Validate => return Err(error),
-            UserMode::Recover => unreachable!("recovery returns before plan construction"),
-        },
+        }
         Err(error) => return Err(error),
     };
     match arguments.mode {
@@ -3925,12 +3969,14 @@ fn historical_09x_user_inventory(
     for entry in request.installed_entries {
         match entry.ownership.as_str() {
             "immutable-plugin-package" | "host-skill-projection" => {
-                let expected =
-                    historical_user_artifact_digest(request.product_version, host, &entry.path)?;
                 let relative = historical_user_artifact_relative(host, &entry.path)?;
                 let executable = relative.starts_with("bin/");
-                if entry.digest != expected
-                    || entry.executable != executable
+                if !historical_user_artifact_matches(
+                    request.product_version,
+                    host,
+                    &entry.path,
+                    &entry.digest,
+                ) || entry.executable != executable
                     || entry.unix_mode != installed_unix_mode(executable)
                 {
                     return None;
@@ -3970,15 +4016,12 @@ fn historical_09x_user_inventory(
         }
     }
 
-    if !files.iter().all(|(relative, digest)| {
-        if !historical_user_artifact_required(host, relative) {
-            return true;
-        }
-        request.installed_entries.iter().any(|entry| {
-            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
-                && entry.digest == *digest
-        })
-    }) {
+    if !historical_user_files_complete(
+        host,
+        request.product_version,
+        request.installed_entries,
+        files,
+    ) {
         return None;
     }
 
@@ -3990,6 +4033,90 @@ fn historical_09x_user_inventory(
         guidance_path: portable(request.installed_guidance_path),
         entries: request.installed_entries.to_vec(),
     })
+}
+
+fn historical_user_files_complete(
+    host: UserHost,
+    version: &str,
+    entries: &[UserOwnershipEntry],
+    files: &[(&str, &str)],
+) -> bool {
+    // The caller authenticates every included byte. Require complete families
+    // for the user's selected Skills, plus the release's required metadata.
+    let selected_skills = entries
+        .iter()
+        .filter_map(|entry| historical_user_artifact_relative(host, &entry.path))
+        .filter_map(|relative| relative.strip_prefix("skills/")?.split_once('/'))
+        .map(|(name, _)| name)
+        .collect::<BTreeSet<_>>();
+    files.iter().all(|(relative, _)| {
+        if !historical_user_artifact_required(host, relative) {
+            return true;
+        }
+        if relative
+            .strip_prefix("skills/")
+            .and_then(|suffix| suffix.split_once('/'))
+            .is_some_and(|(name, _)| !selected_skills.contains(name))
+        {
+            return true;
+        }
+        entries.iter().any(|entry| {
+            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
+                && historical_user_artifact_matches(version, host, &entry.path, &entry.digest)
+        })
+    })
+}
+
+fn historical_user_artifact_matches(
+    version: &str,
+    host: UserHost,
+    path: &str,
+    digest: &str,
+) -> bool {
+    let Some(raw_digest) = historical_user_artifact_digest(version, host, path) else {
+        return false;
+    };
+    if digest == raw_digest {
+        return true;
+    }
+    let Some(relative) = historical_user_artifact_relative(host, path) else {
+        return false;
+    };
+    let Some((name, suffix)) = relative
+        .strip_prefix("skills/")
+        .and_then(|rest| rest.split_once('/'))
+    else {
+        return false;
+    };
+    let Some(source) = HISTORICAL_USER_SKILL_CONTENTS
+        .iter()
+        .find(|(release, _)| *release == version)
+        .and_then(|(_, files)| files.iter().find(|(artifact, _)| *artifact == relative))
+        .map(|(_, bytes)| *bytes)
+    else {
+        return false;
+    };
+    // Authenticate variants derived from embedded immutable public-release bytes only.
+    // Installed metadata, or a self-consistent manifest, cannot authorize arbitrary bytes.
+    [DescriptorLanguage::En, DescriptorLanguage::Ko]
+        .into_iter()
+        .any(|language| {
+            hive_projection::localized_builtin_artifact(name, suffix, source, language).is_ok_and(
+                |bytes| {
+                    sha256_digest(&bytes) == digest
+                        || (Path::new(suffix)
+                            .extension()
+                            .and_then(OsStr::to_str)
+                            .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+                            && sha256_digest(
+                                String::from_utf8_lossy(&bytes)
+                                    .replace("\r\n", "\n")
+                                    .replace('\n', "\r\n")
+                                    .as_bytes(),
+                            ) == digest)
+                },
+            )
+        })
 }
 
 fn historical_user_artifact_required(host: UserHost, relative: &str) -> bool {
@@ -7909,6 +8036,20 @@ mod tests {
         fs::write(&manifest_path, json_line(&manifest).expect("manifest JSON"))
             .expect("replace ownership manifest");
 
+        let runtime = temporary.path().join(".hive/runtime/keep-runtime.json");
+        fs::create_dir_all(runtime.parent().unwrap()).unwrap();
+        fs::write(&runtime, b"user execution history").unwrap();
+        for mode in [UserMode::DryRun, UserMode::Apply] {
+            assert!(execute(
+                UserOperation::Update,
+                &args(temporary.path(), UserHost::Codex, mode),
+                &runner
+            )
+            .is_err());
+            assert_eq!(fs::read(&runtime).unwrap(), b"user execution history");
+            assert_eq!(fs::read(&setup).unwrap(), saved_setup);
+        }
+
         let dry_run = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
         let preview = execute(UserOperation::Install, &dry_run, &runner)
             .expect("preserving reinstall preview");
@@ -8987,6 +9128,8 @@ mod tests {
                 ("0.10.3", 68),
                 ("0.11.0", 73),
                 ("0.11.1", 74),
+                ("0.12.0", 74),
+                ("0.13.0", 74),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -9143,7 +9286,14 @@ mod tests {
                     .expect("direct stable upgrade plan");
                 if matches!(
                     version,
-                    "0.10.0" | "0.10.1" | "0.10.2" | "0.10.3" | "0.11.0" | "0.11.1"
+                    "0.10.0"
+                        | "0.10.1"
+                        | "0.10.2"
+                        | "0.10.3"
+                        | "0.11.0"
+                        | "0.11.1"
+                        | "0.12.0"
+                        | "0.13.0"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -9206,6 +9356,154 @@ mod tests {
                     .expect("upgraded 0.10.1 manifest JSON");
             assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
             assert_eq!(upgraded.host, host);
+        }
+    }
+
+    #[test]
+    fn public_0130_selected_skills_authenticate_complete_known_families_only() {
+        let mut manifest: UserOwnershipManifest = serde_json::from_slice(include_bytes!(
+            "../../../tests/fixtures/user-predecessors/0.13.0/partial-codex-manifest.json"
+        ))
+        .unwrap();
+        assert_eq!(manifest.entries.len(), 20);
+        assert_eq!(
+            source_release_digest_from_entries(&manifest.entries),
+            manifest.source_release_digest
+        );
+        for entry in &mut manifest.entries {
+            entry.unix_mode = installed_unix_mode(entry.executable);
+        }
+        let authenticate = |entries: &[UserOwnershipEntry]| {
+            historical_09x_user_inventory(
+                UserHost::Codex,
+                &InventoryAuthentication {
+                    product_version: "0.13.0",
+                    installed_host_version_range: &manifest.host_version_range,
+                    source_release_digest: &source_release_digest_from_entries(entries),
+                    installed_entries: entries,
+                    installed_guidance_path: Path::new(&manifest.guidance_path),
+                    current_guidance_path: Path::new(&manifest.guidance_path),
+                    current_source_release_digest: "not-the-current-release",
+                    current_entries: &[],
+                    authenticated_prior: None,
+                },
+            )
+        };
+        let authenticated = authenticate(&manifest.entries).expect("real public selected install");
+        assert_user_entries_equal(&authenticated.entries, &manifest.entries);
+        let mut incomplete = manifest.entries.clone();
+        incomplete.retain(|entry| !entry.path.ends_with("user-setup/references/workflow.md"));
+        assert!(authenticate(&incomplete).is_none());
+        let mut missing_core = manifest.entries.clone();
+        missing_core.retain(|entry| !entry.path.ends_with(".codex-plugin/plugin.json"));
+        assert!(authenticate(&missing_core).is_none());
+        let mut modified = manifest.entries.clone();
+        let entry = modified
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("SKILL.md"))
+            .unwrap();
+        entry.digest = sha256_digest(b"untrusted replacement");
+        assert!(authenticate(&modified).is_none());
+        let mut unknown = manifest.entries.clone();
+        let entry = unknown
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("SKILL.md"))
+            .unwrap();
+        entry.path = ".hive/marketplaces/codex/plugins/aigent-hive/skills/unknown/SKILL.md".into();
+        unknown.sort_by(|left, right| left.path.cmp(&right.path));
+        assert!(authenticate(&unknown).is_none());
+    }
+
+    #[test]
+    fn public_0130_korean_and_windows_newlines_upgrade_without_reinstall_or_data_loss() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().unwrap();
+            seed_historical_09x_user_install(temporary.path(), "0.13.0", host);
+            let manifest_path = temporary
+                .path()
+                .join(format!(".hive/install/{}.json", host.as_str()));
+            let mut manifest: UserOwnershipManifest =
+                serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+            let mut changed = 0;
+            for entry in &mut manifest.entries {
+                let Some(relative) = historical_user_artifact_relative(host, &entry.path) else {
+                    continue;
+                };
+                let Some((name, suffix)) = relative
+                    .strip_prefix("skills/")
+                    .and_then(|rest| rest.split_once('/'))
+                else {
+                    continue;
+                };
+                let target = temporary.path().join(&entry.path);
+                let raw = fs::read(&target).unwrap();
+                let mut bytes = hive_projection::localized_builtin_artifact(
+                    name,
+                    suffix,
+                    &raw,
+                    DescriptorLanguage::Ko,
+                )
+                .unwrap();
+                if Path::new(suffix)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+                {
+                    bytes = String::from_utf8(bytes)
+                        .unwrap()
+                        .replace("\r\n", "\n")
+                        .replace('\n', "\r\n")
+                        .into_bytes();
+                }
+                changed += usize::from(raw != bytes);
+                entry.digest = sha256_digest(&bytes);
+                fs::write(target, bytes).unwrap();
+                assert!(historical_user_artifact_matches(
+                    "0.13.0",
+                    host,
+                    &entry.path,
+                    &entry.digest
+                ));
+                assert!(!historical_user_artifact_matches(
+                    "0.13.0",
+                    host,
+                    &entry.path,
+                    &sha256_digest(b"tampered")
+                ));
+            }
+            assert!(changed > 20);
+            manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
+            manifest.plan_digest = inventory_digest(
+                host,
+                &manifest.product_version,
+                &manifest.host_version_range,
+                Path::new(&manifest.guidance_path),
+                &manifest.source_release_digest,
+                &manifest.entries,
+            );
+            fs::write(manifest_path, json_line(&manifest).unwrap()).unwrap();
+            let runtime = temporary
+                .path()
+                .join(".hive/runtime/execution-history.json");
+            fs::create_dir_all(runtime.parent().unwrap()).unwrap();
+            fs::write(&runtime, b"keep exact history").unwrap();
+            build_plan(&args(temporary.path(), host, UserMode::DryRun))
+                .expect("ordinary authenticated upgrade");
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            match host {
+                UserHost::Codex | UserHost::Claude => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &StatefulHostRunner::new(temporary.path(), HostSabotage::None),
+                ),
+                UserHost::Antigravity => execute(
+                    UserOperation::Update,
+                    &arguments,
+                    &AntigravityRunner::new(temporary.path()),
+                ),
+            }
+            .expect("ordinary public upgrade");
+            assert_eq!(fs::read(runtime).unwrap(), b"keep exact history");
         }
     }
 

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "scope": "authentic public0.13.0 partial user root to current0.13.1 source; simulated host registration",
+  "old_binary_sha256": "9e8f00b3ffe24807f207905637bd6ba8d8b11ac7716c4ef6cdab789c7d12e9bd",
+  "new_binary_sha256": "86d5b76d6a18efe06a6494a55dc6334b52b4f89ca49975e78c34e2e9777f14f4",
+  "selected": [
+    "user-setup",
+    "prompt-refine",
+    "usage-guard"
+  ],
+  "settings_knowledge_history_preserved": true,
+  "preview_apply_validate": [
+    "hive.user-install-dry-run-complete",
+    "hive.user-update-complete",
+    "hive.user-install-valid"
+  ],
+  "real_user_installation_changed": false,
+  "app_control_requested": false,
+  "limit": "not the new publictest.2 artifact or live monitor transition"
+}

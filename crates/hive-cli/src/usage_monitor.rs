@@ -1,7 +1,19 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
 mod desktop;
 mod platform;
+#[cfg(debug_assertions)]
+mod qualification;
+mod sensor;
 mod state;
+mod threshold;
+mod upgrade;
+
+#[cfg(debug_assertions)]
+pub(crate) use qualification::run_qualification;
+#[cfg(debug_assertions)]
+pub(crate) use sensor::run_supervisor;
+pub(crate) use sensor::run_worker;
+pub(crate) use upgrade::upgrade_existing;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -23,7 +35,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 const BASE: &str = ".hive/runtime/usage-monitor";
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
+const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 const DESKTOP_VERSION: &str = "26.1013.4894.0";
+const DESKTOP_VERSIONS: &[&str] = &[DESKTOP_VERSION, "26.1016.6573.0"];
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -135,7 +149,21 @@ fn with_state<T>(
     let _lock = lock(root, "state.lock")?;
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
     state.migrate()?;
+    let generation = state.generation;
     let result = apply(&mut state)?;
+    if state.generation != generation {
+        if let Some(incident) = state.incident.as_mut() {
+            incident.detected_at_ms = Some(
+                u64::try_from(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis(),
+                )
+                .unwrap_or(u64::MAX),
+            );
+        }
+    }
     write(root, STATE, &state)?;
     Ok(result)
 }
@@ -150,8 +178,46 @@ pub(crate) fn reset_already_dispatched(
         .ok()
         .flatten()
         .is_some_and(|state| {
-            state.schema_version == 2 && state.reset_already_dispatched(current, previous)
+            matches!(state.schema_version, 2 | 3)
+                && state.reset_already_dispatched(current, previous)
         })
+}
+
+pub(crate) fn monitor_enabled(root: &PinnedTarget) -> bool {
+    load::<Configuration>(root, CONFIG)
+        .ok()
+        .flatten()
+        .is_some_and(|configuration| configuration.enabled)
+}
+
+pub(crate) fn threshold_already_handled(
+    root: &PinnedTarget,
+    policy: &crate::usage_control::MonitorPolicy,
+    snapshots: &[UsageSnapshot],
+    automatic: bool,
+) -> bool {
+    !automatic
+        && cfg!(windows)
+        && monitor_enabled(root)
+        && load::<MonitorState>(root, STATE)
+            .ok()
+            .flatten()
+            .is_some_and(|state| {
+                state.schema_version == 3 && threshold::handled(&state, policy, snapshots)
+            })
+}
+
+pub(crate) fn session_process_identity(pid: u32) -> Option<String> {
+    use crate::usage::CommandRunner;
+    let executable = crate::usage::SystemCommandRunner.qualify("codex").ok()?;
+    platform::call(
+        &json!({"operation":"session-identity","pid":pid,"executable":executable.path()}),
+        Duration::from_secs(5),
+    )
+    .ok()?
+    .get("digest")?
+    .as_str()
+    .map(str::to_owned)
 }
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
@@ -265,16 +331,7 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
     root.read_required(Path::new(".hive/config/user-setup.yml"), 65536)?;
     match action {
         "preview" => preview(root.requested_path()),
-        "status" => {
-            let configuration: Option<Configuration> = load(&root, CONFIG)?;
-            let state: MonitorState = load(&root, STATE)?.unwrap_or_else(MonitorState::new);
-            Ok(
-                json!({"configuration":configuration,"state":state,"observation_gap_seconds":state.last_success.map(|at| now().saturating_sub(at)),
-                "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && now().saturating_sub(state.heartbeat) < BLIND_SECONDS
-                    && state.last_success.is_some_and(|at| now().saturating_sub(at) < BLIND_SECONDS) && state.control_connected && !state.control_stopping && state.unknown_sessions == 0,
-                "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
-            )
-        }
+        "status" => monitor_status(&root),
         "enable" => enable(&root, confirm.unwrap_or_default()),
         "disable" => disable(&root),
         "run" => controller(&root),
@@ -282,7 +339,57 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
     }
 }
 
+fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    let configuration: Option<Configuration> = load(root, CONFIG)?;
+    let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
+    let probe = configuration
+        .as_ref()
+        .zip(state.controller_pid)
+        .and_then(|(config, pid)| {
+            platform::call(
+                &json!({"operation":"session-identity","pid":pid,"executable":config.executable}),
+                Duration::from_secs(5),
+            )
+            .ok()
+        });
+    let alive = probe
+        .as_ref()
+        .and_then(|value| value["digest"].as_str())
+        .is_some_and(|digest| state.controller_identity.as_deref() == Some(digest));
+    let uptime = probe.as_ref().and_then(|value| value["uptime_ms"].as_u64());
+    let gap = state.observation_gap_monotonic(state.app_alive, now(), uptime);
+    let heartbeat_fresh = uptime.zip(state.heartbeat_uptime_ms).map_or_else(
+        || now().saturating_sub(state.heartbeat) < 5,
+        |(tick, last)| tick >= last && tick - last < 5000,
+    );
+    let observed = state.observation_count > 0
+        && state.last_success.is_some()
+        && gap.as_secs() < BLIND_SECONDS;
+    let sensor_health = if !alive {
+        "stopped"
+    } else if !state.app_alive {
+        "idle"
+    } else if !observed {
+        "blind"
+    } else if state.last_query_error.is_some() {
+        "recovering"
+    } else {
+        "healthy"
+    };
+    Ok(
+        json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
+        "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
+        "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
+        "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+            && observed && state.last_query_error.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
+        "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
+        "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
+    )
+}
+
 fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
+    let normal = monitor_root_path(root)?;
+    let root = normal.as_path();
     let executable =
         std::env::current_exe().map_err(|_| error("cannot identify monitor executable"))?;
     let digest = sha256_digest(
@@ -294,12 +401,16 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
     if root_text.contains(['"', '\r', '\n']) {
         return Err(error("invalid monitor root"));
     }
-    let task_key = sha256_digest(root_text.to_lowercase().as_bytes());
-    let installed_executable = root.join(BASE).join("bin").join(format!(
-        "hive-{}-{}.exe",
-        env!("CARGO_PKG_VERSION"),
-        &digest[7..23]
-    ));
+    let installed_executable: PathBuf = root
+        .join(BASE)
+        .join("bin")
+        .join(format!(
+            "hive-{}-{}.exe",
+            env!("CARGO_PKG_VERSION"),
+            &digest[7..23]
+        ))
+        .components()
+        .collect();
     let launch = format!(
         "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
         installed_executable.to_string_lossy().replace('\'', "''"),
@@ -320,13 +431,67 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
     Ok(Configuration {
         schema_version: 1,
         enabled: true,
-        version: env!("CARGO_PKG_VERSION").into(),
+        version: env!("HIVE_PACKAGE_VERSION").into(),
         executable: installed_executable,
         executable_digest: digest,
-        task_name: format!("AigentHive-UsageMonitor-{}", &task_key[7..23]),
+        task_name: monitor_task_name(root),
         arguments: format!("usage monitor run --user-root \"{root_text}\" --output json"),
         launcher,
     })
+}
+
+fn monitor_task_name(root: &Path) -> String {
+    let key = sha256_digest(root.to_string_lossy().to_lowercase().as_bytes());
+    format!("AigentHive-UsageMonitor-{}", &key[7..23])
+}
+
+/// Normalize process-facing Windows names only after comparing pinned directory identities.
+#[cfg_attr(not(windows), allow(clippy::unnecessary_wraps))]
+fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
+    #[cfg(windows)]
+    {
+        use cap_fs_ext::MetadataExt;
+        use std::path::{Component, Prefix};
+        let canonical =
+            std::fs::canonicalize(root).map_err(|_| error("monitor root identity unavailable"))?;
+        let mut components = canonical.components();
+        let normal = match components.next() {
+            Some(Component::Prefix(prefix)) => match prefix.kind() {
+                Prefix::VerbatimDisk(drive) => {
+                    Some(PathBuf::from(format!("{}:\\", char::from(drive))))
+                }
+                Prefix::VerbatimUNC(server, share) => {
+                    Some(PathBuf::from("\\\\").join(server).join(share))
+                }
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(mut normal) = normal {
+            for component in components {
+                if component != Component::RootDir {
+                    normal.push(component.as_os_str());
+                }
+            }
+            let expected = PinnedTarget::open_usage(root)?;
+            let actual = PinnedTarget::open_usage(&normal)?;
+            let before = expected
+                .target_dir()
+                .dir_metadata()
+                .map_err(|_| error("monitor root identity unavailable"))?;
+            let after = actual
+                .target_dir()
+                .dir_metadata()
+                .map_err(|_| error("normalized monitor root identity unavailable"))?;
+            if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
+                return Err(error(
+                    "normalized monitor root identifies another directory",
+                ));
+            }
+            return Ok(normal);
+        }
+    }
+    Ok(root.to_owned())
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
     let mut config = configuration(root)?;
@@ -339,7 +504,7 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
     };
     let mut data = json!({"configuration":config,"adapter_digest":sha256_digest(platform::SCRIPT.as_bytes()),
         "poll_seconds":POLL_SECONDS,"sample_timeout_seconds":5,"retry_seconds":2,"unresponsive_seconds":BLIND_SECONDS,
-        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"automatic_control_available":available,
+        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"automatic_control_available":available,
         "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
         "supports_current_os":available,"remote_execution_supported":false});
@@ -366,7 +531,10 @@ fn require_app_safe_control() -> Result<(), AdapterError> {
     }
 }
 fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
-    if inspection["desktop_package_version"] == DESKTOP_VERSION {
+    if inspection["desktop_package_version"]
+        .as_str()
+        .is_some_and(|version| DESKTOP_VERSIONS.contains(&version))
+    {
         Ok(())
     } else {
         Err(error(
@@ -374,6 +542,19 @@ fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
         ))
     }
 }
+fn prepare_activation(state: &mut MonitorState) {
+    // Only an explicit enable starts a new observation period. A controller crash
+    // or upgrade must retain its prior gap and must not gain sixty extra seconds.
+    state.observation_count = 0;
+    state.observation_watch_started_at = None;
+    state.watch_started_uptime_ms = None;
+    state.last_success_uptime_ms = None;
+    state.sensor_outage_stopped_at = None;
+    state.control_connected = false;
+    state.heartbeat = 0;
+    state.heartbeat_uptime_ms = None;
+}
+
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     require_app_safe_control()?;
     let _control = lock(root, "control.lock")?;
@@ -409,10 +590,7 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     root.publish_runtime(relative, &before, &bytes)?;
     platform::call(&task_request(&config, "register"), Duration::from_secs(15))?;
     with_state(root, |s| {
-        s.observation_count = 0;
-        s.observation_watch_started_at = None;
-        s.control_connected = false;
-        s.heartbeat = 0;
+        prepare_activation(s);
         Ok(())
     })?;
     if let Err(e) = write(root, CONFIG, &config) {
@@ -449,13 +627,13 @@ fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
     write(root, CONFIG, &config)?;
     Ok(json!({"enabled":false,"incident_preserved":true,"changed_paths":[CONFIG]}))
 }
-type SampleResult = Result<Vec<UsageSnapshot>, crate::usage::SensorError>;
-fn sensor_worker() -> mpsc::SyncSender<mpsc::SyncSender<SampleResult>> {
-    let (tx, rx) = mpsc::sync_channel::<mpsc::SyncSender<SampleResult>>(1);
+type SampleResult = sensor::Sample;
+fn sensor_worker() -> mpsc::SyncSender<(bool, mpsc::SyncSender<SampleResult>)> {
+    let (tx, rx) = mpsc::sync_channel::<(bool, mpsc::SyncSender<SampleResult>)>(1);
     thread::spawn(move || {
-        let mut sensor = crate::usage::MonitorSensor::new();
-        while let Ok(reply) = rx.recv() {
-            let _ = reply.send(sensor.read().map(|s| s.core_snapshots()));
+        let mut sensor = sensor::Reader::new();
+        while let Ok((fresh, reply)) = rx.recv() {
+            let _ = reply.send(sensor.read(fresh));
         }
     });
     tx
@@ -475,6 +653,21 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    let mut report = json!({"started_at":now(),"pid":std::process::id(),
+        "version":env!("HIVE_PACKAGE_VERSION"),"error":null});
+    write(root, STARTUP, &report)?;
+    let result = controller_scoped(root, None);
+    if let Err(failure) = &result {
+        report["error"] = json!(failure.message());
+        let _ = write(root, STARTUP, &report);
+    }
+    result
+}
+
+fn controller_scoped(
+    root: &PinnedTarget,
+    qualification: Option<String>,
+) -> Result<Value, AdapterError> {
     require_app_safe_control()?;
     let _lease = lock(root, "controller.lock")?;
     let config: Configuration =
@@ -491,15 +684,32 @@ fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
         Duration::from_secs(5),
     )?;
     require_desktop_version(&initial)?;
+    if let Some(tick) = initial["uptime_ms"].as_u64() {
+        sensor::seed_uptime(tick);
+    }
     if initial["caller_within_app"] == true {
         return Err(error(
             "monitor must run independently through its scheduled task",
         ));
     }
+    let pid = std::process::id();
+    let identity = platform::call(
+        &json!({"operation":"session-identity","pid":pid,"executable":config.executable}),
+        Duration::from_secs(5),
+    )?;
+    with_state(root, |state| {
+        state.controller_pid = Some(pid);
+        state.controller_identity = identity["digest"].as_str().map(str::to_owned);
+        state.runtime_version = Some(env!("HIVE_PACKAGE_VERSION").to_owned());
+        Ok(())
+    })?;
     let active = initial["app_count"].as_u64().is_none_or(|count| count > 0);
-    let desktop = desktop::Desktop::start();
+    let desktop = desktop::Desktop::start_scoped(qualification);
     let mut fault_notice = None;
     loop {
+        if load::<Configuration>(root, CONFIG)?.is_some_and(|current| !current.enabled) {
+            return Ok(json!({"stopped":true}));
+        }
         if let Ok(value) = controller_loop(root, active, &desktop) {
             return Ok(value);
         }
@@ -559,6 +769,18 @@ fn record_control(
             if let Some(i) = s.incident.as_mut() {
                 if packet["stop"]["incident"].as_str() == Some(i.digest.as_str()) {
                     i.record_session_stop(&packet["stop"], now());
+                    if let Some(confirmed) = packet["stop"]["confirmed_sessions"].as_array() {
+                        for receipt in &mut s.threshold_receipts {
+                            if i.threshold_details.iter().any(|detail| {
+                                detail.session_digest == receipt.session_digest
+                                    && detail.policy_digest == receipt.policy_digest
+                            }) && confirmed.iter().any(|value| {
+                                value.as_str() == Some(receipt.session_digest.as_str())
+                            }) {
+                                receipt.confirmed = true;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -573,18 +795,21 @@ fn record_control(
     })
 }
 
-fn record_sample(root: &PinnedTarget, measured: SampleResult, elapsed: u64) -> bool {
+fn record_sample(
+    root: &PinnedTarget,
+    measured: SampleResult,
+    elapsed: u64,
+    policies: &[crate::usage_control::MonitorPolicy],
+) -> (bool, bool) {
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
-        let outcome = measured.map_err(|e| e.to_string()).and_then(|snapshots| {
-            state
-                .observe(&snapshots, now())
-                .map_err(|e| e.message().to_owned())
-        });
-        state.last_query_error = outcome.as_ref().err().cloned();
-        Ok(outcome.is_ok())
+        let result = state.record_query(measured, now());
+        if result.0 {
+            threshold::observe(state, policies, &state.baseline.clone(), now());
+        }
+        Ok(result)
     })
-    .unwrap_or(false)
+    .unwrap_or((false, false))
 }
 
 fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, AdapterError> {
@@ -626,9 +851,14 @@ fn dispatch_halt(
             return Ok(());
         };
         if sent_incident.as_deref() != Some(incident.digest.as_str()) {
-            desktop.stop(
+            desktop.stop_scoped(
                 &incident.digest,
-                Some(incident.detected_at.saturating_mul(1000)),
+                Some(
+                    incident
+                        .detected_at_ms
+                        .unwrap_or_else(|| incident.detected_at.saturating_mul(1000)),
+                ),
+                incident.target_sessions.as_deref(),
             );
             *sent_incident = Some(incident.digest.clone());
         }
@@ -651,16 +881,43 @@ fn dispatch_halt(
 
 type SampleWorker = (Instant, Receiver<SampleResult>);
 
+type PolicyJob = (
+    Vec<crate::usage::MonitorThread>,
+    Vec<threshold::ActiveSession>,
+    mpsc::SyncSender<(Vec<crate::usage_control::MonitorPolicy>, u64)>,
+);
+
+fn policy_worker(root: PathBuf) -> mpsc::SyncSender<PolicyJob> {
+    let (send, receive) = mpsc::sync_channel::<PolicyJob>(1);
+    thread::spawn(move || {
+        while let Ok((contexts, active, reply)) = receive.recv() {
+            let _ = reply.send(threshold::policies(&root, &contexts, &active));
+        }
+    });
+    send
+}
+
+#[allow(clippy::too_many_lines)]
 fn controller_loop(
     root: &PinnedTarget,
     mut active: bool,
     desktop: &desktop::Desktop,
 ) -> Result<Value, AdapterError> {
     let sensor = sensor_worker();
+    let policy_worker = policy_worker(root.requested_path().to_owned());
+    let mut contexts: Vec<crate::usage::MonitorThread> = Vec::new();
+    let mut sessions: Vec<threshold::ActiveSession> = Vec::new();
+    let mut policies = Vec::new();
+    let mut policy_job = None;
+    let mut next_policy = Instant::now();
+    let mut policies_at = Instant::now();
     let started = Instant::now();
-    let gap = with_state(root, |state| Ok(state.observation_gap(active, now())))?;
+    let gap = with_state(root, |state| {
+        Ok(state.observation_gap_monotonic(active, now(), sensor::uptime_ms()))
+    })?;
     let mut cadence = state::Cadence::with_gap(gap);
     let mut sample: Option<SampleWorker> = None;
+    let mut independent = false;
     let mut inspect: Option<Receiver<Result<Value, ()>>> = None;
     let mut next_inspect = started;
     let mut last_control = started
@@ -701,12 +958,53 @@ fn controller_loop(
             }
         }
         while let Ok(packet) = desktop.events.try_recv() {
+            if packet["type"] == "catalog" {
+                contexts = serde_json::from_value(packet["contexts"].clone()).unwrap_or_default();
+                next_policy = tick;
+                continue;
+            }
             control_connected = packet["connected"] == true;
             if control_connected {
                 last_control = tick;
                 active = true;
+                sessions =
+                    serde_json::from_value(packet["active_sessions"].clone()).unwrap_or_default();
             }
             record_control(root, &packet, active, control_connected)?;
+        }
+        if policy_job.is_none() && tick >= next_policy {
+            let (send, receive) = mpsc::sync_channel(1);
+            let _ = policy_worker.try_send((contexts.clone(), sessions.clone(), send));
+            policy_job = Some((tick, receive));
+            next_policy = tick + Duration::from_secs(2);
+        }
+        if let Some((began, receive)) = &policy_job {
+            if let Ok((updated, errors)) = receive.try_recv() {
+                policies = updated;
+                policies_at = tick;
+                with_state(root, |state| {
+                    state.threshold_policy_errors = errors;
+                    if state
+                        .last_success
+                        .is_some_and(|at| now().saturating_sub(at) <= 5)
+                    {
+                        threshold::observe(state, &policies, &state.baseline.clone(), now());
+                    }
+                    Ok(())
+                })?;
+                policy_job = None;
+            } else if began.elapsed() >= Duration::from_secs(5) {
+                policies.clear();
+                with_state(root, |state| {
+                    state.threshold_policy_errors =
+                        u64::try_from(sessions.len()).unwrap_or(u64::MAX);
+                    Ok(())
+                })?;
+                policy_job = None;
+            }
+        }
+        if policies_at.elapsed() > Duration::from_secs(20) {
+            policies.clear();
         }
         if last_control.elapsed() >= Duration::from_secs(3) {
             control_connected = false;
@@ -716,16 +1014,22 @@ fn controller_loop(
         }
         if active && sample.is_none() && tick.duration_since(started) >= cadence.next_sample {
             let (tx, rx) = mpsc::sync_channel(1);
-            let _ = sensor.try_send(tx);
+            let _ = sensor.try_send((independent, tx));
             sample = Some((tick, rx));
             cadence.begin(tick.duration_since(started));
         }
         if let Some((began, rx)) = &sample {
             let result = rx.try_recv();
-            if result.is_ok() || began.elapsed() >= Duration::from_secs(5) {
+            if result.is_ok() || began.elapsed() >= Duration::from_secs(11) {
                 let elapsed = u64::try_from(began.elapsed().as_millis()).unwrap_or(u64::MAX);
-                let measured = result.unwrap_or(Err(crate::usage::SensorError::Timeout));
-                let success = record_sample(root, measured, elapsed);
+                let measured = result.unwrap_or(sensor::Sample {
+                    snapshots: Err("observation-supervisor-timeout".into()),
+                    source: "unavailable",
+                    primary_error: None,
+                });
+                let (success, needs_independent) =
+                    record_sample(root, measured, elapsed, &policies);
+                independent = needs_independent;
                 cadence.complete(tick.duration_since(started), success);
                 sample = None;
             }
@@ -747,9 +1051,10 @@ fn controller_loop(
         if last_publish.elapsed() >= Duration::from_secs(1) {
             let _ = with_state(root, |s| {
                 s.heartbeat = now();
+                s.heartbeat_uptime_ms = sensor::uptime_ms();
                 s.control_connected = control_connected;
                 s.app_alive = active;
-                let _ = s.observation_gap(active, now());
+                let _ = s.observation_gap_monotonic(active, now(), sensor::uptime_ms());
                 Ok(())
             });
             last_publish = tick;
@@ -761,6 +1066,73 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_reenable_does_not_reuse_a_disabled_observation_gap() {
+        let mut state = MonitorState::new();
+        state.last_success = Some(100);
+        state.observation_count = 3;
+        state.watch_started_uptime_ms = Some(90_000);
+        state.last_success_uptime_ms = Some(100_000);
+        state.observation_blind(101);
+        let incident = serde_json::to_value(&state.incident).unwrap();
+        prepare_activation(&mut state);
+        assert_eq!(state.observation_count, 0);
+        assert_eq!(state.last_success, Some(100));
+        assert_eq!(serde_json::to_value(&state.incident).unwrap(), incident);
+        assert_eq!(
+            state.observation_gap_monotonic(true, 900, Some(900_000)),
+            Duration::ZERO
+        );
+        assert_eq!(
+            state.observation_gap_monotonic(true, 959, Some(959_999)),
+            Duration::from_millis(59_999)
+        );
+        assert_eq!(
+            state.observation_gap_monotonic(true, 960, Some(960_000)),
+            Duration::from_secs(BLIND_SECONDS)
+        );
+        state.observation_blind(960);
+        assert_eq!(state.generation, 2);
+        state.observation_blind(961);
+        assert_eq!(state.generation, 2);
+    }
+
+    #[test]
+    fn configured_monitor_identifies_the_actual_package_build() {
+        let temporary = tempfile::tempdir().unwrap();
+        let config = configuration(temporary.path()).unwrap();
+        assert_eq!(config.version, env!("HIVE_PACKAGE_VERSION"));
+    }
+
+    #[test]
+    fn enabled_configuration_is_not_reported_as_a_running_observer() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut config = configuration(temporary.path()).unwrap();
+        config.enabled = true;
+        write(&root, CONFIG, &config).unwrap();
+        let status = monitor_status(&root).unwrap();
+        assert_eq!(status["configuration"]["enabled"], true);
+        assert_eq!(status["controller_alive"], false);
+        assert_eq!(status["sensor_health"], "stopped");
+        assert_eq!(status["monitoring_verified"], false);
+        assert!(status["running_monitor_version"].is_null());
+    }
+    #[test]
+    fn rejected_startup_is_visible_without_publishing_a_stop_or_changing_choice() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut config = configuration(temporary.path()).unwrap();
+        config.enabled = false;
+        write(&root, CONFIG, &config).unwrap();
+        assert!(controller(&root).is_err());
+        let status = monitor_status(&root).unwrap();
+        assert!(status["startup"]["error"].is_string());
+        assert_eq!(status["startup"]["version"], env!("HIVE_PACKAGE_VERSION"));
+        assert_eq!(status["configuration"]["enabled"], false);
+        assert!(!temporary.path().join(STATE).exists());
+        assert_eq!(status["monitoring_verified"], false);
+    }
     #[test]
     fn preview_is_nonmutating_and_activation_requires_matching_installation() {
         let temporary = tempfile::tempdir().unwrap();
@@ -778,14 +1150,14 @@ mod tests {
     }
     #[test]
     fn desktop_package_qualification_is_exact() {
-        assert!(
-            require_desktop_version(&json!({"desktop_package_version":DESKTOP_VERSION})).is_ok()
-        );
+        for version in DESKTOP_VERSIONS {
+            assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_ok());
+            assert!(include_str!("usage_monitor/desktop.ps1").contains(version));
+        }
         for version in ["26.1007.9446.0", "26.1013.4894.1", ""] {
             assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_err());
         }
         assert!(require_desktop_version(&json!({})).is_err());
-        assert!(include_str!("usage_monitor/desktop.ps1").contains(DESKTOP_VERSION));
     }
     #[cfg(windows)]
     #[test]

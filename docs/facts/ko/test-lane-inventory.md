@@ -9,23 +9,22 @@ summary: "목적별 시험 package와 단일 실행 lane 대장의 안정성 회
 tags: [release, test, verification]
 aliases: ["conformance lanes", "test inventory"]
 sources:
-  - "repo:docs/guides/test-cleanup.md#sha256:b53790d8dba15644bdb0086d405b4b05412edc7b1d2c99db0d8d66edc9b049ba"
+  - "repo:docs/guides/test-cleanup.md#sha256:12d06ecf62144cec1394e4cff8762ce8b7942211941077f1d232728182c0294f"
   - "repo:docs/guides/test-lanes.md#sha256:ac5e2863835c6c3605986ff71600d6b6a626676dc745a781cc2d0e18a28fa451"
   - "repo:scripts/test-lanes.py#sha256:5bc7694c5e1f399880069d16edbde37b85c741dadc5d6252892ebd5142cea8b1"
-  - "repo:scripts/test_artifacts.py#sha256:832d67312bf54707ea0e3acfce37189cc733180819e41fdc9ca9c21bf04957d0"
+  - "repo:scripts/test_artifacts.py#sha256:576ee2abad8e8788b0ca22ca617e9fa048afef8321ba4dc3e8f150d7a5bd7978"
   - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:d6b780ea86a3b69a0b822f9b227a5a3e0004ca0d36f7da3e87d401b15b4e973a"
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:81d38458c1fb4e2b0ad406bac350d06b5df34b57de31d729509f726402e9b319"
-  - "repo:tests/conformance/lanes.toml#sha256:ebb52408e72acc7e3dffface4f5694e14749eb204c882eda821a5392408b111f"
+  - "repo:tests/conformance/lanes.toml#sha256:232b3818a375d924b8852fe94b929444f6f2acc718ea34c2dad7ccd1d597e168"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:6cee0fc8998d4b1b25eaed092f1a252b7144b210"
+reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
 status: active
 ---
 
 # 시험 lane 대장
 
-- phase 대신 목적별 Python package와 단일 `tests/conformance/lanes.toml` 대장, 재귀 발견한 모든 `test_*.py` 배정
-- documentation·security·contract·integration·release 배정, 누락·중복 거절
-- 변경 경로별 선택·모듈별 JSON 시간 기록, 안정성·과거 갱신 시험과 자료 보존
-- 사용자 용량 관리 요청: `daily`의 검토·Git 근거 확인 경로만 정리
-- 중복 제외 20GiB 상한·미검토·만료 점검, 시험 기본 `CARGO_INCREMENTAL=0`과 명시 설정 보존
-- 실행 중·목록 변경·연결 경로 삭제 거절, 작은 결과 Markdown의 Git 보존
+- phase 대신 목적별 Python package와 `tests/conformance/lanes.toml`, 재귀 발견한 모든 test_*.py의 documentation·security·contract·integration·release 배정
+- 누락·중복 거절, 변경 경로 선택·모듈별 JSON 시간 기록, 안정성·과거 갱신 시험과 자료 보존
+- daily: 기존 Git 근거·정확 경로 검토 뒤 정리, 미검토·만료·중복 제외 20GiB 초과 시 점검
+- 시험 기본 CARGO_INCREMENTAL=0·명시 설정 보존, 실행 중·목록 변경·연결 삭제 거절
+- 사용자 규약: 정리의 tests/ 새 문서·결과 커밋 금지, 감사 기록은 무시된 .agents/work/test-artifacts/cleanup/, 기존 시험 결과는 Git 보존

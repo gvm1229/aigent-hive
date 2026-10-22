@@ -29,6 +29,52 @@ class WindowsUsageMonitor(unittest.TestCase):
         # Exercise production functions and switch without accepting arbitrary product targets.
         return source.replace("$request = [Console]::In.ReadToEnd() | ConvertFrom-Json", "# request supplied by the fixture")
 
+    def desktop_json(self) -> str:
+        source=(ROOT/'crates/hive-cli/src/usage_monitor/desktop.ps1').read_text(encoding='utf-8')
+        begin=source.index('Add-Type -ReferencedAssemblies')
+        end=source.index("'@",begin)+2
+        return "$ErrorActionPreference='Stop'\n"+source[begin:end]+"\n"
+
+    def test_large_stream_keeps_only_turn_metadata_before_powershell_json(self):
+        source=self.desktop_json()+self.desktop_functions()+r"""
+$state=@{id='fixture';hostId='local';threadRuntimeStatus=@{type='busy'};threadGoal=@{status='active'};
+ turns=@(@{turnId='latest';status='inProgress';itemsPagination=@{oldest='page'};items=@(@{text=('x'*20000000)})});
+ turnHistory=@{kind='canonical';history=@{islands=@(@{entries=@(@{value='old'},@{value='latest'})});entitiesByKey=@{
+ old=@{turnId='old';status='completed'};latest=@{turnId='latest';status='interrupted';itemsPagination=@{oldest='page'}}}}}}
+$inputJson=@{type='broadcast';method='thread-stream-state-changed';params=@{hostId='local';conversationId='fixture';change=@{type='snapshot';conversationState=$state}}}|ConvertTo-Json -Depth 20 -Compress
+if([Text.Encoding]::UTF8.GetByteCount($inputJson) -le 16777216){throw 'Large input not exercised'}
+$filtered=[HiveDesktopJson]::Compact($inputJson)
+$view=($filtered|ConvertFrom-Json).params.change.conversationState
+$turns=@(Visible-Turns $view)
+if($turns.Count -ne 2 -or $turns[-1].status -ne 'interrupted' -or $view.threadGoal.status -ne 'active'){throw 'Turn metadata changed'}
+if($filtered.Contains('20000000') -or $filtered.Contains('"items":') -or $filtered.Length -gt 4096){throw 'History content retained'}
+@{large_input=$true;ordered_status=$true;content_removed=$true}|ConvertTo-Json -Compress
+"""
+        self.assertEqual(self.powershell(source),{'large_input':True,'ordered_status':True,'content_removed':True})
+
+    def test_stream_delta_keeps_paths_and_discards_values(self):
+        source=self.desktop_json()+r"""
+$frame='{"type":"broadcast","method":"thread-stream-state-changed","params":{"hostId":"local","conversationId":"fixture","change":{"type":"delta","patches":[{"path":["turns",0,"status"],"value":"private-content"}]}}}'
+$filtered=[HiveDesktopJson]::Compact($frame)
+$parsed=$filtered|ConvertFrom-Json
+if($filtered.Contains('private-content') -or $parsed.params.change.patches[0].path[2] -ne 'status'){throw 'Delta pruning changed status paths'}
+@{paths_preserved=$true;values_removed=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)['paths_preserved'])
+
+    def test_compact_response_preserves_interrupt_confirmation_and_rejects_bad_input(self):
+        source=self.desktop_json()+r"""
+$frame='{"type":"response","requestId":"r","resultType":"success","handledByClientId":"owner","result":{"ok":true,"interruptedTurnId":"turn","goalPauseError":false,"unused":{"id":"lower","ID":"upper","text":"private-content"}}}'
+$filtered=[HiveDesktopJson]::Compact($frame);$parsed=$filtered|ConvertFrom-Json
+if($parsed.result.interruptedTurnId -ne 'turn' -or -not $parsed.result.ok -or $parsed.result.goalPauseError -or $filtered.Contains('private-content')){throw 'Interrupt response changed'}
+$rejected=$false;try{[HiveDesktopJson]::Compact('{invalid')}catch{$rejected=$true}
+if(-not $rejected){throw 'Invalid JSON accepted'}
+$rejected=$false;try{[HiveDesktopJson]::Compact(('{"type":"response","error":"'+('x'*262145)+'"}'))}catch{$rejected=$true}
+if(-not $rejected){throw 'Oversized retained metadata accepted'}
+@{confirmation_preserved=$true;bounds_enforced=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)['bounds_enforced'])
+
     def deployment_functions(self) -> str:
         path = ROOT / "scripts/complete-usage-monitor-install.ps1"
         return "$ErrorActionPreference='Stop'\n$tokens=$null;$errors=$null\n" + (
@@ -75,7 +121,7 @@ try {
  & 'HELPER' -Request $request -AcceptanceResult $result
  throw 'Conditional installation gate was bypassed'
 } catch {
- if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
+ if($_.Exception.Message -notmatch 'Legacy global developer deployment is retired'){throw}
  @{rejected=$true} | ConvertTo-Json -Compress
 }
 """.replace("'HELPER'", "'" + helper + "'")
@@ -106,7 +152,7 @@ try {
  & 'HELPER' -Request $request -AcceptanceResult $result
  throw 'Legacy partial acceptance authorized deployment'
 } catch {
- if($_.Exception.Message -notmatch 'Session-stop acceptance'){throw}
+ if($_.Exception.Message -notmatch 'Legacy global developer deployment is retired'){throw}
  @{legacy_partial_rejected=$true}|ConvertTo-Json -Compress
 }
 """.replace("'HELPER'", "'" + helper + "'")
@@ -180,15 +226,15 @@ if($sessions.fixture.ready){throw 'Wrong session changed readiness'}
 
     def test_desktop_pipe_handles_split_frames_and_rejects_oversized_frames(self):
         source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding='utf-8')
-        declaration=source.split("Add-Type -TypeDefinition @'",1)[1].split("'@",1)[0]
+        declaration=source.split("-TypeDefinition @'",1)[1].split("'@",1)[0]
         declaration=declaration.replace('"codex-ipc"','"hive-frame-test-" + System.Diagnostics.Process.GetCurrentProcess().Id')
-        fixture="$ErrorActionPreference='Stop'\nAdd-Type -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
+        fixture="$ErrorActionPreference='Stop'\nAdd-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
 $name='hive-frame-test-'+$PID
 $server=[IO.Pipes.NamedPipeServerStream]::new($name,[IO.Pipes.PipeDirection]::InOut,1,[IO.Pipes.PipeTransmissionMode]::Byte,[IO.Pipes.PipeOptions]::Asynchronous)
 $waiting=$server.WaitForConnectionAsync()
 $client=[HiveDesktopPipe]::new();$null=$waiting.GetAwaiter().GetResult();$client.Start()
 try {
- $bytes=[Text.Encoding]::UTF8.GetBytes('{"fixture":true}')
+ $bytes=[Text.Encoding]::UTF8.GetBytes('{"type":"response","requestId":"fixture"}')
  $header=[BitConverter]::GetBytes([int]$bytes.Length)
  $server.Write($header,0,2);$server.Flush();Start-Sleep -Milliseconds 20
  if($null -ne $client.Poll()){throw 'Partial header delivered'}
@@ -197,8 +243,8 @@ try {
  $server.Write($bytes,3,$bytes.Length-3);$server.Flush()
  $deadline=[DateTime]::UtcNow.AddSeconds(2);$frame=$null
  do {Start-Sleep -Milliseconds 10;$frame=$client.Poll()} while($null -eq $frame -and [DateTime]::UtcNow -lt $deadline)
- if(-not ($frame|ConvertFrom-Json).fixture){throw 'Complete frame missing'}
- $bad=[BitConverter]::GetBytes([int]16777217);$server.Write($bad,0,4);$server.Flush()
+ if(($frame|ConvertFrom-Json).requestId -ne 'fixture'){throw 'Complete frame missing'}
+ $bad=[BitConverter]::GetBytes([int]67108865);$server.Write($bad,0,4);$server.Flush()
  $deadline=[DateTime]::UtcNow.AddSeconds(2)
  while($client.Alive -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 10}
  if($client.Alive){throw 'Oversized frame accepted'}
@@ -223,9 +269,9 @@ foreach($root in $data.roots) {
 
     def test_unresponsive_pipe_writer_times_out_without_contacting_the_app(self):
         source=(ROOT / 'crates/hive-cli/src/usage_monitor/desktop.ps1').read_text(encoding='utf-8')
-        declaration=source.split("Add-Type -TypeDefinition @'",1)[1].split("'@",1)[0]
+        declaration=source.split("-TypeDefinition @'",1)[1].split("'@",1)[0]
         declaration=declaration.replace('"codex-ipc"','"hive-write-test-" + System.Diagnostics.Process.GetCurrentProcess().Id')
-        fixture="$ErrorActionPreference='Stop'\nAdd-Type -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
+        fixture="$ErrorActionPreference='Stop'\nAdd-Type -ReferencedAssemblies 'System.Web.Extensions','System.Core' -TypeDefinition @'\n"+declaration+"\n'@\n"+r"""
 $name='hive-write-test-'+$PID
 $server=[IO.Pipes.NamedPipeServerStream]::new($name,[IO.Pipes.PipeDirection]::InOut,1,[IO.Pipes.PipeTransmissionMode]::Byte,[IO.Pipes.PipeOptions]::Asynchronous,4096,4096)
 $waiting=$server.WaitForConnectionAsync();$client=[HiveDesktopPipe]::new();$null=$waiting.GetAwaiter().GetResult();$client.Start()
@@ -346,7 +392,7 @@ $two='01234567-0123-0123-0123-0123456789ac'
 $child='01234567-0123-0123-0123-0123456789ad'
 """
 
-    def test_normal_tracking_has_no_history_subscriptions_or_stop_requests(self):
+    def test_tracking_primitive_has_no_history_subscriptions_or_stop_requests(self):
         source=self.offline_controller()+r"""
 Track $one;Track $two;Track $one
 1..20|ForEach-Object {Advance-Stop}
@@ -355,6 +401,21 @@ if($sessions[$one].ready -or $sessions[$one].subscribed){throw 'Unobserved activ
 @{metadata_only=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["metadata_only"])
+
+    def test_background_snapshot_identifies_active_turn_before_any_stop_event(self):
+        source=self.offline_controller()+r"""
+Track $one
+$sessions[$one].subscribed=$true
+$snapshot=@{hostId='local';conversationId=$one;change=@{type='snapshot';conversationState=@{
+ id=$one;hostId='local';turns=@(@{turnId='still-reasoning';status='inProgress'});
+ threadRuntimeStatus=@{type='running'};threadGoal=@{status='inactive'}
+}}}
+Snapshot $snapshot
+if(-not $sessions[$one].ready -or $sessions[$one].active.Count -ne 1 -or $sessions[$one].active[0] -ne 'still-reasoning'){throw 'Running activity before a stop was ignored'}
+if($null -ne $stop -or $actions.Count -ne 0){throw 'Background activity caused an unsolicited interrupt'}
+@{active_before_stop=$true;no_interrupt=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["active_before_stop"])
 
     def test_all_stop_requests_precede_snapshots_without_waiting_for_activity(self):
         source=self.offline_controller()+r"""
@@ -493,6 +554,20 @@ if(@($actions|Where-Object {$_.kind -eq 'interrupt' -and $_.id -eq $two}).Count)
 """
         self.assertTrue(self.powershell(source)["new_chat_allowed"])
 
+    def test_threshold_scope_does_not_interrupt_or_wait_for_other_conversations(self):
+        source=self.offline_controller()+r"""
+Track $one;Track $two
+$stop=New-Stop 'fixture' ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()) @((Session-Digest $one))
+Advance-Stop
+if(@($actions|Where-Object kind -eq 'interrupt').Count -ne 1){throw 'Scoped threshold interrupted another conversation'}
+if(@($actions|Where-Object {$_.kind -eq 'interrupt' -and $_.id -eq $two}).Count){throw 'Other project received interruption'}
+$stop.age_at_begin=1900;$sessions[$one].lastResponse='accepted';$sessions[$two].lastResponse='none'
+Advance-Stop
+if(-not $sessions[$one].subscribed){throw 'Other conversation delayed scoped confirmation'}
+@{scope_preserved=$true}|ConvertTo-Json -Compress
+"""
+        self.assertTrue(self.powershell(source)["scope_preserved"])
+
     def test_owner_known_at_detection_is_stopped_when_discovery_finishes(self):
         source=self.offline_controller()+r"""
 Track $one;$catalogSeen=@{};$catalogSeen[$two]=$true
@@ -524,7 +599,8 @@ if($stop.verifyUntil -ne $until -or $actions.Count -ne $count -or -not (Stop-Fin
     def test_desktop_version_and_qualification_scope_are_exact(self):
         source=self.offline_controller()+r"""
 Assert-DesktopVersion '26.1013.4894.0'
-foreach($version in @('26.1007.9446.0','26.1013.4894.1','')) {
+Assert-DesktopVersion '26.1016.6573.0'
+foreach($version in @('26.1007.9446.0','26.1013.4894.1','26.1016.6573.1','')) {
  $rejected=$false
  try{Assert-DesktopVersion $version}catch{$rejected=$true}
  if(-not $rejected){throw 'Untested desktop version accepted'}

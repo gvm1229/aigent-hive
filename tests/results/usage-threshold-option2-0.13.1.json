@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "product_target": "0.13.1",
+  "phase": "passed-current-windows-option-2",
+  "host_os": "Windows-11-10.0.26300-SP0",
+  "desktop_package_version": "26.1013.4894.0",
+  "acceptance_authority": "explicit option 2; ordinary external commands may continue, AI children must stop",
+  "scope": "two designated local app conversations and one authenticated child; synthetic floor 99",
+  "attempts": [
+    {
+      "attempt": "threshold-reasoning-06",
+      "input_sha256": "739c526674231cb5e83936d3639600ceef7da7e7513dbc1b2a48e547d9562cf0",
+      "schema_version": 1,
+      "phase": "failed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "synthetic_floor": 99,
+      "real_provider_reset": false,
+      "real_user_installation_changed": false,
+      "binary_sha256": "361d9cb37c81a2e5d2a8f22f92340a5c0fcc355bceff408db335001659ccd4d7",
+      "collector_sha256": "23484b295ea1a941c77dca6a423e7d8bfa2868cfbaf127b1e0af7b44ea84c332",
+      "error": "RuntimeError: subject did not enter required active execution"
+    },
+    {
+      "attempt": "threshold-reasoning-07",
+      "input_sha256": "fb3f5dcb007751fd835fe53d0fb4a3b037309ef142e6888ec900634dfe058b66",
+      "schema_version": 1,
+      "phase": "passed",
+      "role": "reasoning",
+      "subject_digest": "sha256:e91c460d8802dff52081c56df8ded7977806977698bc6da43a13a27b53260840",
+      "synthetic_floor": 99,
+      "real_provider_reset": false,
+      "real_user_installation_changed": false,
+      "binary_sha256": "361d9cb37c81a2e5d2a8f22f92340a5c0fcc355bceff408db335001659ccd4d7",
+      "collector_sha256": "23484b295ea1a941c77dca6a423e7d8bfa2868cfbaf127b1e0af7b44ea84c332",
+      "ai_children_at_detection": 1,
+      "before_turn_digest": "sha256:30f283f62960e0bd683876f74c9e234816291a051385d7c1e576790c8993be8b",
+      "before_tool_calls": 3,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "stop_receipt": {
+        "completed_at": 1792557732,
+        "scope_digest": "sha256:826fa3b14925859ee5016278c98260f7355b931e8d93d832e7d941e2dc2fdacf",
+        "targeted_turns": 1,
+        "elapsed_ms": 1095,
+        "request_ms": 134,
+        "app_alive": true
+      },
+      "app_preserved": true,
+      "generation": 1,
+      "ai_child_results": [
+        {
+          "thread_digest": "sha256:de1ed987da0b7a4b1c7f142cee734d53917d0e4138d2c4345b2cef19c3905d49",
+          "turn_digest": "sha256:cc7cf140cd917f5cc607efa373e480588ebe4bd9404d8b0aaf19810d9d40e6e8",
+          "status": "interrupted",
+          "interrupted_within_five_seconds": true,
+          "tools_unchanged": true
+        }
+      ],
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "no_unlock": true,
+        "numeric_reason": true,
+        "close_action": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 2243,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_stop": false,
+      "monitor_removed": true
+    },
+    {
+      "attempt": "threshold-shell-05",
+      "input_sha256": "84d36a631ad5b59fdbfe52b6655066999730d64fd7f496fd61631880d68006a8",
+      "schema_version": 1,
+      "phase": "passed",
+      "role": "shell",
+      "subject_digest": "sha256:a23b8b067b3544e545c1a2b4c0ba9dcfd2a280bae0304e30a32393651714fa93",
+      "synthetic_floor": 99,
+      "real_provider_reset": false,
+      "real_user_installation_changed": false,
+      "binary_sha256": "361d9cb37c81a2e5d2a8f22f92340a5c0fcc355bceff408db335001659ccd4d7",
+      "collector_sha256": "23484b295ea1a941c77dca6a423e7d8bfa2868cfbaf127b1e0af7b44ea84c332",
+      "ai_children_at_detection": 0,
+      "before_turn_digest": "sha256:ea287124531bffc4e11a4ee721ea635f82292953ebb1eb852ea13f2d9d4eafbc",
+      "before_tool_calls": 1,
+      "tool_free_at_detection": false,
+      "native_interruption_verified": true,
+      "stop_receipt": {
+        "completed_at": 1792557883,
+        "scope_digest": "sha256:5d8dc01bb6f79b2bab0890219613a87f8d19418a5044aa3d27e2a899f8c925c1",
+        "targeted_turns": 1,
+        "elapsed_ms": 1182,
+        "request_ms": 181,
+        "app_alive": true
+      },
+      "app_preserved": true,
+      "generation": 1,
+      "shell_child_exit_verified": false,
+      "external_command_scope": "already-started non-AI shell may continue; explicit option-2 authority",
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "no_unlock": true,
+        "numeric_reason": true,
+        "close_action": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 6016,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_stop": false,
+      "monitor_removed": true
+    }
+  ],
+  "source_hashes": {
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "5168ce45044d62fa5dd4e182e95119a97e5653323b0e5902e4995ed25f83ea7b",
+    "crates/hive-cli/src/usage_monitor/notice.ps1": "1c35ecfd09369c55f49a1f3cd12bca46b04a7b5e6f6ec5113f51f85cb15b9b25",
+    "crates/hive-cli/src/usage_monitor.rs": "79a51f9f11e9bc01cbc97bb6d0943068f325dcac473cdf3070d9e2aee413846a",
+    "crates/hive-cli/src/usage_monitor/threshold.rs": "9f00da30cddf8bbc0083c2e90786e3061fe50947cf41e183c4c8ee9bd91af5c1",
+    "crates/hive-cli/src/usage_control/monitor.rs": "7170fa0c7f8f7f86ea9b83a0e724d4f7e54e23c7ce7ce59eccb1fc4ace32fb74"
+  },
+  "ai_child_native_abort_elapsed_ms": 214,
+  "followup_inspector_sha256": "1b1340be56c09fe9ea3e95365efa7baa35cd2e33ea8a9ac196c27ae4cd3acd68",
+  "followup_inspector_scope": "same child native abort marker; independent of parent cancellation; no new stop",
+  "previous_failed_evidence": {
+    "path": "tests/results/usage-threshold-windows-0.13.1.json",
+    "sha256": "f6085b6e907e1f890d4dfaffa5b030fca6f92dcf2b712d4a73a1f6ad50aa4d26"
+  },
+  "ordinary_external_command_exit_required": false,
+  "ai_child_interruption_required": true,
+  "app_termination_requested": false,
+  "resume_lock": false,
+  "real_user_installation_changed": false,
+  "real_provider_reset_observed": false,
+  "limits": [
+    "already-started ordinary external programs may continue",
+    "local app-managed AI work only; remote/cloud/other OS not qualified",
+    "local cancellation does not prove simultaneous server or billing termination",
+    "does not prove the cause or remediation of the separate main-process crash",
+    "public test artifact and upgrade acceptance tracked separately"
+  ]
+}

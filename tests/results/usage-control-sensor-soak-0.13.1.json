@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "version": "0.13.1",
+  "host": "Windows11 x64 / Codex26.1013.4894.0",
+  "scope": "source-component control/sensing qualification; the control adapter explicitly rejects interruption requests",
+  "control": {
+    "source_adapter_sha256": "184917243177c5feb7c57aa124fe546b85fafe215a939a7f2e80b270e590375b",
+    "query_binary_sha256": "49168010411c34c6692c7a6ae8c373379481cca300e5d851013661edfb961105",
+    "elapsed_seconds": 1810.969,
+    "maximum_control_packet_gap_seconds": 2.031,
+    "control_connection_lost": false,
+    "catalog_errors": [],
+    "app_preserved": true
+  },
+  "control_samples": 121,
+  "catalog_requests": 121,
+  "native_sensor": {
+    "elapsed_seconds": 1810.344,
+    "readings": 117,
+    "valid_readings": 117,
+    "false_blind_deadlines": 0,
+    "query_child_identities": 8,
+    "fresh_process_readings": 1,
+    "owned_reader_faults": 1,
+    "maximum_observation_gap_ms": 20013
+  },
+  "source_digests": {
+    "crates/hive-cli/src/usage_monitor/desktop.ps1": "184917243177c5feb7c57aa124fe546b85fafe215a939a7f2e80b270e590375b",
+    "crates/hive-cli/src/usage_monitor/sensor.rs": "16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb",
+    "crates/hive-cli/src/usage/codex_native.rs": "dfdb3303e45f3af8c7eb277cb9200e996a3265c0937ee1a240c09b98b764369e"
+  },
+  "AI_interruption_requested": false,
+  "Codex_termination_requested": false,
+  "actual_user_installation_changed": false,
+  "limits": [
+    "does not repeat reasoning/tool/subagent interruption; that proof is separately scoped",
+    "does not qualify the unpublished test3 artifact or an actual user installation",
+    "does not establish the earlier browser crash cause or simultaneous server/billing termination"
+  ]
+}

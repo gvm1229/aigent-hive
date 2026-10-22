@@ -17,7 +17,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod codex_native;
-pub(crate) use codex_native::MonitorSensor;
+pub(crate) use codex_native::{MonitorSensor, MonitorThread};
 
 const CODEXBAR_VERSION: &str = "0.45.2";
 const VERSION_TIMEOUT: Duration = Duration::from_secs(5);
@@ -237,6 +237,9 @@ pub(crate) struct QualifiedExecutable {
 }
 
 impl QualifiedExecutable {
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
     #[cfg(test)]
     pub(crate) fn synthetic(program: &str) -> Self {
         Self {

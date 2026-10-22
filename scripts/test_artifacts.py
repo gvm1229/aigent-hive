@@ -454,8 +454,8 @@ class Manager:
             free_before = shutil.disk_usage(self.root).free
             audit = None
             if apply and any(row["status"] == "eligible" for row in rows):
-                audit_relative = "tests/results/cleanup/" + now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:12] + ".md"
-                audit = confined(self.root, audit_relative, ("tests/results",))
+                audit_relative = ".agents/work/test-artifacts/cleanup/" + now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:12] + ".md"
+                audit = confined(self.root, audit_relative, (".agents/work/test-artifacts",))
                 self.last_cleanup_report = audit_relative
                 atomic(audit, "# 산출물 정리 시작 기록\n\n```json\n" + json.dumps(scrub({"started_at": stamp(), "status": "in-progress", "rows": rows}, self.root), ensure_ascii=False, indent=2) + "\n```\n\n- 완료 기록 전 삭제 성공 추론 금지\n")
             for row in rows:

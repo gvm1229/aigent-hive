@@ -24,6 +24,7 @@
 | 과거 재개 차단 재현 | [en](en/codex-resume-lock-reference.md) | [ko](ko/codex-resume-lock-reference.md) |
 | 알림 전용 중단 안내 | [en](en/usage-stop-notice.md) | [ko](ko/usage-stop-notice.md) |
 | 추가 지시 보존의 후속 범위 | [en](en/steering-preservation.md) | [ko](ko/steering-preservation.md) |
+| 데스크톱 앱 전환 조사 | [en](en/hive-desktop-feasibility.md) | [ko](ko/hive-desktop-feasibility.md) |
 | 안정판만의 이전 버전 호환성 | [en](en/stable-only-backward-compatibility.md) | [ko](ko/stable-only-backward-compatibility.md) |
 | 프로젝트 기본 스킬 | [en](en/project-skill-defaults.md) | [ko](ko/project-skill-defaults.md) |
 | 지침의 독립 이식 | [en](en/independent-directive-transplant.md) | [ko](ko/independent-directive-transplant.md) |
@@ -100,6 +101,7 @@
 | Run recovery | [en](en/run-recovery.md) | [ko](ko/run-recovery.md) |
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
 | Usage guard thresholds | [en](en/usage-guard-thresholds.md) | [ko](ko/usage-guard-thresholds.md) |
+| Usage guard stop layers | [en](en/usage-guard-stop-layers.md) | [ko](ko/usage-guard-stop-layers.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Automatic numbered-test release gate | [en](en/automatic-test-release-gate.md) | [ko](ko/automatic-test-release-gate.md) |
 | Installed usage guard | [en](en/installed-usage-guard.md) | [ko](ko/installed-usage-guard.md) |

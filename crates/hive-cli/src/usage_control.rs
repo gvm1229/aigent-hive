@@ -1,5 +1,7 @@
 mod antigravity;
+mod monitor;
 mod token_accounting;
+pub(crate) use monitor::{evaluate_monitor_policy, monitor_policy, MonitorPolicy};
 
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarget};
@@ -1255,7 +1257,12 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
 }
 
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
-    enforce_captured(arguments, &mut EnforcementTrace::default(), &mut |_| Ok(()))
+    let mut result =
+        enforce_captured(arguments, &mut EnforcementTrace::default(), &mut |_| Ok(()))?;
+    if let Ok(Some(path)) = monitor::register_for_arguments(arguments) {
+        result.changed_paths.push(path);
+    }
+    Ok(result)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1321,7 +1328,7 @@ fn enforce_captured(
     trace.halt_digest = runtime_digest(halt.snapshot.bytes());
 
     let mut attempts = 0_u8;
-    let observation = loop {
+    let mut observation = loop {
         attempts += 1;
         let observation = observe_usage(
             runtime,
@@ -1333,6 +1340,7 @@ fn enforce_captured(
             if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
                 halt.marker
                     .as_ref()
+                    .filter(|_| halt.state == OverrideState::Current)
                     .map_or(&[], |marker| marker.snapshots.as_slice())
             } else {
                 &[]
@@ -1363,6 +1371,17 @@ fn enforce_captured(
     if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
         return Ok(policy_changed_result(&binding, &config));
     }
+    let resumed_threshold = observation.decision == Some("halted")
+        && crate::usage_monitor::threshold_already_handled(
+            runtime,
+            &monitor::current_policy(&config, &binding, &loaded, &target)?,
+            &observation.snapshots,
+            arguments.run_id.is_some(),
+        );
+    if resumed_threshold {
+        observation.decision = None;
+        observation.remaining_percent = None;
+    }
     let Some(decision) = observation.decision else {
         let mut result = allowed_result(&binding, &config, &observation);
         if let Some(data) = result
@@ -1379,6 +1398,10 @@ fn enforce_captured(
                 json!(effective_zero_quota_enabled(&loaded)),
             );
             data.insert("active_turn_interruption_verified".to_owned(), json!(false));
+            data.insert(
+                "threshold_resume_current_conversation".to_owned(),
+                json!(resumed_threshold),
+            );
         }
         if let Some(data) = result
             .data
@@ -2337,6 +2360,13 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         "hive.usage-session-disabled"
     };
     let locator = portable_relative_path(&loaded.relative);
+    let mut changed_paths = changed
+        .then(|| locator.clone())
+        .into_iter()
+        .collect::<Vec<_>>();
+    if let Ok(Some(path)) = monitor::register(runtime, &target, &binding, &desired_bytes) {
+        changed_paths.push(path);
+    }
     Ok(ActionResult {
         schema_version: 1,
         action: "ControlUsageSession",
@@ -2353,7 +2383,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         } else {
             "usage safeguard is disabled only for the current session binding".to_owned()
         },
-        changed_paths: changed.then(|| locator.clone()).into_iter().collect(),
+        changed_paths,
         evidence: vec![Evidence {
             kind: "file",
             locator,
@@ -3247,7 +3277,7 @@ mod tests {
         assert_eq!(calls.get(), 0);
     }
 
-    fn installed_config(host: &str, enabled: bool, fallback_enabled: bool) -> Vec<u8> {
+    pub(super) fn installed_config(host: &str, enabled: bool, fallback_enabled: bool) -> Vec<u8> {
         let version = env!("CARGO_PKG_VERSION");
         format!(
             "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\ninterface_language = \"en\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
@@ -3255,7 +3285,7 @@ mod tests {
         .into_bytes()
     }
 
-    fn write_global_config(root: &std::path::Path, threshold: u8) {
+    pub(super) fn write_global_config(root: &std::path::Path, threshold: u8) {
         let config = root.join(".hive/config");
         fs::create_dir_all(&config).expect("global config directory");
         fs::write(

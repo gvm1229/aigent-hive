@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Aigent Hive stable 버전을 설치하고 host와 project를 설정하는 간단한 한국어 안내">
-  <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.0 release-date=2026-10-18 -->
+  <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
   <title>Aigent Hive 간단 설치 안내</title>
   <style>
     :root {
@@ -324,7 +324,7 @@
 
   <div class="glance">
     <table aria-label="설치 안내 한눈에 보기">
-      <tr><th>권장 release</th><td>Stable <code>0.13.0</code> · npm <code>latest</code></td></tr>
+      <tr><th>권장 release</th><td>Stable <code>0.13.1</code> · npm <code>latest</code></td></tr>
       <tr><th>기본 설치</th><td>Node.js와 npm을 사용하는 전역 package 설치</td></tr>
       <tr><th>지원 host</th><td>Codex · Claude Code · Gemini Antigravity</td></tr>
       <tr><th>필요 없는 것</th><td>Model-provider API key · provider API 직접 설정</td></tr>
@@ -374,7 +374,7 @@ npm --version</code></pre>
         <article class="step">
           <div>
             <h3>Version 확인</h3>
-            <p>명령 인식과 stable version label 확인. 현재 예상값: <code>AIgent Hive v0.13.0 (released 2026-10-18)</code></p>
+            <p>명령 인식과 stable version label 확인. 현재 예상값: <code>AIgent Hive v0.13.1 (released 2026-10-21)</code></p>
             <div class="code">
               <span class="label">TERMINAL</span>
               <pre><code>hive --version</code></pre>
@@ -437,7 +437,7 @@ npm --version</code></pre>
           <div class="code">
             <span class="label">SHELL</span>
             <pre><code>curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.13.0/install.sh | sh</code></pre>
+  https://unpkg.com/aigent-hive@0.13.1/install.sh | sh</code></pre>
           </div>
         </div>
       </details>
@@ -447,7 +447,7 @@ npm --version</code></pre>
         <div class="detail-body">
           <div class="code">
             <span class="label">POWERSHELL</span>
-            <pre><code>irm https://unpkg.com/aigent-hive@0.13.0/install.ps1 | iex</code></pre>
+            <pre><code>irm https://unpkg.com/aigent-hive@0.13.1/install.ps1 | iex</code></pre>
           </div>
         </div>
       </details>
@@ -457,7 +457,7 @@ npm --version</code></pre>
         <div class="detail-body">
           <div class="code">
             <span class="label">CMD</span>
-            <pre><code>curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.0/install.cmd &amp;&amp; install-aigent-hive.cmd</code></pre>
+            <pre><code>curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.1/install.cmd &amp;&amp; install-aigent-hive.cmd</code></pre>
           </div>
         </div>
       </details>
@@ -476,10 +476,10 @@ npm --version</code></pre>
     </section>
 
     <section id="monitor">
-      <div class="section-head"><span class="section-number">선택</span><h2>Codex 실행 중 사용량 초기화 감시</h2></div>
-      <p>Windows 11 x64·Codex 26.1013.4894.0의 선택형 기능. 설치·업데이트만으로 새 감시 활성화 없음, 기존 활성 선택은 유지.</p>
-      <p>원할 때 호스트에 “Windows Codex 사용량 초기화 감시를 켜 줘”라고 요청. 등록할 작업과 파일을 먼저 확인하고 활성화 승인.</p>
-      <p>15초 간격으로 사용량을 조회하고, 실제 초기화 관측 또는 60초 동안 정상 조회 부재 때 실행 중 작업에 한 차례 중단 요청. Codex 앱과 저장한 파일 유지, 별도 창에서 이유·시각·중단 확인 상태 표시.</p>
+      <div class="section-head"><span class="section-number">선택</span><h2>Codex 실행 중 사용량 보호</h2></div>
+      <p>Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 선택형 기능. 설치·업데이트만으로 새 감시 활성화 없음, 기존 활성 선택은 유지.</p>
+      <p>원할 때 Codex에 “Windows Codex 중간 중단 감시를 켜 줘”라고 요청. 끄기도 “중간 중단 감시를 꺼 줘”로 요청 가능. 등록할 작업과 파일을 먼저 확인하고 활성화 승인.</p>
+      <p>15초 간격으로 사용량을 조회하고, 실제 초기화 관측·기존 보호 대상 대화의 설정 하한 도달 또는60초 정상 조회 부재 때 실행 중 작업에 한 차례 중단 요청. Codex 앱과 저장한 파일 유지, 별도 창에서 이유·잔여량·하한·시각·중단 확인 상태 표시. 기존 조회 실패는 새 연결로 재확인, 오래된 비교값의 초기화 오판 방지.</p>
       <div class="callout plain"><p><strong>재개는 Codex에서 직접:</strong> 재개 버튼 또는 새 메시지 사용. 알림 창은 닫기만 제공하며 잠금·해제·자동 작업 재개 기능 없음.</p></div>
       <p>다른 운영체제·원격·클라우드 작업 중단 미지원. 감지 전 새 할당량 일부 소비 가능, 서버 처리·사용량 반영의 동시 종료 보장 제외. 기존 사용량 하한·0% 보호 유지.</p>
     </section>
@@ -550,7 +550,7 @@ hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --out
 
     <footer>
       <span>Aigent Hive · Quick Install</span>
-      <span>Stable 0.13.0 · npm latest</span>
+      <span>Stable 0.13.1 · npm latest</span>
     </footer>
   </main>
 </body>

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "phase": "passed-source-regression",
+  "product_version": "0.13.1",
+  "source_commit": "a54101ceca18ce5698bf66bbff7187d2e367fde5",
+  "host": "Windows11 x64",
+  "reported_incident": {
+    "installed_version": "0.13.0",
+    "current_remaining_percent": 60,
+    "process_changed": true,
+    "previous_observation_retained": false,
+    "actual_provider_reset_proven": false,
+    "fresh_followup_result": "hive.usage-allowed",
+    "settings_changed": false
+  },
+  "before_fix": {
+    "synthetic_process_changed": "hive.usage-reset; unexpected",
+    "synthetic_expired_baseline": "hive.usage-reset; unexpected"
+  },
+  "after_fix": {
+    "usage_control_tests_passed": 30,
+    "skipped": 1,
+    "skip_reason": "POSIX-only symlink fixture; current host is Windows",
+    "stale_baselines": "new valid observation establishes baseline",
+    "fresh_increase": "one reset halt then normal resume",
+    "ordinary_floor_and_zero_quota": "still block",
+    "strict": "passed",
+    "format": "passed"
+  },
+  "limits": [
+    "the overwritten original baseline is unavailable; the exact real incident cause is not established",
+    "synthetic CLI conformance does not replace desktop interruption acceptance",
+    "the installed0.13.0 executable and protection settings were not changed"
+  ],
+  "shared_comparison": {
+    "source_commit": "f3ded565e43bd318bdafed8db8f8c24af5564261",
+    "core_expiry_boundary_before_fix": "failed as expected",
+    "expired_monitor_balance_increase": "no reset; subsequent fresh increase still resets",
+    "full_Rust_passed": 1066,
+    "full_Rust_ignored": 5,
+    "Python_passed": 39,
+    "Python_POSIX_skip": 1,
+    "strict": "passed",
+    "format": "passed",
+    "source_digests": {
+      "crates/hive-core/src/usage_guard.rs": "a96e1f7cca05d9a2d88b8990fd57adb038cd7e17b78d18efd5c3d78398f1a4b7",
+      "crates/hive-cli/src/usage_control.rs": "97e51d9608610168c096a0ed9785482bf490cfd3ad76958ab30b3ddb523ed48b",
+      "crates/hive-cli/src/usage_monitor/state.rs": "fdbaac3fc1d9c6e8d5b52db8ca20d3e6d74de8bacc42cdd8919352c9d97512c7"
+    }
+  }
+}
