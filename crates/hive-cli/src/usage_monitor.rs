@@ -799,6 +799,7 @@ fn record_control(
                             if i.threshold_details.iter().any(|detail| {
                                 detail.session_digest == receipt.session_digest
                                     && detail.policy_digest == receipt.policy_digest
+                                    && detail.turn_digest == receipt.turn_digest
                             }) && confirmed.iter().any(|value| {
                                 value.as_str() == Some(receipt.session_digest.as_str())
                             }) {

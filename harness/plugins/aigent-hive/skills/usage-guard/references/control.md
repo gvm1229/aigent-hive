@@ -3,7 +3,7 @@
 Read before any threshold, disable, enable, or toggle operation.
 
 7. Perform at most the explicitly requested control mutation:
-   - A global threshold requires explicit global intent and an integer from 1 through 99:
+   - A global threshold requires explicit global intent and an integer from 0 through 99:
 
      ```text
      hive usage threshold --user-root <user-root> --remaining-percent <percent> --output json
@@ -30,6 +30,8 @@ Read before any threshold, disable, enable, or toggle operation.
 
    - Toggle uses the same command with `--action toggle`. Include
      `--confirm-session-disable` whenever the result would disable enforcement.
+Zero is an enabled exhaustion floor, not a disable action. Positive subscription quota may run; zero quota stops work regardless of paid credits. Never promise zero credit consumption from periodic client-side interruption.
+
 ## Same-session policy recheck
 
    When a threshold mutation returns `session_recheck_required=true` for an active task, run

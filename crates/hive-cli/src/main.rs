@@ -77,12 +77,12 @@ USAGE:
     hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive policy evaluate --input <json> --output json
-    hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
+    hive usage check --account-digest <sha256:...> [--threshold <0..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
     hive usage monitor preview|enable|disable|status --user-root <dir> --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
-    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
     hive usage summarize-tokens --request <normalized-events.json> --output json
@@ -90,7 +90,7 @@ USAGE:
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] --output json
     hive run closure --target <dir> --run <run-id> --output json
     hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
@@ -406,8 +406,8 @@ fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
                 threshold = value
                     .parse::<u8>()
                     .ok()
-                    .filter(|value| (1..=99).contains(value))
-                    .ok_or_else(|| "threshold must be an integer from 1 through 99".to_owned())?;
+                    .filter(|value| (0..=99).contains(value))
+                    .ok_or_else(|| "threshold must be an integer from 0 through 99".to_owned())?;
                 threshold_seen = true;
             }
             "--output" if output.is_none() => output = Some(value.clone()),

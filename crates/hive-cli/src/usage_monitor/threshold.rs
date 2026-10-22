@@ -51,6 +51,7 @@ pub(super) fn policies(
                 // this exact active child, never another root conversation.
                 policy.session_digest =
                     hive_core::sha256_digest(format!("codex\0{}", session.id).as_bytes());
+                policy.turn_digest = Some(hive_core::sha256_digest(session.turn.as_bytes()));
                 policies.push(policy);
             }
             Ok(None) => {}
@@ -76,6 +77,8 @@ pub(super) struct Receipt {
     pub remaining_percent: f64,
     pub threshold_percent: u8,
     pub confirmed: bool,
+    #[serde(default)]
+    pub turn_digest: Option<String>,
 }
 
 // The block copies the exact measured value; tolerance would select a different usage pool.
@@ -114,8 +117,16 @@ pub(super) fn observe(
         }) else {
             continue;
         };
+        let exhausted = block.threshold_percent == 0.0;
+        if exhausted && policy.turn_digest.is_none() {
+            state.threshold_policy_errors = state.threshold_policy_errors.saturating_add(1);
+            continue;
+        }
         if state.threshold_receipts.iter().any(|receipt| {
             receipt.confirmed
+                && (!exhausted
+                    || receipt.session_digest == policy.session_digest
+                        && receipt.turn_digest == policy.turn_digest)
                 && receipt.owner_digest == policy.owner_digest
                 && receipt.target_digest == policy.target_digest
                 && receipt.policy_digest == policy.policy_digest
@@ -134,6 +145,7 @@ pub(super) fn observe(
         if current.is_some_and(|index| {
             let receipt = &state.threshold_receipts[index];
             receipt.policy_digest == policy.policy_digest
+                && (!exhausted || receipt.turn_digest == policy.turn_digest)
                 && receipt.control_digest == policy.control_digest
                 && receipt.account_digest == sample.account_scope_digest
                 && receipt.quota_pool == sample.quota_pool
@@ -165,6 +177,7 @@ pub(super) fn observe(
                 policy.threshold
             },
             confirmed: false,
+            turn_digest: policy.turn_digest.clone(),
         };
         reached.push(receipt.clone());
         state.threshold_receipts.push(receipt);
@@ -229,6 +242,7 @@ mod tests {
             threshold,
             enabled: true,
             zero_enabled: true,
+            turn_digest: Some(sha256_digest(b"first-turn")),
         }
     }
     fn sample(remaining: f64, at: u64) -> Vec<UsageSnapshot> {
@@ -372,6 +386,84 @@ mod tests {
         low[0].measured_at_unix_seconds = 101;
         observe(&mut state, &[scope], &low, 101);
         assert!(state.generation > generation);
+        assert_eq!(state.threshold_receipts[0].threshold_percent, 0);
+    }
+
+    #[test]
+    fn zero_floor_stops_each_new_turn_without_replaying_the_same_turn() {
+        let mut state = MonitorState::new();
+        let mut scope = policy("one", 0);
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(0.01, 100),
+            100,
+        );
+        assert!(state.incident.is_none());
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(0.0, 101),
+            101,
+        );
+        assert_eq!(state.generation, 1);
+        state.threshold_receipts[0].confirmed = true;
+        assert!(!handled(&state, &scope, &sample(0.0, 102)));
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(0.0, 102),
+            102,
+        );
+        assert_eq!(state.generation, 1);
+        scope.turn_digest = Some(sha256_digest(b"second-turn"));
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(0.0, 103),
+            103,
+        );
+        assert_eq!(state.generation, 2);
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(1.0, 104),
+            104,
+        );
+        assert!(state.threshold_receipts.is_empty());
+        observe(&mut state, &[scope], &sample(0.0, 105), 105);
+        assert_eq!(state.generation, 3);
+    }
+
+    #[test]
+    fn five_percent_boundary_preserves_direct_resume_and_zero_still_stops() {
+        let mut state = MonitorState::new();
+        let mut scope = policy("one", 5);
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(5.01, 100),
+            100,
+        );
+        assert!(state.incident.is_none());
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(5.0, 101),
+            101,
+        );
+        state.threshold_receipts[0].confirmed = true;
+        scope.turn_digest = Some(sha256_digest(b"resumed-turn"));
+        observe(
+            &mut state,
+            std::slice::from_ref(&scope),
+            &sample(4.99, 102),
+            102,
+        );
+        assert_eq!(state.generation, 1);
+        assert!(handled(&state, &scope, &sample(4.99, 102)));
+        observe(&mut state, &[scope], &sample(0.0, 103), 103);
+        assert_eq!(state.generation, 2);
         assert_eq!(state.threshold_receipts[0].threshold_percent, 0);
     }
 

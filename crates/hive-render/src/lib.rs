@@ -2952,7 +2952,7 @@ fn validate_answers(answers: &SetupAnswers) -> Result<(), RenderError> {
             answers.primary_host.as_str(),
             "codex" | "claude" | "antigravity"
         )
-        || !(1..=99).contains(&answers.usage_stop_remaining_percent)
+        || !(0..=99).contains(&answers.usage_stop_remaining_percent)
         || answers.elevated_judge_quorum != "2/3"
         || answers.critical_judge_quorum != "3/3+human"
     {
@@ -3286,7 +3286,7 @@ fn validate_global_project_preferences(
                 .is_some_and(valid_environment_name))
         || (!global.discord_guard_enabled && global.discord_webhook_url_env.is_some())
         || !valid_discord_message_fields(&global.discord_message_fields)
-        || !(1..=99).contains(&global.usage_stop_remaining_percent)
+        || !(0..=99).contains(&global.usage_stop_remaining_percent)
     {
         return Err(RenderError::Input(
             "global project preferences violate the typed bridge contract".to_owned(),

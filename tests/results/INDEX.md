@@ -1637,3 +1637,6 @@
 | [passed](runs/20261022T162556-cc84013b6276.md) | 0.13.2 호환 상태 실패·재연결 판정 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T162651-4285c87f27be.md) | 현재 Codex의 새 프로토콜 검사 읽기 전용 수용 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T162719-4dc74c1c1e12.md) | 기능 호환 오류 응답 반영 뒤 Windows 제어 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T163200-4c329e13d810.md) | 0.13.2 0 설정·정책·투영·갱신 Rust 회귀 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T163459-ff635c39db8c.md) | 0.13.2 0 전역·프로젝트 설정과 크레딧 무관 소진 차단 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T163940-b2631702dd9f.md) | 0 프로젝트 정수 읽기 회귀 수정 뒤 CLI 보호 검사 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |

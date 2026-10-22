@@ -21,6 +21,7 @@ pub(crate) struct MonitorPolicy {
     pub threshold: u8,
     pub enabled: bool,
     pub zero_enabled: bool,
+    pub turn_digest: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -60,6 +61,7 @@ fn from_config(
         threshold: config.threshold,
         enabled: effective_enabled(loaded, config.guard_enabled),
         zero_enabled: effective_zero_quota_enabled(loaded),
+        turn_digest: None,
     })
 }
 

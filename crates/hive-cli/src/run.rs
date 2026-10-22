@@ -46,7 +46,7 @@ const RESUME_USAGE: &str = "\
 Inspect a durable run, or prepare one session-bound automatic authorization without spawning.
 
 USAGE:
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] --output json
     Automatic preparation requires --session-id, --process-id, and --role. Manual inspection remains read-only.
 ";
 const CLOSURE_USAGE: &str = "\
@@ -1768,10 +1768,10 @@ fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, Adapt
             value
                 .parse::<u8>()
                 .ok()
-                .filter(|value| (1..=99).contains(value))
+                .filter(|value| (0..=99).contains(value))
                 .ok_or_else(|| {
                     AdapterError::Input(
-                        "usage threshold must be an integer from 1 to 99".to_owned(),
+                        "usage threshold must be an integer from 0 to 99".to_owned(),
                     )
                 })
         })
@@ -2693,7 +2693,7 @@ fn resume_inner(
                 .as_ref()
                 .and_then(|data| data["threshold_remaining_percent"].as_u64())
                 .and_then(|value| u8::try_from(value).ok())
-                .filter(|value| (1..=99).contains(value))
+                .filter(|value| (0..=99).contains(value))
                 .unwrap_or(configured_threshold);
             if arguments
                 .threshold
