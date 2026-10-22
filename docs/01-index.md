@@ -253,3 +253,11 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [공개 시험 수용](research/public-test-0.13.1.md)·[정식 실행](plans/0.13.1-stable-release.md)
 - [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)
 - [0.13.1 정식 공개 확인](research/stable-release-0.13.1.md)·[공개 파일 검증](../tests/results/release-0.13.1-stable.md)
+
+- [초기화 비교 계획](plans/active/usage-baseline-0.13.1.md)·[갱신 보정 계획](plans/active/usage-upgrade-0.13.1.md)·[반복 갱신 검증](research/usage-upgrade-repeat-0.13.1.md)
+- [개발 설치 복구 계획](plans/active/developer-install-recovery.md)·[추가 지시 보존 결정](decisions/steering-preservation.md)
+
+## 0.13.2 호환·소진 보호
+
+- [승인 구현 계획](plans/active/usage-compatibility-0.13.2.md)·[현재 앱 실제 중단 검증](research/usage-compatibility-0.13.2.md)
+- [출시 범위 검토본](releases/0.13.2.md)·[미발송 구독자 안내 초안](releases/0.13.2.subscriber.ko.md)
