@@ -2073,6 +2073,75 @@ fn frozen_project_base_0_13_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_13_1_without_resources,
+    "0.13.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_13_1(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_13_1_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.13.1/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" {
+                files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec());
+            }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
