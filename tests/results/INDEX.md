@@ -1632,41 +1632,8 @@
 | [passed](runs/20261021T191018-2a9d8a4e7481.md) | 네 번째 공개 시험의 여섯 파일 지문과 태그 독립 대조 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T191121-e2eb76474e3b.md) | 네 번째 공개판의 Windows 활성 비활성 보존 갱신 수용 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261021T191514-8eee3f556cc5.md) | 설정 삭제 없이 실패한 시험판을 새 공개 시험판으로 복구 | 9eca95bcd97d0339caf04ddac658fb813016353a | Windows-11-10.0.26300-SP0 |
-
-## 0.13.0 정식 공개
-
-[정식 파일·채널·공지 확인](release-0.13.0-stable.md)·[공개 시험 수용](release-0.13.0-test.json)·[로컬 소스 검증](release-0.13.0-local.json). 실제 Windows 읽기 확인·기존 실제 중단 증거의 구분, 새 실시간 중단 요청 없음
-
-## 0.12.1 최종 수용
-
-[한 차례 중단·직접 재개](session-stop-one-shot-qualification-0.12.1.json)·[공식 로고 알림](usage-stop-notice-only-windows-0.12.1.json)·[로컬 설치·상시 관측](session-stop-one-shot-installation-0.12.1.json). 새 실제 중단 없이 검증한 최종 제어 수명, 이전 전체 확인 실패 보존
-
-## 이전 단계의 추가 근거
-
-제어 비활성·원복 검증: [Windows 0.12.1 제거 경계](usage-monitor-removal-0.12.1.json). 실제 세션 중단 수용과 별도인 모의 검증
-
-첫 차수의 오프라인 수정: [범위·시험·미검증 항목](session-stop-first-iteration-0.12.1.json). 현재 앱 접근·설치 없음
-
-현재 앱의 단일 시험 세션 중단: [Windows 26.1013.4894.0 근거](session-adapter-windows-0.12.1.json). 전체 감시·설치 수용과 별도
-
-현재 앱의 첫 전체 시험: [세 역할 중단·전체 확인 실패](session-stop-partial-windows-0.12.1.json). 실제 중단과 제품 전체 확인의 구분, 설치 미실행
-
-제품 사용자 안내: [Windows 표시·닫기 근거](usage-stop-notice-windows-0.12.1.json)·[실제 화면](assets/usage-stop-notice-0.12.1.png). 실제 중단 없이 검증한 안내 창
-
-현재 Windows 결합 수용: [실제 네 실행·읽기 확인·코드 동일성](session-stop-component-qualification-0.12.1.json). 원래 자동 전체 확인 실패 보존, 새 실제 중단 없음
-
-## 0.13.1 현재 Windows 검증
-
-- [30분 제어·사용량 조회](usage-control-sensor-soak-0.13.1.json):1,810초·정상 조회117회·조회 프로그램 교체8개·보조 복구1회·허위60초 공백0건. 앱 제어 연결 유지·앱 생존 확인, 대화 중단 요청 없는 검증
-- [운영체제별 실행 정의 비교](ci-usage-upgrade-portability-0.13.1.json): 온라인 Windows 통과, Linux·macOS의 잘못된 비교 가정 실패 보존. 전체 실행 정의 비교로 수정, 새 정확 소스 CI 필요
-- [Windows 짧은 별칭의 실제 갱신](usage-windows-short-path-0.13.1.json): 온라인 Windows 검사 실패 보존, 실제 짧은 이름의 공개0.13.0 예약을 긴 이름으로 전환. 활성·비활성·정상 조회4회·설정/기록/앱 보존 통과, 새 정확 소스 CI 별도
-- [Windows 감시 전환·긴 대화 연결](usage-windows-transition-0.13.1.json): 공개0.13.0 합성 이전판의 활성·비활성 보존 갱신과 정상 조회4회 통과, 현재 앱 유지. 실패 원본 보존, 추가 대화 중단 없음
-- [두 번째 공개 시험](release-0.13.1-test.2.json): 게시·여섯 파일 대조·Windows/Linux 공개 수용 통과, 실제 Windows 갱신과macOS 벡터 실패로 수용 미완료
-- [하한 중단의 실제 부분 결과](usage-threshold-windows-0.13.1.json): 승인한 두 대화의 실패8회·조회 정리·안내 표시 근거. 셸 자식5초 종료 미달, 전체 수용 미완료
-- [자연어 감시 해제](usage-monitor-natural-disable-0.13.1.json): 정본 안내를 제공한 격리 사용자에서 감시만 비활성·일반 보호 보존. 실제 새 플러그인 설치·생존 감시 종료는 증명 제외
-- [앱 충돌 조사](../../docs/research/unexpected-codex-exit-2026-10-21.md): 주 프로세스 충돌 기록·기존 감시 임시 비활성·시험 예약과 안내 정리, 정확한 충돌 원인 미확정
-- [선택2의 새 수용](usage-threshold-option2-0.13.1.json): 지정 대화2개·AI 하위 작업1개 중단·앱 유지·원인 안내·직접 재개·반복 중단 부재 통과. 일반 외부 명령의 계속 실행 가능성 명시, 과거 실패 결과 보존
-
-## 0.13.1 정식 공개
-
-- [정식 파일·채널·공지 확인](release-0.13.1-stable.md): 공개 파일29개·npm6개 지문·태그/소스 대조, 승인 공지 요청 수락. 실제 설치0.13.0의 새 버전 조회 확인, 설치·감시 재활성화 제외
+| [passed](runs/20261022T162331-0eca617d6e67.md) | 0.13.2 기능 호환 Windows 제어 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T162422-173121d6fe9a.md) | 0.13.2 기능 호환 Rust 감시 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T162556-cc84013b6276.md) | 0.13.2 호환 상태 실패·재연결 판정 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T162651-4285c87f27be.md) | 현재 Codex의 새 프로토콜 검사 읽기 전용 수용 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T162719-4dc74c1c1e12.md) | 기능 호환 오류 응답 반영 뒤 Windows 제어 회귀 | 13fb29ba23a66d88ba5e7c55c24fc7c4b001cce2 | Windows-11-10.0.26300-SP0 |

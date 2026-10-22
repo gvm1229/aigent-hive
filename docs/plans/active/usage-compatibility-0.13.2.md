@@ -13,8 +13,8 @@
 
 ## 실행 항목
 
-- [ ] [UC132-001] 실제 통신 계약에 따른 호환 검사·상태·갱신
-  - state: agent-owned
+- [x] [UC132-001] 실제 통신 계약에 따른 호환 검사·상태·갱신
+  - state: complete; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:006404101f82bd7a1b01a7f602e6f005515343225b338442a58d9f1314f353f5
 - [ ] [UC132-002] 전역·프로젝트0~99% 설정과 독립 소진 보호
   - state: agent-owned; depends: UC132-001
 - [ ] [UC132-003] 현재 Windows의 초기화·5%·0% 실제 중단 수용

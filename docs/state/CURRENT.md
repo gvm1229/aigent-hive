@@ -10,9 +10,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.13.2`
-- 현재 등록 항목: 0/6 완료
+- 현재 등록 항목: 1/6 완료
 
-- `agent-owned`: `UC132-001`, `UC132-002`, `UC132-003`, `UC132-005`, `UC132-006`
+- `agent-owned`: `UC132-002`, `UC132-003`, `UC132-005`, `UC132-006`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `UC132-004`
 - `blocked`: 없음
