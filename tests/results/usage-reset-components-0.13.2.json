@@ -36,7 +36,7 @@
   },
   "controlled_interruption": {
     "source": "tests/results/usage-compatibility-live-0.13.2.json",
-    "sha256": "ae9ad865350a8e411d89a3bf77d7e6a8433d78302247b7bba51fdde444e918a9",
+    "sha256": "76abaa5e2595b9aeee3797fd612694112e9c8efbbcb43ccfaed49653907aeafc",
     "case": "reset-reasoning",
     "request_ms": 164,
     "stop_ms": 1078,
