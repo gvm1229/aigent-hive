@@ -23,8 +23,8 @@
   - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862
 - [x] [UC132-005] 공개 시험·보존 갱신·실패 복구 수용
   - state: complete; depends: UC132-003; evidence: repo:docs/research/public-test-0.13.2.md#sha256:138f0f7939a701b13860e9aeaa3c32f85e2723387c4a183d40c5473e7d58435e
-- [ ] [UC132-006] 정식 출시·로컬0% 적용·임시 예외 해제
-  - state: agent-owned; depends: UC132-004,UC132-005
+
+UC132-006 실제 정식 게시·로컬0% 적용·임시 예외 해제: [별도 실행 표](../0.13.2-stable-release.md#uc132-006-실행-표)에서 미완료 추적. 위 집계는 출시 전 수용이며 전체 작업 완료와 별개.
 
 ## 구현 순서
 
