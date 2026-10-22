@@ -5,7 +5,7 @@ topic_slug: usage-guard-stop-layers
 language: en
 counterpart: ../ko/usage-guard-stop-layers.md
 title: "Usage Guard Stop Layers"
-summary: "Released 0.13.1 applies configured floors through native session interruption while preserving the app and normal resume."
+summary: "The 0.13.2 source validates protocol compatibility and qualifies reset and floor stops on current Windows Codex."
 tags: [guard, history, usage]
 aliases: []
 sources:
@@ -13,6 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:15d7691b39f9d6e160c2857681d2715ba59ece081f832f9da4df7942ffab6cdf"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9c3f5e81cd6ddf7c4177448f63c31f49054bee8b4335a403985d9bbebf85b275"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
+  - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/research/stable-release-0.13.1.md#sha256:8bb27b7af203a2a4c6a54dc39aa7fd978075e1fb373e6b6d9617e8550acaef4e"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:6096c88095e0ba39fc78dfe959356c2f8d988c2115e3b5519bd55ccf3041464d"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
@@ -27,6 +28,4 @@ status: active
 
 # Usage Guard Stop Layers
 
-The 0.7/0.8 Skills and 0.9 guard block new automatic dispatch. The source-only 15s watcher wrote halt.json for the next gate, never interrupted inference, and was removed in August 2026. Opt-in 0.13.0 reuses sensing/reset data with native Codex user-stop for reset or 60s gaps. 0.13.1 shares the floor policy and owner-bound resume receipts. The 0.13.1 Windows tests verify reasoning, AI-child and tool-call interruption, notice and same-floor resume. Ordinary external commands may continue; AI children must stop. Earlier shell-exit failures remain failed. Historical inference interruption, other hosts and simultaneous billing termination remain unproven.
-
-The 0.13.2 source checks the authenticated desktop protocol instead of an exact package-version list. Current Windows Codex 26.1016.8120.0 acceptance used controlled observations with real session stops: 5% in 664ms, reset in 1,078ms and zero in 1,161ms. Normal floor/reset resumes passed; a new zero-quota turn stopped in 758ms. Connection, observation and interruption are separate claims. The actual account reset was observed by installed 0.13.1, whose desktop control failed; it is not proof of a 0.13.2 real-reset stop.
+The 0.13.2 source authenticates the desktop and checks protocol responses instead of package versions. Windows Codex 26.1016.8120.0 controlled observations verified real stops: 5% 664ms, reset 1,078ms, zero 1,161ms and a new zero-quota turn 758ms. The app survived; floor/reset direct resume passed. Connection, observation and interruption are separate claims. Installed 0.13.1 observed the real account reset but failed desktop control. Natural-reset interruption by 0.13.2, current AI-child interruption and billing cutoff remain unverified. Ordinary external commands may continue. Earlier layers and failed checks remain archived.

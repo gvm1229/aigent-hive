@@ -5,7 +5,7 @@ topic_slug: usage-guard-stop-layers
 language: ko
 counterpart: ../en/usage-guard-stop-layers.md
 title: "사용량 보호의 중단 계층"
-summary: "공개0.13.1의 기존 하한 직접 중단·앱 유지·잠금 없는 재개 확인"
+summary: "0.13.2 소스의 통신 호환 검사·현재 Windows의 초기화와 하한 중단 수용"
 tags: [guard, history, usage]
 aliases: []
 sources:
@@ -13,6 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:15d7691b39f9d6e160c2857681d2715ba59ece081f832f9da4df7942ffab6cdf"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9c3f5e81cd6ddf7c4177448f63c31f49054bee8b4335a403985d9bbebf85b275"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
+  - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/research/stable-release-0.13.1.md#sha256:8bb27b7af203a2a4c6a54dc39aa7fd978075e1fb373e6b6d9617e8550acaef4e"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:6096c88095e0ba39fc78dfe959356c2f8d988c2115e3b5519bd55ccf3041464d"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
@@ -27,12 +28,4 @@ status: active
 
 # 사용량 보호의 중단 계층
 
-- 0.7~0.9 공개 보호: 새 자동 실행 차단
-- 소스 전용15초 감시: halt.json·다음 검사, 추론 직접 취소 제외.2026년8월 제거
-- 선택형0.13.0: 관측·초기화 자료와 Codex 직접 중단, 초기화·60초 공백 조건
-- 0.13.1: 기존 하한 공유·소유 대화별 재개 기록
-- 0.13.1 Windows 추론·AI 하위 작업·도구 호출 중 대화 중단·원인 안내·동일 하한 재개 확인
-- 일반 외부 명령의 잔존 허용, AI 하위 작업 중단 필수. 과거 셸 종료 실패 보존
-- 과거 추론 중단·다른 호스트·과금 동시 종료의 증명 제외
-
-0.13.2 소스의 정확 앱 버전 목록 대신 인증된 통신 계약 검사. Windows·Codex26.1016.8120.0의 합성 관측과 실제 대화 중단 수용:5%664ms·초기화1,078ms·0%1,161ms. 일반 하한/초기화 뒤 직접 재개와0% 새 실행의758ms 재중단 확인. 연결·관측·실제 중단의 별도 판정. 실제 계정 초기화는 설치0.13.1의 관측만 확인, 제어 실패로0.13.2 자연 초기화 중단 증명에서 제외.
+0.13.2 소스의 앱 신원·통신 응답 검사, 정확 버전 목록 제거. Windows·Codex26.1016.8120.0 합성 관측의 실제 중단:5%664ms·초기화1,078ms·0%1,161ms·0% 새 실행758ms. 앱 유지·일반 하한/초기화 뒤 직접 재개 확인. 연결·관측·중단의 별도 판정. 실제 계정 초기화는 설치0.13.1의 감지만 확인, 제어 실패. 수정본의 자연 초기화·이번 AI 하위 작업·과금 종료는 미검증. 일반 외부 명령 잔존 가능, 이전 계층·실패 근거 보존.
