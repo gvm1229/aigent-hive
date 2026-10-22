@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import json
 import sys
 import tempfile
 import tomllib
@@ -54,6 +55,25 @@ def note(*, english_compatibility_id: str = "COMPAT-01", korean_compatibility_id
 
 
 class ReleaseNoteContract(unittest.TestCase):
+    def test_version_validator_rejects_each_stale_host_and_provider_before_packaging(self) -> None:
+        script = (ROOT / "scripts/check-release-version.sh").read_text(encoding="utf-8")
+        program = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+        for stale in ("codex", "claude", "Copier"):
+            with self.subTest(stale=stale), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                for host in ("codex", "claude"):
+                    path = root / f"harness/plugins/aigent-hive/.{host}-plugin/plugin.json"
+                    path.parent.mkdir(parents=True)
+                    path.write_text(json.dumps({"version": "0.1.0" if host == stale else "0.1.1"}), encoding="utf-8")
+                provider = root / "harness/template/.hive/config/skill-providers.json.jinja"
+                provider.parent.mkdir(parents=True)
+                provider.write_text(json.dumps({"product_version": "0.1.0" if stale == "Copier" else "0.1.1"}), encoding="utf-8")
+                result = subprocess.run([sys.executable, "-", "0.1.1"], input=program,
+                                        cwd=root, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"{stale} ", result.stderr)
+                self.assertIn("metadata version differs", result.stderr)
+
     def test_current_product_release_note_is_valid(self) -> None:
         version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
         result = subprocess.run(
