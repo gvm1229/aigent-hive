@@ -1664,3 +1664,11 @@
 | [passed](runs/20261022T182333-dc667a816623.md) | 플러그인 버전 정합화 뒤 전체 Rust 회귀 | 24bf7a71d91f04b307ab3448886ffee26f3de51c | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261022T183149-c5fbff755c47.md) | Python conformance: documentation, security, contract, integration, release | fe0e29336beacddaf6fa4227a8297a43f434d0f8 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T183822-b2ef54e1bb18.md) | 문서 연결 복구와 추적/비추적 입력 구분 회귀 | 88674b3c19927750de07fdbdcd370dff2a3c760a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T184146-6c95f4c945e2.md) | Python conformance: documentation, security, contract, integration, release | d093bf4de89e9d8a56c3ca627f75839238222070 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T190402-dcc1a553b27b.md) | 유지 버전 누락의 플러그인·Copier 사전 차단 회귀 | d093bf4de89e9d8a56c3ca627f75839238222070 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T192217-7278944c9b58.md) | Copier 0 설정과 Rust 생성 결과 일치 | 59e8445db7602da7383deee5b413c713127f86fb | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T192548-93ad71a360c8.md) | 최종 제품 지침을 포함한 0.13.2 개발 CLI 갱신 | 572de0ed17701f0fc4bd278d562d806aed0f1217 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T192633-d0c9afbcf6ec.md) | Python conformance: documentation, security, contract, integration, release | 572de0ed17701f0fc4bd278d562d806aed0f1217 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T195208-96c62faa2700.md) | 0.13.2 Skill 출시 기록과 공개 이전판 검증 | c3d28fb8af2e3f0528acb8d4f08b06236d1857f6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T195241-f157f0299b1a.md) | Python conformance: release | f08ad03a597f2ff17c20157fbe82a75ce5fea373 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T195440-09dab2185c62.md) | 검사 종료 뒤 직렬화한 0.13.2 버전 일치 확인 | f08ad03a597f2ff17c20157fbe82a75ce5fea373 | Windows-11-10.0.26300-SP0 |
