@@ -1660,3 +1660,5 @@
 | [passed](runs/20261022T173302-d92005bff2df.md) | 0.13.2 0 확인 지연 보정 뒤 새 격리 자료 준비 | 04a3ac370b4e40269f18a46525fc1ca8e0a14618 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T173309-53239d814a03.md) | 0.13.2 0% 실제 중단과 새 실행 재차단 재검증 | 04a3ac370b4e40269f18a46525fc1ca8e0a14618 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T180526-b89455e4ec6a.md) | 공개0.13.1 CLI의 합성 이전판 원본 생성·검증 | b46ab7cecec21090500fe4eb2765432ffd2ea459 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T181628-12f31695a9cf.md) | 0.13.2 구현 후 전체 Rust 회귀 | 24bf7a71d91f04b307ab3448886ffee26f3de51c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T182333-dc667a816623.md) | 플러그인 버전 정합화 뒤 전체 Rust 회귀 | 24bf7a71d91f04b307ab3448886ffee26f3de51c | Windows-11-10.0.26300-SP0 |
