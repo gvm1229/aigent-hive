@@ -252,3 +252,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 - [공개 시험 수용](research/public-test-0.13.1.md)·[정식 실행](plans/0.13.1-stable-release.md)
 - [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)
+- [0.13.1 정식 공개 확인](research/stable-release-0.13.1.md)·[공개 파일 검증](../tests/results/release-0.13.1-stable.md)
