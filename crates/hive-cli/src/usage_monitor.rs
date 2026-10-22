@@ -827,6 +827,8 @@ fn record_sample(
     elapsed: u64,
     policies: &[crate::usage_control::MonitorPolicy],
 ) -> (bool, bool) {
+    #[cfg(debug_assertions)]
+    let measured = qualification::observation(root.requested_path(), measured);
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
         let result = state.record_query(measured, now());
@@ -986,6 +988,8 @@ fn controller_loop(
         while let Ok(packet) = desktop.events.try_recv() {
             if packet["type"] == "catalog" {
                 contexts = serde_json::from_value(packet["contexts"].clone()).unwrap_or_default();
+                #[cfg(debug_assertions)]
+                qualification::scope_contexts(root.requested_path(), &mut contexts);
                 next_policy = tick;
                 continue;
             }

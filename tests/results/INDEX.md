@@ -1640,3 +1640,7 @@
 | [passed](runs/20261022T163200-4c329e13d810.md) | 0.13.2 0 설정·정책·투영·갱신 Rust 회귀 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261022T163459-ff635c39db8c.md) | 0.13.2 0 전역·프로젝트 설정과 크레딧 무관 소진 차단 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T163940-b2631702dd9f.md) | 0 프로젝트 정수 읽기 회귀 수정 뒤 CLI 보호 검사 | 37044f9bfcc439747553dc35ccfa5618261a85df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T164710-e28130fbbab0.md) | 0.13.2 격리 관측 주입의 소스 전용 경계 검사 | 6972ce51f6c45a0438bfdee414ad8a14a988992c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T164903-0661b3b90b2a.md) | 0.13.2 실제 시험 자료 주입과 보존 수용 경계 | 6972ce51f6c45a0438bfdee414ad8a14a988992c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T164924-74ff8aeceead.md) | 0.13.2 격리 시나리오 판정·비소유 루트 거부 | 6972ce51f6c45a0438bfdee414ad8a14a988992c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T165015-b06b3e795eb2.md) | 0.13.2 수용 수집기 읽기·기존 검증 근거 회귀 | 6972ce51f6c45a0438bfdee414ad8a14a988992c | Windows-11-10.0.26300-SP0 |

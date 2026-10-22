@@ -65,7 +65,7 @@ def shared_read(path):
         kernel.CloseHandle(handle)
 
 
-def notice(monitor_pid, close=False):
+def notice(monitor_pid, close=False, floor=99):
     # Read/invoke only the close action of the test monitor's own notice child.
     script = r"""
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
@@ -80,12 +80,12 @@ foreach($window in $windows){
  $text=@($controls | ForEach-Object {$_.Current.Name}) -join "`n"
  $buttons=@($controls | Where-Object {$_.Current.ControlType -eq [Windows.Automation.ControlType]::Button -and -not $_.Current.IsOffscreen})
  $close=@($buttons | Where-Object {$_.Current.Name -eq '안내 닫기, 작업 재개 없음'})
- $result=@{visible=$true;floor_reason=$text.Contains('설정한 사용량 하한');numeric_reason=$text.Contains('하한 99%');confirmed=$text.Contains('작업 중단 확인');close_action=($close.Count -eq 1);no_unlock=(-not $text.Contains('보호 해제'))}
+ $result=@{visible=$true;floor_reason=$text.Contains('설정한 사용량 하한');numeric_reason=$text.Contains('하한 FLOOR_VALUE%');reset_reason=$text.Contains('사용량 초기화');confirmed=$text.Contains('작업 중단 확인');close_action=($close.Count -eq 1);no_unlock=(-not $text.Contains('보호 해제'))}
  if(CLOSE_ACTION){if($close.Count -ne 1){throw 'Exact owned close action missing'};$close[0].GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke();$result.closed=$true}
  $result | ConvertTo-Json -Compress;exit 0
 }
 '{}'
-""".replace("OWNER", str(int(monitor_pid))).replace("CLOSE_ACTION", "$true" if close else "$false")
+""".replace("OWNER", str(int(monitor_pid))).replace("FLOOR_VALUE", str(int(floor))).replace("CLOSE_ACTION", "$true" if close else "$false")
     completed = subprocess.run(
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
         capture_output=True, timeout=8, creationflags=subprocess.CREATE_NO_WINDOW,
@@ -104,7 +104,12 @@ def main():
     parser.add_argument("--role", choices=("reasoning", "shell"))
     parser.add_argument("--app-pid", type=int)
     parser.add_argument("--app-created-ticks", type=int)
+    parser.add_argument("--scenario", choices=("legacy", "five", "zero", "reset", "live"), default="legacy")
+    parser.add_argument("--wait-seconds", type=int, default=120)
     args = parser.parse_args()
+    floor = 99 if args.scenario == "legacy" else (5 if args.scenario == "five" else 0)
+    if not 45 <= args.wait_seconds <= 14400:
+        parser.error("bounded wait must be between 45 seconds and four hours")
     fixture = args.fixture.resolve()
     if os.name != "nt" or not fixture.is_relative_to(OWNED) or fixture == OWNED:
         parser.error("owned Windows acceptance fixture required")
@@ -115,20 +120,20 @@ def main():
         from tests.conformance.contracts.test_usage_control import USER_CONFIG
         (fixture / ".hive/config").mkdir(parents=True)
         (fixture / ".hive/install").mkdir()
-        (fixture / ".hive/config/user-setup.yml").write_text(USER_CONFIG.replace("stop_remaining_percent: 20", "stop_remaining_percent: 99"), encoding="utf-8")
-        (fixture / ".hive/install/codex.json").write_text(json.dumps({"product_version":"0.13.1","acceptance_fixture":True}), encoding="utf-8")
+        (fixture / ".hive/config/user-setup.yml").write_text(USER_CONFIG.replace("stop_remaining_percent: 20", f"stop_remaining_percent: {floor}"), encoding="utf-8")
+        (fixture / ".hive/install/codex.json").write_text(json.dumps({"acceptance_fixture":True}), encoding="utf-8")
         shell = r"""param([Parameter(Mandatory=$true)][string]$Fixture)
 $ErrorActionPreference='Stop'
 $process=[Diagnostics.Process]::GetCurrentProcess()
 $identity=@{pid=$PID;created_ticks=$process.StartTime.ToUniversalTime().Ticks}
 [IO.File]::WriteAllText((Join-Path $Fixture 'shell-child.json'),($identity|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
-for($i=0;$i -lt 180;$i++){
+for($i=0;$i -lt 1800;$i++){
  [IO.File]::WriteAllText((Join-Path $Fixture 'shell-heartbeat.txt'),[DateTime]::UtcNow.ToString('o'))
  Start-Sleep -Seconds 1
 }
 """
         (fixture / "long-shell.ps1").write_text(shell, encoding="utf-8-sig")
-        print(json.dumps({"prepared":True,"scope":"isolated source-only single conversation","monitor_started":False,"floor":99}))
+        print(json.dumps({"prepared":True,"scope":"isolated source-only single conversation","monitor_started":False,"floor":floor}))
         return 0
     if not args.role or not args.subject or not args.app_pid or not args.app_created_ticks:
         parser.error("role, approved subject and exact app identity are required")
@@ -145,8 +150,9 @@ for($i=0;$i -lt 180;$i++){
     output = fixture / "result.json"
     state_path = fixture / ".hive/runtime/usage-monitor/state.json"
     record = {"schema_version": 1, "phase": "waiting-subject", "role": args.role,
-              "subject_digest": digest(args.subject), "synthetic_floor": 99,
-              "real_provider_reset": False, "real_user_installation_changed": False,
+              "subject_digest": digest(args.subject), "configured_floor": floor, "observation_scenario": args.scenario,
+              "real_provider_reset": args.scenario == "live", "real_user_installation_changed": False,
+              "policy_context": "isolated source policy, exact projectless test subject",
               "binary_sha256": hashlib.sha256(hive.read_bytes()).hexdigest(),
               "collector_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     component_failures = []
@@ -170,7 +176,7 @@ for($i=0;$i -lt 180;$i++){
             before = native()
             ready_path = fixture / "subject-ready.json"
             ready = read(ready_path) if ready_path.is_file() else {}
-            eligible = before["status"] == "running" and ready.get("thread") == args.subject
+            eligible = before["status"] == "running" and (args.scenario != "legacy" or ready.get("thread") == args.subject)
             eligible &= before["pending_tools"] == 0 if args.role == "reasoning" else (fixture / "shell-child.json").is_file()
             if eligible:
                 stable_since = stable_since or time.monotonic()
@@ -200,12 +206,12 @@ for($i=0;$i -lt 180;$i++){
         record["before_tool_calls"] = before["tool_calls"]
         record["tool_free_at_detection"] = before["pending_tools"] == 0
         with (fixture / "controller-output.json").open("wb") as log:
-            monitor = subprocess.Popen([str(hive), "__usage-monitor-qualification", str(fixture), args.subject],
+            monitor = subprocess.Popen([str(hive), "__usage-monitor-qualification", str(fixture), args.subject, "live" if args.scenario == "legacy" else args.scenario],
                                        stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.DEVNULL,
                                        creationflags=subprocess.CREATE_NO_WINDOW)
         record["phase"] = "waiting-stop"
         save()
-        deadline = time.monotonic() + 45
+        deadline = time.monotonic() + args.wait_seconds
         while time.monotonic() < deadline:
             if monitor.poll() is not None:
                 raise RuntimeError("scoped controller exited before stop")
@@ -223,7 +229,8 @@ for($i=0;$i -lt 180;$i++){
         if args.role == "reasoning" and current["tool_calls"] != before["tool_calls"]:
             raise RuntimeError("reasoning subject used a tool during interruption")
         receipt = incident.get("confirmed_stop") or {}
-        if incident["reason"] != "usage-threshold" or receipt.get("request_ms", 99999) > 2000 or receipt.get("elapsed_ms", 99999) > 5000:
+        expected_reason = "usage-reset" if args.scenario in ("reset", "live") else "usage-threshold"
+        if incident["reason"] != expected_reason or receipt.get("request_ms", 99999) > 2000 or receipt.get("elapsed_ms", 99999) > 5000:
             raise RuntimeError("wrong reason or missed interruption deadline")
         if state.get("known_sessions") != 1 or incident.get("targeted_turns") != 1 or incident.get("confirmed_turns") != 1:
             raise RuntimeError("stop was not exactly scoped to the test conversation")
@@ -256,10 +263,11 @@ for($i=0;$i -lt 180;$i++){
             record["external_command_scope"] = "already-started non-AI shell may continue; explicit option-2 authority"
         until_notice = time.monotonic() + 8
         while True:
-            view = notice(monitor.pid)
+            view = notice(monitor.pid, floor=floor)
             record["notice"] = view
             save()
-            if all(view.get(key) for key in ("visible", "floor_reason", "numeric_reason", "confirmed", "close_action", "no_unlock")):
+            reason_keys = ("reset_reason",) if expected_reason == "usage-reset" else ("floor_reason", "numeric_reason")
+            if all(view.get(key) for key in ("visible", "confirmed", "close_action", "no_unlock", *reason_keys)):
                 record["notice_visible_ms"] = time.time_ns() // 1_000_000 - incident["detected_at_ms"]
                 break
             if time.monotonic() >= until_notice:
@@ -273,25 +281,36 @@ for($i=0;$i -lt 180;$i++){
         deadline = time.monotonic() + 180
         while time.monotonic() < deadline:
             current = native()
-            if current["turn_id"] != before["turn_id"] and current["status"] == "completed":
+            if current["turn_id"] != before["turn_id"] and current["status"] == ("interrupted" if args.scenario == "zero" else "completed"):
                 break
             time.sleep(0.1)
         else:
             raise RuntimeError("direct resume/new message was not completed")
-        resumed = read(fixture / "resume-enforce.json")
-        if resumed.get("code") != "hive.usage-allowed" or not (resumed.get("data") or {}).get("threshold_resume_current_conversation"):
-            raise RuntimeError("manual preflight floor exemption was not verified")
+        if args.scenario == "legacy":
+            resumed = read(fixture / "resume-enforce.json")
+            if resumed.get("code") != "hive.usage-allowed" or not (resumed.get("data") or {}).get("threshold_resume_current_conversation"):
+                raise RuntimeError("manual preflight floor exemption was not verified")
+        elif args.scenario == "zero":
+            stopped_again = read(state_path)
+            second = stopped_again.get("incident") or {}
+            if stopped_again["generation"] <= state["generation"] or not second.get("stop_confirmed"):
+                raise RuntimeError("zero quota did not interrupt the new turn")
+            state = stopped_again
+            record["zero_new_turn_blocked"] = True
+        record["preflight_resume_scope"] = "separate CLI tests; this subject is projectless"
         time.sleep(32)  # At least two more normal readings at the same synthetic floor.
         later = read(state_path)
-        if later["generation"] != state["generation"] or native()["status"] != "completed":
+        if later["generation"] != state["generation"] or native()["status"] != ("interrupted" if args.scenario == "zero" else "completed"):
             raise RuntimeError("same floor event reinterrupted resumed work")
         if disable().returncode:
             raise RuntimeError("test monitor disable failed")
         monitor.wait(timeout=6)
         stable = state_path.read_bytes()
-        record["notice_closed"] = notice(monitor.pid, close=True).get("closed", False)
+        record["notice_closed"] = notice(monitor.pid, close=True, floor=floor).get("closed", False)
+        if args.scenario == "zero":
+            notice(monitor.pid, close=True, floor=floor)
         record["notice_close_preserved_history"] = stable == state_path.read_bytes()
-        record.update(phase="failed" if component_failures else "passed", direct_resume_verified=True, repeated_stop=False,
+        record.update(phase="failed" if component_failures else "passed", direct_resume_verified=args.scenario != "zero", repeated_same_turn_stop=False,
                       app_preserved=app.alive_and_visible(), monitor_removed=True)
         return 1 if component_failures else 0
     except Exception as error:
