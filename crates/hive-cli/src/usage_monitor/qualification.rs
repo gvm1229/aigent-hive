@@ -56,7 +56,7 @@ fn scenario_remaining(mode: &str, index: usize) -> f64 {
     match (mode, index == 0) {
         ("five", true) => 5.01,
         ("five", false) => 5.0,
-        ("zero", true) | ("reset", true) => 1.0,
+        ("zero" | "reset", true) => 1.0,
         ("zero", false) => 0.0,
         ("reset", false) => 2.0,
         _ => unreachable!("qualification mode was validated before activation"),
