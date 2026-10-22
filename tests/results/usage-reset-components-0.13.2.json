@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.2",
+  "host": "Windows 11 x64, Codex 26.1016.8120.0",
+  "actual_execution": true,
+  "decision_date": "2026-10-23",
+  "acceptance": "maintainer-approved combined evidence: natural observation, unchanged reset detection, real controlled-input interruption",
+  "baseline_tag": "v0.13.1",
+  "baseline_commit": "c37882ca7a66e895961f630a3d40c584d910279a",
+  "functions": [
+    {
+      "file": "crates/hive-core/src/usage_guard.rs",
+      "function": "detect_usage_reset",
+      "unchanged": true,
+      "normalized_sha256": "a1ca1e63704034c74ff51523b03edb04f85e78ecc410d8241648a4b61dbc043a",
+      "lines": 21
+    },
+    {
+      "file": "crates/hive-cli/src/usage_monitor/state.rs",
+      "function": "observe_confirmed",
+      "unchanged": true,
+      "normalized_sha256": "f93e9ded0b0fa9de3059badb33ffccc0ba15c98bd264e542ea776e9c4835c3d2",
+      "lines": 126
+    }
+  ],
+  "natural_observation": {
+    "installed_version": "0.13.1",
+    "window": "weekly",
+    "before_percent": 0,
+    "before_kst": "2026-10-23T02:05:20+09:00",
+    "after_percent": 100,
+    "reset_detected_kst": "2026-10-23T02:09:50+09:00",
+    "notice_delivered": true,
+    "stop_confirmed": false,
+    "control_error": "desktop-control-unavailable"
+  },
+  "controlled_interruption": {
+    "source": "tests/results/usage-compatibility-live-0.13.2.json",
+    "sha256": "ae9ad865350a8e411d89a3bf77d7e6a8433d78302247b7bba51fdde444e918a9",
+    "case": "reset-reasoning",
+    "request_ms": 164,
+    "stop_ms": 1078,
+    "real_conversation_interrupted": true,
+    "app_preserved": true,
+    "direct_resume_verified": true
+  },
+  "simultaneous_natural_reset_stop_by_0_13_2_verified": false,
+  "limits": [
+    "Controlled reset readings are not a provider reset",
+    "The old installed monitor detected the real reset but did not confirm interruption",
+    "No server billing or zero-credit-charge guarantee"
+  ]
+}

@@ -18,7 +18,7 @@ sources:
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:7231f60877fd7d269ff3d3b9cc7851daefb42f75baef1682dacb4d9644feffe6"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:332849449782b95d9d5819316151e0e8991477fa2cc56ba5df568dcc35f4c237"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:f901c85a4769dba3021471341fe9a14c0daba392661212bd233d852bfed80304"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
 reviewed_revision: "git:f6bec784d94c76ef79cda8ff28e60a0b05765805"
 status: active

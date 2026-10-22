@@ -14,7 +14,7 @@ sources:
   - "repo:README.md#sha256:c62818728f074affeeb374cedf3a84c6dedab45cd0293c9ee148ff0e3006da7c"
   - "repo:docs/public-stable-release.json#sha256:44a480fb25b20c2278bea0cf3bfa4d4d7923c8027cbb77320ead82d707ae7aa7"
   - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
-  - "repo:tests/conformance/release/test_release_notes.py#sha256:f32a5b2ed683b7369676d905c4dfeef0546d742a2a2317f6679992b034ed5299"
+  - "repo:tests/conformance/release/test_release_notes.py#sha256:0e6e4201c7c3369ea787c956b7022add3aae86f1331894787331e955a4c9a63c"
 links: [product-purpose, release-verification]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
 status: active

@@ -12,11 +12,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.13.2`
-- 현재 등록 항목: 3/6 완료
+- 현재 등록 항목: 4/6 완료
 
 - `agent-owned`: `UC132-005`, `UC132-006`
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `UC132-004`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -37,3 +37,9 @@
 - 02:12 새 사용량 검사 hive.usage-allowed 확인 뒤 재개. 크레딧 사용 허용·보호 우회 없음
 
 - [0.13.2 출시 범위](../releases/0.13.2.md)·[구독자 안내 초안](../releases/0.13.2.subscriber.ko.md) 준비. 미게시·미발송·문구 승인 전, 정식 게시의 공지 전송 승인은 별도 필요
+
+## 0.13.2 수용 갱신
+
+- 현재 Windows의 실제5%·0%·합성 초기화 중단과 직접 재개 수용 완료. 소진 새 실행도 재중단, 실제 수치와 한계는 [검증 기록](../research/usage-compatibility-0.13.2.md)
+- 10월23일 추가 승인으로 실제0%→100% 관측·동일 감지 함수·실제 중단 경로의 결합 수용. 자연 초기화 순간의0.13.2 중단은 미검증 유지, 외부 사건 대기 해제
+- 전체 Rust1,070개 통과·선택 실행5개 제외. Python 전체 검사 중 생성 설정의 유지 버전 누락과 Copier0% 입력 보정, 관련 재시험 통과. 공개 시험·정식 게시·로컬0% 적용 잔여
