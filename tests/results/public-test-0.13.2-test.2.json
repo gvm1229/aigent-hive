@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.2",
+  "package_version": "0.13.2-test.2",
+  "source_commit": "ed5a56d14564d2acaa778067f6712c9ef494fbc8",
+  "candidate_run_id": 39856051148,
+  "publication_failed_run_id": 39859269135,
+  "publication_recovery_run_id": 39860262925,
+  "publication_failure": "npm darwin-x64 test-tag propagation deadline; unchanged candidate recovered after all six official tags changed",
+  "acceptance_run_id": 39860795220,
+  "acceptance_platforms": {
+    "Windows x64": "passed",
+    "macOS arm64": "passed",
+    "Linux musl x64": "passed"
+  },
+  "final_acceptance": true,
+  "reason": "Corrected collector applied without further code changes; all scoped public acceptance passed",
+  "distribution": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.2",
+    "package_version": "0.13.2-test.2",
+    "channel": "test",
+    "source_commit": "ed5a56d14564d2acaa778067f6712c9ef494fbc8",
+    "release_url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.13.2-test.2",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "d3ae1b398aabcc8a9ec159afacaae4cae6ef395f5f65add383621591fc66b225",
+        "sha512_integrity": "sha512-HtqylQI65euns6r+/3YKKeHFR/YzpiGAEUgXNFClcrN7vZDrfmsT79u6eoOV/NsSK4SQdCHc3W73S4G28twBdw==",
+        "size": 17570,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "3094364940f6d85d6a63aaad349c9180a0d2bb17fab3807369f5db5a7c2b0198",
+        "sha512_integrity": "sha512-V+YEStVIOPCK6IHMaJXKSRRDGy708uLmWI6sIf1zRVaUTnwiMjkAFx6nyPq3A63nhCw6OsR6KunZ+dvU+6yL+g==",
+        "size": 11050177,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "574c667885808a849fefe6e27fd67f202424dad55f1b7b809112f785c1b02112",
+        "sha512_integrity": "sha512-yw/ImObXswdYWkPZ6+s2cwpa0D/lL9HAD7yTccyASa2R+iYWTnQ9rrYtd5kTWR+LZde/ey0JdNdUbMutVAGZJw==",
+        "size": 10644491,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "a9eae4f2a1f1758378d03eff5fb5517e4d6c2175b1a5515854a49aad18d7631a",
+        "sha512_integrity": "sha512-0foK1hCZ1vORL0GYbcAXFvypS+4VcXe+hAhfUi8fPK4/7TyTS3n5oBgqKVlvuWdX32jvgkeOJaz0Agaw3CYp5g==",
+        "size": 11391107,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "13ced41f3f49747a7c7b60fb9eea319a6577dc9fb2eaca3ee1cdfe3ed9b223fd",
+        "sha512_integrity": "sha512-Y6D4p5gj5QKy7jVv9lvadY1IjbTr8f9oK9G3LR7Hq8sgMTAYYbSEyVeu9mpwnZgZFt4hnxJ/Ignc/SjNqtAPvA==",
+        "size": 11993914,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.2-test.2",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.2",
+        "sha256": "27f451fc7361e90ce566ac592a3d625874332e20a56f29c8c476f1543d782349",
+        "sha512_integrity": "sha512-3oUfF42quV424hVMn/cuwtyU8vvRk5UTAdw32Ra3sVwfigh8sKKp2Y6X2HNEgi7MMwVCS2D9TFzmzlB0R8rRiQ==",
+        "size": 11509113,
+        "npm_github_bytes_match": true
+      }
+    ],
+    "github_asset_count": 25,
+    "assets": [
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.attestation.jsonl",
+        "size": 11323,
+        "sha256": "3224ea9f578a952006cbfb4007cbfbbcee3261489bb274701234b9eb6d437518"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.tar.gz",
+        "size": 10346966,
+        "sha256": "b59cc231ef28e3682425960e4cd9ee06f7b7f427a21abe0585817854b1e0dfc3"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.tar.gz.sha256",
+        "size": 113,
+        "sha256": "afe03ed92766e43cf343914740177cbfd3cb51501224315a7c6db43d4cbe4e91"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.attestation.jsonl",
+        "size": 11237,
+        "sha256": "465b70778a9e88752224671fbfdb2ac23f14857e95fe1d8a93992648fc9bfef8"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.tar.gz",
+        "size": 11229541,
+        "sha256": "dcc50061790e1530e1c7abff9502a17e664ba1fa067357dfa1c946b82034e7f7"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.tar.gz.sha256",
+        "size": 119,
+        "sha256": "86e21eea47c154d9989360ff5a4f25625ee01aede8b4710e95793a3d6ba7112c"
+      },
+      {
+        "name": "aigent-hive-0.13.2-test.2-npm-umbrella.attestation.jsonl",
+        "size": 10923,
+        "sha256": "be30ad5063e086eafcac0ec8e904fe4a5897fc22b388759fcaeae676b7754a6d"
+      },
+      {
+        "name": "aigent-hive-0.13.2-test.2.tgz",
+        "size": 17570,
+        "sha256": "d3ae1b398aabcc8a9ec159afacaae4cae6ef395f5f65add383621591fc66b225"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.attestation.jsonl",
+        "size": 11131,
+        "sha256": "a3019ed0c92f31fefe3253a6534494fb2fbf7550da8669672f8c08679d9db1ac"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.tar.gz",
+        "size": 11273152,
+        "sha256": "826f30b3966ebe635cb7df8a9374fd92e8a4321cee958f6b59c60603901c2f3b"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.tar.gz.sha256",
+        "size": 112,
+        "sha256": "9a94dea4d51574ad1205c1bf040eef87a643731fdc295c3f701733357b4fc8c3"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.attestation.jsonl",
+        "size": 11230,
+        "sha256": "79a06ac95e9da2267581d381305739425f6d7354c33bcf86deed7fa749449785"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.zip",
+        "size": 11146167,
+        "sha256": "de9f2f769d51247b3eaad105aab3379a6991e61420d37147afe090bf6fc7d140"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.zip.sha256",
+        "size": 113,
+        "sha256": "a15305576f96a52bc28c04711fe0d9d6394aaae91c96b73b1000f850bda76c51"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.attestation.jsonl",
+        "size": 11237,
+        "sha256": "53ab04f64ec003a5efdbf7d82a51a1d00619836ad652c17a40bee000465b7795"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.tar.gz",
+        "size": 11885394,
+        "sha256": "8af2f3787e8125ddf1ddeef0fb17afbe6ddd7e7aa981832fbceca2a42c8cf8cb"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.tar.gz.sha256",
+        "size": 118,
+        "sha256": "7b6e900988ffa7ee8a82c13b53319c2de703cf3d14d2240adaee471ea613a114"
+      },
+      {
+        "name": "aigent-hive-darwin-arm64-0.13.2-test.2.tgz",
+        "size": 10644491,
+        "sha256": "574c667885808a849fefe6e27fd67f202424dad55f1b7b809112f785c1b02112"
+      },
+      {
+        "name": "aigent-hive-darwin-x64-0.13.2-test.2.tgz",
+        "size": 11391107,
+        "sha256": "a9eae4f2a1f1758378d03eff5fb5517e4d6c2175b1a5515854a49aad18d7631a"
+      },
+      {
+        "name": "aigent-hive-linux-arm64-0.13.2-test.2.tgz",
+        "size": 11509113,
+        "sha256": "27f451fc7361e90ce566ac592a3d625874332e20a56f29c8c476f1543d782349"
+      },
+      {
+        "name": "aigent-hive-linux-x64-0.13.2-test.2.tgz",
+        "size": 11993914,
+        "sha256": "13ced41f3f49747a7c7b60fb9eea319a6577dc9fb2eaca3ee1cdfe3ed9b223fd"
+      },
+      {
+        "name": "aigent-hive-win32-x64-0.13.2-test.2.tgz",
+        "size": 11050177,
+        "sha256": "3094364940f6d85d6a63aaad349c9180a0d2bb17fab3807369f5db5a7c2b0198"
+      },
+      {
+        "name": "install.cmd",
+        "size": 827,
+        "sha256": "bebd35dc41b8ff4ec11bb02a1a45913aa1c0ff8d9386f4b65d0c4119e078041d"
+      },
+      {
+        "name": "install.ps1",
+        "size": 17713,
+        "sha256": "25ab7a80a7d37fb19a3683d618e316c3eceefe3cc7d0f8a88a36a67a1b4f08bd"
+      },
+      {
+        "name": "install.sh",
+        "size": 14463,
+        "sha256": "9fe81f47dbca6db0150e8b0b7b9007532c9907779d855d480aa5814b57d5a31a"
+      }
+    ],
+    "annotated_tag_source_verified": true,
+    "real_user_installation_changed": false,
+    "limits": [
+      "Distribution bytes and source only; functional acceptance is separately bound to the exact public test."
+    ],
+    "collector_sha256": "b9278c82e4c2c9edff260aa095348f4f304f2c542abdd17858e38367fed158e0"
+  },
+  "windows_monitor_update": {
+    "host": "Windows 11 x64, Codex26.1016.8120.0",
+    "actual_execution": true,
+    "native_binary_sha256": "e250fd16b530060f6067a1779f658c050cd1f4c6212b94fad742634ed7f72853",
+    "disabled_choice_preserved": true,
+    "enabled_choice_preserved": true,
+    "actual_0131_refresh_failed": true,
+    "failure_code": "hive.user-update-monitor-incomplete",
+    "recovered_control": {
+      "actual_version": "26.1016.8120.0",
+      "error": null,
+      "stage": "observe",
+      "state": "compatible"
+    },
+    "normal_observations_before_followup": 4,
+    "normal_observations_after_followup": 4,
+    "query_elapsed_ms_range": [
+      535,
+      1822
+    ],
+    "derived_poll_start_interval_ms_range": [
+      14960,
+      15044
+    ],
+    "server_reflection_delay_measured": false,
+    "settings_knowledge_history_preserved": true,
+    "real_user_installation_changed": false,
+    "app_preserved": true,
+    "fixture_tasks_removed": true,
+    "scope": "simulated host plugin registration, real npm-owned public artifacts, real Windows scheduled tasks, actual native observations; incompatible old controller was not started",
+    "collector_sha256": "31f4719b403b111dd9377d69e94570f02c63c0686ccf6496e0d99efe18766676"
+  },
+  "prior_test_evidence": "tests/results/public-test-0.13.2-test.1.json",
+  "public_cli_zero_checks": {
+    "receipt": "tests/results/runs/20261022T215810-ac7ab102f930.md",
+    "passed": 2,
+    "actual_public_binary": true,
+    "observations": "isolated external CodexBar fixture",
+    "proves": [
+      "zero floor stays enabled",
+      "positive quota allowed",
+      "zero and credit-bearing zero refused",
+      "other exhausted window refused",
+      "negative, fraction, 100 and leading zero refused",
+      "global zero preserves higher project floor"
+    ],
+    "real_provider_exhaustion": false
+  },
+  "release_boundary": {
+    "qualification_command_unknown": true,
+    "qualification_exit": 2,
+    "embedded_control_components": [
+      {
+        "name": "desktop.ps1",
+        "sha256_normalized": "5f1aae9a5542acdea63835210283f991dfbc1cdd7b2150f49c13d98de8239048",
+        "debug_contains": true,
+        "public_contains": true
+      },
+      {
+        "name": "notice.ps1",
+        "sha256_normalized": "e2f260eb76139c5c942804b5d64d10a92c39e65415e9a49260b86e657d103695",
+        "debug_contains": true,
+        "public_contains": true
+      },
+      {
+        "name": "windows.ps1",
+        "sha256_normalized": "4603493fd530b8f69bf06530d4c336714ad02d54634302b63cbb3da9924a3ee0",
+        "debug_contains": true,
+        "public_contains": true
+      }
+    ],
+    "scope": "same adapter, task and notice script bytes in the live-qualified debug executable and exact public Windows executable; line-ending-normalized component digests"
+  },
+  "report_finalization": {
+    "native_test_exit": 0,
+    "stored_receipt_status": "passed",
+    "wrapper_exit": 2,
+    "reason": "INDEX.md atomic replacement denied by Windows sharing; exact locker unverified",
+    "unchanged_index_regeneration_exit": 0,
+    "test_result_rewritten": false,
+    "verification_code_changed": false
+  }
+}

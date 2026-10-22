@@ -1680,3 +1680,7 @@
 | [failed](runs/20261022T204600-eff7c527b1c8.md) | 공개test.1 여섯 npm 묶음과 29개 파일의 지문·출처 독립 확인 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T204859-c2aa88f6e21a.md) | 시험판25개 파일 기준으로 test.1 공개 바이트 진단 재검증 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T205029-cc2b4f021d12.md) | 공개test.1의 실제 Windows 감시 갱신·불완전0.13.1 복구 진단 | 2a5ddffa0ef62207805e0516722e181d52ff8ade | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T211316-35be8e6ee70c.md) | 최종 공개test.2를 위한 0.13.1 격리 갱신 입력 준비 | ed5a56d14564d2acaa778067f6712c9ef494fbc8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T215313-4ea674af97a5.md) | 최종 공개test.2의 여섯 npm 묶음과25개 파일 독립 대조 | 3757fb391ded84d66d8f3d9b16b6c4705dea8ba1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T215451-c6c568dbe482.md) | 최종 공개test.2의 Windows 활성·비활성 보존과0.13.1 미완료 갱신 복구 | 3757fb391ded84d66d8f3d9b16b6c4705dea8ba1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T215810-ac7ab102f930.md) | 공개test.2 CLI의0 활성·잔액 무관 소진·잘못된 범위 거부·프로젝트 상향 보호 | 3757fb391ded84d66d8f3d9b16b6c4705dea8ba1 | Windows-11-10.0.26300-SP0 |

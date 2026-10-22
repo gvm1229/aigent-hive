@@ -21,8 +21,8 @@
   - state: complete; depends: UC132-001,UC132-002; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862
 - [x] [UC132-004] 실제 초기화 관측·동일 감지 코드·실제 중단의 결합 검증
   - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862
-- [ ] [UC132-005] 공개 시험·보존 갱신·실패 복구 수용
-  - state: agent-owned; depends: UC132-003
+- [x] [UC132-005] 공개 시험·보존 갱신·실패 복구 수용
+  - state: complete; depends: UC132-003; evidence: repo:docs/research/public-test-0.13.2.md#sha256:138f0f7939a701b13860e9aeaa3c32f85e2723387c4a183d40c5473e7d58435e
 - [ ] [UC132-006] 정식 출시·로컬0% 적용·임시 예외 해제
   - state: agent-owned; depends: UC132-004,UC132-005
 
