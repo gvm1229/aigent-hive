@@ -1662,3 +1662,5 @@
 | [passed](runs/20261022T180526-b89455e4ec6a.md) | 공개0.13.1 CLI의 합성 이전판 원본 생성·검증 | b46ab7cecec21090500fe4eb2765432ffd2ea459 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261022T181628-12f31695a9cf.md) | 0.13.2 구현 후 전체 Rust 회귀 | 24bf7a71d91f04b307ab3448886ffee26f3de51c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261022T182333-dc667a816623.md) | 플러그인 버전 정합화 뒤 전체 Rust 회귀 | 24bf7a71d91f04b307ab3448886ffee26f3de51c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261022T183149-c5fbff755c47.md) | Python conformance: documentation, security, contract, integration, release | fe0e29336beacddaf6fa4227a8297a43f434d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261022T183822-b2ef54e1bb18.md) | 문서 연결 복구와 추적/비추적 입력 구분 회귀 | 88674b3c19927750de07fdbdcd370dff2a3c760a | Windows-11-10.0.26300-SP0 |
