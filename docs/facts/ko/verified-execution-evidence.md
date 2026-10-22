@@ -9,11 +9,11 @@ summary: "작업에 연결된 생성·검증 근거로 실행 적용 판정, 개
 tags: [orchestration, skills]
 aliases: []
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:94e9c3723758b46a23989ca9264b0951c4e9bf1096c7c5766d39697bf501f7e3"
+  - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
   - "repo:.agents/directives/references/run-closure.md#sha256:e55fe262c9a36e7a1c0f372941cc7334f5c4f78d888872add82635c0015865a2"
   - "repo:harness/skills/verified-workflow/SKILL.md#sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf"
 links: [host-neutral-continuation, verified-workflow]
-reviewed_revision: "git:5ea719a64f4403d1261feaff28d3f718d257638a"
+reviewed_revision: "git:55b0498374de1a10818ab15b2b0eda5fbb4a645d"
 status: active
 ---
 
