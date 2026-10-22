@@ -65,6 +65,22 @@ def shared_read(path):
         kernel.CloseHandle(handle)
 
 
+def wait_for_new_zero_stop(path, previous_generation):
+    """Native cancellation can arrive before the controller publishes its receipt."""
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        state = read(path)
+        incident = state.get("incident") or {}
+        receipt = incident.get("confirmed_stop") or {}
+        if (state["generation"] > previous_generation and incident.get("stop_confirmed")
+                and incident.get("reason") == "usage-threshold"
+                and receipt.get("request_ms", 99999) <= 2000
+                and receipt.get("elapsed_ms", 99999) <= 5000):
+            return state
+        time.sleep(0.02)
+    raise RuntimeError("zero quota did not confirm interruption of the new turn")
+
+
 def notice(monitor_pid, close=False, floor=99):
     # Read/invoke only the close action of the test monitor's own notice child.
     script = r"""
@@ -291,12 +307,9 @@ for($i=0;$i -lt 1800;$i++){
             if resumed.get("code") != "hive.usage-allowed" or not (resumed.get("data") or {}).get("threshold_resume_current_conversation"):
                 raise RuntimeError("manual preflight floor exemption was not verified")
         elif args.scenario == "zero":
-            stopped_again = read(state_path)
-            second = stopped_again.get("incident") or {}
-            if stopped_again["generation"] <= state["generation"] or not second.get("stop_confirmed"):
-                raise RuntimeError("zero quota did not interrupt the new turn")
-            state = stopped_again
+            state = wait_for_new_zero_stop(state_path, state["generation"])
             record["zero_new_turn_blocked"] = True
+            record["zero_new_turn_receipt"] = state["incident"]["confirmed_stop"]
         record["preflight_resume_scope"] = "separate CLI tests; this subject is projectless"
         time.sleep(32)  # At least two more normal readings at the same synthetic floor.
         later = read(state_path)
