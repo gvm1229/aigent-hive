@@ -5,17 +5,19 @@ topic_slug: usage-guard-stop-layers
 language: ko
 counterpart: ../en/usage-guard-stop-layers.md
 title: "사용량 보호의 중단 계층"
-summary: "과거 협력형 검사와 현재 직접 실행 취소의 보장 범위 구분."
+summary: "공개0.13.1의 기존 하한 직접 중단·앱 유지·잠금 없는 재개 확인"
 tags: [guard, history, usage]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:700e67f2d621d40a9e718832d9b7d93c923f9ae996c36564014257f2b83f741b"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:fdbaac3fc1d9c6e8d5b52db8ca20d3e6d74de8bacc42cdd8919352c9d97512c7"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9f00da30cddf8bbc0083c2e90786e3061fe50947cf41e183c4c8ee9bd91af5c1"
+  - "repo:docs/research/stable-release-0.13.1.md#sha256:8bb27b7af203a2a4c6a54dc39aa7fd978075e1fb373e6b6d9617e8550acaef4e"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
   - "repo:docs/research/usage-guard-stop-comparison.md#sha256:bdd17b2745522c0f5ed813a4dcf1673e0fa34185970bca7e20402f5eac55015f"
+  - "repo:tests/results/release-0.13.1-stable.md#sha256:a8c2566122cb825217755f8c9901570e63517e114fbe7a484a7ce6af229e1420"
 links: [automatic-dispatch-guard, installed-usage-guard, quota-reset-session-control]
-reviewed_revision: "git:724a2648f5a116878aa258996b42ee8810a8b6ec"
+reviewed_revision: "git:b5b9160b5b73adcd26893cca5f16ee00aa995285"
 status: active
 ---
 
