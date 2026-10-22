@@ -14,11 +14,11 @@
 ## 실행 항목
 
 - [x] [UC132-001] 실제 통신 계약에 따른 호환 검사·상태·갱신
-  - state: complete; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:4aa9d59691ee1a8794e87ad1c854c1406b2824a32c1650fa150f5cbefc6e66fa
+  - state: complete; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:6096c88095e0ba39fc78dfe959356c2f8d988c2115e3b5519bd55ccf3041464d
 - [x] [UC132-002] 전역·프로젝트0~99% 설정과 독립 소진 보호
-  - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:4aa9d59691ee1a8794e87ad1c854c1406b2824a32c1650fa150f5cbefc6e66fa
-- [ ] [UC132-003] 현재 Windows의 초기화·5%·0% 실제 중단 수용
-  - state: agent-owned; depends: UC132-001,UC132-002
+  - state: complete; depends: UC132-001; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:6096c88095e0ba39fc78dfe959356c2f8d988c2115e3b5519bd55ccf3041464d
+- [x] [UC132-003] 현재 Windows의 초기화·5%·0% 실제 중단 수용
+  - state: complete; depends: UC132-001,UC132-002; evidence: repo:docs/research/usage-compatibility-0.13.2.md#sha256:6096c88095e0ba39fc78dfe959356c2f8d988c2115e3b5519bd55ccf3041464d
 - [ ] [UC132-004] 실제 계정 초기화 관측과 중단 확인
   - state: awaiting-external-evidence; depends: UC132-001; owner: OpenAI; reason: 실제 계정 초기화와 당시 실행 중단 증거 필요
 - [ ] [UC132-005] 공개 시험·보존 갱신·실패 복구 수용
