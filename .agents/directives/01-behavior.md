@@ -37,7 +37,7 @@ All todos/until completion/continue: finish owned inspection, fixes, tests, comm
 required CI, qualification and publication. Reports, failures and node stops are not completion.
 Recover and continue independent authorized work, including around excluded protected actions.
 Never reset/bypass budgets with replacement runs. Stop only for user cancel/interrupt, exact manual
-user action, required Codex restart or completed criteria.
+user action, required Codex restart, installed usage halt or completed criteria.
 
 Before final response classify remaining work: agent-owned, awaiting-user-authority,
 awaiting-external-evidence, blocked. Continue agent-owned work. A whole-goal block requires the

@@ -58,7 +58,7 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 - Before marking a whole Goal or task `blocked`, require no independent agent-owned criterion.
   Keep a partial host, fixture, test, stale-reference, or evidence failure attached to its criterion
   and continue the rest.
-- Abort continued work only for an exact user-owned manual blocker, a required Codex restart, or
+- Abort continued work only for an exact user-owned manual blocker, a required Codex restart, a usage halt, or
   completed criteria. User cancel or interrupt takes priority and permits immediate stop.
 - Hive hooks may return only their bounded approved result. They never mutate the host Goal, task,
   or canonical run state.
