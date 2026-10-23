@@ -48,6 +48,7 @@ class LegacyUpdateImageTests(unittest.TestCase):
     def test_image_hashes_include_immutable_code_and_data_with_only_loader_addresses_excluded(self):
         image = pe_image()
         result = MODULE.image_fingerprint(image)
+        self.assertEqual(result["image_base_offset"], 0xB0)
         self.assertEqual([section["name"] for section in result["sections"]], [".text", ".rdata"])
         self.assertEqual(result["sections"][0]["sha256"], hashlib.sha256(bytes(range(16))).hexdigest())
         expected = image[0x600:0x620]

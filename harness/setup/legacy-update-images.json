@@ -8,6 +8,7 @@
       "binary_sha256": "e34e5b7486feb6adc52f5b0ca59c01da303a14af2ecd397b1c8e60c9ecab7824",
       "header_size": 1024,
       "header_sha256": "c0092348a2e4dc77b4f7184110a17c994b457f8456f9ce0f5e9dfcaddbdc0d08",
+      "image_base_offset": 288,
       "image_base": 5368709120,
       "image_size": 29421568,
       "sections": [
@@ -45,6 +46,7 @@
       "binary_sha256": "ee46c6ca9715d6f20b6cce82aa2429df547ed98dd157b662904995e0d540db13",
       "header_size": 1024,
       "header_sha256": "dd98275621dcc57bb900d31026178d90e921f9a8f3be8b25585bbfe677ffd785",
+      "image_base_offset": 288,
       "image_base": 5368709120,
       "image_size": 29528064,
       "sections": [
@@ -82,6 +84,7 @@
       "binary_sha256": "e250fd16b530060f6067a1779f658c050cd1f4c6212b94fad742634ed7f72853",
       "header_size": 1024,
       "header_sha256": "7a478ff7d13f0fb3456f14c0b6716e03ee39b72bbc68d30b1689793ec46ff9ee",
+      "image_base_offset": 288,
       "image_base": 5368709120,
       "image_size": 29528064,
       "sections": [

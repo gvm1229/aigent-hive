@@ -128,7 +128,7 @@ def image_fingerprint(binary):
             encoded.append((delta & 127) | 128)
             delta >>= 7
         encoded.append(delta)
-    return dict(binary_sha256=digest(binary), header_size=header_size, header_sha256=digest(binary[:header_size]),
+    return dict(binary_sha256=digest(binary), header_size=header_size, header_sha256=digest(binary[:header_size]), image_base_offset=optional + 24,
                 image_base=image_base, image_size=image_size, sections=immutable,
                 relocation_count=len(selected_relocations), relocations_delta_base64=base64.b64encode(encoded).decode())
 
@@ -159,7 +159,7 @@ def main():
         images.append(package_fingerprint(archive, metadata, version))
     value = dict(schema_version=1, platform="windows-x64", images=images)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({"versions": VERSIONS, "sha256": digest(args.output.read_bytes()), "bytes":args.output.stat().st_size}))
 
 
