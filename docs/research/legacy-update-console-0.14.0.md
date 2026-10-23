@@ -26,6 +26,8 @@
 | [SetConsoleCtrlHandler](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler),2021-12-30 | 콘솔 연결 변경 시 제어 처리기 초기화. Ctrl-C·창 닫기에서 이전 답변 저장과 중단 처리가 별도 검증 대상 |
 | [QueryFullProcessImageNameW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew),2023-02-09 | 프로세스 실행 이미지의 전체 이름 조회. 파일 교체 전 바이트의 지문 인증을 보장하는 규약은 없음 |
 | [GetMappedFileNameW](https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmappedfilenamew),2025-08-15 | 지정 주소에 연결된 파일 이름 조회. 실행 중 폴더 이름 변경 이후의 파일 신원 증명과 구분 |
+| [PE Format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format),접근 시 제공본 | Windows 실행 파일의 영역·주소 보정·가져오기 표 구조. 실제 실행 주소의 차이를 보정한 비교에 사용 |
+| [ReadProcessMemory](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory),2022-05-14 | 권한이 있는 프로세스의 지정 영역 읽기. 이번 시험은 직접 시작한 격리 Hive의 공개 실행 파일 영역에만 한정 |
 
 ## 실제 Windows 시험
 
@@ -36,11 +38,19 @@
 - 시험용 설치 폴더를 같은 시험 루트의 다른 이름으로 이동. 실제 실행 프로세스의 QueryFullProcessImageNameW와 GetMappedFileNameW 모두 이전 경로 반환
 - 거부 답변으로 정상 종료. 격리 사용자 루트의 설치 기록 부재 확인. 새 질문 연결·설정 적용·시간 제한 복구·npm 실제 교체는 미실행
 
+## 실행 이미지 비교의 추가 시험
+
+- [첫 비교](../../tests/results/runs/20261023T141634-f45e51bc2313.md): 같은 공개 원본에서 주소 보정 후 .text·.pdata 일치, .rdata의1407바이트 불일치. 이 결과만으로 전체 읽기 전용 영역 일치 주장 제외
+- [가져오기 표 제외 비교](../../tests/results/runs/20261023T141819-7d1d2f3ad181.md): Windows가 실행 준비 때 채우는2016바이트의 가져오기 표를 제외하고, 읽기 전용 주소 보정28742개를 반영. .text20846088바이트·.rdata7682218바이트·.pdata788532바이트 모두 공개 원본 지문과 일치
+- 같은 시험의 폴더 이동 전후 일치. 변경 가능한 자료·스택·힙·계정·대화 내용은 읽기 대상에서 제외, 공개 기록에는 비교 지문과 건수만 저장
+- 적용 후보: 공개 원본에서 고정한 실행 파일 머리말·읽기 전용 영역 지문·주소 보정 위치로 부모 검증. 기존 경로가 가리키는 새 파일 대신 실제 실행 이미지의 알려진 영역 비교
+- 한계: Windows 격리 시험에서 비교 방법만 확인. 제품용 구현·위조 거부·다른 공개 시험 버전·부모 종료 경합·콘솔 질문 연결·POSIX 검증은 미실행
+
 ## 구현에 넘길 조건
 
 1. 사용자 질문과 부모 JSON 결과의 별도 통로 유지. 새 창 생성이나 임의 콘솔 탐색 제외
 2. 부모의 프로세스 식별자·생성 시각·갱신 인자·설치 범위를 함께 검증. 이름이 같은 현재 디스크 파일의 버전만으로 옛 부모 판정 금지
-3. 실제 실행 이미지나 설치 소유자의 교체 기록을 이용한 신원 검증 방법을 추가 조사·시험. 이 대안은 아직 채택·검증 전
+3. 위 실행 이미지 비교를 제품용 제한된 검사로 구현하고 위조·읽기 실패·부모 종료 시험 추가. 다른 운영체제는 해당 프로세스의 실행 파일 신원과 터미널 결합을 별도 검증
 4. 부모 확인 불가 또는 구버전 `--confirm`의 원래 입력 모드 불명은 설정 보존·질문 보류
 5. Linux/macOS의 실제 경로·터미널 동작은 미실행. Windows 결과의 다른 OS 전용 금지
 6. U140-001은 미완료 유지. 공개 원본에서 새 질문·답변·적용·기한 복구를 마칠 때까지 출시 관문 통과 표시 금지
