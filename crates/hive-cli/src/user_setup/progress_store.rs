@@ -263,7 +263,14 @@ fn catalog_digest(scope: PreferenceScope) -> String {
         PreferenceScope::User => super::USER_SETUP_SCHEMA,
         PreferenceScope::Project => include_str!("../../../../schemas/setup-answers.schema.json"),
     };
-    sha256_digest(format!("{schema}\n{}", super::USER_SETUP_CATALOG).as_bytes())
+    sha256_digest(
+        format!(
+            "{schema}\n{}\n{}",
+            super::USER_SETUP_CATALOG,
+            super::setup_engine::QUESTIONS
+        )
+        .as_bytes(),
+    )
 }
 
 fn valid_hash(value: &str) -> bool {

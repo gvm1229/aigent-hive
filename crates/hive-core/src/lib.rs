@@ -19,6 +19,7 @@ pub mod policy;
 pub mod preferences;
 pub mod role;
 pub mod run;
+pub mod setup;
 pub mod token_accounting;
 pub mod usage_guard;
 

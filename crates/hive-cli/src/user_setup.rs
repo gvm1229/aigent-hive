@@ -22,6 +22,7 @@ use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 mod progress_store;
+mod setup_engine;
 mod usage_preferences;
 pub(crate) use usage_preferences::UsageGuardPreferences;
 
@@ -884,6 +885,11 @@ fn vector_setup_prompt(
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
+    if arguments.iter().any(|value| value == "--section") {
+        return emit_action_result(
+            &setup_engine::describe_section(arguments).unwrap_or_else(|error| failure(&error)),
+        );
+    }
     let valid = arguments.len() == 5
         && arguments.iter().any(|value| value == "--scope")
         && arguments.iter().any(|value| value == "user")

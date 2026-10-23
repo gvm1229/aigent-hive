@@ -1,0 +1,172 @@
+//! CLI adapters for the shared deterministic question contract.
+
+use super::{InterfaceLanguage, SetupError};
+use crate::{ActionResult, Evidence};
+use hive_core::preferences::{DecisionOrigin, PreferenceScope};
+use hive_core::setup::QuestionCatalog;
+use serde_json::{json, Value};
+
+pub(super) const QUESTIONS: &str = include_str!("../../../../../harness/setup/questions.yml");
+
+pub(super) fn catalog() -> Result<QuestionCatalog, SetupError> {
+    let catalog: QuestionCatalog = serde_yaml::from_str(QUESTIONS)
+        .map_err(|error| SetupError::Internal(format!("invalid setup questions: {error}")))?;
+    catalog.validate().map_err(SetupError::Internal)?;
+    Ok(catalog)
+}
+
+pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, SetupError> {
+    let mut scope = None;
+    let mut section = None;
+    let mut root = None;
+    let mut output = None;
+    let mut describe = false;
+    let mut index = 0;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        if option == "--describe" && !describe {
+            describe = true;
+            index += 1;
+            continue;
+        }
+        let slot = match option {
+            "--scope" => &mut scope,
+            "--section" => &mut section,
+            "--user-root" => &mut root,
+            "--output" => &mut output,
+            _ => return Err(SetupError::Input("unknown describe option".to_owned())),
+        };
+        let value = arguments
+            .get(index + 1)
+            .filter(|value| !value.starts_with("--"))
+            .ok_or_else(|| SetupError::Input("missing describe option value".to_owned()))?;
+        if slot.replace(value.clone()).is_some() {
+            return Err(SetupError::Input("duplicate describe option".to_owned()));
+        }
+        index += 2;
+    }
+    if !describe || output.as_deref() != Some("json") {
+        return Err(SetupError::Input(
+            "section description requires --describe --output json".to_owned(),
+        ));
+    }
+    let scope = match scope.as_deref() {
+        Some("user") => PreferenceScope::User,
+        Some("project") => PreferenceScope::Project,
+        _ => {
+            return Err(SetupError::Input(
+                "choose the user or project scope".to_owned(),
+            ))
+        }
+    };
+    let section =
+        section.ok_or_else(|| SetupError::Input("missing question section".to_owned()))?;
+    let user_root = root.map_or_else(super::resolve_user_root, |path| Ok(path.into()))?;
+    let root_cap =
+        crate::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    let config = super::load_operational_config(&root_cap)?;
+    let current = config
+        .as_ref()
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(|error| SetupError::Internal(format!("cannot inspect preferences: {error}")))?;
+    let current = if scope == PreferenceScope::User {
+        current
+    } else {
+        None
+    };
+    let questions = section_data(scope, &section, current.as_ref())?;
+    let korean = config
+        .as_ref()
+        .is_some_and(|c| c.interface_language == InterfaceLanguage::Ko);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "DescribeHiveSetupSection",
+        status: "success",
+        exit_code: 0,
+        code: "hive.setup-section-described",
+        message: if korean {
+            "요청한 설정 질문 목록"
+        } else {
+            "Requested setup questions"
+        }
+        .to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "setup-questions",
+            locator: "harness/setup/questions.yml".to_owned(),
+            digest: hive_core::sha256_digest(QUESTIONS.as_bytes()),
+        }],
+        next_action: None,
+        data: Some(json!({"section":section,"scope":scope,"questions":questions})),
+    })
+}
+
+fn section_data(
+    scope: PreferenceScope,
+    section: &str,
+    current: Option<&Value>,
+) -> Result<Value, SetupError> {
+    let catalog = catalog()?;
+    let questions = catalog.section(scope, section);
+    if questions.is_empty() {
+        return Err(SetupError::Input(
+            "unknown setup question section".to_owned(),
+        ));
+    }
+    let values = questions
+        .iter()
+        .map(|question| {
+            let stored = current.and_then(|current| current.pointer(&question.key));
+            let source = current
+                .and_then(|current| current["preference_decisions"].get(&question.key))
+                .and_then(|record| record.get("origin"))
+                .cloned()
+                .unwrap_or_else(|| {
+                    json!(if stored.is_some() {
+                        DecisionOrigin::LegacyUnknown
+                    } else {
+                        DecisionOrigin::Default
+                    })
+                });
+            json!({"question":question,"current":stored,"source":source,
+            "applicable":current.map(|current| question.applicable(current))})
+        })
+        .collect::<Vec<_>>();
+    Ok(json!(values))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn canonical_questions_are_valid_and_section_output_is_bounded() {
+        let catalog = catalog().unwrap();
+        assert!(catalog.questions.len() > 30);
+        let usage = section_data(PreferenceScope::User, "usage", None).unwrap();
+        assert!(serde_json::to_vec(&usage).unwrap().len() < 16_384);
+        assert!(usage
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|q| q["question"]["section"] == "usage"));
+        assert!(section_data(PreferenceScope::User, "missing", None).is_err());
+    }
+
+    #[test]
+    fn description_keeps_unanswered_defaults_separate_from_stored_choices() {
+        let current = json!({"usage_guard":{"enforcement_enabled":true},
+            "preference_decisions":{"/usage_guard/enforcement_enabled":{"origin":"explicit"}}});
+        let data = section_data(PreferenceScope::User, "usage", Some(&current)).unwrap();
+        let guard = data
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|q| q["question"]["id"] == "usage-enforcement")
+            .unwrap();
+        assert_eq!(guard["current"], true);
+        assert_eq!(guard["question"]["default"], false);
+        assert_eq!(guard["source"], "explicit");
+    }
+}

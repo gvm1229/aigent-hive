@@ -1,0 +1,435 @@
+schema_version: 1
+policy_version: "0.14.0"
+questions:
+  - id: user-language
+    revision: 1
+    scope: "user"
+    section: "language"
+    key: "/interface_language"
+    input: "choice"
+    prompt: {"ko":"사용할 언어를 골라 주세요. / Choose a language.","en":"Choose a language. / 사용할 언어를 골라 주세요."}
+    help: {"ko":"","en":""}
+    options: [{"value":"ko","label":{"ko":"한국어","en":"Korean"}},{"value":"en","label":{"ko":"영어","en":"English"}}]
+  - id: user-mode
+    revision: 1
+    scope: "user"
+    section: "setup"
+    key: "/setup_mode"
+    input: "choice"
+    prompt: {"ko":"설정 방식을 골라 주세요.","en":"Choose a setup mode."}
+    help: {"ko":"","en":""}
+    default: "expedited"
+    options: [{"value":"expedited","label":{"ko":"빠른 설정","en":"Quick setup"}},{"value":"custom","label":{"ko":"맞춤 설정","en":"Custom setup"}}]
+  - id: user-wiki
+    revision: 1
+    scope: "user"
+    section: "wiki"
+    key: "/wiki/enabled"
+    input: "boolean"
+    prompt: {"ko":"로컬 문서에 지식을 저장할까요?","en":"Save knowledge in local documents?"}
+    help: {"ko":"","en":""}
+    default: true
+  - id: user-wiki-language
+    revision: 1
+    scope: "user"
+    section: "wiki"
+    key: "/wiki/language"
+    input: "choice"
+    prompt: {"ko":"지식 문서의 언어를 골라 주세요.","en":"Choose the knowledge document language."}
+    help: {"ko":"","en":""}
+    options: [{"value":"ko","label":{"ko":"한국어","en":"Korean"}},{"value":"en","label":{"ko":"영어","en":"English"}},{"value":"both","label":{"ko":"두 언어","en":"Both languages"}}]
+    when: [{"key":"/wiki/enabled","equals":true}]
+  - id: user-persona
+    revision: 1
+    scope: "user"
+    section: "persona"
+    key: "/persona/id"
+    input: "choice"
+    prompt: {"ko":"AI의 답변 방식을 골라 주세요.","en":"Choose the response style."}
+    help: {"ko":"","en":""}
+    default: "balanced"
+    options: [{"value":"strict","label":{"ko":"엄격","en":"Strict"}},{"value":"balanced","label":{"ko":"균형","en":"Balanced"}},{"value":"friendly","label":{"ko":"친근","en":"Friendly"}},{"value":"custom","label":{"ko":"직접 작성","en":"Custom"}}]
+  - id: user-persona-text
+    revision: 1
+    scope: "user"
+    section: "persona"
+    key: "/persona/custom_description"
+    input: "text"
+    prompt: {"ko":"원하는 답변 방식을 직접 적어 주세요.","en":"Describe your preferred response style."}
+    help: {"ko":"","en":""}
+    minimum: 1
+    maximum: 500
+    when: [{"key":"/persona/id","equals":"custom"}]
+  - id: user-skills
+    revision: 1
+    scope: "user"
+    section: "skills"
+    key: "/skills"
+    input: "structured"
+    prompt: {"ko":"사용할 기능 묶음 또는 기능 목록을 JSON으로 입력해 주세요.","en":"Enter the feature bundle or feature selection as JSON."}
+    help: {"ko":"예: {\"mode\":\"all\"}. 기능 설치와 외부 연결 동의는 별도 처리.","en":"Example: {\"mode\":\"all\"}. Installation and external connections require separate consent."}
+    default: {"mode":"all"}
+  - id: project-language
+    revision: 1
+    scope: "project"
+    section: "language"
+    key: "/interface_language"
+    input: "choice"
+    prompt: {"ko":"사용할 언어를 골라 주세요. / Choose a language.","en":"Choose a language. / 사용할 언어를 골라 주세요."}
+    help: {"ko":"","en":""}
+    options: [{"value":"ko","label":{"ko":"한국어","en":"Korean"}},{"value":"en","label":{"ko":"영어","en":"English"}}]
+  - id: project-mode
+    revision: 1
+    scope: "project"
+    section: "setup"
+    key: "/setup_mode"
+    input: "choice"
+    prompt: {"ko":"설정 방식을 골라 주세요.","en":"Choose a setup mode."}
+    help: {"ko":"","en":""}
+    default: "expedited"
+    options: [{"value":"expedited","label":{"ko":"빠른 설정","en":"Quick setup"}},{"value":"custom","label":{"ko":"맞춤 설정","en":"Custom setup"}}]
+  - id: project-wiki
+    revision: 1
+    scope: "project"
+    section: "wiki"
+    key: "/wiki/enabled"
+    input: "boolean"
+    prompt: {"ko":"로컬 문서에 지식을 저장할까요?","en":"Save knowledge in local documents?"}
+    help: {"ko":"","en":""}
+    default: true
+  - id: project-wiki-language
+    revision: 1
+    scope: "project"
+    section: "wiki"
+    key: "/wiki/language"
+    input: "choice"
+    prompt: {"ko":"지식 문서의 언어를 골라 주세요.","en":"Choose the knowledge document language."}
+    help: {"ko":"","en":""}
+    options: [{"value":"ko","label":{"ko":"한국어","en":"Korean"}},{"value":"en","label":{"ko":"영어","en":"English"}},{"value":"both","label":{"ko":"두 언어","en":"Both languages"}}]
+    when: [{"key":"/wiki/enabled","equals":true}]
+  - id: project-persona
+    revision: 1
+    scope: "project"
+    section: "persona"
+    key: "/persona/id"
+    input: "choice"
+    prompt: {"ko":"AI의 답변 방식을 골라 주세요.","en":"Choose the response style."}
+    help: {"ko":"","en":""}
+    default: "balanced"
+    options: [{"value":"strict","label":{"ko":"엄격","en":"Strict"}},{"value":"balanced","label":{"ko":"균형","en":"Balanced"}},{"value":"friendly","label":{"ko":"친근","en":"Friendly"}},{"value":"custom","label":{"ko":"직접 작성","en":"Custom"}}]
+  - id: project-persona-text
+    revision: 1
+    scope: "project"
+    section: "persona"
+    key: "/persona/custom_description"
+    input: "text"
+    prompt: {"ko":"원하는 답변 방식을 직접 적어 주세요.","en":"Describe your preferred response style."}
+    help: {"ko":"","en":""}
+    minimum: 1
+    maximum: 500
+    when: [{"key":"/persona/id","equals":"custom"}]
+  - id: project-skills
+    revision: 1
+    scope: "project"
+    section: "skills"
+    key: "/skills"
+    input: "structured"
+    prompt: {"ko":"사용할 기능 묶음 또는 기능 목록을 JSON으로 입력해 주세요.","en":"Enter the feature bundle or feature selection as JSON."}
+    help: {"ko":"예: {\"mode\":\"all\"}. 기능 설치와 외부 연결 동의는 별도 처리.","en":"Example: {\"mode\":\"all\"}. Installation and external connections require separate consent."}
+    default: {"mode":"all"}
+  - id: user-contexts
+    revision: 1
+    scope: "user"
+    section: "profile"
+    key: "/profile/contexts"
+    input: "list"
+    prompt: {"ko":"관련된 배경이나 관심사를 골라 주세요. 여러 개는 쉼표로 나눠 주세요.","en":"Choose your backgrounds or interests, separated by commas."}
+    help: {"ko":"","en":""}
+    options: [{"value":"web-developer","label":{"ko":"웹 개발","en":"Web development"}},{"value":"game-developer","label":{"ko":"게임 개발","en":"Game development"}},{"value":"non-developer","label":{"ko":"일반 지식 작업","en":"General knowledge work"}}]
+    minimum: 0
+    maximum: 3
+  - id: user-context-description
+    revision: 1
+    scope: "user"
+    section: "profile"
+    key: "/profile/description"
+    input: "text"
+    prompt: {"ko":"추가로 알려 줄 배경을 적어 주세요.","en":"Describe any additional background."}
+    help: {"ko":"","en":""}
+    minimum: 1
+    maximum: 500
+  - id: user-hosts
+    revision: 1
+    scope: "user"
+    section: "hosts"
+    key: "/selected_hosts"
+    input: "list"
+    prompt: {"ko":"Hive를 사용할 앱을 골라 주세요.","en":"Choose the apps where you use Hive."}
+    help: {"ko":"","en":""}
+    options: [{"value":"codex","label":{"ko":"Codex","en":"Codex"}},{"value":"claude","label":{"ko":"Claude Code","en":"Claude Code"}},{"value":"antigravity","label":{"ko":"Antigravity","en":"Antigravity"}}]
+    minimum: 1
+    maximum: 3
+  - id: user-update-check
+    revision: 1
+    scope: "user"
+    section: "updates"
+    key: "/update_check/enabled"
+    input: "boolean"
+    prompt: {"ko":"하루에 한 번 새 버전 유무를 확인할까요?","en":"Check for a new version once a day?"}
+    help: {"ko":"확인만 하며 자동 설치는 하지 않음.","en":"This checks only; it does not install an update."}
+    default: false
+  - id: user-judge
+    revision: 1
+    scope: "user"
+    section: "review"
+    key: "/judge_invocation"
+    input: "choice"
+    prompt: {"ko":"독립 검토는 명시적으로 요청했을 때만 실행할까요?","en":"Choose when independent reviews may run."}
+    help: {"ko":"","en":""}
+    default: "explicit"
+    options: [{"value":"explicit","label":{"ko":"요청할 때만","en":"Only when requested"}},{"value":"implicit","label":{"ko":"작업 규칙에 따라","en":"As required by the workflow"}}]
+  - id: usage-enforcement
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/enforcement_enabled"
+    input: "boolean"
+    prompt: {"ko":"사용량에 따라 작업을 막거나 중단하는 기능을 켤까요?","en":"Enable usage-based blocking and interruption?"}
+    help: {"ko":"끄면 잔여량·초기화·조회 실패 때문에 작업을 막거나 중단하지 않음.","en":"When off, quota, resets, or observation failures do not block or interrupt work."}
+    default: false
+  - id: usage-warnings
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/warnings_enabled"
+    input: "boolean"
+    prompt: {"ko":"이미 확인한 사용량으로 안내를 표시할까요?","en":"Show notices from observations already available?"}
+    help: {"ko":"안내를 위해 추가 조회하거나 작업을 중단하지 않음.","en":"Notices do not poll for usage or interrupt work."}
+    default: true
+  - id: usage-threshold
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/stop_remaining_percent"
+    input: "integer"
+    prompt: {"ko":"잔여량 기준을 0부터 99 사이 정수로 입력해 주세요.","en":"Enter a remaining-quota threshold from 0 to 99."}
+    help: {"ko":"","en":""}
+    default: 20
+    minimum: 0
+    maximum: 99
+  - id: usage-preflight-threshold
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/preflight/threshold_enabled"
+    input: "boolean"
+    prompt: {"ko":"시작 전 기준 이하의 잔여량 때문에 작업을 막거나 중단할까요?","en":"Before starting, block or interrupt for quota at or below the threshold?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-preflight-reset
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/preflight/reset_enabled"
+    input: "boolean"
+    prompt: {"ko":"시작 전 사용량 기간 초기화 때문에 작업을 막거나 중단할까요?","en":"Before starting, block or interrupt for a usage-period reset?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-preflight-zero-quota
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/preflight/zero_quota_enabled"
+    input: "boolean"
+    prompt: {"ko":"시작 전 사용량 0% 때문에 작업을 막거나 중단할까요?","en":"Before starting, block or interrupt for zero remaining quota?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-preflight-failure
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/preflight/observation_failure"
+    input: "choice"
+    prompt: {"ko":"시작 전 사용량 조회에 실패하면 어떻게 할까요?","en":"Before starting, what should happen when observation fails?"}
+    help: {"ko":"","en":""}
+    default: "warn"
+    options: [{"value":"warn","label":{"ko":"안내 후 계속","en":"Warn and continue"}},{"value":"block","label":{"ko":"작업 차단","en":"Block"}}]
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-monitor
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/midway/enabled"
+    input: "boolean"
+    prompt: {"ko":"실행 중 사용량을 계속 확인하는 감시를 켤까요?","en":"Enable continuous usage monitoring during work?"}
+    help: {"ko":"상시 감시에 대한 별도 선택. 실제 감시 상태는 적용 후 확인.","en":"This is a separate monitoring choice. Actual monitor state is checked after application."}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-midway-threshold
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/midway/threshold_enabled"
+    input: "boolean"
+    prompt: {"ko":"실행 중 기준 이하의 잔여량 때문에 작업을 막거나 중단할까요?","en":"During execution, block or interrupt for quota at or below the threshold?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/midway/enabled","equals":true}]
+  - id: usage-midway-reset
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/midway/reset_enabled"
+    input: "boolean"
+    prompt: {"ko":"실행 중 사용량 기간 초기화 때문에 작업을 막거나 중단할까요?","en":"During execution, block or interrupt for a usage-period reset?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/midway/enabled","equals":true}]
+  - id: usage-midway-zero-quota
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/midway/zero_quota_enabled"
+    input: "boolean"
+    prompt: {"ko":"실행 중 사용량 0% 때문에 작업을 막거나 중단할까요?","en":"During execution, block or interrupt for zero remaining quota?"}
+    help: {"ko":"","en":""}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/midway/enabled","equals":true}]
+  - id: usage-midway-failure
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/midway/observation_failure"
+    input: "choice"
+    prompt: {"ko":"실행 중 사용량 조회에 실패하면 어떻게 할까요?","en":"During execution, what should happen when observation fails?"}
+    help: {"ko":"","en":""}
+    default: "warn"
+    options: [{"value":"warn","label":{"ko":"안내 후 계속","en":"Warn and continue"}},{"value":"stop","label":{"ko":"작업 중단","en":"Stop"}}]
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/midway/enabled","equals":true}]
+  - id: codexbar-fallback
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/codexbar_fallback_enabled"
+    input: "boolean"
+    prompt: {"ko":"기본 조회가 실패하면 CodexBar를 사용할까요?","en":"Use CodexBar when the primary observation fails?"}
+    help: {"ko":"설치가 필요하면 별도 동의 후 진행.","en":"Any required installation needs separate consent."}
+    default: false
+  - id: discord-enabled
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/discord/enabled"
+    input: "boolean"
+    prompt: {"ko":"Discord 사용량 알림을 켤까요?","en":"Enable Discord usage notices?"}
+    help: {"ko":"","en":""}
+    default: false
+  - id: discord-environment
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/discord/webhook_url_env"
+    input: "text"
+    prompt: {"ko":"Discord 연결 주소를 담은 환경 변수 이름을 입력해 주세요.","en":"Enter the environment variable name holding the Discord webhook."}
+    help: {"ko":"주소나 비밀 값 자체는 입력하지 않는 방식.","en":"Enter the variable name, never the URL or secret itself."}
+    minimum: 1
+    maximum: 128
+    when: [{"key":"/usage_guard/discord/enabled","equals":true}]
+  - id: project-name
+    revision: 1
+    scope: "project"
+    section: "identity"
+    key: "/project_name"
+    input: "text"
+    prompt: {"ko":"프로젝트 이름을 입력해 주세요.","en":"Enter the project name."}
+    help: {"ko":"","en":""}
+    minimum: 1
+    maximum: 160
+  - id: project-kind
+    revision: 1
+    scope: "project"
+    section: "identity"
+    key: "/project_kind"
+    input: "choice"
+    prompt: {"ko":"프로젝트 설정 종류를 골라 주세요.","en":"Choose the project configuration kind."}
+    help: {"ko":"","en":""}
+    default: "general"
+    options: [{"value":"general","label":{"ko":"일반","en":"General"}},{"value":"custom","label":{"ko":"직접 설정","en":"Custom"}}]
+  - id: project-host
+    revision: 1
+    scope: "project"
+    section: "hosts"
+    key: "/primary_host"
+    input: "choice"
+    prompt: {"ko":"이 프로젝트에서 사용할 앱을 골라 주세요.","en":"Choose the app for this project."}
+    help: {"ko":"","en":""}
+    options: [{"value":"codex","label":{"ko":"Codex","en":"Codex"}},{"value":"claude","label":{"ko":"Claude Code","en":"Claude Code"}},{"value":"antigravity","label":{"ko":"Antigravity","en":"Antigravity"}}]
+  - id: project-threshold
+    revision: 1
+    scope: "project"
+    section: "usage"
+    key: "/usage_stop_remaining_percent"
+    input: "integer"
+    prompt: {"ko":"프로젝트의 잔여량 기준을 입력해 주세요.","en":"Enter the project remaining-quota threshold."}
+    help: {"ko":"전역 보호를 켠 경우 전역 기준보다 낮출 수 없는 값.","en":"When global enforcement is enabled, this cannot lower its threshold."}
+    default: 20
+    minimum: 0
+    maximum: 99
+  - id: project-roles
+    revision: 1
+    scope: "project"
+    section: "roles"
+    key: "/persistent_roles"
+    input: "structured"
+    prompt: {"ko":"역할 정의를 JSON 목록으로 입력해 주세요.","en":"Enter role definitions as a JSON array."}
+    help: {"ko":"책임·수정 범위·검증 의무를 포함한 구조화된 정의. 빈 목록은 영구 역할 없음.","en":"Include responsibilities, write scope, and verification duties. An empty array means no persistent roles."}
+    default: []
+  - id: project-knowledge-include
+    revision: 1
+    scope: "project"
+    section: "knowledge"
+    key: "/knowledge_include_paths"
+    input: "list"
+    prompt: {"ko":"지식에 포함할 경로를 쉼표로 나눠 입력해 주세요.","en":"Enter knowledge include paths, separated by commas."}
+    help: {"ko":"","en":""}
+    default: []
+    minimum: 0
+    maximum: 64
+  - id: project-knowledge-exclude
+    revision: 1
+    scope: "project"
+    section: "knowledge"
+    key: "/knowledge_exclude_paths"
+    input: "list"
+    prompt: {"ko":"지식에서 제외할 경로를 쉼표로 나눠 입력해 주세요.","en":"Enter knowledge exclude paths, separated by commas."}
+    help: {"ko":"","en":""}
+    default: [".env","**/.env","**/.env.*","**/credentials*","**/secrets/**"]
+    minimum: 0
+    maximum: 64
+  - id: project-knowledge-promotion
+    revision: 1
+    scope: "project"
+    section: "knowledge"
+    key: "/root_knowledge_promotion_categories"
+    input: "list"
+    prompt: {"ko":"전역으로 공유할 지식 종류를 골라 주세요.","en":"Choose which knowledge categories may be shared globally."}
+    help: {"ko":"","en":""}
+    default: []
+    options: [{"value":"fact","label":{"ko":"사실","en":"Facts"}},{"value":"preference","label":{"ko":"선호","en":"Preferences"}},{"value":"workflow","label":{"ko":"작업 방식","en":"Workflows"}}]
+    minimum: 0
+    maximum: 3
+  - id: project-knowledge-confidential
+    revision: 1
+    scope: "project"
+    section: "knowledge"
+    key: "/confidential_knowledge_categories"
+    input: "list"
+    prompt: {"ko":"비공개로 유지할 지식 종류를 골라 주세요.","en":"Choose which knowledge categories must remain confidential."}
+    help: {"ko":"","en":""}
+    default: []
+    options: [{"value":"fact","label":{"ko":"사실","en":"Facts"}},{"value":"preference","label":{"ko":"선호","en":"Preferences"}},{"value":"workflow","label":{"ko":"작업 방식","en":"Workflows"}}]
+    minimum: 0
+    maximum: 3
