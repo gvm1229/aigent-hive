@@ -34,6 +34,7 @@ pub(super) fn resume(
     if !store.questions_match(progress) || store.load()?.progress.as_ref() != Some(progress) {
         return Err(SetupError::Conflict("setup recovery inputs changed".into()));
     }
+    user_setup::progress_store::recover_config(&arguments.root_cap, &store, progress)?;
     let validated = user_setup::execute_answers(&arguments, &bytes, user_setup::SetupBase::Current);
     let repaired = validated.is_err();
     let mut result = if let Ok(result) = validated {

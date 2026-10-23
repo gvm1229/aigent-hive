@@ -205,6 +205,7 @@ pub(super) fn checkpoint(
     expected: Option<&[u8]>,
     progress: &SetupProgress,
 ) -> Result<Option<Vec<u8>>, SetupError> {
+    user_setup::progress_store::prepare_config_backup(&arguments.root_cap, progress, expected)?;
     let Some(binding) = &progress.legacy_migration else {
         return Ok(expected.map(<[u8]>::to_vec));
     };
@@ -272,13 +273,10 @@ fn checkpoint_using<T>(
             "migration recovery record changed".into(),
         ));
     }
-    replace_user_setup_file(
-        &arguments.root_cap,
-        &backup_path,
-        backup.as_deref(),
-        Some(prior),
-    )
-    .map_err(SetupError::Conflict)?;
+    if backup.is_none() {
+        replace_user_setup_file(&arguments.root_cap, &backup_path, None, Some(prior))
+            .map_err(SetupError::Conflict)?;
+    }
     let _reader = stop_reader()?;
     replace_user_setup_file(&arguments.root_cap, relative, Some(prior), Some(&desired))
         .map_err(SetupError::Conflict)?;

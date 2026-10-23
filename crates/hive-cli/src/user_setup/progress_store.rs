@@ -43,6 +43,8 @@ pub(super) struct SetupProgress {
     pub catalog_digest: String,
     pub binding: TargetBinding,
     pub base_config_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_config_mode: Option<u32>,
     pub operation_id: String,
     pub phase: ProgressPhase,
     pub step: String,
@@ -78,6 +80,7 @@ pub(super) struct ProgressStore {
     pub binding: TargetBinding,
     pub relative: PathBuf,
     base_config_digest: String,
+    base_config_mode: Option<u32>,
     catalog_digest: String,
 }
 
@@ -109,6 +112,12 @@ impl ProgressStore {
         };
         let base = read_user_setup_file(&config_root, &config_relative, MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
+        let base_config_mode = if base.is_some() {
+            crate::user_install::host_policy_mode(&config_root, &config_relative)
+                .map_err(SetupError::Conflict)?
+        } else {
+            None
+        };
         // Canonical path bytes avoid lossy display strings and contain no persisted private path.
         let path_digest = sha256_digest(path.as_os_str().as_encoded_bytes());
         let target_id = sha256_digest(format!("{scope:?}:{path_digest}").as_bytes());
@@ -128,6 +137,7 @@ impl ProgressStore {
             },
             relative,
             base_config_digest: optional_digest(base.as_deref()),
+            base_config_mode,
             catalog_digest: catalog_digest(scope),
         })
     }
@@ -172,6 +182,7 @@ impl ProgressStore {
             catalog_digest: self.catalog_digest.clone(),
             binding: self.binding.clone(),
             base_config_digest: self.base_config_digest.clone(),
+            base_config_mode: self.base_config_mode,
             operation_id,
             phase: ProgressPhase::AwaitingAnswers,
             step,
@@ -198,6 +209,7 @@ impl ProgressStore {
         )
         .map_err(SetupError::Conflict)?;
         if progress.base_config_digest != self.base_config_digest
+            || progress.base_config_mode != self.base_config_mode
             || progress.base_config_digest != optional_digest(current.as_deref())
             || progress.catalog_digest != self.catalog_digest
             || progress.question_revision != QUESTION_REVISION
@@ -247,6 +259,7 @@ impl ProgressStore {
 
     pub fn resume_ready(&self, progress: &SetupProgress) -> bool {
         progress.base_config_digest == self.base_config_digest
+            && progress.base_config_mode == self.base_config_mode
             && progress.catalog_digest == self.catalog_digest
             && progress.question_revision == QUESTION_REVISION
     }
@@ -300,6 +313,7 @@ impl ProgressStore {
         complete
             .base_config_digest
             .clone_from(&self.base_config_digest);
+        complete.base_config_mode = self.base_config_mode;
         complete.phase = ProgressPhase::Complete;
         // Completed progress is a resume receipt, not a second copy of free-form answers.
         complete.answers = serde_json::json!({});
@@ -370,6 +384,7 @@ impl ProgressStore {
             ));
         }
         if progress.schema_version != 2
+            || progress.base_config_mode.is_some_and(|mode| mode > 0o7777)
             || progress.answer_schema_version != 2
             || progress.question_revision == 0
             || progress
@@ -427,6 +442,132 @@ pub(super) fn optional_digest(bytes: Option<&[u8]>) -> String {
     sha256_digest(&tagged)
 }
 
+pub(super) fn prepare_config_backup(
+    root: &Dir,
+    progress: &SetupProgress,
+    expected: Option<&[u8]>,
+) -> Result<(), SetupError> {
+    let current = read_user_setup_file(root, Path::new(USER_SETUP_RELATIVE), MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?;
+    if current.as_deref() != expected {
+        return Err(SetupError::Conflict(
+            "settings changed before backup".into(),
+        ));
+    }
+    validate_config_snapshot(root, progress, current.as_deref())?;
+    let relative = recovery_path(progress)?;
+    if let Some(backup) =
+        read_user_setup_file(root, &relative, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)?
+    {
+        if optional_digest(Some(&backup)) != progress.base_config_digest {
+            return Err(SetupError::Conflict("setup recovery backup changed".into()));
+        }
+    } else {
+        if optional_digest(expected) != progress.base_config_digest {
+            return Err(SetupError::Conflict("setup original is unavailable".into()));
+        }
+        if let Some(bytes) = expected {
+            crate::user_install::replace_host_policy_file(root, &relative, None, Some(bytes), None)
+                .map_err(SetupError::Conflict)?;
+        }
+    }
+    validate_config_snapshot(root, progress, current.as_deref())
+}
+
+pub(super) fn recover_config(
+    root: &Dir,
+    store: &ProgressStore,
+    progress: &SetupProgress,
+) -> Result<(), SetupError> {
+    store.projection_binding(progress, None)?;
+    let backup = read_user_setup_file(root, &recovery_path(progress)?, MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?
+        .or(crate::user_install::retained_user_setup_original(
+            root,
+            Path::new(USER_SETUP_RELATIVE),
+        )
+        .map_err(SetupError::Conflict)?);
+    let before = match backup {
+        Some(bytes) if optional_digest(Some(&bytes)) == progress.base_config_digest => Some(bytes),
+        Some(_) => return Err(SetupError::Conflict("setup recovery backup changed".into())),
+        None if progress.base_config_digest == optional_digest(None) => None,
+        None => {
+            let current =
+                read_user_setup_file(root, Path::new(USER_SETUP_RELATIVE), MAX_USER_SETUP_BYTES)
+                    .map_err(SetupError::Conflict)?;
+            if current.as_deref() == Some(candidate_config(progress)?.as_slice()) {
+                // Only complete the published candidate. Unexpected retained prior bytes
+                // are rejected when the original backup has already been cleaned up.
+                crate::user_install::recover_user_setup_file(
+                    root,
+                    Path::new(USER_SETUP_RELATIVE),
+                    "absent",
+                    &sha256_digest(current.as_deref().expect("present candidate")),
+                    progress.base_config_mode,
+                )
+                .map_err(SetupError::Conflict)?;
+                return validate_config_snapshot(root, progress, current.as_deref());
+            }
+            if optional_digest(current.as_deref()) != progress.base_config_digest {
+                return Err(SetupError::Conflict(
+                    "setup original is unavailable for recovery".into(),
+                ));
+            }
+            current
+        }
+    };
+    let desired = candidate_config(progress)?;
+    crate::user_install::recover_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        &before
+            .as_deref()
+            .map_or_else(|| "absent".into(), sha256_digest),
+        &sha256_digest(&desired),
+        progress.base_config_mode,
+    )
+    .map_err(SetupError::Conflict)?;
+    let current = read_user_setup_file(root, Path::new(USER_SETUP_RELATIVE), MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?;
+    validate_config_snapshot(root, progress, current.as_deref())
+}
+
+fn candidate_config(progress: &SetupProgress) -> Result<Vec<u8>, SetupError> {
+    let answers = serde_json::to_vec(&progress.answers)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    super::canonical_config(&super::parse_and_validate_config(&answers)?)
+}
+
+fn validate_config_snapshot(
+    root: &Dir,
+    progress: &SetupProgress,
+    current: Option<&[u8]>,
+) -> Result<(), SetupError> {
+    let mode = if optional_digest(current) == progress.base_config_digest {
+        progress.base_config_mode
+    } else if current == Some(candidate_config(progress)?.as_slice()) {
+        if cfg!(unix) {
+            Some(0o644)
+        } else {
+            None
+        }
+    } else {
+        return Err(SetupError::Conflict(
+            "settings changed outside the interrupted operation".into(),
+        ));
+    };
+    if current.is_some()
+        && crate::user_install::host_policy_mode(root, Path::new(USER_SETUP_RELATIVE))
+            .map_err(SetupError::Conflict)?
+            != mode
+    {
+        return Err(SetupError::Conflict(
+            "settings permissions changed after preview".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn catalog_digest(scope: PreferenceScope) -> String {
     let schema = match scope {
         PreferenceScope::User => super::USER_SETUP_SCHEMA,
@@ -453,6 +594,138 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs;
+
+    fn config_fixture() -> (tempfile::TempDir, Dir, SetupProgress, Vec<u8>, Vec<u8>) {
+        let root = tempfile::tempdir().unwrap();
+        let prior = serde_json::to_vec(&json!({"schema_version":1,"interface_language":"ko",
+            "wiki":{"language":"ko"},"profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+            "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":{"enabled":true,"stop_remaining_percent":5}})).unwrap();
+        let path = root.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, &prior).unwrap();
+        let mut config = super::super::parse_and_validate_installed_config(&prior).unwrap();
+        config.schema_version = 2;
+        config.usage_guard.policy = Some(hive_core::preferences::UsageProtection::default());
+        config.usage_guard.popup_enabled = Some(false);
+        let desired = super::super::canonical_config(&config).unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = store
+            .new_progress(
+                "usage-enforcement".into(),
+                serde_json::to_value(config).unwrap(),
+            )
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let (_, cap) = open_canonical_user_root_for_setup(root.path()).unwrap();
+        prepare_config_backup(&cap, &progress, Some(&prior)).unwrap();
+        (root, cap, progress, prior, desired)
+    }
+
+    #[test]
+    fn interrupted_config_claim_recovers_the_original_or_keeps_the_published_opt_out() {
+        for published in [false, true] {
+            let (root, cap, progress, prior, desired) = config_fixture();
+            crate::user_install::interrupt_setup_replace(
+                &cap,
+                Path::new(USER_SETUP_RELATIVE),
+                &prior,
+                &desired,
+                published,
+            );
+            let store = ProgressStore::open(root.path(), None).unwrap();
+            recover_config(&cap, &store, &progress).unwrap();
+            let current = fs::read(root.path().join(USER_SETUP_RELATIVE)).unwrap();
+            assert_eq!(
+                current,
+                if published {
+                    desired.clone()
+                } else {
+                    prior.clone()
+                }
+            );
+            assert!(crate::user_install::retained_user_setup_original(
+                &cap,
+                Path::new(USER_SETUP_RELATIVE)
+            )
+            .unwrap()
+            .is_none());
+            prepare_config_backup(&cap, &progress, Some(&current)).unwrap();
+        }
+    }
+
+    #[test]
+    fn completion_cleanup_gap_does_not_require_reinstalling_valid_saved_settings() {
+        let (root, cap, progress, prior, desired) = config_fixture();
+        replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            Some(&prior),
+            Some(&desired),
+        )
+        .unwrap();
+        let backup = recovery_path(&progress).unwrap();
+        replace_user_setup_file(&cap, &backup, Some(&prior), None).unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        recover_config(&cap, &store, &progress).unwrap();
+        store.record_completion(&progress).unwrap();
+        assert_eq!(
+            store.load().unwrap().progress.unwrap().phase,
+            ProgressPhase::Complete
+        );
+        assert_eq!(
+            fs::read(root.path().join(USER_SETUP_RELATIVE)).unwrap(),
+            desired
+        );
+    }
+
+    #[test]
+    fn changed_config_backup_is_preserved_and_cannot_restore_a_claim() {
+        let (root, cap, progress, prior, desired) = config_fixture();
+        crate::user_install::interrupt_setup_replace(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            &prior,
+            &desired,
+            false,
+        );
+        let backup = root.path().join(recovery_path(&progress).unwrap());
+        fs::write(&backup, b"external backup edit").unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        assert!(recover_config(&cap, &store, &progress).is_err());
+        assert!(!root.path().join(USER_SETUP_RELATIVE).exists());
+        assert_eq!(fs::read(backup).unwrap(), b"external backup edit");
+        assert_eq!(
+            crate::user_install::retained_user_setup_original(&cap, Path::new(USER_SETUP_RELATIVE))
+                .unwrap(),
+            Some(prior)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn chmod_after_preview_cannot_be_overwritten_by_setup_recovery() {
+        use std::os::unix::fs::PermissionsExt;
+        let (root, cap, progress, prior, _) = config_fixture();
+        fs::set_permissions(
+            root.path().join(USER_SETUP_RELATIVE),
+            fs::Permissions::from_mode(0o400),
+        )
+        .unwrap();
+        assert!(prepare_config_backup(&cap, &progress, Some(&prior)).is_err());
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        assert!(!store.resume_ready(&progress));
+        assert!(recover_config(&cap, &store, &progress).is_err());
+        assert_eq!(
+            fs::metadata(root.path().join(USER_SETUP_RELATIVE))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o400
+        );
+    }
 
     fn save_answer(store: &ProgressStore, value: Value) -> SetupProgress {
         let snapshot = store.load().unwrap();

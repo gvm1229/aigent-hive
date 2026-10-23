@@ -18,6 +18,8 @@ struct Receipt {
     product_version: String,
     binding: TargetBinding,
     before_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    before_mode: Option<u32>,
     candidate_digest: String,
     after_digest: Option<String>,
     question_revision: u32,
@@ -57,6 +59,7 @@ pub(super) fn confirm_completion(
         || receipt.operation_id != progress.operation_id
         || receipt.binding != store.binding
         || receipt.before_digest != progress.base_config_digest
+        || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.catalog_digest != progress.catalog_digest
@@ -96,6 +99,7 @@ pub(super) fn record(
             product_version: env!("CARGO_PKG_VERSION").into(),
             binding: progress.binding.clone(),
             before_digest: progress.base_config_digest.clone(),
+            before_mode: progress.base_config_mode,
             candidate_digest: declaration_digest(&progress.answers)
                 .map_err(SetupError::Internal)?,
             after_digest: None,
@@ -112,6 +116,7 @@ pub(super) fn record(
         || receipt.binding != store.binding
         || receipt.operation_id != progress.operation_id
         || receipt.before_digest != progress.base_config_digest
+        || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.catalog_digest != progress.catalog_digest
@@ -156,6 +161,7 @@ pub(super) fn projection_binding(
         || receipt.binding != store.binding
         || receipt.operation_id != progress.operation_id
         || receipt.before_digest != progress.base_config_digest
+        || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.catalog_digest != progress.catalog_digest

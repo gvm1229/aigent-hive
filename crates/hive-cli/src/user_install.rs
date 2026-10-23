@@ -1985,7 +1985,68 @@ pub(crate) fn recover_user_setup_file(
     after: &str,
     mode: Option<u32>,
 ) -> Result<(), String> {
+    if finish_setup_claim(root, relative, before, after, mode).map_err(|error| error.message().to_owned())? {
+        return Ok(());
+    }
     recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
+}
+
+fn finish_setup_claim(root: &Dir, relative: &Path, before: &str, after: &str, mode: Option<u32>) -> Result<bool, InstallError> {
+    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    if current.as_deref().map_or_else(|| "absent".into(), sha256_digest) != after { return Ok(false); }
+    let Some((parent, _)) = capability_parent(root, relative, false)? else { return Ok(false) };
+    let name = claim_name(relative);
+    let claim = match parent.open_dir_nofollow(&name) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(io_internal("open setup recovery claim", relative, error)),
+    };
+    if current.is_some() && file_permissions(root, relative)? != installed_file_permissions(false) {
+        return Ok(false);
+    }
+    let names = claim.entries().map_err(|error| io_internal("read setup recovery claim", relative, error))?
+        .map(|entry| entry.map(|entry| entry.file_name())).collect::<Result<Vec<_>, _>>()
+        .map_err(|error| io_internal("read setup recovery claim entry", relative, error))?;
+    for name in &names {
+        let (digest, permissions) = if name == OsStr::new("claimed.bin") {
+            (Some(before), Some(FilePermissions { executable: !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0), unix_mode:mode }))
+        } else if name == OsStr::new("replacement.bin") {
+            ((after != "absent").then_some(after), (after != "absent").then(|| installed_file_permissions(false)))
+        } else { return Err(InstallError::Conflict("setup recovery claim contains an unrecognized object".into())); };
+        validate_retained_object(&claim, Path::new(name), digest, permissions, relative, "setup")?;
+    }
+    for name in &names {
+        claim.remove_file(name).map_err(|error| io_internal("finish setup recovery object", relative, error))?;
+    }
+    drop(claim);
+    parent.remove_dir(name).map_err(|error| io_internal("finish setup recovery claim", relative, error))?;
+    Ok(true)
+}
+
+pub(crate) fn retained_user_setup_original(root: &Dir, relative: &Path) -> Result<Option<Vec<u8>>, String> {
+    let Some((parent, _)) = capability_parent(root, relative, false).map_err(|error| error.message().to_owned())? else { return Ok(None) };
+    let claim = match parent.open_dir_nofollow(claim_name(relative)) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    read_optional_regular(&claim, Path::new("claimed.bin"), MAX_USER_FILE_BYTES).map_err(|error| error.message().to_owned())
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_replace(root: &Dir, relative: &Path, before: &[u8], after: &[u8], published: bool) {
+    let permissions = file_permissions(root, relative).unwrap();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = cas_activate_with_barrier(root, relative, Some(ExpectedFile {bytes:before,permissions}), Some(after),
+            FilePermissions {executable:false,unix_mode:None}, Some(&|parent, name, claim| {
+                if published {
+                    stage_file(claim, "replacement.bin", after, FilePermissions {executable:false,unix_mode:None}, relative).unwrap();
+                    publish_exclusive(claim, OsStr::new("replacement.bin"), parent, name).unwrap();
+                }
+                panic!("injected setup replacement interruption");
+            }));
+    }));
+    assert!(result.is_err());
 }
 
 fn recover_bound_user_file(
