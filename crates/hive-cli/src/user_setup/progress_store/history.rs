@@ -21,6 +21,8 @@ struct Receipt {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     before_mode: Option<u32>,
     candidate_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    intent_digest: Option<String>,
     after_digest: Option<String>,
     question_revision: u32,
     catalog_digest: String,
@@ -44,6 +46,18 @@ fn path(id: &str) -> Result<PathBuf, SetupError> {
     Ok(Path::new(DIRECTORY).join(format!("{id}.json")))
 }
 
+fn intent_digest(progress: &SetupProgress) -> Result<String, SetupError> {
+    // Bind every persisted execution input, including migration/monitor metadata.
+    // Phase changes during recovery; the confirmed intent must remain unchanged.
+    let mut intent =
+        serde_json::to_value(progress).map_err(|error| SetupError::Internal(error.to_string()))?;
+    intent
+        .as_object_mut()
+        .expect("setup progress is an object")
+        .remove("phase");
+    declaration_digest(&intent).map_err(SetupError::Internal)
+}
+
 pub(super) fn confirm_completion(
     store: &ProgressStore,
     progress: &SetupProgress,
@@ -62,6 +76,7 @@ pub(super) fn confirm_completion(
         || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
+        || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
         || receipt.question_revision != progress.question_revision
         || receipt.phase != ProgressPhase::Complete
@@ -102,6 +117,7 @@ pub(super) fn record(
             before_mode: progress.base_config_mode,
             candidate_digest: declaration_digest(&progress.answers)
                 .map_err(SetupError::Internal)?,
+            intent_digest: Some(intent_digest(progress)?),
             after_digest: None,
             question_revision: progress.question_revision,
             catalog_digest: progress.catalog_digest.clone(),
@@ -113,12 +129,14 @@ pub(super) fn record(
     };
     if receipt.schema_version != 1
         || receipt.operation != "setup"
+        || receipt.product_version != env!("CARGO_PKG_VERSION")
         || receipt.binding != store.binding
         || receipt.operation_id != progress.operation_id
         || receipt.before_digest != progress.base_config_digest
         || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
+        || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
         || receipt.question_revision != progress.question_revision
         || (receipt.phase == ProgressPhase::Complete && phase != ProgressPhase::Complete)
@@ -158,12 +176,14 @@ pub(super) fn projection_binding(
         .map_err(|_| SetupError::Verification("invalid setup intent record".into()))?;
     if receipt.schema_version != 1
         || receipt.operation != "setup"
+        || receipt.product_version != env!("CARGO_PKG_VERSION")
         || receipt.binding != store.binding
         || receipt.operation_id != progress.operation_id
         || receipt.before_digest != progress.base_config_digest
         || receipt.before_mode != progress.base_config_mode
         || receipt.candidate_digest
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
+        || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
         || receipt.question_revision != progress.question_revision
     {
@@ -356,5 +376,91 @@ mod tests {
         assert!(store.record_applying(&changed).is_err());
         assert!(store.record_completion(&changed).is_err());
         assert_eq!(fs::read(path).unwrap(), bytes);
+    }
+
+    #[test]
+    fn edited_execution_metadata_cannot_resume_apply_projection_or_completion() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = store
+            .new_progress("usage-enforcement".into(), json!({}))
+            .unwrap();
+        progress.legacy_migration = Some(super::super::LegacyMigration {
+            migration_id: hive_core::sha256_digest(b"migration"),
+            monitor_choice: crate::usage_monitor::SavedMonitorChoice {
+                configured: true,
+                enabled: true,
+                config_digest: hive_core::sha256_digest(b"monitor"),
+            },
+            from_schema: 1,
+            questions: vec!["usage-enforcement".into(), "usage-warnings".into()],
+        });
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
+        let receipt = fs::read(&receipt_path).unwrap();
+        for (pointer, value) in [
+            ("/legacy_migration/monitor_choice/enabled", json!(false)),
+            (
+                "/legacy_migration/monitor_choice/config_digest",
+                json!(hive_core::sha256_digest(b"other")),
+            ),
+            ("/legacy_migration/from_schema", json!(2)),
+            ("/legacy_migration/questions", json!([])),
+            (
+                "/legacy_migration/migration_id",
+                json!(hive_core::sha256_digest(b"other")),
+            ),
+            ("/legacy_migration", serde_json::Value::Null),
+            ("/step", json!("usage-warnings")),
+        ] {
+            let mut altered = serde_json::to_value(&progress).unwrap();
+            *altered.pointer_mut(pointer).unwrap() = value;
+            let changed: SetupProgress = serde_json::from_value(altered).unwrap();
+            store.save(&store.load().unwrap(), &changed).unwrap();
+            assert!(
+                store
+                    .require_applying(&changed.operation_id, &changed.answers)
+                    .is_err(),
+                "{pointer}"
+            );
+            assert!(store.record_failure(&changed).is_err(), "{pointer}");
+            assert!(
+                store.projection_binding(&changed, None).is_err(),
+                "{pointer}"
+            );
+            assert!(store.record_completion(&changed).is_err(), "{pointer}");
+            assert_eq!(fs::read(&receipt_path).unwrap(), receipt);
+        }
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_failure(&progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        store.record_completion(&progress).unwrap();
+        store.record_completion(&progress).unwrap();
+    }
+
+    #[test]
+    fn missing_intent_or_different_product_cannot_authorize_recovery() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = applying(&store, "same answers");
+        let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
+        let receipt: serde_json::Value =
+            serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        for field in ["intent_digest", "product_version"] {
+            let mut changed = receipt.clone();
+            if field == "intent_digest" {
+                changed.as_object_mut().unwrap().remove(field);
+            } else {
+                changed[field] = json!("0.0.0");
+            }
+            let bytes = serde_json::to_vec(&changed).unwrap();
+            fs::write(&receipt_path, &bytes).unwrap();
+            assert!(store.record_applying(&progress).is_err());
+            assert!(store.projection_binding(&progress, None).is_err());
+            assert!(store.record_completion(&progress).is_err());
+            assert_eq!(fs::read(&receipt_path).unwrap(), bytes);
+        }
     }
 }
