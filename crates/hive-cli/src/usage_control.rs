@@ -1,6 +1,8 @@
 mod antigravity;
 mod disabled;
 mod monitor;
+mod notices;
+mod observation_warning;
 mod token_accounting;
 pub(crate) use monitor::{evaluate_monitor_policy, monitor_policy, MonitorPolicy};
 
@@ -162,6 +164,13 @@ impl InstalledUsageConfig {
             || self.preflight_zero_enabled(control)
             || self.preflight_reset_enabled(control)
     }
+
+    fn warn_on_observation_failure(&self) -> bool {
+        self.policy.as_ref().is_some_and(|policy| {
+            policy.effective_preflight().observation_failure
+                == hive_core::preferences::PreflightFailure::Warn
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -288,11 +297,12 @@ pub(crate) fn current_dispatch_binding(
         ));
     }
     let halt = load_halt(target, &binding)?;
+    let warning = observation_warning::is_current(&config, &halt)?;
     if matches!(halt.state, OverrideState::Stale | OverrideState::Damaged)
         || halt
             .marker
             .as_ref()
-            .is_some_and(|marker| marker.decision != "observed")
+            .is_some_and(|marker| marker.decision != "observed" && !warning)
     {
         return Err(AdapterError::OwnerBlocked(
             "usage session is halted and cannot authorize loop preparation".to_owned(),
@@ -356,6 +366,7 @@ pub(crate) fn dispatch_preflight(
                 | "hive.usage-session-bypassed"
                 | "hive.usage-disabled"
                 | "hive.usage-preflight-disabled"
+                | "hive.usage-observation-warning"
         )
     {
         return Err(AdapterError::Safety(
@@ -417,6 +428,15 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             return Err(AdapterError::Conflict(
                 "usage halt changed before dispatch authorization".to_owned(),
             ));
+        }
+        if preflight.result.code == "hive.usage-observation-warning" {
+            if !observation_warning::is_current(&config, &halt)? {
+                return Err(AdapterError::Conflict(
+                    "the warning policy evaluation changed before dispatch".to_owned(),
+                ));
+            }
+            target.verify_current()?;
+            return runtime.verify_current();
         }
         let snapshot = preflight.snapshot().ok_or_else(|| {
             AdapterError::Safety("enforced dispatch lacks a fresh sensor observation".to_owned())
@@ -1266,6 +1286,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         .as_ref()
         .and_then(|marker| marker.policy_digest.as_deref())
         == Some(policy_digest.as_str());
+    let warning = observation_warning::is_current(&config, &halt)?;
     let pending_reset = config.preflight_reset_enabled(&loaded)
         && halt
             .marker
@@ -1278,7 +1299,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
                 && halt
                     .marker
                     .as_ref()
-                    .is_some_and(|marker| marker.decision != "observed")));
+                    .is_some_and(|marker| marker.decision != "observed" && !warning)));
     let recheck_required = config.observation_required(&loaded)
         && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
@@ -1486,15 +1507,60 @@ fn enforce_captured(
         config = refreshed;
         policy_digest = refreshed_digest;
     };
-    if let Some(snapshot) = &observation.normalized {
-        validate_observation(snapshot)?;
+    let warning_only =
+        observation.decision == Some("usage-unknown") && config.warn_on_observation_failure();
+    if !warning_only {
+        if let Some(snapshot) = &observation.normalized {
+            validate_observation(snapshot)?;
+        }
     }
-    trace.normalized.clone_from(&observation.normalized);
+    trace.normalized = if warning_only {
+        None
+    } else {
+        observation.normalized.clone()
+    };
     trace.policy_digest.clone_from(&policy_digest);
     // A reset-only opt-out may not authorize a measurement after its binding changed.
     let refreshed_control = load_control(runtime, &binding)?;
     if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
         return Ok(policy_changed_result(&binding, &config));
+    }
+    if warning_only {
+        let mut result = observation_warning::result(
+            runtime,
+            &config,
+            &binding,
+            &loaded,
+            &halt,
+            &observation,
+            trace,
+        )?;
+        let shown = notices::claim_failure(
+            arguments.user_root.as_deref(),
+            runtime,
+            &config,
+            arguments.account_digest.as_deref(),
+        );
+        if let Some(data) = result.data.as_mut() {
+            data["notice"] = if shown {
+                json!({"kind":"observation-unavailable","message":if config.interface_language == "ko" {"사용량을 확인하지 못했습니다. 선택한 경고 정책에 따라 작업을 계속합니다."} else {"Usage is unavailable. Work may continue under your warning policy."}})
+            } else {
+                serde_json::Value::Null
+            };
+        }
+        return Ok(result);
+    }
+    if observation.decision != Some("usage-unknown") {
+        notices::recover_failure(
+            arguments.user_root.as_deref(),
+            runtime,
+            &config,
+            arguments.account_digest.as_deref(),
+            observation
+                .normalized
+                .as_ref()
+                .map(|snapshot| snapshot.account_digest.as_str()),
+        );
     }
     let resumed_threshold = observation.decision == Some("halted")
         && crate::usage_monitor::threshold_already_handled(
@@ -1547,11 +1613,12 @@ fn enforce_captured(
             config.preflight_reset_enabled(&loaded)
         } else {
             config.quota_reset_guard_enabled
-        }) && halt
-            .marker
-            .as_ref()
-            .is_none_or(|marker| matches!(marker.decision.as_str(), "observed" | "usage-reset"))
-        {
+        }) && halt.marker.as_ref().is_none_or(|marker| {
+            matches!(
+                marker.decision.as_str(),
+                "observed" | "usage-reset" | "usage-warning"
+            )
+        }) {
             let marker = HaltMarker {
                 schema_version: 2,
                 host_scope: binding.host_scope.clone(),
@@ -3099,7 +3166,12 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         || !is_sha256_digest(&marker.evidence_digest)
         || !matches!(
             marker.decision.as_str(),
-            "halted" | "quota-exhausted" | "usage-unknown" | "usage-reset" | "observed"
+            "halted"
+                | "quota-exhausted"
+                | "usage-unknown"
+                | "usage-reset"
+                | "observed"
+                | "usage-warning"
         )
         || !matches!(
             marker.selected_window.as_str(),
@@ -3587,6 +3659,203 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn warning_policy_continues_without_observation_and_deduplicates_across_sessions() {
+        let user = temporary_target();
+        let mut policy = hive_core::preferences::UsageProtection {
+            enforcement_enabled: true,
+            ..Default::default()
+        };
+        policy.preflight.threshold_enabled = true;
+        write_version_two_policy(user.path(), "claude", policy.clone());
+        let project = temporary_target();
+        fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+        fs::write(
+            project.path().join(".hive/config/harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let preflight = super::dispatch_preflight(
+            project.path(),
+            "claude",
+            "warning-session",
+            7,
+            Some(user.path()),
+            "no-run",
+            None,
+            |_| panic!("a missing observation was passed as valid"),
+        )
+        .unwrap();
+        assert_eq!(preflight.result.code, "hive.usage-observation-warning");
+        assert!(preflight.snapshot().is_none());
+        assert!(preflight.result.data.as_ref().unwrap()["notice"].is_object());
+        super::verify_dispatch_preflight(&preflight).unwrap();
+        let pinned = PinnedTarget::open(project.path()).unwrap();
+        assert_eq!(
+            super::current_dispatch_binding(
+                &pinned,
+                "claude",
+                "warning-session",
+                7,
+                Some(user.path())
+            )
+            .unwrap(),
+            preflight.binding_digest()
+        );
+        for (session, process_id) in [
+            ("warning-session", 7),
+            ("new-session", 8),
+            ("warning-session", 9),
+        ] {
+            let result = enforce(&EnforceArguments {
+                target: project.path().to_owned(),
+                binding: ParsedBinding {
+                    session_id: session.to_owned(),
+                    process_id,
+                },
+                user_root: Some(user.path().to_owned()),
+                host: Some("claude".to_owned()),
+                account_digest: None,
+                run_id: None,
+            })
+            .unwrap();
+            assert_eq!(result.code, "hive.usage-observation-warning");
+            assert!(result.data.unwrap()["notice"].is_null());
+        }
+        let view = status(&StatusArguments {
+            target: project.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: "warning-session".to_owned(),
+                process_id: 9,
+            },
+            user_root: Some(user.path().to_owned()),
+            host: Some("claude".to_owned()),
+        })
+        .unwrap();
+        assert_eq!(view.exit_code, 0);
+        policy.preflight.observation_failure = hive_core::preferences::PreflightFailure::Block;
+        write_version_two_policy(user.path(), "claude", policy);
+        let blocked = enforce(&EnforceArguments {
+            target: project.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: "strict-session".to_owned(),
+                process_id: 7,
+            },
+            user_root: Some(user.path().to_owned()),
+            host: Some("claude".to_owned()),
+            account_digest: None,
+            run_id: None,
+        })
+        .unwrap();
+        assert_eq!(blocked.code, "hive.usage-unknown");
+        assert_eq!(blocked.exit_code, 3);
+    }
+
+    #[test]
+    fn warning_outage_preserves_reset_baseline_and_rearms_notices_after_recovery() {
+        let user = temporary_target();
+        let mut policy = hive_core::preferences::UsageProtection {
+            enforcement_enabled: true,
+            ..Default::default()
+        };
+        policy.preflight.reset_enabled = true;
+        write_version_two_policy(user.path(), "claude", policy);
+        let project = temporary_target();
+        fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+        fs::write(
+            project.path().join(".hive/config/harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let args = EnforceArguments {
+            target: project.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: "warning-baseline".to_owned(),
+                process_id: 7,
+            },
+            user_root: Some(user.path().to_owned()),
+            host: Some("claude".to_owned()),
+            account_digest: None,
+            run_id: None,
+        };
+        let bound = bind_session(&args.binding, "claude");
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        write_current_capture(project.path(), &bound, 50, now + 3600);
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-allowed");
+        let capture = project
+            .path()
+            .join(claude_capture_path(&bound.session_digest).unwrap());
+        fs::remove_file(&capture).unwrap();
+        let warning = enforce(&args).unwrap();
+        assert_eq!(warning.code, "hive.usage-observation-warning");
+        assert!(warning.data.unwrap()["notice"].is_object());
+        let root = PinnedTarget::open(project.path()).unwrap();
+        let marker = super::load_halt(&root, &bound).unwrap().marker.unwrap();
+        assert_eq!(marker.snapshots.len(), 1);
+        assert_eq!(
+            marker.snapshots[0].remaining_percent.to_bits(),
+            50.0_f64.to_bits()
+        );
+        write_current_capture(project.path(), &bound, 100, now + 7200);
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-reset");
+        fs::remove_file(&capture).unwrap();
+        let next_outage = enforce(&args).unwrap();
+        assert_eq!(next_outage.code, "hive.usage-observation-warning");
+        assert!(next_outage.data.unwrap()["notice"].is_object());
+    }
+
+    #[test]
+    fn warning_notice_opt_out_and_damaged_notice_state_do_not_block_work() {
+        let user = temporary_target();
+        let mut policy = hive_core::preferences::UsageProtection {
+            enforcement_enabled: true,
+            warnings_enabled: false,
+            ..Default::default()
+        };
+        policy.preflight.threshold_enabled = true;
+        write_version_two_policy(user.path(), "claude", policy.clone());
+        let project = temporary_target();
+        fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+        fs::write(
+            project.path().join(".hive/config/harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let args = EnforceArguments {
+            target: project.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: "notice-disabled".to_owned(),
+                process_id: 7,
+            },
+            user_root: Some(user.path().to_owned()),
+            host: Some("claude".to_owned()),
+            account_digest: None,
+            run_id: None,
+        };
+        let hidden = enforce(&args).unwrap();
+        assert_eq!(hidden.exit_code, 0);
+        assert!(hidden.data.unwrap()["notice"].is_null());
+        let notices = user.path().join(".hive/runtime/usage-notices");
+        assert!(!notices.exists());
+        policy.warnings_enabled = true;
+        write_version_two_policy(user.path(), "claude", policy);
+        assert!(enforce(&args).unwrap().data.unwrap()["notice"].is_object());
+        let notice = fs::read_dir(notices)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        fs::write(&notice, b"damaged derived notice state").unwrap();
+        let continued = enforce(&args).unwrap();
+        assert_eq!(continued.code, "hive.usage-observation-warning");
+        assert!(continued.data.unwrap()["notice"].is_null());
+        assert_eq!(fs::read(notice).unwrap(), b"damaged derived notice state");
     }
 
     #[test]

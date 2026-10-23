@@ -2226,6 +2226,42 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(guard["history"], "session-policy-baseline")
         self.assertFalse((target / ".hive/runtime/usage-history").exists())
 
+    def test_v2_warning_policy_prepares_authorized_work_without_a_sensor(self) -> None:
+        target = self.fresh_target("v2-observation-warning")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(target, self.checkpoint_request(state="executing"),
+                                          CAPABILITIES["codex-omx"], "v2-observation-warning")
+        self.assert_success(process, payload)
+        path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = yaml.safe_load(path.read_text(encoding="utf-8"))
+        config["schema_version"] = 2
+        config["usage_guard"].pop("enabled", None)
+        config["usage_guard"].pop("quota_reset_guard_enabled", None)
+        config["usage_guard"].update({
+            "enforcement_enabled": True, "warnings_enabled": True, "codexbar_fallback_enabled": False,
+            "preflight": {"threshold_enabled": True, "reset_enabled": False,
+                          "zero_quota_enabled": False, "observation_failure": "warn"},
+            "midway": {"enabled": False, "threshold_enabled": False, "reset_enabled": False,
+                       "zero_quota_enabled": False, "observation_failure": "warn"},
+        })
+        path.write_text(yaml.safe_dump(config), encoding="utf-8")
+        process, payload = self.resume(
+            target, CAPABILITIES["codex-omx"], dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST, user_root=self.setup_user_root,
+            extra_environment=self.fake_codexbar_environment("missing", empty=True),
+        )
+        self.assert_success(process, payload)
+        self.assertEqual(len(payload["data"]["dispatch_briefs"]), 1)
+        self.assertFalse(payload["data"]["spawned"])
+        guard = payload["data"]["usage_guard"]
+        self.assertEqual(guard["outcome"], "observation-unavailable")
+        self.assertTrue(guard["policy_evaluated"])
+        self.assertTrue(guard["enforcement_enabled"])
+        self.assertTrue(guard["observation_required"])
+        self.assertFalse(guard["enforced"])
+        self.assertRegex(guard["authorization_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(guard["notice"]["kind"], "observation-unavailable")
+
     def test_automatic_history_rejects_regressions_and_tampering(self) -> None:
         reset_at = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         for case in ("remaining-increase", "measurement-regression"):

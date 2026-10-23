@@ -2792,10 +2792,10 @@ fn resume_inner(
                     json!({
                         "dispatch_intent": "automatic",
                         "enforced": enforced,
-                        "outcome": if enforced {"authorized"} else {"disabled"},
+                        "outcome": if preflight.result.code == "hive.usage-observation-warning" {"observation-unavailable"} else if enforced {"authorized"} else {"disabled"},
                         "policy_evaluated": true,
                         "enforcement_enabled": preflight.result.code != "hive.usage-disabled",
-                        "observation_required": enforced,
+                        "observation_required": preflight.result.data.as_ref().is_some_and(|data| data["observation_required"] == true),
                         "evidence_digest": evidence_digest,
                         "window": window,
                         "configured_threshold_percent": configured_threshold,
@@ -2806,6 +2806,7 @@ fn resume_inner(
                         "session_id_digest": sha256_digest(session_id.as_bytes()),
                         "process_id": process_id,
                         "session_guard_digest": preflight.binding_digest(),
+                        "notice": preflight.result.data.as_ref().and_then(|data| data.get("notice")),
                     }),
                 );
             }

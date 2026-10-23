@@ -77,6 +77,42 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def test_v2_failure_notice_quiet_mode_does_not_claim_or_repeat_the_notice(self) -> None:
+        path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(path)
+        config["schema_version"] = 2
+        config["selected_hosts"] = ["claude"]
+        config["usage_guard"].pop("enabled", None)
+        config["usage_guard"].pop("quota_reset_guard_enabled", None)
+        config["usage_guard"].update({
+            "enforcement_enabled": True, "warnings_enabled": True, "codexbar_fallback_enabled": False,
+            "preflight": {"threshold_enabled": True, "reset_enabled": False,
+                          "zero_quota_enabled": False, "observation_failure": "warn"},
+            "midway": {"enabled": False, "threshold_enabled": False, "reset_enabled": False,
+                       "zero_quota_enabled": False, "observation_failure": "warn"},
+        })
+        write_yaml(path, config)
+        (self.consumer / ".hive/config/harness.toml").write_text(
+            HARNESS_CONFIG.replace('primary_host = "codex"', 'primary_host = "claude"'), encoding="utf-8")
+        args = ("usage", "enforce", "--target", str(self.consumer), "--host", "claude",
+                "--process-id", "101", "--user-root", str(self.setup_user_root))
+        process, quiet = self.invoke(*args, "--session-id", "quiet", "--quiet")
+        self.assertEqual(process.returncode, 0, quiet)
+        self.assertEqual(quiet["code"], "hive.usage-observation-warning")
+        self.assertIsNone(quiet["data"]["notice"])
+        self.assertFalse((self.setup_user_root / ".hive/runtime/usage-notices").exists())
+        process, first = self.invoke(*args, "--session-id", "visible")
+        self.assertEqual(process.returncode, 0, first)
+        self.assertEqual(first["data"]["notice"]["kind"], "observation-unavailable")
+        process, repeated = self.invoke(*args, "--session-id", "different-session")
+        self.assertEqual(process.returncode, 0, repeated)
+        self.assertIsNone(repeated["data"]["notice"])
+        config["usage_guard"]["preflight"]["observation_failure"] = "block"
+        write_yaml(path, config)
+        process, strict = self.invoke(*args, "--session-id", "strict", "--quiet")
+        self.assertEqual(process.returncode, 3, strict)
+        self.assertIn("error:", process.stderr)
+
     def test_v2_master_off_skips_sensors_and_preserves_legacy_runtime(self) -> None:
         config_path = self.setup_user_root / ".hive/config/user-setup.yml"
         config = read_yaml(config_path)

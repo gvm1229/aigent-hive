@@ -23,6 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod custom_agent_cli;
 mod discord;
+mod display_options;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -203,7 +204,8 @@ struct SetupArguments {
 }
 
 fn main() -> ExitCode {
-    let arguments: Vec<String> = env::args().skip(1).collect();
+    let mut arguments: Vec<String> = env::args().skip(1).collect();
+    display_options::configure(&mut arguments);
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }
