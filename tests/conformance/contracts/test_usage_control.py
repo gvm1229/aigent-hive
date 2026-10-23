@@ -19,6 +19,8 @@ from tests.conformance.support.harness import (
     Phase1CliTestCase,
     REPOSITORY_ROOT,
     snapshot_tree,
+    read_yaml,
+    write_yaml,
 )
 
 RAW_ACCOUNT = "usage-guard@example.invalid"
@@ -75,6 +77,71 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def test_v2_master_off_skips_sensors_and_preserves_legacy_runtime(self) -> None:
+        config_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(config_path)
+        config["schema_version"] = 2
+        config["usage_guard"].pop("enabled", None)
+        config["usage_guard"].pop("quota_reset_guard_enabled", None)
+        config["usage_guard"].update({
+            "enforcement_enabled": False, "warnings_enabled": True,
+            "preflight": {"threshold_enabled": True, "reset_enabled": True,
+                          "zero_quota_enabled": True, "observation_failure": "block"},
+            "midway": {"enabled": True, "threshold_enabled": True, "reset_enabled": True,
+                       "zero_quota_enabled": True, "observation_failure": "stop"},
+        })
+        write_yaml(config_path, config)
+        harness = self.consumer / ".hive/config/harness.toml"
+        harness.write_text(HARNESS_CONFIG.replace("0.7.0", "0.13.1"), encoding="utf-8")
+        halt = self.write_halt(session_id="master-off", process_id=101, decision="usage-reset")
+        halt.with_name("control.json").write_bytes(b"damaged predecessor control")
+        log = self.work_root / "unexpected-sensor.txt"
+        program = "import os\nfrom pathlib import Path\nPath(os.environ['HIVE_SENSOR_CALL_LOG']).write_text('called')\nraise SystemExit(89)\n"
+        for name in ("codex", "codexbar"):
+            script = self.fake_bin / (name + ".py" if os.name == "nt" else name)
+            script.write_text(("" if os.name == "nt" else f"#!{os.sys.executable}\n") + program, encoding="utf-8")
+        before_project = snapshot_tree(self.consumer)
+        before_user = snapshot_tree(self.setup_user_root)
+        for command, action in (("enforce", "CheckUsage"), ("status", "ShowUsageStatus")):
+            process, result = self.invoke(
+                "usage", command, "--target", str(self.consumer), "--host", "codex",
+                "--session-id", "master-off", "--process-id", "101", "--user-root", str(self.setup_user_root),
+                extra_environment={"HIVE_SENSOR_CALL_LOG": str(log)},
+            )
+            self.assert_result(process, result, action=action, exit_code=0, status="success", code="hive.usage-disabled")
+            self.assertTrue(result["data"]["policy_evaluated"])
+            self.assertFalse(result["data"]["enforcement_enabled"])
+            self.assertFalse(result["data"]["observation_required"])
+            self.assertFalse(result["data"]["authorizes_dispatch"])
+        self.assertFalse(log.exists(), "a disabled policy invoked a sensor command")
+        self.assertEqual(snapshot_tree(self.consumer), before_project)
+        self.assertEqual(snapshot_tree(self.setup_user_root), before_user)
+
+        source = self.work_root / "source-fixture"
+        source.mkdir()
+        (source / "hive-source.json").write_text("{}", encoding="utf-8")
+        source_before = snapshot_tree(source)
+        process, result = self.invoke(
+            "usage", "enforce", "--target", str(source), "--host", "codex",
+            "--session-id", "master-off", "--process-id", "101", "--user-root", str(self.setup_user_root),
+            extra_environment={"HIVE_SENSOR_CALL_LOG": str(log)},
+        )
+        self.assert_result(process, result, action="CheckUsage", exit_code=0, status="success", code="hive.usage-disabled")
+        self.assertEqual(snapshot_tree(source), source_before)
+        self.assertEqual(snapshot_tree(self.setup_user_root), before_user)
+        self.assertFalse(log.exists())
+
+        config["usage_guard"]["enforcement_enabled"] = "false"
+        write_yaml(config_path, config)
+        process, result = self.invoke(
+            "usage", "enforce", "--target", str(self.consumer), "--host", "codex",
+            "--session-id", "master-off", "--process-id", "101", "--user-root", str(self.setup_user_root),
+            extra_environment={"HIVE_SENSOR_CALL_LOG": str(log)},
+        )
+        self.assertNotEqual(process.returncode, 0, result)
+        self.assertNotEqual(result["code"], "hive.usage-disabled")
+        self.assertFalse(log.exists())
+
     def test_zero_threshold_keeps_protection_and_rejects_exhausted_credits(self) -> None:
         process, result = self.invoke("usage", "threshold", "--target", str(self.consumer),
                                       "--remaining-percent", "0")

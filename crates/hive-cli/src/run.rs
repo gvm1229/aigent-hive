@@ -2744,7 +2744,10 @@ fn resume_inner(
                     "preflight":preflight.result.data}),
                 );
             }
-            if preflight.result.code == "hive.usage-session-bypassed" {
+            if matches!(
+                preflight.result.code,
+                "hive.usage-session-bypassed" | "hive.usage-disabled"
+            ) {
                 if issue_dispatch_authorization(
                     &target,
                     &authorization_path,
@@ -2765,6 +2768,9 @@ fn resume_inner(
                         "dispatch_intent": "automatic",
                         "enforced": false,
                         "outcome": "disabled",
+                        "policy_evaluated": true,
+                        "enforcement_enabled": preflight.result.code != "hive.usage-disabled",
+                        "observation_required": false,
                         "evidence_digest": preflight.binding_digest(),
                         "window": null,
                         "configured_threshold_percent": configured_threshold,
@@ -2829,6 +2835,9 @@ fn resume_inner(
                     let data = json!({
                         "dispatch_intent": "automatic",
                         "enforced": true,
+                        "policy_evaluated": true,
+                        "enforcement_enabled": true,
+                        "observation_required": true,
                         "outcome": "authorized",
                         "evidence_digest": evidence.digest,
                         "window": evidence.window,

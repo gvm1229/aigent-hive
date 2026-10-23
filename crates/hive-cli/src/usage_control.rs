@@ -1,4 +1,5 @@
 mod antigravity;
+mod disabled;
 mod monitor;
 mod token_accounting;
 pub(crate) use monitor::{evaluate_monitor_policy, monitor_policy, MonitorPolicy};
@@ -106,6 +107,7 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
     pub(crate) quota_reset_guard_enabled: bool,
+    pub(crate) policy: Option<hive_core::preferences::UsageProtection>,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
     pub(crate) discord_request_privacy: String,
@@ -113,6 +115,14 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) bytes: Vec<u8>,
     pub(crate) config_locator: String,
     target_class: UsageTargetClass,
+}
+
+impl InstalledUsageConfig {
+    fn enforcement_disabled(&self) -> bool {
+        self.policy
+            .as_ref()
+            .is_some_and(|policy| !policy.enforcement_enabled)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -210,6 +220,14 @@ pub(crate) fn current_dispatch_binding(
         session_id: session_id.to_owned(),
         process_id,
     };
+    if config.enforcement_disabled() {
+        target.verify_current()?;
+        return Ok(dispatch_binding_digest(
+            Some(host),
+            &parsed,
+            &disabled::trace(&config)?,
+        ));
+    }
     let binding = bind_session(&parsed, host);
     let control = load_control(target, &binding)?;
     if matches!(control.state, OverrideState::Stale | OverrideState::Damaged)
@@ -285,7 +303,7 @@ pub(crate) fn dispatch_preflight(
     if result.exit_code == 0
         && !matches!(
             result.code,
-            "hive.usage-allowed" | "hive.usage-session-bypassed"
+            "hive.usage-allowed" | "hive.usage-session-bypassed" | "hive.usage-disabled"
         )
     {
         return Err(AdapterError::Safety(
@@ -309,6 +327,19 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
     let args = &preflight.arguments;
     let target = PinnedTarget::open(&args.target)?;
     let config = read_effective_config(&target, args.user_root.as_deref(), args.host.as_deref())?;
+    if effective_policy_digest(&config)? != preflight.trace.policy_digest {
+        return Err(AdapterError::Conflict(
+            "usage policy changed before dispatch authorization".to_owned(),
+        ));
+    }
+    if config.enforcement_disabled() {
+        if preflight.result.code != "hive.usage-disabled" {
+            return Err(AdapterError::Conflict(
+                "usage enforcement changed before dispatch authorization".to_owned(),
+            ));
+        }
+        return target.verify_current();
+    }
     let global = open_global_runtime(&config, args.user_root.as_deref())?;
     let runtime = global.as_ref().unwrap_or(&target);
     let binding = bind_runtime_session(
@@ -1151,6 +1182,16 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     if !config.target_class.is_configured() {
         return Ok(inactive_target_result("ShowUsageStatus"));
     }
+    if config.enforcement_disabled() {
+        let binding = bind_runtime_session(
+            &arguments.binding,
+            &config.primary_host,
+            &target,
+            config.target_class.uses_global_runtime(),
+        );
+        target.verify_current()?;
+        return Ok(disabled::result("ShowUsageStatus", &binding, &config));
+    }
     let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
     let runtime = global_runtime.as_ref().unwrap_or(&target);
     let binding = bind_runtime_session(
@@ -1259,6 +1300,9 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let mut result =
         enforce_captured(arguments, &mut EnforcementTrace::default(), &mut |_| Ok(()))?;
+    if result.code == "hive.usage-disabled" {
+        return Ok(result);
+    }
     if let Ok(Some(path)) = monitor::register_for_arguments(arguments) {
         result.changed_paths.push(path);
     }
@@ -1279,6 +1323,17 @@ fn enforce_captured(
     )?;
     if !config.target_class.is_configured() {
         return Ok(inactive_target_result("CheckUsage"));
+    }
+    if config.enforcement_disabled() {
+        let binding = bind_runtime_session(
+            &arguments.binding,
+            &config.primary_host,
+            &target,
+            config.target_class.uses_global_runtime(),
+        );
+        *trace = disabled::trace(&config)?;
+        target.verify_current()?;
+        return Ok(disabled::result("CheckUsage", &binding, &config));
     }
     let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
     let runtime = global_runtime.as_ref().unwrap_or(&target);
@@ -1352,6 +1407,11 @@ fn enforce_captured(
             arguments.host.as_deref(),
         )?;
         let refreshed_digest = effective_policy_digest(&refreshed)?;
+        if refreshed.enforcement_disabled() {
+            *trace = disabled::trace(&refreshed)?;
+            target.verify_current()?;
+            return Ok(disabled::result("CheckUsage", &binding, &refreshed));
+        }
         if refreshed_digest == policy_digest {
             break observation;
         }
@@ -2021,7 +2081,7 @@ pub(crate) fn effective_policy_digest(
         UsageTargetClass::Source => "source",
         UsageTargetClass::NonHive => "non-hive",
     };
-    let value = json!({
+    let mut value = json!({
         "schema_version": 1,
         "decision_contract": "remaining-percent-v1",
         "target_class": target_class,
@@ -2033,6 +2093,10 @@ pub(crate) fn effective_policy_digest(
         "project_threshold_remaining_percent": config.project_threshold,
         "codexbar_fallback_enabled": config.codexbar_fallback_enabled,
     });
+    if let Some(policy) = &config.policy {
+        value["decision_contract"] = json!("usage-preferences-v2");
+        value["usage_policy"] = json!(policy);
+    }
     let bytes = serde_json_canonicalizer::to_vec(&value).map_err(|error| {
         AdapterError::Internal(format!("cannot encode effective usage policy: {error}"))
     })?;
@@ -2364,7 +2428,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         .then(|| locator.clone())
         .into_iter()
         .collect::<Vec<_>>();
-    if let Ok(Some(path)) = monitor::register(runtime, &target, &binding, &desired_bytes) {
+    if let Ok(Some(path)) = monitor::register(runtime, &target, &binding, &desired_bytes, &config) {
         changed_paths.push(path);
     }
     Ok(ActionResult {
@@ -2446,6 +2510,7 @@ pub(crate) fn read_effective_config(
             guard_enabled: false,
             codexbar_fallback_enabled: false,
             quota_reset_guard_enabled: false,
+            policy: None,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
             discord_request_privacy: "summary".to_owned(),
@@ -2472,13 +2537,6 @@ pub(crate) fn read_effective_config(
     };
     let root =
         crate::user_install::open_user_root_for_setup(user_root).map_err(AdapterError::Safety)?;
-    let Some(global) = crate::user_setup::load_operational_config(&root)
-        .map_err(|error| AdapterError::Safety(error.message().to_owned()))?
-    else {
-        return Err(AdapterError::Safety(
-            "global Hive setup is required when --user-root is supplied".to_owned(),
-        ));
-    };
     let global_bytes = crate::user_install::read_user_setup_file(
         &root,
         Path::new(USER_CONFIG_PATH),
@@ -2486,6 +2544,8 @@ pub(crate) fn read_effective_config(
     )
     .map_err(AdapterError::Safety)?
     .ok_or_else(|| AdapterError::Safety("global Hive setup is required".to_owned()))?;
+    let global = crate::user_setup::parse_and_validate_installed_config(&global_bytes)
+        .map_err(|error| AdapterError::Safety(error.message().to_owned()))?;
     let guard = &global.usage_guard;
     let host = match installed.as_ref() {
         Some(config) => config.primary_host.clone(),
@@ -2525,6 +2585,7 @@ pub(crate) fn read_effective_config(
         guard_enabled: guard.threshold_enabled(),
         codexbar_fallback_enabled: guard.threshold_enabled() && guard.codexbar_fallback_enabled,
         quota_reset_guard_enabled: guard.reset_enabled(),
+        policy: guard.policy.clone(),
         discord_guard_enabled: guard.threshold_enabled() && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
@@ -2549,6 +2610,7 @@ pub(crate) fn read_effective_config(
     effective.global_threshold = Some(guard.stop_remaining_percent);
     effective.project_threshold = project_threshold;
     effective.guard_enabled = guard.threshold_enabled();
+    effective.policy.clone_from(&guard.policy);
     effective.codexbar_fallback_enabled =
         guard.threshold_enabled() && guard.codexbar_fallback_enabled;
     effective.quota_reset_guard_enabled = guard.reset_enabled();
@@ -2683,6 +2745,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         guard_enabled,
         codexbar_fallback_enabled,
         quota_reset_guard_enabled: true,
+        policy: None,
         discord_guard_enabled,
         discord_webhook_url_env,
         discord_request_privacy,
@@ -3296,6 +3359,128 @@ mod tests {
             ),
         )
         .expect("global setup");
+    }
+
+    fn write_disabled_policy(root: &std::path::Path, host: &str) {
+        write_global_config(root, 20);
+        let path = root.join(".hive/config/user-setup.yml");
+        let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
+        config["schema_version"] = json!(2);
+        config["selected_hosts"] = json!([host]);
+        config["usage_guard"]
+            .as_object_mut()
+            .unwrap()
+            .remove("enabled");
+        let mut policy = hive_core::preferences::UsageProtection::from_legacy(true, true, true);
+        policy.enforcement_enabled = false;
+        config["usage_guard"].as_object_mut().unwrap().extend(
+            serde_json::to_value(policy)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .clone(),
+        );
+        fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn explicit_master_disable_dominates_legacy_projects_and_damaged_runtime_without_writes() {
+        for host in ["codex", "claude", "antigravity"] {
+            let user = temporary_target();
+            write_disabled_policy(user.path(), host);
+            let project = temporary_target();
+            fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+            let old = String::from_utf8(installed_config(host, true, true))
+                .unwrap()
+                .replace(env!("CARGO_PKG_VERSION"), "0.13.1");
+            fs::write(project.path().join(".hive/config/harness.toml"), old).unwrap();
+            let parsed = ParsedBinding {
+                session_id: "disabled-policy-test".to_owned(),
+                process_id: 7,
+            };
+            let bound = bind_session(&parsed, host);
+            for path in [control_path(&bound), halt_path(&bound)] {
+                let path = project.path().join(path);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(&path, b"damaged legacy runtime").unwrap();
+            }
+            let args = EnforceArguments {
+                target: project.path().to_owned(),
+                binding: parsed.clone(),
+                account_digest: None,
+                user_root: Some(user.path().to_owned()),
+                host: Some(host.to_owned()),
+                run_id: None,
+            };
+            let enforced = enforce(&args).unwrap();
+            assert_eq!(enforced.code, "hive.usage-disabled");
+            assert_eq!(enforced.exit_code, 0);
+            assert!(enforced.changed_paths.is_empty());
+            let data = enforced.data.unwrap();
+            assert_eq!(data["policy_evaluated"], true);
+            assert_eq!(data["enforcement_enabled"], false);
+            assert_eq!(data["observation_required"], false);
+            assert_eq!(data["authorizes_dispatch"], false);
+            let shown = status(&StatusArguments {
+                target: args.target,
+                binding: parsed,
+                user_root: args.user_root,
+                host: args.host,
+            })
+            .unwrap();
+            assert_eq!(shown.code, "hive.usage-disabled");
+            for path in [control_path(&bound), halt_path(&bound)] {
+                assert_eq!(
+                    fs::read(project.path().join(path)).unwrap(),
+                    b"damaged legacy runtime"
+                );
+            }
+            assert!(!user.path().join(".hive/runtime").exists());
+        }
+    }
+
+    #[test]
+    fn disabled_dispatch_evaluates_policy_without_a_sensor_and_detects_reenablement() {
+        let user = temporary_target();
+        write_disabled_policy(user.path(), "claude");
+        let project = temporary_target();
+        fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+        fs::write(
+            project.path().join(".hive/config/harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let preflight = super::dispatch_preflight(
+            project.path(),
+            "claude",
+            "disabled-session",
+            7,
+            Some(user.path()),
+            "not-created",
+            None,
+            |_| panic!("disabled guard requested an observation"),
+        )
+        .unwrap();
+        assert_eq!(preflight.result.code, "hive.usage-disabled");
+        super::verify_dispatch_preflight(&preflight).unwrap();
+        let pinned = PinnedTarget::open(project.path()).unwrap();
+        assert_eq!(
+            super::current_dispatch_binding(
+                &pinned,
+                "claude",
+                "disabled-session",
+                7,
+                Some(user.path())
+            )
+            .unwrap(),
+            preflight.binding_digest()
+        );
+        assert!(!project.path().join(".hive/runtime").exists());
+        let path = user.path().join(".hive/config/user-setup.yml");
+        let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
+        config["usage_guard"]["enforcement_enabled"] = json!(true);
+        fs::write(path, serde_yaml::to_string(&config).unwrap()).unwrap();
+        assert!(super::verify_dispatch_preflight(&preflight).is_err());
     }
 
     #[test]

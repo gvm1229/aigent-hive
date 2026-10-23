@@ -89,6 +89,13 @@ pub(crate) fn monitor_policy(
     let target = PinnedTarget::open_usage(scope)?;
     let runtime = PinnedTarget::open_usage(user_root)?;
     let config = read_effective_config(&target, Some(user_root), Some("codex"))?;
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
+        return Ok(None);
+    }
     let mut binding = bind_runtime_session(
         &ParsedBinding {
             session_id: session.to_owned(),
@@ -169,7 +176,11 @@ pub(super) fn register(
     target: &PinnedTarget,
     binding: &SessionBinding,
     control_bytes: &[u8],
+    config: &InstalledUsageConfig,
 ) -> Result<Option<String>, AdapterError> {
+    if config.enforcement_disabled() {
+        return Ok(None);
+    }
     if !crate::usage_monitor::monitor_enabled(root) || binding.host_scope != "codex" {
         return Ok(None);
     }
@@ -199,19 +210,22 @@ pub(super) fn register_for_arguments(
     let Some(root) = arguments.user_root.as_deref() else {
         return Ok(None);
     };
+    let target = PinnedTarget::open_usage(&arguments.target)?;
+    let config = read_effective_config(&target, Some(root), arguments.host.as_deref())?;
+    if config.enforcement_disabled() {
+        return Ok(None);
+    }
     let runtime = PinnedTarget::open_usage(root)?;
     if !crate::usage_monitor::monitor_enabled(&runtime) {
         return Ok(None);
     }
-    let target = PinnedTarget::open_usage(&arguments.target)?;
-    let config = read_effective_config(&target, Some(root), arguments.host.as_deref())?;
     let binding = bind_runtime_session(&arguments.binding, &config.primary_host, &target, true);
     let loaded = load_control(&runtime, &binding)?;
     if loaded.state != OverrideState::Current {
         return Ok(None);
     }
     match loaded.snapshot.bytes() {
-        Some(bytes) => register(&runtime, &target, &binding, bytes),
+        Some(bytes) => register(&runtime, &target, &binding, bytes, &config),
         None => Ok(None),
     }
 }

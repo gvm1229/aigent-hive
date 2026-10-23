@@ -550,7 +550,45 @@ fn prepare_activation(state: &mut MonitorState) {
     state.heartbeat_uptime_ms = None;
 }
 
+fn usage_policy_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(String, bool)>>> =
+        std::sync::OnceLock::new();
+    let Some(bytes) = root.read_optional(Path::new(".hive/config/user-setup.yml"), 1024 * 1024)?
+    else {
+        return Err(error("global usage policy is missing"));
+    };
+    // The controller checks this before each dispatch. Validate identical bytes once,
+    // while still performing the pinned file read on every check.
+    let digest = sha256_digest(&bytes);
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Some((prior, disabled)) = cache
+        .lock()
+        .map_err(|_| error("monitor policy cache unavailable"))?
+        .as_ref()
+    {
+        if prior == &digest {
+            return Ok(*disabled);
+        }
+    }
+    let config = crate::user_setup::parse_and_validate_installed_config(&bytes)
+        .map_err(|failure| error(failure.message()))?;
+    let disabled = config
+        .usage_guard
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled);
+    *cache
+        .lock()
+        .map_err(|_| error("monitor policy cache unavailable"))? = Some((digest, disabled));
+    Ok(disabled)
+}
+
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Err(error(
+            "enable usage enforcement and explicitly select midway monitoring in Hive setup first",
+        ));
+    }
     require_app_safe_control()?;
     let _control = lock(root, "control.lock")?;
     if preview(root.requested_path())?["preview_digest"].as_str() != Some(confirm) {
@@ -648,6 +686,9 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+    }
     let mut report = json!({"started_at":now(),"pid":std::process::id(),
         "version":env!("HIVE_PACKAGE_VERSION"),"error":null});
     write(root, STARTUP, &report)?;
@@ -663,6 +704,9 @@ fn controller_scoped(
     root: &PinnedTarget,
     qualification: Option<String>,
 ) -> Result<Value, AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+    }
     require_app_safe_control()?;
     let _lease = lock(root, "controller.lock")?;
     let config: Configuration =
@@ -702,11 +746,17 @@ fn controller_scoped(
     let desktop = desktop::Desktop::start_scoped(qualification);
     let mut fault_notice = None;
     loop {
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+        }
         if load::<Configuration>(root, CONFIG)?.is_some_and(|current| !current.enabled) {
             return Ok(json!({"stopped":true}));
         }
         if let Ok(value) = controller_loop(root, active, &desktop) {
             return Ok(value);
+        }
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
         }
         let incident = match with_state(root, |s| Ok(s.controller_fault(now()))) {
             Ok(value) => value,
@@ -874,6 +924,9 @@ fn dispatch_halt(
     sent_incident: &mut Option<String>,
     notification: &mut Option<(String, Receiver<bool>)>,
 ) -> Result<(), AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Ok(());
+    }
     if let Some(incident) = incident {
         let Some(should_notify) = claim_halt(root, &incident.digest)? else {
             return Ok(());
@@ -959,6 +1012,9 @@ fn controller_loop(
         .unwrap_or(started);
     loop {
         let tick = Instant::now();
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+        }
         collect_notice(root, &mut notification);
         let Some(current): Option<Configuration> = load(root, CONFIG)? else {
             return Err(error("monitor configuration disappeared"));
@@ -1099,6 +1155,45 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn opted_in_user_policy() -> Value {
+        let mut guard = serde_json::to_value(hive_core::preferences::UsageProtection::from_legacy(
+            true, true, true,
+        ))
+        .unwrap();
+        guard["stop_remaining_percent"] = json!(20);
+        json!({"schema_version":2,"interface_language":"en","wiki":{"language":"en"},
+            "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+            "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":guard})
+    }
+
+    #[test]
+    fn explicit_master_disable_prevents_monitor_start_or_registration() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join(".hive/config/user-setup.yml");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut config = opted_in_user_policy();
+        let root = PinnedTarget::open_usage(directory.path()).unwrap();
+        for (master, midway) in [(false, true), (true, false)] {
+            config["usage_guard"]["enforcement_enabled"] = json!(master);
+            config["usage_guard"]["midway"]["enabled"] = json!(midway);
+            std::fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+            assert!(usage_policy_disabled(&root).unwrap());
+            assert_eq!(
+                controller(&root).unwrap()["reason"],
+                "usage-policy-disabled"
+            );
+            assert!(enable(&root, "unconfirmed").is_err());
+            assert!(!directory.path().join(".hive/runtime").exists());
+        }
+        config["usage_guard"]["midway"]["enabled"] = json!(true);
+        std::fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+        assert!(!usage_policy_disabled(&root).unwrap());
+        std::fs::write(&path, "broken: policy").unwrap();
+        assert!(usage_policy_disabled(&root).is_err());
+        std::fs::remove_file(&path).unwrap();
+        assert!(usage_policy_disabled(&root).is_err());
+    }
     #[test]
     fn live_contract_failure_and_disconnect_never_reuse_compatible_state() {
         let temporary = tempfile::tempdir().unwrap();
@@ -1175,6 +1270,13 @@ mod tests {
     fn rejected_startup_is_visible_without_publishing_a_stop_or_changing_choice() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let user_policy = temporary.path().join(".hive/config/user-setup.yml");
+        std::fs::create_dir_all(user_policy.parent().unwrap()).unwrap();
+        std::fs::write(
+            user_policy,
+            serde_yaml::to_string(&opted_in_user_policy()).unwrap(),
+        )
+        .unwrap();
         let mut config = configuration(temporary.path()).unwrap();
         config.enabled = false;
         write(&root, CONFIG, &config).unwrap();

@@ -1722,7 +1722,9 @@ fn parse_and_validate_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError
     parse_and_validate_config_inner(bytes, false)
 }
 
-fn parse_and_validate_installed_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
+pub(crate) fn parse_and_validate_installed_config(
+    bytes: &[u8],
+) -> Result<UserSetupConfig, SetupError> {
     parse_and_validate_config_inner(bytes, true)
 }
 
