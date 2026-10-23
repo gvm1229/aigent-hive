@@ -2993,9 +2993,18 @@ fn load_answers(path: &Path) -> Result<(SetupAnswers, JsonValue), RenderError> {
     object
         .entry("user_store_binding")
         .or_insert_with(|| JsonValue::String(String::new()));
-    let answers: SetupAnswers = serde_json::from_value(value.clone()).map_err(|error| {
+    let mut answers: SetupAnswers = serde_json::from_value(value.clone()).map_err(|error| {
         RenderError::Input(format!("setup answers violate the contract: {error}"))
     })?;
+    let declarations = serde_json::to_value(&answers).map_err(|error| {
+        RenderError::Internal(format!("cannot inspect setup declarations: {error}"))
+    })?;
+    hive_core::preferences::reconcile_decisions(
+        &declarations,
+        &mut answers.preference_decisions,
+        hive_core::preferences::PreferenceScope::Project,
+    )
+    .map_err(RenderError::Input)?;
     Ok((answers, value))
 }
 
@@ -6934,6 +6943,20 @@ mod tests {
         answers
             .preference_decisions
             .insert("/project_name".to_owned(), decision.clone());
+        let inherited = PreferenceDecision::new(
+            &hive_core::preferences::inheritance_declaration("/usage_guard/stop_remaining_percent")
+                .unwrap(),
+            DecisionOrigin::Inherited,
+            PreferenceInput::Terminal,
+            PreferenceScope::Project,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        answers.preference_decisions.insert(
+            "/usage_stop_remaining_percent".to_owned(),
+            inherited.clone(),
+        );
         let input = temporary.path().join("answers.yml");
         fs::write(&input, render_setup_answers(&answers).unwrap()).unwrap();
         let capabilities = fixture("capabilities-codex-host-native.json");
@@ -6951,6 +6974,10 @@ mod tests {
         let (stored, _) = load_answers(&target.join(".hive/setup-answers.yml")).unwrap();
         assert_eq!(stored.schema_version, 2);
         assert_eq!(stored.preference_decisions["/project_name"], decision);
+        assert_eq!(
+            stored.preference_decisions["/usage_stop_remaining_percent"],
+            inherited
+        );
         assert_eq!(stored.persistent_roles, answers.persistent_roles);
     }
 

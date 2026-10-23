@@ -184,6 +184,16 @@ pub enum PreferenceScope {
     Project,
 }
 
+/// Parent declaration, retained separately from the value it currently resolves to.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PreferenceReference {
+    /// Parent scope; currently only user-to-project inheritance is supported.
+    pub scope: PreferenceScope,
+    /// Pointer in the parent document, which may differ from the child's pointer.
+    pub key: String,
+}
+
 /// Provenance stored with a setting. No prompt, session, or credential is retained.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -206,6 +216,9 @@ pub struct PreferenceDecision {
     pub decided_at: Option<u64>,
     /// Digest of the stored declaration, not its resolved inherited value.
     pub value_digest: String,
+    /// The declaration hashed for an inherited choice, never its resolved value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inherited_from: Option<PreferenceReference>,
 }
 
 /// JSON Pointer to its decision record. Canonical settings and these records share one write.
@@ -224,6 +237,18 @@ impl PreferenceDecision {
         version: &str,
         decided_at: Option<u64>,
     ) -> Result<Self, String> {
+        let inherited_from = if origin == DecisionOrigin::Inherited {
+            let reference: PreferenceReference =
+                serde_json::from_value(declaration.get("inherit").cloned().unwrap_or(Value::Null))
+                    .map_err(|error| format!("invalid inheritance reference: {error}"))?;
+            validate_preference_pointer(&reference.key)?;
+            if scope != PreferenceScope::Project || reference.scope != PreferenceScope::User {
+                return Err("invalid inheritance scope".to_owned());
+            }
+            Some(reference)
+        } else {
+            None
+        };
         Ok(Self {
             origin,
             input_channel,
@@ -241,6 +266,7 @@ impl PreferenceDecision {
                 decided_at
             },
             value_digest: declaration_digest(declaration)?,
+            inherited_from,
         })
     }
 
@@ -261,6 +287,106 @@ pub fn declaration_digest(declaration: &Value) -> Result<String, String> {
     serde_json_canonicalizer::to_vec(declaration)
         .map(|bytes| sha256_digest(&bytes))
         .map_err(|error| format!("cannot fingerprint preference declaration: {error}"))
+}
+
+/// Build the stored reference used by a project preference, independent of the resolved value.
+///
+/// # Errors
+/// Rejects malformed or reserved setting pointers.
+pub fn inheritance_declaration(key: &str) -> Result<Value, String> {
+    validate_preference_pointer(key)?;
+    Ok(serde_json::json!({"inherit":{"scope":"user","key":key}}))
+}
+
+fn validate_preference_pointer(key: &str) -> Result<(), String> {
+    if !key.starts_with('/')
+        || key.len() < 2
+        || key.len() > 512
+        || key.chars().any(char::is_control)
+        || key
+            .split('/')
+            .nth(1)
+            .is_some_and(|part| matches!(part, "schema_version" | "preference_decisions"))
+    {
+        return Err("invalid or reserved preference pointer".to_owned());
+    }
+    let mut chars = key.chars();
+    while let Some(character) = chars.next() {
+        if character == '~' && !matches!(chars.next(), Some('0' | '1')) {
+            return Err("invalid preference pointer escape".to_owned());
+        }
+    }
+    Ok(())
+}
+
+/// Derive truthful provenance after a local edit. This does not write or authorize anything.
+///
+/// Missing optional declarations are compared as null. Inheritance fingerprints contain
+/// the reference, so changing the parent's effective value cannot look like a local edit.
+///
+/// # Errors
+/// Rejects a wrong scope, malformed reference, or invalid fingerprint.
+pub fn reconcile_decisions(
+    document: &Value,
+    decisions: &mut PreferenceDecisions,
+    scope: PreferenceScope,
+) -> Result<(), String> {
+    for (key, record) in decisions {
+        validate_preference_pointer(key)?;
+        if record.scope != scope {
+            return Err("preference decision belongs to another scope".to_owned());
+        }
+        if record.question_id.is_some() != record.question_revision.is_some()
+            || record.question_revision == Some(0)
+            || record.question_id.as_ref().is_some_and(|id| {
+                id.is_empty() || id.len() > 128 || id.chars().any(char::is_control)
+            })
+            || (matches!(
+                record.origin,
+                DecisionOrigin::Default | DecisionOrigin::LegacyUnknown
+            ) && record.decided_at.is_some())
+        {
+            return Err("preference question or answer time is inconsistent".to_owned());
+        }
+        if !record
+            .value_digest
+            .strip_prefix("sha256:")
+            .is_some_and(|hex| {
+                hex.len() == 64
+                    && hex
+                        .bytes()
+                        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            })
+        {
+            return Err("invalid preference declaration fingerprint".to_owned());
+        }
+        if record.origin == DecisionOrigin::Inherited {
+            let reference = record
+                .inherited_from
+                .as_ref()
+                .ok_or("missing inheritance reference")?;
+            if scope != PreferenceScope::Project
+                || reference.scope != PreferenceScope::User
+                || !record.matches_declaration(&inheritance_declaration(&reference.key)?)?
+            {
+                return Err("invalid inherited preference declaration".to_owned());
+            }
+        } else {
+            if record.inherited_from.is_some() {
+                return Err("non-inherited preference contains an inheritance reference".to_owned());
+            }
+            let declaration = document.pointer(key).unwrap_or(&Value::Null);
+            if !record.matches_declaration(declaration)? {
+                record.origin = DecisionOrigin::ExternalChange;
+                record.decided_at = None;
+                record.question_id = None;
+                record.question_revision = None;
+                "unknown".clone_into(&mut record.changed_in_version);
+                record.value_digest = declaration_digest(declaration)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -401,5 +527,83 @@ mod tests {
             declaration_digest(&serde_json::from_str::<Value>(r#"{"a":1,"b":2}"#).unwrap())
                 .unwrap(),
         );
+    }
+
+    #[test]
+    fn external_value_edits_do_not_keep_an_explicit_answer_claim() {
+        let decision = PreferenceDecision::new(
+            &json!(true),
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        let mut records = BTreeMap::from([("/wiki/enabled".to_owned(), decision)]);
+        let document = json!({"wiki":{"enabled":false}});
+        reconcile_decisions(&document, &mut records, PreferenceScope::User).unwrap();
+        let record = &records["/wiki/enabled"];
+        assert_eq!(record.origin, DecisionOrigin::ExternalChange);
+        assert_eq!(record.decided_at, None);
+        assert_eq!(record.changed_in_version, "unknown");
+        assert!(record.matches_declaration(&json!(false)).unwrap());
+    }
+
+    #[test]
+    fn parent_changes_preserve_inheritance_but_wrong_scope_is_rejected() {
+        let key = "/wiki/enabled";
+        let decision = PreferenceDecision::new(
+            &inheritance_declaration(key).unwrap(),
+            DecisionOrigin::Inherited,
+            PreferenceInput::Terminal,
+            PreferenceScope::Project,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        let mut records = BTreeMap::from([(key.to_owned(), decision.clone())]);
+        for value in [true, false] {
+            reconcile_decisions(
+                &json!({"wiki":{"enabled":value}}),
+                &mut records,
+                PreferenceScope::Project,
+            )
+            .unwrap();
+            assert_eq!(records[key], decision);
+        }
+        assert!(reconcile_decisions(&json!({}), &mut records, PreferenceScope::User).is_err());
+        assert!(inheritance_declaration("/preference_decisions/claim").is_err());
+        assert!(inheritance_declaration("/bad~xescape").is_err());
+    }
+
+    #[test]
+    fn project_pointer_can_inherit_a_differently_named_parent_setting() {
+        let decision = PreferenceDecision::new(
+            &inheritance_declaration("/usage_guard/stop_remaining_percent").unwrap(),
+            DecisionOrigin::Inherited,
+            PreferenceInput::Terminal,
+            PreferenceScope::Project,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        let mut records = BTreeMap::from([("/usage_stop_remaining_percent".to_owned(), decision)]);
+        reconcile_decisions(
+            &json!({"usage_stop_remaining_percent":50}),
+            &mut records,
+            PreferenceScope::Project,
+        )
+        .unwrap();
+        let encoded = serde_json::to_value(&records).unwrap();
+        assert_eq!(
+            encoded["/usage_stop_remaining_percent"]["inherited_from"]["key"],
+            "/usage_guard/stop_remaining_percent"
+        );
+        records
+            .get_mut("/usage_stop_remaining_percent")
+            .unwrap()
+            .inherited_from = None;
+        assert!(reconcile_decisions(&json!({}), &mut records, PreferenceScope::Project).is_err());
     }
 }

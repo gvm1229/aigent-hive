@@ -1712,8 +1712,17 @@ fn parse_and_validate_config_inner(
         migrate_legacy_missing_usage_threshold(&mut value);
     }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
-    let config: UserSetupConfig = serde_json::from_value(value)
+    let mut config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
+    let declarations = serde_json::to_value(&config).map_err(|error| {
+        SetupError::Internal(format!("cannot inspect setup declarations: {error}"))
+    })?;
+    hive_core::preferences::reconcile_decisions(
+        &declarations,
+        &mut config.preference_decisions,
+        hive_core::preferences::PreferenceScope::User,
+    )
+    .map_err(SetupError::Input)?;
     validate_config_semantics(&config)?;
     Ok(config)
 }
@@ -3771,6 +3780,36 @@ usage_guard:
         assert!(!config.usage_guard.threshold_enabled());
         assert!(config.usage_guard.codexbar_fallback_enabled);
         assert!(config.usage_guard.discord.enabled);
+    }
+
+    #[test]
+    fn version_two_external_edit_is_preserved_with_corrected_provenance() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &value["usage_guard"]["stop_remaining_percent"],
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent": decision});
+        value["usage_guard"]["stop_remaining_percent"] = json!(45);
+        let bytes = serde_json::to_vec(&value).unwrap();
+        let config = parse_and_validate_installed_config(&bytes).unwrap();
+        assert_eq!(config.usage_guard.stop_remaining_percent, 45);
+        let record = &config.preference_decisions["/usage_guard/stop_remaining_percent"];
+        assert_eq!(record.origin, DecisionOrigin::ExternalChange);
+        assert_eq!(record.decided_at, None);
+        assert!(record.matches_declaration(&json!(45)).unwrap());
+        assert_eq!(
+            parse_and_validate_installed_config(&canonical_config(&config).unwrap()).unwrap(),
+            config
+        );
     }
 
     #[test]

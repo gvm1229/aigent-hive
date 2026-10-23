@@ -474,8 +474,54 @@
         "value_digest": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "inherited_from": {
+          "type": "object",
+          "required": [
+            "scope",
+            "key"
+          ],
+          "properties": {
+            "scope": {
+              "const": "user"
+            },
+            "key": {
+              "type": "string",
+              "pattern": "^/[^\\r\\n]+$",
+              "maxLength": 512
+            }
+          },
+          "additionalProperties": false
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "origin": {
+                "const": "inherited"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "inherited_from"
+            ],
+            "properties": {
+              "scope": {
+                "const": "project"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "inherited_from"
+              ]
+            }
+          }
+        }
+      ]
     },
     "preference_decisions": {
       "type": "object",
