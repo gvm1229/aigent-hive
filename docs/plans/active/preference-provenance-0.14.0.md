@@ -5,8 +5,8 @@
 
 ## 항목
 
-- [ ] [P140-001] 설정 자료 형식과 선택 출처의 원자적 저장
-  - state: agent-owned
+- [x] [P140-001] 설정 자료 형식과 선택 출처의 원자적 저장
+  - state: complete; evidence: repo:docs/research/cli-foundations-0.14.0.md#sha256:aaa49c66c9c3a5a4b41076404e1121a3ddb9f24fee2c523bcce0901ad5042164
 - [ ] [P140-002] 이전 설정의 질문 기반 이전·중단 복구
   - state: agent-owned; depends: P140-001,S140-001
 
