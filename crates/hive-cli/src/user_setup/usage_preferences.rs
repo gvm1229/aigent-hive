@@ -13,6 +13,7 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) policy: Option<UsageProtection>,
     pub(crate) stop_remaining_percent: u8,
     pub(crate) codexbar_fallback_enabled: bool,
+    pub(crate) popup_enabled: Option<bool>,
     pub(crate) discord: DiscordGuardPreferences,
     pub(crate) project_overrides: BTreeMap<String, u8>,
 }
@@ -25,6 +26,8 @@ struct WirePreferences {
     stop_remaining_percent: u8,
     #[serde(default)]
     codexbar_fallback_enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    popup_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     quota_reset_guard_enabled: Option<bool>,
     #[serde(default)]
@@ -70,12 +73,16 @@ impl<'de> Deserialize<'de> for UsageGuardPreferences {
                 ));
             }
         };
+        let popup_enabled = wire
+            .popup_enabled
+            .or_else(|| policy.is_some().then_some(false));
         Ok(Self {
             enabled: wire.enabled.unwrap_or(false),
             quota_reset_guard_enabled: wire.quota_reset_guard_enabled.unwrap_or(true),
             policy,
             stop_remaining_percent: wire.stop_remaining_percent,
             codexbar_fallback_enabled: wire.codexbar_fallback_enabled,
+            popup_enabled,
             discord: wire.discord,
             project_overrides: wire.project_overrides,
         })
@@ -88,6 +95,7 @@ impl Serialize for UsageGuardPreferences {
             enabled: self.policy.is_none().then_some(self.enabled),
             stop_remaining_percent: self.stop_remaining_percent,
             codexbar_fallback_enabled: self.codexbar_fallback_enabled,
+            popup_enabled: self.popup_enabled,
             quota_reset_guard_enabled: self
                 .policy
                 .is_none()
@@ -141,6 +149,7 @@ mod tests {
         .unwrap();
         assert!(!guard.threshold_enabled());
         assert!(guard.reset_enabled());
+        assert_eq!(guard.popup_enabled, None);
         let saved = serde_json::to_value(&guard).unwrap();
         assert_eq!(saved["enabled"], false);
         assert_eq!(saved["quota_reset_guard_enabled"], true);
@@ -156,11 +165,13 @@ mod tests {
         let guard: UsageGuardPreferences = serde_json::from_value(value).unwrap();
         assert!(!guard.threshold_enabled());
         assert!(!guard.reset_enabled());
+        assert_eq!(guard.popup_enabled, Some(false));
         let saved = serde_json::to_value(&guard).unwrap();
         assert!(saved.get("enabled").is_none());
         assert!(saved.get("quota_reset_guard_enabled").is_none());
         assert_eq!(saved["preflight"]["threshold_enabled"], true);
         assert_eq!(saved["midway"]["enabled"], true);
+        assert_eq!(saved["popup_enabled"], false);
         assert_eq!(
             serde_json::from_value::<UsageGuardPreferences>(saved).unwrap(),
             guard

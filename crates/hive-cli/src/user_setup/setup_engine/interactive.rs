@@ -310,6 +310,7 @@ fn fresh_answers() -> Value {
     let mut guard = serde_json::to_value(UsageProtection::default()).expect("typed usage policy");
     guard["stop_remaining_percent"] = json!(20);
     guard["codexbar_fallback_enabled"] = json!(false);
+    guard["popup_enabled"] = json!(false);
     guard["discord"] = serde_json::to_value(user_setup::DiscordGuardPreferences::default())
         .expect("typed notices");
     guard["project_overrides"] = json!({});

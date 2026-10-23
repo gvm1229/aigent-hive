@@ -709,6 +709,10 @@
             "zero_quota_enabled",
             "observation_failure"
           ]
+        },
+        "popup_enabled": {
+          "type": "boolean",
+          "default": false
         }
       },
       "required": [

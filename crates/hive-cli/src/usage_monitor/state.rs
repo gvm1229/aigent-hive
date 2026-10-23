@@ -75,6 +75,8 @@ pub(super) struct MonitorState {
     pub incident: Option<Incident>,
     #[serde(default)]
     pub sensor_outage_stopped_at: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observation_outage_noticed_at: Option<u64>,
     #[serde(default)]
     pub last_reset_dispatched_at: Option<u64>,
     #[serde(default)]
@@ -143,6 +145,8 @@ pub(super) struct Incident {
     #[serde(default)]
     pub confirmed_termination: Option<TerminationReceipt>,
     pub notification: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub policy_suppressed: bool,
     #[serde(default)]
     pub stop_confirmed: bool,
     #[serde(default)]
@@ -335,6 +339,7 @@ impl MonitorState {
             last_verified_scope: None,
             confirmed_termination: None,
             notification: "pending".to_owned(),
+            policy_suppressed: false,
             stop_confirmed: false,
             stop_error: None,
             targeted_turns: 0,
@@ -470,6 +475,7 @@ impl MonitorState {
         }
         self.baseline = next;
         self.sensor_outage_stopped_at = None;
+        self.observation_outage_noticed_at = None;
         self.last_success = Some(now);
         if self
             .observation_watch_started_at
@@ -485,6 +491,40 @@ impl MonitorState {
         if self.sensor_outage_stopped_at.is_none() {
             self.halt("sensor-unresponsive", at);
             self.sensor_outage_stopped_at = Some(at);
+        }
+    }
+
+    pub fn observation_warning(&mut self, at: u64) {
+        if self.sensor_outage_stopped_at.is_none() && self.observation_outage_noticed_at.is_none() {
+            self.halt("sensor-unresponsive", at);
+            self.observation_outage_noticed_at = Some(at);
+            self.suppress_pending();
+        }
+    }
+
+    pub fn controller_warning(&mut self, at: u64) {
+        if self.incident.as_ref().is_some_and(|incident| {
+            incident.reason == "monitor-fault"
+                && self
+                    .last_success
+                    .is_none_or(|good| good <= incident.detected_at)
+        }) {
+            return;
+        }
+        self.halt("monitor-fault", at);
+        self.suppress_pending();
+    }
+
+    pub fn suppress_pending(&mut self) {
+        if let Some(incident) = self
+            .incident
+            .as_mut()
+            .filter(|incident| incident.stop_dispatched_at.is_none())
+        {
+            incident.policy_suppressed = true;
+            "not-requested".clone_into(&mut incident.stop_method);
+            "suppressed".clone_into(&mut incident.notification);
+            self.threshold_receipts.retain(|receipt| receipt.confirmed);
         }
     }
 

@@ -79,6 +79,15 @@ pub(super) struct Receipt {
     pub confirmed: bool,
     #[serde(default)]
     pub turn_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zero_quota: Option<bool>,
+}
+
+impl Receipt {
+    pub(super) fn is_zero_quota(&self) -> bool {
+        self.zero_quota
+            .unwrap_or(self.threshold_percent == 0 && self.remaining_percent == 0.0)
+    }
 }
 
 // The block copies the exact measured value; tolerance would select a different usage pool.
@@ -117,7 +126,7 @@ pub(super) fn observe(
         }) else {
             continue;
         };
-        let exhausted = block.threshold_percent == 0.0;
+        let exhausted = policy.zero_enabled && block.remaining_percent == 0.0;
         if exhausted && policy.turn_digest.is_none() {
             state.threshold_policy_errors = state.threshold_policy_errors.saturating_add(1);
             continue;
@@ -178,6 +187,7 @@ pub(super) fn observe(
             },
             confirmed: false,
             turn_digest: policy.turn_digest.clone(),
+            zero_quota: Some(exhausted),
         };
         reached.push(receipt.clone());
         state.threshold_receipts.push(receipt);
@@ -186,7 +196,9 @@ pub(super) fn observe(
         return;
     }
     let reset_pending = state.incident.as_ref().is_some_and(|incident| {
-        incident.reason == "usage-reset" && incident.stop_dispatched_at.is_none()
+        incident.reason == "usage-reset"
+            && incident.stop_dispatched_at.is_none()
+            && !incident.policy_suppressed
     });
     if !reset_pending {
         state.halt("usage-threshold", at);

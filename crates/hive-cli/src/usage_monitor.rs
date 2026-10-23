@@ -1,6 +1,7 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
 mod desktop;
 mod platform;
+mod preferences;
 #[cfg(debug_assertions)]
 mod qualification;
 mod sensor;
@@ -538,6 +539,7 @@ fn require_desktop_inspection(inspection: &Value) -> Result<(), AdapterError> {
     }
 }
 fn prepare_activation(state: &mut MonitorState) {
+    state.suppress_pending();
     // Only an explicit enable starts a new observation period. A controller crash
     // or upgrade must retain its prior gap and must not gain sixty extra seconds.
     state.observation_count = 0;
@@ -545,46 +547,14 @@ fn prepare_activation(state: &mut MonitorState) {
     state.watch_started_uptime_ms = None;
     state.last_success_uptime_ms = None;
     state.sensor_outage_stopped_at = None;
+    state.observation_outage_noticed_at = None;
     state.control_connected = false;
     state.heartbeat = 0;
     state.heartbeat_uptime_ms = None;
 }
 
 fn usage_policy_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
-    static CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(String, bool)>>> =
-        std::sync::OnceLock::new();
-    let Some(bytes) = root.read_optional(
-        Path::new(".hive/config/user-setup.yml"),
-        usize::try_from(crate::user_setup::MAX_USER_SETUP_BYTES)
-            .expect("setup limit fits supported platforms"),
-    )?
-    else {
-        return Err(error("global usage policy is missing"));
-    };
-    // The controller checks this before each dispatch. Validate identical bytes once,
-    // while still performing the pinned file read on every check.
-    let digest = sha256_digest(&bytes);
-    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(None));
-    if let Some((prior, disabled)) = cache
-        .lock()
-        .map_err(|_| error("monitor policy cache unavailable"))?
-        .as_ref()
-    {
-        if prior == &digest {
-            return Ok(*disabled);
-        }
-    }
-    let config = crate::user_setup::parse_and_validate_installed_config(&bytes)
-        .map_err(|failure| error(failure.message()))?;
-    let disabled = config
-        .usage_guard
-        .policy
-        .as_ref()
-        .is_some_and(|policy| !policy.effective_midway().enabled);
-    *cache
-        .lock()
-        .map_err(|_| error("monitor policy cache unavailable"))? = Some((digest, disabled));
-    Ok(disabled)
+    Ok(!preferences::load(root)?.checks.enabled)
 }
 
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
@@ -762,16 +732,27 @@ fn controller_scoped(
         if usage_policy_disabled(root)? {
             return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
         }
-        let incident = match with_state(root, |s| Ok(s.controller_fault(now()))) {
+        let selected = preferences::load(root)?;
+        let incident = match with_state(root, |s| {
+            if selected.stop_on_failure() {
+                Ok(s.controller_fault(now()))
+            } else {
+                s.controller_warning(now());
+                Ok(None)
+            }
+        }) {
             Ok(value) => value,
-            Err(_) => fault_notice
+            Err(_) if selected.stop_on_failure() => fault_notice
                 .is_none()
                 .then(|| sha256_digest(b"monitor-state-repair-required")),
+            Err(_) => None,
         };
         if let Some(incident) = incident {
             desktop.stop(&incident, Some(now().saturating_mul(1000)));
-            let _notice =
-                platform::notify("monitor-fault", false, &incident, root.requested_path());
+            if selected.notify() {
+                let _notice =
+                    platform::notify("monitor-fault", false, &incident, root.requested_path());
+            }
             fault_notice = Some(incident);
         }
         // Recover observation without repeatedly stopping user-resumed work.
@@ -881,36 +862,48 @@ fn record_sample(
     elapsed: u64,
     policies: &[crate::usage_control::MonitorPolicy],
 ) -> (bool, bool) {
+    let Ok(selected) = preferences::load(root) else {
+        return (false, false);
+    };
     #[cfg(debug_assertions)]
     let measured = qualification::observation(root.requested_path(), measured);
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
         let result = state.record_query(measured, now());
+        selected.filter_pending(state);
         if result.0 {
             threshold::observe(state, policies, &state.baseline.clone(), now());
         }
+        selected.filter_pending(state);
         Ok(result)
     })
     .unwrap_or((false, false))
 }
 
-fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, AdapterError> {
+fn claim_halt(
+    root: &PinnedTarget,
+    digest: &str,
+    selected: &preferences::Preferences,
+) -> Result<Option<(state::Incident, bool)>, AdapterError> {
     with_state(root, |s| {
+        selected.filter_pending(s);
         let Some(current) = s.incident.as_mut().filter(|i| i.digest == digest) else {
             return Ok(None);
         };
-        if current.stop_dispatched_at.is_some() {
+        if current.stop_dispatched_at.is_some() || current.policy_suppressed {
             return Ok(None);
         }
         current.stop_dispatched_at = Some(now());
         if current.reason == "usage-reset" {
             s.last_reset_dispatched_at = Some(current.detected_at);
         }
-        let notify = current.notification == "pending";
+        let notify = current.notification == "pending" && selected.notify();
         if notify {
             current.notification = "requested".into();
+        } else if current.notification == "pending" {
+            current.notification = "suppressed".into();
         }
-        Ok(Some(notify))
+        Ok(Some((current.clone(), notify)))
     })
     .or_else(|failure| {
         if matches!(failure, AdapterError::Conflict(_)) {
@@ -928,11 +921,9 @@ fn dispatch_halt(
     sent_incident: &mut Option<String>,
     notification: &mut Option<(String, Receiver<bool>)>,
 ) -> Result<(), AdapterError> {
-    if usage_policy_disabled(root)? {
-        return Ok(());
-    }
+    let selected = preferences::load(root)?;
     if let Some(incident) = incident {
-        let Some(should_notify) = claim_halt(root, &incident.digest)? else {
+        let Some((incident, should_notify)) = claim_halt(root, &incident.digest, &selected)? else {
             return Ok(());
         };
         if sent_incident.as_deref() != Some(incident.digest.as_str()) {
@@ -1072,14 +1063,17 @@ fn controller_loop(
             if let Ok((updated, errors)) = receive.try_recv() {
                 policies = updated;
                 policies_at = tick;
+                let selected = preferences::load(root)?;
                 with_state(root, |state| {
                     state.threshold_policy_errors = errors;
+                    selected.filter_pending(state);
                     if state
                         .last_success
                         .is_some_and(|at| now().saturating_sub(at) <= 5)
                     {
                         threshold::observe(state, &policies, &state.baseline.clone(), now());
                     }
+                    selected.filter_pending(state);
                     Ok(())
                 })?;
                 policy_job = None;
@@ -1125,8 +1119,14 @@ fn controller_loop(
             }
         }
         if active && cadence.blind(tick.duration_since(started)) {
+            let selected = preferences::load(root)?;
             with_state(root, |state| {
-                state.observation_blind(now());
+                if selected.stop_on_failure() {
+                    state.observation_blind(now());
+                } else {
+                    state.observation_warning(now());
+                }
+                selected.filter_pending(state);
                 Ok(())
             })?;
         }
@@ -1230,7 +1230,11 @@ mod tests {
         prepare_activation(&mut state);
         assert_eq!(state.observation_count, 0);
         assert_eq!(state.last_success, Some(100));
-        assert_eq!(serde_json::to_value(&state.incident).unwrap(), incident);
+        assert_eq!(
+            serde_json::to_value(&state.incident).unwrap()["digest"],
+            incident["digest"]
+        );
+        assert!(state.incident.as_ref().unwrap().policy_suppressed);
         assert_eq!(
             state.observation_gap_monotonic(true, 900, Some(900_000)),
             Duration::ZERO
@@ -1363,6 +1367,10 @@ mod tests {
     }
     #[test]
     fn dispatch_claim_is_atomic_and_never_replays_the_same_event() {
+        let selected = preferences::Preferences {
+            checks: hive_core::preferences::UsageProtection::from_legacy(true, true, true).midway,
+            popup_enabled: true,
+        };
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         let incident = with_state(&root, |s| {
@@ -1371,22 +1379,73 @@ mod tests {
         })
         .unwrap();
         let held = lock(&root, "state.lock").unwrap();
-        assert!(claim_halt(&root, &incident).unwrap().is_none());
+        assert!(claim_halt(&root, &incident, &selected)
+            .unwrap()
+            .map(|(_, notify)| notify)
+            .is_none());
         assert!(record_control(&root, &json!({"control_stopping":false}), true, true).is_ok());
         drop(held);
-        assert_eq!(claim_halt(&root, &incident).unwrap(), Some(true));
-        assert_eq!(claim_halt(&root, &incident).unwrap(), None);
+        assert_eq!(
+            claim_halt(&root, &incident, &selected)
+                .unwrap()
+                .map(|(_, notify)| notify),
+            Some(true)
+        );
+        assert_eq!(
+            claim_halt(&root, &incident, &selected)
+                .unwrap()
+                .map(|(_, notify)| notify),
+            None
+        );
         with_state(&root, |s| {
             s.incident = None;
             Ok(())
         })
         .unwrap();
-        assert!(claim_halt(&root, &incident).unwrap().is_none());
+        assert!(claim_halt(&root, &incident, &selected)
+            .unwrap()
+            .map(|(_, notify)| notify)
+            .is_none());
         assert!(load::<MonitorState>(&root, STATE)
             .unwrap()
             .unwrap()
             .incident
             .is_none());
+    }
+
+    #[test]
+    fn dispatch_claim_uses_filtered_targets_and_requires_popup_choice() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut selected = preferences::Preferences {
+            checks: hive_core::preferences::UsageProtection::from_legacy(true, true, true).midway,
+            popup_enabled: false,
+        };
+        let digest = with_state(&root, |state| {
+            state.halt("usage-reset", 100);
+            Ok(state.incident.as_ref().unwrap().digest.clone())
+        })
+        .unwrap();
+        let (claimed, notify) = claim_halt(&root, &digest, &selected).unwrap().unwrap();
+        assert!(!notify);
+        assert_eq!(claimed.notification, "suppressed");
+        assert!(claimed.stop_dispatched_at.is_some());
+        selected.checks.reset_enabled = false;
+        selected.popup_enabled = true;
+        let digest = with_state(&root, |state| {
+            state.halt("usage-reset", 101);
+            Ok(state.incident.as_ref().unwrap().digest.clone())
+        })
+        .unwrap();
+        assert!(claim_halt(&root, &digest, &selected).unwrap().is_none());
+        let history = load::<MonitorState>(&root, STATE)
+            .unwrap()
+            .unwrap()
+            .incident
+            .unwrap();
+        assert_eq!(history.digest, digest);
+        assert!(history.policy_suppressed);
+        assert_eq!(history.stop_dispatched_at, None);
     }
     #[test]
     fn no_monitor_event_is_a_dispatch_permission_or_resume_lock() {

@@ -433,3 +433,13 @@ questions:
     options: [{"value":"fact","label":{"ko":"사실","en":"Facts"}},{"value":"preference","label":{"ko":"선호","en":"Preferences"}},{"value":"workflow","label":{"ko":"작업 방식","en":"Workflows"}}]
     minimum: 0
     maximum: 3
+  - id: monitor-popup
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/popup_enabled"
+    input: "boolean"
+    prompt: {"ko":"사용량 감시가 작업을 중단할 때 별도 알림 창을 띄울까요?","en":"Show a desktop notice when usage monitoring interrupts work?"}
+    help: {"ko":"작업 중단 선택과 별도의 선택. 기본값은 알림 창 없음.","en":"This is separate from interruption consent. Desktop notices are off by default."}
+    default: false
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/midway/enabled","equals":true}]
