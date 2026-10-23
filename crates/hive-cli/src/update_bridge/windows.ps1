@@ -31,7 +31,7 @@ try {
     $caller = Get-CimInstance Win32_Process -Filter ("ProcessId = " + [int]$request.caller_pid)
     $parent = Get-CimInstance Win32_Process -Filter ("ProcessId = " + [int]$caller.ParentProcessId)
     if ($null -eq $parent -or -not $parent.ExecutablePath -or
-        [IO.Path]::GetFileName([string]$parent.ExecutablePath) -notin @('hive.exe','hive-update-helper.exe')) {
+        [IO.Path]::GetFileName([string]$parent.ExecutablePath) -notin @('hive.exe','hive-direct-update-helper.exe')) {
         Reply @{ event='not-legacy-parent' }; exit 0
     }
     if ((Sha256 ([string]$request.registry)) -ne '{{REGISTRY_DIGEST}}') { throw 'public registry differs' }

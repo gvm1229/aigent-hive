@@ -133,7 +133,7 @@ fn interactive_parent(parent: &Parent, root: &Path, executable: &Path) -> Result
         if !same_path(target, executable)? {
             return Err("legacy direct target differs".into());
         }
-        root.join(".hive/runtime/update/hive-update-helper.exe")
+        root.join(".hive/runtime/update/hive-direct-update-helper.exe")
     } else {
         executable.to_owned()
     };
@@ -387,6 +387,40 @@ mod tests {
         let other = tempfile::tempdir().unwrap();
         assert!(interactive_parent(&parent, other.path(), &executable).is_err());
         parent.version = "0.12.0".into();
+        assert!(interactive_parent(&parent, root.path(), &executable).is_err());
+    }
+
+    #[test]
+    fn public_direct_handoff_uses_its_exact_helper_and_target() {
+        let root = tempfile::tempdir().unwrap();
+        let executable = root.path().join("bin/hive.exe");
+        let helper = root
+            .path()
+            .join(".hive/runtime/update/hive-direct-update-helper.exe");
+        for path in [&executable, &helper] {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"fixture").unwrap();
+        }
+        let mut parent = Parent {
+            version: "0.13.1".into(),
+            executable: helper.clone(),
+            arguments: vec![
+                helper.to_string_lossy().into_owned(),
+                "update".into(),
+                "--direct-handoff".into(),
+                executable.to_string_lossy().into_owned(),
+                "--user-root".into(),
+                root.path().to_string_lossy().into_owned(),
+            ],
+        };
+        assert!(interactive_parent(&parent, root.path(), &executable).unwrap());
+        parent.arguments[3] = helper.to_string_lossy().into_owned();
+        assert!(interactive_parent(&parent, root.path(), &executable).is_err());
+        parent.arguments[3] = executable.to_string_lossy().into_owned();
+        parent.executable = root
+            .path()
+            .join(".hive/runtime/update/hive-update-helper.exe");
+        std::fs::write(&parent.executable, b"fixture").unwrap();
         assert!(interactive_parent(&parent, root.path(), &executable).is_err());
     }
 }
