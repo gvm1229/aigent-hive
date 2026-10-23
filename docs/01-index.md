@@ -272,4 +272,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 ## 0.14.0 대화형 CLI
 
 - [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
+- [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
 - [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)
