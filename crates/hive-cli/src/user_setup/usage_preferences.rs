@@ -107,6 +107,12 @@ impl Serialize for UsageGuardPreferences {
 }
 
 impl UsageGuardPreferences {
+    /// The legacy projection flag represents the overall v2 choice, not one check.
+    pub(crate) fn projection_enabled(&self) -> bool {
+        self.policy
+            .as_ref()
+            .map_or(self.enabled, |policy| policy.enforcement_enabled)
+    }
     pub(crate) fn threshold_enabled(&self) -> bool {
         self.policy.as_ref().map_or(self.enabled, |policy| {
             policy.effective_preflight().threshold_enabled

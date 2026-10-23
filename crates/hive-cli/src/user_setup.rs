@@ -36,7 +36,7 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
     include_str!("../../../schemas/user-setup-catalog.schema.json");
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
-const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+pub(crate) const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
 const FEATURE_QUESTION_CLAIM_SECONDS: u64 = 15 * 60;
 const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 /// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
@@ -2049,7 +2049,7 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
         }
     }
     if config.schema_version == 1
-        && !config.usage_guard.threshold_enabled()
+        && !config.usage_guard.projection_enabled()
         && config.usage_guard.codexbar_fallback_enabled
     {
         return Err(SetupError::Input(
@@ -2058,7 +2058,7 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
     }
     let discord = &config.usage_guard.discord;
     match (
-        config.schema_version == 2 || config.usage_guard.threshold_enabled(),
+        config.schema_version == 2 || config.usage_guard.projection_enabled(),
         discord.enabled,
         discord.webhook_url_env.as_deref(),
     ) {
@@ -2434,7 +2434,7 @@ fn resolve_skills(
             )
         });
     }
-    if config.usage_guard.threshold_enabled() {
+    if config.usage_guard.projection_enabled() {
         selected.insert("usage-guard".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
@@ -3558,9 +3558,11 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         persona_id: config.persona.id,
         persona_custom_description: config.persona.custom_description,
         selected_project_skills,
-        usage_guard_enabled: config.usage_guard.threshold_enabled(),
-        codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
-        discord_guard_enabled: config.usage_guard.discord.enabled,
+        usage_guard_enabled: config.usage_guard.projection_enabled(),
+        codexbar_fallback_enabled: config.usage_guard.projection_enabled()
+            && config.usage_guard.codexbar_fallback_enabled,
+        discord_guard_enabled: config.usage_guard.projection_enabled()
+            && config.usage_guard.discord.enabled,
         discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
         discord_message_fields: config
             .usage_guard
@@ -3966,6 +3968,49 @@ usage_guard:
         .unwrap()
         .unwrap();
         assert_eq!(inspected, config);
+    }
+
+    #[test]
+    fn version_two_projection_keeps_reset_only_protection_and_masks_dormant_integrations() {
+        let root = tempfile::tempdir().unwrap();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let mut value = v2_config_value();
+        value["usage_guard"]["enforcement_enabled"] = json!(true);
+        value["usage_guard"]["preflight"]["reset_enabled"] = json!(true);
+        value["usage_guard"]["codexbar_fallback_enabled"] = json!(true);
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(config.usage_guard.projection_enabled());
+        let stored = canonical_config(&config).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            None,
+            Some(&stored),
+        )
+        .unwrap();
+        let projected = project_preferences(root.path()).unwrap();
+        assert!(projected.usage_guard_enabled);
+        assert!(projected.codexbar_fallback_enabled);
+        value["usage_guard"]["enforcement_enabled"] = json!(false);
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            Some(&stored),
+            Some(&canonical_config(&config).unwrap()),
+        )
+        .unwrap();
+        let projected = project_preferences(root.path()).unwrap();
+        assert!(!projected.usage_guard_enabled);
+        assert!(!projected.codexbar_fallback_enabled);
+        assert!(
+            load_operational_config(&cap)
+                .unwrap()
+                .unwrap()
+                .usage_guard
+                .codexbar_fallback_enabled
+        );
     }
 
     #[test]

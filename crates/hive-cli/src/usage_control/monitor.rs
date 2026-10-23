@@ -178,7 +178,11 @@ pub(super) fn register(
     control_bytes: &[u8],
     config: &InstalledUsageConfig,
 ) -> Result<Option<String>, AdapterError> {
-    if config.enforcement_disabled() {
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
         return Ok(None);
     }
     if !crate::usage_monitor::monitor_enabled(root) || binding.host_scope != "codex" {
@@ -212,7 +216,11 @@ pub(super) fn register_for_arguments(
     };
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let config = read_effective_config(&target, Some(root), arguments.host.as_deref())?;
-    if config.enforcement_disabled() {
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
         return Ok(None);
     }
     let runtime = PinnedTarget::open_usage(root)?;

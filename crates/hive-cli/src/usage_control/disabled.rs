@@ -25,11 +25,19 @@ pub(super) fn result(
         action,
         status: "success",
         exit_code: 0,
-        code: "hive.usage-disabled",
-        message: if config.interface_language == "ko" {
-            "사용량 보호 비활성 정책 확인 완료"
+        code: if config.enforcement_disabled() {
+            "hive.usage-disabled"
         } else {
-            "Usage protection is disabled by the current policy"
+            "hive.usage-preflight-disabled"
+        },
+        message: match (
+            config.interface_language.as_str(),
+            config.enforcement_disabled(),
+        ) {
+            ("ko", true) => "사용량 보호 비활성 정책 확인 완료",
+            ("ko", false) => "시작 전 사용량 검사 비활성 정책 확인 완료",
+            (_, true) => "Usage protection is disabled by the current policy",
+            (_, false) => "Preflight usage checks are disabled by the current policy",
         }
         .to_owned(),
         changed_paths: Vec::new(),
@@ -40,9 +48,9 @@ pub(super) fn result(
         }],
         next_action: None,
         data: Some(
-            json!({"policy_evaluated":true,"enforcement_enabled":false,"enforced":false,
+            json!({"policy_schema_version":2,"policy_evaluated":true,"enforcement_enabled":!config.enforcement_disabled(),"enforced":false,
             "observation_required":false,"guard_enabled":false,"zero_quota_guard_enabled":false,
-            "quota_reset_guard_enabled":false,"monitor_registration_required":false,
+            "quota_reset_guard_enabled":false,
             "host_scope":binding.host_scope,"session_id_digest":binding.session_digest,"process_id":binding.process_id,
             "threshold_remaining_percent":config.threshold,"global_threshold_remaining_percent":config.global_threshold,
             "project_threshold_remaining_percent":config.project_threshold,"scope":"automatic-dispatch-preflight",

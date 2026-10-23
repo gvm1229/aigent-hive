@@ -2144,6 +2144,7 @@ pub(crate) struct DispatchAuthorizationRecord {
 struct InstalledUsageConfig {
     threshold: u8,
     primary_host: Host,
+    policy_schema_version: u8,
 }
 
 fn installed_usage_config(
@@ -2164,6 +2165,7 @@ fn installed_usage_config(
     Ok(InstalledUsageConfig {
         threshold: config.threshold,
         primary_host,
+        policy_schema_version: if config.policy.is_some() { 2 } else { 1 },
     })
 }
 
@@ -2682,7 +2684,9 @@ fn resume_inner(
                 requested_account_digest,
                 |snapshot| {
                     // Reject malformed/foreign history before shared enforcement can write runtime state.
-                    history = Some(read_usage_history(&target, &snapshot.account_digest)?);
+                    if installed.policy_schema_version == 1 {
+                        history = Some(read_usage_history(&target, &snapshot.account_digest)?);
+                    }
                     Ok(())
                 },
             )?;
@@ -2744,10 +2748,31 @@ fn resume_inner(
                     "preflight":preflight.result.data}),
                 );
             }
-            if matches!(
-                preflight.result.code,
-                "hive.usage-session-bypassed" | "hive.usage-disabled"
-            ) {
+            let version_two_policy = preflight
+                .result
+                .data
+                .as_ref()
+                .is_some_and(|data| data["policy_schema_version"] == 2);
+            if version_two_policy
+                || matches!(
+                    preflight.result.code,
+                    "hive.usage-session-bypassed"
+                        | "hive.usage-disabled"
+                        | "hive.usage-preflight-disabled"
+                )
+            {
+                let evidence_digest = preflight.snapshot().map_or_else(
+                    || preflight.binding_digest(),
+                    crate::usage::NormalizedSnapshot::evidence_digest,
+                );
+                let window = preflight
+                    .snapshot()
+                    .map(crate::usage::NormalizedSnapshot::selected_window_label);
+                let enforced = preflight.snapshot().is_some();
+                usage_evidence = preflight.snapshot().map(|snapshot| UsageGuardEvidence {
+                    digest: snapshot.evidence_digest(),
+                    window: snapshot.selected_window_label(),
+                });
                 if issue_dispatch_authorization(
                     &target,
                     &authorization_path,
@@ -2757,7 +2782,7 @@ fn resume_inner(
                     status.status().revision,
                     role_id,
                     &brief_digest,
-                    &preflight.binding_digest(),
+                    &evidence_digest,
                     &preflight,
                 )? {
                     runtime_changed_paths.push(portable_relative_path(&authorization_path));
@@ -2766,15 +2791,15 @@ fn resume_inner(
                     vec![brief],
                     json!({
                         "dispatch_intent": "automatic",
-                        "enforced": false,
-                        "outcome": "disabled",
+                        "enforced": enforced,
+                        "outcome": if enforced {"authorized"} else {"disabled"},
                         "policy_evaluated": true,
                         "enforcement_enabled": preflight.result.code != "hive.usage-disabled",
-                        "observation_required": false,
-                        "evidence_digest": preflight.binding_digest(),
-                        "window": null,
+                        "observation_required": enforced,
+                        "evidence_digest": evidence_digest,
+                        "window": window,
                         "configured_threshold_percent": configured_threshold,
-                        "history": "not_sampled",
+                        "history": if enforced {"session-policy-baseline"} else {"not_sampled"},
                         "authorization_id": authorization_id,
                         "role_id": role_id,
                         "host_scope": installed.primary_host,

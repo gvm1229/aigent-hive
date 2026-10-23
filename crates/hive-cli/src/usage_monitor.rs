@@ -553,7 +553,11 @@ fn prepare_activation(state: &mut MonitorState) {
 fn usage_policy_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
     static CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(String, bool)>>> =
         std::sync::OnceLock::new();
-    let Some(bytes) = root.read_optional(Path::new(".hive/config/user-setup.yml"), 1024 * 1024)?
+    let Some(bytes) = root.read_optional(
+        Path::new(".hive/config/user-setup.yml"),
+        usize::try_from(crate::user_setup::MAX_USER_SETUP_BYTES)
+            .expect("setup limit fits supported platforms"),
+    )?
     else {
         return Err(error("global usage policy is missing"));
     };

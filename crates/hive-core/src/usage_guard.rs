@@ -448,13 +448,33 @@ pub fn evaluate_usage(
     })
 }
 
-/// Evaluate the default-on exhaustion safeguard independently of the ordinary threshold.
+/// Evaluate exhaustion independently of the ordinary threshold; the caller selects this check.
 /// Every supplied quota window is checked, including a weekly window hidden by session precedence.
 #[must_use]
 pub fn evaluate_zero_quota(
     policy: &UsagePolicy,
     snapshots: &[UsageSnapshot],
     now_unix_seconds: i64,
+) -> UsageDecision {
+    evaluate_all_windows(policy, snapshots, now_unix_seconds, true)
+}
+
+/// Validate every observed window without enforcing a quota floor or zero-quota stop.
+/// Used by a separately selected reset check. Actual dispatch still needs its own authority.
+#[must_use]
+pub fn evaluate_observation_only(
+    policy: &UsagePolicy,
+    snapshots: &[UsageSnapshot],
+    now_unix_seconds: i64,
+) -> UsageDecision {
+    evaluate_all_windows(policy, snapshots, now_unix_seconds, false)
+}
+
+fn evaluate_all_windows(
+    policy: &UsagePolicy,
+    snapshots: &[UsageSnapshot],
+    now_unix_seconds: i64,
+    stop_at_zero: bool,
 ) -> UsageDecision {
     let mut zero_policy = policy.clone();
     zero_policy.stop_threshold_percent = 0;
@@ -481,7 +501,7 @@ pub fn evaluate_zero_quota(
     }
     if let Some(snapshot) = snapshots
         .iter()
-        .find(|snapshot| snapshot.remaining_percent == 0.0)
+        .find(|snapshot| stop_at_zero && snapshot.remaining_percent == 0.0)
     {
         return UsageDecision::Block(UsageBlock {
             window: snapshot.quota_window,
@@ -661,12 +681,32 @@ fn validate_monotonicity(
 #[cfg(test)]
 mod tests {
     use super::{
-        detect_usage_reset, evaluate_usage, evaluate_zero_quota, SourceConfidence, UsageDecision,
-        UsagePermitError, UsagePolicy, UsagePolicyError, UsageSnapshot, UsageUnknownReason,
-        UsageWindow,
+        detect_usage_reset, evaluate_observation_only, evaluate_usage, evaluate_zero_quota,
+        SourceConfidence, UsageDecision, UsagePermitError, UsagePolicy, UsagePolicyError,
+        UsageSnapshot, UsageUnknownReason, UsageWindow,
     };
 
     const NOW: i64 = 1_000;
+
+    #[test]
+    fn reset_observation_validation_does_not_apply_a_threshold_or_zero_stop() {
+        for remaining in [0.0, 1.0, 20.0, 50.0] {
+            assert!(matches!(
+                evaluate_observation_only(&policy(), &pair(remaining, 0.0), NOW),
+                UsageDecision::Allow(_)
+            ));
+        }
+        let mut invalid = pair(50.0, 0.0);
+        invalid[1].expires_at_unix_seconds = NOW;
+        assert!(matches!(
+            evaluate_observation_only(&policy(), &invalid, NOW),
+            UsageDecision::Unknown(_)
+        ));
+        assert!(matches!(
+            evaluate_observation_only(&policy(), &[], NOW),
+            UsageDecision::Unknown(_)
+        ));
+    }
 
     #[test]
     fn zero_quota_checks_every_window_without_applying_the_ordinary_threshold() {

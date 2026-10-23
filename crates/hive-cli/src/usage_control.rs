@@ -9,7 +9,8 @@ use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarge
 use crate::usage;
 use hive_core::sha256_digest;
 use hive_core::usage_guard::{
-    detect_usage_reset, evaluate_usage, evaluate_zero_quota, UsageDecision, UsagePolicy,
+    detect_usage_reset, evaluate_observation_only, evaluate_usage, evaluate_zero_quota,
+    UsageDecision, UsagePolicy,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -123,6 +124,44 @@ impl InstalledUsageConfig {
             .as_ref()
             .is_some_and(|policy| !policy.enforcement_enabled)
     }
+
+    fn preflight_disabled(&self) -> bool {
+        self.policy
+            .as_ref()
+            .is_some_and(|policy| !policy.observation_required())
+    }
+
+    fn preflight_reset_enabled(&self, control: &LoadedControl) -> bool {
+        let configured = self
+            .policy
+            .as_ref()
+            .map_or(self.quota_reset_guard_enabled, |policy| {
+                policy.effective_preflight().reset_enabled
+            });
+        effective_reset_enabled(control, configured)
+            && effective_enabled(control, self.ordinary_enabled())
+    }
+
+    fn ordinary_enabled(&self) -> bool {
+        self.guard_enabled
+            || self
+                .policy
+                .as_ref()
+                .is_some_and(|policy| policy.effective_preflight().reset_enabled)
+    }
+
+    fn preflight_zero_enabled(&self, control: &LoadedControl) -> bool {
+        self.policy
+            .as_ref()
+            .is_none_or(|policy| policy.effective_preflight().zero_quota_enabled)
+            && effective_zero_quota_enabled(control)
+    }
+
+    fn observation_required(&self, control: &LoadedControl) -> bool {
+        effective_enabled(control, self.guard_enabled)
+            || self.preflight_zero_enabled(control)
+            || self.preflight_reset_enabled(control)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -220,7 +259,7 @@ pub(crate) fn current_dispatch_binding(
         session_id: session_id.to_owned(),
         process_id,
     };
-    if config.enforcement_disabled() {
+    if config.preflight_disabled() {
         target.verify_current()?;
         return Ok(dispatch_binding_digest(
             Some(host),
@@ -230,12 +269,22 @@ pub(crate) fn current_dispatch_binding(
     }
     let binding = bind_session(&parsed, host);
     let control = load_control(target, &binding)?;
-    if matches!(control.state, OverrideState::Stale | OverrideState::Damaged)
-        || (!effective_enabled(&control, config.guard_enabled)
-            && !effective_zero_quota_enabled(&control))
-    {
+    if matches!(control.state, OverrideState::Stale | OverrideState::Damaged) {
         return Err(AdapterError::OwnerBlocked(
             "usage session control is stale, disabled, or incorrectly bound".to_owned(),
+        ));
+    }
+    if !config.observation_required(&control) {
+        target.verify_current()?;
+        return Ok(dispatch_binding_digest(
+            Some(host),
+            &parsed,
+            &EnforcementTrace {
+                normalized: None,
+                policy_digest: effective_policy_digest(&config)?,
+                control_digest: runtime_digest(control.snapshot.bytes()),
+                halt_digest: "absent".to_owned(),
+            },
         ));
     }
     let halt = load_halt(target, &binding)?;
@@ -303,7 +352,10 @@ pub(crate) fn dispatch_preflight(
     if result.exit_code == 0
         && !matches!(
             result.code,
-            "hive.usage-allowed" | "hive.usage-session-bypassed" | "hive.usage-disabled"
+            "hive.usage-allowed"
+                | "hive.usage-session-bypassed"
+                | "hive.usage-disabled"
+                | "hive.usage-preflight-disabled"
         )
     {
         return Err(AdapterError::Safety(
@@ -332,8 +384,11 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             "usage policy changed before dispatch authorization".to_owned(),
         ));
     }
-    if config.enforcement_disabled() {
-        if preflight.result.code != "hive.usage-disabled" {
+    if config.preflight_disabled() {
+        if !matches!(
+            preflight.result.code,
+            "hive.usage-disabled" | "hive.usage-preflight-disabled"
+        ) {
             return Err(AdapterError::Conflict(
                 "usage enforcement changed before dispatch authorization".to_owned(),
             ));
@@ -356,7 +411,7 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             "usage policy or session control changed before dispatch authorization".to_owned(),
         ));
     }
-    if effective_enabled(&control, config.guard_enabled) || effective_zero_quota_enabled(&control) {
+    if config.observation_required(&control) {
         let halt = load_halt(runtime, &binding)?;
         if runtime_digest(halt.snapshot.bytes()) != preflight.trace.halt_digest {
             return Err(AdapterError::Conflict(
@@ -385,7 +440,7 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
                 &snapshot.core_snapshots(),
                 now,
                 effective_enabled(&control, config.guard_enabled),
-                effective_zero_quota_enabled(&control)
+                config.preflight_zero_enabled(&control)
             ),
             UsageDecision::Allow(_)
         ) {
@@ -1182,7 +1237,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     if !config.target_class.is_configured() {
         return Ok(inactive_target_result("ShowUsageStatus"));
     }
-    if config.enforcement_disabled() {
+    if config.preflight_disabled() {
         let binding = bind_runtime_session(
             &arguments.binding,
             &config.primary_host,
@@ -1211,12 +1266,12 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         .as_ref()
         .and_then(|marker| marker.policy_digest.as_deref())
         == Some(policy_digest.as_str());
-    let pending_reset = config.quota_reset_guard_enabled
+    let pending_reset = config.preflight_reset_enabled(&loaded)
         && halt
             .marker
             .as_ref()
             .is_some_and(|marker| marker.decision == "usage-reset");
-    let halted = (guard_enabled || effective_zero_quota_enabled(&loaded))
+    let halted = config.observation_required(&loaded)
         && (pending_reset
             || (current_halt
                 && current_policy
@@ -1224,7 +1279,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
                     .marker
                     .as_ref()
                     .is_some_and(|marker| marker.decision != "observed")));
-    let recheck_required = (guard_enabled || effective_zero_quota_enabled(&loaded))
+    let recheck_required = config.observation_required(&loaded)
         && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
     let mut evidence = vec![Evidence {
@@ -1277,10 +1332,14 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "project_threshold_remaining_percent": config.project_threshold,
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
-            "zero_quota_guard_enabled": effective_zero_quota_enabled(&loaded),
+            "zero_quota_guard_enabled": config.preflight_zero_enabled(&loaded),
+            "policy_schema_version": if config.policy.is_some() {2} else {1},
+            "policy_evaluated": true,
+            "enforcement_enabled": !config.enforcement_disabled(),
+            "observation_required": config.observation_required(&loaded),
             "zero_quota_guard_scope": "hive-dispatch-preflight",
             "active_turn_interruption_verified": false,
-            "quota_reset_guard_enabled": effective_reset_enabled(&loaded, config.quota_reset_guard_enabled),
+            "quota_reset_guard_enabled": config.preflight_reset_enabled(&loaded),
             "quota_reset_guard_installed_enabled": config.quota_reset_guard_enabled,
             "quota_reset_guard_monitoring": false,
             "quota_reset_guard_monitoring_reason": "host-bound periodic interruption is unsupported",
@@ -1324,7 +1383,7 @@ fn enforce_captured(
     if !config.target_class.is_configured() {
         return Ok(inactive_target_result("CheckUsage"));
     }
-    if config.enforcement_disabled() {
+    if config.preflight_disabled() {
         let binding = bind_runtime_session(
             &arguments.binding,
             &config.primary_host,
@@ -1348,7 +1407,7 @@ fn enforce_captured(
     trace.policy_digest.clone_from(&policy_digest);
     trace.control_digest = runtime_digest(loaded.snapshot.bytes());
     "absent".clone_into(&mut trace.halt_digest);
-    if !effective_enabled(&loaded, config.guard_enabled) && !effective_zero_quota_enabled(&loaded) {
+    if !config.observation_required(&loaded) {
         return Ok(ActionResult {
             schema_version: 1,
             action: "CheckUsage",
@@ -1365,6 +1424,11 @@ fn enforce_captured(
             next_action: None,
             data: Some(json!({
                 "guard_enabled": false,
+                "policy_evaluated": true,
+                "policy_schema_version": if config.policy.is_some() {2} else {1},
+                "enforcement_enabled": true,
+                "enforced": false,
+                "observation_required": false,
                 "zero_quota_guard_enabled": false,
                 "host_scope": binding.host_scope,
                 "session_id_digest": binding.session_digest,
@@ -1391,8 +1455,9 @@ fn enforce_captured(
             &binding,
             arguments.account_digest.as_deref(),
             effective_enabled(&loaded, config.guard_enabled),
-            effective_zero_quota_enabled(&loaded),
-            if effective_reset_enabled(&loaded, config.quota_reset_guard_enabled) {
+            config.preflight_zero_enabled(&loaded),
+            config.preflight_reset_enabled(&loaded),
+            if config.preflight_reset_enabled(&loaded) {
                 halt.marker
                     .as_ref()
                     .filter(|_| halt.state == OverrideState::Current)
@@ -1407,7 +1472,7 @@ fn enforce_captured(
             arguments.host.as_deref(),
         )?;
         let refreshed_digest = effective_policy_digest(&refreshed)?;
-        if refreshed.enforcement_disabled() {
+        if refreshed.preflight_disabled() {
             *trace = disabled::trace(&refreshed)?;
             target.verify_current()?;
             return Ok(disabled::result("CheckUsage", &binding, &refreshed));
@@ -1455,7 +1520,11 @@ fn enforce_captured(
             );
             data.insert(
                 "zero_quota_guard_enabled".to_owned(),
-                json!(effective_zero_quota_enabled(&loaded)),
+                json!(config.preflight_zero_enabled(&loaded)),
+            );
+            data.insert(
+                "quota_reset_guard_enabled".to_owned(),
+                json!(config.preflight_reset_enabled(&loaded)),
             );
             data.insert("active_turn_interruption_verified".to_owned(), json!(false));
             data.insert(
@@ -1474,11 +1543,14 @@ fn enforce_captured(
                 json!(halt.marker.as_ref().map(|marker| marker.schema_version)),
             );
         }
-        if config.quota_reset_guard_enabled
-            && halt
-                .marker
-                .as_ref()
-                .is_none_or(|marker| matches!(marker.decision.as_str(), "observed" | "usage-reset"))
+        if (if config.policy.is_some() {
+            config.preflight_reset_enabled(&loaded)
+        } else {
+            config.quota_reset_guard_enabled
+        }) && halt
+            .marker
+            .as_ref()
+            .is_none_or(|marker| matches!(marker.decision.as_str(), "observed" | "usage-reset"))
         {
             let marker = HaltMarker {
                 schema_version: 2,
@@ -1521,10 +1593,7 @@ fn enforce_captured(
             {
                 data.insert(
                     "quota_reset_guard_enabled".to_owned(),
-                    json!(effective_reset_enabled(
-                        &loaded,
-                        config.quota_reset_guard_enabled
-                    )),
+                    json!(config.preflight_reset_enabled(&loaded)),
                 );
                 data.insert(
                     "quota_reset_guard_baseline_updated".to_owned(),
@@ -1607,7 +1676,7 @@ fn enforce_captured(
         );
         data.insert(
             "zero_quota_guard_enabled".to_owned(),
-            json!(effective_zero_quota_enabled(&loaded)),
+            json!(config.preflight_zero_enabled(&loaded)),
         );
         data.insert("active_turn_interruption_verified".to_owned(), json!(false));
     }
@@ -1764,6 +1833,7 @@ fn observe_usage(
     account_digest: Option<&str>,
     threshold_enabled: bool,
     zero_enabled: bool,
+    reset_enabled: bool,
     previous_snapshots: &[hive_core::usage_guard::UsageSnapshot],
 ) -> TurnObservation {
     let sampled_at = SystemTime::now();
@@ -1826,8 +1896,7 @@ fn observe_usage(
         ),
         Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
-    if threshold_enabled
-        && config.quota_reset_guard_enabled
+    if reset_enabled
         && decision.is_none()
         && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
         && !crate::usage_monitor::reset_already_dispatched(
@@ -1879,7 +1948,11 @@ fn evaluate_guard_decision(
             return decision;
         }
     }
-    evaluate_usage(policy, snapshots, &[], now)
+    if threshold_enabled {
+        evaluate_usage(policy, snapshots, &[], now)
+    } else {
+        evaluate_observation_only(policy, snapshots, now)
+    }
 }
 
 fn read_usage_snapshot(
@@ -2061,6 +2134,8 @@ fn allowed_result(
         next_action: None,
         data: Some(json!({
             "guard_enabled": true,
+            "policy_schema_version": if config.policy.is_some() {2} else {1},
+            "policy_evaluated":true,"enforcement_enabled":true,"enforced":true,"observation_required":true,
             "host_scope": binding.host_scope,
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
@@ -2313,7 +2388,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         global_runtime.is_some(),
     );
     let loaded = load_control(runtime, &binding)?;
-    let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
+    let currently_enabled = effective_enabled(&loaded, config.ordinary_enabled());
     let zero_action = matches!(
         arguments.action,
         SessionAction::EnableZeroQuotaGuard | SessionAction::DisableZeroQuotaGuard
@@ -2363,7 +2438,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         | SessionAction::EnableZeroQuotaGuard
         | SessionAction::DisableZeroQuotaGuard => currently_enabled,
     };
-    if desired_enabled && !config.guard_enabled {
+    if desired_enabled && !config.ordinary_enabled() {
         return Err(AdapterError::Safety(
             "the installed usage guard is disabled and cannot be enabled by a session override"
                 .to_owned(),
@@ -2540,7 +2615,7 @@ pub(crate) fn read_effective_config(
     let global_bytes = crate::user_install::read_user_setup_file(
         &root,
         Path::new(USER_CONFIG_PATH),
-        MAX_CONFIG_BYTES as u64,
+        crate::user_setup::MAX_USER_SETUP_BYTES,
     )
     .map_err(AdapterError::Safety)?
     .ok_or_else(|| AdapterError::Safety("global Hive setup is required".to_owned()))?;
@@ -2583,10 +2658,10 @@ pub(crate) fn read_effective_config(
         project_threshold: None,
         primary_host: host,
         guard_enabled: guard.threshold_enabled(),
-        codexbar_fallback_enabled: guard.threshold_enabled() && guard.codexbar_fallback_enabled,
+        codexbar_fallback_enabled: guard.projection_enabled() && guard.codexbar_fallback_enabled,
         quota_reset_guard_enabled: guard.reset_enabled(),
         policy: guard.policy.clone(),
-        discord_guard_enabled: guard.threshold_enabled() && guard.discord.enabled,
+        discord_guard_enabled: guard.projection_enabled() && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
         discord_message_fields: Vec::new(),
@@ -2612,9 +2687,9 @@ pub(crate) fn read_effective_config(
     effective.guard_enabled = guard.threshold_enabled();
     effective.policy.clone_from(&guard.policy);
     effective.codexbar_fallback_enabled =
-        guard.threshold_enabled() && guard.codexbar_fallback_enabled;
+        guard.projection_enabled() && guard.codexbar_fallback_enabled;
     effective.quota_reset_guard_enabled = guard.reset_enabled();
-    effective.discord_guard_enabled = guard.threshold_enabled() && guard.discord.enabled;
+    effective.discord_guard_enabled = guard.projection_enabled() && guard.discord.enabled;
     effective
         .discord_webhook_url_env
         .clone_from(&guard.discord.webhook_url_env);
@@ -3362,6 +3437,16 @@ mod tests {
     }
 
     fn write_disabled_policy(root: &std::path::Path, host: &str) {
+        let mut policy = hive_core::preferences::UsageProtection::from_legacy(true, true, true);
+        policy.enforcement_enabled = false;
+        write_version_two_policy(root, host, policy);
+    }
+
+    fn write_version_two_policy(
+        root: &std::path::Path,
+        host: &str,
+        policy: hive_core::preferences::UsageProtection,
+    ) {
         write_global_config(root, 20);
         let path = root.join(".hive/config/user-setup.yml");
         let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
@@ -3371,8 +3456,6 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .remove("enabled");
-        let mut policy = hive_core::preferences::UsageProtection::from_legacy(true, true, true);
-        policy.enforcement_enabled = false;
         config["usage_guard"].as_object_mut().unwrap().extend(
             serde_json::to_value(policy)
                 .unwrap()
@@ -3381,6 +3464,129 @@ mod tests {
                 .clone(),
         );
         fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+    }
+
+    fn write_current_capture(
+        root: &std::path::Path,
+        bound: &SessionBinding,
+        remaining: u8,
+        reset: u64,
+    ) {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut capture = valid_capture(bound);
+        capture["received_at_unix_seconds"] = json!(now);
+        capture["received_at_unix_millis"] = json!(now * 1000);
+        capture["expires_at_unix_seconds"] = json!(now + 120);
+        capture["windows"][0]["resets_at_unix_seconds"] = json!(reset);
+        capture["windows"][0]["remaining_percent"] = json!(remaining);
+        let path = root.join(claude_capture_path(&bound.session_digest).unwrap());
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, serde_json::to_vec(&capture).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn version_two_preflight_reasons_are_independent_across_all_flag_combinations() {
+        for bits in 0..8 {
+            let threshold = bits & 1 != 0;
+            let reset = bits & 2 != 0;
+            let zero = bits & 4 != 0;
+            let user = temporary_target();
+            let mut policy = hive_core::preferences::UsageProtection {
+                enforcement_enabled: true,
+                ..Default::default()
+            };
+            policy.preflight.threshold_enabled = threshold;
+            policy.preflight.reset_enabled = reset;
+            policy.preflight.zero_quota_enabled = zero;
+            write_version_two_policy(user.path(), "claude", policy);
+            let project = temporary_target();
+            fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+            fs::write(
+                project.path().join(".hive/config/harness.toml"),
+                installed_config("claude", true, false),
+            )
+            .unwrap();
+            let parsed = ParsedBinding {
+                session_id: "independent-flags".to_owned(),
+                process_id: 7,
+            };
+            let bound = bind_session(&parsed, "claude");
+            let args = EnforceArguments {
+                target: project.path().to_owned(),
+                binding: parsed,
+                user_root: Some(user.path().to_owned()),
+                host: Some("claude".to_owned()),
+                account_digest: None,
+                run_id: None,
+            };
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let cases = [
+                (
+                    10,
+                    now + 3600,
+                    if threshold {
+                        "hive.usage-limited"
+                    } else {
+                        "hive.usage-allowed"
+                    },
+                ),
+                (
+                    0,
+                    now + 3600,
+                    if zero {
+                        "hive.usage-quota-exhausted"
+                    } else if threshold {
+                        "hive.usage-limited"
+                    } else {
+                        "hive.usage-allowed"
+                    },
+                ),
+                (
+                    100,
+                    now + 7200,
+                    if reset {
+                        "hive.usage-reset"
+                    } else {
+                        "hive.usage-allowed"
+                    },
+                ),
+                (100, now + 7200, "hive.usage-allowed"),
+            ];
+            for (remaining, reset_at, expected) in cases {
+                write_current_capture(project.path(), &bound, remaining, reset_at);
+                let result = enforce(&args).unwrap();
+                assert_eq!(
+                    result.code,
+                    if bits == 0 {
+                        "hive.usage-preflight-disabled"
+                    } else {
+                        expected
+                    },
+                    "bits={bits}, remaining={remaining}"
+                );
+                if bits == 2 && remaining == 0 {
+                    let preflight = super::dispatch_preflight(
+                        project.path(),
+                        "claude",
+                        "independent-flags",
+                        7,
+                        Some(user.path()),
+                        "no-run",
+                        None,
+                        |_| Ok(()),
+                    )
+                    .unwrap();
+                    assert_eq!(preflight.result.code, "hive.usage-allowed");
+                    super::verify_dispatch_preflight(&preflight).unwrap();
+                }
+            }
+        }
     }
 
     #[test]
