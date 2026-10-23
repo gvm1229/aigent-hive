@@ -265,5 +265,11 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 ## 0.13.2 기능 호환·0% 보호
 
+- [기본 비활성화 계획·출시 보류](plans/active/usage-default-off-0.13.2.md)·[현재 선택](decisions/reset-stop-boundary.md#0132-기본-비활성화-설계)
 - [공개 시험 수용](research/public-test-0.13.2.md)·[실제 중단 검증](research/usage-compatibility-0.13.2.md)
 - [정식 게시·로컬 적용](plans/0.13.2-stable-release.md)·[승인 범위](plans/active/usage-compatibility-0.13.2.md)
+
+## 0.14.0 대화형 CLI
+
+- [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
+- [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)
