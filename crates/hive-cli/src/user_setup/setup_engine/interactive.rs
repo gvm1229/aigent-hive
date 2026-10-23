@@ -283,7 +283,14 @@ fn preliminary_result<R: BufRead, W: Write>(
         ));
     }
     if options.show {
-        return inspect_settings(config, snapshot, terminal, options.interaction.json).map(Some);
+        return inspect_settings(
+            &options.root,
+            config,
+            snapshot,
+            terminal,
+            options.interaction.json,
+        )
+        .map(Some);
     }
     if mode != InteractionMode::Terminal {
         return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
@@ -637,14 +644,29 @@ fn display_preview<R: BufRead, W: Write>(
 }
 
 fn inspect_settings<R: BufRead, W: Write>(
+    root: &Path,
     config: Option<&user_setup::UserSetupConfig>,
     snapshot: &ProgressSnapshot,
     terminal: &mut Terminal<R, W>,
     json_output: bool,
 ) -> Result<crate::ActionResult, SetupError> {
-    let policy = config.and_then(|c| c.usage_guard.policy.as_ref());
+    let migration = config
+        .map(|config| user_setup::migration::inspect(root, config))
+        .transpose()?
+        .flatten();
+    let policy = config
+        .and_then(|c| c.usage_guard.policy.as_ref())
+        .or_else(|| {
+            migration
+                .as_ref()
+                .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
+        });
     if !json_output {
-        if let Some(config) = config {
+        if let Some(config) = migration
+            .as_ref()
+            .map(|preview| &preview.candidate)
+            .or(config)
+        {
             let values = serde_json::to_value(config)
                 .map_err(|error| SetupError::Internal(error.to_string()))?;
             display_preview(&values, terminal)?;
@@ -664,7 +686,8 @@ fn inspect_settings<R: BufRead, W: Write>(
         "Stored settings and pending questions inspected",
         Some(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
-            "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":"not-inspected"}),
+            "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":"not-inspected",
+            "migration_preview":migration}),
         ),
         None,
     ))
@@ -737,6 +760,46 @@ mod tests {
             snapshot: store.load().unwrap(),
             fresh: true,
         }
+    }
+
+    #[test]
+    fn legacy_show_reports_independent_zero_guard_without_saving_migration_or_reading_input() {
+        let root = tempfile::tempdir().unwrap();
+        let mut stored = fresh_answers();
+        stored["schema_version"] = json!(1);
+        stored["interface_language"] = json!("ko");
+        stored["usage_guard"] = json!({"enabled":false,"stop_remaining_percent":5});
+        let bytes = serde_json::to_vec(&stored).unwrap();
+        let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let mut options = options(root.path());
+        options.show = true;
+        options.interaction.json = true;
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"no\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let shown = execute(&options, InteractionMode::NonInteractive, &mut terminal).unwrap();
+        assert_eq!(shown.code, "hive.setup-shown");
+        let data = shown.data.unwrap();
+        assert_eq!(data["stored"]["schema_version"], 1);
+        assert_eq!(
+            data["effective_usage"]["preflight"]["threshold_enabled"],
+            false
+        );
+        assert_eq!(
+            data["effective_usage"]["preflight"]["zero_quota_enabled"],
+            true
+        );
+        assert_eq!(data["migration_preview"]["candidate"]["schema_version"], 2);
+        assert_eq!(data["actual_monitor_state"], "not-inspected");
+        assert_eq!(terminal.reader.position(), 0);
+        assert!(terminal.writer.is_empty());
+        assert_eq!(std::fs::read(path).unwrap(), bytes);
+        assert!(!root.path().join(".hive/runtime").exists());
+        assert!(!root.path().join(".hive/config/setup-progress").exists());
     }
 
     #[test]

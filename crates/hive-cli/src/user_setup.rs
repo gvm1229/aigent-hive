@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod migration;
 mod progress_store;
 mod setup_engine;
 mod usage_preferences;

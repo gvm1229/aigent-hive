@@ -191,6 +191,32 @@ pub(crate) fn monitor_enabled(root: &PinnedTarget) -> bool {
         .is_some_and(|configuration| configuration.enabled)
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SavedMonitorChoice {
+    pub enabled: bool,
+    pub configured: bool,
+    pub config_digest: String,
+}
+
+pub(crate) fn inspect_saved_choice(user_root: &Path) -> Result<SavedMonitorChoice, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let before = root.snapshot_bounded(Path::new(CONFIG), 65536)?;
+    let choice = transition::selection(&root)?;
+    let after = root.snapshot_bounded(Path::new(CONFIG), 65536)?;
+    root.verify_current()?;
+    if before.bytes() != after.bytes() {
+        return Err(error("monitor choice changed during inspection"));
+    }
+    Ok(SavedMonitorChoice {
+        enabled: choice.unwrap_or(false),
+        configured: choice.is_some(),
+        config_digest: before
+            .bytes()
+            .map_or_else(|| "absent".to_owned(), sha256_digest),
+    })
+}
+
 pub(crate) fn threshold_already_handled(
     root: &PinnedTarget,
     policy: &crate::usage_control::MonitorPolicy,
