@@ -25,6 +25,8 @@ struct Receipt {
     phase: ProgressPhase,
     started_at_unix_nanos: u64,
     completed_at_unix_nanos: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    projection_digest: Option<String>,
 }
 
 fn path(id: &str) -> Result<PathBuf, SetupError> {
@@ -102,6 +104,7 @@ pub(super) fn record(
             phase,
             started_at_unix_nanos: recorded_now()?,
             completed_at_unix_nanos: None,
+            projection_digest: None,
         }
     };
     if receipt.schema_version != 1
@@ -135,6 +138,54 @@ pub(super) fn record(
     }
     replace_user_setup_file(&store.root, &relative, before.as_deref(), Some(&bytes))
         .map_err(SetupError::Conflict)
+}
+
+pub(super) fn projection_binding(
+    store: &ProgressStore,
+    progress: &SetupProgress,
+    desired: Option<&str>,
+) -> Result<Option<String>, SetupError> {
+    let relative = path(&progress.operation_id)?;
+    let before = read_user_setup_file(&store.root, &relative, LIMIT)
+        .map_err(SetupError::Conflict)?
+        .ok_or_else(|| SetupError::Verification("setup intent record is missing".into()))?;
+    let mut receipt: Receipt = serde_json::from_slice(&before)
+        .map_err(|_| SetupError::Verification("invalid setup intent record".into()))?;
+    if receipt.schema_version != 1
+        || receipt.operation != "setup"
+        || receipt.binding != store.binding
+        || receipt.operation_id != progress.operation_id
+        || receipt.before_digest != progress.base_config_digest
+        || receipt.candidate_digest
+            != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
+        || receipt.catalog_digest != progress.catalog_digest
+        || receipt.question_revision != progress.question_revision
+    {
+        return Err(SetupError::Conflict(
+            "setup projection intent changed".into(),
+        ));
+    }
+    if let Some(digest) = desired {
+        if !super::valid_hash(digest)
+            || receipt.phase == ProgressPhase::Complete
+            || receipt
+                .projection_digest
+                .as_deref()
+                .is_some_and(|prior| prior != digest)
+        {
+            return Err(SetupError::Conflict(
+                "setup projection journal changed".into(),
+            ));
+        }
+        if receipt.projection_digest.is_none() {
+            receipt.projection_digest = Some(digest.into());
+            let bytes = serde_json::to_vec_pretty(&receipt)
+                .map_err(|error| SetupError::Internal(error.to_string()))?;
+            replace_user_setup_file(&store.root, &relative, Some(&before), Some(&bytes))
+                .map_err(SetupError::Conflict)?;
+        }
+    }
+    Ok(receipt.projection_digest)
 }
 
 pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(), SetupError> {

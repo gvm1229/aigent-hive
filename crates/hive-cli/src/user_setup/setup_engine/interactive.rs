@@ -238,7 +238,7 @@ fn execute_inner<R: BufRead, W: Write>(
                 progress.phase,
                 ProgressPhase::Applying | ProgressPhase::RecoverableFailure
             ) {
-                return super::recovery::resume(&root_path, &progress, terminal.language);
+                return super::recovery::resume(&root_path, &progress, terminal.language, options.legacy_budget.is_some());
             }
             if !store.resume_ready(&progress) {
                 return Ok(pending(terminal.language, "hive.setup-resume-required"));

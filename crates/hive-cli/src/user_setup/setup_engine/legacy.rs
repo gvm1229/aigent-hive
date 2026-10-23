@@ -318,7 +318,10 @@ pub(super) fn apply(
     let applied = user_setup::execute_answers(
         arguments,
         answers,
-        user_setup::SetupBase::Expected(baseline.as_deref()),
+        user_setup::SetupBase::Bound {
+            expected: baseline.as_deref(),
+            progress,
+        },
     )?;
     let validation = user_setup::Arguments {
         answers: arguments.answers.clone(),

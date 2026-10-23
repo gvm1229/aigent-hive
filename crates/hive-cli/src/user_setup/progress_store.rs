@@ -278,8 +278,11 @@ impl ProgressStore {
             ));
         }
         let mut complete = prior.clone();
-        history::record(self, prior, ProgressPhase::Complete)?;
-        history::retain_completed(self, &prior.operation_id)?;
+        super::projection_journal::cleanup(
+            &self.root,
+            prior,
+            self.projection_binding(prior, None)?.as_deref(),
+        )?;
         let backup = recovery_path(prior)?;
         if let Some(bytes) = self.read(&backup)? {
             if optional_digest(Some(&bytes)) != prior.base_config_digest {
@@ -292,6 +295,8 @@ impl ProgressStore {
             replace_user_setup_file(&self.root, Path::new(LEGACY_PROGRESS), Some(bytes), None)
                 .map_err(SetupError::Conflict)?;
         }
+        history::record(self, prior, ProgressPhase::Complete)?;
+        history::retain_completed(self, &prior.operation_id)?;
         complete
             .base_config_digest
             .clone_from(&self.base_config_digest);
@@ -333,6 +338,19 @@ impl ProgressStore {
 
     pub fn record_failure(&self, prior: &SetupProgress) -> Result<(), SetupError> {
         history::record(self, prior, ProgressPhase::RecoverableFailure)
+    }
+
+    pub fn projection_binding(
+        &self,
+        progress: &SetupProgress,
+        desired: Option<&str>,
+    ) -> Result<Option<String>, SetupError> {
+        history::projection_binding(self, progress, desired)
+    }
+
+    pub fn questions_match(&self, progress: &SetupProgress) -> bool {
+        progress.catalog_digest == self.catalog_digest
+            && progress.question_revision == QUESTION_REVISION
     }
 
     fn read(&self, path: &Path) -> Result<Option<Vec<u8>>, SetupError> {

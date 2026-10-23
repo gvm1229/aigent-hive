@@ -1974,6 +1974,28 @@ pub(crate) fn recover_host_policy_file(
     after: &str,
     mode: Option<u32>,
 ) -> Result<(), String> {
+    let installed_mode = if cfg!(unix) { Some(mode.unwrap_or(0o600)) } else { None };
+    recover_bound_user_file(root, relative, before, after, mode, installed_mode)
+}
+
+pub(crate) fn recover_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<(), String> {
+    recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
+}
+
+fn recover_bound_user_file(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+    installed_mode: Option<u32>,
+) -> Result<(), String> {
     if let Some((parent, name)) =
         capability_parent(root, relative, false).map_err(|error| error.message().to_owned())?
     {
@@ -1998,10 +2020,8 @@ pub(crate) fn recover_host_policy_file(
                     let actual = host_policy_mode(root, relative)?;
                     let expected = if current == before {
                         mode
-                    } else if cfg!(unix) {
-                        Some(mode.unwrap_or(0o600))
                     } else {
-                        None
+                        installed_mode
                     };
                     if actual != expected {
                         return Err("host setting permissions changed during recovery".to_owned());
@@ -2019,18 +2039,13 @@ pub(crate) fn recover_host_policy_file(
             Err(error) => return Err(error.to_string()),
         }
     }
-    let installed_mode = if cfg!(unix) {
-        Some(mode.unwrap_or(0o600))
-    } else {
-        None
-    };
     let entry = UserBackupEntry {
         path: portable(relative),
         existed: before != "absent",
         digest: (before != "absent").then(|| before.to_owned()),
         installed_digest: (after != "absent").then(|| after.to_owned()),
         installed_executable: (after != "absent")
-            .then(|| !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0)),
+            .then(|| !cfg!(unix) || installed_mode.is_some_and(|value| value & 0o111 != 0)),
         installed_unix_mode: if after == "absent" {
             None
         } else {
@@ -6977,6 +6992,26 @@ mod tests {
     use crate::user_setup::DiscordGuardPreferences;
     use std::sync::Mutex;
     use tempfile::tempdir;
+
+    #[test]
+    fn setup_recovery_restores_a_claimed_file_before_resuming_its_replace() {
+        let temporary = tempdir().unwrap();
+        let (_, root) = open_canonical_user_root_for_setup(temporary.path()).unwrap();
+        let relative = Path::new(".agents/directives/00-hive-user.md");
+        replace_user_setup_file(&root, relative, None, Some(b"old directive")).unwrap();
+        let permissions = file_permissions(&root, relative).unwrap();
+        let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = cas_activate_with_barrier(&root, relative,
+                Some(ExpectedFile {bytes:b"old directive",permissions}), Some(b"new directive"),
+                FilePermissions {executable:false,unix_mode:None}, Some(&|_, _, _| panic!("injected interruption after claim")));
+        }));
+        assert!(interrupted.is_err());
+        assert!(!temporary.path().join(relative).exists());
+        recover_user_setup_file(&root, relative, &sha256_digest(b"old directive"), &sha256_digest(b"new directive"), permissions.unix_mode).unwrap();
+        assert_eq!(read_user_setup_file(&root, relative, 1024).unwrap(), Some(b"old directive".to_vec()));
+        replace_user_setup_file(&root, relative, Some(b"old directive"), Some(b"new directive")).unwrap();
+        assert_eq!(read_user_setup_file(&root, relative, 1024).unwrap(), Some(b"new directive".to_vec()));
+    }
 
     struct FakeRunner {
         calls: Mutex<Vec<String>>,

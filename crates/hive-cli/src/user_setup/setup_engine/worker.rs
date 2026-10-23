@@ -149,7 +149,10 @@ fn apply_request_using(
     let applied = execute(
         &arguments,
         &answers,
-        SetupBase::Expected(expected.as_deref()),
+        SetupBase::Bound {
+            expected: expected.as_deref(),
+            progress: &progress,
+        },
     )?;
     arguments.mode = SetupMode::Validate;
     execute(&arguments, &answers, SetupBase::Current)?;

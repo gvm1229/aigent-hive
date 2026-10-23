@@ -23,6 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod migration;
 mod progress_store;
+mod projection_journal;
 mod setup_engine;
 mod usage_preferences;
 pub(crate) use usage_preferences::UsageGuardPreferences;
@@ -474,21 +475,24 @@ struct UserProjectionBaseEntry {
     content: String,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct AppliedProjection {
     pub(crate) changes: Vec<ProjectionChange>,
     pub(crate) changed_paths: Vec<String>,
     pub(crate) reports: Vec<UserProjectionPathReport>,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ProjectionChange {
     pub(crate) path: PathBuf,
     pub(crate) before: Option<Vec<u8>>,
     pub(crate) after: Option<Vec<u8>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct UserProjectionPathReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<String>,
@@ -1392,6 +1396,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
 enum SetupBase<'a> {
     Current,
     Expected(Option<&'a [u8]>),
+    Bound { expected: Option<&'a [u8]>, progress: &'a progress_store::SetupProgress },
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1407,7 +1412,11 @@ fn execute_answers(
         MAX_USER_SETUP_BYTES,
     )
     .map_err(SetupError::Conflict)?;
-    if matches!(expected_config, SetupBase::Expected(expected) if expected != existing.as_deref()) {
+    let expected = match expected_config {
+        SetupBase::Expected(expected) | SetupBase::Bound { expected, .. } => Some(expected),
+        SetupBase::Current => None,
+    };
+    if expected.is_some_and(|expected| expected != existing.as_deref()) {
         return Err(SetupError::Conflict(
             "settings changed after the setup preview".to_owned(),
         ));
@@ -1423,6 +1432,13 @@ fn execute_answers(
     let catalog = parse_and_validate_catalog()?;
     let resolved_skills = resolve_skills(&config, &catalog)?;
     let desired = canonical_config(&config)?;
+    if let SetupBase::Bound { progress, .. } = expected_config {
+        let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
+        if store.load()?.progress.as_ref() != Some(progress) || !store.questions_match(progress) {
+            return Err(SetupError::Conflict("setup operation changed before activation".into()));
+        }
+        projection_journal::preflight(&arguments.root_cap, &store, progress)?;
+    }
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
     if matches!(arguments.mode, SetupMode::DryRun | SetupMode::Apply) {
@@ -1516,6 +1532,10 @@ fn execute_answers(
             let mut host_changed_paths = Vec::new();
             let mut activated_hosts = Vec::new();
             for host in &config.selected_hosts {
+                if matches!(expected_config, SetupBase::Bound { .. })
+                    && super::user_install::validate_configured_host(&arguments.user_root, *host, &config, &resolved_skills).is_ok() {
+                    continue;
+                }
                 match super::user_install::apply_configured_host(
                     &arguments.user_root,
                     *host,
@@ -1549,7 +1569,7 @@ fn execute_answers(
                 }
             }
             let projection =
-                apply_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)
+                apply_setup_projection(arguments, expected_config, &config, &resolved_skills, &desired)
                     .map_err(|primary| {
                         match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
                             Ok(()) => primary,
@@ -1630,6 +1650,17 @@ fn execute_answers(
                 &projection.reports,
             ))
         }
+    }
+}
+
+fn apply_setup_projection(arguments: &Arguments, base: SetupBase<'_>, config: &UserSetupConfig, skills: &[String], desired: &[u8]) -> Result<AppliedProjection, SetupError> {
+    if let SetupBase::Bound { progress, .. } = base {
+        let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
+        projection_journal::apply(&arguments.root_cap, &store, progress, || {
+            plan_user_projection(&arguments.root_cap, config, skills, desired)
+        })
+    } else {
+        apply_user_projection(&arguments.root_cap, config, skills, desired)
     }
 }
 
