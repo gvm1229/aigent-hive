@@ -231,14 +231,17 @@ fn execute_inner<R: BufRead, W: Write>(
     }
     let record = match snapshot.progress.clone() {
         Some(progress) if progress.phase != ProgressPhase::Complete => {
-            if !options.resume || !store.resume_ready(&progress) {
+            if !options.resume {
                 return Ok(pending(terminal.language, "hive.setup-resume-required"));
             }
             if matches!(
                 progress.phase,
                 ProgressPhase::Applying | ProgressPhase::RecoverableFailure
             ) {
-                return Ok(pending(terminal.language, "hive.setup-recovery-required"));
+                return super::recovery::resume(&root_path, &progress, terminal.language);
+            }
+            if !store.resume_ready(&progress) {
+                return Ok(pending(terminal.language, "hive.setup-resume-required"));
             }
             progress
         }
@@ -601,6 +604,11 @@ fn preview_apply<R: BufRead, W: Write>(
         return Ok(pending(terminal.language, "hive.update-input-pending"));
     }
     record_bundle_acceptance(progress, &displayed)?;
+    let _lease = if options.legacy_budget.is_none() {
+        Some(crate::user_install::lock_user_setup(root_cap).map_err(SetupError::Conflict)?)
+    } else {
+        None
+    };
     let bytes = serde_json::to_vec(&progress.answers)
         .map_err(|error| SetupError::Internal(error.to_string()))?;
     input
@@ -614,7 +622,7 @@ fn preview_apply<R: BufRead, W: Write>(
     store.record_applying(&progress.record)?;
     args.mode = user_setup::SetupMode::Apply;
     let application = if let Some(budget) = &options.legacy_budget {
-        super::worker::apply(&args, &bytes, existing, budget)
+        super::worker::apply(&args, &bytes, existing, &progress.operation_id, budget)
     } else {
         user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))
     };
@@ -762,7 +770,7 @@ fn inspect_settings<R: BufRead, W: Write>(
     ))
 }
 
-fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
+pub(super) fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
     result(
         "needs-input",
         2,

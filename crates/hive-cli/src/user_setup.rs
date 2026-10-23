@@ -1380,6 +1380,11 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
 
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
+    let _lease = if arguments.mode == SetupMode::Apply {
+        Some(crate::user_install::lock_user_setup(&arguments.root_cap).map_err(SetupError::Conflict)?)
+    } else {
+        None
+    };
     execute_answers(arguments, &answer_bytes, SetupBase::Current)
 }
 

@@ -246,7 +246,22 @@ impl ProgressStore {
     }
 
     pub fn record_completion(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        if prior.catalog_digest != self.catalog_digest
+            || prior.question_revision != QUESTION_REVISION
+        {
+            return Err(SetupError::Conflict(
+                "setup questions changed before completion".into(),
+            ));
+        }
         let snapshot = self.load()?;
+        if snapshot.progress.as_ref().is_some_and(|current| {
+            current.phase == ProgressPhase::Complete
+                && current.operation_id == prior.operation_id
+                && self.resume_ready(current)
+        }) {
+            // A worker may have durably completed before its parent receives the reply.
+            return history::confirm_completion(self, prior);
+        }
         if snapshot.progress.as_ref() != Some(prior) {
             return Err(SetupError::Conflict(
                 "setup progress changed before recording completion".to_owned(),
@@ -276,6 +291,26 @@ impl ProgressStore {
             ));
         }
         history::record(self, prior, ProgressPhase::Applying)
+    }
+
+    pub fn require_applying(
+        &self,
+        operation_id: &str,
+        answers: &Value,
+    ) -> Result<SetupProgress, SetupError> {
+        let progress = self
+            .load()?
+            .progress
+            .ok_or_else(|| SetupError::Conflict("setup apply has no saved operation".into()))?;
+        if progress.operation_id != operation_id
+            || progress.answers != *answers
+            || progress.phase != ProgressPhase::Applying
+            || !self.resume_ready(&progress)
+        {
+            return Err(SetupError::Conflict("setup apply operation changed".into()));
+        }
+        self.record_applying(&progress)?;
+        Ok(progress)
     }
 
     pub fn record_failure(&self, prior: &SetupProgress) -> Result<(), SetupError> {

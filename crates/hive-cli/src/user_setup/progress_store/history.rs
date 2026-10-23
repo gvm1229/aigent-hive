@@ -40,6 +40,36 @@ fn path(id: &str) -> Result<PathBuf, SetupError> {
     Ok(Path::new(DIRECTORY).join(format!("{id}.json")))
 }
 
+pub(super) fn confirm_completion(
+    store: &ProgressStore,
+    progress: &SetupProgress,
+) -> Result<(), SetupError> {
+    let bytes = read_user_setup_file(&store.root, &path(&progress.operation_id)?, LIMIT)
+        .map_err(SetupError::Conflict)?
+        .ok_or_else(|| SetupError::Verification("setup completion record is missing".into()))?;
+    let receipt: Receipt = serde_json::from_slice(&bytes)
+        .map_err(|_| SetupError::Verification("invalid setup completion record".into()))?;
+    if receipt.schema_version != 1
+        || receipt.operation != "setup"
+        || receipt.product_version != env!("CARGO_PKG_VERSION")
+        || receipt.operation_id != progress.operation_id
+        || receipt.binding != store.binding
+        || receipt.before_digest != progress.base_config_digest
+        || receipt.candidate_digest
+            != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
+        || receipt.catalog_digest != progress.catalog_digest
+        || receipt.question_revision != progress.question_revision
+        || receipt.phase != ProgressPhase::Complete
+        || receipt.after_digest.as_ref() != Some(&store.base_config_digest)
+        || receipt.completed_at_unix_nanos.is_none()
+    {
+        return Err(SetupError::Conflict(
+            "setup completion no longer matches".into(),
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn record(
     store: &ProgressStore,
     progress: &SetupProgress,

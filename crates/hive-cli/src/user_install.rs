@@ -1888,6 +1888,22 @@ pub(crate) fn read_user_setup_file(
     read_optional_regular(root, relative, maximum).map_err(|error| error.message().to_owned())
 }
 
+pub(crate) fn lock_user_setup(root: &Dir) -> Result<std::fs::File, String> {
+    let (parent, name) = capability_parent(root, Path::new(".hive/config/setup-apply.lock"), true)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "setup lock parent is unavailable".to_owned())?;
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create(true).follow(FollowSymlinks::No);
+    let file = parent.open_with(&name, &options)
+        .map_err(|_| "cannot open the owned setup lock".to_owned())?;
+    if !file.metadata().map_err(|_| "cannot inspect setup lock")?.is_file() {
+        return Err("setup lock is not a regular file".into());
+    }
+    let file = file.into_std();
+    file.try_lock().map_err(|_| "another setup apply or recovery is running".to_owned())?;
+    Ok(file)
+}
+
 pub(crate) fn replace_user_setup_file(
     root: &Dir,
     relative: &Path,

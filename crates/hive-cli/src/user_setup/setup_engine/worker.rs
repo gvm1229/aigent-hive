@@ -30,6 +30,7 @@ struct Request {
     catalog_digest: String,
     deadline_unix_millis: u64,
     user_root: PathBuf,
+    operation_id: String,
     answers: String,
     expected_config: Option<String>,
 }
@@ -95,6 +96,13 @@ fn receive_and_apply() -> Result<ActionResult, SetupError> {
 }
 
 fn apply_request(request: &Request) -> Result<ActionResult, SetupError> {
+    apply_request_using(request, user_setup::execute_answers)
+}
+
+fn apply_request_using(
+    request: &Request,
+    mut execute: impl FnMut(&Arguments, &[u8], SetupBase<'_>) -> Result<ActionResult, SetupError>,
+) -> Result<ActionResult, SetupError> {
     if request.schema_version != 1
         || request.package_version != env!("HIVE_PACKAGE_VERSION")
         || request.catalog_digest != hive_core::sha256_digest(super::QUESTIONS.as_bytes())
@@ -126,19 +134,27 @@ fn apply_request(request: &Request) -> Result<ActionResult, SetupError> {
     let expected = request.expected_config.as_deref().map(decode).transpose()?;
     let (root, cap) = crate::user_install::open_canonical_user_root_for_setup(&request.user_root)
         .map_err(SetupError::Conflict)?;
+    let _lease = crate::user_install::lock_user_setup(&cap).map_err(SetupError::Conflict)?;
+    let store = user_setup::progress_store::ProgressStore::open(&request.user_root, None)?;
+    let answer_value = serde_json::from_slice(&answers)
+        .map_err(|_| SetupError::Input("invalid setup worker answers".into()))?;
+    let progress = store.require_applying(&request.operation_id, &answer_value)?;
     let mut arguments = Arguments {
         answers: "stdin:setup-apply-worker".into(),
         mode: SetupMode::Apply,
         user_root: root,
         root_cap: cap,
     };
-    let applied = user_setup::execute_answers(
+    let applied = execute(
         &arguments,
         &answers,
         SetupBase::Expected(expected.as_deref()),
     )?;
     arguments.mode = SetupMode::Validate;
-    user_setup::execute_answers(&arguments, &answers, SetupBase::Current)?;
+    execute(&arguments, &answers, SetupBase::Current)?;
+    // Record success before writing the pipe; losing the reply must not repeat installation.
+    user_setup::progress_store::ProgressStore::open(&arguments.user_root, None)?
+        .record_completion(&progress)?;
     Ok(applied)
 }
 
@@ -146,6 +162,7 @@ pub(super) fn apply(
     arguments: &Arguments,
     answers: &[u8],
     expected: Option<&[u8]>,
+    operation_id: &str,
     budget: &LegacyBudget,
 ) -> Result<ActionResult, SetupError> {
     let deadline = budget.apply_deadline().ok_or_else(|| {
@@ -170,6 +187,7 @@ pub(super) fn apply(
             .unwrap_or(0),
         ),
         user_root: arguments.user_root.clone(),
+        operation_id: operation_id.to_owned(),
         answers: encode(answers),
         expected_config: expected.map(encode),
     };
@@ -308,9 +326,122 @@ mod tests {
             catalog_digest: hive_core::sha256_digest(super::super::QUESTIONS.as_bytes()),
             deadline_unix_millis: unix_millis().unwrap() + 90_000,
             user_root: root.to_owned(),
+            operation_id: "a".repeat(64),
             answers: base64::engine::general_purpose::STANDARD.encode(b"{}"),
             expected_config: None,
         }
+    }
+
+    #[test]
+    fn worker_persists_completion_before_reply_and_rejects_duplicate_activation() {
+        use user_setup::progress_store::{ProgressPhase, ProgressStore};
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let answers = serde_json::json!({"interface_language":"ko"});
+        let mut progress = store
+            .new_progress("user-language".into(), answers.clone())
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let mut request = request(root.path());
+        request.operation_id.clone_from(&progress.operation_id);
+        request.answers =
+            base64::engine::general_purpose::STANDARD.encode(serde_json::to_vec(&answers).unwrap());
+        let (_, cap) =
+            crate::user_install::open_canonical_user_root_for_setup(root.path()).unwrap();
+        let lease = crate::user_install::lock_user_setup(&cap).unwrap();
+        assert!(apply_request_using(&request, |_, _, _| panic!("concurrent activation")).is_err());
+        drop(lease);
+        let mut phases = Vec::new();
+        let result = apply_request_using(&request, |arguments, _, _| {
+            assert!(crate::user_install::lock_user_setup(&cap).is_err());
+            phases.push(arguments.mode);
+            Ok(ActionResult {
+                schema_version: 1,
+                action: "SetupHiveUser",
+                status: "success",
+                exit_code: 0,
+                code: "hive.user-setup-valid",
+                message: "fixture validation".into(),
+                changed_paths: Vec::new(),
+                evidence: Vec::new(),
+                next_action: None,
+                data: None,
+            })
+        })
+        .unwrap();
+        assert_eq!(phases, [SetupMode::Apply, SetupMode::Validate]);
+        // Discard the reply: a restarted parent still sees completion and cannot apply again.
+        drop(result);
+        assert_eq!(
+            store.load().unwrap().progress.unwrap().phase,
+            ProgressPhase::Complete
+        );
+        store.record_completion(&progress).unwrap();
+        assert!(apply_request_using(&request, |_, _, _| panic!("duplicate activation")).is_err());
+        let mut forged = progress.clone();
+        forged.answers["interface_language"] = serde_json::json!("en");
+        assert!(store.record_completion(&forged).is_err());
+    }
+
+    #[test]
+    fn changed_saved_answers_never_reach_the_worker_application() {
+        use user_setup::progress_store::{ProgressPhase, ProgressStore};
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = store
+            .new_progress(
+                "user-language".into(),
+                serde_json::json!({"interface_language":"ko"}),
+            )
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let mut request = request(root.path());
+        request.operation_id.clone_from(&progress.operation_id);
+        assert!(
+            apply_request_using(&request, |_, _, _| panic!("changed answers applied")).is_err()
+        );
+        assert_eq!(store.load().unwrap().progress.unwrap(), progress);
+    }
+
+    #[test]
+    fn validation_failure_never_records_completion() {
+        use user_setup::progress_store::{ProgressPhase, ProgressStore};
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = store
+            .new_progress("user-language".into(), serde_json::json!({}))
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let mut request = request(root.path());
+        request.operation_id.clone_from(&progress.operation_id);
+        let mut phases = Vec::new();
+        assert!(apply_request_using(&request, |arguments, _, _| {
+            phases.push(arguments.mode);
+            if arguments.mode == SetupMode::Validate {
+                return Err(SetupError::Verification("fixture validation failed".into()));
+            }
+            Ok(ActionResult {
+                schema_version: 1,
+                action: "SetupHiveUser",
+                status: "success",
+                exit_code: 0,
+                code: "hive.user-setup-valid",
+                message: "fixture apply".into(),
+                changed_paths: Vec::new(),
+                evidence: Vec::new(),
+                next_action: None,
+                data: None,
+            })
+        })
+        .is_err());
+        assert_eq!(phases, [SetupMode::Apply, SetupMode::Validate]);
+        assert_eq!(store.load().unwrap().progress.unwrap(), progress);
     }
 
     #[test]
