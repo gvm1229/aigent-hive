@@ -160,3 +160,5 @@ Derived SQLite와 advisory lock:
 | 기본 활성 소진 보호 | [en](en/zero-quota-safeguard.md) | [ko](ko/zero-quota-safeguard.md) |
 
 - [0.13.2 이전 사용량 보호 사실 본문 보존](../archive/facts/usage-guard-before-0.13.2.md)
+
+| 사용량 중단 기본 비활성화 계획 | [en](en/usage-default-off-scope.md) | [ko](ko/usage-default-off-scope.md) |
