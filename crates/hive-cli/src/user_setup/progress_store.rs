@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
+mod history;
+
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";
 const USER_PROGRESS: &str = ".hive/config/setup-progress/user.yml";
 const QUESTION_REVISION: u32 = 1;
@@ -251,11 +253,33 @@ impl ProgressStore {
             ));
         }
         let mut complete = prior.clone();
+        history::record(self, prior, ProgressPhase::Complete)?;
+        history::retain_completed(self, &prior.operation_id)?;
+        if let Some(bytes) = &snapshot.legacy {
+            replace_user_setup_file(&self.root, Path::new(LEGACY_PROGRESS), Some(bytes), None)
+                .map_err(SetupError::Conflict)?;
+        }
         complete
             .base_config_digest
             .clone_from(&self.base_config_digest);
         complete.phase = ProgressPhase::Complete;
+        // Completed progress is a resume receipt, not a second copy of free-form answers.
+        complete.answers = serde_json::json!({});
+        complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
+    }
+
+    pub fn record_applying(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        if self.load()?.progress.as_ref() != Some(prior) || !self.resume_ready(prior) {
+            return Err(SetupError::Conflict(
+                "setup changed before recording apply intent".to_owned(),
+            ));
+        }
+        history::record(self, prior, ProgressPhase::Applying)
+    }
+
+    pub fn record_failure(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        history::record(self, prior, ProgressPhase::RecoverableFailure)
     }
 
     fn read(&self, path: &Path) -> Result<Option<Vec<u8>>, SetupError> {

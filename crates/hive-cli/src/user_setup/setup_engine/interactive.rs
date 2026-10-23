@@ -591,11 +591,23 @@ fn preview_apply<R: BufRead, W: Write>(
         .map_err(|error| SetupError::Internal(error.to_string()))?;
     progress.phase = ProgressPhase::Applying;
     persist(store, progress)?;
+    store.record_applying(&progress.record)?;
     args.mode = user_setup::SetupMode::Apply;
     let applied =
-        user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+        match user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))
+        {
+            Ok(applied) => applied,
+            Err(failure) => {
+                store.record_failure(&progress.record)?;
+                return Err(failure);
+            }
+        };
     args.mode = user_setup::SetupMode::Validate;
-    user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)?;
+    if let Err(failure) = user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)
+    {
+        store.record_failure(&progress.record)?;
+        return Err(failure);
+    }
     ProgressStore::open(root, None)?.record_completion(&progress.record)?;
     let mut completed = result(
         "success",
