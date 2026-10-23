@@ -1304,6 +1304,29 @@ fn execute_command(
     command: &UserCommandArguments,
     runner: &impl CommandRunner,
 ) -> ActionResult {
+    if command.mode == UserMode::Apply {
+        match crate::update_bridge::maybe_setup(&command.user_root) {
+            Ok(Some(mut result)) => {
+                result.action = action_name(operation, command.mode);
+                return result;
+            }
+            Ok(None) => {}
+            Err(message) => {
+                return ActionResult {
+                    schema_version: 1,
+                    action: action_name(operation, command.mode),
+                    status: "needs-input",
+                    exit_code: 2,
+                    code: "hive.update-input-pending",
+                    message,
+                    changed_paths: Vec::new(),
+                    evidence: Vec::new(),
+                    next_action: Some(crate::update_bridge::resume_command(&command.user_root)),
+                    data: Some(json!({"settings_preserved":true,"legacy_interaction":"pending"})),
+                }
+            }
+        }
+    }
     let mut result = execute_hosts(operation, command, runner);
     if result.exit_code == 0
         && operation == UserOperation::Update

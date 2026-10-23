@@ -29,6 +29,26 @@ public sealed class HiveParentImage : IDisposable
     private static extern bool EnumProcessModulesEx(SafeProcessHandle process, [Out] IntPtr[] modules, uint bytes, out uint required, uint filter);
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool ReadProcessMemory(SafeProcessHandle process, IntPtr address, [Out] byte[] bytes, UIntPtr size, out UIntPtr count);
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CommandLineToArgvW(string command, out int count);
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr pointer);
+
+    public static string[] Arguments(string command)
+    {
+        if (String.IsNullOrEmpty(command) || command.Length > 32768) throw new ArgumentException("invalid parent command");
+        int count;
+        IntPtr parsed = CommandLineToArgvW(command, out count);
+        if (parsed == IntPtr.Zero) throw new Win32Exception("parent arguments unavailable");
+        try
+        {
+            if (count < 2 || count > 32) throw new ArgumentException("invalid parent argument count");
+            var arguments = new string[count];
+            for (int index = 0; index < count; index++) arguments[index] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(parsed, index * IntPtr.Size));
+            return arguments;
+        }
+        finally { LocalFree(parsed); }
+    }
 
     public HiveParentImage(int processId)
     {

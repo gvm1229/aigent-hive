@@ -39,6 +39,7 @@ mod session;
 mod source_wiki;
 mod update;
 mod update_activation;
+mod update_bridge;
 mod update_discovery;
 mod usage;
 mod usage_control;
@@ -204,8 +205,12 @@ struct SetupArguments {
 }
 
 fn main() -> ExitCode {
+    update_bridge::mark_process_start();
     let mut arguments: Vec<String> = env::args().skip(1).collect();
     display_options::configure(&mut arguments);
+    if arguments == ["__setup-apply-worker"] {
+        return user_setup::run_apply_worker();
+    }
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }
@@ -217,6 +222,10 @@ fn main() -> ExitCode {
     if arguments.first().map(String::as_str) == Some("__usage-monitor-qualification") {
         return usage_monitor::run_qualification(&arguments[1..]);
     }
+    dispatch(arguments)
+}
+
+fn dispatch(arguments: Vec<String>) -> ExitCode {
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")

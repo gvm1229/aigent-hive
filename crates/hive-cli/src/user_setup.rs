@@ -27,6 +27,24 @@ mod setup_engine;
 mod usage_preferences;
 pub(crate) use usage_preferences::UsageGuardPreferences;
 
+pub(crate) fn run_apply_worker() -> ExitCode {
+    setup_engine::run_apply_worker()
+}
+
+pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Duration {
+    setup_engine::command_timeout(requested)
+}
+
+#[cfg(windows)]
+pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
+    root: &Path,
+    reader: R,
+    writer: W,
+    budget: crate::update_bridge::LegacyBudget,
+) -> ActionResult {
+    setup_engine::update_with_terminal(root, reader, writer, budget)
+}
+
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
 const USER_FEATURE_ANSWERS_RELATIVE: &str = ".hive/config/user-feature-answers.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";

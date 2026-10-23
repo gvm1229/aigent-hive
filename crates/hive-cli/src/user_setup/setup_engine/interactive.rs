@@ -43,6 +43,7 @@ struct Options {
     show: bool,
     dry_run: bool,
     section: Option<String>,
+    legacy_budget: Option<crate::update_bridge::LegacyBudget>,
 }
 
 fn parse(arguments: &[String]) -> Result<Options, SetupError> {
@@ -53,6 +54,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         show: false,
         dry_run: false,
         section: None,
+        legacy_budget: None,
     };
     let mut seen = std::collections::BTreeSet::new();
     let mut scope = None;
@@ -130,6 +132,40 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
         eprintln!("{next}");
     }
     ExitCode::from(result.exit_code)
+}
+
+#[cfg(windows)]
+pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
+    root: &Path,
+    reader: R,
+    writer: W,
+    budget: crate::update_bridge::LegacyBudget,
+) -> crate::ActionResult {
+    let options = Options {
+        root: root.to_owned(),
+        interaction: InteractionRequest::default(),
+        resume: true,
+        show: false,
+        dry_run: false,
+        section: None,
+        legacy_budget: Some(budget),
+    };
+    let mut terminal = Terminal {
+        reader,
+        writer,
+        language: InterfaceLanguage::En,
+    };
+    let mut result = execute(&options, InteractionMode::Terminal, &mut terminal)
+        .unwrap_or_else(|failure| user_setup::failure(&failure));
+    if result.exit_code != 0 {
+        result.next_action = Some(crate::update_bridge::resume_command(root));
+    }
+    let _ = writeln!(terminal.writer, "{}", result.message);
+    if let Some(next) = &result.next_action {
+        let _ = writeln!(terminal.writer, "{next}");
+    }
+    let _ = terminal.writer.flush();
+    result
 }
 
 fn execute<R: BufRead, W: Write>(
@@ -557,6 +593,68 @@ fn preview_apply<R: BufRead, W: Write>(
     if options.dry_run || !terminal.confirm()? {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }
+    if options
+        .legacy_budget
+        .as_ref()
+        .is_some_and(|budget| budget.apply_deadline().is_none())
+    {
+        return Ok(pending(terminal.language, "hive.update-input-pending"));
+    }
+    record_bundle_acceptance(progress, &displayed)?;
+    let bytes = serde_json::to_vec(&progress.answers)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    input
+        .as_file_mut()
+        .set_len(0)
+        .and_then(|()| input.rewind())
+        .and_then(|()| input.write_all(&bytes))
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    progress.phase = ProgressPhase::Applying;
+    persist(store, progress)?;
+    store.record_applying(&progress.record)?;
+    args.mode = user_setup::SetupMode::Apply;
+    let application = if let Some(budget) = &options.legacy_budget {
+        super::worker::apply(&args, &bytes, existing, budget)
+    } else {
+        user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))
+    };
+    let applied = match application {
+        Ok(applied) => applied,
+        Err(failure) => {
+            store.record_failure(&progress.record)?;
+            return Err(failure);
+        }
+    };
+    if options.legacy_budget.is_none() {
+        args.mode = user_setup::SetupMode::Validate;
+        if let Err(failure) =
+            user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)
+        {
+            store.record_failure(&progress.record)?;
+            return Err(failure);
+        }
+    }
+    ProgressStore::open(root, None)?.record_completion(&progress.record)?;
+    let mut completed = result(
+        "success",
+        0,
+        "hive.user-setup-complete",
+        terminal.language,
+        "Hive 전역 설정 적용·검증 완료",
+        "Hive user setup applied and verified",
+        Some(
+            json!({"operation_id":progress.operation_id,"changed_file_count":applied.changed_paths.len(),"model_calls":0}),
+        ),
+        None,
+    );
+    completed.changed_paths = applied.changed_paths;
+    Ok(completed)
+}
+
+fn record_bundle_acceptance(
+    progress: &mut Conversation,
+    displayed: &hive_core::setup::QuestionCatalog,
+) -> Result<(), SetupError> {
     // The bundle confirmation records acceptance only for choices displayed above.
     let accepted_questions: Vec<_> = displayed
         .questions
@@ -581,48 +679,7 @@ fn preview_apply<R: BufRead, W: Write>(
             }
         }
     }
-    let bytes = serde_json::to_vec(&progress.answers)
-        .map_err(|error| SetupError::Internal(error.to_string()))?;
-    input
-        .as_file_mut()
-        .set_len(0)
-        .and_then(|()| input.rewind())
-        .and_then(|()| input.write_all(&bytes))
-        .map_err(|error| SetupError::Internal(error.to_string()))?;
-    progress.phase = ProgressPhase::Applying;
-    persist(store, progress)?;
-    store.record_applying(&progress.record)?;
-    args.mode = user_setup::SetupMode::Apply;
-    let applied =
-        match user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))
-        {
-            Ok(applied) => applied,
-            Err(failure) => {
-                store.record_failure(&progress.record)?;
-                return Err(failure);
-            }
-        };
-    args.mode = user_setup::SetupMode::Validate;
-    if let Err(failure) = user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)
-    {
-        store.record_failure(&progress.record)?;
-        return Err(failure);
-    }
-    ProgressStore::open(root, None)?.record_completion(&progress.record)?;
-    let mut completed = result(
-        "success",
-        0,
-        "hive.user-setup-complete",
-        terminal.language,
-        "Hive 전역 설정 적용·검증 완료",
-        "Hive user setup applied and verified",
-        Some(
-            json!({"operation_id":progress.operation_id,"changed_file_count":applied.changed_paths.len(),"model_calls":0}),
-        ),
-        None,
-    );
-    completed.changed_paths = applied.changed_paths;
-    Ok(completed)
+    Ok(())
 }
 
 fn display_preview<R: BufRead, W: Write>(
@@ -761,6 +818,7 @@ mod tests {
             show: false,
             dry_run: false,
             section: None,
+            legacy_budget: None,
         }
     }
 

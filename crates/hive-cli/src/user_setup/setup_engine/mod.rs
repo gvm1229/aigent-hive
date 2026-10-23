@@ -8,7 +8,12 @@ use serde_json::{json, Value};
 
 mod interactive;
 mod terminal;
+mod worker;
+#[cfg(windows)]
+pub(super) use interactive::update_with_terminal;
 pub(super) use interactive::{handles, run};
+pub(in crate::user_setup) use worker::command_timeout;
+pub(in crate::user_setup) use worker::run as run_apply_worker;
 
 pub(super) const QUESTIONS: &str = include_str!("../../../../../harness/setup/questions.yml");
 
