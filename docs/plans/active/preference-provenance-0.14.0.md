@@ -25,6 +25,7 @@
 | `policy_version`, `changed_in_version` | 당시 기본값 정책과 마지막 변경 제품 버전 |
 | `decided_at` | 실제 답변 시각. 출처 불명 이전값에는 null |
 | `value_digest` | 저장 선택 선언의 JCS SHA256. 상속은 상속 선언만 계산, 전역 값 변경을 직접 편집으로 오인 금지 |
+| `inherited_from` | 상속 출처의 범위와 부모 설정 포인터. 프로젝트 키와 전역 키가 다른 경우에도 실제 선언 보존 |
 
 - 직접 값 입력은explicit, 빠른 설정 일괄 수락이나 화면 기본값의 Enter 선택은accepted-default. inherited는 전역 값을 매번 계산하며 프로젝트에 독립 선택으로 복제하지 않는 원칙
 - AI가 저장한 값도 사용자 확인 증거가 없으면explicit로 승격 금지. 명시한 답안 파일의 적용 요청은 해당 입력값 선택으로 처리, 자동 보충 기본값과 구분
