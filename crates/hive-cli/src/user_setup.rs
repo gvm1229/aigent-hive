@@ -50,8 +50,9 @@ pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
     reader: R,
     writer: W,
     budget: crate::update_bridge::LegacyBudget,
+    hosts: &[String],
 ) -> ActionResult {
-    setup_engine::update_with_terminal(root, reader, writer, budget)
+    setup_engine::update_with_terminal(root, reader, writer, budget, hosts)
 }
 
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";

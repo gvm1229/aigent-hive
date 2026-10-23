@@ -57,6 +57,8 @@ pub(super) struct SetupProgress {
     pub answered_questions: std::collections::BTreeMap<String, u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub legacy_migration: Option<LegacyMigration>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub update_hosts: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -202,6 +204,7 @@ impl ProgressStore {
             selected_section: None,
             answered_questions: std::collections::BTreeMap::new(),
             legacy_migration: None,
+            update_hosts: Vec::new(),
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -383,6 +386,7 @@ impl ProgressStore {
     }
 
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
+        super::setup_engine::validate_update_hosts(progress)?;
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
             self.binding.scope != PreferenceScope::User
                 || !matches!(migration.from_schema, 1 | 2)

@@ -65,6 +65,7 @@ impl LegacyBudget {
 #[cfg(windows)]
 pub(crate) fn maybe_setup(
     user_root: &std::path::Path,
+    hosts: &[String],
 ) -> Result<Option<crate::ActionResult>, String> {
     // Unit-level installer calls are not child CLI entrypoints.
     if !std::env::args().any(|argument| argument == "--scope") {
@@ -75,7 +76,7 @@ pub(crate) fn maybe_setup(
         return Ok(None);
     };
     Ok(Some(crate::user_setup::update_with_terminal(
-        user_root, reader, writer, budget,
+        user_root, reader, writer, budget, hosts,
     )))
 }
 
@@ -83,6 +84,7 @@ pub(crate) fn maybe_setup(
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn maybe_setup(
     _user_root: &std::path::Path,
+    _hosts: &[String],
 ) -> Result<Option<crate::ActionResult>, String> {
     // POSIX still uses the existing preserving installer until its /dev/tty adapter is qualified.
     Ok(None)

@@ -1305,7 +1305,8 @@ fn execute_command(
     runner: &impl CommandRunner,
 ) -> ActionResult {
     if command.mode == UserMode::Apply {
-        match crate::update_bridge::maybe_setup(&command.user_root) {
+        let hosts: Vec<_> = command.hosts.iter().map(|host| host.as_str().to_owned()).collect();
+        match crate::update_bridge::maybe_setup(&command.user_root, &hosts) {
             Ok(Some(mut result)) => {
                 result.action = action_name(operation, command.mode);
                 return result;

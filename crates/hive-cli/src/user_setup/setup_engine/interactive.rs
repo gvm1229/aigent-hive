@@ -44,6 +44,7 @@ struct Options {
     dry_run: bool,
     section: Option<String>,
     legacy_budget: Option<crate::update_bridge::LegacyBudget>,
+    update_hosts: Vec<String>,
 }
 
 fn parse(arguments: &[String]) -> Result<Options, SetupError> {
@@ -55,6 +56,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         dry_run: false,
         section: None,
         legacy_budget: None,
+        update_hosts: Vec::new(),
     };
     let mut seen = std::collections::BTreeSet::new();
     let mut scope = None;
@@ -187,6 +189,7 @@ pub(super) fn execute_update<R: BufRead, W: Write>(
         dry_run: false,
         section: None,
         legacy_budget: None,
+        update_hosts: Vec::new(),
     };
     execute(&options, mode, terminal)
 }
@@ -197,6 +200,7 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
     reader: R,
     writer: W,
     budget: crate::update_bridge::LegacyBudget,
+    hosts: &[String],
 ) -> crate::ActionResult {
     let options = Options {
         root: root.to_owned(),
@@ -206,6 +210,7 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         dry_run: false,
         section: None,
         legacy_budget: Some(budget),
+        update_hosts: hosts.to_vec(),
     };
     let mut terminal = Terminal {
         reader,
@@ -273,6 +278,9 @@ fn execute_inner<R: BufRead, W: Write>(
         ));
     }
     let snapshot = store.load()?;
+    if let Some(progress) = snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete) {
+        super::host_scope::check_request(progress, &options.update_hosts)?;
+    }
     if config.is_none()
         && snapshot
             .progress
@@ -314,6 +322,8 @@ fn execute_inner<R: BufRead, W: Write>(
         snapshot,
         fresh: config.is_none(),
     };
+    super::host_scope::bind(&mut progress.record, &options.update_hosts, config.is_none(),
+        progress.snapshot.progress.as_ref().is_none_or(|p| p.phase == ProgressPhase::Complete))?;
     if progress.selected_section.is_none() {
         progress.selected_section.clone_from(&options.section);
     }
@@ -452,6 +462,7 @@ fn collect<R: BufRead, W: Write>(
     } else {
         InterfaceLanguage::En
     };
+    super::host_scope::announce(progress, terminal)?;
     if progress.fresh && progress.answers["preference_decisions"]["/wiki/language"].is_null() {
         progress.answers["wiki"]["language"] = progress.answers["interface_language"].clone();
     }
@@ -498,6 +509,9 @@ fn collect<R: BufRead, W: Write>(
         .filter(|q| q.scope == PreferenceScope::User)
     {
         if matches!(question.id.as_str(), "user-language" | "user-mode") {
+            continue;
+        }
+        if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
             continue;
         }
         if progress
@@ -928,6 +942,7 @@ mod tests {
             dry_run: false,
             section: None,
             legacy_budget: None,
+            update_hosts: Vec::new(),
         }
     }
 
@@ -1078,6 +1093,24 @@ mod tests {
             assert!(terminal.writer.is_empty());
             assert!(!root.path().join(".hive").exists());
         }
+    }
+
+    #[test]
+    fn frozen_update_keeps_selected_apps_after_language_without_repeating_host_question() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        super::super::host_scope::bind(&mut progress.record, &["antigravity".into()], true, true).unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"1\n\n\n"), writer: Vec::new(), language: InterfaceLanguage::En,
+        };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions,
+            &options(root.path()), &mut terminal).unwrap());
+        let shown = String::from_utf8(terminal.writer).unwrap();
+        assert!(shown.contains("앞서 선택한 앱에 갱신을 적용합니다: antigravity"));
+        assert!(!shown.contains("Hive를 사용할 앱"));
+        assert_eq!(progress.answers["selected_hosts"], json!(["antigravity"]));
+        assert!(!progress.answered_questions.contains_key("user-hosts"));
     }
 
     #[test]
