@@ -2522,10 +2522,10 @@ pub(crate) fn read_effective_config(
         global_threshold: Some(guard.stop_remaining_percent),
         project_threshold: None,
         primary_host: host,
-        guard_enabled: guard.enabled,
-        codexbar_fallback_enabled: guard.enabled && guard.codexbar_fallback_enabled,
-        quota_reset_guard_enabled: guard.quota_reset_guard_enabled,
-        discord_guard_enabled: guard.enabled && guard.discord.enabled,
+        guard_enabled: guard.threshold_enabled(),
+        codexbar_fallback_enabled: guard.threshold_enabled() && guard.codexbar_fallback_enabled,
+        quota_reset_guard_enabled: guard.reset_enabled(),
+        discord_guard_enabled: guard.threshold_enabled() && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
         discord_message_fields: Vec::new(),
@@ -2548,10 +2548,11 @@ pub(crate) fn read_effective_config(
         .max(guard.stop_remaining_percent);
     effective.global_threshold = Some(guard.stop_remaining_percent);
     effective.project_threshold = project_threshold;
-    effective.guard_enabled = guard.enabled;
-    effective.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
-    effective.quota_reset_guard_enabled = guard.quota_reset_guard_enabled;
-    effective.discord_guard_enabled = guard.enabled && guard.discord.enabled;
+    effective.guard_enabled = guard.threshold_enabled();
+    effective.codexbar_fallback_enabled =
+        guard.threshold_enabled() && guard.codexbar_fallback_enabled;
+    effective.quota_reset_guard_enabled = guard.reset_enabled();
+    effective.discord_guard_enabled = guard.threshold_enabled() && guard.discord.enabled;
     effective
         .discord_webhook_url_env
         .clone_from(&guard.discord.webhook_url_env);

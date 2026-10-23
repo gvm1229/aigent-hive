@@ -8476,9 +8476,11 @@ mod tests {
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
                 quota_reset_guard_enabled: true,
+                policy: None,
                 discord: DiscordGuardPreferences::default(),
                 project_overrides: BTreeMap::new(),
             },
+            preference_decisions: BTreeMap::new(),
         };
 
         let english = String::from_utf8(render_user_guidance(

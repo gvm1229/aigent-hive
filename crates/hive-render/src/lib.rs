@@ -398,6 +398,8 @@ struct SetupAnswers {
     user_store_binding: String,
     approved_optional_skills: Vec<SkillApproval>,
     approved_fallback_hooks: Vec<HookApproval>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    preference_decisions: hive_core::preferences::PreferenceDecisions,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -3013,7 +3015,7 @@ fn load_resolution(path: &Path) -> Result<CapabilityResolution, RenderError> {
 }
 
 fn validate_answers(answers: &SetupAnswers) -> Result<(), RenderError> {
-    if answers.schema_version != 1
+    if !matches!(answers.schema_version, 1 | 2)
         || answers.project_name.trim().is_empty()
         || !matches!(answers.setup_mode.as_str(), "expedited" | "custom")
         || !matches!(answers.project_kind.as_str(), "general" | "custom")
@@ -6404,7 +6406,7 @@ fn render_setup_answers(answers: &SetupAnswers) -> Result<Vec<u8>, RenderError> 
     };
     let mut output = format!(
         "# Generated from setup answers. Change values through a validated Hive reconfigure action.\n\
-schema_version: 1\n\
+schema_version: {}\n\
 project_name: {}\n\
 project_identity: {}\n\
 setup_mode: {}\n\
@@ -6413,6 +6415,7 @@ primary_host: {}\n\
 usage_stop_remaining_percent: {}\n\
 elevated_judge_quorum: {}\n\
 critical_judge_quorum: {}\n",
+        answers.schema_version,
         quote(&answers.project_name),
         quote(if answers.project_identity.is_empty() {
             &answers.project_name
@@ -6426,40 +6429,7 @@ critical_judge_quorum: {}\n",
         quote(&answers.elevated_judge_quorum),
         quote(&answers.critical_judge_quorum),
     );
-    if answers.setup_mode == "custom" {
-        append_yaml_key(
-            &mut output,
-            "interface_language",
-            answers
-                .interface_language
-                .as_ref()
-                .expect("validated custom setup has interface language"),
-        )?;
-        append_yaml_key(
-            &mut output,
-            "wiki",
-            answers
-                .wiki
-                .as_ref()
-                .expect("validated custom setup has Wiki preferences"),
-        )?;
-        append_yaml_key(
-            &mut output,
-            "persona",
-            answers
-                .persona
-                .as_ref()
-                .expect("validated custom setup has persona"),
-        )?;
-        append_yaml_key(
-            &mut output,
-            "skills",
-            answers
-                .skills
-                .as_ref()
-                .expect("validated custom setup has Skill selection"),
-        )?;
-    }
+    append_custom_setup_preferences(&mut output, answers)?;
     append_yaml_key(&mut output, "persistent_roles", &answers.persistent_roles)?;
     append_yaml_key(
         &mut output,
@@ -6495,7 +6465,55 @@ critical_judge_quorum: {}\n",
         "approved_fallback_hooks",
         &answers.approved_fallback_hooks,
     );
+    if !answers.preference_decisions.is_empty() {
+        append_yaml_key(
+            &mut output,
+            "preference_decisions",
+            &answers.preference_decisions,
+        )?;
+    }
     Ok(output.into_bytes())
+}
+
+fn append_custom_setup_preferences(
+    output: &mut String,
+    answers: &SetupAnswers,
+) -> Result<(), RenderError> {
+    if answers.setup_mode == "custom" {
+        append_yaml_key(
+            output,
+            "interface_language",
+            answers
+                .interface_language
+                .as_ref()
+                .expect("validated custom setup has interface language"),
+        )?;
+        append_yaml_key(
+            output,
+            "wiki",
+            answers
+                .wiki
+                .as_ref()
+                .expect("validated custom setup has Wiki preferences"),
+        )?;
+        append_yaml_key(
+            output,
+            "persona",
+            answers
+                .persona
+                .as_ref()
+                .expect("validated custom setup has persona"),
+        )?;
+        append_yaml_key(
+            output,
+            "skills",
+            answers
+                .skills
+                .as_ref()
+                .expect("validated custom setup has Skill selection"),
+        )?;
+    }
+    Ok(())
 }
 
 fn quote_approved_at_scalars(output: &mut String) {
@@ -6891,6 +6909,49 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/setup")
             .join(name)
+    }
+
+    #[test]
+    fn version_two_project_answers_keep_decisions_through_apply_and_validate() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path().join("project");
+        fs::create_dir(&target).unwrap();
+        let target = target.canonicalize().unwrap();
+        let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+        answers.schema_version = 2;
+        let decision = PreferenceDecision::new(
+            &serde_json::json!(answers.project_name),
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::Project,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        answers
+            .preference_decisions
+            .insert("/project_name".to_owned(), decision.clone());
+        let input = temporary.path().join("answers.yml");
+        fs::write(&input, render_setup_answers(&answers).unwrap()).unwrap();
+        let capabilities = fixture("capabilities-codex-host-native.json");
+        for mode in [SetupMode::Apply, SetupMode::Validate] {
+            execute_setup(&SetupRequest {
+                target: &target,
+                answers: &input,
+                capabilities: &capabilities,
+                mode,
+                reconfigure_roles: BTreeSet::new(),
+                global_preferences: None,
+            })
+            .unwrap();
+        }
+        let (stored, _) = load_answers(&target.join(".hive/setup-answers.yml")).unwrap();
+        assert_eq!(stored.schema_version, 2);
+        assert_eq!(stored.preference_decisions["/project_name"], decision);
+        assert_eq!(stored.persistent_roles, answers.persistent_roles);
     }
 
     #[test]

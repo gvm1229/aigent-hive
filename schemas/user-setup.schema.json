@@ -15,21 +15,54 @@
     "usage_guard"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "interface_language": { "enum": ["en", "ko"] },
-    "wiki": { "$ref": "#/$defs/wiki" },
-    "profile": { "$ref": "#/$defs/profile" },
-    "persona": { "$ref": "#/$defs/persona" },
+    "schema_version": {
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "interface_language": {
+      "enum": [
+        "en",
+        "ko"
+      ]
+    },
+    "wiki": {
+      "$ref": "#/$defs/wiki"
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    },
+    "persona": {
+      "$ref": "#/$defs/persona"
+    },
     "selected_hosts": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "enum": ["codex", "claude", "antigravity"] }
+      "items": {
+        "enum": [
+          "codex",
+          "claude",
+          "antigravity"
+        ]
+      }
     },
-    "skills": { "$ref": "#/$defs/skill_selection" },
-    "update_check": { "$ref": "#/$defs/update_check" },
-    "judge_invocation": { "$ref": "#/$defs/judge_invocation" },
-    "usage_guard": { "$ref": "#/$defs/usage_guard" }
+    "skills": {
+      "$ref": "#/$defs/skill_selection"
+    },
+    "update_check": {
+      "$ref": "#/$defs/update_check"
+    },
+    "judge_invocation": {
+      "$ref": "#/$defs/judge_invocation"
+    },
+    "usage_guard": {
+      "type": "object"
+    },
+    "preference_decisions": {
+      "$ref": "#/$defs/preference_decisions"
+    }
   },
   "$defs": {
     "nonempty_single_line": {
@@ -41,28 +74,62 @@
     "wiki": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["language"],
+      "required": [
+        "language"
+      ],
       "properties": {
-        "enabled": { "type": "boolean", "default": true },
-        "language": { "enum": ["en", "ko", "both"] },
-        "backend": { "const": "markdown", "default": "markdown" }
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "language": {
+          "enum": [
+            "en",
+            "ko",
+            "both"
+          ]
+        },
+        "backend": {
+          "const": "markdown",
+          "default": "markdown"
+        }
       }
     },
     "profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contexts"],
+      "required": [
+        "contexts"
+      ],
       "properties": {
         "contexts": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "enum": ["web-developer", "game-developer", "non-developer"] }
+          "items": {
+            "enum": [
+              "web-developer",
+              "game-developer",
+              "non-developer"
+            ]
+          }
         },
-        "description": { "$ref": "#/$defs/nonempty_single_line" }
+        "description": {
+          "$ref": "#/$defs/nonempty_single_line"
+        }
       },
       "anyOf": [
-        { "properties": { "contexts": { "minItems": 1 } } },
-        { "required": ["description"] }
+        {
+          "properties": {
+            "contexts": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "description"
+          ]
+        }
       ]
     },
     "persona": {
@@ -70,18 +137,33 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id"],
+          "required": [
+            "id"
+          ],
           "properties": {
-            "id": { "enum": ["strict", "balanced", "friendly"] }
+            "id": {
+              "enum": [
+                "strict",
+                "balanced",
+                "friendly"
+              ]
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "custom_description"],
+          "required": [
+            "id",
+            "custom_description"
+          ],
           "properties": {
-            "id": { "const": "custom" },
-            "custom_description": { "$ref": "#/$defs/nonempty_single_line" }
+            "id": {
+              "const": "custom"
+            },
+            "custom_description": {
+              "$ref": "#/$defs/nonempty_single_line"
+            }
           }
         }
       ]
@@ -123,22 +205,33 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode"],
+          "required": [
+            "mode"
+          ],
           "properties": {
-            "mode": { "const": "all" }
+            "mode": {
+              "const": "all"
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "selected"],
+          "required": [
+            "mode",
+            "selected"
+          ],
           "properties": {
-            "mode": { "const": "individual" },
+            "mode": {
+              "const": "individual"
+            },
             "selected": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
-              "items": { "$ref": "#/$defs/skill_name" }
+              "items": {
+                "$ref": "#/$defs/skill_name"
+              }
             }
           }
         }
@@ -148,25 +241,40 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": false }
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
       }
     },
     "judge_invocation": {
-      "enum": ["explicit", "implicit"],
+      "enum": [
+        "explicit",
+        "implicit"
+      ],
       "default": "explicit"
     },
     "usage_guard": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": true },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
         "stop_remaining_percent": {
           "type": "integer",
           "minimum": 0,
           "maximum": 99
         },
-        "codexbar_fallback_enabled": { "type": "boolean", "default": false },
-        "quota_reset_guard_enabled": { "type": "boolean", "default": true },
+        "codexbar_fallback_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "quota_reset_guard_enabled": {
+          "type": "boolean",
+          "default": true
+        },
         "project_overrides": {
           "type": "object",
           "propertyNames": {
@@ -186,13 +294,19 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean", "default": false },
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
             "webhook_url_env": {
               "type": "string",
               "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
             },
             "request_privacy": {
-              "enum": ["summary", "raw-prompt"],
+              "enum": [
+                "summary",
+                "raw-prompt"
+              ],
               "default": "summary"
             },
             "message_fields": {
@@ -224,17 +338,39 @@
           "allOf": [
             {
               "if": {
-                "properties": { "enabled": { "const": true } },
-                "required": ["enabled"]
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
               },
-              "then": { "required": ["webhook_url_env"] }
+              "then": {
+                "required": [
+                  "webhook_url_env"
+                ]
+              }
             },
             {
               "if": {
-                "properties": { "enabled": { "const": false } },
-                "required": ["enabled"]
+                "properties": {
+                  "enabled": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
               },
-              "then": { "not": { "required": ["webhook_url_env"] } }
+              "then": {
+                "not": {
+                  "required": [
+                    "webhook_url_env"
+                  ]
+                }
+              }
             }
           ]
         }
@@ -242,15 +378,328 @@
       "allOf": [
         {
           "if": {
-            "properties": { "enabled": { "const": false } },
-            "required": ["enabled"]
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            },
+            "required": [
+              "enabled"
+            ]
           },
           "then": {
-            "properties": { "codexbar_fallback_enabled": { "const": false } }
+            "properties": {
+              "codexbar_fallback_enabled": {
+                "const": false
+              }
+            }
           }
         }
       ],
-      "required": ["stop_remaining_percent"]
+      "required": [
+        "stop_remaining_percent"
+      ]
+    },
+    "preference_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "input_channel",
+        "scope",
+        "question_id",
+        "question_revision",
+        "policy_version",
+        "changed_in_version",
+        "decided_at",
+        "value_digest"
+      ],
+      "properties": {
+        "origin": {
+          "enum": [
+            "default",
+            "explicit",
+            "accepted-default",
+            "inherited",
+            "legacy-unknown",
+            "external-change"
+          ]
+        },
+        "input_channel": {
+          "enum": [
+            "terminal",
+            "answers-file",
+            "agent",
+            "migration"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "user",
+            "project"
+          ]
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "question_revision": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "changed_in_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "decided_at": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "value_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "preference_decisions": {
+      "type": "object",
+      "maxProperties": 512,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^/[^\\r\\n\\u0000]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/preference_decision"
+      }
+    },
+    "usage_guard_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stop_remaining_percent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99
+        },
+        "codexbar_fallback_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "project_overrides": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[^\\r\\n\\u0000]+$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "default": {}
+        },
+        "discord": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "webhook_url_env": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+            },
+            "request_privacy": {
+              "enum": [
+                "summary",
+                "raw-prompt"
+              ],
+              "default": "summary"
+            },
+            "message_fields": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "remaining-usage",
+                  "project",
+                  "request",
+                  "progress",
+                  "host",
+                  "resume",
+                  "measured-at",
+                  "evidence"
+                ]
+              },
+              "default": [
+                "remaining-usage",
+                "project",
+                "request",
+                "progress",
+                "host",
+                "resume"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "required": [
+                  "webhook_url_env"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "not": {
+                  "required": [
+                    "webhook_url_env"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "enforcement_enabled": {
+          "type": "boolean"
+        },
+        "warnings_enabled": {
+          "type": "boolean"
+        },
+        "preflight": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "threshold_enabled": {
+              "type": "boolean"
+            },
+            "reset_enabled": {
+              "type": "boolean"
+            },
+            "zero_quota_enabled": {
+              "type": "boolean"
+            },
+            "observation_failure": {
+              "enum": [
+                "warn",
+                "block"
+              ]
+            }
+          },
+          "required": [
+            "threshold_enabled",
+            "reset_enabled",
+            "zero_quota_enabled",
+            "observation_failure"
+          ]
+        },
+        "midway": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "threshold_enabled": {
+              "type": "boolean"
+            },
+            "reset_enabled": {
+              "type": "boolean"
+            },
+            "zero_quota_enabled": {
+              "type": "boolean"
+            },
+            "observation_failure": {
+              "enum": [
+                "warn",
+                "stop"
+              ]
+            }
+          },
+          "required": [
+            "enabled",
+            "threshold_enabled",
+            "reset_enabled",
+            "zero_quota_enabled",
+            "observation_failure"
+          ]
+        }
+      },
+      "required": [
+        "stop_remaining_percent",
+        "enforcement_enabled",
+        "warnings_enabled",
+        "preflight",
+        "midway"
+      ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 1
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "properties": {
+          "usage_guard": {
+            "$ref": "#/$defs/usage_guard"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "usage_guard": {
+            "$ref": "#/$defs/usage_guard_v2"
+          }
+        }
+      }
+    }
+  ]
 }

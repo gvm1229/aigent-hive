@@ -382,7 +382,9 @@ mod tests {
         )
         .unwrap();
         for effective_value in [true, false] {
-            assert!(!decision.matches_declaration(&json!(effective_value)).unwrap());
+            assert!(!decision
+                .matches_declaration(&json!(effective_value))
+                .unwrap());
             assert!(decision.matches_declaration(&declaration).unwrap());
         }
         assert!(!decision.matches_declaration(&json!(false)).unwrap());

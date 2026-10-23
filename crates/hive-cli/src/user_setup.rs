@@ -21,6 +21,9 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod usage_preferences;
+pub(crate) use usage_preferences::UsageGuardPreferences;
+
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
 const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
 const USER_FEATURE_ANSWERS_RELATIVE: &str = ".hive/config/user-feature-answers.yml";
@@ -293,28 +296,6 @@ fn default_discord_message_fields() -> Vec<DiscordMessageField> {
     ]
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct UsageGuardPreferences {
-    #[serde(default)]
-    pub(crate) enabled: bool,
-    pub(crate) stop_remaining_percent: u8,
-    #[serde(default)]
-    pub(crate) codexbar_fallback_enabled: bool,
-    /// Stop automatic work when a previously observed quota window refills.
-    #[serde(default = "default_quota_reset_guard_enabled")]
-    pub(crate) quota_reset_guard_enabled: bool,
-    #[serde(default)]
-    pub(crate) discord: DiscordGuardPreferences,
-    /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
-    #[serde(default)]
-    pub(crate) project_overrides: BTreeMap<String, u8>,
-}
-
-const fn default_quota_reset_guard_enabled() -> bool {
-    true
-}
-
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UpdateCheckPreferences {
@@ -361,6 +342,8 @@ pub(crate) struct UserSetupConfig {
     #[serde(default)]
     pub(crate) judge_invocation: JudgeInvocation,
     pub(crate) usage_guard: UsageGuardPreferences,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) preference_decisions: hive_core::preferences::PreferenceDecisions,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1725,7 +1708,7 @@ fn parse_and_validate_config_inner(
     }
     migrate_legacy_skill_names(&mut value)?;
     migrate_legacy_single_profile(&mut value);
-    if allow_legacy_recommended {
+    if allow_legacy_recommended && value["schema_version"] == 1 {
         migrate_legacy_missing_usage_threshold(&mut value);
     }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
@@ -1952,9 +1935,9 @@ fn validate_schema(schema_source: &str, value: &JsonValue, label: &str) -> Resul
 
 #[allow(clippy::too_many_lines)]
 fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError> {
-    if config.schema_version != 1 {
+    if !matches!(config.schema_version, 1 | 2) {
         return Err(SetupError::Input(
-            "user setup schema_version must be 1".to_owned(),
+            "user setup schema_version must be 1 or 2".to_owned(),
         ));
     }
     validate_user_profile(&config.profile)?;
@@ -2021,14 +2004,17 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
-    if !config.usage_guard.enabled && config.usage_guard.codexbar_fallback_enabled {
+    if config.schema_version == 1
+        && !config.usage_guard.threshold_enabled()
+        && config.usage_guard.codexbar_fallback_enabled
+    {
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
         ));
     }
     let discord = &config.usage_guard.discord;
     match (
-        config.usage_guard.enabled,
+        config.schema_version == 2 || config.usage_guard.threshold_enabled(),
         discord.enabled,
         discord.webhook_url_env.as_deref(),
     ) {
@@ -2404,7 +2390,7 @@ fn resolve_skills(
             )
         });
     }
-    if config.usage_guard.enabled {
+    if config.usage_guard.threshold_enabled() {
         selected.insert("usage-guard".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
@@ -3528,7 +3514,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         persona_id: config.persona.id,
         persona_custom_description: config.persona.custom_description,
         selected_project_skills,
-        usage_guard_enabled: config.usage_guard.enabled,
+        usage_guard_enabled: config.usage_guard.threshold_enabled(),
         codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
         discord_guard_enabled: config.usage_guard.discord.enabled,
         discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
@@ -3719,6 +3705,72 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    fn v2_config_value() -> JsonValue {
+        let mut value = serde_json::to_value(valid_config()).unwrap();
+        value["schema_version"] = json!(2);
+        let guard = value["usage_guard"].as_object_mut().unwrap();
+        guard.remove("enabled");
+        guard.remove("quota_reset_guard_enabled");
+        guard.extend(
+            serde_json::to_value(hive_core::preferences::UsageProtection::default())
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .clone(),
+        );
+        value
+    }
+
+    #[test]
+    fn version_two_roundtrip_preserves_policy_and_decision_together() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &value["wiki"]["enabled"],
+            DecisionOrigin::AcceptedDefault,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/wiki/enabled": decision});
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(!config.usage_guard.reset_enabled());
+        let stored = canonical_config(&config).unwrap();
+        let restored = parse_and_validate_installed_config(&stored).unwrap();
+        assert_eq!(restored, config);
+        assert_eq!(restored.preference_decisions["/wiki/enabled"], decision);
+        let stored: JsonValue = serde_yaml::from_slice(&stored).unwrap();
+        assert!(stored["usage_guard"].get("enabled").is_none());
+        assert_eq!(stored["usage_guard"]["enforcement_enabled"], false);
+    }
+
+    #[test]
+    fn schema_version_cannot_silently_change_a_policy_interpretation() {
+        let mut v2 = v2_config_value();
+        v2["schema_version"] = json!(1);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&v2).unwrap()).is_err());
+        let mut v1 = serde_json::to_value(valid_config()).unwrap();
+        v1["schema_version"] = json!(2);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&v1).unwrap()).is_err());
+    }
+
+    #[test]
+    fn version_two_keeps_saved_integration_choices_while_master_is_off() {
+        let mut value = v2_config_value();
+        value["usage_guard"]["codexbar_fallback_enabled"] = json!(true);
+        value["usage_guard"]["discord"]["enabled"] = json!(true);
+        value["usage_guard"]["discord"]["webhook_url_env"] = json!("HIVE_DISCORD_WEBHOOK_URL");
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(config.usage_guard.codexbar_fallback_enabled);
+        assert!(config.usage_guard.discord.enabled);
     }
 
     #[test]
