@@ -2807,6 +2807,7 @@ fn resume_inner(
                         "process_id": process_id,
                         "session_guard_digest": preflight.binding_digest(),
                         "notice": preflight.result.data.as_ref().and_then(|data| data.get("notice")),
+                        "notices": preflight.result.data.as_ref().and_then(|data| data.get("notices")),
                     }),
                 );
             }

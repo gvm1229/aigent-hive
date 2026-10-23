@@ -1562,6 +1562,20 @@ fn enforce_captured(
                 .map(|snapshot| snapshot.account_digest.as_str()),
         );
     }
+    let quota_notices = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .and_then(|duration| i64::try_from(duration.as_secs()).ok())
+        .filter(|_| observation.decision != Some("usage-unknown"))
+        .map_or_else(Vec::new, |now| {
+            notices::observe_quota(
+                arguments.user_root.as_deref(),
+                runtime,
+                &config,
+                &observation.snapshots,
+                now,
+            )
+        });
     let resumed_threshold = observation.decision == Some("halted")
         && crate::usage_monitor::threshold_already_handled(
             runtime,
@@ -1580,6 +1594,7 @@ fn enforce_captured(
             .as_mut()
             .and_then(serde_json::Value::as_object_mut)
         {
+            data.insert("notices".to_owned(), json!(quota_notices));
             data.insert(
                 "guard_enabled".to_owned(),
                 json!(effective_enabled(&loaded, config.guard_enabled)),
@@ -1732,6 +1747,9 @@ fn enforce_captured(
         ));
     }
     let mut result = halted_result(&binding, &published, changed);
+    if let Some(data) = result.data.as_mut() {
+        data["notices"] = json!(quota_notices);
+    }
     if let Some(data) = result
         .data
         .as_mut()
@@ -3659,6 +3677,54 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn valid_preflight_reports_low_and_zero_notices_without_changing_selected_checks() {
+        let user = temporary_target();
+        let mut policy = hive_core::preferences::UsageProtection {
+            enforcement_enabled: true,
+            ..Default::default()
+        };
+        policy.preflight.zero_quota_enabled = true;
+        write_version_two_policy(user.path(), "claude", policy);
+        let project = temporary_target();
+        fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+        fs::write(
+            project.path().join(".hive/config/harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let binding = ParsedBinding {
+            session_id: "quota-notice".to_owned(),
+            process_id: 7,
+        };
+        let bound = bind_session(&binding, "claude");
+        let arguments = EnforceArguments {
+            target: project.path().to_owned(),
+            binding,
+            user_root: Some(user.path().to_owned()),
+            host: Some("claude".to_owned()),
+            account_digest: None,
+            run_id: None,
+        };
+        let reset = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 3600;
+        write_current_capture(project.path(), &bound, 5, reset);
+        let first = enforce(&arguments).unwrap();
+        assert_eq!(first.code, "hive.usage-allowed");
+        assert_eq!(first.data.unwrap()["notices"][0]["kind"], "quota-low");
+        assert_eq!(
+            enforce(&arguments).unwrap().data.unwrap()["notices"],
+            json!([])
+        );
+        write_current_capture(project.path(), &bound, 0, reset);
+        let exhausted = enforce(&arguments).unwrap();
+        assert_eq!(exhausted.code, "hive.usage-quota-exhausted");
+        assert_eq!(exhausted.data.unwrap()["notices"][0]["kind"], "quota-empty");
     }
 
     #[test]

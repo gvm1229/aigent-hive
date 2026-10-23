@@ -4,6 +4,9 @@ use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+mod quota;
+pub(super) use quota::observe as observe_quota;
+
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct FailureEpisode {
