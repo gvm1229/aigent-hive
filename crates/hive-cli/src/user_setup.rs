@@ -3866,6 +3866,87 @@ usage_guard:
     }
 
     #[test]
+    fn version_two_values_and_decisions_are_replaced_together_and_resist_stale_writers() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let choice = |threshold: u8, origin| {
+            let mut value = v2_config_value();
+            value["usage_guard"]["stop_remaining_percent"] = json!(threshold);
+            let decision = PreferenceDecision::new(
+                &json!(threshold),
+                origin,
+                PreferenceInput::Terminal,
+                PreferenceScope::User,
+                "0.14.0",
+                Some(100),
+            )
+            .unwrap();
+            value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent":decision});
+            let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+            canonical_config(&config).unwrap()
+        };
+        let root = tempfile::tempdir().unwrap();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let path = Path::new(USER_SETUP_RELATIVE);
+        let first = choice(25, DecisionOrigin::Explicit);
+        super::super::user_install::replace_user_setup_file(&cap, path, None, Some(&first))
+            .unwrap();
+        let winner = choice(35, DecisionOrigin::AcceptedDefault);
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            path,
+            Some(&first),
+            Some(&winner),
+        )
+        .unwrap();
+        let stale = choice(45, DecisionOrigin::Explicit);
+        assert!(super::super::user_install::replace_user_setup_file(
+            &cap,
+            path,
+            Some(&first),
+            Some(&stale)
+        )
+        .is_err());
+        let stored =
+            super::super::user_install::read_user_setup_file(&cap, path, MAX_USER_SETUP_BYTES)
+                .unwrap()
+                .unwrap();
+        assert_eq!(stored, winner);
+        let config = parse_and_validate_installed_config(&stored).unwrap();
+        assert_eq!(config.usage_guard.stop_remaining_percent, 35);
+        let decision = &config.preference_decisions["/usage_guard/stop_remaining_percent"];
+        assert_eq!(decision.origin, DecisionOrigin::AcceptedDefault);
+        assert!(decision.matches_declaration(&json!(35)).unwrap());
+    }
+
+    #[test]
+    fn version_two_rejects_wrong_scope_or_invented_default_answer_time() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &json!(20),
+            DecisionOrigin::Default,
+            PreferenceInput::Migration,
+            PreferenceScope::User,
+            "0.14.0",
+            None,
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent":decision});
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["scope"] =
+            json!("project");
+        assert!(parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).is_err());
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["scope"] =
+            json!("user");
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["decided_at"] =
+            json!(100);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+
+    #[test]
     fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
         assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
     }
