@@ -12,22 +12,18 @@ sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:dff827b04011d7ad8ff7412543aaccfe570d63a10bb0370f4c52409544504cb4"
   - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b3f259173a92bf050ca26df5b462330ea4ce9d96bb9bca431b6a54700ddfea36"
   - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:ee4aa374f3452d250a376e66c1d1d49ce28c076b95aab8a8bdb9b155e05bca7e"
+  - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:cd9973f27fdd4952ee1936257cb4ed0f2f98d6b8033aa1f89fc2b93eefeb34fd"
+  - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
-  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:40d08d401f60962d70f8bb4fcb83b4f17b3b067d165e24db9f579cf364b63b2d"
+  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:7231f60877fd7d269ff3d3b9cc7851daefb42f75baef1682dacb4d9644feffe6"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:f901c85a4769dba3021471341fe9a14c0daba392661212bd233d852bfed80304"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
-reviewed_revision: "git:9fc4580a60a40af3161efb32b68726d66b41f294"
+reviewed_revision: "git:f6bec784d94c76ef79cda8ff28e60a0b05765805"
 status: active
 ---
 
 # 설치 범위 지식 수집
 
-전역 위키 활성 상태의 선택 호스트 사용자 지침: 설치 직후 모든 폴더의 매 턴 검토. 프로젝트 설정,
-Hive harness, project marker, 연결 collection: 안전한 user-root 수집의 전제 조건 아님. 미등록 target의
-자동 조회: project-private·confidential 지식을 제외한 user-root·shared collection 검색. 수집 방식:
-foreground agent 검토, 정규화, 제한된 범위. Background raw-prompt recorder: 미사용.
-
-`0.9.1` Windows 수용: knowledge 명령·Skill 요청이 아닌 PortareFolium 경력 배경 일반 발화 사용.
-동일 session의 user-root claim·index receipt 자동 생성과 별도 fresh Codex session의 미등록
-project 자동 회수 PASS.
+전역 위키 지침의 모든 선택 호스트 폴더 적용. 안전한 사용자 전역 지식 기록에 프로젝트 설정·하네스·표시 파일·연결 자료 모음 불필요. 미등록 조회의 비공개·기밀 제외. 에이전트 검토·정규화·제한된 전경 기록, 대화 원문 자동 수집 제외. 소진 확인 시 추가 도구 없이 기록·검사 연기, 새 요청의 정상 사용량 확인 뒤 재개.0.9.1 자동 기록·새 세션 회수 근거는 보존 문서 참조.

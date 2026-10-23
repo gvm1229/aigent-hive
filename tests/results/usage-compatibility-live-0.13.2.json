@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.2",
+  "package_version": "0.13.2-dev",
+  "host": "Windows 11 x64 Codex",
+  "desktop_version": "26.1016.8120.0",
+  "scope": "isolated source policy and controlled observations; real approved conversation interruption; no real user installation",
+  "cases": [
+    {
+      "name": "five-reasoning",
+      "result_sha256": "ac2010545595aa6eed8bce3b9a43f990558c471c3c3ec07c61627ed1ea85c8c2",
+      "role": "reasoning",
+      "configured_floor": 5,
+      "observation_scenario": "five",
+      "real_provider_reset": false,
+      "policy_context": "isolated source policy, exact projectless test subject",
+      "binary_sha256": "fc56e1ee6f8ae68c7ae8a04e231355047542b89dbf259c73505a139b73581384",
+      "collector_sha256": "7cd123b50cb299d4c4d90e522d0c44d4a0d026b5d65df3901e4e410610916178",
+      "ai_children_at_detection": 0,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "app_preserved": true,
+      "stop_receipt": {
+        "completed_at": 1792689813,
+        "scope_digest": "sha256:93e7e8b2a275c8f9a67c589037d16723351398a5b043c84ad55d1f29be44d77d",
+        "targeted_turns": 1,
+        "elapsed_ms": 664,
+        "request_ms": 240,
+        "app_alive": true
+      },
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "reset_reason": false,
+        "numeric_reason": true,
+        "close_action": true,
+        "no_unlock": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 2219,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_same_turn_stop": false,
+      "monitor_removed": true
+    },
+    {
+      "name": "reset-reasoning",
+      "result_sha256": "70b07f1f43176e2578a8578d0b385d841c1c8c9775c0c9e5db792ad2191ff614",
+      "role": "reasoning",
+      "configured_floor": 0,
+      "observation_scenario": "reset",
+      "real_provider_reset": false,
+      "policy_context": "isolated source policy, exact projectless test subject",
+      "binary_sha256": "fc56e1ee6f8ae68c7ae8a04e231355047542b89dbf259c73505a139b73581384",
+      "collector_sha256": "7cd123b50cb299d4c4d90e522d0c44d4a0d026b5d65df3901e4e410610916178",
+      "ai_children_at_detection": 0,
+      "tool_free_at_detection": true,
+      "native_interruption_verified": true,
+      "app_preserved": true,
+      "stop_receipt": {
+        "completed_at": 1792690134,
+        "scope_digest": "sha256:5f41072f65f120b967b24fcdfb6dad45b062f4ca4f91c4fbaa6a1e0d727e4289",
+        "targeted_turns": 1,
+        "elapsed_ms": 1078,
+        "request_ms": 164,
+        "app_alive": true
+      },
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "reset_reason": true,
+        "numeric_reason": false,
+        "close_action": true,
+        "no_unlock": true,
+        "floor_reason": false
+      },
+      "notice_visible_ms": 2745,
+      "component_failures": [],
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": true,
+      "repeated_same_turn_stop": false,
+      "monitor_removed": true
+    },
+    {
+      "name": "zero-shell-retry1",
+      "result_sha256": "0df58910aac2f93b8e98b0c087d639455e80faabe083e0a8b85612aaec33d559",
+      "role": "shell",
+      "configured_floor": 0,
+      "observation_scenario": "zero",
+      "real_provider_reset": false,
+      "policy_context": "isolated source policy, exact projectless test subject",
+      "binary_sha256": "fc56e1ee6f8ae68c7ae8a04e231355047542b89dbf259c73505a139b73581384",
+      "collector_sha256": "024997ba6a9a473bc995c19baf344caedbe13e975c1dbbdecdb7302bdf7ebd72",
+      "ai_children_at_detection": 0,
+      "tool_free_at_detection": false,
+      "native_interruption_verified": true,
+      "app_preserved": true,
+      "stop_receipt": {
+        "completed_at": 1792690422,
+        "scope_digest": "sha256:8f1354a3627dab82b45265630f6dcd12a38034c94ede01866a926cc2cd0922f0",
+        "targeted_turns": 1,
+        "elapsed_ms": 1161,
+        "request_ms": 228,
+        "app_alive": true
+      },
+      "notice": {
+        "confirmed": true,
+        "visible": true,
+        "reset_reason": false,
+        "numeric_reason": true,
+        "close_action": true,
+        "no_unlock": true,
+        "floor_reason": true
+      },
+      "notice_visible_ms": 6259,
+      "component_failures": [],
+      "zero_new_turn_blocked": true,
+      "zero_new_turn_receipt": {
+        "completed_at": 1792690528,
+        "scope_digest": "sha256:3c479a495fafb725d2a70a7a825032f1598adedc3798b9b296378df92983ac56",
+        "targeted_turns": 1,
+        "elapsed_ms": 758,
+        "request_ms": 94,
+        "app_alive": true
+      },
+      "external_command_scope": "already-started non-AI shell may continue; explicit option-2 authority",
+      "shell_child_exit_verified": false,
+      "notice_closed": true,
+      "notice_close_preserved_history": true,
+      "direct_resume_verified": false,
+      "repeated_same_turn_stop": false,
+      "monitor_removed": true
+    }
+  ],
+  "preserved_failure": {
+    "case": "zero-shell",
+    "reason": "collector checked the second receipt before publication",
+    "aggregate_passed": false,
+    "native_second_stop_was_later_confirmed": true,
+    "fixed_by": "bounded receipt wait and fresh zero-shell-retry1 run"
+  },
+  "real_reset": {
+    "detected_kst": "2026-10-23T02:09:50+09:00",
+    "installed_version": "0.13.1",
+    "observation_verified": true,
+    "interruption_verified": false,
+    "reason": "desktop-control-unavailable",
+    "prior_turn_completed_kst": "2026-10-23T02:09:39+09:00"
+  },
+  "limitations": [
+    "No real provider reset interruption proven by 0.13.2",
+    "No AI child subject in this acceptance",
+    "Already-started external shell may continue",
+    "No server billing or zero credit consumption guarantee"
+  ]
+}

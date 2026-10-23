@@ -66,7 +66,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Source development uses this installed product contract and global threshold. Never create a second source Skill, Python guard, watcher, or source-local threshold state.
 
-## Windows live interruption (0.13.1)
+## Windows live interruption (0.13.2)
 
 `hive usage monitor --help` exposes the installed version's monitor commands. Only its confirmed
 installation may create the current-user scheduled monitor. First show `preview --user-root
@@ -80,7 +80,7 @@ persistent connection is discarded; an independent fresh-process read gets its o
 limit. Either valid route preserves observation health. Failure retries are two seconds; never
 extend the 60-second rule to hide an error. Both routes use the same subscription provider,
 so they are not independent services during a provider outage. Keep the app open with a persistent reason/status window. Never
-terminate the app when control is unavailable. Only a qualified desktop version may connect. It never starts
+terminate the app when control is unavailable. The authenticated current-user desktop must pass the supported protocol checks; its package version is diagnostic metadata, not an allowlist. Connection, valid observation and confirmed interruption are separate results. It never starts
 model work, controls a remote/cloud run, or guarantees an account-percentage overshoot limit.
 
 Use `status` to distinguish saved opt-in, the actual live controller/version, observation route

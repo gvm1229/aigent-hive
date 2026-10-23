@@ -14,6 +14,10 @@ non-installation. Source-workspace and already activated user-level contracts re
 
 ## Mandatory memory gate
 
+An active usage halt takes priority over this gate. After quota exhaustion is observed, defer
+capture and lint without another tool call, checkpoint or cleanup. Review the durable claim
+only after a new request receives fresh allowed usage; never write during the halted turn.
+
 1. When Wiki is enabled, review every user turn and completed task before the final response.
    Select only a durable, reusable `preference`, `workflow`, `decision`, `convention`,
    `project-profile`, or verified `outcome`. A normal question or quick-answer is not a fact candidate.

@@ -9,10 +9,10 @@ summary: "Explicit prompt authoring requires execution approval; ambiguous work 
 tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:d9ec515a86f7c86a760de68c0b68edc70e4c11bdcb79c42524b403afd1218767"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:524f78114d3777a6bbb15d61d6221644ddf39a194ebbcd3f3b878d2d3f9ffdd1"
   - "repo:harness/skills/prompt-refine/SKILL.md#sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed"
 links: [orchestration-ownership, skill-routing]
-reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
+reviewed_revision: "git:0ee29cc7a10c6786f5d325569f85182e654cd4b1"
 status: active
 ---
 

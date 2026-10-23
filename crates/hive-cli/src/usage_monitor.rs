@@ -36,8 +36,7 @@ const BASE: &str = ".hive/runtime/usage-monitor";
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
 const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
-const DESKTOP_VERSION: &str = "26.1013.4894.0";
-const DESKTOP_VERSIONS: &[&str] = &[DESKTOP_VERSION, "26.1016.6573.0"];
+
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -380,8 +379,9 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
         "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
-        "automatic_control_available":cfg!(windows),"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
-            && observed && state.last_query_error.is_none() && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
+        "automatic_control_available":cfg!(windows),"compatibility_policy":"protocol","monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+            && observed && state.last_query_error.is_none() && state.control_compatibility.as_deref() == Some("compatible") && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
+        "desktop_compatibility":{"actual_version":state.desktop_version,"state":if !alive || !heartbeat_fresh {"unavailable"} else {state.control_compatibility.as_deref().unwrap_or("pending")},"stage":state.control_stage,"error":state.control_error},
         "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
         "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
     )
@@ -504,7 +504,7 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
     };
     let mut data = json!({"configuration":config,"adapter_digest":sha256_digest(platform::SCRIPT.as_bytes()),
         "poll_seconds":POLL_SECONDS,"sample_timeout_seconds":5,"retry_seconds":2,"unresponsive_seconds":BLIND_SECONDS,
-        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"qualified_desktop_package_version":DESKTOP_VERSION,"qualified_desktop_package_versions":DESKTOP_VERSIONS,"automatic_control_available":available,
+        "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"compatibility_policy":"protocol","automatic_control_available":available,
         "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
         "supports_current_os":available,"remote_execution_supported":false});
@@ -530,16 +530,11 @@ fn require_app_safe_control() -> Result<(), AdapterError> {
         ))
     }
 }
-fn require_desktop_version(inspection: &Value) -> Result<(), AdapterError> {
-    if inspection["desktop_package_version"]
-        .as_str()
-        .is_some_and(|version| DESKTOP_VERSIONS.contains(&version))
-    {
+fn require_desktop_inspection(inspection: &Value) -> Result<(), AdapterError> {
+    if inspection["available"] == true && inspection["app_count"].as_u64().is_some() {
         Ok(())
     } else {
-        Err(error(
-            "installed Codex desktop version requires session-control qualification",
-        ))
+        Err(error("cannot inspect the current-user Codex desktop"))
     }
 }
 fn prepare_activation(state: &mut MonitorState) {
@@ -572,7 +567,7 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
             "installed Hive Codex version differs; update it before enabling the monitor",
         ));
     }
-    require_desktop_version(&platform::call(
+    require_desktop_inspection(&platform::call(
         &json!({"operation":"inspect"}),
         Duration::from_secs(5),
     )?)?;
@@ -683,7 +678,7 @@ fn controller_scoped(
         &json!({"operation":"inspect","caller_pid":std::process::id()}),
         Duration::from_secs(5),
     )?;
-    require_desktop_version(&initial)?;
+    require_desktop_inspection(&initial)?;
     if let Some(tick) = initial["uptime_ms"].as_u64() {
         sensor::seed_uptime(tick);
     }
@@ -752,6 +747,36 @@ fn record_control(
 ) -> Result<(), AdapterError> {
     with_state(root, |s| {
         s.control_connected = control_connected;
+        if let Some(version) = packet["desktop_version"].as_str().filter(|v| v.len() <= 64) {
+            s.desktop_version = Some(version.into());
+        }
+        s.control_compatibility = Some(
+            if control_connected && packet["compatibility"] == "compatible" {
+                "compatible"
+            } else if control_connected && packet["compatibility"] == "incompatible" {
+                "incompatible"
+            } else if control_connected {
+                "pending"
+            } else {
+                "unavailable"
+            }
+            .into(),
+        );
+        s.control_stage = packet["compatibility_stage"]
+            .as_str()
+            .filter(|v| matches!(*v, "identity" | "initialize" | "observe" | "interrupt"))
+            .map(str::to_owned);
+        if let Some(reason) = packet["control_error"].as_str().filter(|v| {
+            v.starts_with("desktop-")
+                && v.len() <= 64
+                && v.bytes().all(|b| b.is_ascii_lowercase() || b == b'-')
+        }) {
+            s.control_error = Some(reason.into());
+        } else if control_connected {
+            s.control_error = None;
+        } else if s.control_error.is_none() {
+            s.control_error = Some("desktop-control-disconnected".into());
+        }
         s.control_stopping = packet["control_stopping"] == true;
         s.activity_observed_at =
             (control_connected && packet["activity_observed"] == true).then(now);
@@ -774,6 +799,7 @@ fn record_control(
                             if i.threshold_details.iter().any(|detail| {
                                 detail.session_digest == receipt.session_digest
                                     && detail.policy_digest == receipt.policy_digest
+                                    && detail.turn_digest == receipt.turn_digest
                             }) && confirmed.iter().any(|value| {
                                 value.as_str() == Some(receipt.session_digest.as_str())
                             }) {
@@ -801,6 +827,8 @@ fn record_sample(
     elapsed: u64,
     policies: &[crate::usage_control::MonitorPolicy],
 ) -> (bool, bool) {
+    #[cfg(debug_assertions)]
+    let measured = qualification::observation(root.requested_path(), measured);
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
         let result = state.record_query(measured, now());
@@ -960,6 +988,8 @@ fn controller_loop(
         while let Ok(packet) = desktop.events.try_recv() {
             if packet["type"] == "catalog" {
                 contexts = serde_json::from_value(packet["contexts"].clone()).unwrap_or_default();
+                #[cfg(debug_assertions)]
+                qualification::scope_contexts(root.requested_path(), &mut contexts);
                 next_policy = tick;
                 continue;
             }
@@ -1053,6 +1083,9 @@ fn controller_loop(
                 s.heartbeat = now();
                 s.heartbeat_uptime_ms = sensor::uptime_ms();
                 s.control_connected = control_connected;
+                if !control_connected {
+                    s.control_compatibility = Some("unavailable".into());
+                }
                 s.app_alive = active;
                 let _ = s.observation_gap_monotonic(active, now(), sensor::uptime_ms());
                 Ok(())
@@ -1066,6 +1099,26 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn live_contract_failure_and_disconnect_never_reuse_compatible_state() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        record_control(&root, &json!({"desktop_version":"99.0.0.0","compatibility":"compatible","compatibility_stage":"observe","activity_observed":true}), true, true).unwrap();
+        let state: MonitorState = load(&root, STATE).unwrap().unwrap();
+        assert_eq!(state.control_compatibility.as_deref(), Some("compatible"));
+        assert!(state.incident.is_none());
+        record_control(&root, &json!({"compatibility":"incompatible","compatibility_stage":"interrupt","control_error":"desktop-interrupt-protocol-mismatch"}), true, true).unwrap();
+        let state: MonitorState = load(&root, STATE).unwrap().unwrap();
+        assert_eq!(state.control_compatibility.as_deref(), Some("incompatible"));
+        record_control(&root, &json!({"connected":false}), true, false).unwrap();
+        let state: MonitorState = load(&root, STATE).unwrap().unwrap();
+        assert_eq!(state.control_compatibility.as_deref(), Some("unavailable"));
+        assert_eq!(
+            state.control_error.as_deref(),
+            Some("desktop-interrupt-protocol-mismatch")
+        );
+        assert!(state.activity_observed_at.is_none());
+    }
     #[test]
     fn explicit_reenable_does_not_reuse_a_disabled_observation_gap() {
         let mut state = MonitorState::new();
@@ -1149,15 +1202,18 @@ mod tests {
         assert!(!temporary.path().join(CONFIG).exists());
     }
     #[test]
-    fn desktop_package_qualification_is_exact() {
-        for version in DESKTOP_VERSIONS {
-            assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_ok());
-            assert!(include_str!("usage_monitor/desktop.ps1").contains(version));
+    fn desktop_inspection_does_not_gate_on_package_version() {
+        for version in ["26.1013.4894.0", "26.1016.8120.0", "99.0.0.0"] {
+            assert!(require_desktop_inspection(
+                &json!({"available":true,"app_count":1,"desktop_package_version":version})
+            )
+            .is_ok());
         }
-        for version in ["26.1007.9446.0", "26.1013.4894.1", ""] {
-            assert!(require_desktop_version(&json!({"desktop_package_version":version})).is_err());
-        }
-        assert!(require_desktop_version(&json!({})).is_err());
+        assert!(
+            require_desktop_inspection(&json!({"desktop_package_version":"26.1013.4894.0"}))
+                .is_err()
+        );
+        assert!(require_desktop_inspection(&json!({"available":false,"app_count":1})).is_err());
     }
     #[cfg(windows)]
     #[test]

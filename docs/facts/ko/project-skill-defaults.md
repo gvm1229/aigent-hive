@@ -9,11 +9,11 @@ summary: "프로젝트 기본 스킬"
 tags: [directive, project, skill]
 aliases: []
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:f68d23e2eb431d0a36193df9c26d59db5fdc8d00afc9dc00bf1588175e486c0c"
+  - "repo:crates/hive-render/src/lib.rs#sha256:0f57f976119a94d844faa5fbcab16eae37ed838041ffc9d089ebeb5b8a36ae3f"
   - "repo:harness/project-setup/skill-suites.yml#sha256:c120d17e58acb2d3731c6963ca478a281034952412cc0f3c1b2de43791db0ff5"
-  - "repo:schemas/setup-answers.schema.json#sha256:f9b463d937ba88b4ce5e1b9bc904cce5e15a0cfba4c347f9d9a29234ba994146"
+  - "repo:schemas/setup-answers.schema.json#sha256:fc6ee25893e4aeb8446d1b1c8b40db6fcf00c4685a47d53c2301b2690df50a27"
 links: [agent-directive-ownership, codex-skill-delivery]
-reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
+reviewed_revision: "git:0ee29cc7a10c6786f5d325569f85182e654cd4b1"
 status: active
 ---
 

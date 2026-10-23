@@ -947,7 +947,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "update_check": { "enabled": false },
         "judge_invocation": "explicit",
         "usage_guard": { "enabled": true,
-            "stop_remaining_percent": "<user-chosen-integer-1-to-99>",
+            "stop_remaining_percent": "<user-chosen-integer-0-to-99>",
             "codexbar_fallback_enabled": false,
             "discord": { "enabled": false, "request_privacy": "summary",
                 "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
@@ -989,7 +989,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
             "schema": schema,
             "catalog": catalog,
             "answer_template": example,
-            "answer_template_notice": "Usage protection is recommended. In Custom setup, replace <user-chosen-integer-1-to-99> with the user's own value before validation; Expedited setup uses 20% remaining.",
+            "answer_template_notice": "Usage protection is recommended. In Custom setup, replace <user-chosen-integer-0-to-99> with the user's own value before validation; Expedited setup uses 20% remaining.",
             "expedited_defaults": expedited_defaults,
             "question_order": question_order,
         })),
@@ -1994,9 +1994,9 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
-    if !(1..=99).contains(&config.usage_guard.stop_remaining_percent) {
+    if !(0..=99).contains(&config.usage_guard.stop_remaining_percent) {
         return Err(SetupError::Input(
-            "usage guard stop_remaining_percent must be between 1 and 99".to_owned(),
+            "usage guard stop_remaining_percent must be between 0 and 99".to_owned(),
         ));
     }
     for (project_identity, threshold) in &config.usage_guard.project_overrides {
@@ -2010,9 +2010,9 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
                     .to_owned(),
             ));
         }
-        if !(1..=99).contains(threshold) {
+        if !(0..=99).contains(threshold) {
             return Err(SetupError::Input(
-                "usage guard project override must be between 1 and 99".to_owned(),
+                "usage guard project override must be between 0 and 99".to_owned(),
             ));
         }
         if *threshold < config.usage_guard.stop_remaining_percent {
@@ -3385,8 +3385,8 @@ pub(crate) fn set_operational_usage_threshold(
     user_root: &Path,
     remaining_percent: u8,
 ) -> Result<UsageThresholdUpdate, String> {
-    if !(1..=99).contains(&remaining_percent) {
-        return Err("global usage threshold must be between 1 and 99".to_owned());
+    if !(0..=99).contains(&remaining_percent) {
+        return Err("global usage threshold must be between 0 and 99".to_owned());
     }
     let (_canonical_root, root) =
         super::user_install::open_canonical_user_root_for_setup(user_root)?;

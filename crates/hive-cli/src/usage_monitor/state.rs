@@ -94,6 +94,14 @@ pub(super) struct MonitorState {
     #[serde(default)]
     pub control_connected: bool,
     #[serde(default)]
+    pub desktop_version: Option<String>,
+    #[serde(default)]
+    pub control_compatibility: Option<String>,
+    #[serde(default)]
+    pub control_stage: Option<String>,
+    #[serde(default)]
+    pub control_error: Option<String>,
+    #[serde(default)]
     pub control_stopping: bool,
     #[serde(default)]
     pub active_turns: u64,

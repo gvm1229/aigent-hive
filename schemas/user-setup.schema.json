@@ -162,7 +162,7 @@
         "enabled": { "type": "boolean", "default": true },
         "stop_remaining_percent": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 99
         },
         "codexbar_fallback_enabled": { "type": "boolean", "default": false },
@@ -177,7 +177,7 @@
           },
           "additionalProperties": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 99
           },
           "default": {}

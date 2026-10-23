@@ -158,3 +158,5 @@ Derived SQLite와 advisory lock:
 | 0.12.0 범위 | [en](en/v0-11-2-scope.md) | [ko](ko/v0-11-2-scope.md) |
 
 | 기본 활성 소진 보호 | [en](en/zero-quota-safeguard.md) | [ko](ko/zero-quota-safeguard.md) |
+
+- [0.13.2 이전 사용량 보호 사실 본문 보존](../archive/facts/usage-guard-before-0.13.2.md)

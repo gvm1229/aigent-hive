@@ -14,6 +14,23 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[3]
 
 
+class ZeroReceiptTiming(unittest.TestCase):
+    def test_native_abort_waits_for_the_independent_controller_receipt(self):
+        helper = runpy.run_path(str(ROOT / "scripts/qualify-usage-threshold.py"))
+        wait = helper["wait_for_new_zero_stop"]
+        pending = {"generation": 2, "incident": {"stop_confirmed": False}}
+        confirmed = {"generation": 2, "incident": {
+            "reason": "usage-threshold", "stop_confirmed": True,
+            "confirmed_stop": {"request_ms": 163, "elapsed_ms": 494}}}
+        reads = mock.Mock(side_effect=[pending, confirmed])
+        pause = mock.Mock()
+        clock = SimpleNamespace(monotonic=mock.Mock(side_effect=[0, .1, .2]), sleep=pause)
+        with mock.patch.dict(wait.__globals__, {"read": reads, "time": clock}):
+            self.assertEqual(wait(Path("fixture-state.json"), 1), confirmed)
+        self.assertEqual(reads.call_count, 2)
+        pause.assert_called_once_with(.02)
+
+
 @unittest.skipUnless(os.name == "nt", "Windows shared-delete observer handles")
 class ThresholdCollectorReads(unittest.TestCase):
     def test_observer_permits_atomic_state_replacement_while_reading(self):

@@ -56,7 +56,7 @@
     },
     "usage_stop_remaining_percent": {
       "type": "integer",
-      "minimum": 1,
+      "minimum": 0,
       "maximum": 99
     },
     "elevated_judge_quorum": {

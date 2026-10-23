@@ -1,8 +1,8 @@
 //! Preserve the monitor choice and history while replacing its version-bound executable/task.
 use super::{
     configuration, error, load, lock, monitor_root_path, monitor_status, monitor_task_name, now,
-    platform, require_app_safe_control, require_desktop_version, task_request, with_state, write,
-    Configuration, BASE, CONFIG,
+    platform, require_app_safe_control, require_desktop_inspection, task_request, with_state,
+    write, Configuration, BASE, CONFIG,
 };
 use crate::run::{AdapterError, PinnedTarget};
 use hive_core::sha256_digest;
@@ -96,7 +96,7 @@ fn upgrade_with(
             write(root, JOURNAL, &journal)?;
             stage(root, &next)?;
             if old.enabled {
-                require_desktop_version(&call(
+                require_desktop_inspection(&call(
                     &json!({"operation":"inspect"}),
                     Duration::from_secs(5),
                 )?)?;
@@ -269,7 +269,7 @@ fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, A
 
 #[cfg(test)]
 mod tests {
-    use super::super::{MonitorState, DESKTOP_VERSION, STATE};
+    use super::super::{MonitorState, STATE};
     use super::*;
     use std::cell::RefCell;
 
@@ -435,7 +435,7 @@ mod tests {
                     assert!(lock(&root, "controller.lock").is_err());
                     return Err(error("injected scheduler refusal"));
                 }
-                Ok(json!({"desktop_package_version":DESKTOP_VERSION}))
+                Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"}))
             },
             |_, _| panic!("failed replacement cannot start health checks"),
         )
@@ -494,7 +494,7 @@ mod tests {
             &root,
             |request, _| {
                 calls.borrow_mut().push(request.clone());
-                Ok(json!({"desktop_package_version":DESKTOP_VERSION}))
+                Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"}))
             },
             |_, _| Ok(json!({"fresh_observations":4})),
         )
@@ -570,7 +570,7 @@ mod tests {
             &root,
             |request, _| {
                 calls.borrow_mut().push(request.clone());
-                Ok(json!({"desktop_package_version":DESKTOP_VERSION}))
+                Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"}))
             },
             |root, next| {
                 let state: MonitorState = load(root, STATE)?.unwrap();
@@ -610,7 +610,7 @@ mod tests {
         let (_directory, root) = fixture(true);
         assert!(upgrade_with(
             &root,
-            |_, _| Ok(json!({"desktop_package_version":DESKTOP_VERSION})),
+            |_, _| Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"})),
             |_, _| Err(error("injected fresh observation failure"))
         )
         .is_err());

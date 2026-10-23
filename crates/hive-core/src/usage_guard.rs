@@ -99,12 +99,12 @@ impl UsagePolicy {
     /// # Errors
     ///
     /// Returns [`UsagePolicyError::StopThresholdOutOfRange`] unless the
-    /// percentage is in the inclusive range `1..=99`.
+    /// percentage is in the inclusive range `0..=99`.
     pub fn with_stop_remaining_percent(
         mut self,
         stop_threshold_percent: u8,
     ) -> Result<Self, UsagePolicyError> {
-        if !(1..=99).contains(&stop_threshold_percent) {
+        if !(0..=99).contains(&stop_threshold_percent) {
             return Err(UsagePolicyError::StopThresholdOutOfRange {
                 value: stop_threshold_percent,
             });
@@ -159,7 +159,7 @@ impl UsagePolicy {
 /// Invalid policy configuration rejected before usage evaluation.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum UsagePolicyError {
-    /// The setup-approved stop threshold must be in `1..=99`.
+    /// The setup-approved stop threshold must be in `0..=99`.
     StopThresholdOutOfRange { value: u8 },
 }
 
@@ -821,7 +821,7 @@ mod tests {
 
     #[test]
     fn policy_accepts_only_setup_supported_threshold_overrides() {
-        for threshold in [1, 57, 99] {
+        for threshold in [0, 1, 57, 99] {
             let configured = policy()
                 .with_stop_remaining_percent(threshold)
                 .expect("supported threshold should be accepted");
@@ -830,7 +830,7 @@ mod tests {
                 f64::from(threshold).to_bits()
             );
         }
-        for threshold in [0, 100] {
+        for threshold in [100, 255] {
             assert_eq!(
                 policy().with_stop_remaining_percent(threshold),
                 Err(UsagePolicyError::StopThresholdOutOfRange { value: threshold })

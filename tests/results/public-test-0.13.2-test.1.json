@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "product_version": "0.13.2",
+  "package_version": "0.13.2-test.1",
+  "source_commit": "2a5ddffa0ef62207805e0516722e181d52ff8ade",
+  "candidate_run_id": 39847015866,
+  "publication_failed_run_id": 39849797782,
+  "publication_recovery_run_id": 39850912546,
+  "publication_failure": "npm Windows test-tag propagation deadline; same candidate recovered after all six official tags changed",
+  "acceptance_run_id": 39851671476,
+  "acceptance_platforms": {
+    "Windows x64": "passed",
+    "macOS arm64": "passed",
+    "Linux musl x64": "passed"
+  },
+  "final_acceptance": false,
+  "reason": "verification collector changed after publication: use 25 test assets instead of 29 stable assets; final acceptance requires test.2",
+  "distribution": {
+    "schema_version": 1,
+    "status": "passed",
+    "product_version": "0.13.2",
+    "package_version": "0.13.2-test.1",
+    "channel": "test",
+    "source_commit": "2a5ddffa0ef62207805e0516722e181d52ff8ade",
+    "release_url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.13.2-test.1",
+    "packages": [
+      {
+        "package": "aigent-hive",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "a0d048415166457af4083d26e63a1990fec44031659295af902d74c7013f43d7",
+        "sha512_integrity": "sha512-wPG23FB1zPtPZ4IbJOcGff2RzzXfnYsrfuIoAxDWBpv7YipSyeM7pGcoRSeyP1GvAvGp64Gn0cULExX2PW3d7g==",
+        "size": 17568,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/win32-x64",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "fb3fad95ea5fa747c2beeab9d752c7750788b569ebcf85d6dda2cbd8802bf2ad",
+        "sha512_integrity": "sha512-GSbLSrACZmunE18MOfJOYvtFj9G4PG1vvG+BcKRuEpn5S3ybvtKjLjitE6qbxDbVqycxB3o+LZNWDAubKEZ8Ng==",
+        "size": 11050180,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/darwin-arm64",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "6f87b9d30bccd9fb77087286da476dac0d7f20be58d9bfa96333ccb6d6e49025",
+        "sha512_integrity": "sha512-ShefS6mFY7SPyJj8/X1NPpdT4KQYMhmffEj0xdOeyYH0Kzyd8LoDFg7cZD9YvPtbLNCuwmWVMphX/U684saPdg==",
+        "size": 10644493,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/darwin-x64",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "1205dd056ef9f78a2c8b52e153c910aba34504775b98d542a3a3cb7265160d62",
+        "sha512_integrity": "sha512-PzeZkdBQ3/ASWG+ouZkCno5sFQELo0A20Bp2Q/Va8XiEireVeVBlBRGvyyE9eZZS+ezv8tGEsV/eeRrl61MVHw==",
+        "size": 11391103,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/linux-x64",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "5e9ef8ff4c1dd5b5068687250066a2a4233d8c822aac184724795c031923f2f0",
+        "sha512_integrity": "sha512-PEAYP4g2Zg6jMzw1mHJ0/Dq5SURthaQi8UI7kowFWfAo4EuLh7mfjzSP3oj7BQC5TCVUY4h3gET4qTut96P73g==",
+        "size": 11994017,
+        "npm_github_bytes_match": true
+      },
+      {
+        "package": "@aigent-hive/linux-arm64",
+        "version": "0.13.2-test.1",
+        "latest": "0.13.1",
+        "test": "0.13.2-test.1",
+        "sha256": "2348a08a13338ce5b701fd28934ba40323c0efcda4c3a73a162737522a2ba41a",
+        "sha512_integrity": "sha512-hInQVcFiPRKQFte1fYmjIQgBVv89dal9J11bwUJWx0G/b392eGW6YnBoViEI8xDkHlda/+L5585jQGacwtVLmQ==",
+        "size": 11508490,
+        "npm_github_bytes_match": true
+      }
+    ],
+    "github_asset_count": 25,
+    "assets": [
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.attestation.jsonl",
+        "size": 11194,
+        "sha256": "50199e7770fd6d6c8544c4c3330c300f646119a8d6fd31fae8ca16a373f093e8"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.tar.gz",
+        "size": 10346963,
+        "sha256": "f897c89f5ba7a2c50332cd48c9dfadb096ea11ff9474e849ceb9f1180f02554c"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-apple-darwin.tar.gz.sha256",
+        "size": 113,
+        "sha256": "6b56b3081b6de0c9dca6d097344c216f995b6bdf7dc26bef28e2633610ab3779"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.attestation.jsonl",
+        "size": 11096,
+        "sha256": "b91f510cb34e33e4e1a9ffcd8d96a1b08774f90287946e43779cf2400c8e0faf"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.tar.gz",
+        "size": 11228924,
+        "sha256": "9cdf29fe6411ed3311edeb254f6d3865cb645eafe1ee31e0e4d1223a2acc9556"
+      },
+      {
+        "name": "aigent-hive-0.13.2-aarch64-unknown-linux-musl.tar.gz.sha256",
+        "size": 119,
+        "sha256": "cae31fb91d8b21d52f5bb368467506e5b391c82d5132261b99859aec72c71256"
+      },
+      {
+        "name": "aigent-hive-0.13.2-test.1-npm-umbrella.attestation.jsonl",
+        "size": 10829,
+        "sha256": "328f32c59fa323321221bd9a378142671f97fd02d6930a6b14202c103eee728f"
+      },
+      {
+        "name": "aigent-hive-0.13.2-test.1.tgz",
+        "size": 17568,
+        "sha256": "a0d048415166457af4083d26e63a1990fec44031659295af902d74c7013f43d7"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.attestation.jsonl",
+        "size": 11182,
+        "sha256": "1b4c6c1b09ff2bb10a8b65e9ce5ab22b7187c06054d9dda7445a83f4733d4dec"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.tar.gz",
+        "size": 11273128,
+        "sha256": "0bb9ef2f489edbf197086d0400ff9211a6e9327597f2c251c2289389422c9e52"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-apple-darwin.tar.gz.sha256",
+        "size": 112,
+        "sha256": "cbd5161f4a078d93b89e3a1becb519a760257d6adb5a3907ad53f363dd835ae6"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.attestation.jsonl",
+        "size": 11089,
+        "sha256": "9b5ba21ea05f541fef88cde025b2d8fac749e08033c93cb78080e827e0101cb6"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.zip",
+        "size": 11146160,
+        "sha256": "f0e2f177176131031b4e5ab0d9bba1c2151862c5ab998289279a131966cbe243"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-pc-windows-msvc.zip.sha256",
+        "size": 113,
+        "sha256": "8ded9a1748794ad6a2d0b7d5c66ea23266d862b5ddb65e7258ac0711ed4c01cd"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.attestation.jsonl",
+        "size": 11280,
+        "sha256": "664f91a229ab2b6ea987f73506b3e245255965ba0b07456f91848aeffe41b6a7"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.tar.gz",
+        "size": 11885548,
+        "sha256": "0eaf8a267c02bcbe54453f06d8be58275d0bc33ed0c2ce3c14f31df09f36e0f4"
+      },
+      {
+        "name": "aigent-hive-0.13.2-x86_64-unknown-linux-musl.tar.gz.sha256",
+        "size": 118,
+        "sha256": "ad49fdd9ab88055254bec1259390230b3bd714263a9c5cb2fa771ae774bd9c34"
+      },
+      {
+        "name": "aigent-hive-darwin-arm64-0.13.2-test.1.tgz",
+        "size": 10644493,
+        "sha256": "6f87b9d30bccd9fb77087286da476dac0d7f20be58d9bfa96333ccb6d6e49025"
+      },
+      {
+        "name": "aigent-hive-darwin-x64-0.13.2-test.1.tgz",
+        "size": 11391103,
+        "sha256": "1205dd056ef9f78a2c8b52e153c910aba34504775b98d542a3a3cb7265160d62"
+      },
+      {
+        "name": "aigent-hive-linux-arm64-0.13.2-test.1.tgz",
+        "size": 11508490,
+        "sha256": "2348a08a13338ce5b701fd28934ba40323c0efcda4c3a73a162737522a2ba41a"
+      },
+      {
+        "name": "aigent-hive-linux-x64-0.13.2-test.1.tgz",
+        "size": 11994017,
+        "sha256": "5e9ef8ff4c1dd5b5068687250066a2a4233d8c822aac184724795c031923f2f0"
+      },
+      {
+        "name": "aigent-hive-win32-x64-0.13.2-test.1.tgz",
+        "size": 11050180,
+        "sha256": "fb3fad95ea5fa747c2beeab9d752c7750788b569ebcf85d6dda2cbd8802bf2ad"
+      },
+      {
+        "name": "install.cmd",
+        "size": 827,
+        "sha256": "acc1a8eb1b9beb01a9b2bf754ff321768fd5b730dfcbb4822234f0fd14ed3994"
+      },
+      {
+        "name": "install.ps1",
+        "size": 17713,
+        "sha256": "d17da22e2fd81a2f033069917e749d99b7e2dbc2c6b59eb83ef536ad27c6d180"
+      },
+      {
+        "name": "install.sh",
+        "size": 14463,
+        "sha256": "9d29289055335cb45fca10f7efb5ebc6fe4ca6188427fd501e17ae3b4aac0940"
+      }
+    ],
+    "annotated_tag_source_verified": true,
+    "real_user_installation_changed": false,
+    "limits": [
+      "Distribution bytes and source only; functional acceptance is separately bound to the exact public test."
+    ],
+    "collector_sha256": "b9278c82e4c2c9edff260aa095348f4f304f2c542abdd17858e38367fed158e0"
+  },
+  "windows_monitor_update": {
+    "host": "Windows 11 x64, Codex26.1016.8120.0",
+    "actual_execution": true,
+    "native_binary_sha256": "ee46c6ca9715d6f20b6cce82aa2429df547ed98dd157b662904995e0d540db13",
+    "disabled_choice_preserved": true,
+    "enabled_choice_preserved": true,
+    "actual_0131_refresh_failed": true,
+    "failure_code": "hive.user-update-monitor-incomplete",
+    "recovered_control": {
+      "actual_version": "26.1016.8120.0",
+      "error": null,
+      "stage": "observe",
+      "state": "compatible"
+    },
+    "normal_observations_before_followup": 4,
+    "normal_observations_after_followup": 4,
+    "query_elapsed_ms_range": [
+      574,
+      1383
+    ],
+    "derived_poll_start_interval_ms_range": [
+      15015,
+      15046
+    ],
+    "server_reflection_delay_measured": false,
+    "settings_knowledge_history_preserved": true,
+    "real_user_installation_changed": false,
+    "app_preserved": true,
+    "fixture_tasks_removed": true,
+    "scope": "simulated host plugin registration, real npm-owned public artifacts, real Windows scheduled tasks, actual native observations; incompatible old controller was not started",
+    "collector_sha256": "31f4719b403b111dd9377d69e94570f02c63c0686ccf6496e0d99efe18766676"
+  },
+  "diagnostics": [
+    {
+      "scope": "unrelated uncertain plugin activation recovery prototype",
+      "runs": [
+        "20261022T202058-929851ff770a",
+        "20261022T202202-256c55463ac3"
+      ],
+      "status": "failed expectation",
+      "reason": "unattributable pending host transitions intentionally refuse recovery; source-only synthetic roots, no real user change; excluded from monitor recovery acceptance"
+    }
+  ]
+}

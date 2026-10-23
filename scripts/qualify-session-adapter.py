@@ -87,8 +87,7 @@ def main() -> int:
     parser.add_argument("--thread", required=True)
     parser.add_argument("--app-pid", type=int, required=True)
     parser.add_argument("--app-created-ticks", type=int, required=True)
-    parser.add_argument("--package-version", choices=("26.1013.4894.0", "26.1016.6573.0"),
-                        default="26.1013.4894.0")
+    parser.add_argument("--package-version", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--interrupt", action="store_true")
     parser.add_argument("--hold-seconds", type=int, default=1, choices=range(0, 61))
@@ -140,9 +139,13 @@ def main() -> int:
                 if packet.get("connected"):
                     if packet.get("server_pid") != args.app_pid:
                         raise RuntimeError("Adapter connected to a different app")
+                    if packet.get("desktop_version") != args.package_version:
+                        raise RuntimeError("Observed package differs from the recorded app")
+                    if packet.get("compatibility") == "incompatible":
+                        raise RuntimeError("Desktop protocol incompatible")
                     return packet
-                if packet.get("error"):
-                    raise RuntimeError(packet["error"])
+                if packet.get("control_error") or packet.get("error"):
+                    raise RuntimeError(packet.get("control_error") or packet["error"])
             raise RuntimeError("Adapter deadline exceeded")
 
         send({"operation": "discover", "valid": True, "ids": [args.thread]})

@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.2 release-date=2026-10-23 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -89,6 +89,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.13.2`](releases/0.13.2.md) | 기능 호환 확인·0% 하한·소진 보호 |
 | [`0.13.1`](releases/0.13.1.md) | 하한 직접 중단·조회 회복·보존 갱신 보정 |
 | [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
@@ -253,3 +254,16 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [공개 시험 수용](research/public-test-0.13.1.md)·[정식 실행](plans/0.13.1-stable-release.md)
 - [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)
 - [0.13.1 정식 공개 확인](research/stable-release-0.13.1.md)·[공개 파일 검증](../tests/results/release-0.13.1-stable.md)
+
+- [초기화 비교 계획](plans/active/usage-baseline-0.13.1.md)·[갱신 보정 계획](plans/active/usage-upgrade-0.13.1.md)·[반복 갱신 검증](research/usage-upgrade-repeat-0.13.1.md)
+- [개발 설치 복구 계획](plans/active/developer-install-recovery.md)·[추가 지시 보존 결정](decisions/steering-preservation.md)
+
+## 0.13.2 호환·소진 보호
+
+- [승인 구현 계획](plans/active/usage-compatibility-0.13.2.md)·[현재 앱 실제 중단 검증](research/usage-compatibility-0.13.2.md)
+- [출시 범위 검토본](releases/0.13.2.md)·[미발송 구독자 안내 초안](releases/0.13.2.subscriber.ko.md)
+
+## 0.13.2 기능 호환·0% 보호
+
+- [공개 시험 수용](research/public-test-0.13.2.md)·[실제 중단 검증](research/usage-compatibility-0.13.2.md)
+- [정식 게시·로컬 적용](plans/0.13.2-stable-release.md)·[승인 범위](plans/active/usage-compatibility-0.13.2.md)

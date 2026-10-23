@@ -75,6 +75,43 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def test_zero_threshold_keeps_protection_and_rejects_exhausted_credits(self) -> None:
+        process, result = self.invoke("usage", "threshold", "--target", str(self.consumer),
+                                      "--remaining-percent", "0")
+        self.assertEqual(process.returncode, 0, result)
+        arguments = ("usage", "enforce", "--target", str(self.consumer), "--session-id", "zero-floor",
+                     "--process-id", "101", "--account-digest", ACCOUNT_DIGEST)
+        allowed, allowed_result = self.invoke(*arguments, sensor_case="threshold")
+        self.assertEqual(allowed.returncode, 0, allowed_result)
+        self.assertTrue(allowed_result["data"]["guard_enabled"])
+        self.assertTrue(allowed_result["data"]["zero_quota_guard_enabled"])
+        for case in ("zero", "zero-with-credits", "weekly-zero-session-high"):
+            blocked, blocked_result = self.invoke(*arguments, sensor_case=case)
+            self.assertEqual(blocked.returncode, 3, blocked_result)
+            self.assertEqual(blocked_result["code"], "hive.usage-quota-exhausted")
+        before = snapshot_tree(self.consumer)
+        for value in ("-1", "0.5", "100", "00"):
+            rejected, _ = self.invoke("usage", "threshold", "--target", str(self.consumer),
+                                      "--remaining-percent", value)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertEqual(snapshot_tree(self.consumer), before)
+
+    def test_global_zero_is_valid_and_preserves_a_higher_project_floor(self) -> None:
+        user_root = self.work_root / "zero-user"
+        config = user_root / ".hive/config/user-setup.yml"
+        config.parent.mkdir(parents=True)
+        config.write_text(USER_CONFIG, encoding="utf-8")
+        process, result = self.invoke("usage", "threshold", "--user-root", str(user_root),
+                                      "--remaining-percent", "0")
+        self.assertEqual(process.returncode, 0, result)
+        self.assertIn("stop_remaining_percent: 0", config.read_text(encoding="utf-8"))
+        status, result = self.invoke("usage", "status", "--target", str(self.consumer),
+                                    "--user-root", str(user_root), "--session-id", "zero-project",
+                                    "--process-id", "101")
+        self.assertEqual(status.returncode, 0, result)
+        self.assertEqual(result["data"]["global_threshold_remaining_percent"], 0)
+        self.assertEqual(result["data"]["threshold_remaining_percent"], 10)
+
     def test_token_summary_preserves_historical_overrun_without_guard_authority(self) -> None:
         historical = json.loads((REPOSITORY_ROOT / "tests/results/readiness-host-acceptance-2026-09-27.json").read_text(encoding="utf-8"))
         request = {

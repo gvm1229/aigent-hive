@@ -155,7 +155,7 @@ capability_resolution:
 usage_stop_remaining_percent:
   type: int
   help: 신뢰 가능한 subscription usage sensor가 있을 때 새 자율 작업을 중지할 사용자 선택 잔여 비율
-  validator: "{% if usage_stop_remaining_percent < 1 or usage_stop_remaining_percent > 99 %}1~99 사이 값을 입력해야 합니다{% endif %}"
+  validator: "{% if usage_stop_remaining_percent < 0 or usage_stop_remaining_percent > 99 %}0~99 사이 값을 입력해야 합니다{% endif %}"
 
 elevated_judge_quorum:
   type: str

@@ -3,7 +3,7 @@
 Read before any threshold, disable, enable, or toggle operation.
 
 7. Perform at most the explicitly requested control mutation:
-   - A global threshold requires explicit global intent and an integer from 1 through 99:
+   - A global threshold requires explicit global intent and an integer from 0 through 99:
 
      ```text
      hive usage threshold --user-root <user-root> --remaining-percent <percent> --output json
@@ -30,7 +30,12 @@ Read before any threshold, disable, enable, or toggle operation.
 
    - Toggle uses the same command with `--action toggle`. Include
      `--confirm-session-disable` whenever the result would disable enforcement.
+Zero is an enabled exhaustion floor, not a disable action. Positive subscription quota may run; zero quota stops work regardless of paid credits. Never promise zero credit consumption from periodic client-side interruption.
+
 ## Same-session policy recheck
+
+   Run each required usage check in its own tool call. Inspect its result before starting or
+   queuing further work; do not batch it with other work, including parallel calls.
 
    When a threshold mutation returns `session_recheck_required=true` for an active task, run
    `enforce` immediately with the same exact target, host, session id, process id, user root, and
@@ -75,6 +80,9 @@ Read before any threshold, disable, enable, or toggle operation.
   to be bypassed. Warn that the opt-out permits work that may use paid account credits.
 - Exhaustion returns exit `3` and `hive.usage-quota-exhausted`. Stop Hive-controlled work, keep the
   halt receipt, and report the exhausted window. A bare continue does not remove the stop.
+  After exhaustion is observed, do not call another tool for checkpoints, knowledge capture,
+  lint, Git, cleanup, or handoff records. Defer these operations; the guard's existing receipt
+  is sufficient. End with a short halt notice. New user requests require fresh allowed usage.
   A fresh positive observation can clear exhaustion; a newly detected quota increase can stop that
   request once while ordinary protection is enabled. The next request remeasures without a resume lock.
 - Report `zero_quota_guard_enabled` and `active_turn_interruption_verified`. Do not promise live

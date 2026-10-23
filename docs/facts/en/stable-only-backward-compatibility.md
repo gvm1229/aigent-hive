@@ -10,11 +10,11 @@ tags: [compatibility, provenance, release, v0-12-0]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:30e453d8375c22b0ec9ec56998fc472dace3fff8cea63ad7ad360d5ff4c19898"
-  - "repo:crates/hive-render/src/lib.rs#sha256:f68d23e2eb431d0a36193df9c26d59db5fdc8d00afc9dc00bf1588175e486c0c"
+  - "repo:crates/hive-render/src/lib.rs#sha256:0f57f976119a94d844faa5fbcab16eae37ed838041ffc9d089ebeb5b8a36ae3f"
   - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:958df30cdb8c19d4591eed2324587cd0cdb3fb90a30da8ef01daee015efc150e"
   - "repo:tests/results/acceptance-0.12.0-test.3.json#sha256:56a95cce7790c624305121943ac216f2651350f2b9325b8f61a24db566b89304"
 links: [source-development, v0-11-2-scope]
-reviewed_revision: "git:ccf59c00e326034d6d12ef9a9c8a52c91d5ff8cc"
+reviewed_revision: "git:55b0498374de1a10818ab15b2b0eda5fbb4a645d"
 status: active
 ---
 

@@ -290,9 +290,9 @@ fn prepare_update(
             "installed harness and source release versions differ".to_owned(),
         ));
     }
-    if !(1..=99).contains(&installed.usage_stop_remaining_percent) {
+    if !(0..=99).contains(&installed.usage_stop_remaining_percent) {
         return Err(UpdateError::Verification(
-            "installed usage threshold must be an integer from 1 through 99".to_owned(),
+            "installed usage threshold must be an integer from 0 through 99".to_owned(),
         ));
     }
     require_operational_update_prerequisites(&installed, &verified.manifest.release_version)?;

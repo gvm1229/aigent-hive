@@ -62,6 +62,14 @@ from pathlib import Path
 requested = sys.argv[1]
 root = Path(".")
 
+for host in ("codex", "claude"):
+    path = root / f"harness/plugins/aigent-hive/.{host}-plugin/plugin.json"
+    if json.loads(path.read_text(encoding="utf-8")).get("version") != requested:
+        raise SystemExit(f"{host} plugin metadata version differs from {requested}")
+providers = (root / "harness/template/.hive/config/skill-providers.json.jinja").read_text(encoding="utf-8")
+if re.findall(r'"product_version"\s*:\s*"([^"]+)"', providers) != [requested]:
+    raise SystemExit(f"Copier provider metadata version differs from {requested}")
+
 lock = tomllib.loads((root / "Cargo.lock").read_text(encoding="utf-8"))
 for package in lock["package"]:
     if package["name"].startswith("hive-") and package["version"] != requested:

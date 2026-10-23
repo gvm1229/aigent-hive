@@ -29,7 +29,7 @@ Inspect or change the installed usage safeguard.
 USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
-    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] --output json
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
     hive usage summarize-tokens --request <normalized-events.json> --output json
@@ -923,10 +923,10 @@ fn parse_threshold(arguments: &[String]) -> Result<ThresholdArguments, AdapterEr
     let remaining_percent = raw
         .parse::<u8>()
         .ok()
-        .filter(|value| (1..=99).contains(value) && value.to_string() == raw)
+        .filter(|value| (0..=99).contains(value) && value.to_string() == raw)
         .ok_or_else(|| {
             AdapterError::Input(
-                "--remaining-percent must be an integer from 1 through 99".to_owned(),
+                "--remaining-percent must be an integer from 0 through 99".to_owned(),
             )
         })?;
     let target = optional(&options, "--target").map(PathBuf::from);
@@ -2831,10 +2831,10 @@ fn threshold_range(bytes: &[u8]) -> Result<(u8, std::ops::Range<usize>), Adapter
                     let remainder = &digits[digit_len..];
                     if digit_len == 0
                         || !remainder.trim().is_empty()
-                        || digits[..digit_len].starts_with('0')
+                        || digit_len > 1 && digits[..digit_len].starts_with('0')
                     {
                         return Err(AdapterError::Safety(
-                            "installed usage threshold must be a plain integer from 1 to 99"
+                            "installed usage threshold must be a plain integer from 0 to 99"
                                 .to_owned(),
                         ));
                     }
@@ -2842,10 +2842,10 @@ fn threshold_range(bytes: &[u8]) -> Result<(u8, std::ops::Range<usize>), Adapter
                     let value = raw
                         .parse::<u8>()
                         .ok()
-                        .filter(|value| (1..=99).contains(value))
+                        .filter(|value| (0..=99).contains(value))
                         .ok_or_else(|| {
                             AdapterError::Safety(
-                                "installed usage threshold must be an integer from 1 to 99"
+                                "installed usage threshold must be an integer from 0 to 99"
                                     .to_owned(),
                             )
                         })?;
@@ -2966,7 +2966,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
             marker.selected_window.as_str(),
             "session" | "weekly" | "multiple" | "unknown"
         )
-        || !(1..=99).contains(&marker.threshold_remaining_percent)
+        || !(0..=99).contains(&marker.threshold_remaining_percent)
         || marker
             .policy_digest
             .as_deref()

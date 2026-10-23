@@ -99,7 +99,7 @@ elif case == "weekly-low-session-high":
     secondary_used = 92
 elif case == "weekly-zero-session-high":
     secondary_used = 100
-elif case == "zero":
+elif case in ("zero", "zero-with-credits"):
     primary_used = secondary_used = 100
 elif case == "remaining-increase":
     primary_used = 30
@@ -186,6 +186,8 @@ row = {
     "usage": usage,
 }
 rows = [row]
+if case == "zero-with-credits":
+    row["credits"] = {"hasCredits": True, "balance": 1000, "unlimited": False}
 if case == "duplicate-account":
     rows.append(copy.deepcopy(row))
 

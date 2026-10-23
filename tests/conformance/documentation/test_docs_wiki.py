@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,7 +17,28 @@ DOCS = ROOT / "docs"
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+\.md(?:#[^)]+)?)\)")
 
 
+def tracked_docs_markdown(root: Path) -> set[Path]:
+    names = subprocess.check_output(
+        ["git", "-c", "core.fsmonitor=false", "-C", str(root), "ls-files", "-z", "--", "docs"],
+    ).decode("utf-8").split("\0")
+    return {(root / name).resolve() for name in names if name.endswith(".md")}
+
+
 class DocsWikiConformance(unittest.TestCase):
+    def test_inventory_keeps_staged_orphans_without_claiming_untracked_drafts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="hive-doc-inventory-") as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "docs").mkdir()
+            tracked = root / "docs/orphan.md"
+            draft = root / "docs/private-draft.md"
+            tracked.write_text("# Tracked orphan\n", encoding="utf-8")
+            draft.write_text("# Untracked draft\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "--", "docs/orphan.md"], check=True)
+            self.assertEqual(tracked_docs_markdown(root), {tracked.resolve()})
+            subprocess.run(["git", "-C", str(root), "add", "--", "docs/private-draft.md"], check=True)
+            self.assertEqual(tracked_docs_markdown(root), {tracked.resolve(), draft.resolve()})
+
     def test_document_home_reaches_every_tracked_docs_markdown_file(self) -> None:
         pending = [DOCS / "00-home.md"]
         reached: set[Path] = set()
@@ -44,7 +67,7 @@ class DocsWikiConformance(unittest.TestCase):
 
         expected = {
             path.resolve()
-            for path in DOCS.rglob("*.md")
+            for path in tracked_docs_markdown(ROOT)
             if not path.relative_to(DOCS).as_posix().startswith("archive/")
             or path.relative_to(DOCS).as_posix()
             in {"archive/README.md", "archive/MANIFEST.md"}

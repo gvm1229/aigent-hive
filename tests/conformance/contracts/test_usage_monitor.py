@@ -596,21 +596,22 @@ if($stop.verifyUntil -ne $until -or $actions.Count -ne $count -or -not (Stop-Fin
         source+="if(-not $blocked -or ('HiveDesktopPipe' -as [type])){throw 'Desktop transport was loaded'};@{blocked_before_native_code=$true}|ConvertTo-Json -Compress"
         self.assertTrue(self.powershell(source)["blocked_before_native_code"])
 
-    def test_desktop_version_and_qualification_scope_are_exact(self):
+    def test_protocol_shape_and_qualification_scope_replace_version_gate(self):
         source=self.offline_controller()+r"""
-Assert-DesktopVersion '26.1013.4894.0'
-Assert-DesktopVersion '26.1016.6573.0'
-foreach($version in @('26.1007.9446.0','26.1013.4894.1','26.1016.6573.1','')) {
+$good=@{turns=@(@{turnId='turn';status='inProgress'});threadRuntimeStatus=@{type='busy'};futureField='accepted'}
+Assert-DesktopSnapshot $good
+foreach($bad in @(@{turns=@()},@{turns=@(@{turnId='turn';status='unknown'});threadRuntimeStatus=@{type='busy'}})) {
  $rejected=$false
- try{Assert-DesktopVersion $version}catch{$rejected=$true}
- if(-not $rejected){throw 'Untested desktop version accepted'}
+ try{Assert-DesktopSnapshot $bad}catch{$rejected=$true}
+ if(-not $rejected){throw 'Invalid protocol shape accepted'}
 }
 $QualificationThread=$one
 Track $one;Track $two
 if($sessions.Count -ne 1 -or -not $sessions.ContainsKey($one)){throw 'Qualification scope escaped'}
-@{version_exact=$true;scope_exact=$true}|ConvertTo-Json -Compress
+@{protocol_checked=$true;scope_exact=$true}|ConvertTo-Json -Compress
 """
         self.assertTrue(self.powershell(source)["scope_exact"])
+
 
 
 if __name__ == "__main__":
