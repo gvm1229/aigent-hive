@@ -16,6 +16,7 @@ pub(crate) use qualification::run_qualification;
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
 pub(crate) use upgrade::upgrade_existing;
+pub(crate) use upgrade::resume_after_setup;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -215,6 +216,16 @@ pub(crate) fn inspect_saved_choice(user_root: &Path) -> Result<SavedMonitorChoic
             .bytes()
             .map_or_else(|| "absent".to_owned(), sha256_digest),
     })
+}
+
+pub(crate) fn quiesce_for_setup(
+    user_root: &Path,
+    choice: &SavedMonitorChoice,
+    operation_id: &str,
+) -> Result<transition::StoppedReader, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    transition::quiesce_operation(&root, platform::call, Duration::from_secs(15),
+        Some(&choice.config_digest), Some(operation_id))
 }
 
 pub(crate) fn threshold_already_handled(

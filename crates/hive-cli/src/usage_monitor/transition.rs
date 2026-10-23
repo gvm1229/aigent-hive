@@ -78,7 +78,7 @@ pub(super) fn disable(
     quiesce(root, call, timeout, None).map(|stopped| stopped.result.clone())
 }
 
-pub(super) struct StoppedReader {
+pub(crate) struct StoppedReader {
     _control: std::fs::File,
     _controller: std::fs::File,
     result: Value,
@@ -90,13 +90,30 @@ pub(super) fn quiesce(
     timeout: Duration,
     expected_digest: Option<&str>,
 ) -> Result<StoppedReader, AdapterError> {
+    quiesce_operation(root, call, timeout, expected_digest, None)
+}
+
+pub(super) fn quiesce_operation(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    timeout: Duration,
+    expected_digest: Option<&str>,
+    operation_id: Option<&str>,
+) -> Result<StoppedReader, AdapterError> {
     let control = lock(root, "control.lock")?;
     let before = root.read_optional(std::path::Path::new(CONFIG), 65536)?;
     let digest = before
         .as_deref()
         .map_or_else(|| "absent".into(), sha256_digest);
     if expected_digest.is_some_and(|expected| expected != digest) {
-        return Err(error("monitor choice changed since setup preview"));
+        let prior: Option<Value> = load(root, JOURNAL)?;
+        if !prior.is_some_and(|journal| {
+            operation_id.is_some_and(|id| journal["operation_id"] == id)
+                && journal["before_digest"] == expected_digest.unwrap_or_default()
+                && journal["after_digest"] == digest
+        }) {
+            return Err(error("monitor choice changed since setup preview"));
+        }
     }
     let Some(mut config) = authenticated_config(root)? else {
         return Ok(StoppedReader {
@@ -105,12 +122,13 @@ pub(super) fn quiesce(
             result: json!({"enabled":false,"configured":false,"controller_stopped":null}),
         });
     };
-    let mut journal = json!({"schema_version":1,"operation":"disable","started_at":now(),
-        "before_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
-        "completed_at":null,"error":null});
-    write(root, JOURNAL, &journal)?;
     // Persist the requested stop before touching the scheduler. A retry must never re-enable it.
     config.enabled = false;
+    let mut journal = json!({"schema_version":1,"operation":"disable","started_at":now(),
+        "operation_id":operation_id,"before_digest":expected_digest.unwrap_or(&digest),
+        "after_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
+        "completed_at":null,"error":null});
+    write(root, JOURNAL, &journal)?;
     write(root, CONFIG, &config)?;
     let result = (|| {
         if call(&task_request(&config, "unregister"), timeout)?["removed"] != true {
@@ -215,6 +233,42 @@ mod tests {
             .read_optional(Path::new(JOURNAL), 65536)
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn only_the_same_setup_operation_can_resume_its_partial_stop() {
+        let (_temp, root) = fixture();
+        let before = root.read_required(Path::new(CONFIG), 65536).unwrap();
+        let digest = sha256_digest(&before);
+        assert!(quiesce_operation(
+            &root,
+            |_, _| Err(error("scheduler refused")),
+            Duration::ZERO,
+            Some(&digest),
+            Some("setup-a")
+        )
+        .is_err());
+        assert!(quiesce_operation(
+            &root,
+            |_, _| panic!("another setup stopped it"),
+            Duration::ZERO,
+            Some(&digest),
+            Some("setup-b")
+        )
+        .is_err());
+        let stopped = quiesce_operation(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+            Some(&digest),
+            Some("setup-a"),
+        )
+        .unwrap();
+        assert_eq!(stopped.result["controller_stopped"], true);
+        assert_eq!(
+            load::<Value>(&root, JOURNAL).unwrap().unwrap()["before_digest"],
+            digest
+        );
     }
 
     #[test]

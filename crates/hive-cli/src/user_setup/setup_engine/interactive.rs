@@ -13,10 +13,10 @@ use std::io::{self, BufRead, IsTerminal, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-struct Conversation {
-    record: SetupProgress,
-    snapshot: ProgressSnapshot,
-    fresh: bool,
+pub(super) struct Conversation {
+    pub(super) record: SetupProgress,
+    pub(super) snapshot: ProgressSnapshot,
+    pub(super) fresh: bool,
 }
 impl std::ops::Deref for Conversation {
     type Target = SetupProgress;
@@ -245,15 +245,7 @@ fn execute_inner<R: BufRead, W: Write>(
             }
             progress
         }
-        _ => store.new_progress(
-            "user-language".to_owned(),
-            config
-                .as_ref()
-                .map(serde_json::to_value)
-                .transpose()
-                .map_err(|error| SetupError::Internal(error.to_string()))?
-                .unwrap_or_else(fresh_answers),
-        )?,
+        _ => initial_progress(&root_path, &store, config.as_ref())?,
     };
     let mut progress = Conversation {
         record,
@@ -264,13 +256,18 @@ fn execute_inner<R: BufRead, W: Write>(
         progress.selected_section.clone_from(&options.section);
     }
     let questions = catalog()?;
-    if !collect(
-        &store,
-        &mut progress,
-        &questions.questions,
-        options,
-        terminal,
-    )? {
+    let collected = if progress.legacy_migration.is_some() {
+        super::legacy::collect(&root_path, &store, &mut progress, terminal)?
+    } else {
+        collect(
+            &store,
+            &mut progress,
+            &questions.questions,
+            options,
+            terminal,
+        )?
+    };
+    if !collected {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }
     preview_apply(
@@ -281,6 +278,24 @@ fn execute_inner<R: BufRead, W: Write>(
         &store,
         &mut progress,
         terminal,
+    )
+}
+
+fn initial_progress(
+    root: &Path,
+    store: &ProgressStore,
+    config: Option<&user_setup::UserSetupConfig>,
+) -> Result<SetupProgress, SetupError> {
+    if let Some(progress) = super::legacy::initial_progress(root, store, config)? {
+        return Ok(progress);
+    }
+    store.new_progress(
+        "user-language".into(),
+        config
+            .map(serde_json::to_value)
+            .transpose()
+            .map_err(|error| SetupError::Internal(error.to_string()))?
+            .unwrap_or_else(fresh_answers),
     )
 }
 
@@ -333,21 +348,6 @@ fn preliminary_result<R: BufRead, W: Write>(
     }
     if mode != InteractionMode::Terminal {
         return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
-    }
-    if config
-        .as_ref()
-        .is_some_and(|config| config.schema_version == 1)
-    {
-        return Ok(Some(result(
-            "needs-input",
-            2,
-            "hive.setup-migration-pending",
-            terminal.language,
-            "기존 사용량 보호의 실제 감시 상태를 확인한 뒤 설정 이전 필요",
-            "Legacy setup needs verified monitor-state migration",
-            None,
-            Some("hive setup --scope user --show --output json".to_owned()),
-        )));
     }
     Ok(None)
 }
@@ -541,7 +541,11 @@ fn answered(progress: &SetupProgress, question: &Question) -> bool {
     progress.answered_questions.get(&question.id) == Some(&question.revision)
 }
 
-fn set_value(document: &mut Value, pointer: &str, value: Value) -> Result<(), SetupError> {
+pub(super) fn set_value(
+    document: &mut Value,
+    pointer: &str,
+    value: Value,
+) -> Result<(), SetupError> {
     let (parent, key) = pointer
         .rsplit_once('/')
         .ok_or_else(|| SetupError::Internal("invalid preference pointer".to_owned()))?;
@@ -553,7 +557,10 @@ fn set_value(document: &mut Value, pointer: &str, value: Value) -> Result<(), Se
     Ok(())
 }
 
-fn persist(store: &ProgressStore, progress: &mut Conversation) -> Result<(), SetupError> {
+pub(super) fn persist(
+    store: &ProgressStore,
+    progress: &mut Conversation,
+) -> Result<(), SetupError> {
     progress.snapshot = store.save(&progress.snapshot, &progress.record)?;
     Ok(())
 }
@@ -624,7 +631,7 @@ fn preview_apply<R: BufRead, W: Write>(
     let application = if let Some(budget) = &options.legacy_budget {
         super::worker::apply(&args, &bytes, existing, &progress.operation_id, budget)
     } else {
-        user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))
+        super::legacy::apply(&args, &bytes, existing, &progress.record)
     };
     let applied = match application {
         Ok(applied) => applied,
@@ -633,15 +640,6 @@ fn preview_apply<R: BufRead, W: Write>(
             return Err(failure);
         }
     };
-    if options.legacy_budget.is_none() {
-        args.mode = user_setup::SetupMode::Validate;
-        if let Err(failure) =
-            user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)
-        {
-            store.record_failure(&progress.record)?;
-            return Err(failure);
-        }
-    }
     ProgressStore::open(root, None)?.record_completion(&progress.record)?;
     let mut completed = result(
         "success",

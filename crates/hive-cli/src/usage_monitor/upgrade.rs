@@ -93,13 +93,57 @@ fn upgrade_with(
     call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
     ready: impl Fn(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
 ) -> Result<Value, AdapterError> {
+    upgrade_with_choice(root, call, ready, None)
+}
+
+pub(crate) fn resume_after_setup(
+    user_root: &Path,
+    operation_id: &str,
+) -> Result<Value, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    if policy_disables_monitor(&root)? {
+        return super::transition::disable(&root, platform::call, Duration::from_secs(15));
+    }
+    let stopped: Value = load(&root, super::transition::JOURNAL)?
+        .ok_or_else(|| error("setup monitor stop record is missing"))?;
+    let bytes = root.read_required(Path::new(CONFIG), 65536)?;
+    if stopped["operation_id"] != operation_id || stopped["phase"] != "complete" {
+        return Err(error("monitor choice changed after setup paused it"));
+    }
+    if stopped["after_digest"] != sha256_digest(&bytes) {
+        let prior: Value =
+            load(&root, JOURNAL)?.ok_or_else(|| error("monitor changed after setup"))?;
+        let current: Configuration =
+            serde_json::from_slice(&bytes).map_err(|_| error("invalid monitor configuration"))?;
+        if prior["setup_operation"] == operation_id
+            && prior["phase"] == "complete"
+            && prior["to"]
+                == serde_json::to_value(&current)
+                    .map_err(|_| error("invalid monitor configuration"))?
+        {
+            return await_ready(&root, &current);
+        }
+        return Err(error(
+            "monitor changed after setup; no automatic reactivation",
+        ));
+    }
+    require_app_safe_control()?;
+    upgrade_with_choice(&root, platform::call, await_ready, Some(operation_id))
+}
+
+fn upgrade_with_choice(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    ready: impl Fn(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
+    setup_operation: Option<&str>,
+) -> Result<Value, AdapterError> {
     if policy_disables_monitor(root)? {
         return super::transition::disable(root, call, Duration::from_secs(15));
     }
     let mut next = configuration(root.requested_path())?;
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
-    next.enabled = old.enabled;
+    next.enabled = setup_operation.is_some() || old.enabled;
     authenticate_previous(root, &old, &next)?;
     let manifest: Value = load(root, ".hive/install/codex.json")?
         .ok_or_else(|| error("matching Codex installation required for monitor update"))?;
@@ -108,21 +152,24 @@ fn upgrade_with(
             "Codex installation and upgraded monitor versions differ",
         ));
     }
-    let mut journal = json!({"schema_version":1,"from":old,"to":next,
+    let mut journal = json!({"schema_version":1,"from":old,"to":next,"setup_operation":setup_operation,
         "phase":"preparing","started_at":now(),"error":null,"completed_at":null});
+    let mut journal_started = false;
     let operation: Result<Value, AdapterError> = (|| {
         {
             let _control = lock(root, "control.lock")?;
+            verify_upgrade_inputs(root, &old, setup_operation)?;
             write(root, JOURNAL, &journal)?;
+            journal_started = true;
             stage(root, &next)?;
-            if old.enabled {
+            if next.enabled {
                 require_desktop_inspection(&call(
                     &json!({"operation":"inspect"}),
                     Duration::from_secs(5),
                 )?)?;
             }
             let previous_lease = pause_previous(root, &old, Duration::from_secs(15))?;
-            if old.enabled {
+            if old.enabled || next.enabled {
                 // Exact stored action/description must match; never stop by process name.
                 if let Err(failure) =
                     call(&task_request(&old, "unregister"), Duration::from_secs(15))
@@ -136,7 +183,7 @@ fn upgrade_with(
                 write(root, CONFIG, &old)?;
                 return Err(failure);
             }
-            if old.enabled {
+            if next.enabled {
                 with_state(root, |state| {
                     // Preserve baseline, incidents, deduplication and manual-resume receipts.
                     state.observation_count = 0;
@@ -151,14 +198,14 @@ fn upgrade_with(
                 call(&task_request(&next, "register"), Duration::from_secs(15))?;
                 call(&task_request(&next, "start"), Duration::from_secs(10))?;
             }
-            journal["phase"] = json!(if old.enabled {
+            journal["phase"] = json!(if next.enabled {
                 "checking"
             } else {
                 "disabled-preserved"
             });
             write(root, JOURNAL, &journal)?;
         } // Release control lock so the user can still disable while health is checked.
-        let health = if old.enabled {
+        let health = if next.enabled {
             ready(root, &next)?
         } else {
             json!({"enabled":false})
@@ -168,17 +215,42 @@ fn upgrade_with(
         write(root, JOURNAL, &journal)?;
         Ok(
             json!({"enabled":next.enabled,"version":next.version,"executable":next.executable,
-            "task_replaced":old.enabled,"history_preserved":true,"health":health,
+            "task_replaced":old.enabled || next.enabled,"history_preserved":true,"health":health,
             "changed_paths":[CONFIG,JOURNAL,next.executable]}),
         )
     })();
     if let Err(failure) = &operation {
         journal["phase"] = json!("incomplete");
         journal["error"] = json!(failure.message());
-        let _ = write(root, JOURNAL, &journal);
+        if journal_started {
+            let _ = write(root, JOURNAL, &journal);
+        }
         // Never enable a disabled choice, discard evidence, or restart an older unsafe binary.
     }
     operation
+}
+
+fn verify_upgrade_inputs(
+    root: &PinnedTarget,
+    old: &Configuration,
+    setup_operation: Option<&str>,
+) -> Result<(), AdapterError> {
+    let current: Configuration =
+        load(root, CONFIG)?.ok_or_else(|| error("monitor changed before update"))?;
+    if super::serialize(&current)? != super::serialize(old)? || policy_disables_monitor(root)? {
+        return Err(error("monitor or policy changed before update"));
+    }
+    if let Some(id) = setup_operation {
+        let stopped: Value = load(root, super::transition::JOURNAL)?
+            .ok_or_else(|| error("setup stop record missing"))?;
+        if stopped["operation_id"] != id
+            || stopped["phase"] != "complete"
+            || stopped["after_digest"] != sha256_digest(&super::serialize(old)?)
+        {
+            return Err(error("monitor choice changed before setup resume"));
+        }
+    }
+    Ok(())
 }
 
 fn authenticate_previous(
@@ -686,6 +758,60 @@ mod tests {
             load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
             "complete"
         );
+    }
+
+    #[test]
+    fn setup_resume_activates_only_the_new_reader_and_honors_a_later_manual_disable() {
+        let (_directory, root) = fixture(false);
+        let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        old.launcher = super::super::task_launcher(
+            &old.executable,
+            &monitor_root_path(root.requested_path())
+                .unwrap()
+                .to_string_lossy(),
+        );
+        write(&root, CONFIG, &old).unwrap();
+        let before = sha256_digest(&super::super::serialize(&old).unwrap());
+        let stopped = super::super::transition::quiesce_operation(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+            Some(&before),
+            Some("migration-a"),
+        )
+        .unwrap();
+        drop(stopped);
+        verify_upgrade_inputs(&root, &old, Some("migration-a")).unwrap();
+        let result = upgrade_with_choice(
+            &root,
+            |request, _| {
+                let current: Configuration = load(&root, CONFIG)?.unwrap();
+                if matches!(
+                    request["operation"].as_str(),
+                    Some("inspect" | "unregister")
+                ) {
+                    assert!(!current.enabled);
+                    assert_eq!(current.version, "0.13.0");
+                } else {
+                    assert!(current.enabled);
+                    assert_eq!(current.version, env!("HIVE_PACKAGE_VERSION"));
+                }
+                Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"}))
+            },
+            |_, _| Ok(json!({"fresh_observations":4})),
+            Some("migration-a"),
+        )
+        .unwrap();
+        assert_eq!(result["enabled"], true);
+        super::super::transition::disable(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+        )
+        .unwrap();
+        let disabled: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        assert!(!disabled.enabled);
+        assert!(verify_upgrade_inputs(&root, &disabled, Some("migration-a")).is_err());
     }
 
     #[test]

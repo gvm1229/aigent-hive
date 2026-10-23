@@ -7,6 +7,7 @@ use hive_core::setup::QuestionCatalog;
 use serde_json::{json, Value};
 
 mod interactive;
+mod legacy;
 mod recovery;
 mod terminal;
 mod worker;

@@ -30,7 +30,7 @@ pub(super) fn inspect(
     prepare(config, choice).map(Some)
 }
 
-fn prepare(
+pub(super) fn prepare(
     config: &UserSetupConfig,
     monitor_choice: SavedMonitorChoice,
 ) -> Result<Preview, SetupError> {

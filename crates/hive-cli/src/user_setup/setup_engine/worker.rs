@@ -145,6 +145,7 @@ fn apply_request_using(
         user_root: root,
         root_cap: cap,
     };
+    let expected = super::legacy::checkpoint(&arguments, &answers, expected.as_deref(), &progress)?;
     let applied = execute(
         &arguments,
         &answers,
@@ -152,6 +153,7 @@ fn apply_request_using(
     )?;
     arguments.mode = SetupMode::Validate;
     execute(&arguments, &answers, SetupBase::Current)?;
+    super::legacy::finish_monitor(&arguments.user_root, &answers, &progress)?;
     // Record success before writing the pipe; losing the reply must not repeat installation.
     user_setup::progress_store::ProgressStore::open(&arguments.user_root, None)?
         .record_completion(&progress)?;

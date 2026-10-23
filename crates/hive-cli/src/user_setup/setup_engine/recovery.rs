@@ -31,6 +31,7 @@ pub(super) fn resume(
             "hive.setup-recovery-required",
         ));
     }
+    super::legacy::finish_monitor(root, &bytes, progress)?;
     store.record_completion(progress)?;
     let mut result = validated.expect("validated recovery");
     result.code = "hive.user-setup-complete";

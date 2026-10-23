@@ -53,6 +53,15 @@ pub(super) struct SetupProgress {
     pub selected_section: Option<String>,
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub answered_questions: std::collections::BTreeMap<String, u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_migration: Option<LegacyMigration>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LegacyMigration {
+    pub migration_id: String,
+    pub monitor_choice: crate::usage_monitor::SavedMonitorChoice,
 }
 
 pub(super) struct ProgressSnapshot {
@@ -170,6 +179,7 @@ impl ProgressStore {
             setup_mode: None,
             selected_section: None,
             answered_questions: std::collections::BTreeMap::new(),
+            legacy_migration: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -270,6 +280,14 @@ impl ProgressStore {
         let mut complete = prior.clone();
         history::record(self, prior, ProgressPhase::Complete)?;
         history::retain_completed(self, &prior.operation_id)?;
+        let backup = recovery_path(prior)?;
+        if let Some(bytes) = self.read(&backup)? {
+            if optional_digest(Some(&bytes)) != prior.base_config_digest {
+                return Err(SetupError::Conflict("setup recovery backup changed".into()));
+            }
+            replace_user_setup_file(&self.root, &backup, Some(&bytes), None)
+                .map_err(SetupError::Conflict)?;
+        }
         if let Some(bytes) = &snapshot.legacy {
             replace_user_setup_file(&self.root, Path::new(LEGACY_PROGRESS), Some(bytes), None)
                 .map_err(SetupError::Conflict)?;
@@ -322,6 +340,17 @@ impl ProgressStore {
     }
 
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
+        if progress.legacy_migration.as_ref().is_some_and(|migration| {
+            self.binding.scope != PreferenceScope::User
+                || !valid_hash(&migration.migration_id)
+                || (migration.monitor_choice.enabled && !migration.monitor_choice.configured)
+                || (migration.monitor_choice.config_digest != "absent"
+                    && !valid_hash(&migration.monitor_choice.config_digest))
+        }) {
+            return Err(SetupError::Verification(
+                "invalid legacy setup binding".into(),
+            ));
+        }
         if progress.schema_version != 2
             || progress.answer_schema_version != 2
             || progress.question_revision == 0
@@ -358,7 +387,22 @@ impl ProgressStore {
     }
 }
 
-fn optional_digest(bytes: Option<&[u8]>) -> String {
+pub(super) fn recovery_path(progress: &SetupProgress) -> Result<PathBuf, SetupError> {
+    if progress.operation_id.len() != 64
+        || !progress
+            .operation_id
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(SetupError::Verification(
+            "invalid recovery operation".into(),
+        ));
+    }
+    Ok(Path::new(".hive/config/setup-progress/recovery")
+        .join(format!("{}.yml", progress.operation_id)))
+}
+
+pub(super) fn optional_digest(bytes: Option<&[u8]>) -> String {
     // Absence and a present empty file have distinct fingerprints.
     let mut tagged = vec![u8::from(bytes.is_some())];
     tagged.extend_from_slice(bytes.unwrap_or_default());
