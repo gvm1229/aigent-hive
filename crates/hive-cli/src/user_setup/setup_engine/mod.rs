@@ -11,6 +11,8 @@ mod legacy;
 mod recovery;
 mod terminal;
 mod worker;
+mod update;
+pub(in crate::user_setup) use update::run as run_update_completion;
 pub(super) use interactive::resume_pending_update;
 #[cfg(windows)]
 pub(super) use interactive::update_with_terminal;

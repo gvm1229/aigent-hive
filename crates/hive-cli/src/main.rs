@@ -211,6 +211,9 @@ fn main() -> ExitCode {
     if arguments == ["__setup-apply-worker"] {
         return user_setup::run_apply_worker();
     }
+    if arguments.first().map(String::as_str) == Some("__complete-user-update") {
+        return user_setup::run_update_completion(&arguments[1..]);
+    }
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }

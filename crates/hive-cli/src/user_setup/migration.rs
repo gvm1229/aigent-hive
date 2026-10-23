@@ -30,6 +30,56 @@ pub(super) fn inspect(
     prepare(config, choice).map(Some)
 }
 
+pub(super) fn pending_questions(config: &UserSetupConfig) -> Vec<&'static str> {
+    if config.schema_version == 1 {
+        return vec!["usage-enforcement", "usage-warnings"];
+    }
+    [
+        ("usage-enforcement", "/usage_guard/enforcement_enabled"),
+        ("usage-warnings", "/usage_guard/warnings_enabled"),
+    ]
+    .into_iter()
+    .filter_map(|(id, key)| {
+        config
+            .preference_decisions
+            .get(key)
+            .filter(|choice| {
+                choice.input_channel == PreferenceInput::Migration
+                    && matches!(
+                        choice.origin,
+                        DecisionOrigin::LegacyUnknown | DecisionOrigin::Default
+                    )
+                    && choice.question_id.is_none()
+            })
+            .map(|_| id)
+    })
+    .collect()
+}
+
+pub(super) fn review(root: &Path, config: &UserSetupConfig) -> Result<Preview, SetupError> {
+    if let Some(preview) = inspect(root, config)? {
+        return Ok(preview);
+    }
+    let monitor_choice = crate::usage_monitor::inspect_saved_choice(root)
+        .map_err(|failure| SetupError::Verification(failure.message().into()))?;
+    let source =
+        serde_json::to_value(config).map_err(|error| SetupError::Internal(error.to_string()))?;
+    let source_digest =
+        hive_core::preferences::declaration_digest(&source).map_err(SetupError::Internal)?;
+    let migration_id = sha256_digest(
+        serde_json::to_vec(&json!(["usage-review-v2", source_digest, monitor_choice]))
+            .map_err(|error| SetupError::Internal(error.to_string()))?
+            .as_slice(),
+    );
+    Ok(Preview {
+        migration_id,
+        source_digest,
+        monitor_choice,
+        candidate: config.clone(),
+        pending_questions: pending_questions(config),
+    })
+}
+
 pub(super) fn prepare(
     config: &UserSetupConfig,
     monitor_choice: SavedMonitorChoice,
@@ -111,7 +161,7 @@ pub(super) fn prepare(
         source_digest,
         monitor_choice,
         candidate,
-        pending_questions: vec!["legacy-usage-choice", "usage-warnings"],
+        pending_questions: vec!["usage-enforcement", "usage-warnings"],
     })
 }
 

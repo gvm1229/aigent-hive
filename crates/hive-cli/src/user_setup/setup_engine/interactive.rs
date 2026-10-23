@@ -155,15 +155,6 @@ pub(in crate::user_setup) fn resume_pending_update(
         // An unconfirmed personal reconfiguration must not block a software update.
         return Ok(None);
     }
-    let options = Options {
-        root: root.to_owned(),
-        interaction: InteractionRequest::default(),
-        resume: true,
-        show: false,
-        dry_run: false,
-        section: None,
-        legacy_budget: None,
-    };
     let mode = if interactive {
         InteractionMode::Terminal
     } else {
@@ -174,13 +165,30 @@ pub(in crate::user_setup) fn resume_pending_update(
         writer: io::stderr().lock(),
         language: InterfaceLanguage::En,
     };
-    let mut result =
-        execute(&options, mode, &mut terminal).unwrap_or_else(|error| user_setup::failure(&error));
+    let mut result = super::update::complete(root, mode, &mut terminal)
+        .unwrap_or_else(|error| user_setup::failure(&error));
     result.action = "UpdateHiveUser";
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }
     Ok(Some(result))
+}
+
+pub(super) fn execute_update<R: BufRead, W: Write>(
+    root: &Path,
+    mode: InteractionMode,
+    terminal: &mut Terminal<R, W>,
+) -> Result<crate::ActionResult, SetupError> {
+    let options = Options {
+        root: root.to_owned(),
+        interaction: InteractionRequest::default(),
+        resume: true,
+        show: false,
+        dry_run: false,
+        section: None,
+        legacy_budget: None,
+    };
+    execute(&options, mode, terminal)
 }
 
 #[cfg(windows)]
@@ -369,6 +377,7 @@ fn preliminary_result<R: BufRead, W: Write>(
             .progress
             .as_ref()
             .is_some_and(|p| p.phase == ProgressPhase::Complete && store.resume_ready(p))
+        && config.is_none_or(|config| user_setup::migration::pending_questions(config).is_empty())
     {
         return Ok(Some(result(
             "success",
@@ -816,7 +825,7 @@ fn inspect_settings<R: BufRead, W: Write>(
         Some(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":"not-inspected",
-            "migration_preview":migration}),
+            "migration_preview":migration,"pending_questions":config.map(user_setup::migration::pending_questions).unwrap_or_default()}),
         ),
         None,
     ))
@@ -883,7 +892,7 @@ mod tests {
         let before = std::fs::read(root.path().join(&store.relative)).unwrap();
         let result = resume_pending_update(root.path(), false).unwrap().unwrap();
         assert_eq!(result.action, "UpdateHiveUser");
-        assert_eq!(result.code, "hive.setup-needs-input");
+        assert_eq!(result.code, "hive.update-input-pending");
         assert!(result
             .next_action
             .unwrap()

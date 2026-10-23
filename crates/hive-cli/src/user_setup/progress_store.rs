@@ -64,6 +64,17 @@ pub(super) struct SetupProgress {
 pub(super) struct LegacyMigration {
     pub migration_id: String,
     pub monitor_choice: crate::usage_monitor::SavedMonitorChoice,
+    #[serde(default = "legacy_schema")]
+    pub from_schema: u32,
+    #[serde(default = "legacy_questions")]
+    pub questions: Vec<String>,
+}
+
+const fn legacy_schema() -> u32 {
+    1
+}
+fn legacy_questions() -> Vec<String> {
+    vec!["usage-enforcement".into(), "usage-warnings".into()]
 }
 
 pub(super) struct ProgressSnapshot {
@@ -374,6 +385,11 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
             self.binding.scope != PreferenceScope::User
+                || !matches!(migration.from_schema, 1 | 2)
+                || migration
+                    .questions
+                    .iter()
+                    .any(|id| !matches!(id.as_str(), "usage-enforcement" | "usage-warnings"))
                 || !valid_hash(&migration.migration_id)
                 || (migration.monitor_choice.enabled && !migration.monitor_choice.configured)
                 || (migration.monitor_choice.config_digest != "absent"

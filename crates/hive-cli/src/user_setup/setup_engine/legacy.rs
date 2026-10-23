@@ -24,11 +24,20 @@ pub(super) fn initial_progress(
     store: &ProgressStore,
     config: Option<&UserSetupConfig>,
 ) -> Result<Option<SetupProgress>, SetupError> {
-    let Some(config) = config.filter(|config| config.schema_version == 1) else {
+    let Some(config) =
+        config.filter(|config| !user_setup::migration::pending_questions(config).is_empty())
+    else {
         return Ok(None);
     };
-    let preview = user_setup::migration::inspect(root, config)?
-        .ok_or_else(|| SetupError::Internal("legacy preview missing".into()))?;
+    transition_progress(root, store, config).map(Some)
+}
+
+pub(super) fn transition_progress(
+    root: &Path,
+    store: &ProgressStore,
+    config: &UserSetupConfig,
+) -> Result<SetupProgress, SetupError> {
+    let preview = user_setup::migration::review(root, config)?;
     let mut record = store.new_progress(
         "usage-enforcement".into(),
         serde_json::to_value(&preview.candidate)
@@ -37,9 +46,15 @@ pub(super) fn initial_progress(
     record.legacy_migration = Some(LegacyMigration {
         migration_id: preview.migration_id,
         monitor_choice: preview.monitor_choice,
+        from_schema: config.schema_version,
+        questions: preview
+            .pending_questions
+            .iter()
+            .map(|id| (*id).into())
+            .collect(),
     });
     record.setup_mode = Some("custom".into());
-    Ok(Some(record))
+    Ok(record)
 }
 
 pub(super) fn collect<R: BufRead, W: Write>(
@@ -70,7 +85,14 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .iter()
         .find(|q| q.id == "usage-warnings")
         .expect("notice question");
-    if !progress.answered_questions.contains_key(&guard.id) {
+    if progress
+        .legacy_migration
+        .as_ref()
+        .expect("review")
+        .questions
+        .contains(&guard.id)
+        && !progress.answered_questions.contains_key(&guard.id)
+    {
         show_effects(progress, terminal)?;
         terminal.say(
             "현재 보호를 유지하려면 예, 모든 사용량 차단·중단과 상시 감시를 끄려면 아니요를 선택해 주세요. 권장: 아니요. 잔여량 기준과 지난 기록은 보존합니다.",
@@ -80,7 +102,13 @@ pub(super) fn collect<R: BufRead, W: Write>(
             return Ok(false);
         }
     }
-    if !progress.answered_questions.contains_key(&warnings.id)
+    if progress
+        .legacy_migration
+        .as_ref()
+        .expect("review")
+        .questions
+        .contains(&warnings.id)
+        && !progress.answered_questions.contains_key(&warnings.id)
         && !ask_choice(store, progress, warnings, terminal, false)?
     {
         return Ok(false);
@@ -256,13 +284,23 @@ fn checkpoint_using<T>(
                 "migration recovery record changed".into(),
             ));
         }
+        if user_setup::progress_store::optional_digest(actual.as_deref())
+            == progress.base_config_digest
+        {
+            let _reader = stop_reader()?;
+        }
         return Ok(Some(desired));
     }
     let prior =
         expected.ok_or_else(|| SetupError::Conflict("legacy settings disappeared".into()))?;
     if actual.as_deref() != Some(prior)
         || user_setup::progress_store::optional_digest(Some(prior)) != progress.base_config_digest
-        || user_setup::parse_and_validate_installed_config(prior)?.schema_version != 1
+        || user_setup::parse_and_validate_installed_config(prior)?.schema_version
+            != progress
+                .legacy_migration
+                .as_ref()
+                .expect("transition")
+                .from_schema
     {
         return Err(SetupError::Conflict(
             "legacy settings changed after preview".into(),
@@ -374,6 +412,8 @@ mod tests {
         record.legacy_migration = Some(LegacyMigration {
             migration_id: preview.migration_id,
             monitor_choice: preview.monitor_choice,
+            from_schema: 1,
+            questions: vec!["usage-enforcement".into(), "usage-warnings".into()],
         });
         let progress = Conversation {
             record,
@@ -444,6 +484,25 @@ mod tests {
                     raw
                 );
             }
+        }
+    }
+
+    #[test]
+    fn new_review_progress_uses_the_canonical_question_ids() {
+        let (root, store, _, raw) = fixture(0);
+        let config = user_setup::parse_and_validate_installed_config(&raw).unwrap();
+        let progress = initial_progress(root.path(), &store, Some(&config))
+            .unwrap()
+            .unwrap();
+        let questions = &progress.legacy_migration.as_ref().unwrap().questions;
+        assert_eq!(questions, &["usage-enforcement", "usage-warnings"]);
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        for id in questions {
+            assert!(catalog()
+                .unwrap()
+                .questions
+                .iter()
+                .any(|question| &question.id == id));
         }
     }
 
