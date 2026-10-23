@@ -113,6 +113,7 @@
         "conflict",
         "verification-failed",
         "needs-input",
+        "pending",
         "error"
       ]
     },
@@ -183,7 +184,7 @@
     {
       "properties": {
         "exit_code": { "const": 2 },
-        "status": { "enum": ["blocked", "error", "needs-input"] }
+        "status": { "enum": ["blocked", "error", "needs-input", "pending"] }
       }
     },
     {

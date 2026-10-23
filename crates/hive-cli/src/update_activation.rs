@@ -1,7 +1,9 @@
 mod completion;
+mod output;
 
 use crate::usage::{CommandRunner, SystemCommandRunner};
 use hive_core::sha256_digest;
+use hive_core::setup::{InteractionMode, InteractionRequest};
 use hive_update::SemVersion;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -39,6 +41,7 @@ struct UpdateArguments {
     confirm: bool,
     handoff_executable: Option<PathBuf>,
     user_root: Option<PathBuf>,
+    interaction: InteractionRequest,
 }
 
 #[derive(Clone, Copy)]
@@ -52,9 +55,12 @@ Update the installed Aigent Hive package and its authenticated user projections.
 
 USAGE:
     hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
+                [--interactive | --non-interactive] [--output json]
 
 The default channel is stable. The test channel requires explicit --channel test.
---confirm accepts the displayed exact update without an interactive terminal.
+--confirm accepts only the software update. It does not answer setup questions.
+--non-interactive and --output json never wait for input.
+--interactive requires a terminal and conflicts with non-interactive or JSON output.
 ";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -297,19 +303,22 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         print!("{UPDATE_USAGE}");
         return ExitCode::SUCCESS;
     }
+    let json_output = arguments.windows(2).any(|pair| pair == ["--output", "json"]);
     let arguments = match parse_arguments(arguments) {
         Ok(arguments) => arguments,
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     };
-    let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
+    let mode = arguments.interaction.resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
+        .expect("parsed interaction contract");
+    if mode == InteractionMode::NeedsInput {
+        return output::needs_input(json_output, "--interactive requires a usable terminal");
+    }
+    let interactive = mode == InteractionMode::Terminal;
     if !interactive && !arguments.confirm {
-        eprintln!(
-            "update blocked: `hive update` requires an interactive terminal or explicit --confirm; no update was installed"
-        );
-        return ExitCode::from(3);
+        return output::needs_input(json_output,
+            "Software update approval is required. Run in a terminal or pass --confirm; no update was installed.");
     }
     let user_root = match arguments
         .user_root
@@ -319,36 +328,30 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         }) {
         Ok(root) => root,
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     };
     // Finish an approved interrupted setup before registry lookup or another binary install.
     // Software --confirm never supplies answers to the setup engine.
     match crate::user_setup::resume_pending_update(&user_root, interactive) {
         Ok(Some(result)) => {
-            eprintln!("{}", result.message);
-            if let Some(next) = result.next_action { eprintln!("{next}"); }
-            return ExitCode::from(result.exit_code);
+            return output::emit(json_output, &result);
         }
         Ok(None) => {}
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     }
     let language = match selected_language(&user_root) {
         Ok(language) => language,
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     };
     let current_executable = match env::current_exe() {
         Ok(path) => path,
         Err(error) => {
-            eprintln!("error: cannot resolve the running Hive executable: {error}");
-            return ExitCode::from(2);
+            return output::error(json_output, format!("cannot resolve the running Hive executable: {error}"));
         }
     };
     let executable = arguments
@@ -356,21 +359,14 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         .as_deref()
         .unwrap_or(&current_executable);
     if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
-        if let Err(error) =
-            spawn_windows_direct_handoff(&current_executable, &user_root, &arguments)
-        {
-            eprintln!("error: cannot start Windows direct update handoff: {error}");
-            return ExitCode::from(2);
-        }
-        eprintln!(
-            "Windows direct update handoff started; completion continues in the child process."
-        );
-        return ExitCode::SUCCESS;
+        return match spawn_windows_direct_handoff(&current_executable, &user_root, &arguments) {
+            Ok(record) => output::handoff(json_output, language, record.as_deref()),
+            Err(error) => output::error(json_output, format!("cannot start Windows direct update handoff: {error}")),
+        };
     }
     if arguments.handoff_executable.is_some() {
         if let Err(error) = wait_for_windows_direct_unlock(executable) {
-            eprintln!("error: {error}");
-            return ExitCode::from(2);
+            return output::error(json_output, error);
         }
     }
     let mut output = io::stderr().lock();
@@ -412,13 +408,8 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             &mut output,
         )
     };
-    match outcome {
-        Ok(_) => ExitCode::SUCCESS,
-        Err(message) => {
-            eprintln!("error: {message}");
-            ExitCode::from(2)
-        }
-    }
+    let result = output::finished(outcome, refresher.report.borrow().as_ref(), language);
+    output::emit(json_output, &result)
 }
 
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
@@ -427,6 +418,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     let mut confirm = false;
     let mut handoff_executable = None;
     let mut user_root = None;
+    let mut interaction = InteractionRequest::default();
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].as_str() {
@@ -445,6 +437,21 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
             "--confirm" if !confirm => {
                 confirm = true;
                 index += 1;
+            }
+            "--interactive" if !interaction.interactive => {
+                interaction.interactive = true;
+                index += 1;
+            }
+            "--non-interactive" if !interaction.non_interactive => {
+                interaction.non_interactive = true;
+                index += 1;
+            }
+            "--output" if !interaction.json => {
+                if arguments.get(index + 1).map(String::as_str) != Some("json") {
+                    return Err("--output must be json".into());
+                }
+                interaction.json = true;
+                index += 2;
             }
             "--direct-handoff" if handoff_executable.is_none() => {
                 let value = arguments
@@ -471,11 +478,13 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
             option => return Err(format!("unknown or duplicate update option: {option}")),
         }
     }
+    interaction.resolve(false, false)?;
     Ok(UpdateArguments {
         channel,
         confirm,
         handoff_executable,
         user_root,
+        interaction,
     })
 }
 
@@ -493,7 +502,7 @@ fn spawn_windows_direct_handoff(
     executable: &Path,
     user_root: &Path,
     arguments: &UpdateArguments,
-) -> Result<(), String> {
+) -> Result<Option<PathBuf>, String> {
     if !cfg!(windows) {
         return Err("Windows direct update handoff is unavailable on this platform".to_owned());
     }
@@ -532,10 +541,27 @@ fn spawn_windows_direct_handoff(
     if arguments.confirm {
         command.arg("--confirm");
     }
+    if arguments.interaction.non_interactive {
+        command.arg("--non-interactive");
+    }
+    if arguments.interaction.interactive {
+        command.arg("--interactive");
+    }
+    let record = if arguments.interaction.json {
+        command.args(["--output", "json"]);
+        let mut nonce = [0_u8; 32];
+        getrandom::fill(&mut nonce).map_err(|error| format!("cannot identify update handoff: {error}"))?;
+        let record = parent.join(format!("{}.json", &sha256_digest(&nonce)[7..]));
+        let file = fs::OpenOptions::new().write(true).create_new(true).open(&record)
+            .map_err(|error| format!("cannot create update result file: {error}"))?;
+        command.stdout(file);
+        command.stdin(std::process::Stdio::null());
+        Some(record)
+    } else { None };
     command
         .spawn()
         .map_err(|error| format!("cannot launch direct update helper: {error}"))?;
-    Ok(())
+    Ok(record)
 }
 
 fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
@@ -1546,6 +1572,30 @@ mod tests {
         assert!(parse_arguments(&["--channel".to_owned(), "preview".to_owned()]).is_err());
         assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_err());
         assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
+    }
+
+    #[test]
+    fn update_input_mode_is_independent_of_software_confirmation() {
+        for confirmed in [false, true] {
+            for stdin in [false, true] {
+                for guidance in [false, true] {
+                    let parse = |flags: &[&str]| {
+                        let mut args: Vec<_> = flags.iter().map(ToString::to_string).collect();
+                        if confirmed { args.push("--confirm".into()); }
+                        parse_arguments(&args).unwrap().interaction.resolve(stdin, guidance).unwrap()
+                    };
+                    assert_eq!(parse(&[]), if stdin && guidance { InteractionMode::Terminal } else { InteractionMode::NonInteractive });
+                    assert_eq!(parse(&["--interactive"]), if stdin && guidance { InteractionMode::Terminal } else { InteractionMode::NeedsInput });
+                    assert_eq!(parse(&["--non-interactive"]), InteractionMode::NonInteractive);
+                    assert_eq!(parse(&["--output", "json"]), InteractionMode::NonInteractive);
+                }
+            }
+        }
+        for flags in [vec!["--interactive", "--non-interactive"], vec!["--interactive", "--output", "json"],
+            vec!["--output", "text"], vec!["--non-interactive", "--non-interactive"],
+            vec!["--output", "json", "--output", "json"]] {
+            assert!(parse_arguments(&flags.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err());
+        }
     }
 
     #[test]

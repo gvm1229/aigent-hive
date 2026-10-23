@@ -64,7 +64,7 @@ USAGE:
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] --output json
     hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
-    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
+    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm] [--interactive|--non-interactive] [--output json]
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
@@ -270,12 +270,16 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("korean") => korean::run(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
+        Some("update") if arguments.iter().any(|argument| argument == "--scope") => {
+            user_install::run_update(&arguments[1..])
+        }
         Some("update")
             if arguments.len() == 1
                 || arguments.get(1).is_some_and(|argument| {
                     matches!(
                         argument.as_str(),
                         "--channel" | "--user-root" | "--confirm" | "--direct-handoff" | "--help"
+                            | "--interactive" | "--non-interactive" | "--output"
                     )
                 }) =>
         {
@@ -283,9 +287,6 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         }
         Some("update") if arguments.get(1).map(String::as_str) == Some("--check") => {
             update_discovery::run(&arguments[1..])
-        }
-        Some("update") if arguments.iter().any(|argument| argument == "--scope") => {
-            user_install::run_update(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
         _ if wants_json(&arguments) => {

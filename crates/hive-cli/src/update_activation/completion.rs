@@ -11,13 +11,17 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub(super) struct Report {
     action: String,
     pub status: String,
     pub exit_code: u8,
     pub code: String,
     pub message: String,
+    #[serde(default)]
+    pub changed_paths: Vec<String>,
+    #[serde(default)]
+    pub evidence: Vec<Value>,
     pub data: Option<Value>,
     pub next_action: Option<String>,
 }
@@ -52,7 +56,18 @@ impl Report {
 fn decode(bytes: &[u8], success: bool) -> Result<Report, String> {
     let report: Report =
         serde_json::from_slice(bytes).map_err(|_| "update completion returned invalid JSON")?;
-    if report.action != "UpdateHiveUser" || success != (report.exit_code == 0) {
+    if report.action != "UpdateHiveUser"
+        || success != (report.exit_code == 0)
+        || !matches!(
+            (report.exit_code, report.status.as_str()),
+            (0, "success")
+                | (2, "blocked" | "error" | "needs-input" | "pending")
+                | (3, "blocked" | "conflict")
+                | (4, "unsupported")
+                | (5, "verification-failed")
+                | (10, "error")
+        )
+    {
         return Err("update completion action or exit status differs".into());
     }
     if report.succeeded() {
