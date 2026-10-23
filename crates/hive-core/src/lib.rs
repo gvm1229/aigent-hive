@@ -16,6 +16,7 @@ pub mod loop_graph;
 pub mod native_workflow;
 pub mod orchestration;
 pub mod policy;
+pub mod preferences;
 pub mod role;
 pub mod run;
 pub mod token_accounting;
