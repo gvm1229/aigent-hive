@@ -537,6 +537,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments.first().map(String::as_str) == Some("feature") {
         return run_feature(&arguments[1..]);
     }
+    if setup_engine::handles(arguments) {
+        return setup_engine::run(arguments);
+    }
     let result = parse(arguments)
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
@@ -1356,9 +1359,23 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
     Ok(PathBuf::from(value))
 }
 
-#[allow(clippy::too_many_lines)]
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
+    execute_answers(arguments, &answer_bytes, SetupBase::Current)
+}
+
+#[derive(Clone, Copy)]
+enum SetupBase<'a> {
+    Current,
+    Expected(Option<&'a [u8]>),
+}
+
+#[allow(clippy::too_many_lines)]
+fn execute_answers(
+    arguments: &Arguments,
+    answer_bytes: &[u8],
+    expected_config: SetupBase<'_>,
+) -> Result<ActionResult, SetupError> {
     let relative = Path::new(USER_SETUP_RELATIVE);
     let existing = super::user_install::read_user_setup_file(
         &arguments.root_cap,
@@ -1366,12 +1383,17 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
         MAX_USER_SETUP_BYTES,
     )
     .map_err(SetupError::Conflict)?;
-    let legacy_answers = existing.as_deref() == Some(answer_bytes.as_slice())
-        && has_legacy_recommended_skill_selection(&answer_bytes)?;
+    if matches!(expected_config, SetupBase::Expected(expected) if expected != existing.as_deref()) {
+        return Err(SetupError::Conflict(
+            "settings changed after the setup preview".to_owned(),
+        ));
+    }
+    let legacy_answers = existing.as_deref() == Some(answer_bytes)
+        && has_legacy_recommended_skill_selection(answer_bytes)?;
     let config = if legacy_answers {
-        parse_and_validate_installed_config(&answer_bytes)?
+        parse_and_validate_installed_config(answer_bytes)?
     } else {
-        parse_and_validate_config(&answer_bytes)?
+        parse_and_validate_config(answer_bytes)?
     };
     validate_registered_project_overrides(&config, &arguments.user_root)?;
     let catalog = parse_and_validate_catalog()?;
@@ -1416,7 +1438,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 changed_paths,
                 "hive.user-setup-dry-run-complete",
                 "user setup dry run completed",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &projection.reports,
             ))
@@ -1460,7 +1482,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 Vec::new(),
                 "hive.user-setup-valid",
                 "installed user setup is valid",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &[],
             ))
@@ -1579,7 +1601,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 host_changed_paths,
                 "hive.user-setup-complete",
                 "user setup completed",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &projection.reports,
             ))
@@ -3824,6 +3846,26 @@ usage_guard:
     }
 
     #[test]
+    fn setup_preview_snapshot_rejects_changed_config_before_any_host_mutation() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, b"changed after preview").unwrap();
+        let arguments = Arguments {
+            answers: root.path().join("answers.yml"),
+            mode: SetupMode::Apply,
+            user_root: root.path().to_owned(),
+            root_cap: super::super::user_install::open_user_root_for_setup(root.path()).unwrap(),
+        };
+        let Err(error) = execute_answers(&arguments, b"unused", SetupBase::Expected(None)) else {
+            panic!("changed setup input was accepted");
+        };
+        assert!(error.message().contains("changed after the setup preview"));
+        assert_eq!(fs::read(&path).unwrap(), b"changed after preview");
+        assert!(!root.path().join(".hive/install").exists());
+    }
+
+    #[test]
     fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
         assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
     }
@@ -4771,6 +4813,12 @@ usage_guard: {}
         arguments.extend(["--target".to_owned(), project.path().display().to_string()]);
         let result = execute_progress(parse_progress(&arguments).unwrap()).unwrap();
         assert_eq!(result.code, "hive.project-setup-progress-status");
+        hive_core::validate_json_schema(
+            include_str!("../../../schemas/action-result.schema.json"),
+            &serde_json::to_value(&result).unwrap(),
+            "project progress result",
+        )
+        .unwrap();
         assert_eq!(result.data.unwrap()["binding"]["scope"], "project");
         assert!(!root.path().join(".hive").exists());
     }

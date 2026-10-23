@@ -45,6 +45,12 @@ pub(super) struct SetupProgress {
     pub phase: ProgressPhase,
     pub step: String,
     pub answers: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_section: Option<String>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub answered_questions: std::collections::BTreeMap<String, u32>,
 }
 
 pub(super) struct ProgressSnapshot {
@@ -159,6 +165,9 @@ impl ProgressStore {
             phase: ProgressPhase::AwaitingAnswers,
             step,
             answers,
+            setup_mode: None,
+            selected_section: None,
+            answered_questions: std::collections::BTreeMap::new(),
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -168,7 +177,7 @@ impl ProgressStore {
         &self,
         snapshot: &ProgressSnapshot,
         progress: &SetupProgress,
-    ) -> Result<(), SetupError> {
+    ) -> Result<ProgressSnapshot, SetupError> {
         self.validate(progress)?;
         let current = read_user_setup_file(
             &self.config_root,
@@ -200,7 +209,12 @@ impl ProgressStore {
             snapshot.expected.as_deref(),
             Some(desired.as_bytes()),
         )
-        .map_err(SetupError::Conflict)
+        .map_err(SetupError::Conflict)?;
+        Ok(ProgressSnapshot {
+            progress: Some(progress.clone()),
+            expected: Some(desired.into_bytes()),
+            legacy: snapshot.legacy.clone(),
+        })
     }
 
     pub fn clear(&self, snapshot: &ProgressSnapshot) -> Result<Vec<String>, SetupError> {
@@ -225,6 +239,25 @@ impl ProgressStore {
             && progress.question_revision == QUESTION_REVISION
     }
 
+    pub fn matches_config(&self, bytes: Option<&[u8]>) -> bool {
+        self.base_config_digest == optional_digest(bytes)
+    }
+
+    pub fn record_completion(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        let snapshot = self.load()?;
+        if snapshot.progress.as_ref() != Some(prior) {
+            return Err(SetupError::Conflict(
+                "setup progress changed before recording completion".to_owned(),
+            ));
+        }
+        let mut complete = prior.clone();
+        complete
+            .base_config_digest
+            .clone_from(&self.base_config_digest);
+        complete.phase = ProgressPhase::Complete;
+        self.save(&snapshot, &complete).map(|_| ())
+    }
+
     fn read(&self, path: &Path) -> Result<Option<Vec<u8>>, SetupError> {
         read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)
     }
@@ -233,6 +266,10 @@ impl ProgressStore {
         if progress.schema_version != 2
             || progress.answer_schema_version != 2
             || progress.question_revision == 0
+            || progress
+                .setup_mode
+                .as_deref()
+                .is_some_and(|mode| !matches!(mode, "expedited" | "custom"))
             || progress.binding != self.binding
             || !valid_hash(&progress.catalog_digest)
             || !valid_hash(&progress.base_config_digest)
@@ -247,6 +284,17 @@ impl ProgressStore {
             ));
         }
         super::validate_progress_step(&progress.step)?;
+        if let Some(section) = &progress.selected_section {
+            super::validate_progress_step(section)?;
+        }
+        for (question, revision) in &progress.answered_questions {
+            super::validate_progress_step(question)?;
+            if *revision == 0 {
+                return Err(SetupError::Verification(
+                    "invalid answered question revision".to_owned(),
+                ));
+            }
+        }
         super::validate_progress_answers_for_scope(&progress.answers, self.binding.scope)
     }
 }

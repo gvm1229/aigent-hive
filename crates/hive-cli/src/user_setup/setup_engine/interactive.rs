@@ -1,0 +1,877 @@
+use super::{catalog, terminal::Terminal};
+use crate::user_setup::{
+    self,
+    progress_store::{ProgressPhase, ProgressSnapshot, ProgressStore, SetupProgress},
+    InterfaceLanguage, SetupError,
+};
+use hive_core::preferences::{
+    DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope, UsageProtection,
+};
+use hive_core::setup::{AnswerInput, InteractionMode, InteractionRequest, Question};
+use serde_json::{json, Value};
+use std::io::{self, BufRead, IsTerminal, Seek, Write};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+struct Conversation {
+    record: SetupProgress,
+    snapshot: ProgressSnapshot,
+    fresh: bool,
+}
+impl std::ops::Deref for Conversation {
+    type Target = SetupProgress;
+    fn deref(&self) -> &Self::Target {
+        &self.record
+    }
+}
+impl std::ops::DerefMut for Conversation {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.record
+    }
+}
+
+pub(in crate::user_setup) fn handles(arguments: &[String]) -> bool {
+    !arguments
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--answers" | "--quick-answers"))
+}
+
+struct Options {
+    root: PathBuf,
+    interaction: InteractionRequest,
+    resume: bool,
+    show: bool,
+    dry_run: bool,
+    section: Option<String>,
+}
+
+fn parse(arguments: &[String]) -> Result<Options, SetupError> {
+    let mut options = Options {
+        root: user_setup::resolve_user_root()?,
+        interaction: InteractionRequest::default(),
+        resume: false,
+        show: false,
+        dry_run: false,
+        section: None,
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    let mut scope = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        if !seen.insert(option) {
+            return Err(SetupError::Input("duplicate setup option".to_owned()));
+        }
+        match option {
+            "--interactive" => options.interaction.interactive = true,
+            "--non-interactive" => options.interaction.non_interactive = true,
+            "--resume" => options.resume = true,
+            "--show" => options.show = true,
+            "--dry-run" => options.dry_run = true,
+            "--scope" | "--user-root" | "--output" | "--section" => {
+                let value = arguments
+                    .get(index + 1)
+                    .filter(|value| !value.starts_with("--"))
+                    .ok_or_else(|| SetupError::Input("missing setup option value".to_owned()))?;
+                match option {
+                    "--scope" => scope = Some(value.as_str()),
+                    "--user-root" => options.root = value.into(),
+                    "--section" => options.section = Some(value.clone()),
+                    _ if value == "json" => options.interaction.json = true,
+                    _ => return Err(SetupError::Input("setup output must be json".to_owned())),
+                }
+                index += 1;
+            }
+            _ => {
+                return Err(SetupError::Input(
+                    "unknown interactive setup option".to_owned(),
+                ))
+            }
+        }
+        index += 1;
+    }
+    if scope != Some("user")
+        || (options.show && (options.resume || options.dry_run || options.section.is_some()))
+    {
+        return Err(SetupError::Input(
+            "choose user setup or a separate settings inspection".to_owned(),
+        ));
+    }
+    options
+        .interaction
+        .resolve(false, false)
+        .map_err(SetupError::Input)?;
+    Ok(options)
+}
+
+pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
+    let json_output = arguments
+        .windows(2)
+        .any(|pair| pair == ["--output", "json"]);
+    let result = parse(arguments)
+        .and_then(|options| {
+            let mode = options
+                .interaction
+                .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
+                .map_err(SetupError::Input)?;
+            let mut terminal = Terminal {
+                reader: io::stdin().lock(),
+                writer: io::stderr().lock(),
+                language: InterfaceLanguage::En,
+            };
+            execute(&options, mode, &mut terminal)
+        })
+        .unwrap_or_else(|error| user_setup::failure(&error));
+    if json_output {
+        return crate::emit_action_result(&result);
+    }
+    eprintln!("{}", result.message);
+    if let Some(next) = &result.next_action {
+        eprintln!("{next}");
+    }
+    ExitCode::from(result.exit_code)
+}
+
+fn execute<R: BufRead, W: Write>(
+    options: &Options,
+    mode: InteractionMode,
+    terminal: &mut Terminal<R, W>,
+) -> Result<crate::ActionResult, SetupError> {
+    let mut result = execute_inner(options, mode, terminal)?;
+    if result.next_action.as_deref() == Some("hive setup --scope user --resume") {
+        let path = options.root.to_string_lossy();
+        let quoted = if cfg!(windows) {
+            path.replace('\'', "''")
+        } else {
+            path.replace('\'', "'\"'\"'")
+        };
+        result.next_action = Some(format!(
+            "hive setup --scope user --resume --user-root '{quoted}'"
+        ));
+    }
+    Ok(result)
+}
+
+fn execute_inner<R: BufRead, W: Write>(
+    options: &Options,
+    mode: InteractionMode,
+    terminal: &mut Terminal<R, W>,
+) -> Result<crate::ActionResult, SetupError> {
+    let (root_path, root_cap) =
+        crate::user_install::open_canonical_user_root_for_setup(&options.root)
+            .map_err(SetupError::Conflict)?;
+    let existing = crate::user_install::read_user_setup_file(
+        &root_cap,
+        Path::new(user_setup::USER_SETUP_RELATIVE),
+        user_setup::MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    let config = existing
+        .as_deref()
+        .map(user_setup::parse_and_validate_installed_config)
+        .transpose()?;
+    if let Some(config) = &config {
+        terminal.language = config.interface_language;
+    }
+    let store = ProgressStore::open(&root_path, None)?;
+    if !store.matches_config(existing.as_deref()) {
+        return Err(SetupError::Conflict(
+            "settings changed before setup could start".to_owned(),
+        ));
+    }
+    let snapshot = store.load()?;
+    if config.is_none()
+        && snapshot
+            .progress
+            .as_ref()
+            .is_some_and(|p| p.answers["interface_language"] == "ko")
+    {
+        terminal.language = InterfaceLanguage::Ko;
+    }
+    if let Some(result) =
+        preliminary_result(options, mode, &store, &snapshot, config.as_ref(), terminal)?
+    {
+        return Ok(result);
+    }
+    let record = match snapshot.progress.clone() {
+        Some(progress) if progress.phase != ProgressPhase::Complete => {
+            if !options.resume || !store.resume_ready(&progress) {
+                return Ok(pending(terminal.language, "hive.setup-resume-required"));
+            }
+            if matches!(
+                progress.phase,
+                ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+            ) {
+                return Ok(pending(terminal.language, "hive.setup-recovery-required"));
+            }
+            progress
+        }
+        _ => store.new_progress(
+            "user-language".to_owned(),
+            config
+                .as_ref()
+                .map(serde_json::to_value)
+                .transpose()
+                .map_err(|error| SetupError::Internal(error.to_string()))?
+                .unwrap_or_else(fresh_answers),
+        )?,
+    };
+    let mut progress = Conversation {
+        record,
+        snapshot,
+        fresh: config.is_none(),
+    };
+    if progress.selected_section.is_none() {
+        progress.selected_section.clone_from(&options.section);
+    }
+    let questions = catalog()?;
+    if !collect(
+        &store,
+        &mut progress,
+        &questions.questions,
+        options,
+        terminal,
+    )? {
+        return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
+    preview_apply(
+        options,
+        &root_path,
+        &root_cap,
+        existing.as_deref(),
+        &store,
+        &mut progress,
+        terminal,
+    )
+}
+
+fn preliminary_result<R: BufRead, W: Write>(
+    options: &Options,
+    mode: InteractionMode,
+    store: &ProgressStore,
+    snapshot: &ProgressSnapshot,
+    config: Option<&user_setup::UserSetupConfig>,
+    terminal: &mut Terminal<R, W>,
+) -> Result<Option<crate::ActionResult>, SetupError> {
+    if mode == InteractionMode::NeedsInput {
+        return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
+    }
+    if options.resume
+        && snapshot
+            .progress
+            .as_ref()
+            .is_some_and(|p| p.phase == ProgressPhase::Complete && store.resume_ready(p))
+    {
+        return Ok(Some(result(
+            "success",
+            0,
+            "hive.user-setup-complete",
+            terminal.language,
+            "이미 적용·검증을 마친 설정입니다.",
+            "This setup was already applied and verified.",
+            None,
+            None,
+        )));
+    }
+    if options.section.as_ref().is_some_and(|section| {
+        catalog().map_or(true, |c| {
+            c.section(PreferenceScope::User, section).is_empty()
+        })
+    }) {
+        return Err(SetupError::Input(
+            "unknown setup question section".to_owned(),
+        ));
+    }
+    if options.show {
+        return inspect_settings(config, snapshot, terminal, options.interaction.json).map(Some);
+    }
+    if mode != InteractionMode::Terminal {
+        return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
+    }
+    if config
+        .as_ref()
+        .is_some_and(|config| config.schema_version == 1)
+    {
+        return Ok(Some(result(
+            "needs-input",
+            2,
+            "hive.setup-migration-pending",
+            terminal.language,
+            "기존 사용량 보호의 실제 감시 상태를 확인한 뒤 설정 이전 필요",
+            "Legacy setup needs verified monitor-state migration",
+            None,
+            Some("hive setup --scope user --show --output json".to_owned()),
+        )));
+    }
+    Ok(None)
+}
+
+fn fresh_answers() -> Value {
+    let mut guard = serde_json::to_value(UsageProtection::default()).expect("typed usage policy");
+    guard["stop_remaining_percent"] = json!(20);
+    guard["codexbar_fallback_enabled"] = json!(false);
+    guard["discord"] = serde_json::to_value(user_setup::DiscordGuardPreferences::default())
+        .expect("typed notices");
+    guard["project_overrides"] = json!({});
+    json!({"schema_version":2,"wiki":{"enabled":true,"language":"ko","backend":"markdown"},
+        "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},"selected_hosts":["codex"],
+        "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","usage_guard":guard,"preference_decisions":{}})
+}
+
+fn collect<R: BufRead, W: Write>(
+    store: &ProgressStore,
+    progress: &mut Conversation,
+    questions: &[Question],
+    options: &Options,
+    terminal: &mut Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    let selected = |id: &str| {
+        questions
+            .iter()
+            .find(|q| q.id == id)
+            .ok_or_else(|| SetupError::Internal("missing setup question".to_owned()))
+    };
+    let needs_language = progress.answers.get("interface_language").is_none()
+        || (progress.selected_section.as_deref() == Some("language")
+            && !answered(progress, selected("user-language")?));
+    if needs_language && !ask(store, progress, selected("user-language")?, terminal)? {
+        return Ok(false);
+    }
+    terminal.language = if progress.answers["interface_language"] == "ko" {
+        InterfaceLanguage::Ko
+    } else {
+        InterfaceLanguage::En
+    };
+    if progress.fresh && progress.answers["preference_decisions"]["/wiki/language"].is_null() {
+        progress.answers["wiki"]["language"] = progress.answers["interface_language"].clone();
+    }
+    for question in questions
+        .iter()
+        .filter(|q| q.scope == PreferenceScope::User)
+    {
+        if let Some(value) = progress.answers.pointer(&question.key).cloned() {
+            if progress.answers["preference_decisions"][&question.key].is_null() {
+                let decision = PreferenceDecision::new(
+                    &value,
+                    if progress.fresh {
+                        DecisionOrigin::Default
+                    } else {
+                        DecisionOrigin::LegacyUnknown
+                    },
+                    PreferenceInput::Terminal,
+                    PreferenceScope::User,
+                    env!("CARGO_PKG_VERSION"),
+                    None,
+                )
+                .map_err(SetupError::Internal)?;
+                progress.answers["preference_decisions"][&question.key] = json!(decision);
+            }
+        }
+    }
+    if progress.setup_mode.is_none() {
+        if progress.selected_section.is_some() {
+            progress.setup_mode = Some("custom".to_owned());
+        } else {
+            "user-mode".clone_into(&mut progress.step);
+            persist(store, progress)?;
+            let answer = terminal.ask(selected("user-mode")?, None)?;
+            let AnswerInput::Answered { value, .. } = answer else {
+                return Ok(false);
+            };
+            progress.setup_mode = value.as_str().map(str::to_owned);
+        }
+        persist(store, progress)?;
+    }
+    let quick = progress.setup_mode.as_deref() == Some("expedited");
+    for question in questions
+        .iter()
+        .filter(|q| q.scope == PreferenceScope::User)
+    {
+        if matches!(question.id.as_str(), "user-language" | "user-mode") {
+            continue;
+        }
+        if progress
+            .selected_section
+            .as_ref()
+            .is_some_and(|section| &question.section != section)
+        {
+            continue;
+        }
+        if quick && !matches!(question.id.as_str(), "user-contexts" | "user-hosts") {
+            continue;
+        }
+        if !question.applicable(&progress.answers) {
+            continue;
+        }
+        if question.id == "user-context-description"
+            && progress.answers["profile"]["contexts"]
+                .as_array()
+                .is_some_and(|values| !values.is_empty())
+        {
+            continue;
+        }
+        if answered(progress, question) && options.resume {
+            continue;
+        }
+        if !ask(store, progress, question, terminal)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn ask<R: BufRead, W: Write>(
+    store: &ProgressStore,
+    progress: &mut Conversation,
+    question: &Question,
+    terminal: &mut Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    progress.step.clone_from(&question.id);
+    persist(store, progress)?;
+    let current = progress.answers.pointer(&question.key);
+    let (value, origin) = loop {
+        let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
+            return Ok(false);
+        };
+        if config_answer_valid(question, &progress.answers, &value)? {
+            break (value, origin);
+        }
+        terminal.say(
+            "입력한 구조가 이 설정의 형식과 맞지 않습니다. 이 항목만 다시 입력해 주세요.",
+            "The structure does not match this setting. Enter this answer again.",
+        )?;
+    };
+    set_value(&mut progress.answers, &question.key, value.clone())?;
+    let mut decision = PreferenceDecision::new(
+        &value,
+        origin,
+        PreferenceInput::Terminal,
+        PreferenceScope::User,
+        env!("CARGO_PKG_VERSION"),
+        Some(user_setup::feature_now_unix()?),
+    )
+    .map_err(SetupError::Input)?;
+    decision.question_id = Some(question.id.clone());
+    decision.question_revision = Some(question.revision);
+    progress.answers["preference_decisions"][&question.key] = json!(decision);
+    progress
+        .answered_questions
+        .insert(question.id.clone(), question.revision);
+    persist(store, progress)?;
+    Ok(true)
+}
+
+fn config_answer_valid(
+    question: &Question,
+    answers: &Value,
+    value: &Value,
+) -> Result<bool, SetupError> {
+    let source = match question.scope {
+        PreferenceScope::User => user_setup::USER_SETUP_SCHEMA,
+        PreferenceScope::Project => {
+            include_str!("../../../../../schemas/setup-answers.schema.json")
+        }
+    };
+    let schema: Value =
+        serde_json::from_str(source).map_err(|error| SetupError::Internal(error.to_string()))?;
+    let validator = jsonschema::options()
+        .with_draft(jsonschema::Draft::Draft202012)
+        .should_validate_formats(true)
+        .build(&schema)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    let mut proposed = answers.clone();
+    set_value(&mut proposed, &question.key, value.clone())?;
+    // Other required answers may still be pending. Reject only errors in this answer's subtree.
+    let nested = format!("{}/", question.key);
+    let invalid = validator.iter_errors(&proposed).any(|error| {
+        let path = error.instance_path().to_string();
+        path == question.key || path.starts_with(&nested)
+    });
+    Ok(!invalid)
+}
+
+fn answered(progress: &SetupProgress, question: &Question) -> bool {
+    progress.answered_questions.get(&question.id) == Some(&question.revision)
+}
+
+fn set_value(document: &mut Value, pointer: &str, value: Value) -> Result<(), SetupError> {
+    let (parent, key) = pointer
+        .rsplit_once('/')
+        .ok_or_else(|| SetupError::Internal("invalid preference pointer".to_owned()))?;
+    let object = document
+        .pointer_mut(parent)
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| SetupError::Internal("missing preference object".to_owned()))?;
+    object.insert(key.replace("~1", "/").replace("~0", "~"), value);
+    Ok(())
+}
+
+fn persist(store: &ProgressStore, progress: &mut Conversation) -> Result<(), SetupError> {
+    progress.snapshot = store.save(&progress.snapshot, &progress.record)?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn preview_apply<R: BufRead, W: Write>(
+    options: &Options,
+    root: &Path,
+    root_cap: &cap_std::fs::Dir,
+    existing: Option<&[u8]>,
+    store: &ProgressStore,
+    progress: &mut Conversation,
+    terminal: &mut Terminal<R, W>,
+) -> Result<crate::ActionResult, SetupError> {
+    if progress.answers["persona"]["id"] != "custom" {
+        progress.answers["persona"]
+            .as_object_mut()
+            .expect("persona object")
+            .remove("custom_description");
+    }
+    let bytes = serde_json::to_vec(&progress.answers)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    let mut input =
+        tempfile::NamedTempFile::new().map_err(|error| SetupError::Internal(error.to_string()))?;
+    input
+        .write_all(&bytes)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    let mut args = user_setup::Arguments {
+        answers: input.path().to_owned(),
+        mode: user_setup::SetupMode::DryRun,
+        user_root: root.to_owned(),
+        root_cap: root_cap
+            .try_clone()
+            .map_err(|error| SetupError::Internal(error.to_string()))?,
+    };
+    user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    let displayed = display_preview(&progress.answers, terminal)?;
+    progress.phase = ProgressPhase::Previewed;
+    persist(store, progress)?;
+    if options.dry_run || !terminal.confirm()? {
+        return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
+    // The bundle confirmation records acceptance only for choices displayed above.
+    let accepted_questions: Vec<_> = displayed
+        .questions
+        .iter()
+        .filter(|q| q.scope == PreferenceScope::User && q.applicable(&progress.answers))
+        .collect();
+    for question in accepted_questions {
+        if progress.answers["preference_decisions"][&question.key]["origin"] == "default" {
+            if let Some(value) = progress.answers.pointer(&question.key).cloned() {
+                let mut decision = PreferenceDecision::new(
+                    &value,
+                    DecisionOrigin::AcceptedDefault,
+                    PreferenceInput::Terminal,
+                    PreferenceScope::User,
+                    env!("CARGO_PKG_VERSION"),
+                    Some(user_setup::feature_now_unix()?),
+                )
+                .map_err(SetupError::Internal)?;
+                decision.question_id = Some(question.id.clone());
+                decision.question_revision = Some(question.revision);
+                progress.answers["preference_decisions"][&question.key] = json!(decision);
+            }
+        }
+    }
+    let bytes = serde_json::to_vec(&progress.answers)
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    input
+        .as_file_mut()
+        .set_len(0)
+        .and_then(|()| input.rewind())
+        .and_then(|()| input.write_all(&bytes))
+        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    progress.phase = ProgressPhase::Applying;
+    persist(store, progress)?;
+    args.mode = user_setup::SetupMode::Apply;
+    let applied =
+        user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    args.mode = user_setup::SetupMode::Validate;
+    user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Current)?;
+    ProgressStore::open(root, None)?.record_completion(&progress.record)?;
+    let mut completed = result(
+        "success",
+        0,
+        "hive.user-setup-complete",
+        terminal.language,
+        "Hive 전역 설정 적용·검증 완료",
+        "Hive user setup applied and verified",
+        Some(
+            json!({"operation_id":progress.operation_id,"changed_file_count":applied.changed_paths.len(),"model_calls":0}),
+        ),
+        None,
+    );
+    completed.changed_paths = applied.changed_paths;
+    Ok(completed)
+}
+
+fn display_preview<R: BufRead, W: Write>(
+    answers: &Value,
+    terminal: &mut Terminal<R, W>,
+) -> Result<hive_core::setup::QuestionCatalog, SetupError> {
+    terminal.say("적용 전 확인: 선택한 앱의 Hive 설정과 지침 갱신. 기존 사용자 자료 보존.","Preview: update Hive settings and instructions for the selected apps. Preserve existing user data.")?;
+    let displayed = catalog()?;
+    for question in displayed
+        .questions
+        .iter()
+        .filter(|q| q.scope == PreferenceScope::User && q.applicable(answers))
+    {
+        if let Some(value) = answers.pointer(&question.key) {
+            writeln!(
+                terminal.writer,
+                "{} {}",
+                question
+                    .prompt
+                    .get(terminal.language == InterfaceLanguage::Ko),
+                super::terminal::display_value(
+                    question,
+                    value,
+                    terminal.language == InterfaceLanguage::Ko
+                )
+            )
+            .map_err(|error| SetupError::Input(error.to_string()))?;
+        }
+    }
+    Ok(displayed)
+}
+
+fn inspect_settings<R: BufRead, W: Write>(
+    config: Option<&user_setup::UserSetupConfig>,
+    snapshot: &ProgressSnapshot,
+    terminal: &mut Terminal<R, W>,
+    json_output: bool,
+) -> Result<crate::ActionResult, SetupError> {
+    let policy = config.and_then(|c| c.usage_guard.policy.as_ref());
+    if !json_output {
+        if let Some(config) = config {
+            let values = serde_json::to_value(config)
+                .map_err(|error| SetupError::Internal(error.to_string()))?;
+            display_preview(&values, terminal)?;
+        } else {
+            terminal.say(
+                "아직 저장된 설정이 없습니다.",
+                "No settings have been saved yet.",
+            )?;
+        }
+    }
+    Ok(result(
+        "success",
+        0,
+        "hive.setup-shown",
+        terminal.language,
+        "저장된 설정과 미완료 질문 조회 완료",
+        "Stored settings and pending questions inspected",
+        Some(
+            json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
+            "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":"not-inspected"}),
+        ),
+        None,
+    ))
+}
+
+fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
+    result(
+        "needs-input",
+        2,
+        code,
+        language,
+        "설정이 아직 끝나지 않았습니다. 터미널에서 이어서 진행해 주세요.",
+        "Setup is pending. Continue in a terminal.",
+        None,
+        Some("hive setup --scope user --resume".to_owned()),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn result(
+    status: &'static str,
+    exit_code: u8,
+    code: &'static str,
+    language: InterfaceLanguage,
+    ko: &str,
+    en: &str,
+    data: Option<Value>,
+    next_action: Option<String>,
+) -> crate::ActionResult {
+    crate::ActionResult {
+        schema_version: 1,
+        action: "SetupHiveUser",
+        status,
+        exit_code,
+        code,
+        message: if language == InterfaceLanguage::Ko {
+            ko
+        } else {
+            en
+        }
+        .to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action,
+        data,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn options(root: &Path) -> Options {
+        Options {
+            root: root.to_owned(),
+            interaction: InteractionRequest::default(),
+            resume: false,
+            show: false,
+            dry_run: false,
+            section: None,
+        }
+    }
+
+    fn conversation(store: &ProgressStore) -> Conversation {
+        Conversation {
+            record: store
+                .new_progress("user-language".to_owned(), fresh_answers())
+                .unwrap(),
+            snapshot: store.load().unwrap(),
+            fresh: true,
+        }
+    }
+
+    #[test]
+    fn quick_answers_are_valid_v2_without_any_model_or_settings_write() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        let mut terminal = Terminal {
+            reader: Cursor::new("2\n\n1\n1\n".as_bytes()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
+        let config =
+            user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+                .unwrap();
+        assert_eq!(config.schema_version, 2);
+        assert_eq!(config.interface_language, InterfaceLanguage::En);
+        assert!(!config.usage_guard.policy.unwrap().enforcement_enabled);
+        assert_eq!(
+            config.preference_decisions["/selected_hosts"].origin,
+            DecisionOrigin::Explicit
+        );
+        assert_eq!(
+            config.preference_decisions["/usage_guard/enforcement_enabled"].origin,
+            DecisionOrigin::Default
+        );
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        assert!(!root.path().join(".hive/install").exists());
+    }
+
+    #[test]
+    fn interruption_preserves_language_and_resume_does_not_repeat_answered_questions() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        let mut terminal = Terminal {
+            reader: Cursor::new("1\n\n1\n".as_bytes()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(!collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
+        assert_eq!(store.load().unwrap().progress.unwrap().step, "user-hosts");
+        let mut options = options(root.path());
+        options.resume = true;
+        let mut resumed = Terminal {
+            reader: Cursor::new("1\n".as_bytes()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options,
+            &mut resumed
+        )
+        .unwrap());
+        let shown = String::from_utf8(resumed.writer).unwrap();
+        assert!(shown.contains("Hive를 사용할 앱"));
+        assert!(!shown.contains("사용할 언어"));
+        assert!(!shown.contains("배경이나 관심사"));
+    }
+
+    #[test]
+    fn machine_mode_and_missing_terminal_never_read_stdin_or_create_progress() {
+        let root = tempfile::tempdir().unwrap();
+        for mode in [InteractionMode::NonInteractive, InteractionMode::NeedsInput] {
+            let mut terminal = Terminal {
+                reader: Cursor::new(b"yes\n"),
+                writer: Vec::new(),
+                language: InterfaceLanguage::En,
+            };
+            let result = execute(&options(root.path()), mode, &mut terminal).unwrap();
+            assert_eq!(result.code, "hive.setup-needs-input");
+            hive_core::validate_json_schema(
+                include_str!("../../../../../schemas/action-result.schema.json"),
+                &serde_json::to_value(&result).unwrap(),
+                "setup result",
+            )
+            .unwrap();
+            assert_eq!(terminal.reader.position(), 0);
+            assert!(terminal.writer.is_empty());
+            assert!(!root.path().join(".hive").exists());
+        }
+    }
+
+    #[test]
+    fn invalid_interaction_options_are_rejected_before_opening_settings() {
+        let args = |tail: &[&str]| {
+            [
+                vec!["--scope".to_owned(), "user".to_owned()],
+                tail.iter().map(|s| (*s).to_owned()).collect(),
+            ]
+            .concat()
+        };
+        assert!(parse(&args(&["--interactive", "--output", "json"])).is_err());
+        assert!(parse(&args(&["--interactive", "--non-interactive"])).is_err());
+        assert!(parse(&args(&["--show", "--resume"])).is_err());
+    }
+
+    #[test]
+    fn invalid_structured_choice_repeats_only_that_question_without_saving_it() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        let catalog = catalog().unwrap();
+        let question = catalog
+            .questions
+            .iter()
+            .find(|q| q.id == "user-skills")
+            .unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"{\"mode\":\"invalid\"}\n{\"mode\":\"all\"}\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        assert_eq!(progress.answers["skills"], json!({"mode":"all"}));
+        assert_eq!(progress.answered_questions.len(), 1);
+        assert!(String::from_utf8(terminal.writer)
+            .unwrap()
+            .contains("Enter this answer again"));
+    }
+}

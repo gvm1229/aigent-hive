@@ -6,6 +6,10 @@ use hive_core::preferences::{DecisionOrigin, PreferenceScope};
 use hive_core::setup::QuestionCatalog;
 use serde_json::{json, Value};
 
+mod interactive;
+mod terminal;
+pub(super) use interactive::{handles, run};
+
 pub(super) const QUESTIONS: &str = include_str!("../../../../../harness/setup/questions.yml");
 
 pub(super) fn catalog() -> Result<QuestionCatalog, SetupError> {
@@ -168,5 +172,29 @@ mod tests {
         assert_eq!(guard["current"], true);
         assert_eq!(guard["question"]["default"], false);
         assert_eq!(guard["source"], "explicit");
+    }
+
+    #[test]
+    fn described_section_obeys_the_machine_result_contract() {
+        let root = tempfile::tempdir().unwrap();
+        let args = vec![
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--describe".to_owned(),
+            "--section".to_owned(),
+            "usage".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+            "--user-root".to_owned(),
+            root.path().display().to_string(),
+        ];
+        let result = describe_section(&args).unwrap();
+        hive_core::validate_json_schema(
+            include_str!("../../../../../schemas/action-result.schema.json"),
+            &serde_json::to_value(result).unwrap(),
+            "section result",
+        )
+        .unwrap();
+        assert!(!root.path().join(".hive").exists());
     }
 }

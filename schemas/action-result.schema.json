@@ -25,6 +25,13 @@
         "SetupHarness",
         "SetupHiveUser",
         "DescribeHiveUserSetup",
+        "DescribeHiveSetupSection",
+        "SaveUserSetupProgress",
+        "InspectUserSetupProgress",
+        "ClearUserSetupProgress",
+        "SaveProjectSetupProgress",
+        "InspectProjectSetupProgress",
+        "ClearProjectSetupProgress",
         "ManageHiveUserFeature",
         "InstallHiveUser",
         "UninstallHiveUser",
@@ -105,6 +112,7 @@
         "blocked",
         "conflict",
         "verification-failed",
+        "needs-input",
         "error"
       ]
     },
@@ -146,6 +154,7 @@
               "run-status",
               "prepared-dispatch",
               "user-setup-catalog",
+              "setup-questions",
               "session-manifest"
             ]
           },
@@ -174,7 +183,7 @@
     {
       "properties": {
         "exit_code": { "const": 2 },
-        "status": { "enum": ["blocked", "error"] }
+        "status": { "enum": ["blocked", "error", "needs-input"] }
       }
     },
     {
