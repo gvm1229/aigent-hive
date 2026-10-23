@@ -1,3 +1,5 @@
+mod completion;
+
 use crate::usage::{CommandRunner, SystemCommandRunner};
 use hive_core::sha256_digest;
 use hive_update::SemVersion;
@@ -111,6 +113,9 @@ struct UpdateFlowContext<'a> {
 }
 
 trait ProjectionRefresher {
+    fn requires_host_selection(&self) -> bool { true }
+    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) { (language, hosts.to_vec()) }
+
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String>;
 
     fn refresh_and_validate(
@@ -128,77 +133,38 @@ trait ProjectionRefresher {
     ) -> Result<(), String>;
 }
 
-struct LiveProjectionRefresher;
+struct LiveProjectionRefresher {
+    interactive: bool,
+    report: std::cell::RefCell<Option<completion::Report>>,
+}
 
-impl ProjectionRefresher for LiveProjectionRefresher {
-    fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String> {
-        crate::user_install::authenticated_saved_projection_hosts(user_root)
-    }
-
-    fn refresh_and_validate(
-        &self,
-        executable: &Path,
-        user_root: &Path,
-        hosts: &[String],
-    ) -> Result<(), String> {
-        run_user_projection(executable, user_root, hosts, "update")
-    }
-
-    fn bootstrap_and_validate(
-        &self,
-        executable: &Path,
-        user_root: &Path,
-        hosts: &[String],
-    ) -> Result<(), String> {
-        run_user_projection(executable, user_root, hosts, "install")
+impl LiveProjectionRefresher {
+    fn new(interactive: bool) -> Self { Self { interactive, report:std::cell::RefCell::new(None) } }
+    fn complete(&self, executable: &Path, root: &Path) -> Result<(), String> {
+        let report = completion::run(executable, root, self.interactive)?;
+        let success = report.succeeded();
+        let message = format!("{} [{}]",report.message,report.code);
+        if let Some(next) = &report.next_action { eprintln!("{next}"); }
+        if success { eprintln!("{}",report.message); }
+        *self.report.borrow_mut()=Some(report);
+        if success { Ok(()) } else { Err(message) }
     }
 }
 
-fn run_user_projection(
-    executable: &Path,
-    user_root: &Path,
-    hosts: &[String],
-    operation: &str,
-) -> Result<(), String> {
-    let executable = executable.to_string_lossy();
-    let program = SystemCommandRunner
-        .qualify(&executable)
-        .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
-    let hosts = hosts.join(",");
-    let user_root = user_root.to_string_lossy();
-    for mode in ["--apply", "--validate"] {
-        let expected_action = projection_refresh_action(operation, mode);
-        let output = SystemCommandRunner
-            .run(
-                &program,
-                &[
-                    operation,
-                    "--scope",
-                    "user",
-                    "--hosts",
-                    &hosts,
-                    mode,
-                    "--user-root",
-                    &user_root,
-                    "--output",
-                    "json",
-                ],
-                INSTALL_TIMEOUT,
-                INSTALL_OUTPUT_LIMIT,
-            )
-            .map_err(|error| {
-                format!("activated Hive user projection {mode} command failed: {error}")
-            })?;
-        let result: ChildActionResult = serde_json::from_slice(&output.stdout).map_err(|_| {
-            format!("activated Hive user projection {mode} command returned malformed JSON")
-        })?;
-        if !output.success || !projection_refresh_reported_success(expected_action, &result) {
-            return Err(format!(
-                "activated Hive user projection {mode} command did not report success"
-            ));
-        }
+impl ProjectionRefresher for LiveProjectionRefresher {
+    fn requires_host_selection(&self) -> bool { false }
+    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) {
+        self.report.borrow().as_ref().map_or_else(||(language,hosts.to_vec()),|report| report.summary(language,hosts))
     }
-    Ok(())
+    fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String> {
+        crate::user_install::authenticated_saved_projection_hosts(user_root)
+    }
+    fn refresh_and_validate(&self, executable: &Path, user_root: &Path, _hosts: &[String]) -> Result<(), String> {
+        self.complete(executable,user_root)
+    }
+    fn bootstrap_and_validate(&self, executable: &Path, user_root: &Path, _hosts: &[String]) -> Result<(), String> {
+        self.complete(executable,user_root)
+    }
 }
 
 #[cfg(test)]
@@ -229,6 +195,7 @@ impl ProjectionRefresher for NoopProjectionRefresher {
     }
 }
 
+#[cfg(test)]
 #[derive(Deserialize)]
 struct ChildActionResult {
     action: String,
@@ -236,6 +203,7 @@ struct ChildActionResult {
     exit_code: u8,
 }
 
+#[cfg(test)]
 fn projection_refresh_action(operation: &str, mode: &str) -> &'static str {
     match (operation, mode) {
         ("install", "--apply") => "InstallHiveUser",
@@ -245,6 +213,7 @@ fn projection_refresh_action(operation: &str, mode: &str) -> &'static str {
     }
 }
 
+#[cfg(test)]
 fn projection_refresh_reported_success(expected_action: &str, result: &ChildActionResult) -> bool {
     result.status == "success" && result.exit_code == 0 && result.action == expected_action
 }
@@ -405,6 +374,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         }
     }
     let mut output = io::stderr().lock();
+    let refresher = LiveProjectionRefresher::new(interactive);
     let outcome = if arguments.confirm {
         let mut input = io::Cursor::new(b"y\n".as_slice());
         update_flow_with_projection_channel(
@@ -415,7 +385,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             },
             &LiveRegistry,
             &LiveInstaller,
-            &LiveProjectionRefresher,
+            &refresher,
             UpdateSelection {
                 channel: arguments.channel,
                 confirmed: true,
@@ -433,7 +403,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             },
             &LiveRegistry,
             &LiveInstaller,
-            &LiveProjectionRefresher,
+            &refresher,
             UpdateSelection {
                 channel: arguments.channel,
                 confirmed: false,
@@ -679,14 +649,16 @@ fn update_flow_with_projection_channel(
                 .map_err(|error| {
                     format!("authenticated user projection reconciliation failed: {error}")
                 })?;
-            write_reconciled(output, context.language, &hosts)?;
+            let (language, hosts) = refresher.summary(context.language, &hosts);
+            write_reconciled(output, language, &hosts)?;
             return Ok(FlowOutcome::Reconciled);
         }
-        hosts = select_bootstrap_hosts(context.language, input, output)?;
+        if refresher.requires_host_selection() { hosts = select_bootstrap_hosts(context.language, input, output)?; }
         refresher
             .bootstrap_and_validate(context.executable, context.user_root, &hosts)
             .map_err(|error| format!("initial user projection bootstrap failed: {error}"))?;
-        write_bootstrapped(output, context.language, &hosts)?;
+        let (language, hosts) = refresher.summary(context.language, &hosts);
+        write_bootstrapped(output, language, &hosts)?;
         return Ok(FlowOutcome::Reconciled);
     }
     write_prompt(output, context.language, &owner, &target, &hosts)?;
@@ -700,7 +672,7 @@ fn update_flow_with_projection_channel(
             return Ok(FlowOutcome::Declined);
         }
     }
-    if bootstrap {
+    if bootstrap && refresher.requires_host_selection() {
         hosts = select_bootstrap_hosts(context.language, input, output)?;
     }
     installer.install(&owner, &target)?;
@@ -725,7 +697,8 @@ fn update_flow_with_projection_channel(
                 )
             })?;
     }
-    write_installed(output, context.language, &target, &hosts)?;
+    let (language, hosts) = refresher.summary(context.language, &hosts);
+    write_installed(output, language, &target, &hosts)?;
     Ok(FlowOutcome::Installed)
 }
 
@@ -1145,11 +1118,11 @@ fn write_reconciled(
 ) -> Result<(), String> {
     let message = match language {
         Language::En => format!(
-            "Aigent Hive is current; refreshed and validated user projection hosts: {}.\n",
+            "Aigent Hive is current; user guidance updated and verified for: {}.\n",
             hosts.join(", ")
         ),
         Language::Ko => format!(
-            "Aigent Hive는 최신 상태이며 사용자 투영 호스트를 갱신·검증했습니다: {}.\n",
+            "Aigent Hive는 최신 상태이며 다음 앱의 사용자 지침을 갱신·검증했습니다: {}.\n",
             hosts.join(", ")
         ),
     };
@@ -1164,8 +1137,8 @@ fn write_bootstrapped(
     hosts: &[String],
 ) -> Result<(), String> {
     let message = match language {
-        Language::En => format!("Aigent Hive is current; initialized setup-required user projections for: {}. Open one selected host to complete setup.\n", hosts.join(", ")),
-        Language::Ko => format!("Aigent Hive는 최신 상태이며 다음 호스트에 설정 대기 사용자 투영을 초기화했습니다: {}. 선택한 호스트 하나를 열어 설정을 완료하세요.\n", hosts.join(", ")),
+        Language::En => format!("Aigent Hive is current; user settings and guidance installed and verified for: {}.\n", hosts.join(", ")),
+        Language::Ko => format!("Aigent Hive는 최신 상태입니다. 다음 앱의 초기 설정과 사용자 지침 설치·검증을 마쳤습니다: {}.\n", hosts.join(", ")),
     };
     output
         .write_all(message.as_bytes())
@@ -1198,12 +1171,12 @@ fn write_installed(
             target.exact
         ),
         Language::En => format!(
-            "Aigent Hive update complete: {}. Refreshed and validated user projection hosts: {}.\n",
+            "Aigent Hive update complete: {}. User guidance updated and verified for: {}.\n",
             target.exact,
             hosts.join(", ")
         ),
         Language::Ko => format!(
-            "Aigent Hive 갱신 완료: {}. 갱신·검증한 사용자 투영 호스트: {}.\n",
+            "Aigent Hive 갱신 완료: {}. 사용자 지침을 갱신·검증한 앱: {}.\n",
             target.exact,
             hosts.join(", ")
         ),
@@ -1216,8 +1189,8 @@ fn write_installed(
 fn projection_scope_message(language: Language, hosts: &[String]) -> String {
     if hosts.is_empty() {
         return match language {
-            Language::En => "none (binary-only update)".to_owned(),
-            Language::Ko => "없음(바이너리만 갱신)".to_owned(),
+            Language::En => "initial setup after update".to_owned(),
+            Language::Ko => "갱신 후 초기 설정".to_owned(),
         };
     }
     hosts.join(", ")
@@ -1457,7 +1430,7 @@ mod tests {
         assert_eq!(installer.calls.borrow().len(), 0);
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("사용자 투영 호스트를 갱신·검증"));
+            .contains("사용자 지침을 갱신·검증"));
     }
 
     #[test]
@@ -1672,7 +1645,7 @@ mod tests {
         );
         let text = String::from_utf8(output).expect("output");
         assert!(text.contains("User projection refresh: claude, codex"));
-        assert!(text.contains("Refreshed and validated user projection hosts: claude, codex"));
+        assert!(text.contains("User guidance updated and verified for: claude, codex"));
     }
 
     #[test]
