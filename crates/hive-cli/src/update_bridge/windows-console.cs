@@ -25,7 +25,7 @@ public sealed class HiveUpdateConsole : IDisposable
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool ReadConsole(SafeFileHandle handle, [Out] StringBuilder text, uint capacity, out uint read, IntPtr control);
+    private static extern bool ReadConsole(SafeFileHandle handle, [Out, MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.U2)] char[] text, uint capacity, out uint read, IntPtr control);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool WriteConsole(SafeFileHandle handle, string text, uint count, out uint written, IntPtr reserved);
 
@@ -101,11 +101,13 @@ public sealed class HiveUpdateConsole : IDisposable
         bool tooLong = false;
         while (true)
         {
-            var chunk = new StringBuilder(4096);
+            var chunk = new char[4096];
             uint read;
             if (!ReadConsole(input, chunk, 4096, out read, IntPtr.Zero)) throw new Win32Exception("parent console input ended");
             if (read == 0) return null;
-            string text = chunk.ToString();
+            // ReadConsole returns a count, not a null-terminated string.
+            if (read > chunk.Length) throw new InvalidOperationException("invalid console read length");
+            string text = new string(chunk, 0, checked((int)read));
             if (text.IndexOf((char)26) >= 0 || text.IndexOf((char)3) >= 0) return null;
             if (!tooLong && line.Length + text.Length <= 65536) line.Append(text);
             else tooLong = true;
