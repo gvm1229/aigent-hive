@@ -19,10 +19,27 @@ pub(crate) fn upgrade_existing(user_root: &Path) -> Result<Option<Value>, Adapte
     let root = PinnedTarget::open_usage(user_root)?;
     match load::<Configuration>(&root, CONFIG)? {
         None => return Ok(None),
+        Some(_) if policy_disables_monitor(&root)? => {
+            return super::transition::disable(&root, platform::call, Duration::from_secs(15))
+                .map(Some);
+        }
         Some(config) if config.enabled => require_app_safe_control()?,
         Some(_) => {}
     }
     upgrade_with(&root, platform::call, await_ready).map(Some)
+}
+
+fn policy_disables_monitor(root: &PinnedTarget) -> Result<bool, AdapterError> {
+    let Some(bytes) = root.read_optional(Path::new(".hive/config/user-setup.yml"), 1024 * 1024)?
+    else {
+        return Ok(false);
+    };
+    let settings = crate::user_setup::parse_and_validate_installed_config(&bytes)
+        .map_err(|failure| error(failure.message()))?;
+    Ok(settings
+        .usage_guard
+        .policy
+        .is_some_and(|policy| !policy.enforcement_enabled || !policy.midway.enabled))
 }
 
 fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
@@ -76,6 +93,9 @@ fn upgrade_with(
     call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
     ready: impl Fn(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
 ) -> Result<Value, AdapterError> {
+    if policy_disables_monitor(root)? {
+        return super::transition::disable(root, call, Duration::from_secs(15));
+    }
     let mut next = configuration(root.requested_path())?;
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
@@ -338,6 +358,62 @@ mod tests {
                 .unwrap()
                 .enabled
         );
+    }
+
+    #[test]
+    fn disabled_v2_policy_stops_leftover_registration_without_inspection_or_staging() {
+        for (master, midway) in [(false, true), (true, false)] {
+            let (_directory, root) = fixture(true);
+            let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+            let root_text = monitor_root_path(root.requested_path()).unwrap();
+            old.launcher =
+                super::super::task_launcher(&old.executable, &root_text.to_string_lossy());
+            write(&root, CONFIG, &old).unwrap();
+            let policy = hive_core::preferences::UsageProtection {
+                enforcement_enabled: master,
+                midway: hive_core::preferences::MidwayPreferences {
+                    enabled: midway,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let mut guard = serde_json::to_value(policy).unwrap();
+            guard["stop_remaining_percent"] = json!(20);
+            guard["popup_enabled"] = json!(false);
+            let settings = json!({"schema_version":2,"interface_language":"en","wiki":{"language":"ko"},
+                "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+                "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":guard});
+            let path = root.requested_path().join(".hive/config/user-setup.yml");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, serde_json::to_vec(&settings).unwrap()).unwrap();
+            let before = root.read_required(Path::new(STATE), 65536).unwrap();
+            let calls = RefCell::new(Vec::new());
+            let result = upgrade_with(
+                &root,
+                |request, _| {
+                    calls
+                        .borrow_mut()
+                        .push(request["operation"].as_str().unwrap().to_owned());
+                    assert_eq!(request["operation"], "unregister");
+                    Ok(json!({"removed":true}))
+                },
+                |_, _| panic!("disabled policy cannot observe health"),
+            )
+            .unwrap();
+            assert_eq!(calls.into_inner(), ["unregister"]);
+            assert_eq!(result["controller_stopped"], true);
+            assert!(
+                !load::<Configuration>(&root, CONFIG)
+                    .unwrap()
+                    .unwrap()
+                    .enabled
+            );
+            assert_eq!(root.read_required(Path::new(STATE), 65536).unwrap(), before);
+            assert!(root
+                .read_optional(Path::new(JOURNAL), 65536)
+                .unwrap()
+                .is_none());
+        }
     }
 
     #[test]

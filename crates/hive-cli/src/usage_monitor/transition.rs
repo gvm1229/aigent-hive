@@ -75,12 +75,36 @@ pub(super) fn disable(
     call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
     timeout: Duration,
 ) -> Result<Value, AdapterError> {
-    if authenticated_config(root)?.is_none() {
-        return Ok(json!({"enabled":false,"configured":false,"controller_stopped":null}));
+    quiesce(root, call, timeout, None).map(|stopped| stopped.result.clone())
+}
+
+pub(super) struct StoppedReader {
+    _control: std::fs::File,
+    _controller: std::fs::File,
+    result: Value,
+}
+
+pub(super) fn quiesce(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    timeout: Duration,
+    expected_digest: Option<&str>,
+) -> Result<StoppedReader, AdapterError> {
+    let control = lock(root, "control.lock")?;
+    let before = root.read_optional(std::path::Path::new(CONFIG), 65536)?;
+    let digest = before
+        .as_deref()
+        .map_or_else(|| "absent".into(), sha256_digest);
+    if expected_digest.is_some_and(|expected| expected != digest) {
+        return Err(error("monitor choice changed since setup preview"));
     }
-    let _control = lock(root, "control.lock")?;
-    let mut config =
-        authenticated_config(root)?.ok_or_else(|| error("monitor configuration changed"))?;
+    let Some(mut config) = authenticated_config(root)? else {
+        return Ok(StoppedReader {
+            _control: control,
+            _controller: lock(root, "controller.lock")?,
+            result: json!({"enabled":false,"configured":false,"controller_stopped":null}),
+        });
+    };
     let mut journal = json!({"schema_version":1,"operation":"disable","started_at":now(),
         "before_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
         "completed_at":null,"error":null});
@@ -92,16 +116,7 @@ pub(super) fn disable(
         if call(&task_request(&config, "unregister"), timeout)?["removed"] != true {
             return Err(error("monitor task removal was not confirmed"));
         }
-        let began = Instant::now();
-        let _controller = loop {
-            match lock(root, "controller.lock") {
-                Ok(lease) => break lease,
-                Err(AdapterError::Conflict(_)) if began.elapsed() < timeout => {
-                    thread::sleep(Duration::from_millis(25));
-                }
-                Err(failure) => return Err(failure),
-            }
-        };
+        let controller = await_controller(root, timeout)?;
         root.verify_current()?;
         let current = authenticated_config(root)?
             .ok_or_else(|| error("monitor configuration removed during stop"))?;
@@ -111,10 +126,12 @@ pub(super) fn disable(
         journal["phase"] = json!("complete");
         journal["completed_at"] = json!(now());
         write(root, JOURNAL, &journal)?;
-        Ok(
-            json!({"enabled":false,"configured":true,"controller_stopped":true,
-            "incident_preserved":true,"changed_paths":[CONFIG,JOURNAL]}),
-        )
+        Ok(StoppedReader {
+            _control: control,
+            _controller: controller,
+            result: json!({"enabled":false,"configured":true,"controller_stopped":true,
+                "incident_preserved":true,"changed_paths":[CONFIG,JOURNAL]}),
+        })
     })();
     if let Err(failure) = &result {
         journal["phase"] = json!("incomplete");
@@ -122,6 +139,19 @@ pub(super) fn disable(
         let _ = write(root, JOURNAL, &journal);
     }
     result
+}
+
+fn await_controller(root: &PinnedTarget, timeout: Duration) -> Result<std::fs::File, AdapterError> {
+    let began = Instant::now();
+    loop {
+        match lock(root, "controller.lock") {
+            Ok(lease) => return Ok(lease),
+            Err(AdapterError::Conflict(_)) if began.elapsed() < timeout => {
+                thread::sleep(Duration::from_millis(25));
+            }
+            Err(failure) => return Err(failure),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -139,6 +169,52 @@ mod tests {
         std::fs::write(root.requested_path().join(path), b"old binary").unwrap();
         write(&root, CONFIG, &config).unwrap();
         (temp, root)
+    }
+
+    #[test]
+    fn reader_lease_holds_both_locks_until_the_settings_writer_finishes() {
+        let (_temp, root) = fixture();
+        let before = root.read_required(Path::new(CONFIG), 65536).unwrap();
+        let stopped = quiesce(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+            Some(&sha256_digest(&before)),
+        )
+        .unwrap();
+        assert_eq!(stopped.result["controller_stopped"], true);
+        assert!(lock(&root, "controller.lock").is_err());
+        assert!(lock(&root, "control.lock").is_err());
+        assert!(
+            !load::<Configuration>(&root, CONFIG)
+                .unwrap()
+                .unwrap()
+                .enabled
+        );
+        drop(stopped);
+        assert!(lock(&root, "controller.lock").is_ok());
+        assert!(lock(&root, "control.lock").is_ok());
+    }
+
+    #[test]
+    fn changed_monitor_choice_is_rejected_before_stop_or_rewrite() {
+        let (_temp, root) = fixture();
+        let before = root.read_required(Path::new(CONFIG), 65536).unwrap();
+        assert!(quiesce(
+            &root,
+            |_, _| panic!("changed choice stopped"),
+            Duration::ZERO,
+            Some(&sha256_digest(b"different preview"))
+        )
+        .is_err());
+        assert_eq!(
+            root.read_required(Path::new(CONFIG), 65536).unwrap(),
+            before
+        );
+        assert!(root
+            .read_optional(Path::new(JOURNAL), 65536)
+            .unwrap()
+            .is_none());
     }
 
     #[test]
