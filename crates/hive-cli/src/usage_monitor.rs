@@ -7,6 +7,7 @@ mod qualification;
 mod sensor;
 mod state;
 mod threshold;
+mod transition;
 mod upgrade;
 
 #[cfg(debug_assertions)]
@@ -54,7 +55,7 @@ struct Configuration {
     launcher: Option<TaskLauncher>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct TaskLauncher {
     executable: PathBuf,
@@ -341,6 +342,7 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
 
 fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
     let configuration: Option<Configuration> = load(root, CONFIG)?;
+    let selection = transition::selection(root);
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
     let probe = configuration
         .as_ref()
@@ -380,10 +382,14 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
         "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
-        "automatic_control_available":cfg!(windows),"compatibility_policy":"protocol","monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+        "automatic_control_available":cfg!(windows),"compatibility_policy":"protocol","monitoring_verified": require_app_safe_control().is_ok() && selection.as_ref().is_ok_and(|value| *value == Some(true)) && alive && heartbeat_fresh
             && observed && state.last_query_error.is_none() && state.control_compatibility.as_deref() == Some("compatible") && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
         "desktop_compatibility":{"actual_version":state.desktop_version,"state":if !alive || !heartbeat_fresh {"unavailable"} else {state.control_compatibility.as_deref().unwrap_or("pending")},"stage":state.control_stage,"error":state.control_error},
         "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
+        "saved_selection_verified":selection.is_ok(),
+        "verified_saved_selection":selection.as_ref().ok().copied().flatten(),
+        "selection_error":selection.as_ref().err().map(AdapterError::message),
+        "disable":load::<Value>(root, transition::JOURNAL)?,
         "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
     )
 }
@@ -412,23 +418,7 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
         ))
         .components()
         .collect();
-    let launch = format!(
-        "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
-        installed_executable.to_string_lossy().replace('\'', "''"),
-        root_text.replace('\'', "''")
-    );
-    let encoded = base64::engine::general_purpose::STANDARD.encode(
-        launch
-            .encode_utf16()
-            .flat_map(u16::to_le_bytes)
-            .collect::<Vec<_>>(),
-    );
-    let launcher = std::env::var_os("SystemRoot").map(|path| TaskLauncher {
-        executable: Path::new(&path).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
-        arguments: format!(
-            "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}"
-        ),
-    });
+    let launcher = task_launcher(&installed_executable, root_text);
     Ok(Configuration {
         schema_version: 1,
         enabled: true,
@@ -438,6 +428,26 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
         task_name: monitor_task_name(root),
         arguments: format!("usage monitor run --user-root \"{root_text}\" --output json"),
         launcher,
+    })
+}
+
+fn task_launcher(executable: &Path, root_text: &str) -> Option<TaskLauncher> {
+    let launch = format!(
+        "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
+        executable.to_string_lossy().replace('\'', "''"),
+        root_text.replace('\'', "''")
+    );
+    let encoded = base64::engine::general_purpose::STANDARD.encode(
+        launch
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect::<Vec<_>>(),
+    );
+    std::env::var_os("SystemRoot").map(|path| TaskLauncher {
+        executable: Path::new(&path).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
+        arguments: format!(
+            "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}"
+        ),
     })
 }
 
@@ -622,17 +632,7 @@ fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
     )
 }
 fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
-    let _control = lock(root, "control.lock")?;
-    let Some(mut config): Option<Configuration> = load(root, CONFIG)? else {
-        return Ok(json!({"enabled":false}));
-    };
-    platform::call(
-        &task_request(&config, "unregister"),
-        Duration::from_secs(15),
-    )?;
-    config.enabled = false;
-    write(root, CONFIG, &config)?;
-    Ok(json!({"enabled":false,"incident_preserved":true,"changed_paths":[CONFIG]}))
+    transition::disable(root, platform::call, Duration::from_secs(15))
 }
 type SampleResult = sensor::Sample;
 fn sensor_worker() -> mpsc::SyncSender<(bool, mpsc::SyncSender<SampleResult>)> {

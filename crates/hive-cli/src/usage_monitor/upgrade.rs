@@ -53,7 +53,7 @@ fn stage_bytes(
     Ok(())
 }
 
-fn owned_binary_relative(
+pub(super) fn owned_binary_relative(
     root: &PinnedTarget,
     executable: &Path,
 ) -> Result<std::path::PathBuf, AdapterError> {
@@ -166,6 +166,14 @@ fn authenticate_previous(
     previous: &Configuration,
     next: &Configuration,
 ) -> Result<(), AdapterError> {
+    authenticate_ownership(root, previous, &next.task_name)
+}
+
+pub(super) fn authenticate_ownership(
+    root: &PinnedTarget,
+    previous: &Configuration,
+    task_name: &str,
+) -> Result<(), AdapterError> {
     let root_text = previous
         .arguments
         .strip_prefix("usage monitor run --user-root \"")
@@ -199,8 +207,7 @@ fn authenticate_previous(
         }
     }
     if previous.schema_version != 1
-        || (previous.task_name != next.task_name
-            && previous.task_name != monitor_task_name(prior_path))
+        || (previous.task_name != task_name && previous.task_name != monitor_task_name(prior_path))
         || owned_binary_relative(&prior, &previous.executable).is_err()
     {
         return Err(error(
