@@ -36,6 +36,10 @@ pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Dura
     setup_engine::command_timeout(requested)
 }
 
+pub(crate) fn resume_pending_update(root: &Path, interactive: bool) -> Result<Option<ActionResult>, String> {
+    setup_engine::resume_pending_update(root, interactive).map_err(|error| error.message().to_owned())
+}
+
 #[cfg(windows)]
 pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
     root: &Path,

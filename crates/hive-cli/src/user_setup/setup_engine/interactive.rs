@@ -134,6 +134,55 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     ExitCode::from(result.exit_code)
 }
 
+pub(in crate::user_setup) fn resume_pending_update(
+    root: &Path,
+    interactive: bool,
+) -> Result<Option<crate::ActionResult>, SetupError> {
+    let store = ProgressStore::open(root, None)?;
+    let Some(progress) = store
+        .load()?
+        .progress
+        .filter(|progress| progress.phase != ProgressPhase::Complete)
+    else {
+        return Ok(None);
+    };
+    if !matches!(
+        progress.phase,
+        ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+    ) && progress.legacy_migration.is_none()
+        && progress.base_config_digest != user_setup::progress_store::optional_digest(None)
+    {
+        // An unconfirmed personal reconfiguration must not block a software update.
+        return Ok(None);
+    }
+    let options = Options {
+        root: root.to_owned(),
+        interaction: InteractionRequest::default(),
+        resume: true,
+        show: false,
+        dry_run: false,
+        section: None,
+        legacy_budget: None,
+    };
+    let mode = if interactive {
+        InteractionMode::Terminal
+    } else {
+        InteractionMode::NonInteractive
+    };
+    let mut terminal = Terminal {
+        reader: io::stdin().lock(),
+        writer: io::stderr().lock(),
+        language: InterfaceLanguage::En,
+    };
+    let mut result =
+        execute(&options, mode, &mut terminal).unwrap_or_else(|error| user_setup::failure(&error));
+    result.action = "UpdateHiveUser";
+    if result.exit_code != 0 {
+        result.next_action = Some(crate::update_bridge::resume_command(root));
+    }
+    Ok(Some(result))
+}
+
 #[cfg(windows)]
 pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
     root: &Path,
@@ -238,7 +287,12 @@ fn execute_inner<R: BufRead, W: Write>(
                 progress.phase,
                 ProgressPhase::Applying | ProgressPhase::RecoverableFailure
             ) {
-                return super::recovery::resume(&root_path, &progress, terminal.language, options.legacy_budget.is_some());
+                return super::recovery::resume(
+                    &root_path,
+                    &progress,
+                    terminal.language,
+                    options.legacy_budget.is_some(),
+                );
             }
             if !store.resume_ready(&progress) {
                 return Ok(pending(terminal.language, "hive.setup-resume-required"));
@@ -815,6 +869,46 @@ fn result(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn update_resume_does_not_create_progress_or_consume_noninteractive_answers() {
+        let root = tempfile::tempdir().unwrap();
+        assert!(resume_pending_update(root.path(), false).unwrap().is_none());
+        assert!(!root.path().join(".hive").exists());
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = store
+            .new_progress("user-language".into(), fresh_answers())
+            .unwrap();
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        let before = std::fs::read(root.path().join(&store.relative)).unwrap();
+        let result = resume_pending_update(root.path(), false).unwrap().unwrap();
+        assert_eq!(result.action, "UpdateHiveUser");
+        assert_eq!(result.code, "hive.setup-needs-input");
+        assert!(result
+            .next_action
+            .unwrap()
+            .starts_with("hive update --user-root"));
+        assert_eq!(
+            std::fs::read(root.path().join(&store.relative)).unwrap(),
+            before
+        );
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+    }
+
+    #[test]
+    fn optional_existing_setup_does_not_become_an_update_input_requirement() {
+        let root = tempfile::tempdir().unwrap();
+        let mut settings = fresh_answers();
+        settings["interface_language"] = json!("en");
+        let config = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(config.parent().unwrap()).unwrap();
+        std::fs::write(&config, serde_json::to_vec(&settings).unwrap()).unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = store.new_progress("user-persona".into(), settings).unwrap();
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        assert!(resume_pending_update(root.path(), false).unwrap().is_none());
+        assert_eq!(store.load().unwrap().progress.unwrap(), progress);
+    }
 
     fn options(root: &Path) -> Options {
         Options {

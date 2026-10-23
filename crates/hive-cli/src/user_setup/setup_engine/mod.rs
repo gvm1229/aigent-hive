@@ -11,6 +11,7 @@ mod legacy;
 mod recovery;
 mod terminal;
 mod worker;
+pub(super) use interactive::resume_pending_update;
 #[cfg(windows)]
 pub(super) use interactive::update_with_terminal;
 pub(super) use interactive::{handles, run};

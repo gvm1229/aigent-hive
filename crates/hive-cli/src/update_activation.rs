@@ -354,6 +354,20 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    // Finish an approved interrupted setup before registry lookup or another binary install.
+    // Software --confirm never supplies answers to the setup engine.
+    match crate::user_setup::resume_pending_update(&user_root, interactive) {
+        Ok(Some(result)) => {
+            eprintln!("{}", result.message);
+            if let Some(next) = result.next_action { eprintln!("{next}"); }
+            return ExitCode::from(result.exit_code);
+        }
+        Ok(None) => {}
+        Err(message) => {
+            eprintln!("error: {message}");
+            return ExitCode::from(2);
+        }
+    }
     let language = match selected_language(&user_root) {
         Ok(language) => language,
         Err(message) => {
