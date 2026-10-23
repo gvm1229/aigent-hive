@@ -3082,20 +3082,20 @@ fn render_user_guidance(
             }
         },
     );
-    let question_gate = if question_pending {
+    let optional_questions = if question_pending && setup.is_some() {
         match setup.map(|config| config.interface_language) {
             Some(crate::user_setup::InterfaceLanguage::Ko) => {
-                "- 상태: `setup-required`. 새 release의 전역 질문이 아직 답변되지 않았음. 일반 Hive 작업 전에 설치된 `aigent-hive:user-setup` Skill로 질문을 한 번 묻고 답을 저장. 답변 전에는 setup, doctor, update, recover, 질문 명령만 허용.\n"
+                "- 선택형 설정 질문 보류. 일반 Hive 작업은 계속 진행. 사용자가 설정 검토를 원할 때 `hive setup --scope user` 안내, 기존 선택 보존과 새 기능의 별도 선택.\n"
             }
             _ => {
-                "- State: `setup-required`. A global question introduced by this release is unanswered. Use the installed `aigent-hive:user-setup` Skill to ask and save the answer before ordinary Hive work. Until then only setup, doctor, update, recover, and question commands are available.\n"
+                "- Optional setup questions are pending. Continue ordinary Hive work. When the user requests a settings review, offer `hive setup --scope user`; preserve existing choices and ask separately before enabling new features.\n"
             }
         }
     } else {
         ""
     };
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{question_gate}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -8578,6 +8578,18 @@ mod tests {
             let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)), false);
             validate_operational_guidance(&guidance, Some(&config(InterfaceLanguage::En)))
                 .expect("every host must retain the mandatory capture contract");
+        }
+        for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+            let pending = String::from_utf8(render_user_guidance(
+                UserHost::Codex,
+                Some(&config(language)),
+                true,
+            ))
+            .unwrap();
+            assert!(pending.contains("`operational`"));
+            assert!(!pending.contains("setup-required"));
+            assert!(pending.contains("hive setup --scope user"));
+            assert!(!pending.contains("Until then only"));
         }
     }
 

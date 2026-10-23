@@ -3574,11 +3574,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
 
 fn detect_state(root: &Dir) -> Result<UserSetupState, SetupError> {
     if load_operational_config(root)?.is_some() {
-        return if feature_question_pending(root)? {
-            Ok(UserSetupState::SetupRequired)
-        } else {
-            Ok(UserSetupState::Operational)
-        };
+        return Ok(UserSetupState::Operational);
     }
     let install = Path::new(".hive/install");
     let metadata = match root.symlink_metadata(install) {
@@ -3944,6 +3940,30 @@ usage_guard:
         value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["decided_at"] =
             json!(100);
         assert!(parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+
+    #[test]
+    fn optional_feature_question_keeps_an_existing_setup_operational() {
+        let root = tempfile::tempdir().unwrap();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let config = canonical_config(&valid_config()).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            None,
+            Some(&config),
+        )
+        .unwrap();
+        assert!(feature_question_pending(&cap).unwrap());
+        assert_eq!(detect_state(&cap).unwrap(), UserSetupState::Operational);
+        let inspected = super::super::user_install::read_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            MAX_USER_SETUP_BYTES,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(inspected, config);
     }
 
     #[test]
