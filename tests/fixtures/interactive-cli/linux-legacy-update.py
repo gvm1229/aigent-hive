@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -137,6 +137,16 @@ def terminal_run(command, stop=None):
                             reply, kind = None, "held"
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
                             reply, kind = "yes", "final"
+                        elif mode == "monitor-decline" and "설정 방식을" in text and "맞춤 설정" in text:
+                            reply, kind = "2", "custom"
+                        elif mode == "monitor-decline" and "사용량에 따라 작업을 막거나 중단하는 기능" in text and "이 변경을 적용할까요?" not in text:
+                            reply, kind = "yes", "enforcement"
+                        elif mode == "monitor-decline" and "실행 중 사용량을 계속 확인하는 감시" in text:
+                            reply, kind = "yes", "monitor-choice"
+                        elif mode == "monitor-decline" and "이 사용자 계정의 Codex 대화 전체" in text:
+                            reply, kind = ("yes", "unsupported-yes") if "unsupported-yes" not in answers else ("no", "runtime-no")
+                        elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
+                            reply, kind = "yes", "final"
                         elif ("Korean" in text or "한국어" in text) and "English" in text:
                             reply, kind = "1", "language"
                         elif stop == "cancel":
@@ -238,8 +248,35 @@ else:
             "zero_quota_enabled": True, "observation_failure": "block"}, guard
         assert not guard["midway"]["enabled"] and guard["stop_remaining_percent"] == 5
         assert data["pending_questions"] == ["usage-enforcement", "usage-warnings"], data
+    elif mode == "monitor-decline":
+        shown=subprocess.run([str(binary),"setup","--scope","user","--show","--user-root",str(user),"--output","json"],env=environment,capture_output=True,text=True,timeout=30)
+        assert shown.returncode==0,shown.stderr
+        stored=json.loads(shown.stdout)["data"]["stored"]
+        assert stored["usage_guard"]["enforcement_enabled"] and not stored["usage_guard"]["midway"]["enabled"]
+        decision=stored["preference_decisions"]["/usage_guard/midway/enabled"]
+        assert decision["question_id"]=="user-monitor-activation" and decision["origin"]=="explicit"
+        assert answers.count("unsupported-yes")==1 and answers.count("runtime-no")==1
+        assert answers[-1]=="final",answers
+        assert not (user/".hive/runtime/usage-monitor/config.json").exists()
     else:
         assert "enforcement_enabled: false" in saved and "final" in answers
+        if mode == "file-monitor-block":
+            shown=subprocess.run([str(binary),"setup","--scope","user","--show","--user-root",str(user),"--output","json"],env=environment,capture_output=True,text=True,check=True)
+            settings=json.loads(shown.stdout)["data"]["stored"]
+            settings["usage_guard"]["enforcement_enabled"]=True
+            settings["usage_guard"]["midway"]["enabled"]=True
+            document=root/"monitor-answers.json";document.write_text(json.dumps(settings))
+            args=[str(binary),"setup","--scope","user","--answers",str(document),"--user-root",str(user),"--output","json"]
+            dry=subprocess.run([*args,"--dry-run"],env=environment,capture_output=True,text=True,timeout=30)
+            assert dry.returncode==0,(dry.stdout,dry.stderr)
+            scope=json.loads(dry.stdout)["data"]["monitor_activation"]
+            assert not scope["platform_eligible"] and scope["requires_separate_confirmation"]
+            before=config.read_bytes()
+            for flags in [[],["--monitor-confirm",scope["confirmation_digest"]]]:
+                blocked=subprocess.run([*args,"--apply",*flags],env=environment,capture_output=True,text=True,timeout=30)
+                assert blocked.returncode!=0,(blocked.stdout,blocked.stderr)
+                assert config.read_bytes()==before
+                assert not (user/".hive/runtime/usage-monitor/config.json").exists()
 incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,

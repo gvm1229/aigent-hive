@@ -570,6 +570,14 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
     let binding = activation::Binding::capture(&pinned)?;
     preview_bound(&pinned, &binding)
 }
+
+pub(crate) fn setup_activation_preview(root: &Path) -> Result<Value, AdapterError> {
+    preview(root)
+}
+
+pub(crate) fn activate_after_setup(root: &Path, approval: &str) -> Result<Value, AdapterError> {
+    enable(&PinnedTarget::open_usage(root)?, approval)
+}
 fn preview_bound(pinned: &PinnedTarget, binding: &activation::Binding) -> Result<Value, AdapterError> {
     let mut config = configuration(pinned.requested_path())?;
     let available = cfg!(windows);

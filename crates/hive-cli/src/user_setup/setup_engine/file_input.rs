@@ -12,6 +12,7 @@ pub(in crate::user_setup) struct FileOptions {
     pub channel: PreferenceInput,
     pub quick: bool,
     pub index_rebuild_scope: Option<String>,
+    pub monitor_confirm: Option<String>,
 }
 
 impl Default for FileOptions {
@@ -20,6 +21,7 @@ impl Default for FileOptions {
             channel: PreferenceInput::AnswersFile,
             quick: false,
             index_rebuild_scope: None,
+            monitor_confirm: None,
         }
     }
 }
@@ -50,13 +52,18 @@ pub(in crate::user_setup) fn file_options(
             };
             seen = true;
             index += 2;
-        } else if arguments[index] == "--index-rebuild-scope" {
+        } else if matches!(arguments[index].as_str(), "--index-rebuild-scope" | "--monitor-confirm") {
+            let monitor = arguments[index] == "--monitor-confirm";
             let digest = arguments.get(index + 1).filter(|value|
                 value.len() == 71 && value.starts_with("sha256:")
                     && value[7..].bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
-                .ok_or_else(|| SetupError::Input("index rebuild scope requires a SHA-256 digest".into()))?;
-            if options.index_rebuild_scope.replace(digest.clone()).is_some() {
-                return Err(SetupError::Input("duplicate index rebuild scope".into()));
+                .ok_or_else(|| SetupError::Input(if monitor {
+                    "monitor confirmation requires a SHA-256 digest".into()
+                } else { "index rebuild scope requires a SHA-256 digest".into() }))?;
+            let previous = if monitor { options.monitor_confirm.replace(digest.clone()) }
+                else { options.index_rebuild_scope.replace(digest.clone()) };
+            if previous.is_some() {
+                return Err(SetupError::Input("duplicate operation scope approval".into()));
             }
             index += 2;
         } else {
@@ -73,6 +80,9 @@ pub(in crate::user_setup) fn execute(
 ) -> Result<ActionResult, SetupError> {
     if options.index_rebuild_scope.is_some() && arguments.mode != SetupMode::Apply {
         return Err(SetupError::Input("index rebuild approval requires --apply".into()));
+    }
+    if options.monitor_confirm.is_some() && arguments.mode != SetupMode::Apply {
+        return Err(SetupError::Input("monitor confirmation requires --apply".into()));
     }
     let input =
         user_setup::read_bounded_regular(&arguments.answers, user_setup::MAX_ANSWERS_BYTES)?;
@@ -125,12 +135,13 @@ pub(in crate::user_setup) fn execute(
     let bytes =
         serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     if arguments.mode == SetupMode::Apply {
-        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration, options.index_rebuild_scope.as_deref());
+        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration, options);
     }
     let mut result = user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
     if arguments.mode == SetupMode::DryRun {
         super::index_rebuild::describe(arguments, &config, &mut result)?;
         super::monitor_stop::describe(arguments, &config, &mut result)?;
+        super::monitor_start::describe(arguments, &config, &mut result)?;
     }
     Ok(result)
 }
@@ -251,6 +262,19 @@ mod tests {
 
     fn input() -> Value {
         super::super::default_answers(Some(InterfaceLanguage::Ko))
+    }
+
+    #[test]
+    fn monitor_confirmation_is_not_implied_by_apply_and_rejects_duplicate_or_invalid_tokens() {
+        let digest=format!("sha256:{}","a".repeat(64));
+        assert!(file_options(&["--apply".into()]).unwrap().1.monitor_confirm.is_none());
+        let args=["--apply".into(),"--monitor-confirm".into(),digest.clone()];
+        let (filtered,options)=file_options(&args).unwrap();
+        assert_eq!(filtered,["--apply"]);
+        assert_eq!(options.monitor_confirm.as_deref(),Some(digest.as_str()));
+        assert!(options.index_rebuild_scope.is_none());
+        assert!(file_options(&[args.as_slice(),&args[1..]].concat()).is_err());
+        assert!(file_options(&["--monitor-confirm".into(),"yes".into()]).is_err());
     }
     fn parse(value: &Value) -> UserSetupConfig {
         user_setup::parse_and_validate_config(&serde_json::to_vec(value).unwrap()).unwrap()

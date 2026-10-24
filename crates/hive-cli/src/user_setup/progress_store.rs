@@ -79,6 +79,8 @@ pub(super) struct SetupProgress {
     pub index_rebuild_scope: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub monitor_stop: Option<crate::usage_monitor::SavedMonitorChoice>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor_start: Option<super::setup_engine::monitor_start::Approval>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -251,6 +253,7 @@ impl ProgressStore {
             extras_approval_digest: None,
             index_rebuild_scope: None,
             monitor_stop: None,
+            monitor_start: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -383,6 +386,7 @@ impl ProgressStore {
         complete.extras_approval_digest = None;
         complete.index_rebuild_scope = None;
         complete.monitor_stop = None;
+        complete.monitor_start = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -469,6 +473,7 @@ impl ProgressStore {
 
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
+        super::setup_engine::monitor_start::validate(self.binding.scope, progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
         if progress.monitor_stop.as_ref().is_some_and(|choice|
             self.binding.scope != PreferenceScope::User || !choice.configured

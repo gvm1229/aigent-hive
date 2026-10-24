@@ -525,7 +525,7 @@ fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
-        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild") {
+        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild" | "user-monitor-activation") {
             continue;
         }
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
@@ -761,6 +761,9 @@ fn preview_apply<R: BufRead, W: Write>(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    if !super::monitor_start::collect(root, existing, store, progress, terminal)? {
+        return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
     super::monitor_stop::bind(root, &mut progress.record)?;
     if progress.monitor_stop.is_some() {
         terminal.say("Hive가 등록한 상시 감시를 해제하고 종료를 확인합니다. 지난 사용량 기록은 보존합니다.",
@@ -783,6 +786,7 @@ fn preview_apply<R: BufRead, W: Write>(
         return Ok(pending(terminal.language, "hive.update-input-pending"));
     }
     record_bundle_acceptance(progress, &displayed)?;
+    super::monitor_start::preflight(root, &progress.record)?;
     let _lease = if options.legacy_budget.is_none() {
         Some(crate::user_install::lock_user_setup(root_cap).map_err(SetupError::Conflict)?)
     } else {

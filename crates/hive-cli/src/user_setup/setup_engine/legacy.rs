@@ -329,7 +329,7 @@ pub(super) fn finish_monitor(
 ) -> Result<(), SetupError> {
     super::monitor_stop::verify_finished(root, progress)?;
     let Some(binding) = &progress.legacy_migration else {
-        return Ok(());
+        return super::monitor_start::finish(root, answers, progress);
     };
     let config = user_setup::parse_and_validate_config(answers)?;
     if binding.monitor_choice.enabled
@@ -342,7 +342,7 @@ pub(super) fn finish_monitor(
         crate::usage_monitor::resume_after_setup(root, &progress.operation_id)
             .map_err(|failure| SetupError::Verification(failure.message().into()))?;
     }
-    Ok(())
+    super::monitor_start::finish(root, answers, progress)
 }
 
 pub(super) fn apply(

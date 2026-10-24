@@ -14,8 +14,9 @@ pub(super) fn apply(
     expected: Option<&[u8]>,
     legacy_input: Option<&UserSetupConfig>,
     migration: Option<user_setup::progress_store::LegacyMigration>,
-    index_rebuild_scope: Option<&str>,
+    options: &super::file_input::FileOptions,
 ) -> Result<ActionResult, SetupError> {
+    let index_rebuild_scope = options.index_rebuild_scope.as_deref();
     let store = ProgressStore::open(&arguments.user_root, None)?;
     store.recover_pending_state()?;
     let snapshot = store.load()?;
@@ -25,6 +26,7 @@ pub(super) fn apply(
         .filter(|p| p.phase != ProgressPhase::Complete)
     {
         require_same_intent(pending, config, legacy_input)?;
+        super::monitor_start::check_file_replay(pending, options.monitor_confirm.as_deref())?;
         if index_rebuild_scope.is_some_and(|digest| pending.index_rebuild_scope.as_deref()
             .is_some_and(|saved| saved != digest)) {
             return Err(SetupError::Conflict("index rebuild approval differs from the pending setup".into()));
@@ -71,7 +73,10 @@ pub(super) fn apply(
     progress.answers = answers;
     progress.legacy_migration = migration;
     super::monitor_stop::bind(&arguments.user_root, &mut progress)?;
+    super::monitor_start::bind_file(&arguments.user_root, expected, &mut progress,
+        options.monitor_confirm.as_deref(), options.channel)?;
     super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
+    super::monitor_start::preflight(&arguments.user_root, &progress)?;
     progress.phase = ProgressPhase::Applying;
     store.save(&snapshot, &progress)?;
     store.record_applying(&progress)?;
