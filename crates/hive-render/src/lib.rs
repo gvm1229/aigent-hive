@@ -1,6 +1,8 @@
 //! Deterministic setup rendering and safe consumer-project activation.
 
 mod activation;
+mod consent_setup;
+pub use consent_setup::{materialize_setup_extras, setup_extras_request, supported_setup_hooks};
 mod local_overrides;
 mod reconfiguration;
 pub use reconfiguration::{project_reconfiguration_candidate, project_role_changes, reconfiguration_tree_digest, validate_reconfiguration_tree, ProjectReconfigurationCandidate};
