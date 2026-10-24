@@ -1,6 +1,8 @@
 //! Deterministic setup rendering and safe consumer-project activation.
 
 mod activation;
+mod setup_preparation;
+pub use setup_preparation::{prepare_setup, PreparedSetup, PreparedSetupChange};
 pub mod skill_delivery;
 use activation::{
     activate_staged, open_target_capability, read_capability_optional, stage_and_validate,
@@ -861,7 +863,7 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
     ensure_consumer_target(request.target)
         .map_err(|error| RenderError::Input(error.to_string()))?;
     let target_dir = open_target_capability(request.target)?;
-    execute_setup_with_target(request, &target_dir, true, None, None)
+    execute_setup_with_target(request, &target_dir, true, None, None, None)
 }
 
 /// Execute setup while retaining project rollback state until a connected
@@ -883,7 +885,7 @@ pub fn execute_setup_with_post_apply(
     ensure_consumer_target(request.target)
         .map_err(|error| RenderError::Input(error.to_string()))?;
     let target_dir = open_target_capability(request.target)?;
-    execute_setup_with_target(request, &target_dir, true, None, Some(post_apply))
+    execute_setup_with_target(request, &target_dir, true, None, Some(post_apply), None)
 }
 
 /// Render the current binary's mergeable project projection through an
@@ -2601,7 +2603,7 @@ pub fn execute_setup_in(
             "pinned setup entrypoint supports only dry-run and apply".to_owned(),
         ));
     }
-    execute_setup_with_target(request, target_dir, false, None, None)
+    execute_setup_with_target(request, target_dir, false, None, None, None)
 }
 
 /// Execute a signed release update against a caller-pinned consumer target.
@@ -2690,6 +2692,7 @@ fn execute_release_update_for_target_in(
         false,
         Some(authenticated_source_version),
         None,
+        None,
     )
 }
 
@@ -2728,6 +2731,7 @@ fn execute_setup_with_target(
     verify_ambient_target: bool,
     release_source_version: Option<&str>,
     post_apply: Option<&dyn Fn() -> Result<(), RenderError>>,
+    capture: Option<&mut Vec<PreparedSetupChange>>,
 ) -> Result<SetupOutcome, RenderError> {
     let (answers, migrated_answers) = load_answers(request.answers)?;
     let resolution = load_resolution(request.capabilities)?;
@@ -2833,6 +2837,10 @@ fn execute_setup_with_target(
     }
     if verify_ambient_target {
         verify_target_capability_current(request.target, target_dir)?;
+    }
+
+    if let Some(capture) = capture {
+        *capture = setup_preparation::capture(target_dir, &changes, &planned)?;
     }
 
     Ok(SetupOutcome {
