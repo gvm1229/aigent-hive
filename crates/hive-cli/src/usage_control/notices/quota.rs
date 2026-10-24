@@ -6,11 +6,11 @@ use hive_core::usage_guard::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Episode {
+struct LegacyEpisode {
     schema_version: u8,
     identity_digest: String,
     policy_digest: String,
@@ -19,6 +19,79 @@ struct Episode {
     healthy_observations: u8,
     low_shown: bool,
     zero_shown: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Episode {
+    schema_version: u8,
+    identity_digest: String,
+    period: i64,
+    measured_at: i64,
+    policies: BTreeMap<String, PolicyEpisode>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct PolicyEpisode {
+    threshold: u8,
+    healthy_observations: u8,
+    low_shown: bool,
+    zero_shown: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SavedEpisode {
+    Current(Episode),
+    Legacy(LegacyEpisode),
+}
+
+fn policy_digest(threshold: u8) -> String {
+    sha256_digest(format!("quota-warning-v1:{threshold}").as_bytes())
+}
+
+fn load_episode(bytes: &[u8], identity: &str) -> Result<Episode, AdapterError> {
+    let saved: SavedEpisode = serde_json::from_slice(bytes)
+        .map_err(|_| AdapterError::Safety("invalid quota warning episode".to_owned()))?;
+    let episode = match saved {
+        SavedEpisode::Current(episode) => episode,
+        SavedEpisode::Legacy(old) => {
+            let threshold = (0..=99)
+                .find(|value| policy_digest(*value) == old.policy_digest)
+                .filter(|_| old.schema_version == 1)
+                .ok_or_else(|| AdapterError::Safety("invalid legacy warning policy".into()))?;
+            Episode {
+                schema_version: 2,
+                identity_digest: old.identity_digest,
+                period: old.period,
+                measured_at: old.measured_at,
+                policies: BTreeMap::from([(
+                    old.policy_digest,
+                    PolicyEpisode {
+                        threshold,
+                        healthy_observations: old.healthy_observations,
+                        low_shown: old.low_shown,
+                        zero_shown: old.zero_shown,
+                    },
+                )]),
+            }
+        }
+    };
+    if episode.schema_version != 2
+        || episode.identity_digest != identity
+        || episode.policies.len() > 100
+        || episode.policies.iter().any(|(key, value)| {
+            value.threshold > 99
+                || value.healthy_observations > 2
+                || *key != policy_digest(value.threshold)
+        })
+    {
+        return Err(AdapterError::Safety(
+            "quota warning identity or policy differs".into(),
+        ));
+    }
+    Ok(episode)
 }
 
 pub(in super::super) fn observe(
@@ -77,21 +150,12 @@ fn claim(
         .as_slice(),
     );
     let path = Path::new(".hive/runtime/usage-notices").join(format!("{}.json", &identity[7..]));
-    let file = root.snapshot_bounded(&path, 4096)?;
+    let file = root.snapshot_bounded(&path, 32768)?;
     let previous: Option<Episode> = file
         .bytes()
-        .map(serde_json::from_slice)
-        .transpose()
-        .map_err(|_| AdapterError::Safety("invalid quota warning episode".to_owned()))?;
-    if previous
-        .as_ref()
-        .is_some_and(|old| old.schema_version != 1 || old.identity_digest != identity)
-    {
-        return Err(AdapterError::Safety(
-            "quota warning identity differs".to_owned(),
-        ));
-    }
-    let policy_digest = sha256_digest(format!("quota-warning-v1:{}", config.threshold).as_bytes());
+        .map(|bytes| load_episode(bytes, &identity))
+        .transpose()?;
+    let policy_digest = policy_digest(config.threshold);
     // Replaying a cached measurement is not a second recovery observation. A stale process
     // must also not restore an old period after a newer process has already observed its reset.
     if previous
@@ -104,48 +168,58 @@ fn claim(
         .as_ref()
         .is_some_and(|old| sample.measured_at_unix_seconds == old.measured_at);
     let mut episode = previous.unwrap_or_else(|| Episode {
-        schema_version: 1,
+        schema_version: 2,
         identity_digest: identity,
-        policy_digest: policy_digest.clone(),
         period: sample.resets_at_unix_seconds,
         measured_at: sample.measured_at_unix_seconds,
-        healthy_observations: 0,
-        low_shown: false,
-        zero_shown: false,
+        policies: BTreeMap::new(),
     });
-    if episode.policy_digest != policy_digest || episode.period != sample.resets_at_unix_seconds {
-        if repeated && episode.period != sample.resets_at_unix_seconds {
+    if episode.period != sample.resets_at_unix_seconds {
+        if repeated {
             return Ok(None);
         }
-        episode.policy_digest = policy_digest;
         episode.period = sample.resets_at_unix_seconds;
-        episode.healthy_observations = 0;
-        episode.low_shown = false;
-        episode.zero_shown = false;
+        episode.policies.clear();
     }
     episode.measured_at = sample.measured_at_unix_seconds;
-    let kind = if sample.remaining_percent > f64::from(config.threshold) {
-        if !repeated {
-            episode.healthy_observations = episode.healthy_observations.saturating_add(1).min(2);
-        }
-        if episode.healthy_observations == 2 {
-            episode.low_shown = false;
-            episode.zero_shown = false;
-        }
-        None
-    } else {
-        episode.healthy_observations = 0;
-        if !show {
-            None
-        } else if sample.remaining_percent == 0.0 {
-            let first = !episode.zero_shown;
-            episode.zero_shown = true;
-            first.then_some("quota-empty")
+    episode
+        .policies
+        .entry(policy_digest.clone())
+        .or_insert(PolicyEpisode {
+            threshold: config.threshold,
+            healthy_observations: 0,
+            low_shown: false,
+            zero_shown: false,
+        });
+    // One already-obtained measurement can recover all remembered thresholds. Changing
+    // which policy is selected must not erase another policy's notice or recovery history.
+    for policy in episode.policies.values_mut() {
+        if sample.remaining_percent > f64::from(policy.threshold) {
+            if !repeated {
+                policy.healthy_observations = policy.healthy_observations.saturating_add(1).min(2);
+            }
+            if policy.healthy_observations == 2 {
+                policy.low_shown = false;
+                policy.zero_shown = false;
+            }
         } else {
-            let first = !episode.low_shown;
-            episode.low_shown = true;
-            first.then_some("quota-low")
+            policy.healthy_observations = 0;
         }
+    }
+    let policy = episode
+        .policies
+        .get_mut(&policy_digest)
+        .expect("selected warning policy");
+    let kind = if !show || sample.remaining_percent > f64::from(config.threshold) {
+        None
+    } else if sample.remaining_percent == 0.0 {
+        let first = !policy.zero_shown;
+        policy.zero_shown = true;
+        first.then_some("quota-empty")
+    } else {
+        let first = !policy.low_shown;
+        policy.low_shown = true;
+        first.then_some("quota-low")
     };
     let bytes =
         serde_json::to_vec(&episode).map_err(|error| AdapterError::Internal(error.to_string()))?;
@@ -234,6 +308,75 @@ mod tests {
         assert!(check(50.0, 8).is_empty());
         assert_eq!(check(10.0, 9).len(), 1);
         assert_eq!(check(0.0, 10).len(), 1);
+    }
+
+    #[test]
+    fn revisiting_thresholds_retains_each_policy_until_recovery_or_a_new_period() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut config = config();
+        let mut check = |threshold, remaining, time, period| {
+            config.threshold = threshold;
+            let mut measurement = sample(remaining, time);
+            measurement.resets_at_unix_seconds = period;
+            observe(
+                None,
+                &PinnedTarget::open_usage(temp.path()).unwrap(),
+                &config,
+                &[measurement],
+                time,
+            )
+        };
+        assert_eq!(check(20, 10.0, 1, 10000).len(), 1);
+        assert_eq!(check(40, 10.0, 2, 10000).len(), 1);
+        assert!(check(20, 10.0, 3, 10000).is_empty());
+        assert!(check(40, 10.0, 4, 10000).is_empty());
+        assert!(check(40, 30.0, 5, 10000).is_empty());
+        assert!(check(40, 30.0, 5, 10000).is_empty());
+        assert!(check(40, 30.0, 6, 10000).is_empty());
+        assert_eq!(check(20, 10.0, 7, 10000).len(), 1);
+        assert!(check(40, 10.0, 8, 10000).is_empty());
+        assert_eq!(check(40, 10.0, 9, 11000).len(), 1);
+        assert_eq!(check(20, 10.0, 10, 11000).len(), 1);
+        assert!(check(40, 10.0, 1, 10000).is_empty());
+    }
+
+    #[test]
+    fn legacy_quota_episode_keeps_its_already_shown_notice_during_migration() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temp.path()).unwrap();
+        let mut config = config();
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 1)], 1).len(),
+            1
+        );
+        let path = std::fs::read_dir(temp.path().join(".hive/runtime/usage-notices"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .find(|path| path.extension().is_some_and(|ext| ext == "json"))
+            .unwrap();
+        let current: Episode = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        let legacy = LegacyEpisode {
+            schema_version: 1,
+            identity_digest: current.identity_digest,
+            policy_digest: policy_digest(20),
+            period: current.period,
+            measured_at: current.measured_at,
+            healthy_observations: 0,
+            low_shown: true,
+            zero_shown: false,
+        };
+        std::fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        assert!(observe(None, &root, &config, &[sample(10.0, 2)], 2).is_empty());
+        config.threshold = 40;
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 3)], 3).len(),
+            1
+        );
+        config.threshold = 20;
+        assert!(observe(None, &root, &config, &[sample(10.0, 4)], 4).is_empty());
+        let saved: Episode = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(saved.schema_version, 2);
+        assert_eq!(saved.policies.len(), 2);
     }
 
     #[test]
