@@ -18,6 +18,37 @@ pub struct ProjectReconfigurationCandidate {
     pub resolved_owner: String,
 }
 
+/// Identify existing role definitions that need explicit reconfiguration consent.
+///
+/// # Errors
+/// Rejects unsafe targets, invalid answers, or damaged existing role profiles.
+pub fn project_role_changes(
+    target: &Path,
+    bytes: &[u8],
+) -> Result<std::collections::BTreeSet<String>, RenderError> {
+    super::ensure_consumer_target(target).map_err(|error| RenderError::Input(error.to_string()))?;
+    let target = super::open_target_capability(target)?;
+    let (answers, value) = super::parse_answers(bytes)?;
+    super::validate_schema_instance(super::SETUP_SCHEMA, &value, "setup answers")?;
+    super::validate_answers(&answers)?;
+    let mut changed = std::collections::BTreeSet::new();
+    for seed in &answers.persistent_roles {
+        let path = Path::new(".hive/team/roles").join(format!("{}.md", seed.role_id));
+        if let Some(bytes) = super::read_target_optional(&target, &path)? {
+            let (profile, _) = super::parse_role(&bytes)?;
+            if profile.role_id != seed.role_id {
+                return Err(RenderError::Conflict(
+                    "existing role identity changed".into(),
+                ));
+            }
+            if !profile.definition_matches(seed) {
+                changed.insert(seed.role_id.clone());
+            }
+        }
+    }
+    Ok(changed)
+}
+
 /// Fingerprint the exact planned tree after the caller's preserving merge.
 #[must_use]
 pub fn reconfiguration_tree_digest(files: &BTreeMap<PathBuf, Vec<u8>>) -> String {
@@ -275,6 +306,28 @@ mod tests {
         assert_eq!(new_body, old_body);
         assert_eq!(new_profile.current_assignment, assigned.current_assignment);
         assert_eq!(new_profile.handoff_path, assigned.handoff_path);
+        assert_role_recovery(&role, &candidate, &approved.reconfigure_roles);
         assert_eq!(fs::read(role_path).unwrap(), role);
+    }
+
+    fn assert_role_recovery(
+        role: &[u8],
+        candidate: &ProjectReconfigurationCandidate,
+        approved: &BTreeSet<String>,
+    ) {
+        let change = super::super::PreparedSetupChange {
+            path: ".hive/team/roles/reviewer.md".into(),
+            before: Some(role.to_vec()),
+            after: Some(candidate.files[Path::new(".hive/team/roles/reviewer.md")].clone()),
+        };
+        assert!(super::super::setup_role_update_is_preserving(&change, approved).unwrap());
+        assert!(!super::super::setup_role_update_is_preserving(&change, &BTreeSet::new()).unwrap());
+        let mut damaged = change;
+        damaged
+            .after
+            .as_mut()
+            .unwrap()
+            .extend_from_slice(b"changed user body");
+        assert!(!super::super::setup_role_update_is_preserving(&damaged, approved).unwrap());
     }
 }

@@ -72,6 +72,32 @@ pub fn setup_recovery_change_is_owned(
     }))
 }
 
+/// Permit a confirmed role definition update only while preserving its user body and work state.
+///
+/// # Errors
+/// Rejects malformed role profiles.
+pub fn setup_role_update_is_preserving(
+    change: &PreparedSetupChange,
+    approved: &std::collections::BTreeSet<String>,
+) -> Result<bool, RenderError> {
+    let Some(id) = approved.iter().find(|id| {
+        super::valid_role_id(id)
+            && change.path == Path::new(".hive/team/roles").join(format!("{id}.md"))
+    }) else {
+        return Ok(false);
+    };
+    let (Some(before), Some(after)) = (change.before.as_deref(), change.after.as_deref()) else {
+        return Ok(false);
+    };
+    let (old, old_body) = super::parse_role(before)?;
+    let (new, new_body) = super::parse_role(after)?;
+    Ok(old.role_id == *id
+        && new.role_id == *id
+        && old_body == new_body
+        && old.current_assignment == new.current_assignment
+        && old.handoff_path == new.handoff_path)
+}
+
 /// Prepare recoverable byte changes through the ordinary setup dry-run engine.
 /// Callers must still bind the target and compare the original bytes before writing.
 ///

@@ -25,6 +25,7 @@ mod tests;
 
 // CLI flags are validated together before any write or input wait.
 #[allow(clippy::struct_excessive_bools)]
+#[derive(Clone)]
 struct Options {
     target: PathBuf,
     root: PathBuf,
@@ -35,6 +36,7 @@ struct Options {
     describe: bool,
     section: Option<String>,
     capabilities: Option<PathBuf>,
+    reconfigure_roles: BTreeSet<String>,
 }
 
 fn parse(arguments: &[String]) -> Result<Options, SetupError> {
@@ -48,6 +50,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         describe: false,
         section: None,
         capabilities: None,
+        reconfigure_roles: BTreeSet::new(),
     };
     let mut seen = BTreeSet::new();
     let mut index = 0;
@@ -287,8 +290,15 @@ fn execute<R: BufRead, W: Write>(
     if !questions::collect(&store, &mut snapshot, &mut progress, &global, terminal)? {
         return Ok(pending(terminal.language));
     }
+    if !existing::confirm_roles(options, &store, &mut snapshot, &mut progress, terminal)? {
+        return Ok(pending(terminal.language));
+    }
+    let mut confirmed = options.clone();
+    confirmed
+        .reconfigure_roles
+        .clone_from(&progress.reconfigure_roles);
     apply(
-        options,
+        &confirmed,
         &store,
         &mut snapshot,
         &mut progress,
@@ -394,7 +404,7 @@ fn request<'a>(
         answers,
         capabilities: caps,
         mode,
-        reconfigure_roles: BTreeSet::new(),
+        reconfigure_roles: options.reconfigure_roles.clone(),
         global_preferences: Some(global.clone()),
     }
 }
@@ -543,10 +553,14 @@ fn finish_existing_apply(
         return Ok(pending(language));
     }
     if progress.project_context.is_some() {
+        let mut confirmed = options.clone();
+        confirmed
+            .reconfigure_roles
+            .clone_from(&progress.reconfigure_roles);
         let root = crate::user_install::open_user_root_for_setup(&options.root)
             .map_err(SetupError::Conflict)?;
         let _lease = crate::user_install::lock_user_setup(&root).map_err(SetupError::Conflict)?;
-        activation::apply(options, store, progress, global, None)?;
+        activation::apply(&confirmed, store, progress, global, None)?;
         ProgressStore::open(&options.root, Some(&options.target))?.record_completion(progress)?;
         return Ok(report(
             "success",

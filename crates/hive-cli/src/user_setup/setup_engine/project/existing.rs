@@ -6,6 +6,88 @@ use hive_core::preferences::{
 use serde_json::{json, Value};
 use std::path::Path;
 
+pub(super) fn confirm_roles<R: std::io::BufRead, W: std::io::Write>(
+    options: &super::Options,
+    store: &super::ProgressStore,
+    snapshot: &mut user_setup::progress_store::ProgressSnapshot,
+    progress: &mut user_setup::progress_store::SetupProgress,
+    terminal: &mut super::Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    let changed = hive_render::project_role_changes(
+        &options.target,
+        &serde_json::to_vec(&progress.answers)
+            .map_err(|error| SetupError::Internal(error.to_string()))?,
+    )
+    .map_err(|error| SetupError::Conflict(error.to_string()))?;
+    if changed.is_empty() {
+        progress.reconfigure_roles.clear();
+        progress.role_approval_digest = None;
+        *snapshot = store.save(snapshot, progress)?;
+        return Ok(true);
+    }
+    let catalog = super::super::catalog()?;
+    let question = catalog
+        .questions
+        .iter()
+        .find(|question| question.id == "project-role-update")
+        .expect("role confirmation question");
+    let definitions = progress.answers["persistent_roles"]
+        .as_array()
+        .expect("validated roles")
+        .iter()
+        .filter(|role| {
+            role["role_id"]
+                .as_str()
+                .is_some_and(|id| changed.contains(id))
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    let digest = hive_core::preferences::declaration_digest(&json!(definitions))
+        .map_err(SetupError::Internal)?;
+    if changed == progress.reconfigure_roles
+        && progress.role_approval_digest.as_deref() == Some(&digest)
+        && progress.answered_questions.get(&question.id) == Some(&question.revision)
+        && progress.question_bindings.get(&question.id) == Some(&question.into())
+    {
+        return Ok(true);
+    }
+    progress.step.clone_from(&question.id);
+    *snapshot = store.save(snapshot, progress)?;
+    terminal.say(
+        "정의를 변경할 기존 역할:",
+        "Existing role definitions to change:",
+    )?;
+    for id in &changed {
+        writeln!(terminal.writer, "  {id}")
+            .map_err(|error| SetupError::Internal(error.to_string()))?;
+    }
+    let hive_core::setup::AnswerInput::Answered { value, .. } = terminal.ask(question, None)?
+    else {
+        return Ok(false);
+    };
+    if value != json!(true) {
+        progress.answered_questions.remove("project-roles");
+        progress.reconfigure_roles.clear();
+        progress.role_approval_digest = None;
+        *snapshot = store.save(snapshot, progress)?;
+        terminal.say(
+            "재개하면 역할 정의부터 다시 검토합니다. 프로젝트 파일은 변경하지 않았습니다.",
+            "Resume to revise the role definitions. Project files have not changed.",
+        )?;
+        return Ok(false);
+    }
+    progress.reconfigure_roles = changed;
+    progress.role_approval_digest = Some(digest);
+    progress
+        .answered_questions
+        .insert(question.id.clone(), question.revision);
+    progress
+        .question_bindings
+        .insert(question.id.clone(), question.into());
+    *snapshot = store.save(snapshot, progress)?;
+    Ok(true)
+}
+
 pub(super) fn answers(bytes: &[u8]) -> Result<Value, SetupError> {
     let original: Value = serde_yaml::from_slice(bytes)
         .map_err(|_| SetupError::Verification("invalid saved project answers".into()))?;

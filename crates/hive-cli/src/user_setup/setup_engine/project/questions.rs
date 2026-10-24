@@ -52,7 +52,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::Project)
     {
-        if question.id == "project-mode"
+        if matches!(question.id.as_str(), "project-mode" | "project-role-update")
             || (quick
                 && !matches!(
                     question.id.as_str(),

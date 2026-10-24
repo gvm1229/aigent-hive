@@ -3,10 +3,10 @@
 mod activation;
 mod local_overrides;
 mod reconfiguration;
-pub use reconfiguration::{project_reconfiguration_candidate, reconfiguration_tree_digest, validate_reconfiguration_tree, ProjectReconfigurationCandidate};
+pub use reconfiguration::{project_reconfiguration_candidate, project_role_changes, reconfiguration_tree_digest, validate_reconfiguration_tree, ProjectReconfigurationCandidate};
 mod setup_preparation;
 pub use setup_preparation::{
-    prepare_setup, setup_recovery_change_is_owned, PreparedSetup, PreparedSetupChange,
+    prepare_setup, setup_recovery_change_is_owned, setup_role_update_is_preserving, PreparedSetup, PreparedSetupChange,
 };
 pub mod skill_delivery;
 use activation::{

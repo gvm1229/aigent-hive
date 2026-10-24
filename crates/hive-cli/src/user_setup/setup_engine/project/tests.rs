@@ -527,3 +527,117 @@ fn confirmed_project_recovery_rejects_global_drift_and_never_trusts_a_missing_pa
         hive_core::sha256_digest(b"different plan");
     assert!(store.projection_binding(&tampered, None).is_err());
 }
+
+#[test]
+fn existing_role_changes_require_a_saved_confirmation_and_preserve_the_user_body() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+    let original = fixtures.join("answers-base.yml");
+    let caps = fixtures.join("capabilities-codex-host-native.json");
+    let initial = hive_render::SetupRequest {
+        target: target.path(),
+        answers: &original,
+        capabilities: &caps,
+        mode: hive_render::SetupMode::Apply,
+        reconfigure_roles: BTreeSet::new(),
+        global_preferences: Some(global.clone()),
+    };
+    hive_render::execute_setup(&initial).unwrap();
+    let role_path = target.path().join(".hive/team/roles/reviewer.md");
+    let mut role = std::fs::read(&role_path).unwrap();
+    role.extend_from_slice(b"\nUser handoff notes.\r\n");
+    std::fs::write(&role_path, &role).unwrap();
+    let mut answers =
+        existing::answers(&std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap())
+            .unwrap();
+    answers["persistent_roles"][0]["responsibilities"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("Review CLI settings"));
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut progress = store.new_progress("project-roles".into(), answers).unwrap();
+    let mut options = options(root.path(), target.path());
+    let mut no = Terminal {
+        reader: Cursor::new(b"no\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        !existing::confirm_roles(&options, &store, &mut snapshot, &mut progress, &mut no).unwrap()
+    );
+    assert!(progress.reconfigure_roles.is_empty());
+    assert_eq!(std::fs::read(&role_path).unwrap(), role);
+    let mut yes = Terminal {
+        reader: Cursor::new(b"yes\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        existing::confirm_roles(&options, &store, &mut snapshot, &mut progress, &mut yes).unwrap()
+    );
+    assert_eq!(
+        progress.reconfigure_roles,
+        BTreeSet::from(["reviewer".into()])
+    );
+    let mut no_input = Terminal {
+        reader: Cursor::new(b""),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(existing::confirm_roles(
+        &options,
+        &store,
+        &mut snapshot,
+        &mut progress,
+        &mut no_input
+    )
+    .unwrap());
+    assert!(no_input.writer.is_empty());
+    assert_changed_role_needs_approval(&options, &store, &mut snapshot, &progress);
+    options.reconfigure_roles = progress.reconfigure_roles.clone();
+    let input = write_answers(&progress.answers).unwrap();
+    let prepared = prepare_settings(&options, input.path(), &caps, &global).unwrap();
+    activation::bind_context(
+        &mut progress,
+        &global,
+        &std::fs::read(&caps).unwrap(),
+        &prepared.outcome,
+    )
+    .unwrap();
+    progress.phase = ProgressPhase::Applying;
+    store.save(&snapshot, &progress).unwrap();
+    store.record_applying(&progress).unwrap();
+    activation::apply(&options, &store, &progress, &global, Some(prepared)).unwrap();
+    assert!(std::fs::read(&role_path)
+        .unwrap()
+        .ends_with(b"\nUser handoff notes.\r\n"));
+    ProgressStore::open(root.path(), Some(target.path()))
+        .unwrap()
+        .record_completion(&progress)
+        .unwrap();
+}
+
+fn assert_changed_role_needs_approval(
+    options: &Options,
+    store: &ProgressStore,
+    snapshot: &mut user_setup::progress_store::ProgressSnapshot,
+    original: &user_setup::progress_store::SetupProgress,
+) {
+    let mut changed = original.clone();
+    changed.answers["persistent_roles"][0]["display_name"] = json!("Changed after approval");
+    let mut terminal = Terminal {
+        reader: Cursor::new(b""),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        !existing::confirm_roles(options, store, snapshot, &mut changed, &mut terminal).unwrap()
+    );
+    assert!(String::from_utf8(terminal.writer)
+        .unwrap()
+        .contains("Approve definition changes"));
+    *snapshot = store.save(snapshot, original).unwrap();
+}

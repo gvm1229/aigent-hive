@@ -50,15 +50,18 @@ fn validate(journal: &Journal, progress: &SetupProgress) -> Result<(), SetupErro
                 .flatten()
                 .filter_map(|role| role["role_id"].as_str().map(str::to_owned))
                 .collect();
-            hive_render::setup_recovery_change_is_owned(
-                &hive_render::PreparedSetupChange {
-                    path: change.path.clone(),
-                    before: change.before.clone(),
-                    after: change.after.clone(),
-                },
-                &roles,
-            )
-            .map_err(|error| SetupError::Conflict(error.to_string()))?
+            let change = hive_render::PreparedSetupChange {
+                path: change.path.clone(),
+                before: change.before.clone(),
+                after: change.after.clone(),
+            };
+            hive_render::setup_recovery_change_is_owned(&change, &roles)
+                .map_err(|error| SetupError::Conflict(error.to_string()))?
+                || hive_render::setup_role_update_is_preserving(
+                    &change,
+                    &progress.reconfigure_roles,
+                )
+                .map_err(|error| SetupError::Conflict(error.to_string()))?
         } else {
             matches!(
                 change.path.to_str(),

@@ -67,6 +67,10 @@ pub(super) struct SetupProgress {
     pub question_bindings: std::collections::BTreeMap<String, QuestionBinding>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_context: Option<ProjectContext>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    pub reconfigure_roles: std::collections::BTreeSet<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role_approval_digest: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -229,6 +233,8 @@ impl ProgressStore {
             update_hosts: Vec::new(),
             question_bindings: questions::capture(self.binding.scope)?,
             project_context: None,
+            reconfigure_roles: std::collections::BTreeSet::new(),
+            role_approval_digest: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -355,6 +361,8 @@ impl ProgressStore {
         // Completed progress is a resume receipt, not a second copy of free-form answers.
         complete.answers = serde_json::json!({});
         complete.project_context = None;
+        complete.reconfigure_roles.clear();
+        complete.role_approval_digest = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -442,6 +450,14 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
+        if progress.reconfigure_roles.is_empty() != progress.role_approval_digest.is_none()
+            || progress.role_approval_digest.as_ref().is_some_and(|digest| !valid_hash(digest)) {
+            return Err(SetupError::Verification("role approval fingerprint is missing or invalid".into()));
+        }
+        if !progress.reconfigure_roles.is_empty() && (self.binding.scope != PreferenceScope::Project
+            || progress.reconfigure_roles.iter().any(|id| !progress.answers["persistent_roles"].as_array().is_some_and(|roles|roles.iter().any(|role|role["role_id"]==id.as_str())))) {
+            return Err(SetupError::Verification("role approval does not match project answers".into()));
+        }
         if let Some(context) = &progress.project_context {
             if self.binding.scope != PreferenceScope::Project || !valid_hash(&context.global_digest)
                 || !valid_hash(&context.plan_digest) {

@@ -407,6 +407,15 @@ questions:
     prompt: {"ko":"역할 정의를 JSON 목록으로 입력해 주세요.","en":"Enter role definitions as a JSON array."}
     help: {"ko":"책임·수정 범위·검증 의무를 포함한 구조화된 정의. 빈 목록은 영구 역할 없음.","en":"Include responsibilities, write scope, and verification duties. An empty array means no persistent roles."}
     default: []
+  - id: project-role-update
+    revision: 1
+    scope: "project"
+    section: "roles"
+    key: "/_control/role_update"
+    input: "boolean"
+    prompt: {"ko":"위 역할의 정의 변경을 승인할까요?","en":"Approve definition changes for the roles listed above?"}
+    help: {"ko":"역할 본문과 현재 할당·인계는 보존하며 정의만 변경.","en":"Only the definitions change. Role body, current assignment, and handoff are preserved."}
+    default: false
   - id: project-knowledge-include
     revision: 1
     scope: "project"
