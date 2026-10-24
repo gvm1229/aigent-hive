@@ -54,7 +54,7 @@ public static class SetupConsoleFixture {
     public static int Main(string[] args) {
         Process child=null;
         try {
-            if(args.Length!=3) return 20;
+            if(args.Length!=4) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
@@ -68,7 +68,9 @@ public static class SetupConsoleFixture {
                 string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
                 WaitStep(child,progress,"user-language"); Send(input,"1\r");
                 WaitStep(child,progress,"usage-enforcement"); Thread.Sleep(100);
-                if(!GenerateConsoleCtrlEvent(0,0)) return 22;
+                if(args[3]=="ctrl-c") { if(!GenerateConsoleCtrlEvent(0,0)) return 22; }
+                else if(args[3]=="eof") { Send(input,new string((char)26,1)+"\r"); }
+                else return 26;
                 if(!child.WaitForExit(10000)) return 23;
                 File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
                 return child.ExitCode==0 ? 24 : 0;
@@ -83,6 +85,12 @@ public static class SetupConsoleFixture {
 @unittest.skipUnless(os.name == "nt", "native Ctrl-C regression requires a private Windows console")
 class SetupConsoleInterruptConformance(Phase1CliTestCase):
     def test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume(self):
+        self.check_interruption("ctrl-c")
+
+    def test_eof_is_not_a_negative_answer_and_saved_choices_resume(self):
+        self.check_interruption("eof")
+
+    def check_interruption(self, kind):
         source = self.work_root / "console.cs"
         helper = self.work_root / "console.exe"
         source.write_text(FIXTURE, encoding="utf-8")
@@ -101,12 +109,14 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
         startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startup.wShowWindow = subprocess.SW_HIDE
         result = subprocess.run(
-            [str(helper), str(self.hive_binary), str(root), str(result_path)],
+            [str(helper), str(self.hive_binary), str(root), str(result_path), kind],
             capture_output=True, text=True, timeout=45,
             creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotEqual(json.loads(result_path.read_text())["exit_code"], 0)
+        if kind == "eof":
+            self.assertEqual(json.loads(result_path.read_text())["exit_code"], 2)
         progress_path = root / ".hive/config/setup-progress/user.yml"
         progress = read_yaml(progress_path)
         self.assertEqual(progress["answers"]["interface_language"], "ko")
