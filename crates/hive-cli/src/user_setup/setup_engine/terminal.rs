@@ -120,6 +120,9 @@ pub(super) fn display_value(question: &Question, value: &Value, korean: bool) ->
     if question.input == InputKind::Structured {
         return value.to_string();
     }
+    if value.is_null() {
+        return if korean { "없음" } else { "None" }.into();
+    }
     if let Some(values) = value.as_array() {
         return values
             .iter()

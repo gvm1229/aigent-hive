@@ -161,7 +161,9 @@ fn annotate(
 ) -> Result<(), SetupError> {
     let defaults = super::default_answers(Some(config.interface_language));
     let values = declarations(config)?;
-    let mut choices = BTreeMap::new();
+    let mut choices: BTreeMap<_, _> = current.into_iter().flat_map(|c| c.preference_decisions.iter())
+        .filter(|(key, decision)| !values.contains_key(*key) && decision.matches_declaration(&Value::Null).unwrap_or(false))
+        .map(|(key, decision)| (key.clone(), decision.clone())).collect();
     for (key, value) in values {
         let provided = supplied.pointer(&key).is_some();
         if let Some(prior) = current
@@ -237,6 +239,23 @@ mod tests {
         assert_eq!(record.input_channel, PreferenceInput::AnswersFile);
         assert_eq!(record.decided_at, Some(42));
         assert!(user_setup::migration::pending_questions(&config).is_empty());
+    }
+
+    #[test]
+    fn explicit_optional_removal_keeps_its_record_when_the_file_omits_that_value() {
+        let mut supplied = input();
+        let mut current = parse(&supplied);
+        let removal = PreferenceDecision::new(&Value::Null, DecisionOrigin::Explicit,
+            PreferenceInput::Terminal, PreferenceScope::User, "0.14.0", Some(42)).unwrap();
+        current.preference_decisions.insert("/profile/description".into(), removal.clone());
+        let mut config = parse(&supplied);
+        annotate(&mut config, &supplied, Some(&current), FileOptions::default(), Some(99)).unwrap();
+        assert_eq!(config.preference_decisions["/profile/description"], removal);
+        supplied["profile"]["description"] = json!("New details");
+        let mut changed = parse(&supplied);
+        annotate(&mut changed, &supplied, Some(&current), FileOptions::default(), Some(99)).unwrap();
+        assert_eq!(changed.preference_decisions["/profile/description"].input_channel, PreferenceInput::AnswersFile);
+        assert_eq!(changed.preference_decisions["/profile/description"].decided_at, Some(99));
     }
 
     #[test]

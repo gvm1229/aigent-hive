@@ -537,13 +537,6 @@ fn collect<R: BufRead, W: Write>(
         if !question.applicable(&progress.answers) {
             continue;
         }
-        if question.id == "user-context-description"
-            && progress.answers["profile"]["contexts"]
-                .as_array()
-                .is_some_and(|values| !values.is_empty())
-        {
-            continue;
-        }
         if answered(progress, question) && options.resume {
             continue;
         }
@@ -588,6 +581,15 @@ fn ask<R: BufRead, W: Write>(
         let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
             return Ok(false);
         };
+        if question.id == "user-context-description" && value == json!(":clear")
+            && (origin == DecisionOrigin::Explicit || current.is_none()) {
+            if progress.answers["profile"]["contexts"].as_array().is_some_and(|items| !items.is_empty()) {
+                break (Value::Null, origin);
+            }
+            terminal.say("배경 종류를 고르지 않았으므로 설명을 입력해 주세요.",
+                "Enter a description because no background is selected.")?;
+            continue;
+        }
         if config_answer_valid(question, &progress.answers, &value)? {
             break (value, origin);
         }
@@ -596,7 +598,11 @@ fn ask<R: BufRead, W: Write>(
             "The structure does not match this setting. Enter this answer again.",
         )?;
     };
-    set_value(&mut progress.answers, &question.key, value.clone())?;
+    if question.id == "user-context-description" && value.is_null() {
+        progress.answers["profile"].as_object_mut().expect("profile").remove("description");
+    } else {
+        set_value(&mut progress.answers, &question.key, value.clone())?;
+    }
     if question.id == "discord-enabled" && value == json!(false) {
         progress.answers["usage_guard"]["discord"].as_object_mut()
             .expect("notification preferences").remove("webhook_url_env");
@@ -657,8 +663,16 @@ pub(super) fn answered(progress: &SetupProgress, question: &Question) -> bool {
     progress.answered_questions.get(&question.id) == Some(&question.revision)
         && progress.question_bindings.get(&question.id).is_some_and(|binding|
             binding.revision == question.revision && binding.key == question.key && binding.input == question.input)
-        && progress.answers.pointer(&question.key).is_some_and(|value|
+        && (progress.answers.pointer(&question.key).is_some_and(|value|
             question.validate_value(value).is_ok() && config_answer_valid(question, &progress.answers, value).unwrap_or(false))
+            || cleared_description(&progress.answers, question))
+}
+
+fn cleared_description(answers: &Value, question: &Question) -> bool {
+    question.id == "user-context-description" && answers.pointer(&question.key).is_none()
+        && answers["profile"]["contexts"].as_array().is_some_and(|items| !items.is_empty())
+        && answers["preference_decisions"][&question.key]["value_digest"]
+            == json!(hive_core::preferences::declaration_digest(&Value::Null).expect("null fingerprint"))
 }
 
 fn selected_question(progress: &SetupProgress, question: &Question, options: &Options, quick: bool) -> bool {
@@ -666,7 +680,8 @@ fn selected_question(progress: &SetupProgress, question: &Question, options: &Op
         return true;
     }
     progress.selected_section.as_ref().is_none_or(|section| &question.section == section)
-        && (!quick || matches!(question.id.as_str(), "user-contexts" | "user-hosts"))
+        && (!quick || matches!(question.id.as_str(), "user-contexts" | "user-hosts")
+            || (question.id == "user-context-description" && progress.answers["profile"]["contexts"].as_array().is_some_and(Vec::is_empty)))
 }
 
 pub(super) fn set_value(
@@ -827,7 +842,8 @@ fn display_preview<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(answers))
     {
-        if let Some(value) = answers.pointer(&question.key) {
+        if let Some(value) = answers.pointer(&question.key)
+            .or_else(|| cleared_description(answers, question).then_some(&Value::Null)) {
             writeln!(
                 terminal.writer,
                 "{} {}",
@@ -1062,6 +1078,54 @@ mod tests {
         assert!(progress.answers["preference_decisions"].get("/usage_guard/discord/webhook_url_env").is_none());
         assert!(!String::from_utf8(disable.writer).unwrap().contains("How much request content"));
         user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn profile_details_can_be_added_cleared_and_resumed_with_a_null_choice_record() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
+        progress.setup_mode = Some("custom".into());
+        progress.selected_section = Some("profile".into());
+        let mut terminal = Terminal { reader: Cursor::new(b"1\nLocal tools\n"), writer: Vec::new(), language: InterfaceLanguage::En };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
+        assert_eq!(progress.answers["profile"]["description"], "Local tools");
+        let mut clear = Terminal { reader: Cursor::new(b"\n:clear\n"), writer: Vec::new(), language: InterfaceLanguage::En };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut clear).unwrap());
+        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        assert!(config.profile.description.is_none());
+        let decision = &config.preference_decisions["/profile/description"];
+        assert_eq!(decision.origin, DecisionOrigin::Explicit);
+        assert!(decision.matches_declaration(&Value::Null).unwrap());
+        let mut preview = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En };
+        display_preview(&progress.answers, &mut preview).unwrap();
+        assert!(String::from_utf8(preview.writer).unwrap().contains("Describe any additional background. None"));
+        let mut resume_options = options(root.path()); resume_options.resume = true;
+        let mut resumed = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &resume_options, &mut resumed).unwrap());
+        assert!(resumed.writer.is_empty());
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+    }
+
+    #[test]
+    fn quick_setup_requires_details_when_no_background_is_selected_and_preserves_eof() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
+        progress.setup_mode = Some("expedited".into());
+        let mut first = Terminal { reader: Cursor::new(b"[]\n:clear\n"), writer: Vec::new(), language: InterfaceLanguage::En };
+        assert!(!collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut first).unwrap());
+        assert!(!progress.answered_questions.contains_key("user-context-description"));
+        assert!(String::from_utf8(first.writer).unwrap().contains("no background is selected"));
+        let mut resume_options = options(root.path()); resume_options.resume = true;
+        let mut resumed = Terminal { reader: Cursor::new(b"Local work\n1\n"), writer: Vec::new(), language: InterfaceLanguage::En };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &resume_options, &mut resumed).unwrap());
+        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        assert!(config.profile.contexts.is_empty());
+        assert_eq!(config.profile.description.as_deref(), Some("Local work"));
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
 
     #[test]

@@ -179,13 +179,14 @@ questions:
     minimum: 0
     maximum: 3
   - id: user-context-description
-    revision: 1
+    revision: 2
     scope: "user"
     section: "profile"
     key: "/profile/description"
     input: "text"
     prompt: {"ko":"추가로 알려 줄 배경을 적어 주세요.","en":"Describe any additional background."}
-    help: {"ko":"","en":""}
+    help: {"ko":"추가 설명을 지우거나 비워 두려면 :clear 입력. 배경 종류가 없으면 설명은 필수.","en":"Enter :clear to remove or omit extra details. A description is required when no background is selected."}
+    default: ":clear"
     minimum: 1
     maximum: 500
   - id: user-hosts
