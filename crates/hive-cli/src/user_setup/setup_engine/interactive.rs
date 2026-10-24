@@ -909,6 +909,7 @@ fn inspect_settings<R: BufRead, W: Write>(
                 .as_ref()
                 .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
         });
+    let monitor = crate::usage_monitor::setup_status(root);
     if !json_output {
         if let Some(config) = migration
             .as_ref()
@@ -924,6 +925,7 @@ fn inspect_settings<R: BufRead, W: Write>(
                 "No settings have been saved yet.",
             )?;
         }
+        display_monitor(&monitor, terminal)?;
     }
     Ok(result(
         "success",
@@ -934,11 +936,30 @@ fn inspect_settings<R: BufRead, W: Write>(
         "Stored settings and pending questions inspected",
         Some(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
-            "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":"not-inspected",
+            "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
             "migration_preview":migration,"pending_questions":config.map(user_setup::migration::pending_questions).unwrap_or_default()}),
         ),
         None,
     ))
+}
+
+fn display_monitor<R: BufRead, W: Write>(monitor: &Value, terminal: &mut Terminal<R, W>) -> Result<(), SetupError> {
+    let (saved_ko, saved_en) = match monitor["saved_enabled"].as_bool() {
+        Some(true) => ("켜짐", "on"), Some(false) => ("꺼짐", "off"),
+        None if monitor["configuration"] == "absent" => ("설정 없음", "not configured"),
+        None => ("확인 못함", "unverified"),
+    };
+    let (state_ko, state_en) = match monitor["controller_state"].as_str() {
+        Some("running") => ("실행 중", "running"), Some("stopped") => ("종료 확인", "stop confirmed"),
+        Some("not-configured") => ("설정 없음", "not configured"), _ => ("확인 못함", "unverified"),
+    };
+    terminal.say(&format!("감시 저장 선택: {saved_ko}"), &format!("Saved monitoring selection: {saved_en}"))?;
+    terminal.say(&format!("확인한 감시 실행 상태: {state_ko}"), &format!("Observed monitor state: {state_en}"))?;
+    if monitor["controller_state"] == "running" {
+        terminal.say(if monitor["monitoring_verified"] == true {"감시 관측·제어: 정상 확인"} else {"감시 관측·제어: 확인 못함"},
+            if monitor["monitoring_verified"] == true {"Observation and control: verified"} else {"Observation and control: unverified"})?;
+    }
+    Ok(())
 }
 
 pub(super) fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
@@ -1223,12 +1244,28 @@ mod tests {
             true
         );
         assert_eq!(data["migration_preview"]["candidate"]["schema_version"], 2);
-        assert_eq!(data["actual_monitor_state"], "not-inspected");
+        assert_eq!(data["actual_monitor_state"]["controller_state"], "not-configured");
+        assert_eq!(data["actual_monitor_state"]["sensor_queries"], 0);
         assert_eq!(terminal.reader.position(), 0);
         assert!(terminal.writer.is_empty());
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert!(!root.path().join(".hive/runtime").exists());
         assert!(!root.path().join(".hive/config/setup-progress").exists());
+    }
+
+    #[test]
+    fn monitor_status_text_uses_the_selected_language_without_claiming_readiness() {
+        for (language, off, stopped, unknown) in [(InterfaceLanguage::Ko, "꺼짐", "종료 확인", "확인 못함"),
+            (InterfaceLanguage::En, "off", "stop confirmed", "unverified")] {
+            let mut terminal = Terminal { reader: Cursor::new(b"unused\n"), writer: Vec::new(), language };
+            display_monitor(&json!({"saved_enabled":false,"controller_state":"stopped"}), &mut terminal).unwrap();
+            let output = String::from_utf8(terminal.writer).unwrap();
+            assert!(output.contains(off) && output.contains(stopped));
+            terminal.writer = Vec::new();
+            display_monitor(&json!({"saved_enabled":true,"controller_state":"running","monitoring_verified":false}), &mut terminal).unwrap();
+            assert!(String::from_utf8(terminal.writer).unwrap().contains(unknown));
+            assert_eq!(terminal.reader.position(), 0);
+        }
     }
 
     #[test]

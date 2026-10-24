@@ -6,6 +6,7 @@ mod preferences;
 mod qualification;
 mod sensor;
 mod state;
+mod status;
 mod threshold;
 mod transition;
 mod upgrade;
@@ -17,6 +18,7 @@ pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
 pub(crate) use upgrade::upgrade_existing;
 pub(crate) use upgrade::resume_after_setup;
+pub(crate) use status::setup_status;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -141,6 +143,22 @@ fn lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
         .into_std();
     file.try_lock()
         .map_err(|_| AdapterError::Conflict("monitor operation already running".into()))?;
+    Ok(file)
+}
+
+fn existing_lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
+    let mut parent = root.target_dir().try_clone().map_err(|_| error("cannot pin lock parent"))?;
+    for component in Path::new(BASE).components() {
+        parent = parent.open_dir_nofollow(component.as_os_str())
+            .map_err(|_| error("monitor lock parent is absent or unsafe"))?;
+    }
+    if !parent.symlink_metadata(name).is_ok_and(|metadata| metadata.is_file()) {
+        return Err(error("monitor lock is absent or unsafe"));
+    }
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).follow(FollowSymlinks::No);
+    let file = parent.open_with(name, &options).map_err(|_| error("cannot pin monitor lock"))?.into_std();
+    file.try_lock().map_err(|_| AdapterError::Conflict("monitor operation already running".into()))?;
     Ok(file)
 }
 
@@ -387,6 +405,7 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
     let probe = configuration
         .as_ref()
+        .filter(|_| selection.is_ok())
         .zip(state.controller_pid)
         .and_then(|(config, pid)| {
             platform::call(

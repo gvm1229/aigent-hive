@@ -82,8 +82,8 @@ pub(super) fn verify_stopped(root: &PinnedTarget) -> Result<(), AdapterError> {
     if authenticated_config(root)?.is_none() {
         return Err(error("monitor stop configuration is missing"));
     }
-    let _control = lock(root, "control.lock")?;
-    let _controller = lock(root, "controller.lock")?;
+    let _control = super::existing_lock(root, "control.lock")?;
+    let _controller = super::existing_lock(root, "controller.lock")?;
     let config = authenticated_config(root)?.ok_or_else(|| error("monitor stop configuration is missing"))?;
     let journal: Value = load(root, JOURNAL)?.ok_or_else(|| error("monitor stop receipt is missing"))?;
     let bytes = root.read_required(std::path::Path::new(CONFIG), 65536)?;
