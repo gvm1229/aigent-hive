@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -48,6 +48,7 @@ if direct:
     assert os.environ['AIGENT_HIVE_PREFIX']==str(package)
 else:
     assert sys.argv[1:]==['install','-g','aigent-hive@0.13.2-test.2'],sys.argv
+count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
 binary=package/'bin/hive';binary.unlink();shutil.copyfile('/build/debug/hive',binary);binary.chmod(0o755)
 subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)
 digest=hashlib.sha256(binary.read_bytes()).hexdigest()
@@ -79,19 +80,10 @@ environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
 command = [str(binary), "update", "--channel", "test", "--user-root", str(user)]
 answers = []
-if mode == "confirm":
-    def invoke(arguments):
-        result = subprocess.run([str(binary), *arguments], env=environment, capture_output=True, text=True, timeout=120)
-        assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
-    invoke(["install", "--scope", "user", "--host", "antigravity", "--user-root", str(user), "--apply", "--output", "json"])
-    old = root / "old.json"
-    old.write_text(json.dumps({"schema_version": 1, "interface_language": "ko", "wiki": {"language": "ko"},
-        "profile": {"contexts": ["non-developer"]}, "persona": {"id": "balanced"}, "selected_hosts": ["antigravity"],
-        "skills": {"mode": "all"}, "usage_guard": {"enabled": False, "quota_reset_guard_enabled": True, "stop_remaining_percent": 5}}))
-    invoke(["setup", "--scope", "user", "--answers", str(old), "--user-root", str(user), "--apply", "--output", "json"])
-    result = subprocess.run([*command, "--confirm"], env=environment, input="no\nyes\n", capture_output=True, text=True, timeout=120)
-    assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
-else:
+terminal_runs = []
+
+def terminal_run(command, stop=None):
+    answers = []
     pid, descriptor = pty.fork()
     if pid == 0:
         os.execve(str(binary), command, environment)
@@ -99,7 +91,7 @@ else:
     output, pending = b"", b""
     status = None
     try:
-        while time.monotonic() - began < 180:
+        while time.monotonic() - began < (560 if stop == "hold" else 180):
             readable, _, _ = select.select([descriptor], [], [], 0.2)
             if readable:
                 try:
@@ -116,11 +108,13 @@ else:
                     elif "comma-separated): " in text:
                         reply, kind = "antigravity", "old-host"
                     elif text.endswith("> "):
-                        if "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
+                        if stop == "hold" and ("Korean" in text or "한국어" in text) and "English" in text:
+                            reply, kind = None, "held"
+                        elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
                             reply, kind = "yes", "final"
                         elif ("Korean" in text or "한국어" in text) and "English" in text:
                             reply, kind = "1", "language"
-                        elif mode == "cancel":
+                        elif stop == "cancel":
                             reply, kind = ":cancel", "cancel"
                         else:
                             reply, kind = "", "default"
@@ -132,7 +126,7 @@ else:
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (2 if mode == "cancel" else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (2 if stop in {"cancel", "hold"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -142,10 +136,39 @@ else:
                 pass
         os.close(descriptor)
 
+    terminal_runs.append({"stop": stop, "elapsed_seconds": round(time.monotonic() - began, 3), "status": status})
+    return answers
+
+if mode == "confirm":
+    def invoke(arguments):
+        result = subprocess.run([str(binary), *arguments], env=environment, capture_output=True, text=True, timeout=120)
+        assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
+    invoke(["install", "--scope", "user", "--host", "antigravity", "--user-root", str(user), "--apply", "--output", "json"])
+    old = root / "old.json"
+    old.write_text(json.dumps({"schema_version": 1, "interface_language": "ko", "wiki": {"language": "ko"},
+        "profile": {"contexts": ["non-developer"]}, "persona": {"id": "balanced"}, "selected_hosts": ["antigravity"],
+        "skills": {"mode": "all"}, "usage_guard": {"enabled": False, "quota_reset_guard_enabled": True, "stop_remaining_percent": 5}}))
+    invoke(["setup", "--scope", "user", "--answers", str(old), "--user-root", str(user), "--apply", "--output", "json"])
+    result = subprocess.run([*command, "--confirm"], env=environment, input="no\nyes\n", capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
+else:
+    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else None)
+
 config = user / ".hive/config/user-setup.yml"
 progress = (user / ".hive/config/setup-progress/user.yml").read_text()
-if mode == "cancel":
-    assert not config.exists() and "phase: awaiting-answers" in progress and "interface_language: ko" in progress
+if mode in {"cancel", "cancel-resume", "deadline"}:
+    assert not config.exists() and "phase: awaiting-answers" in progress
+    if mode != "deadline":
+        assert "interface_language: ko" in progress
+    else:
+        assert 418 <= terminal_runs[0]["elapsed_seconds"] < 550, terminal_runs
+    if mode in {"cancel-resume", "deadline"}:
+        answers += terminal_run([str(binary), "update", "--user-root", str(user)])
+        saved = config.read_text()
+        progress = (user / ".hive/config/setup-progress/user.yml").read_text()
+        assert "schema_version: 2" in saved and "interface_language: ko" in saved
+        assert "enforcement_enabled: false" in saved and "phase: complete" in progress
+        assert (root / "install-count").read_text() == "1"
 else:
     saved = config.read_text()
     assert "schema_version: 2" in saved and "interface_language: ko" in saved and "phase: complete" in progress
@@ -168,7 +191,8 @@ assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,
     "incoming_stripped_sha256": incoming["sha256"], "installer_stub": incoming["installer"], "answers": answers,
     "original_parent": "public 0.13.1 Linux x64", "incoming": "development 0.14.0",
-    "registry_target": "0.13.2-test.2", "private_user_mount": False,
+    "registry_target": "0.13.2-test.2", "private_user_mount": False, "terminal_runs": terminal_runs,
+    "installer_invocations": int((root / "install-count").read_text()),
     "scope": "Linux Docker PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
 Path("/results", mode + ".json").write_text(json.dumps(evidence, indent=2) + "\n")
 print(json.dumps(evidence))
