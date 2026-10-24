@@ -276,6 +276,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [갱신 연결의 Windows 검증](research/cli-update-validation-0.14.0.md): 공개0.13.1 원본의 첫 질문·적용, 콘솔 입력 수정, 새 명령의 무입력 결과
 - [진행 기록의 대상과 쓰기 복구](research/cli-state-recovery-0.14.0.md): 같은 경로의 다른 폴더 구분, 중단된 기록 교체, 범위별 복구
 - [설정 입력과 프로젝트 CLI 검증](research/cli-project-validation-0.14.0.md): 입력 출처·전역 변경 메뉴·콘솔 중단·새 프로젝트 설정
+- [프로젝트 재설정과 역할 보존](research/cli-project-reconfiguration-0.14.0.md): 사용자 수정 병합·기존 답안 이전·역할 동의·중단 재개
 - [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
 - [첫 갱신 시험의 격리 실수와 복구](research/legacy-update-test-isolation-0.14.0.md): 잘못된 npm 대역·기존13.1 복구·시험 설치 경로 제한
 - [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)
