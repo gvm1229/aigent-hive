@@ -20,6 +20,26 @@ questions:
     help: {"ko":"","en":""}
     default: "expedited"
     options: [{"value":"expedited","label":{"ko":"빠른 설정","en":"Quick setup"}},{"value":"custom","label":{"ko":"맞춤 설정","en":"Custom setup"}}]
+  - id: user-section
+    revision: 1
+    scope: "user"
+    section: "setup"
+    key: "/selected_section"
+    input: "choice"
+    prompt: {"ko":"변경할 설정을 골라 주세요.","en":"Choose the settings to change."}
+    help: {"ko":"선택한 항목만 질문하며 나머지 값은 보존. 중단은 :cancel.","en":"Review only the selected group and preserve the other values. Enter :cancel to stop."}
+    options:
+      - {"value":"all","label":{"ko":"전체 설정 검토","en":"Review all settings"}}
+      - {"value":"language","label":{"ko":"화면 언어","en":"Interface language"}}
+      - {"value":"wiki","label":{"ko":"위키","en":"Knowledge documents"}}
+      - {"value":"profile","label":{"ko":"배경과 관심사","en":"Background and interests"}}
+      - {"value":"persona","label":{"ko":"답변 방식","en":"Response style"}}
+      - {"value":"hosts","label":{"ko":"사용할 앱","en":"Apps"}}
+      - {"value":"review","label":{"ko":"독립 검토","en":"Independent review"}}
+      - {"value":"skills","label":{"ko":"기능 선택","en":"Feature selection"}}
+      - {"value":"updates","label":{"ko":"새 버전 확인","en":"Update checks"}}
+      - {"value":"usage","label":{"ko":"사용량 보호","en":"Usage protection"}}
+      - {"value":"notifications","label":{"ko":"조회 대체 수단과 알림","en":"Fallback observation and notices"}}
   - id: user-wiki
     revision: 1
     scope: "user"

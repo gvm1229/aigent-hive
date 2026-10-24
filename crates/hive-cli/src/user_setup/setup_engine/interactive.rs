@@ -462,6 +462,7 @@ fn collect<R: BufRead, W: Write>(
             .find(|q| q.id == id)
             .ok_or_else(|| SetupError::Internal("missing setup question".to_owned()))
     };
+    if !choose_section(store, progress, selected("user-section")?, terminal)? { return Ok(false); }
     let needs_language = progress.answers.get("interface_language").is_none()
         || (progress.selected_section.as_deref() == Some("language")
             && !answered(progress, selected("user-language")?));
@@ -519,7 +520,7 @@ fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
-        if matches!(question.id.as_str(), "user-language" | "user-mode") {
+        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section") {
             continue;
         }
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
@@ -545,6 +546,27 @@ fn collect<R: BufRead, W: Write>(
             return Ok(false);
         }
     }
+    Ok(true)
+}
+
+fn choose_section<R: BufRead, W: Write>(
+    store: &ProgressStore,
+    progress: &mut Conversation,
+    question: &Question,
+    terminal: &mut Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    if progress.fresh || progress.selected_section.is_some() || progress.setup_mode.is_some() {
+        return Ok(true);
+    }
+    progress.step.clone_from(&question.id);
+    persist(store, progress)?;
+    let AnswerInput::Answered { value, .. } = terminal.ask(question, None)? else { return Ok(false) };
+    let section = value.as_str().ok_or_else(|| SetupError::Input("invalid setting group".into()))?;
+    progress.selected_section = (section != "all").then(|| section.to_owned());
+    progress.setup_mode = Some("custom".into());
+    progress.answered_questions.insert(question.id.clone(), question.revision);
+    progress.question_bindings.insert(question.id.clone(), question.into());
+    persist(store, progress)?;
     Ok(true)
 }
 
@@ -1176,6 +1198,51 @@ mod tests {
         let mut options = options(root.path()); options.resume = true;
         progress.selected_section = Some("persona".into());
         assert!(selected_question(&progress, &question, &options, true));
+    }
+
+    #[test]
+    fn configured_users_select_a_group_and_language_changes_do_not_change_wiki_or_hosts() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.fresh = false;
+        progress.answers["interface_language"] = json!("ko");
+        progress.answers["wiki"]["language"] = json!("ko");
+        let mut terminal = Terminal { reader:Cursor::new(b"language\n2\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
+        let shown = String::from_utf8(terminal.writer).unwrap();
+        assert!(shown.contains("변경할 설정을 골라 주세요"));
+        assert!(!shown.contains("설정 방식을 골라 주세요"));
+        assert!(!shown.contains("Hive를 사용할 앱을 골라 주세요"));
+        assert_eq!(progress.answers["interface_language"], "en");
+        assert_eq!(progress.answers["wiki"]["language"], "ko");
+        assert_eq!(progress.answers["selected_hosts"], json!(["codex"]));
+        assert_eq!(terminal.language, InterfaceLanguage::En);
+    }
+
+    #[test]
+    fn cancelled_group_selection_preserves_values_and_can_resume_a_single_group() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.fresh = false; progress.answers["interface_language"] = json!("ko");
+        let original = progress.answers.clone();
+        let mut cancelled = Terminal { reader:Cursor::new(b":cancel\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
+        assert!(!collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut cancelled).unwrap());
+        assert_eq!(progress.answers, original);
+        assert!(!progress.answered_questions.contains_key("user-section"));
+        let mut resumed = Terminal { reader:Cursor::new(b"persona\nfriendly\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
+        let mut options = options(root.path()); options.resume=true;
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options, &mut resumed).unwrap());
+        assert_eq!(progress.answers["persona"]["id"], "friendly");
+        assert_eq!(progress.selected_section.as_deref(), Some("persona"));
+        assert_eq!(progress.answers["selected_hosts"], original["selected_hosts"]);
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        let catalog = catalog().unwrap();
+        let menu = catalog.questions.iter().find(|q| q.id=="user-section").unwrap();
+        for option in &menu.options {
+            assert!(option.value=="all" || !catalog.section(PreferenceScope::User, &option.value).is_empty());
+        }
     }
 
     #[test]
