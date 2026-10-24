@@ -426,7 +426,11 @@ mod tests {
                 .map(|change| {
                     (
                         change.path.clone(),
-                        crate::user_install::host_policy_mode(output, &change.path).unwrap(),
+                        if change.before.is_some() {
+                            crate::user_install::host_policy_mode(output, &change.path).unwrap()
+                        } else {
+                            None
+                        },
                     )
                 })
                 .collect(),
