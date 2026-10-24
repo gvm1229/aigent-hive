@@ -116,6 +116,64 @@ fn validate_answers(answers: &Value) {
 }
 
 #[test]
+fn existing_project_answers_keep_legacy_values_without_inventing_original_choice_times() {
+    let bytes = include_bytes!("../../../../../../tests/fixtures/setup/answers-base.yml");
+    let original: Value = serde_yaml::from_slice(bytes).unwrap();
+    let normalized = existing::answers(bytes).unwrap();
+    assert_eq!(normalized["schema_version"], 2);
+    assert_eq!(normalized["persistent_roles"], original["persistent_roles"]);
+    assert_eq!(
+        normalized["knowledge_include_paths"],
+        original["knowledge_include_paths"]
+    );
+    assert_eq!(
+        normalized["preference_decisions"]["/persistent_roles"]["origin"],
+        "legacy-unknown"
+    );
+    assert_eq!(
+        normalized["preference_decisions"]["/persistent_roles"]["changed_in_version"],
+        "unknown"
+    );
+    assert!(normalized["preference_decisions"]["/persistent_roles"]["decided_at"].is_null());
+    assert_eq!(
+        normalized["preference_decisions"]["/root_knowledge_promotion_categories"]["origin"],
+        "default"
+    );
+    validate_answers(&normalized);
+}
+
+#[test]
+fn choosing_custom_preferences_replaces_the_previous_quick_inheritance_records() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    preferences::record_defaults(&mut answers).unwrap();
+    let mut progress = store.new_progress("project-mode".into(), answers).unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"2\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::Ko,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap()
+    );
+    assert_eq!(progress.answers["setup_mode"], "custom");
+    assert!(progress.answers["preference_decisions"]
+        .as_object()
+        .unwrap()
+        .values()
+        .all(|record| record["origin"] != "inherited"));
+    assert_eq!(
+        progress.answers["preference_decisions"]["/wiki/enabled"]["input_channel"],
+        "terminal"
+    );
+    validate_answers(&progress.answers);
+}
+
+#[test]
 fn custom_project_collects_explicit_preferences_and_repeats_only_invalid_answer() {
     let root = tempfile::tempdir().unwrap();
     let target = tempfile::tempdir().unwrap();

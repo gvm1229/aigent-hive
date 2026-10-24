@@ -3046,6 +3046,18 @@ pub fn inspect_project_preferences(
     Ok((answers.preference_decisions, resolved))
 }
 
+/// Normalize saved project choices through the same schema and provenance checks as setup.
+/// This does not change the stored document or infer an original answer time.
+///
+/// # Errors
+/// Rejects invalid stored answers or decision metadata.
+pub fn normalized_project_answers(bytes: &[u8]) -> Result<JsonValue, RenderError> {
+    let (answers, value) = parse_answers(bytes)?;
+    validate_schema_instance(SETUP_SCHEMA, &value, "setup answers")?;
+    validate_answers(&answers)?;
+    serde_json::to_value(answers).map_err(|error|RenderError::Internal(error.to_string()))
+}
+
 fn load_resolution(path: &Path) -> Result<CapabilityResolution, RenderError> {
     let bytes = read_bytes(path, "capability evidence")?;
     let value: JsonValue = serde_json::from_slice(&bytes).map_err(|error| {

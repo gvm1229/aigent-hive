@@ -136,8 +136,8 @@ pub(super) fn preview<R: BufRead, W: Write>(
     let mut shown = answers.clone();
     if shown["setup_mode"] == "expedited" {
         terminal.say(
-            "언어·문서·답변 방식·기능 목록은 전역 설정을 따릅니다. 아래 값은 현재 전역 값입니다.",
-            "Language, documents, response style, and features inherit global settings. Current values follow.",
+            "언어·문서·답변 방식은 전역 설정을 따르고, 기능은 프로젝트 권장 묶음을 사용합니다. 아래는 현재 적용값입니다.",
+            "Language, documents, and response style inherit global settings; features use the project default bundle. Current effective values follow.",
         )?;
         seed_overrides(&mut shown, global);
         shown["usage_stop_remaining_percent"] = json!(global.usage_stop_remaining_percent);

@@ -17,6 +17,7 @@ use std::{
 
 mod activation;
 mod capabilities;
+mod existing;
 mod preferences;
 mod questions;
 #[cfg(test)]
@@ -274,9 +275,10 @@ fn execute<R: BufRead, W: Write>(
         Some(progress) if options.resume => {
             return completed_resume(options, &progress, &global, terminal.language);
         }
-        _ if saved.is_some() => {
-            return Err(SetupError::Conflict("existing project settings require the preserving reconfiguration path; original files were preserved".into()));
-        }
+        _ if saved.is_some() => store.new_progress(
+            "project-mode".into(),
+            existing::answers(saved.as_deref().expect("saved answers"))?,
+        )?,
         _ => store.new_progress(
             "project-mode".into(),
             questions::defaults(&target, &global, host),
@@ -352,6 +354,11 @@ fn prepare_files(
             serde_json::from_slice(&bytes)
                 .map_err(|_| SetupError::Input("invalid capabilities".into()))?,
             json!({"capabilities":"provided-document"}),
+        )
+    } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {
+        (
+            matrix,
+            json!({"capabilities":"stored-project-document","execution_capabilities_revalidated":false}),
         )
     } else {
         capabilities::inspect(
@@ -470,7 +477,12 @@ fn apply<R: BufRead, W: Write>(
         preview.changed_paths.len()
     )
     .map_err(|e| SetupError::Internal(e.to_string()))?;
-    if options.capabilities.is_none() {
+    if facts["capabilities"] == "stored-project-document" {
+        terminal.say(
+            "기존 프로젝트의 기능 자료를 사용합니다. 실제 실행 지원을 새로 검증한 결과는 아닙니다.",
+            "Using the project's saved capability data. Runtime support was not revalidated.",
+        )?;
+    } else if options.capabilities.is_none() {
         terminal.say("앱 실행 파일 확인과 실행 기능 지원은 별개입니다. 실행 기능은 아직 검증되지 않았습니다.","Executable presence is separate from execution support. Execution capabilities remain unverified.")?;
     }
     progress.phase = ProgressPhase::Previewed;

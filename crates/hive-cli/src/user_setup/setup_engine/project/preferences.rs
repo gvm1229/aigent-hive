@@ -24,6 +24,9 @@ pub(super) fn record_defaults(answers: &mut Value) -> Result<(), SetupError> {
     let mut decisions: PreferenceDecisions =
         serde_json::from_value(answers["preference_decisions"].clone())
             .map_err(|error| SetupError::Verification(error.to_string()))?;
+    if answers["setup_mode"] == "custom" {
+        decisions.retain(|_, record| record.origin != DecisionOrigin::Inherited);
+    }
     for (key, value) in answers.as_object().expect("project answers") {
         if matches!(
             key.as_str(),
