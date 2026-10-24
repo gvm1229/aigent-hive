@@ -80,8 +80,7 @@ pub(super) fn configure<R: BufRead, W: Write>(
         "승인할 원본·권한·후크 미리보기:",
         "Preview of sources, permissions, and hooks to approve:",
     )?;
-    writeln!(terminal.writer, "{}", semantic(&preview))
-        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    show_choices(&preview, terminal)?;
     let confirm = question("project-extras-confirm");
     progress.step.clone_from(&confirm.id);
     *snapshot = store.save(snapshot, progress)?;
@@ -258,4 +257,29 @@ fn semantic(records: &Value) -> Value {
         }
     }
     value
+}
+
+pub(super) fn show_choices<R: BufRead, W: Write>(
+    records: &Value,
+    terminal: &mut Terminal<R, W>,
+) -> Result<(), SetupError> {
+    let fields = |key: &str, keys: &[&str]| -> Vec<Value> {
+        records[key]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|record| {
+                let selected: serde_json::Map<String, Value> = keys
+                    .iter()
+                    .filter_map(|key| record.get(*key).map(|value| ((*key).into(), value.clone())))
+                    .collect();
+                Value::Object(selected)
+            })
+            .collect()
+    };
+    let shown = json!({
+        "skills": fields("approved_optional_skills", &["name", "source", "requested_capabilities", "approved_capabilities"]),
+        "hooks": fields("approved_fallback_hooks", &["capability", "event", "command", "path"]),
+    });
+    writeln!(terminal.writer, "{shown}").map_err(|error| SetupError::Internal(error.to_string()))
 }

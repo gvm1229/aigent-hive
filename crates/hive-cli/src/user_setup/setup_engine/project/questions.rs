@@ -181,15 +181,7 @@ pub(super) fn preview<R: BufRead, W: Write>(
         }
     }
     terminal.say("선택 기능과 후크:", "Optional features and hooks:")?;
-    writeln!(
-        terminal.writer,
-        "{}",
-        json!({
-            "features": answers["approved_optional_skills"],
-            "hooks": answers["approved_fallback_hooks"],
-        })
-    )
-    .map_err(|error| SetupError::Internal(error.to_string()))?;
+    super::extras::show_choices(answers, terminal)?;
     Ok(())
 }
 
