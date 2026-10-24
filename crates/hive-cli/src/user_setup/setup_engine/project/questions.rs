@@ -91,6 +91,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
     {
         progress.answers["project_identity"] = progress.answers["project_name"].clone();
     }
+    super::preferences::record_defaults(&mut progress.answers)?;
     *snapshot = store.save(snapshot, progress)?;
     Ok(true)
 }
@@ -127,6 +128,7 @@ pub(super) fn preview<R: BufRead, W: Write>(
             "Language, documents, response style, and features inherit global settings. Current values follow.",
         )?;
         seed_overrides(&mut shown, global);
+        shown["usage_stop_remaining_percent"] = json!(global.usage_stop_remaining_percent);
     }
     let catalog = super::super::catalog()?;
     for question in catalog

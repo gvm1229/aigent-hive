@@ -179,7 +179,7 @@ pub struct SetupOutcome {
 /// independently consented project preference and is rendered as its own
 /// canonical setting.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 pub struct ResolvedProjectPreferences {
     pub setup_mode: String,
     pub provenance: String,
@@ -2965,7 +2965,11 @@ fn read_target_required<T: TargetRead + ?Sized>(
 
 fn load_answers(path: &Path) -> Result<(SetupAnswers, JsonValue), RenderError> {
     let bytes = read_bytes(path, "setup answers")?;
-    let mut value: JsonValue = serde_yaml::from_slice(&bytes)
+    parse_answers(&bytes)
+}
+
+fn parse_answers(bytes: &[u8]) -> Result<(SetupAnswers, JsonValue), RenderError> {
+    let mut value: JsonValue = serde_yaml::from_slice(bytes)
         .map_err(|error| RenderError::Input(format!("invalid setup answer YAML: {error}")))?;
     let object = value
         .as_object_mut()
@@ -3006,6 +3010,27 @@ fn load_answers(path: &Path) -> Result<(SetupAnswers, JsonValue), RenderError> {
     )
     .map_err(RenderError::Input)?;
     Ok((answers, value))
+}
+
+/// Inspect stored project choices against current global preferences without rendering files.
+/// The decision view reconciles external edits but does not write the original document.
+///
+/// # Errors
+/// Rejects invalid answers, provenance, or incompatible global preferences.
+///
+/// # Panics
+/// Panics if the internal resolver drops explicitly supplied global preferences.
+pub fn inspect_project_preferences(
+    bytes: &[u8],
+    global: &GlobalProjectPreferences,
+) -> Result<(hive_core::preferences::PreferenceDecisions, ResolvedProjectPreferences), RenderError> {
+    let (answers, value) = parse_answers(bytes)?;
+    validate_schema_instance(SETUP_SCHEMA, &value, "setup answers")?;
+    validate_answers(&answers)?;
+    let effective = resolve_effective_project_preferences(&answers, Some(global))?;
+    let resolved = resolved_preferences(&answers, effective.as_ref())
+        .expect("global preferences were supplied");
+    Ok((answers.preference_decisions, resolved))
 }
 
 fn load_resolution(path: &Path) -> Result<CapabilityResolution, RenderError> {

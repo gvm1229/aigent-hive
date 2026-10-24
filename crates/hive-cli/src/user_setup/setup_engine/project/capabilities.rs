@@ -12,7 +12,7 @@ pub(super) fn inspect(host: &str) -> Result<(Value, Value), SetupError> {
     Ok((matrix, facts))
 }
 
-fn unverified(host: &str, version: &str) -> Result<Value, SetupError> {
+pub(super) fn unverified(host: &str, version: &str) -> Result<Value, SetupError> {
     let mut matrix = json!({"schema_version":1,"host":host,"host_version":version,"surface":"cli",
         "detection":"unknown","external_runtime":null,"resolved_owner":"host-native",
         "capabilities":{"instructions":"unverified","simple-question-isolation":"unverified",

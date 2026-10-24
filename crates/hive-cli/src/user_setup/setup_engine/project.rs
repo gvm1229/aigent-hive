@@ -16,6 +16,7 @@ use std::{
 };
 
 mod capabilities;
+mod preferences;
 mod questions;
 #[cfg(test)]
 mod tests;
@@ -219,7 +220,7 @@ fn execute<R: BufRead, W: Write>(
     .map_err(SetupError::Conflict)?;
     let store = ProgressStore::open(&options.root, Some(&target))?;
     if options.show || options.describe {
-        return inspect(options, &store, saved.as_deref(), terminal.language);
+        return preferences::inspect(options, &store, saved.as_deref(), terminal.language);
     }
     if mode != InteractionMode::Terminal {
         return Ok(pending(terminal.language));
@@ -299,43 +300,11 @@ fn global_preferences(root: &Path) -> Result<hive_render::GlobalProjectPreferenc
     Ok(global)
 }
 
-fn inspect(
-    options: &Options,
-    store: &ProgressStore,
-    saved: Option<&[u8]>,
-    language: InterfaceLanguage,
-) -> Result<ActionResult, SetupError> {
-    let stored = saved
-        .map(serde_yaml::from_slice::<Value>)
-        .transpose()
-        .map_err(|_| SetupError::Verification("invalid project settings".into()))?;
-    let data = if options.describe {
-        let section = options
-            .section
-            .as_ref()
-            .ok_or_else(|| SetupError::Input("project describe requires --section".into()))?;
-        json!({"section":section,"questions":super::section_data(hive_core::preferences::PreferenceScope::Project,section,stored.as_ref())?})
-    } else {
-        json!({"stored":stored,"pending":store.load()?.progress})
-    };
-    Ok(report(
-        "success",
-        0,
-        "hive.project-setup-shown",
-        language,
-        ["프로젝트 설정 조회 결과", "Project setup inspection"],
-        Some(data),
-    ))
-}
-
 fn prepare_files(
     options: &Options,
     answers: &Value,
 ) -> Result<(tempfile::NamedTempFile, tempfile::NamedTempFile, Value), SetupError> {
-    let mut answer_file =
-        tempfile::NamedTempFile::new().map_err(|e| SetupError::Internal(e.to_string()))?;
-    serde_json::to_writer(answer_file.as_file_mut(), answers)
-        .map_err(|e| SetupError::Internal(e.to_string()))?;
+    let answer_file = write_answers(answers)?;
     let (matrix, facts) = if let Some(path) = &options.capabilities {
         let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
         hive_core::run::CapabilityResolution::parse_json(&bytes)
@@ -357,6 +326,14 @@ fn prepare_files(
     serde_json::to_writer(capability_file.as_file_mut(), &matrix)
         .map_err(|e| SetupError::Internal(e.to_string()))?;
     Ok((answer_file, capability_file, facts))
+}
+
+fn write_answers(answers: &Value) -> Result<tempfile::NamedTempFile, SetupError> {
+    let mut file =
+        tempfile::NamedTempFile::new().map_err(|e| SetupError::Internal(e.to_string()))?;
+    serde_json::to_writer(file.as_file_mut(), answers)
+        .map_err(|e| SetupError::Internal(e.to_string()))?;
+    Ok(file)
 }
 
 fn request<'a>(
@@ -433,6 +410,14 @@ fn apply<R: BufRead, W: Write>(
     let cap = crate::user_install::open_user_root_for_setup(&options.root)
         .map_err(SetupError::Conflict)?;
     let _lease = crate::user_install::lock_user_setup(&cap).map_err(SetupError::Conflict)?;
+    if global_preferences(&options.root)? != *global {
+        return Err(SetupError::Conflict(
+            "global settings changed after the preview; review the current values before applying"
+                .into(),
+        ));
+    }
+    preferences::accept_preview_defaults(&mut progress.answers)?;
+    let answers = write_answers(&progress.answers)?;
     progress.phase = ProgressPhase::Applying;
     *snapshot = store.save(snapshot, progress)?;
     store.record_applying(progress)?;

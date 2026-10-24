@@ -186,3 +186,161 @@ fn interrupted_project_resumes_without_repeating_collected_answers() {
     assert_eq!(progress.answers["project_name"], "Named");
     validate_answers(&progress.answers);
 }
+
+#[test]
+fn inherited_fingerprints_follow_the_declaration_and_show_the_current_parent() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["project_identity"] = json!("test");
+    preferences::record_defaults(&mut answers).unwrap();
+    validate_answers(&answers);
+    let bytes = serde_json::to_vec(&answers).unwrap();
+    let path = target.path().join(".hive/setup-answers.yml");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, &bytes).unwrap();
+    let mut options = options(root.path(), target.path());
+    options.show = true;
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let first = preferences::inspect(&options, &store, Some(&bytes), InterfaceLanguage::Ko)
+        .unwrap()
+        .data
+        .unwrap();
+    assert_eq!(first["effective"]["interface_language"], "ko");
+    let parent_path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+    let mut parent: Value = serde_json::from_slice(&std::fs::read(&parent_path).unwrap()).unwrap();
+    parent["interface_language"] = json!("en");
+    parent["usage_guard"]["stop_remaining_percent"] = json!(45);
+    std::fs::write(&parent_path, serde_json::to_vec(&parent).unwrap()).unwrap();
+    let second = preferences::inspect(&options, &store, Some(&bytes), InterfaceLanguage::En)
+        .unwrap()
+        .data
+        .unwrap();
+    assert_eq!(second["effective"]["interface_language"], "en");
+    assert_eq!(second["effective"]["usage_stop_remaining_percent"], 45);
+    assert_eq!(second["stored"]["usage_stop_remaining_percent"], 20);
+    assert_eq!(first["sources"], second["sources"]);
+    assert_eq!(
+        second["sources"]["/interface_language"]["origin"],
+        "inherited"
+    );
+    assert_ne!(
+        first["parent"]["settings_digest"],
+        second["parent"]["settings_digest"]
+    );
+    assert_eq!(std::fs::read(path).unwrap(), bytes);
+    assert!(!root.path().join(".hive/config/setup-progress").exists());
+    options.describe = true;
+    options.section = Some("language".into());
+    let described = preferences::inspect(&options, &store, Some(&bytes), InterfaceLanguage::En)
+        .unwrap()
+        .data
+        .unwrap();
+    assert_eq!(described["questions"][0]["source"], "inherited");
+    assert_eq!(described["questions"][0]["effective"], "en");
+}
+
+#[test]
+fn preview_acceptance_distinguishes_visible_defaults_and_external_edits() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["project_identity"] = json!("test");
+    preferences::record_defaults(&mut answers).unwrap();
+    assert_eq!(
+        answers["preference_decisions"]["/persistent_roles"]["origin"],
+        "default"
+    );
+    assert!(answers["preference_decisions"]["/persistent_roles"]["decided_at"].is_null());
+    preferences::accept_preview_defaults(&mut answers).unwrap();
+    assert_eq!(
+        answers["preference_decisions"]["/persistent_roles"]["origin"],
+        "accepted-default"
+    );
+    assert_eq!(
+        answers["preference_decisions"]["/elevated_judge_quorum"]["origin"],
+        "default"
+    );
+    assert_eq!(
+        answers["preference_decisions"]["/interface_language"]["origin"],
+        "inherited"
+    );
+    answers["project_name"] = json!("manual change");
+    let (records, _) =
+        hive_render::inspect_project_preferences(&serde_json::to_vec(&answers).unwrap(), &global)
+            .unwrap();
+    assert_eq!(
+        records["/project_name"].origin,
+        hive_core::preferences::DecisionOrigin::ExternalChange
+    );
+    assert!(records["/project_name"].decided_at.is_none());
+    assert_eq!(
+        answers["preference_decisions"]["/project_name"]["origin"],
+        "accepted-default"
+    );
+}
+
+#[test]
+fn changed_global_preferences_after_preview_do_not_apply_the_project() {
+    struct EditOnConfirmation {
+        path: PathBuf,
+        output: Vec<u8>,
+        changed: bool,
+    }
+    impl Write for EditOnConfirmation {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.output.extend_from_slice(bytes);
+            if !self.changed
+                && String::from_utf8_lossy(&self.output).contains("이 변경을 적용할까요?")
+            {
+                let mut value: Value = serde_json::from_slice(&std::fs::read(&self.path)?)?;
+                value["interface_language"] = json!("en");
+                std::fs::write(&self.path, serde_json::to_vec(&value)?)?;
+                self.changed = true;
+            }
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    global(root.path());
+    let caps = root.path().join("capabilities.json");
+    std::fs::write(
+        &caps,
+        serde_json::to_vec(&capabilities::unverified("codex", "unverified").unwrap()).unwrap(),
+    )
+    .unwrap();
+    let mut options = options(root.path(), target.path());
+    options.capabilities = Some(caps);
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\n\n\n\nyes\n"),
+        writer: EditOnConfirmation {
+            path: root.path().join(user_setup::USER_SETUP_RELATIVE),
+            output: Vec::new(),
+            changed: false,
+        },
+        language: InterfaceLanguage::En,
+    };
+    let result = execute(&options, InteractionMode::Terminal, &mut terminal);
+    assert!(
+        matches!(result,Err(SetupError::Conflict(message)) if message.contains("global settings changed after the preview"))
+    );
+    assert!(terminal.writer.changed);
+    assert!(!target.path().join(".hive").exists());
+    let progress = ProgressStore::open(root.path(), Some(target.path()))
+        .unwrap()
+        .load()
+        .unwrap()
+        .progress
+        .unwrap();
+    assert_eq!(progress.phase, ProgressPhase::Previewed);
+    assert_eq!(
+        progress.answers["preference_decisions"]["/persistent_roles"]["origin"],
+        "default"
+    );
+}
