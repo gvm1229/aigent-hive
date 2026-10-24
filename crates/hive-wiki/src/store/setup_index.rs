@@ -62,17 +62,20 @@ impl RagStore {
     /// A changed scope requires new approval. A valid index makes a retry a no-op.
     ///
     /// # Errors
-    /// Rejects an obsolete digest, unavailable source, dirty state or failed publication.
+    /// Rejects an obsolete digest, unavailable source, unrelated dirty state or failed publication.
     pub fn rebuild_setup_index(&self, approved_digest: &str) -> Result<StoreCommit, WikiError> {
         let _lock = self.acquire_authorization_lock()?;
-        self.reject_dirty_mutation()?;
         let (preview, scope) = self.setup_rebuild_scope()?;
         if preview.scope_digest != approved_digest {
             return Err(WikiError::Conflict(
                 "setup index sources changed after approval".into(),
             ));
         }
-        if self.index_state_is_complete()? && self.load_registry_optional()?.is_some() {
+        let recovering = self.validate_setup_recovery(&scope)?;
+        if !recovering
+            && self.index_state_is_complete()?
+            && self.load_registry_optional()?.is_some()
+        {
             return self.current_commit();
         }
         self.commit_scoped_canonical_writes_locked(
@@ -82,6 +85,50 @@ impl RagStore {
             )],
             Some(&scope),
         )
+    }
+
+    fn validate_setup_recovery(&self, scope: &UserSetupIndexScope) -> Result<bool, WikiError> {
+        let Some(bytes) = super::read_bounded_optional(
+            &self.root,
+            Path::new(super::RAG_DIRTY_RELATIVE),
+            super::MAX_DIRTY_BYTES,
+            "setup index recovery journal",
+        )?
+        else {
+            return Ok(false);
+        };
+        let dirty: super::PersistentDirtyState = serde_json::from_slice(&bytes)
+            .map_err(|_| WikiError::Verification("invalid setup index recovery journal".into()))?;
+        super::validate_dirty_state(&dirty)?;
+        if dirty.entries.len() != 1
+            || dirty.entries[0].locator != COLLECTION_REGISTRY_RELATIVE
+            || dirty.entries[0].delete
+            || dirty.entries[0].target_digest != sha256_digest(&registry_bytes(&scope.registry)?)
+        {
+            return Err(WikiError::Conflict(
+                "setup cannot resume a different canonical knowledge write".into(),
+            ));
+        }
+        let base = self.load_manifest_repairable()?;
+        let lineage_matches = base.as_ref().map_or_else(
+            || {
+                dirty.base_generation == 0
+                    && dirty.base_manifest_digest == super::empty_manifest_digest()
+            },
+            |manifest| {
+                dirty.base_generation == manifest.generation
+                    && dirty.base_manifest_digest == manifest.logical_digest
+            },
+        );
+        if !lineage_matches || dirty.base_generation.checked_add(1) != Some(dirty.target_generation)
+        {
+            return Err(WikiError::Conflict(
+                "setup index recovery generation changed".into(),
+            ));
+        }
+        // The approved resulting registry is deterministic from the still-bound metadata.
+        // Its write can have been interrupted before installation; replay only this write.
+        Ok(true)
     }
 
     fn setup_rebuild_scope(&self) -> Result<(SetupIndexPreview, UserSetupIndexScope), WikiError> {
@@ -149,6 +196,19 @@ impl RagStore {
     }
 }
 
+pub(super) fn interrupt(point: u8) {
+    #[cfg(all(debug_assertions, not(test)))]
+    if std::env::var("HIVE_SETUP_INDEX_INTERRUPT_AFTER")
+        .ok()
+        .as_deref()
+        == Some(&point.to_string())
+    {
+        std::process::exit(89);
+    }
+    #[cfg(any(not(debug_assertions), test))]
+    let _ = point;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,6 +234,42 @@ mod tests {
             .unwrap();
         std::fs::remove_file(root.path().join(SHARED_INDEX_RELATIVE)).unwrap();
         (root, project, store)
+    }
+
+    #[test]
+    fn setup_rebuild_recovers_only_its_exact_registry_write_and_generation() {
+        let (root, _project, store) = registered();
+        let preview = store.preview_setup_index_rebuild().unwrap().unwrap();
+        let registry = std::fs::read(root.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap();
+        store
+            .begin_external_canonical_mutation(&[(
+                PathBuf::from(COLLECTION_REGISTRY_RELATIVE),
+                registry,
+            )])
+            .unwrap();
+        let journal = root.path().join(RAG_DIRTY_RELATIVE);
+        let original = std::fs::read(&journal).unwrap();
+        assert!(store.preview_setup_index_rebuild().is_err());
+        let mut wrong: super::super::PersistentDirtyState =
+            serde_json::from_slice(&original).unwrap();
+        wrong.base_manifest_digest = sha256_digest(b"different lineage");
+        let changed = serde_json::to_vec(&wrong).unwrap();
+        std::fs::write(&journal, &changed).unwrap();
+        assert!(store.rebuild_setup_index(&preview.scope_digest).is_err());
+        assert_eq!(std::fs::read(&journal).unwrap(), changed);
+        std::fs::write(&journal, &original).unwrap();
+        store.rebuild_setup_index(&preview.scope_digest).unwrap();
+        assert!(!journal.exists());
+        store.validate_current().unwrap();
+        store
+            .begin_external_canonical_mutation(&[(
+                PathBuf::from(".hive/knowledge/Wiki/foreign.md"),
+                b"foreign".to_vec(),
+            )])
+            .unwrap();
+        let unrelated = std::fs::read(&journal).unwrap();
+        assert!(store.rebuild_setup_index(&preview.scope_digest).is_err());
+        assert_eq!(std::fs::read(&journal).unwrap(), unrelated);
     }
 
     #[test]

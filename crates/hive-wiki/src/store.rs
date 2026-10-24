@@ -2836,6 +2836,7 @@ impl RagStore {
         let write_count = writes.len();
         let result = crate::transactional_capability(&self.root, &mut snapshots, |snapshots| {
             snapshots[0].install_staged(&self.root, &dirty_bytes)?;
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(0); }
             let mut changed = Vec::new();
             for (index, (path, bytes)) in writes.iter().enumerate() {
                 if snapshots[index + 1].install_staged(&self.root, bytes)? {
@@ -2843,6 +2844,7 @@ impl RagStore {
                 }
             }
             injected_failure_after_canonical_writes()?;
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(1); }
             let transient_claim_paths = snapshots[1..=write_count]
                 .iter()
                 .flat_map(crate::CapabilityFileSnapshot::transient_claim_paths)
@@ -2866,13 +2868,17 @@ impl RagStore {
             if snapshots[write_count + 1].install_staged(&self.root, &artifact.sqlite_bytes)? {
                 changed.push(SHARED_INDEX_RELATIVE.to_owned());
             }
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(2); }
             if snapshots[write_count + 2].install_staged(&self.root, &manifest_bytes)? {
                 changed.push(RAG_MANIFEST_RELATIVE.to_owned());
             }
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(3); }
             snapshots[0].remove(&self.root)?;
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(4); }
             if snapshots[write_count + 3].install_staged(&self.root, &trust_bytes)? {
                 changed.push(RAG_TRUST_RELATIVE.to_owned());
             }
+            if scope.is_some_and(|s| s.external_approved) { setup_index::interrupt(5); }
             if let Some(scope) = scope { scope.verify_current(&self.root, snapshots)?; }
             changed.sort();
             changed.dedup();
