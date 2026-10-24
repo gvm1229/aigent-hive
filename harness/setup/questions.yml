@@ -358,6 +358,29 @@ questions:
     minimum: 1
     maximum: 128
     when: [{"key":"/usage_guard/discord/enabled","equals":true}]
+  - id: discord-privacy
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/discord/request_privacy"
+    input: "choice"
+    prompt: {"ko":"Discord에 요청 내용을 얼마나 공개할까요?","en":"How much request content may Discord notices include?"}
+    help: {"ko":"요청 원문은 개인 정보나 작업 내용의 외부 공개 가능성이 있는 별도 선택.","en":"Original request text may disclose personal or work information outside this device."}
+    default: "summary"
+    options: [{"value":"summary","label":{"ko":"요약만","en":"Summary only"}},{"value":"raw-prompt","label":{"ko":"요청 원문","en":"Original request text"}}]
+    when: [{"key":"/usage_guard/discord/enabled","equals":true}]
+  - id: discord-fields
+    revision: 1
+    scope: "user"
+    section: "notifications"
+    key: "/usage_guard/discord/message_fields"
+    input: "list"
+    prompt: {"ko":"Discord 알림에 넣을 항목을 쉼표로 나눠 골라 주세요.","en":"Choose the fields for Discord notices, separated by commas."}
+    help: {"ko":"최소 한 항목 선택. 사용량 보호를 끈 동안은 알림 비활성.","en":"Select at least one field. Notices remain inactive while usage enforcement is off."}
+    options: [{"value":"remaining-usage","label":{"ko":"남은 사용량","en":"Remaining usage"}},{"value":"project","label":{"ko":"프로젝트","en":"Project"}},{"value":"request","label":{"ko":"요청 내용","en":"Request"}},{"value":"progress","label":{"ko":"진행 상태","en":"Progress"}},{"value":"host","label":{"ko":"사용 앱","en":"App"}},{"value":"resume","label":{"ko":"재개 방법","en":"Resume instructions"}},{"value":"measured-at","label":{"ko":"측정 시각","en":"Observation time"}},{"value":"evidence","label":{"ko":"확인 근거","en":"Evidence"}}]
+    minimum: 1
+    maximum: 8
+    when: [{"key":"/usage_guard/discord/enabled","equals":true}]
   - id: project-name
     revision: 1
     scope: "project"

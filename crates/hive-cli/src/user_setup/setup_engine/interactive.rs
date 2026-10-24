@@ -597,6 +597,13 @@ fn ask<R: BufRead, W: Write>(
         )?;
     };
     set_value(&mut progress.answers, &question.key, value.clone())?;
+    if question.id == "discord-enabled" && value == json!(false) {
+        progress.answers["usage_guard"]["discord"].as_object_mut()
+            .expect("notification preferences").remove("webhook_url_env");
+        progress.answers["preference_decisions"].as_object_mut()
+            .expect("choice records").remove("/usage_guard/discord/webhook_url_env");
+        progress.answered_questions.remove("discord-environment");
+    }
     let mut decision = PreferenceDecision::new(
         &value,
         origin,
@@ -1024,6 +1031,37 @@ mod tests {
             snapshot: store.load().unwrap(),
             fresh: true,
         }
+    }
+
+    #[test]
+    fn notification_section_collects_privacy_and_fields_then_clears_a_disabled_reference() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
+        progress.setup_mode = Some("custom".into());
+        progress.selected_section = Some("notifications".into());
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"no\nyes\nHIVE_TEST_WEBHOOK\n2\n1,5\n"),
+            writer: Vec::new(), language: InterfaceLanguage::En,
+        };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
+        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        assert_eq!(config.usage_guard.popup_enabled, Some(false));
+        assert!(config.usage_guard.discord.enabled);
+        assert_eq!(config.usage_guard.discord.request_privacy, user_setup::DiscordRequestPrivacy::RawPrompt);
+        assert_eq!(progress.answers["usage_guard"]["discord"]["message_fields"], json!(["remaining-usage", "host"]));
+        assert_eq!(progress.answers["preference_decisions"]["/usage_guard/discord/request_privacy"]["origin"], "explicit");
+        assert!(!config.usage_guard.policy.unwrap().enforcement_enabled);
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        let mut disable = Terminal {
+            reader: Cursor::new(b"no\nno\n"), writer: Vec::new(), language: InterfaceLanguage::En,
+        };
+        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut disable).unwrap());
+        assert!(progress.answers["usage_guard"]["discord"].get("webhook_url_env").is_none());
+        assert!(progress.answers["preference_decisions"].get("/usage_guard/discord/webhook_url_env").is_none());
+        assert!(!String::from_utf8(disable.writer).unwrap().contains("How much request content"));
+        user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
     }
 
     #[test]
