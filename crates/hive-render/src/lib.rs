@@ -3240,7 +3240,9 @@ fn resolve_effective_project_preferences(
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
-            if answers.usage_stop_remaining_percent < global.usage_stop_remaining_percent {
+            if global.usage_guard_enabled
+                && answers.usage_stop_remaining_percent < global.usage_stop_remaining_percent
+            {
                 return Err(RenderError::Safety(format!(
                     "project usage threshold {}% cannot be lower than the global {}% threshold",
                     answers.usage_stop_remaining_percent, global.usage_stop_remaining_percent
@@ -8502,6 +8504,29 @@ mod tests {
             discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 60,
         }
+    }
+
+    #[test]
+    fn disabled_global_guard_allows_inactive_project_threshold_below_its_stored_value() {
+        let (_,mut value)=load_answers(&fixture("answers-base.yml")).unwrap();
+        value["setup_mode"]=serde_json::json!("custom");
+        value["interface_language"]=serde_json::json!("ko");
+        value["wiki"]=serde_json::json!({"enabled":true,"language":"both"});
+        value["persona"]=serde_json::json!({"id":"friendly"});
+        value["skills"]=serde_json::json!({"mode":"individual","selected":[]});
+        value["usage_stop_remaining_percent"]=serde_json::json!(0);
+        let mut answers:SetupAnswers=serde_json::from_value(value).unwrap();
+        super::validate_answers(&answers).unwrap();
+        let mut global=test_global_preferences();
+        global.selected_project_skills=hive_projection::project_default_skills().unwrap();
+        global.usage_guard_enabled=false;
+        let effective=resolve_effective_project_preferences(&answers,Some(&global)).unwrap().unwrap();
+        assert!(!effective.usage_guard_enabled);
+        assert_eq!(effective.usage_stop_remaining_percent,0);
+        global.usage_guard_enabled=true;
+        assert!(matches!(resolve_effective_project_preferences(&answers,Some(&global)),Err(RenderError::Safety(_))));
+        answers.usage_stop_remaining_percent=99;
+        assert_eq!(resolve_effective_project_preferences(&answers,Some(&global)).unwrap().unwrap().usage_stop_remaining_percent,99);
     }
 
     fn apply_optional_skill_fixture(
