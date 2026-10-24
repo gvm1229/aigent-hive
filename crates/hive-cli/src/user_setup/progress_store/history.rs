@@ -62,6 +62,7 @@ pub(super) fn confirm_completion(
     store: &ProgressStore,
     progress: &SetupProgress,
 ) -> Result<(), SetupError> {
+    store.verify_directory_binding()?;
     let bytes = read_user_setup_file(&store.root, &path(&progress.operation_id)?, LIMIT)
         .map_err(SetupError::Conflict)?
         .ok_or_else(|| SetupError::Verification("setup completion record is missing".into()))?;
@@ -95,6 +96,7 @@ pub(super) fn record(
     progress: &SetupProgress,
     phase: ProgressPhase,
 ) -> Result<(), SetupError> {
+    store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
     let before =
         read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?;
@@ -168,6 +170,7 @@ pub(super) fn projection_binding(
     progress: &SetupProgress,
     desired: Option<&str>,
 ) -> Result<Option<String>, SetupError> {
+    store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
     let before = read_user_setup_file(&store.root, &relative, LIMIT)
         .map_err(SetupError::Conflict)?
@@ -215,6 +218,7 @@ pub(super) fn projection_binding(
 }
 
 pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(), SetupError> {
+    store.verify_directory_binding()?;
     let mut directory = store
         .root
         .try_clone()

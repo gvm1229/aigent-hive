@@ -5,6 +5,7 @@ use crate::user_install::{
     open_canonical_user_root_for_setup, read_user_setup_file, replace_user_setup_file,
 };
 use cap_std::fs::Dir;
+use cap_fs_ext::MetadataExt as CapMetadataExt;
 use hive_core::{preferences::PreferenceScope, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -88,7 +89,9 @@ pub(super) struct ProgressSnapshot {
 #[derive(Debug)]
 pub(super) struct ProgressStore {
     root: Dir,
+    root_path: PathBuf,
     config_root: Dir,
+    config_path: PathBuf,
     config_relative: PathBuf,
     pub binding: TargetBinding,
     pub relative: PathBuf,
@@ -118,7 +121,7 @@ impl ProgressStore {
             })?;
             (
                 PreferenceScope::User,
-                user_path,
+                user_path.clone(),
                 config_root,
                 PathBuf::from(USER_SETUP_RELATIVE),
             )
@@ -133,7 +136,8 @@ impl ProgressStore {
         };
         // Canonical path bytes avoid lossy display strings and contain no persisted private path.
         let path_digest = sha256_digest(path.as_os_str().as_encoded_bytes());
-        let target_id = sha256_digest(format!("{scope:?}:{path_digest}").as_bytes());
+        let identity = directory_identity(&config_root)?;
+        let target_id = sha256_digest(format!("{scope:?}:{path_digest}:{}:{}", identity.0, identity.1).as_bytes());
         let relative = match scope {
             PreferenceScope::User => PathBuf::from(USER_PROGRESS),
             PreferenceScope::Project => Path::new(".hive/config/setup-progress/projects")
@@ -141,7 +145,9 @@ impl ProgressStore {
         };
         Ok(Self {
             root,
+            root_path: user_path,
             config_root,
+            config_path: path,
             config_relative,
             binding: TargetBinding {
                 scope,
@@ -156,6 +162,7 @@ impl ProgressStore {
     }
 
     pub fn load(&self) -> Result<ProgressSnapshot, SetupError> {
+        self.verify_directory_binding()?;
         let expected = self.read(&self.relative)?;
         let legacy = if self.binding.scope == PreferenceScope::User {
             self.read(Path::new(LEGACY_PROGRESS))?
@@ -215,6 +222,7 @@ impl ProgressStore {
         snapshot: &ProgressSnapshot,
         progress: &SetupProgress,
     ) -> Result<ProgressSnapshot, SetupError> {
+        self.verify_directory_binding()?;
         self.validate(progress)?;
         let current = read_user_setup_file(
             &self.config_root,
@@ -256,6 +264,7 @@ impl ProgressStore {
     }
 
     pub fn clear(&self, snapshot: &ProgressSnapshot) -> Result<Vec<String>, SetupError> {
+        self.verify_directory_binding()?;
         let mut changed = Vec::new();
         // Clear the fallback first, so a successful clear cannot resurrect old answers.
         if let Some(bytes) = &snapshot.legacy {
@@ -385,6 +394,20 @@ impl ProgressStore {
         read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)
     }
 
+    fn verify_directory_binding(&self) -> Result<(), SetupError> {
+        for (path, pinned) in [(&self.root_path, &self.root), (&self.config_path, &self.config_root)] {
+            let (_, current) = open_canonical_user_root_for_setup(path).map_err(SetupError::Conflict)?;
+            if directory_identity(&current)? != directory_identity(pinned)? {
+                return Err(SetupError::Conflict("setup target directory changed; saved answers were preserved".into()));
+            }
+        }
+        if self.binding.scope == PreferenceScope::Project {
+            hive_core::ensure_consumer_target(&self.config_path)
+                .map_err(|error| SetupError::Input(error.to_string()))?;
+        }
+        Ok(())
+    }
+
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
@@ -438,6 +461,11 @@ impl ProgressStore {
         }
         super::validate_progress_answers_for_scope(&progress.answers, self.binding.scope)
     }
+}
+
+fn directory_identity(directory: &Dir) -> Result<(u64, u64), SetupError> {
+    let metadata = directory.dir_metadata().map_err(|error| SetupError::Conflict(error.to_string()))?;
+    Ok((CapMetadataExt::dev(&metadata), CapMetadataExt::ino(&metadata)))
 }
 
 pub(super) fn recovery_path(progress: &SetupProgress) -> Result<PathBuf, SetupError> {
@@ -806,6 +834,76 @@ mod tests {
         assert!(b.load().unwrap().progress.is_none());
         fs::copy(root.path().join(a_relative), root.path().join(&b.relative)).unwrap();
         assert!(b.load().is_err());
+    }
+
+    #[test]
+    fn another_directory_at_the_same_project_path_cannot_reuse_saved_answers() {
+        let user = tempfile::tempdir().unwrap();
+        let projects = tempfile::tempdir().unwrap();
+        let path = projects.path().join("project");
+        fs::create_dir(&path).unwrap();
+        let store = ProgressStore::open(user.path(), Some(&path)).unwrap();
+        let progress = save_answer(&store, json!({"project_name":"original"}));
+        let snapshot = store.load().unwrap();
+        let progress_path = user.path().join(&store.relative);
+        let prior = fs::read(&progress_path).unwrap();
+        let binding = store.binding.clone();
+        #[cfg(windows)]
+        {
+            // Windows pins this directory against rename while the capability is open.
+            assert_eq!(fs::rename(&path, projects.path().join("moved")).unwrap_err().raw_os_error(), Some(32));
+            assert_eq!(store.load().unwrap().progress, snapshot.progress);
+            assert_eq!(snapshot.progress.as_ref(), Some(&progress));
+            drop(store);
+        }
+        fs::rename(&path, projects.path().join("moved")).unwrap();
+        fs::create_dir(&path).unwrap();
+        #[cfg(not(windows))]
+        {
+            assert!(store.load().is_err());
+            assert!(store.save(&snapshot, &progress).is_err());
+            assert!(store.clear(&snapshot).is_err());
+        }
+        let replacement = ProgressStore::open(user.path(), Some(&path)).unwrap();
+        assert_eq!(replacement.binding.path_digest, binding.path_digest);
+        assert_ne!(replacement.binding.target_id, binding.target_id);
+        assert!(replacement.load().is_err());
+        assert_eq!(fs::read(&progress_path).unwrap(), prior);
+        assert!(!path.join(".hive").exists());
+    }
+
+    #[test]
+    fn copied_user_progress_at_the_same_path_is_not_a_resume_authority() {
+        let parent = tempfile::tempdir().unwrap();
+        let path = parent.path().join("user");
+        fs::create_dir(&path).unwrap();
+        let store = ProgressStore::open(&path, None).unwrap();
+        save_answer(&store, json!({"interface_language":"ko"}));
+        let original = fs::read(path.join(USER_PROGRESS)).unwrap();
+        #[cfg(windows)]
+        {
+            assert_eq!(fs::rename(&path, parent.path().join("prior-user")).unwrap_err().raw_os_error(), Some(32));
+            drop(store);
+        }
+        fs::rename(&path, parent.path().join("prior-user")).unwrap();
+        fs::create_dir_all(path.join(".hive/config/setup-progress")).unwrap();
+        fs::write(path.join(USER_PROGRESS), &original).unwrap();
+        #[cfg(not(windows))]
+        assert!(store.load().is_err());
+        assert!(ProgressStore::open(&path, None).unwrap().load().is_err());
+        assert_eq!(fs::read(path.join(USER_PROGRESS)).unwrap(), original);
+    }
+
+    #[test]
+    fn normal_project_file_changes_do_not_replace_the_target_identity() {
+        let user = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();
+        let progress = save_answer(&store, json!({"project_name":"same"}));
+        fs::write(project.path().join("README.md"), "new project text").unwrap();
+        let reopened = ProgressStore::open(user.path(), Some(project.path())).unwrap();
+        assert_eq!(reopened.load().unwrap().progress.as_ref(), Some(&progress));
+        assert!(reopened.resume_ready(&progress));
     }
 
     #[test]
