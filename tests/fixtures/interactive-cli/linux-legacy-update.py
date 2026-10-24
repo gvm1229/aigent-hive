@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -62,12 +62,14 @@ for name in ("npm", "sh"):
     (shim / name).chmod(0o755)
 (shim / "env").symlink_to("/usr/bin/env")
 (shim / "agy").write_text('''#!/usr/bin/python3
-import json,shutil,sys
+import json,os,shutil,sys,time
 from pathlib import Path
 root=Path('/tmp/hive-first-update/user');args=sys.argv[1:]
 if args==['--version']:print('1.1.7');raise SystemExit(0)
 stage=root/'.gemini/config/plugins/aigent-hive'
 if args[:2]==['plugin','install']:
+    if os.environ.get('HIVE_TEST_SLOW_ONCE')=='1' and not (root/'slow-once').exists():
+        (root/'slow-once').write_text('used');(root/'slow-pid').write_text(str(os.getpid()));time.sleep(105)
     if stage.exists():shutil.rmtree(stage)
     shutil.copytree(args[2],stage)
 if args==['plugin','list']:
@@ -78,6 +80,8 @@ else:print('{}')
 environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "LANG": "C.UTF-8",
                "LC_ALL": "C.UTF-8", "CODEX_HOME": str(root / "codex"),
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
+if mode == "slow":
+    environment["HIVE_TEST_SLOW_ONCE"] = "1"
 command = [str(binary), "update", "--channel", "test", "--user-root", str(user)]
 answers = []
 terminal_runs = []
@@ -90,6 +94,7 @@ def terminal_run(command, stop=None):
     began = time.monotonic()
     output, pending = b"", b""
     status = None
+    killed = False
     try:
         while time.monotonic() - began < (560 if stop == "hold" else 180):
             readable, _, _ = select.select([descriptor], [], [], 0.2)
@@ -108,7 +113,12 @@ def terminal_run(command, stop=None):
                     elif "comma-separated): " in text:
                         reply, kind = "antigravity", "old-host"
                     elif text.endswith("> "):
-                        if stop == "hold" and ("Korean" in text or "한국어" in text) and "English" in text:
+                        if stop == "parent-exit":
+                            if not killed:
+                                os.kill(pid, 15)
+                                killed = True
+                            reply, kind = None, "parent-exit"
+                        elif stop == "hold" and ("Korean" in text or "한국어" in text) and "English" in text:
                             reply, kind = None, "held"
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
                             reply, kind = "yes", "final"
@@ -126,7 +136,7 @@ def terminal_run(command, stop=None):
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (2 if stop in {"cancel", "hold"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-15 if stop == "parent-exit" else 2 if stop in {"cancel", "hold", "slow"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -152,17 +162,38 @@ if mode == "confirm":
     result = subprocess.run([*command, "--confirm"], env=environment, input="no\nyes\n", capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
 else:
-    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else None)
+    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else mode if mode in {"slow", "parent-exit"} else None)
 
 config = user / ".hive/config/user-setup.yml"
 progress = (user / ".hive/config/setup-progress/user.yml").read_text()
-if mode in {"cancel", "cancel-resume", "deadline"}:
-    assert not config.exists() and "phase: awaiting-answers" in progress
-    if mode != "deadline":
+if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit"}:
+    assert "phase: complete" not in progress
+    if mode != "slow":
+        assert not config.exists() and "phase: awaiting-answers" in progress
+    if mode in {"cancel", "cancel-resume"}:
         assert "interface_language: ko" in progress
-    else:
+    elif mode == "deadline":
         assert 418 <= terminal_runs[0]["elapsed_seconds"] < 550, terminal_runs
-    if mode in {"cancel-resume", "deadline"}:
+    elif mode == "slow":
+        assert 88 <= terminal_runs[0]["elapsed_seconds"] < 135, terminal_runs
+        slow_pid = int((user / "slow-pid").read_text())
+        proc = Path(f"/proc/{slow_pid}/stat")
+        assert not proc.exists() or proc.read_text().rsplit(") ", 1)[1].split()[0] == "Z", "owned host subprocess survived worker timeout"
+    elif mode == "parent-exit":
+        def live_children():
+            result = []
+            for entry in Path("/proc").glob("[0-9]*/comm"):
+                try:
+                    if entry.read_text().strip() == "hive" and (entry.parent / "stat").read_text().rsplit(") ", 1)[1].split()[0] != "Z":
+                        result.append(entry.parent.name)
+                except FileNotFoundError:
+                    pass
+            return result
+        until = time.monotonic() + 15
+        while live_children() and time.monotonic() < until:
+            time.sleep(0.1)
+        assert not live_children(), "orphaned setup remained after parent exit"
+    if mode in {"cancel-resume", "deadline", "slow", "parent-exit"}:
         answers += terminal_run([str(binary), "update", "--user-root", str(user)])
         saved = config.read_text()
         progress = (user / ".hive/config/setup-progress/user.yml").read_text()
