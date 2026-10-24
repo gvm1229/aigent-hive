@@ -416,6 +416,33 @@ questions:
     prompt: {"ko":"위 역할의 정의 변경을 승인할까요?","en":"Approve definition changes for the roles listed above?"}
     help: {"ko":"역할 본문과 현재 할당·인계는 보존하며 정의만 변경.","en":"Only the definitions change. Role body, current assignment, and handoff are preserved."}
     default: false
+  - id: project-extras
+    revision: 1
+    scope: "project"
+    section: "extensions"
+    key: "/_control/extras"
+    input: "boolean"
+    prompt: {"ko":"선택 기능이나 후크 설정을 검토할까요?","en":"Review optional features or hooks?"}
+    help: {"ko":"아니요는 기존 선택 유지. 새 설치에서는 모두 비활성.","en":"No preserves existing choices. New installations keep them disabled."}
+    default: false
+  - id: project-extras-input
+    revision: 1
+    scope: "project"
+    section: "extensions"
+    key: "/_control/extras_input"
+    input: "structured"
+    prompt: {"ko":"선택 기능과 후크 목록을 JSON으로 입력해 주세요.","en":"Enter optional feature and hook selections as JSON."}
+    help: {"ko":"기능: skills 목록에 name, source(path:상대경로), requested_capabilities, approved_capabilities. 후크: hooks 목록에 capability, event. 빈 목록은 해제. 지문과 승인 시각은 CLI에서 계산.","en":"Features: skills entries use name, source (path:relative-file), requested_capabilities, and approved_capabilities. Hooks use capability and event. Empty lists revoke choices. The CLI computes hashes and consent time."}
+    default: {"skills":[],"hooks":[]}
+  - id: project-extras-confirm
+    revision: 1
+    scope: "project"
+    section: "extensions"
+    key: "/_control/extras_confirm"
+    input: "boolean"
+    prompt: {"ko":"표시한 원본·권한·후크 변경을 승인할까요?","en":"Approve the displayed sources, permissions, and hook changes?"}
+    help: {"ko":"이 확인 뒤에도 전체 설정 미리보기와 최종 적용 확인 진행.","en":"The complete settings preview and final apply confirmation still follow."}
+    default: false
   - id: project-knowledge-include
     revision: 1
     scope: "project"

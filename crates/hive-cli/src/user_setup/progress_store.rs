@@ -71,6 +71,10 @@ pub(super) struct SetupProgress {
     pub reconfigure_roles: std::collections::BTreeSet<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role_approval_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extras_draft: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extras_approval_digest: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -235,6 +239,8 @@ impl ProgressStore {
             project_context: None,
             reconfigure_roles: std::collections::BTreeSet::new(),
             role_approval_digest: None,
+            extras_draft: None,
+            extras_approval_digest: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -363,6 +369,8 @@ impl ProgressStore {
         complete.project_context = None;
         complete.reconfigure_roles.clear();
         complete.role_approval_digest = None;
+        complete.extras_draft = None;
+        complete.extras_approval_digest = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -450,6 +458,12 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
+        if progress.extras_draft.as_ref().is_some_and(|draft| self.binding.scope != PreferenceScope::Project || super::progress_contains_secret(draft)) {
+            return Err(SetupError::Verification("optional feature draft has an invalid scope or secret".into()));
+        }
+        if progress.extras_approval_digest.as_ref().is_some_and(|digest| self.binding.scope != PreferenceScope::Project || !valid_hash(digest)) {
+            return Err(SetupError::Verification("optional feature approval fingerprint is invalid".into()));
+        }
         if progress.reconfigure_roles.is_empty() != progress.role_approval_digest.is_none()
             || progress.role_approval_digest.as_ref().is_some_and(|digest| !valid_hash(digest)) {
             return Err(SetupError::Verification("role approval fingerprint is missing or invalid".into()));

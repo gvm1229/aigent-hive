@@ -61,7 +61,12 @@ pub(super) fn collect<R: BufRead, W: Write>(
             || (review_roles && question.id == "project-roles");
         if matches!(
             question.id.as_str(),
-            "project-mode" | "project-role-update" | "project-knowledge-root"
+            "project-mode"
+                | "project-role-update"
+                | "project-knowledge-root"
+                | "project-extras"
+                | "project-extras-input"
+                | "project-extras-confirm"
         ) || (quick && !quick_question)
         {
             continue;
@@ -119,7 +124,7 @@ pub(super) fn language(answers: &Value, inherited: InterfaceLanguage) -> Interfa
     }
 }
 
-fn seed_overrides(answers: &mut Value, global: &hive_render::GlobalProjectPreferences) {
+pub(super) fn seed_overrides(answers: &mut Value, global: &hive_render::GlobalProjectPreferences) {
     let object = answers.as_object_mut().expect("answers");
     object
         .entry("interface_language")
@@ -175,6 +180,16 @@ pub(super) fn preview<R: BufRead, W: Write>(
             .map_err(|error| SetupError::Internal(error.to_string()))?;
         }
     }
+    terminal.say("선택 기능과 후크:", "Optional features and hooks:")?;
+    writeln!(
+        terminal.writer,
+        "{}",
+        json!({
+            "features": answers["approved_optional_skills"],
+            "hooks": answers["approved_fallback_hooks"],
+        })
+    )
+    .map_err(|error| SetupError::Internal(error.to_string()))?;
     Ok(())
 }
 

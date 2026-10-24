@@ -116,6 +116,227 @@ fn validate_answers(answers: &Value) {
 }
 
 #[test]
+fn optional_features_require_confirmation_and_resume_without_repeating_review() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    std::fs::create_dir(target.path().join("vendor")).unwrap();
+    std::fs::write(
+        target.path().join("vendor/SKILL.md"),
+        b"---\nname: local-check\ndescription: Read local fixture.\n---\n\n# Local check\n",
+    )
+    .unwrap();
+    let mut options = options(root.path(), target.path());
+    options.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native-hooks.json"),
+    );
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["setup_mode"] = json!("custom");
+    questions::seed_overrides(&mut answers, &global);
+    answers["project_identity"] = answers["project_name"].clone();
+    let mut progress = store
+        .new_progress("project-extras".into(), answers)
+        .unwrap();
+    let draft = json!({"skills":[{"name":"local-check","source":"path:vendor/SKILL.md","requested_capabilities":["filesystem-read"],"approved_capabilities":["filesystem-read"]}],
+        "hooks":[{"capability":"checkpoint-reminder","event":"Stop"}]});
+    let mut first = Terminal {
+        reader: Cursor::new(format!("yes\n{draft}\nno\n")),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        !extras::configure(&options, &store, &mut snapshot, &mut progress, &mut first).unwrap()
+    );
+    assert_eq!(progress.answers["approved_optional_skills"], json!([]));
+    assert!(progress.extras_draft.is_some());
+    assert!(!target.path().join(".hive").exists());
+    let mut second = Terminal {
+        reader: Cursor::new(b"\nyes\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        extras::configure(&options, &store, &mut snapshot, &mut progress, &mut second).unwrap()
+    );
+    assert!(!String::from_utf8(second.writer)
+        .unwrap()
+        .contains("Review optional features"));
+    assert!(progress.extras_draft.is_none());
+    assert_extra_review_binding(&options, &store, &mut snapshot, &mut progress);
+    assert_eq!(
+        progress.answers["approved_optional_skills"][0]["name"],
+        "local-check"
+    );
+    assert_eq!(
+        progress.answers["preference_decisions"]["/approved_optional_skills"]["origin"],
+        "explicit"
+    );
+    let mut apply_terminal = Terminal {
+        reader: Cursor::new(b"yes\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert_eq!(
+        apply(
+            &options,
+            &store,
+            &mut snapshot,
+            &mut progress,
+            &global,
+            &mut apply_terminal
+        )
+        .unwrap()
+        .exit_code,
+        0
+    );
+    assert!(target
+        .path()
+        .join(".agents/skills/local-check/SKILL.md")
+        .is_file());
+    assert!(target
+        .path()
+        .join(".hive/hooks/checkpoint-reminder")
+        .is_file());
+}
+
+fn assert_extra_review_binding(
+    options: &Options,
+    store: &ProgressStore,
+    snapshot: &mut user_setup::progress_store::ProgressSnapshot,
+    progress: &mut user_setup::progress_store::SetupProgress,
+) {
+    let mut no_input = Terminal {
+        reader: Cursor::new(b""),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(extras::configure(options, store, snapshot, progress, &mut no_input).unwrap());
+    assert!(no_input.writer.is_empty());
+    let original = progress.clone();
+    progress.answers["approved_optional_skills"] = json!([]);
+    assert!(!extras::configure(options, store, snapshot, progress, &mut no_input).unwrap());
+    assert!(String::from_utf8(no_input.writer)
+        .unwrap()
+        .contains("Review optional features"));
+    *progress = original;
+    *snapshot = store.save(snapshot, progress).unwrap();
+}
+
+#[test]
+fn optional_source_change_after_preview_preserves_unapproved_answers() {
+    struct EditAtConsent {
+        path: PathBuf,
+        text: String,
+        edited: bool,
+    }
+    impl Write for EditAtConsent {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.text.push_str(&String::from_utf8_lossy(bytes));
+            if !self.edited && self.text.contains("Approve the displayed sources") {
+                std::fs::write(
+                    &self.path,
+                    b"---\nname: local-check\ndescription: Changed.\n---\nChanged source\n",
+                )?;
+                self.edited = true;
+            }
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let path = target.path().join("SKILL.md");
+    std::fs::write(
+        &path,
+        b"---\nname: local-check\ndescription: Original.\n---\nOriginal source\n",
+    )
+    .unwrap();
+    let mut options = options(root.path(), target.path());
+    options.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+    );
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["setup_mode"] = json!("custom");
+    questions::seed_overrides(&mut answers, &global);
+    let mut progress = store
+        .new_progress("project-extras".into(), answers)
+        .unwrap();
+    let draft = json!({"skills":[{"name":"local-check","source":"path:SKILL.md","requested_capabilities":[],"approved_capabilities":[]}],"hooks":[]});
+    let mut terminal = Terminal {
+        reader: Cursor::new(format!("yes\n{draft}\nyes\n")),
+        writer: EditAtConsent {
+            path,
+            text: String::new(),
+            edited: false,
+        },
+        language: InterfaceLanguage::En,
+    };
+    let result = extras::configure(
+        &options,
+        &store,
+        &mut snapshot,
+        &mut progress,
+        &mut terminal,
+    );
+    assert!(terminal.writer.edited);
+    assert!(
+        matches!(result, Err(SetupError::Conflict(message)) if message.contains("source changed"))
+    );
+    assert_eq!(progress.answers["approved_optional_skills"], json!([]));
+    assert!(progress.extras_approval_digest.is_none());
+    assert!(progress.extras_draft.is_some());
+    assert!(!target.path().join(".hive").exists());
+}
+
+#[test]
+fn declining_optional_review_keeps_choices_and_eof_does_not_answer() {
+    for bytes in [b"".as_slice(), b"no\n".as_slice()] {
+        let root = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let global = global(root.path());
+        let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+        let mut snapshot = store.load().unwrap();
+        let mut answers = questions::defaults(target.path(), &global, "codex");
+        answers["setup_mode"] = json!("custom");
+        questions::seed_overrides(&mut answers, &global);
+        let mut progress = store
+            .new_progress("project-extras".into(), answers.clone())
+            .unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(bytes),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert_eq!(
+            extras::configure(
+                &options(root.path(), target.path()),
+                &store,
+                &mut snapshot,
+                &mut progress,
+                &mut terminal
+            )
+            .unwrap(),
+            !bytes.is_empty()
+        );
+        assert_eq!(progress.answers, answers);
+        assert_eq!(
+            progress.answered_questions.contains_key("project-extras"),
+            !bytes.is_empty()
+        );
+        assert!(!target.path().join(".hive").exists());
+    }
+}
+
+#[test]
 fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
     let root = tempfile::tempdir().unwrap();
     let target = tempfile::tempdir().unwrap();

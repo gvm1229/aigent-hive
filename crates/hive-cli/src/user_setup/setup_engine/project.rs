@@ -18,6 +18,7 @@ use std::{
 mod activation;
 mod capabilities;
 mod existing;
+mod extras;
 mod input;
 mod preferences;
 mod questions;
@@ -288,6 +289,7 @@ fn execute<R: BufRead, W: Write>(
     }
     if !existing::bind_knowledge(options, &store, &mut snapshot, &mut progress, terminal)?
         || !existing::confirm_roles(options, &store, &mut snapshot, &mut progress, terminal)?
+        || !extras::configure(options, &store, &mut snapshot, &mut progress, terminal)?
     {
         return Ok(pending(terminal.language));
     }
