@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 
 mod history;
 mod state_io;
+mod questions;
+pub(super) use questions::QuestionBinding;
 
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";
 const USER_PROGRESS: &str = ".hive/config/setup-progress/user.yml";
@@ -61,6 +63,8 @@ pub(super) struct SetupProgress {
     pub legacy_migration: Option<LegacyMigration>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub update_hosts: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub question_bindings: std::collections::BTreeMap<String, QuestionBinding>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -213,6 +217,7 @@ impl ProgressStore {
             answered_questions: std::collections::BTreeMap::new(),
             legacy_migration: None,
             update_hosts: Vec::new(),
+            question_bindings: questions::capture(self.binding.scope)?,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -407,6 +412,7 @@ impl ProgressStore {
 
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
+        questions::validate_bindings(&progress.question_bindings)?;
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
             self.binding.scope != PreferenceScope::User
                 || !matches!(migration.from_schema, 1 | 2)

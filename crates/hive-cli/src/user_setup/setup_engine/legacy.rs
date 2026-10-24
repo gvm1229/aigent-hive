@@ -91,7 +91,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .expect("review")
         .questions
         .contains(&guard.id)
-        && !progress.answered_questions.contains_key(&guard.id)
+        && !super::interactive::answered(progress, guard)
     {
         show_effects(progress, terminal)?;
         terminal.say(
@@ -108,7 +108,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .expect("review")
         .questions
         .contains(&warnings.id)
-        && !progress.answered_questions.contains_key(&warnings.id)
+        && !super::interactive::answered(progress, warnings)
         && !ask_choice(store, progress, warnings, terminal, false)?
     {
         return Ok(false);
@@ -157,6 +157,7 @@ fn ask_choice<R: BufRead, W: Write>(
     progress
         .answered_questions
         .insert(question.id.clone(), question.revision);
+    progress.question_bindings.insert(question.id.clone(), question.into());
     persist(store, progress)?;
     Ok(true)
 }

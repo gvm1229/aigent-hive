@@ -280,7 +280,7 @@ fn execute_inner<R: BufRead, W: Write>(
             "settings changed before setup could start".to_owned(),
         ));
     }
-    let snapshot = store.load()?;
+    let mut snapshot = store.load()?;
     if let Some(progress) = snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete) {
         super::host_scope::check_request(progress, &options.update_hosts)?;
     }
@@ -297,6 +297,7 @@ fn execute_inner<R: BufRead, W: Write>(
     {
         return Ok(result);
     }
+    refresh_questions(options, &store, &mut snapshot, terminal)?;
     let record = match snapshot.progress.clone() {
         Some(progress) if progress.phase != ProgressPhase::Complete => {
             if !options.resume {
@@ -354,6 +355,22 @@ fn execute_inner<R: BufRead, W: Write>(
         &mut progress,
         terminal,
     )
+}
+
+fn refresh_questions<R: BufRead, W: Write>(
+    options: &Options,
+    store: &ProgressStore,
+    snapshot: &mut ProgressSnapshot,
+    terminal: &mut Terminal<R, W>,
+) -> Result<(), SetupError> {
+    if options.resume {
+        if let Some(refreshed) = store.refresh_draft_questions(snapshot)? {
+            *snapshot = refreshed;
+            terminal.say("질문 목록 변경을 확인했습니다. 기존 값은 보존하고 바뀐 답안만 다시 확인합니다.",
+                "The question catalog changed. Saved values are preserved; only affected answers need review.")?;
+        }
+    }
+    Ok(())
 }
 
 fn initial_progress(
@@ -517,14 +534,7 @@ fn collect<R: BufRead, W: Write>(
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
             continue;
         }
-        if progress
-            .selected_section
-            .as_ref()
-            .is_some_and(|section| &question.section != section)
-        {
-            continue;
-        }
-        if quick && !matches!(question.id.as_str(), "user-contexts" | "user-hosts") {
+        if !selected_question(progress, question, options, quick) {
             continue;
         }
         if !question.applicable(&progress.answers) {
@@ -584,6 +594,7 @@ fn ask<R: BufRead, W: Write>(
     progress
         .answered_questions
         .insert(question.id.clone(), question.revision);
+    progress.question_bindings.insert(question.id.clone(), question.into());
     persist(store, progress)?;
     Ok(true)
 }
@@ -617,8 +628,20 @@ fn config_answer_valid(
     Ok(!invalid)
 }
 
-fn answered(progress: &SetupProgress, question: &Question) -> bool {
+pub(super) fn answered(progress: &SetupProgress, question: &Question) -> bool {
     progress.answered_questions.get(&question.id) == Some(&question.revision)
+        && progress.question_bindings.get(&question.id).is_some_and(|binding|
+            binding.revision == question.revision && binding.key == question.key && binding.input == question.input)
+        && progress.answers.pointer(&question.key).is_some_and(|value|
+            question.validate_value(value).is_ok() && config_answer_valid(question, &progress.answers, value).unwrap_or(false))
+}
+
+fn selected_question(progress: &SetupProgress, question: &Question, options: &Options, quick: bool) -> bool {
+    if options.resume && progress.answered_questions.contains_key(&question.id) && !answered(progress, question) {
+        return true;
+    }
+    progress.selected_section.as_ref().is_none_or(|section| &question.section == section)
+        && (!quick || matches!(question.id.as_str(), "user-contexts" | "user-hosts"))
 }
 
 pub(super) fn set_value(
@@ -1114,6 +1137,54 @@ mod tests {
         assert!(!shown.contains("Hive를 사용할 앱"));
         assert_eq!(progress.answers["selected_hosts"], json!(["antigravity"]));
         assert!(!progress.answered_questions.contains_key("user-hosts"));
+    }
+
+    #[test]
+    fn resume_after_catalog_change_reasks_only_the_changed_answer() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        let questions = catalog().unwrap().questions;
+        let mut initial = Terminal { reader: Cursor::new(b"1\n\n1\n1\n"), writer:Vec::new(), language:InterfaceLanguage::En };
+        assert!(collect(&store, &mut progress, &questions, &options(root.path()), &mut initial).unwrap());
+        let original_hosts = progress.answers["selected_hosts"].clone();
+        progress.catalog_digest = hive_core::sha256_digest(b"older catalog");
+        progress.answered_questions.insert("user-contexts".into(), 2);
+        progress.question_bindings.get_mut("user-contexts").unwrap().revision = 2;
+        std::fs::write(root.path().join(&store.relative), serde_yaml::to_string(&progress.record).unwrap()).unwrap();
+        let refreshed = store.refresh_draft_questions(&store.load().unwrap()).unwrap().unwrap();
+        progress.record = refreshed.progress.clone().unwrap();
+        progress.snapshot = refreshed;
+        let mut options = options(root.path());
+        options.resume = true;
+        let mut resumed = Terminal { reader:Cursor::new(b"3\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
+        assert!(collect(&store, &mut progress, &questions, &options, &mut resumed).unwrap());
+        let shown = String::from_utf8(resumed.writer).unwrap();
+        assert_eq!(shown.matches("관련된 배경이나 관심사").count(), 1);
+        assert!(!shown.contains("사용할 언어"));
+        assert!(!shown.contains("Hive를 사용할 앱"));
+        assert_eq!(progress.answers["selected_hosts"], original_hosts);
+        assert_eq!(progress.answers["profile"]["contexts"], json!(["non-developer"]));
+        assert_eq!(progress.answered_questions["user-contexts"], 1);
+    }
+
+    #[test]
+    fn wording_and_default_changes_do_not_replace_a_valid_answer_but_invalid_choices_need_review() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        let mut question = catalog().unwrap().questions.into_iter().find(|q| q.id == "user-hosts").unwrap();
+        progress.answered_questions.insert(question.id.clone(), question.revision);
+        progress.answers["selected_hosts"] = json!(["codex"]);
+        assert!(answered(&progress, &question));
+        question.prompt.ko = "다듬은 질문".into();
+        question.default = Some(json!(["claude"]));
+        assert!(answered(&progress, &question));
+        question.options.retain(|choice| choice.value != "codex");
+        assert!(!answered(&progress, &question));
+        let mut options = options(root.path()); options.resume = true;
+        progress.selected_section = Some("persona".into());
+        assert!(selected_question(&progress, &question, &options, true));
     }
 
     #[test]
