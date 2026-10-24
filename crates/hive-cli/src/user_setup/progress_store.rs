@@ -12,6 +12,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 mod history;
+mod state_io;
 
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";
 const USER_PROGRESS: &str = ".hive/config/setup-progress/user.yml";
@@ -249,13 +250,7 @@ impl ProgressStore {
                 "setup progress exceeds the size limit".to_owned(),
             ));
         }
-        replace_user_setup_file(
-            &self.root,
-            &self.relative,
-            snapshot.expected.as_deref(),
-            Some(desired.as_bytes()),
-        )
-        .map_err(SetupError::Conflict)?;
+        self.write_state(&self.relative, snapshot.expected.as_deref(), Some(desired.as_bytes()))?;
         Ok(ProgressSnapshot {
             progress: Some(progress.clone()),
             expected: Some(desired.into_bytes()),
@@ -268,13 +263,11 @@ impl ProgressStore {
         let mut changed = Vec::new();
         // Clear the fallback first, so a successful clear cannot resurrect old answers.
         if let Some(bytes) = &snapshot.legacy {
-            replace_user_setup_file(&self.root, Path::new(LEGACY_PROGRESS), Some(bytes), None)
-                .map_err(SetupError::Conflict)?;
+            self.write_state(Path::new(LEGACY_PROGRESS), Some(bytes), None)?;
             changed.push(LEGACY_PROGRESS.to_owned());
         }
         if let Some(bytes) = &snapshot.expected {
-            replace_user_setup_file(&self.root, &self.relative, Some(bytes), None)
-                .map_err(SetupError::Conflict)?;
+            self.write_state(&self.relative, Some(bytes), None)?;
             changed.push(self.relative.to_string_lossy().into_owned());
         }
         Ok(changed)
@@ -292,6 +285,7 @@ impl ProgressStore {
     }
 
     pub fn record_completion(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        self.recover_pending_state()?;
         if prior.catalog_digest != self.catalog_digest
             || prior.question_revision != QUESTION_REVISION
         {
@@ -328,8 +322,7 @@ impl ProgressStore {
                 .map_err(SetupError::Conflict)?;
         }
         if let Some(bytes) = &snapshot.legacy {
-            replace_user_setup_file(&self.root, Path::new(LEGACY_PROGRESS), Some(bytes), None)
-                .map_err(SetupError::Conflict)?;
+            self.write_state(Path::new(LEGACY_PROGRESS), Some(bytes), None)?;
         }
         history::record(self, prior, ProgressPhase::Complete)?;
         history::retain_completed(self, &prior.operation_id)?;
@@ -391,7 +384,11 @@ impl ProgressStore {
     }
 
     fn read(&self, path: &Path) -> Result<Option<Vec<u8>>, SetupError> {
-        read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)
+        if path == self.relative || path == Path::new(LEGACY_PROGRESS) {
+            self.read_state(path, MAX_USER_SETUP_BYTES)
+        } else {
+            read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)
+        }
     }
 
     fn verify_directory_binding(&self) -> Result<(), SetupError> {

@@ -272,6 +272,9 @@ fn execute_inner<R: BufRead, W: Write>(
         terminal.language = config.interface_language;
     }
     let store = ProgressStore::open(&root_path, None)?;
+    if !options.show && mode != InteractionMode::NeedsInput {
+        store.recover_pending_state()?;
+    }
     if !store.matches_config(existing.as_deref()) {
         return Err(SetupError::Conflict(
             "settings changed before setup could start".to_owned(),

@@ -171,6 +171,7 @@ fn complete_bound<R: BufRead, W: Write>(
         terminal.language = config.interface_language;
     }
     let store = ProgressStore::open(&root, None)?;
+    if mode != InteractionMode::NeedsInput { store.recover_pending_state()?; }
     let snapshot = store.load()?;
     if let (Some(context), Some(progress)) = (legacy_parent, snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete)) {
         super::host_scope::check_request(progress, context.hosts)?;

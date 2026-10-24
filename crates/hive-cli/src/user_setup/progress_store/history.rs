@@ -1,6 +1,6 @@
 //! Durable, bounded lifecycle evidence. Answers and free-form text are represented by hashes.
 use super::{ProgressPhase, ProgressStore, SetupError, SetupProgress, TargetBinding};
-use crate::user_install::{read_user_setup_file, replace_user_setup_file};
+use crate::user_install::read_user_setup_file;
 use cap_fs_ext::DirExt;
 use hive_core::preferences::declaration_digest;
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,21 @@ fn path(id: &str) -> Result<PathBuf, SetupError> {
     Ok(Path::new(DIRECTORY).join(format!("{id}.json")))
 }
 
+pub(super) fn is_record_path(relative: &Path) -> bool {
+    relative.file_name().and_then(|name| name.to_str()).and_then(|name| name.strip_suffix(".json"))
+        .and_then(|id| path(id).ok()).as_deref() == Some(relative)
+}
+
+pub(super) fn validate_scope(store: &ProgressStore, relative: &Path, bytes: &[u8]) -> Result<(), SetupError> {
+    let receipt: Receipt = serde_json::from_slice(bytes)
+        .map_err(|_| SetupError::Verification("invalid retained lifecycle record".into()))?;
+    if receipt.schema_version != 1 || receipt.operation != "setup" || receipt.binding != store.binding
+        || path(&receipt.operation_id)?.as_path() != relative {
+        return Err(SetupError::Conflict("retained lifecycle record scope changed".into()));
+    }
+    Ok(())
+}
+
 fn intent_digest(progress: &SetupProgress) -> Result<String, SetupError> {
     // Bind every persisted execution input, including migration/monitor metadata.
     // Phase changes during recovery; the confirmed intent must remain unchanged.
@@ -63,8 +78,7 @@ pub(super) fn confirm_completion(
     progress: &SetupProgress,
 ) -> Result<(), SetupError> {
     store.verify_directory_binding()?;
-    let bytes = read_user_setup_file(&store.root, &path(&progress.operation_id)?, LIMIT)
-        .map_err(SetupError::Conflict)?
+    let bytes = store.read_state(&path(&progress.operation_id)?, LIMIT)?
         .ok_or_else(|| SetupError::Verification("setup completion record is missing".into()))?;
     let receipt: Receipt = serde_json::from_slice(&bytes)
         .map_err(|_| SetupError::Verification("invalid setup completion record".into()))?;
@@ -98,8 +112,7 @@ pub(super) fn record(
 ) -> Result<(), SetupError> {
     store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
-    let before =
-        read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?;
+    let before = store.read_state(&relative, LIMIT)?;
     let mut receipt = if let Some(bytes) = &before {
         serde_json::from_slice::<Receipt>(bytes)
             .map_err(|_| SetupError::Verification("invalid lifecycle record".into()))?
@@ -161,8 +174,7 @@ pub(super) fn record(
             "lifecycle record exceeds its size limit".into(),
         ));
     }
-    replace_user_setup_file(&store.root, &relative, before.as_deref(), Some(&bytes))
-        .map_err(SetupError::Conflict)
+    store.write_state(&relative, before.as_deref(), Some(&bytes))
 }
 
 pub(super) fn projection_binding(
@@ -172,8 +184,7 @@ pub(super) fn projection_binding(
 ) -> Result<Option<String>, SetupError> {
     store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
-    let before = read_user_setup_file(&store.root, &relative, LIMIT)
-        .map_err(SetupError::Conflict)?
+    let before = store.read_state(&relative, LIMIT)?
         .ok_or_else(|| SetupError::Verification("setup intent record is missing".into()))?;
     let mut receipt: Receipt = serde_json::from_slice(&before)
         .map_err(|_| SetupError::Verification("invalid setup intent record".into()))?;
@@ -210,8 +221,7 @@ pub(super) fn projection_binding(
             receipt.projection_digest = Some(digest.into());
             let bytes = serde_json::to_vec_pretty(&receipt)
                 .map_err(|error| SetupError::Internal(error.to_string()))?;
-            replace_user_setup_file(&store.root, &relative, Some(&before), Some(&bytes))
-                .map_err(SetupError::Conflict)?;
+            store.write_state(&relative, Some(&before), Some(&bytes))?;
         }
     }
     Ok(receipt.projection_digest)
@@ -246,8 +256,8 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
             continue;
         };
         let Ok(relative) = path(id) else { continue };
-        let Some(bytes) =
-            read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?
+        // Inspect scope before considering recovery; another project's write is not ours.
+        let Some(bytes) = read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?
         else {
             continue;
         };
@@ -268,8 +278,7 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
     completed
         .sort_by(|left, right| (&right.0, &right.1, &right.2).cmp(&(&left.0, &left.1, &left.2)));
     for (_, _, relative, bytes) in completed.into_iter().skip(100) {
-        replace_user_setup_file(&store.root, &relative, Some(&bytes), None)
-            .map_err(SetupError::Conflict)?;
+        store.write_state(&relative, Some(&bytes), None)?;
     }
     Ok(())
 }

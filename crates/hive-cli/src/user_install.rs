@@ -1905,6 +1905,58 @@ pub(crate) fn lock_user_setup(root: &Dir) -> Result<std::fs::File, String> {
     Ok(file)
 }
 
+pub(crate) fn lock_setup_state(root: &Dir, scope: &str) -> Result<std::fs::File, String> {
+    if scope.len() != 64 || !scope.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("invalid setup state scope".into());
+    }
+    let relative = Path::new(".hive/config/setup-progress/locks").join(format!("{scope}.lock"));
+    let (parent, name) = capability_parent(root, &relative, true)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or("setup state lock parent is unavailable")?;
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create(true).follow(FollowSymlinks::No);
+    let file = parent.open_with(&name, &options).map_err(|_| "cannot open setup state lock")?;
+    if !file.metadata().map_err(|_| "cannot inspect setup state lock")?.is_file() {
+        return Err("setup state lock is not a regular file".into());
+    }
+    let file = file.into_std();
+    file.try_lock().map_err(|_| "another setup state write is running".to_owned())?;
+    Ok(file)
+}
+
+/// Read retained objects only; callers must hold their scope lock before recovery.
+pub(crate) struct SetupWriteClaim {
+    pub before: Option<Vec<u8>>,
+    pub before_mode: Option<u32>,
+    pub staged: Option<Vec<u8>>,
+}
+
+pub(crate) fn inspect_setup_write_claim(root: &Dir, relative: &Path, limit: u64) -> Result<Option<SetupWriteClaim>, String> {
+    let Some((parent, _)) = capability_parent(root, relative, false)
+        .map_err(|error| error.message().to_owned())? else { return Ok(None) };
+    let claim = match parent.open_dir_nofollow(claim_name(relative)) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    for entry in claim.entries().map_err(|error| error.to_string())? {
+        let name = entry.map_err(|error| error.to_string())?.file_name();
+        if name != OsStr::new("claimed.bin") && name != OsStr::new("replacement.bin") {
+            return Err("setup state claim contains an unrecognized object".into());
+        }
+    }
+    let before = read_optional_regular(&claim, Path::new("claimed.bin"), limit)
+        .map_err(|error| error.message().to_owned())?;
+    let before_mode = if before.is_some() { host_policy_mode(&claim, Path::new("claimed.bin"))? } else { None };
+    let staged = read_optional_regular(&claim, Path::new("replacement.bin"), limit)
+        .map_err(|error| error.message().to_owned())?;
+    if staged.is_some() && file_permissions(&claim, Path::new("replacement.bin"))
+        .map_err(|error| error.message().to_owned())? != installed_file_permissions(false) {
+        return Err("setup state replacement permissions changed".into());
+    }
+    Ok(Some(SetupWriteClaim { before, before_mode, staged }))
+}
+
 pub(crate) fn replace_user_setup_file(
     root: &Dir,
     relative: &Path,
@@ -2048,6 +2100,28 @@ pub(crate) fn interrupt_setup_replace(root: &Dir, relative: &Path, before: &[u8]
             }));
     }));
     assert!(result.is_err());
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_remove(root: &Dir, relative: &Path, before: &[u8]) {
+    let permissions = file_permissions(root, relative).unwrap();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = cas_activate_with_barrier(root, relative, Some(ExpectedFile { bytes:before, permissions }), None,
+            installed_file_permissions(false), Some(&|_, _, _| panic!("injected removal interruption")));
+    }));
+    assert!(result.is_err());
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_creation(root: &Dir, relative: &Path, desired: Option<&[u8]>, published: bool) {
+    let (parent, name) = capability_parent(root, relative, true).unwrap().unwrap();
+    let claim_name = claim_name(relative);
+    parent.create_dir(&claim_name).unwrap();
+    let claim = parent.open_dir_nofollow(&claim_name).unwrap();
+    if let Some(bytes) = desired {
+        stage_file(&claim, "replacement.bin", bytes, installed_file_permissions(false), relative).unwrap();
+        if published { publish_exclusive(&claim, OsStr::new("replacement.bin"), &parent, &name).unwrap(); }
+    }
 }
 
 fn recover_bound_user_file(
