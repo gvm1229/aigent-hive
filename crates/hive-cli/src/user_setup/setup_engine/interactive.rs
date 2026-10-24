@@ -96,6 +96,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
     }
     if scope != Some("user")
         || (options.show && (options.resume || options.dry_run || options.section.is_some()))
+        || (options.resume && options.dry_run)
     {
         return Err(SetupError::Input(
             "choose user setup or a separate settings inspection".to_owned(),
@@ -439,7 +440,11 @@ fn preliminary_result<R: BufRead, W: Write>(
         )
         .map(Some);
     }
-    if mode != InteractionMode::Terminal {
+    let confirmed_resume = options.resume
+        && snapshot.progress.as_ref().is_some_and(|p| {
+            matches!(p.phase, ProgressPhase::Applying | ProgressPhase::RecoverableFailure)
+        });
+    if mode != InteractionMode::Terminal && !confirmed_resume {
         return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
     }
     Ok(None)
@@ -931,6 +936,32 @@ fn result(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn only_confirmed_noninteractive_resume_passes_the_input_gate() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut snapshot = store.load().unwrap();
+        let mut record = store.new_progress("file-apply".into(), fresh_answers()).unwrap();
+        let mut options = options(root.path());
+        options.resume = true;
+        let mut terminal = Terminal {
+            reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En,
+        };
+        for (phase, needs_input) in [
+            (ProgressPhase::AwaitingAnswers, true), (ProgressPhase::Previewed, true),
+            (ProgressPhase::Applying, false), (ProgressPhase::RecoverableFailure, false),
+        ] {
+            record.phase = phase;
+            snapshot.progress = Some(record.clone());
+            assert_eq!(preliminary_result(
+                &options, InteractionMode::NonInteractive, &store, &snapshot, None, &mut terminal,
+            ).unwrap().is_some(), needs_input);
+        }
+        assert!(parse(&["--scope".into(), "user".into(), "--resume".into(), "--dry-run".into()]).is_err());
+        assert!(terminal.writer.is_empty());
+        assert!(!root.path().join(".hive").exists());
+    }
 
     #[test]
     fn update_resume_does_not_create_progress_or_consume_noninteractive_answers() {

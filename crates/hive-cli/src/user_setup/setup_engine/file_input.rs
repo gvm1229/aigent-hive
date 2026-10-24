@@ -62,14 +62,6 @@ pub(in crate::user_setup) fn execute(
 ) -> Result<ActionResult, SetupError> {
     let input =
         user_setup::read_bounded_regular(&arguments.answers, user_setup::MAX_ANSWERS_BYTES)?;
-    let _lease = if arguments.mode == SetupMode::Apply {
-        Some(
-            crate::user_install::lock_user_setup(&arguments.root_cap)
-                .map_err(SetupError::Conflict)?,
-        )
-    } else {
-        None
-    };
     let existing = crate::user_install::read_user_setup_file(
         &arguments.root_cap,
         Path::new(user_setup::USER_SETUP_RELATIVE),
@@ -113,6 +105,9 @@ pub(in crate::user_setup) fn execute(
     }
     let bytes =
         serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
+    if arguments.mode == SetupMode::Apply {
+        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref());
+    }
     user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))
 }
 

@@ -257,7 +257,7 @@ pub(super) fn apply_to(
     };
     let total_changes = journal.projection.changes.len();
     for (index, change) in journal.projection.changes.into_iter().enumerate() {
-        interrupt_project_fixture(progress, index);
+        interrupt_setup_fixture(progress, index);
         let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
         verify_mode(
@@ -286,7 +286,7 @@ pub(super) fn apply_to(
             .push(change.path.to_string_lossy().into_owned());
         applied.changes.push(change);
     }
-    interrupt_project_fixture(progress, total_changes);
+    interrupt_setup_fixture(progress, total_changes);
     crate::user_install::prune_user_setup_empty_ancestors(
         output,
         removed_skills.iter().map(PathBuf::as_path),
@@ -295,13 +295,15 @@ pub(super) fn apply_to(
     Ok(applied)
 }
 
-fn interrupt_project_fixture(progress: &SetupProgress, index: usize) {
+fn interrupt_setup_fixture(progress: &SetupProgress, index: usize) {
     #[cfg(debug_assertions)]
-    if progress.binding.scope == PreferenceScope::Project
-        && std::env::var("HIVE_PROJECT_SETUP_INTERRUPT_AFTER")
-            .ok()
-            .and_then(|value| value.parse::<usize>().ok())
-            == Some(index)
+    if std::env::var(match progress.binding.scope {
+        PreferenceScope::Project => "HIVE_PROJECT_SETUP_INTERRUPT_AFTER",
+        PreferenceScope::User => "HIVE_USER_SETUP_INTERRUPT_AFTER",
+    })
+    .ok()
+    .and_then(|value| value.parse::<usize>().ok())
+        == Some(index)
     {
         std::process::exit(87);
     }
