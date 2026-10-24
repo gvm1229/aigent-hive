@@ -60,6 +60,16 @@ questions:
     minimum: 1
     maximum: 500
     when: [{"key":"/persona/id","equals":"custom"}]
+  - id: user-judge
+    revision: 1
+    scope: "user"
+    section: "review"
+    key: "/judge_invocation"
+    input: "choice"
+    prompt: {"ko":"독립 검토는 명시적으로 요청했을 때만 실행할까요?","en":"Choose when independent reviews may run."}
+    help: {"ko":"","en":""}
+    default: "explicit"
+    options: [{"value":"explicit","label":{"ko":"요청할 때만","en":"Only when requested"}},{"value":"implicit","label":{"ko":"작업 규칙에 따라","en":"As required by the workflow"}}]
   - id: user-skills
     revision: 1
     scope: "user"
@@ -178,16 +188,6 @@ questions:
     prompt: {"ko":"하루에 한 번 새 버전 유무를 확인할까요?","en":"Check for a new version once a day?"}
     help: {"ko":"확인만 하며 자동 설치는 하지 않음.","en":"This checks only; it does not install an update."}
     default: false
-  - id: user-judge
-    revision: 1
-    scope: "user"
-    section: "review"
-    key: "/judge_invocation"
-    input: "choice"
-    prompt: {"ko":"독립 검토는 명시적으로 요청했을 때만 실행할까요?","en":"Choose when independent reviews may run."}
-    help: {"ko":"","en":""}
-    default: "explicit"
-    options: [{"value":"explicit","label":{"ko":"요청할 때만","en":"Only when requested"}},{"value":"implicit","label":{"ko":"작업 규칙에 따라","en":"As required by the workflow"}}]
   - id: usage-enforcement
     revision: 1
     scope: "user"

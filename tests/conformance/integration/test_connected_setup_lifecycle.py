@@ -262,9 +262,12 @@ else:
         defaults = description["data"]["expedited_defaults"]
         self.assertIsInstance(defaults, dict)
         self.assertEqual(defaults["interface_language"], "en")
-        self.assertEqual(defaults["persona"], {"id": "strict"})
+        self.assertEqual(defaults["schema_version"], 2)
+        self.assertEqual(defaults["persona"], {"id": "balanced"})
         self.assertEqual(defaults["skills"], {"mode": "all"})
-        self.assertEqual(defaults["usage_guard"]["enabled"], True)
+        self.assertFalse(defaults["usage_guard"]["enforcement_enabled"])
+        self.assertTrue(defaults["usage_guard"]["warnings_enabled"])
+        self.assertFalse(defaults["usage_guard"]["midway"]["enabled"])
         self.assertEqual(defaults["usage_guard"]["stop_remaining_percent"], 20)
         answers = self.work_root / "product-owned-expedited-defaults.yml"
         write_yaml(answers, defaults)

@@ -5,7 +5,7 @@ use crate::user_setup::{
     InterfaceLanguage, SetupError,
 };
 use hive_core::preferences::{
-    DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope, UsageProtection,
+    DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
 };
 use hive_core::setup::{AnswerInput, InteractionMode, InteractionRequest, Question};
 use serde_json::{json, Value};
@@ -446,16 +446,7 @@ fn preliminary_result<R: BufRead, W: Write>(
 }
 
 fn fresh_answers() -> Value {
-    let mut guard = serde_json::to_value(UsageProtection::default()).expect("typed usage policy");
-    guard["stop_remaining_percent"] = json!(20);
-    guard["codexbar_fallback_enabled"] = json!(false);
-    guard["popup_enabled"] = json!(false);
-    guard["discord"] = serde_json::to_value(user_setup::DiscordGuardPreferences::default())
-        .expect("typed notices");
-    guard["project_overrides"] = json!({});
-    json!({"schema_version":2,"wiki":{"enabled":true,"language":"ko","backend":"markdown"},
-        "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},"selected_hosts":["codex"],
-        "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","usage_guard":guard,"preference_decisions":{}})
+    super::default_answers(None)
 }
 
 fn collect<R: BufRead, W: Write>(

@@ -33,6 +33,21 @@ pub(super) fn catalog() -> Result<QuestionCatalog, SetupError> {
     Ok(catalog)
 }
 
+pub(in crate::user_setup) fn default_answers(language: Option<InterfaceLanguage>) -> Value {
+    let mut guard = serde_json::to_value(hive_core::preferences::UsageProtection::default()).expect("typed usage policy");
+    guard["stop_remaining_percent"] = json!(super::EXPEDITED_DEFAULT_USAGE_THRESHOLD);
+    guard["codexbar_fallback_enabled"] = json!(false);
+    guard["popup_enabled"] = json!(false);
+    guard["discord"] = serde_json::to_value(super::DiscordGuardPreferences::default()).expect("typed notices");
+    guard["project_overrides"] = json!({});
+    let wiki_language = if language == Some(InterfaceLanguage::Ko) { "ko" } else { "en" };
+    let mut answers = json!({"schema_version":2,"wiki":{"enabled":true,"language":wiki_language,"backend":"markdown"},
+        "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},"selected_hosts":["codex"],
+        "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","usage_guard":guard,"preference_decisions":{}});
+    if let Some(language) = language { answers["interface_language"] = json!(language); }
+    answers
+}
+
 pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, SetupError> {
     let mut scope = None;
     let mut section = None;

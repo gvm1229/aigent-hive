@@ -953,53 +953,13 @@ fn describe_result() -> Result<ActionResult, SetupError> {
     let catalog: JsonValue = serde_yaml::from_str(USER_SETUP_CATALOG).map_err(|error| {
         SetupError::Internal(format!("invalid embedded user setup catalog: {error}"))
     })?;
-    let question_order = json!([
-        "interface-language",
-        "daily-update-check",
-        "setup-mode",
-        "wiki",
-        "user-contexts",
-        "persona",
-        "hosts",
-        "judge-invocation",
-        "skills",
-        "usage-guard",
-        "discord"
-    ]);
-    let example = json!({
-        "schema_version": 1,
-        "interface_language": "en",
-        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
-        "profile": { "contexts": ["non-developer"] },
-        "persona": { "id": "balanced" },
-        "selected_hosts": ["codex"],
-        "skills": { "mode": "all" },
-        "update_check": { "enabled": false },
-        "judge_invocation": "explicit",
-        "usage_guard": { "enabled": true,
-            "stop_remaining_percent": "<user-chosen-integer-0-to-99>",
-            "codexbar_fallback_enabled": false,
-            "discord": { "enabled": false, "request_privacy": "summary",
-                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
-        }
-    });
-    let expedited_defaults = json!({
-        "schema_version": 1,
-        "interface_language": "en",
-        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
-        "profile": { "contexts": ["non-developer"] },
-        "persona": { "id": "strict" },
-        "selected_hosts": ["codex"],
-        "skills": { "mode": "all" },
-        "update_check": { "enabled": false },
-        "judge_invocation": "explicit",
-        "usage_guard": { "enabled": true,
-            "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
-            "codexbar_fallback_enabled": false,
-            "discord": { "enabled": false, "request_privacy": "summary",
-                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
-        }
-    });
+    let questions = setup_engine::catalog()?.questions;
+    let user_questions: Vec<_> = questions.iter().filter(|question| question.scope == hive_core::preferences::PreferenceScope::User).collect();
+    let question_order: Vec<_> = user_questions.iter().map(|question| &question.id).collect();
+    let sections: BTreeSet<_> = user_questions.iter().map(|question| &question.section).collect();
+    let expedited_defaults = setup_engine::default_answers(Some(InterfaceLanguage::En));
+    let mut example = expedited_defaults.clone();
+    example["usage_guard"]["stop_remaining_percent"] = json!("<user-chosen-integer-0-to-99>");
     Ok(ActionResult {
         schema_version: 1,
         action: "DescribeHiveUserSetup",
@@ -1015,13 +975,14 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         }],
         next_action: None,
         data: Some(json!({
-            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}").as_bytes()),
+            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}\n{}", setup_engine::QUESTIONS).as_bytes()),
             "schema": schema,
             "catalog": catalog,
             "answer_template": example,
-            "answer_template_notice": "Usage protection is recommended. In Custom setup, replace <user-chosen-integer-0-to-99> with the user's own value before validation; Expedited setup uses 20% remaining.",
+            "answer_template_notice": "Usage blocking and interruption are off by default. In Custom setup, replace <user-chosen-integer-0-to-99> with the user's value before validation. Quick setup keeps 20% as an inactive threshold; new optional controls require an explicit choice.",
             "expedited_defaults": expedited_defaults,
             "question_order": question_order,
+            "sections": sections,
         })),
     })
 }
@@ -4139,27 +4100,46 @@ usage_guard:
             .filter_map(serde_json::Value::as_str)
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            question_order,
-            vec![
-                "interface-language",
-                "daily-update-check",
-                "setup-mode",
-                "wiki",
-                "user-contexts",
-                "persona",
-                "hosts",
-                "judge-invocation",
-                "skills",
-                "usage-guard",
-                "discord",
-            ]
-        );
+        assert_eq!(&question_order[..2], &["user-language", "user-mode"]);
+        assert!(question_order.iter().position(|id| *id == "user-judge") < question_order.iter().position(|id| *id == "user-skills"));
+        assert_eq!(question_order.iter().collect::<BTreeSet<_>>().len(), question_order.len());
+        let catalog = setup_engine::catalog().unwrap();
+        for id in question_order {
+            assert!(catalog.questions.iter().any(|question| question.id == id && question.scope == hive_core::preferences::PreferenceScope::User));
+        }
         assert_eq!(data["answer_template"]["judge_invocation"], "explicit");
         assert_eq!(
             data["schema"]["$defs"]["judge_invocation"]["enum"],
             serde_json::json!(["explicit", "implicit"])
         );
+    }
+
+    #[test]
+    fn described_quick_defaults_match_terminal_defaults_and_never_enable_usage_enforcement() {
+        let data = describe_result().unwrap().data.unwrap();
+        let defaults = &data["expedited_defaults"];
+        assert_eq!(*defaults, setup_engine::default_answers(Some(InterfaceLanguage::En)));
+        let config = parse_and_validate_config(&serde_json::to_vec(defaults).unwrap()).unwrap();
+        assert_eq!(config.schema_version, 2);
+        let policy = config.usage_guard.policy.as_ref().unwrap();
+        assert!(!policy.enforcement_enabled);
+        assert!(policy.warnings_enabled);
+        for layer in ["preflight", "midway"] {
+            for flag in ["threshold_enabled", "reset_enabled", "zero_quota_enabled"] {
+                assert_eq!(defaults["usage_guard"][layer][flag], false);
+            }
+            assert_eq!(defaults["usage_guard"][layer]["observation_failure"], "warn");
+        }
+        assert_eq!(defaults["usage_guard"]["midway"]["enabled"], false);
+        assert_eq!(data["answer_template"]["usage_guard"]["enforcement_enabled"], false);
+        assert!(!data["answer_template_notice"].as_str().unwrap().contains("protection is recommended"));
+        for language in [InterfaceLanguage::En, InterfaceLanguage::Ko] {
+            let defaults = setup_engine::default_answers(Some(language));
+            let config = parse_and_validate_config(&serde_json::to_vec(&defaults).unwrap()).unwrap();
+            assert_eq!(config.interface_language, language);
+            assert_eq!(defaults["wiki"]["language"], defaults["interface_language"]);
+        }
+        assert!(setup_engine::default_answers(None).get("interface_language").is_none());
     }
 
     #[test]
