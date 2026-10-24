@@ -1856,3 +1856,431 @@
 | [passed](runs/20261023T143847-f3630d74b060.md) | 공개 실행 이미지의 머리말 주소 보정 위치 고정 | a9245c6383da13560b722980eb223a93c47a4eb3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261023T143914-380d656efae0.md) | 제품용 Windows 부모 이미지 판독기의 공개0.13.1 대조·위조 거부 | a9245c6383da13560b722980eb223a93c47a4eb3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261023T144138-02be9ea03ebb.md) | 개발 검증: uv.EXE | a9245c6383da13560b722980eb223a93c47a4eb3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T150929-e8e81f6c7e09.md) | Windows 전용 콘솔의 한글 입력·JSON 분리·기한 종료 | a071c493d5bb4aed7345f56594b45ab459697424 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T151125-6515ff684eab.md) | Windows 전용 콘솔의 한글 입력·JSON 분리·기한 종료 | a071c493d5bb4aed7345f56594b45ab459697424 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T153905-6dc438622705.md) | 개발 검증: uv.EXE | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T153936-e90d8861ee2a.md) | 개발 검증: uv.EXE | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T155226-36af8d189d00.md) | 개발 검증: cargo.EXE | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T160049-36e0b76cdb2e.md) | 개발 검증: cargo.EXE | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T160937-7e10160251f6.md) | 개발 검증: cargo.EXE | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T161731-5a73c6549015.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T161843-4362096b96db.md) | 공개0.13.1 부모에서 새0.14 질문·한국어·취소 연결 | 06df4998143e3e58b15472a0bdd465cc7d9594e1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T164252-33f16720ae1f.md) | 공개0.13.1 부모에서 새0.14 질문·한국어·취소 연결 | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T172021-33d1a49081d2.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T172707-0f0041bccec8.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T173152-bd1a8884151c.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T174210-cbdb8b9d7a81.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T174334-455f78c7710e.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T174540-9fc545076f45.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T175131-f2b212fa2886.md) | 개발 검증: uv.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T175256-4635a052c8cd.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183026-0b0e06fb6daf.md) | 공개0.13.1 부모에서 새0.14 질문·한국어·취소 연결 | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T183135-47a12349fdf6.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183213-e06aff582196.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183252-02e0a95f6ed7.md) | 개발 검증: cargo.EXE | 7a7f314197b23f93f72e839bbb9f6226470a8f9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183624-5fc711d336b3.md) | 개발 검증: cargo.EXE | 406e9b9c0630e4bf191a39d231b8584378bcc558 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183823-c6de201baeca.md) | 개발 검증: cargo.EXE | 406e9b9c0630e4bf191a39d231b8584378bcc558 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T183924-9dac27eaf27e.md) | 개발 검증: cargo.EXE | 406e9b9c0630e4bf191a39d231b8584378bcc558 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T184138-c86ebb2f9308.md) | 개발 검증: cargo.EXE | 406e9b9c0630e4bf191a39d231b8584378bcc558 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T184459-3b359fba8401.md) | 개발 검증: cargo.EXE | 1cc19e8ea1b2b70b715a7f4d0dc63db9abea486c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T184557-af975047c8cc.md) | 개발 검증: cargo.EXE | 1cc19e8ea1b2b70b715a7f4d0dc63db9abea486c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T184728-70640c420b91.md) | 개발 검증: cargo.EXE | 1cc19e8ea1b2b70b715a7f4d0dc63db9abea486c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T185500-e2684ae75ead.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T185707-e014c76c744c.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T185904-9617a6a729c4.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T190019-412d1cbae84b.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T190228-701a4b8277c6.md) | 기존 v1 설정의 실제 한국어 질문·해제 답변·취소·재개 보존 | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T190252-b41728d4ee57.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T190445-c6fb03730bf1.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T190539-2bcbe0651b85.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T190659-e4fcf04fa03b.md) | 개발 검증: cargo.EXE | d5c098c88cd264f55566eb0871042a433f3784fc | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T191734-ce3a81f4d922.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T191924-3a8b9c9c8ab3.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T192245-29c631e202cf.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T192449-6f12f4939d0c.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T192647-d0c8aa081824.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T192806-090571d2ad53.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T192921-60ce8a3d9f77.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T193302-5182486dc014.md) | 격리 CLI의 해제 정책 저장 후 하네스 실패·재개·중복 적용 방지 | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T193626-a62a7c46c869.md) | 격리 CLI의 해제 정책 저장 후 하네스 실패·재개·중복 적용 방지 | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T194158-1bc00d325536.md) | 격리 CLI의 해제 정책 저장 후 하네스 실패·재개·중복 적용 방지 | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T194605-662942986c8b.md) | 개발 검증: cargo.EXE | 6da58d7fdb89d71c6d1b0c9a4ff8fae6ff81b52a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T195802-fb4013148412.md) | 개발 검증: cargo.EXE | e9e86fc96face6a63a6410e6d3e20984d53f59c3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T200011-bd4a1c30cf14.md) | 개발 검증: cargo.EXE | e9e86fc96face6a63a6410e6d3e20984d53f59c3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T200329-effa1036805e.md) | 개발 검증: cargo.EXE | e9e86fc96face6a63a6410e6d3e20984d53f59c3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T200556-6bf2585c3ffb.md) | 개발 검증: cargo.EXE | e9e86fc96face6a63a6410e6d3e20984d53f59c3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T201731-4236fcc937ff.md) | 개발 검증: cargo.EXE | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T201945-f8e942a16c2b.md) | 격리 CLI의 해제 정책 저장 후 하네스 실패·재개·중복 적용 방지 | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T202459-45b07f0035a9.md) | 같은 hive update의 질문 재개·confirm 계약·해제 보존 후 적용 재개 | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T202650-17db33989539.md) | 개발 검증: cargo.EXE | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T202931-0e6cd4a92910.md) | 격리 CLI의 해제 정책 저장 후 하네스 실패·재개·중복 적용 방지 | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T203133-1994457c12b1.md) | 개발 검증: cargo.EXE | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T203256-982205b69d1b.md) | 개발 검증: cargo.EXE | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T203611-083ac5bd0770.md) | 터미널 hive update confirm에서 미응답 선택 질문 유지 | 1d74bf113f258d487d991568821f53c40cd492a3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T203829-7800791efbe0.md) | 개발 검증: cargo.EXE | 20c682bdb73ba216c35a79f5fe4525fb72f4644f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T204639-517db61a905d.md) | 개발 검증: uv.EXE | 20c682bdb73ba216c35a79f5fe4525fb72f4644f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T210953-33fee4782c56.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T211343-e734f90ba478.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T211626-fea497812bf0.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T213007-ddaf594102ba.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T213311-ab0230b76f6f.md) | 비대화형 v1 보존 이전 후 같은 완료기의 한국어 선택 검토 | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T213607-fe7fbd8f7de4.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T215605-07c5be9ab9c1.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T215821-9dd67230a6cb.md) | 개발 검증: cargo.EXE | 6b918daa7f1c3f96daa031b01a4ff4d15a75d2d2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T220327-878e4ca4f80f.md) | 개발 검증: cargo.EXE | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T223016-030c99bba48c.md) | 개발 검증: cargo.EXE | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T223140-d83594debe93.md) | 새 갱신 부모의 완료기 터미널 상속·한국어·첫 설정 | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T223218-ff171d76c9e2.md) | 개발 검증: cargo.EXE | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T223407-2a75d877cba0.md) | 개발 검증: cargo.EXE | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T225704-59ec786c9600.md) | 개발 검증: cargo.EXE | bfd448727ac9f701eb77b2702823d391442cc9a5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T230323-9b72b9d0dc62.md) | Windows 실행 중 Hive 복사본의 파일 이름 변경 가능성 확인 | 717367b1baec92546b9e52e3438264e20b783f1a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T230534-57a8ca78e00e.md) | Windows 기존 설치 함수의 실행 중 파일 교체 경계 확인 | 717367b1baec92546b9e52e3438264e20b783f1a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T231856-097b06dbbcd7.md) | Rust Windows 파일 제거의 실행 이미지 처리 확인 | 717367b1baec92546b9e52e3438264e20b783f1a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T233635-d8e3b95ca321.md) | 개발 검증: cargo.EXE | 5eba5a643c5a2f9815f87a7959661d6dfd80b8e8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T233729-45f7935651a1.md) | 개발 검증: cargo.EXE | 5eba5a643c5a2f9815f87a7959661d6dfd80b8e8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T233752-6a25552dcbfe.md) | 개발 검증: cargo.EXE | 5eba5a643c5a2f9815f87a7959661d6dfd80b8e8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234109-ba066690bd96.md) | 개발 검증: cargo.EXE | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234205-5f94b7f86559.md) | 개발 검증: cargo.EXE | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234317-428556679c23.md) | 개발 검증: cargo.EXE | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234423-cb5284a9d34c.md) | 개발 검증: uv.EXE | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234501-b4e7443123a7.md) | 공개 갱신 명령의 JSON 무입력·기존 선택 보존·직접 갱신 미완료 반환 | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234549-ac72f7cc96aa.md) | Windows 직접 갱신 인계의 미완료 JSON과 하위 결과 분리 | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234601-3a6671212527.md) | 개발 검증: cargo.EXE | 538bbb56832219ed65dff05082eade85c947621c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T234912-dcbc57972b77.md) | 개발 검증: cargo.EXE | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235012-05adc6495f88.md) | 개발 검증: cargo.EXE | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235106-25b2b491205e.md) | 개발 검증: cargo.EXE | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235114-f46d82337ba1.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T235119-ca51fc3ed63b.md) | 공개0.13.1 원본 부모의 첫 갱신에서 앱 보존·질문·적용·검증 | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261023T235423-7e42ea1c7b3a.md) | 개발 검증: cargo.EXE | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235457-81f30f95d6ef.md) | 개발 검증: cargo.EXE | bbbd34a5a89b8ecde4c60e61d5b6551262c78eb4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235647-1c1951512989.md) | 개발 검증: cargo.EXE | e785a958ff4bada60bd46d38fce277060a3bdf28 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235712-eeaf2f930311.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | e785a958ff4bada60bd46d38fce277060a3bdf28 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235718-9d1cc4ad11e8.md) | 공개0.13.1 원본 부모의 첫 갱신에서 앱 보존·질문·적용·검증 | e785a958ff4bada60bd46d38fce277060a3bdf28 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261023T235903-c519a498cc7a.md) | 개발 검증: uv.EXE | e785a958ff4bada60bd46d38fce277060a3bdf28 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000431-cca3d1e0d4ba.md) | 개발 검증: cargo.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000530-f1b3012e1335.md) | 개발 검증: cargo.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000640-c7566fc1e4d7.md) | 개발 검증: cargo.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000741-243a6730bebc.md) | 개발 검증: cargo.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T000756-ca84ac11c93b.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000847-99fcf4cd21d8.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T000854-642991c7935d.md) | 공개0.13.1 --confirm의 콘솔 없는 기존효과 보존 이전 | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [interrupted](runs/20261024T000909-a31d9d03f623.md) | 개발 검증: uv.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T001001-53c8a3541a4c.md) | 개발 검증: uv.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T001058-886632d5ac2c.md) | 개발 검증: cargo.EXE | 879ea417e2b91e9b1a0cee954d868865b75d0798 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T001905-11f760899fea.md) | 개발 검증: cargo.EXE | 6467de655989f0df1cce8a8c27ac7d892e2a4e95 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T002042-3c65b3af2600.md) | 개발 검증: cargo.EXE | 6467de655989f0df1cce8a8c27ac7d892e2a4e95 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T002128-14489a198d9d.md) | 개발 검증: cargo.EXE | 6467de655989f0df1cce8a8c27ac7d892e2a4e95 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T002224-d4fc5b7be557.md) | 개발 검증: cargo.EXE | 6467de655989f0df1cce8a8c27ac7d892e2a4e95 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T003328-3a0987793417.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T003741-7e3f28390b4a.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T004047-4e6a8a8870bf.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T004206-d347487d0135.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T004418-a1b07319c44b.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T004520-a78d394cf5cb.md) | 개발 검증: cargo.EXE | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T004641-80579d11ccc3.md) | 공개 갱신 명령의 JSON 무입력·기존 선택 보존·직접 갱신 미완료 반환 | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T005009-fbd9be4f9f8e.md) | 공개0.13.1 첫 질문 연결의 격리 설치 대역 준비 | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T005014-f79542f84a3d.md) | 공개0.13.1 --confirm의 콘솔 없는 기존효과 보존 이전 | 622c500646ff3e7c73b89f80f42ba9a61fbd9939 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T011548-f1830ef2ccb4.md) | 개발 검증: cargo.EXE | e266e4e4855586d9b1e9cd9ae1949fadc4f7cf63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T012526-8e08d19a0b18.md) | 개발 검증: cargo.EXE | e266e4e4855586d9b1e9cd9ae1949fadc4f7cf63 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T012834-3fdc95906a67.md) | 개발 검증: cargo.EXE | e266e4e4855586d9b1e9cd9ae1949fadc4f7cf63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T013055-48b1535529c2.md) | 실제 설정 재개에서 바뀐 질문만 재확인하고 기존 언어와 앱 유지 | e266e4e4855586d9b1e9cd9ae1949fadc4f7cf63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T013207-62ffcd71a502.md) | 개발 검증: cargo.EXE | e266e4e4855586d9b1e9cd9ae1949fadc4f7cf63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T020032-fa9523772df4.md) | 개발 검증: cargo.EXE | aaa1d899f0755b850bbfb0c7fa27e583f2c988d3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T021247-290660a455e9.md) | 같은 안전 기본값의 답안 파일 적용·검증·보존 제거·재설치 | aaa1d899f0755b850bbfb0c7fa27e583f2c988d3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T021613-b4e42a49a272.md) | 개발 검증: cargo.EXE | aaa1d899f0755b850bbfb0c7fa27e583f2c988d3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T021821-17cad8c0a3b8.md) | 같은 안전 기본값의 답안 파일 적용·검증·보존 제거·재설치 | aaa1d899f0755b850bbfb0c7fa27e583f2c988d3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T033106-2ac13d030038.md) | 개발 검증: cargo.EXE | 192bc6e2e9059302b22db7eee7a6da429612d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T033249-ec4f29692aa7.md) | 개발 검증: cargo.EXE | 192bc6e2e9059302b22db7eee7a6da429612d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T033334-b0af4fd17990.md) | 개발 검증: cargo.EXE | 192bc6e2e9059302b22db7eee7a6da429612d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T033602-436cd6a6bf7f.md) | 답안 파일과 AI 입력 출처·검증·보존 재설치 | 192bc6e2e9059302b22db7eee7a6da429612d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T033735-07ccf19c5745.md) | 개발 검증: cargo.EXE | 192bc6e2e9059302b22db7eee7a6da429612d0f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T034028-876c72d6e85f.md) | 개발 검증: uv.EXE | a621ae353a9183fa1400f89f83388a43afb43d63 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T034254-3b3ebdf620b8.md) | 개발 검증: uv.EXE | 5349a8cb7f01807df4e551ea0a0dac0f58850140 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T034752-fb26d63f5d21.md) | 개발 검증: cargo.EXE | 14ad26e006694a8a96b466249006439b161a750c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T034930-26c5d30c8da8.md) | 기존 전역 설정의 항목 메뉴에서 언어만 변경하고 다른 값 보존 | 14ad26e006694a8a96b466249006439b161a750c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T035106-a7eeae1095f1.md) | 개발 검증: cargo.EXE | 14ad26e006694a8a96b466249006439b161a750c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T035649-9d199ab4d1b6.md) | 프로젝트 기본 설정의 미검증 기능·빈 역할·지식 범위 확인 | 36341187e1b4f34ae87796d85d678b4c91496926 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T042531-3787574e61b0.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T043129-89fbd2945be9.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T043235-314d7d2ac9ee.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T043317-170c0d6487bf.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T043436-3cadf49c6481.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T043522-b95e43189d02.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T043551-acc72141f50d.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T043623-12e07e76c589.md) | 새 프로젝트 CLI의 취소·재개·빠른 상속·맞춤·전역 설정 연결 | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T043828-836e9f041ca7.md) | 개발 검증: cargo.EXE | 496cbaf7adb81d58d1af182eb98ff66eac148ad2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T044217-6f8a42e7d3a5.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044324-8bdb8571ab96.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T044406-8f544a5bc25c.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044423-e1de0ece8fea.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044516-3e0b035b169f.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044601-fd20dd61cbe5.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044650-a244e07833fb.md) | 프로젝트 출처 저장·전역 변경의 상속 유지·조회 무변경 | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044802-cdae31642721.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T044841-e9f5b1f2ad44.md) | 개발 검증: cargo.EXE | 745449654d81b888077250bdef624694f9d18bb2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T045242-527f48981a83.md) | 개발 검증: cargo.EXE | 48cefa680bccebc59ea38ec39c8f6c88afff558f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T045326-37d62c92d539.md) | 개발 검증: cargo.EXE | 48cefa680bccebc59ea38ec39c8f6c88afff558f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T045900-dfb169f77749.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T045947-87d092c83cf6.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050037-ed14f9dbfffe.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050104-c69bcd429607.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050158-e9af485365a3.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050223-c38cebacc1ae.md) | 개발 검증: cargo.EXE | 4b36c1271732b63f65138afd88b7b9167281add4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050642-27403ec5fba1.md) | 개발 검증: cargo.EXE | 4e3ad747fea0d7334aa14784cd90c6b8414ebe99 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050722-cff34a301038.md) | 개발 검증: cargo.EXE | 4e3ad747fea0d7334aa14784cd90c6b8414ebe99 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T050752-f518fda3ed09.md) | 개발 검증: cargo.EXE | 4e3ad747fea0d7334aa14784cd90c6b8414ebe99 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051027-1fdacc3401c5.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T051212-c073d29bc58e.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051333-8db4b6fccb0d.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051427-6f6da58e4e2c.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051459-8a601b68ac69.md) | 프로젝트 실제 종료 지점별 무입력 재개와 중복 적용 방지 | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051759-3bd729b02b93.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051851-350089b80bc3.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T051925-9e2a2c53715c.md) | 프로젝트 실제 종료 지점별 무입력 재개와 중복 적용 방지 | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052119-ca852833e3f8.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052211-bab6d9f32376.md) | 개발 검증: cargo.EXE | 75a34e8d7e3c51f60456b76355b586bef5b7e2af | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052348-66855a42ab7d.md) | 개발 검증: cargo.EXE | 5d086db2220ac07d654595a9fc54b2215f82eff5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052451-7e1d4c1624f9.md) | 개발 검증: cargo.EXE | 5d086db2220ac07d654595a9fc54b2215f82eff5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052535-52e857b11938.md) | 개발 검증: cargo.EXE | 5d086db2220ac07d654595a9fc54b2215f82eff5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052558-9cb356f4b838.md) | 개발 검증: cargo.EXE | 5d086db2220ac07d654595a9fc54b2215f82eff5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T052615-cf0b84cdc114.md) | 전역 한국어와 다른 프로젝트 영어 선택의 취소·조회·재개 유지 | 5d086db2220ac07d654595a9fc54b2215f82eff5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T053429-e50c3429e3b9.md) | 프로젝트 실제 종료 지점별 무입력 재개와 중복 적용 방지 | 6da32231617ba2382b4f7a51c6945eba4660231d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T053842-7eebabc1e0f9.md) | 기존 프로젝트의 사용자 수정 보존과 설정 검증 경로 확인 | 551d75c5ecd92fe5a592a870d55b941a4eff8531 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T054405-55f026c9aa4f.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T054541-4c0cfde5eec6.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T054704-332265f9ff14.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T054752-dbfca93a090a.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T054817-c1b7dc6b58b5.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T054911-c620b8b57694.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055015-0141200cf032.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055039-c908d690a0e0.md) | 개발 검증: cargo.EXE | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055052-174fc630bb75.md) | 보존된 공유 지침·개별 지침·기능 검증과 일반 재설정 덮어쓰기 거부 | 2df79f1b92b1e56ec98bc98e77c10395771647ad | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T055649-e7f7e894084b.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055740-3410e0d9229a.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055848-a6b3dacf8f66.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T055920-cb31a155f92c.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T060101-14b8cb5b9a4b.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T060147-a925591300ef.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T060235-7190b9ad87b3.md) | 개발 검증: cargo.EXE | c5f79982b10403deb698f97ee72c3a916f7dc83f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T061034-c2d0bd564c41.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T061531-79d9551305f8.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T061941-896b943c659d.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T062151-706b9fd64cbb.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T062250-0318681cc3d7.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T062445-440fa3994a50.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T062649-eaa813b419e8.md) | 개발 검증: cargo.EXE | aed9fe837c4bc1ade32114a4422146704ce37fa4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T063324-de3b69dc5e97.md) | 개발 검증: cargo.EXE | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T063508-624f9c5d478d.md) | 개발 검증: cargo.EXE | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T063926-a70f37aad759.md) | 개발 검증: cargo.EXE | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T064009-3009c7e4c50d.md) | 개발 검증: cargo.EXE | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T064031-5386d796051a.md) | 기존 프로젝트 사용자 수정 보존·v1답안 재설정·중단 재개 | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T064710-1009a2c8a511.md) | 개발 검증: cargo.EXE | d23d185d32b09fa122ce759392df3caff93f942f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T064955-fc75122bc49d.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065102-fddd83af1443.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T065313-ce4d20085e3a.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065332-475f562d67e6.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065514-944e364abe43.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065626-d12669e66b2f.md) | 기존 역할 정의의 명시 동의·거부 후 재검토·중단 재개와 본문 보존 | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065818-91ded1727cd1.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T065936-f7eafb14df78.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T070018-ecf6d4a6aaa0.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T070140-60bf9d1ee632.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T070254-e61a7b4e2a10.md) | 개발 검증: cargo.EXE | f1985f634aa5a607cb10cf44a1ae2b8f54bacc39 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T070514-45dc6474d1d3.md) | 개발 검증: cargo.EXE | cf40b290bb63a13f7ca79966e4fa9c2f32f90652 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071034-efa553d68ce6.md) | 개발 검증: cargo.EXE | a3c278da3e7773761b87eb74dd5da4418dc5bd7d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071144-2c96e379f11e.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071327-2a7c26b3b455.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T071509-e8db38f83e0d.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071546-d16f5b152193.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T071658-ca8922b63ac9.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071718-b103e0672e07.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071739-165fd407ecb5.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T071756-7e6e032a060d.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T072006-755296e08fab.md) | 맞춤 프로젝트의 비활성 기준0·경로 재입력·지식 공유 범위 결합 | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T072119-f9843fc17da3.md) | 개발 검증: cargo.EXE | 3f078e2c0927896c78a840c489c72fbc3e1b38aa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T072919-d6fc7904edd1.md) | 공개0.13.1 원본 프로젝트의 개발0.14 보존 재설정 | ad1cef47bfaf75f0fc9bc6d3839e355c07b3e336 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T074605-784f7b3ff163.md) | 개발 검증: cargo.EXE | 263ccc813f48474faa2be9116950f27f1e099d9e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T074739-b6fc0c3ddfaa.md) | 개발 검증: cargo.EXE | 263ccc813f48474faa2be9116950f27f1e099d9e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T074933-45278555ee8b.md) | 개발 검증: cargo.EXE | 263ccc813f48474faa2be9116950f27f1e099d9e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T075255-cf46fbf071ef.md) | 개발 검증: cargo.EXE | 5eadd942f8e88747866171add59e84638b7981e3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T075429-be5634ade2a1.md) | 개발 검증: cargo.EXE | 5eadd942f8e88747866171add59e84638b7981e3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T075525-656fba821ba1.md) | 개발 검증: cargo.EXE | 5eadd942f8e88747866171add59e84638b7981e3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T075545-07d7f667f783.md) | 개발 검증: cargo.EXE | 5eadd942f8e88747866171add59e84638b7981e3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T075650-94272ee5f972.md) | 개발 검증: cargo.EXE | 5eadd942f8e88747866171add59e84638b7981e3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T080204-f638bf107e9e.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T080248-bbd0cb0e31e4.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T080539-63d781ab6c61.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081347-592aa2d857af.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T081423-541163b3f25f.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081502-cc3689e60dc8.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T081555-0e8db58134f5.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081622-23db897c5b00.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081639-e9ac4d05b4b0.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081650-d7b163b738ed.md) | 선택 기능·지원 후크의 별도 동의와 취소·중단 복구·해제 | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081808-b9837f140a79.md) | 개발 검증: cargo.EXE | 0bbfd614b6ec2cb1be10b747f7eb4135abb12120 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081914-ed0777881794.md) | 개발 검증: cargo.EXE | c32a658c0084bd94e2038bf87f095eea8d829b5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T081954-d45b89304fbc.md) | 개발 검증: cargo.EXE | c32a658c0084bd94e2038bf87f095eea8d829b5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082339-b806bf500904.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082435-5917e9692030.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082452-ec8e8e37ac30.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T082501-905c1dfb8cb0.md) | 파일과 AI 설정의 확정 의도·실제 종료·재실행 복구 | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082558-0b36b4af48d0.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082638-b6db6d1e401a.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082647-425f461586e5.md) | 파일과 AI 설정의 확정 의도·실제 종료·재실행 복구 | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082727-dc7e12d92205.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T082802-4d510f6219e9.md) | 개발 검증: uv.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T083005-ac57ace86eb0.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083019-8b9f5e9ac9f5.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083053-849d6e44120c.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T083058-fd6c4d2c905d.md) | 파일과 AI 설정의 확정 의도·실제 종료·재실행 복구 | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083117-bff53facbe26.md) | 파일과 AI 설정의 확정 의도·실제 종료·재실행 복구 | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083148-b8f4a96ba68a.md) | 개발 검증: cargo.EXE | 4abf98a38c477e11732887041a6926beff0357d5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083533-b5204bbbb4e2.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083701-d01a9b5a430c.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083800-2e9977894d30.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T083910-40dcbf403cca.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T084001-09b1c52d55f3.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T084007-380b32162794.md) | 공개0.13.1 전역 답안의 v2 정규화·보호 보존·파일 중단 복구 | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T084047-99ea36d04022.md) | 공개0.13.1 전역 답안의 v2 정규화·보호 보존·파일 중단 복구 | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T084153-6a57380b6bb4.md) | 개발 검증: cargo.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T084218-e162efb95467.md) | 개발 검증: uv.EXE | d07c0cfb8911d582ae10f4636996bc19ab97dcea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T084940-dda818d0be59.md) | 개발 검증: cargo.EXE | caf133fd0ae38646bb7c15b689fa7b22a60c8e66 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T085059-948aaf27359c.md) | 개발 검증: cargo.EXE | caf133fd0ae38646bb7c15b689fa7b22a60c8e66 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T085348-48b978cb51f3.md) | Linux 격리 컨테이너의 설정 복구 기록 0600 권한과 중단 복구 | caf133fd0ae38646bb7c15b689fa7b22a60c8e66 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T085830-36211d9fd41e.md) | Linux 격리 컨테이너의 설정 복구 검사: projection_journal | caf133fd0ae38646bb7c15b689fa7b22a60c8e66 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T090118-c2e50b763215.md) | Linux 격리 컨테이너의 설정 복구 검사: user_setup와 비공개 기록 | 4c02eaa06c7c73030d021a071fd496655b43e42b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T090726-a46dc6317564.md) | 개발 검증: cargo.EXE | 34d9d5e657bc0359abef9d37e6d9ed81d8bc3b80 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T090818-5cc3df4c2042.md) | Linux 격리 컨테이너의 설정 복구 검사: projection_journal | 34d9d5e657bc0359abef9d37e6d9ed81d8bc3b80 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T090953-ebd074ed8035.md) | 개발 검증: cargo.EXE | 34d9d5e657bc0359abef9d37e6d9ed81d8bc3b80 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T091539-33ad8f8fc0b6.md) | 개발 검증: cargo.EXE | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T091712-0cd6f7e19056.md) | 개발 검증: cargo.EXE | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T091948-ef43306945fc.md) | 개발 검증: cargo.EXE | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T092127-0dcb752cb9c2.md) | 개발 검증: cargo.EXE | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T092146-620d888176d4.md) | 개발 검증: cargo.EXE | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T092158-254022c69b9e.md) | 전역 알림의 공개 범위·전송 항목·해제 대화 | 91f04ab6f0e94d0d92bb46c776e59f7e8c82876b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T092810-25ce42e30f27.md) | 개발 검증: cargo.EXE | 5e87ba662b39312b6a57f0caeb54fa34dc61143e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T092938-30de83526166.md) | 개발 검증: cargo.EXE | 5e87ba662b39312b6a57f0caeb54fa34dc61143e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T093037-b54db30e1732.md) | 개발 검증: cargo.EXE | 5e87ba662b39312b6a57f0caeb54fa34dc61143e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T093149-c7ad2993e50d.md) | 개발 검증: cargo.EXE | 5e87ba662b39312b6a57f0caeb54fa34dc61143e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T093158-2e267fac8511.md) | 배경 설명 추가·제거 미리보기·취소 재개와 출처 보존 | 5e87ba662b39312b6a57f0caeb54fa34dc61143e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T094629-b57b02245728.md) | 개발 검증: cargo.EXE | 7bf48b19e08934f793856a41539e5d4fa8df0635 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T094703-0084c9e9943c.md) | 개발 검증: cargo.EXE | 7bf48b19e08934f793856a41539e5d4fa8df0635 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T094852-b77411b2ca89.md) | 개발 검증: cargo.EXE | 7bf48b19e08934f793856a41539e5d4fa8df0635 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T095235-d08cbffc8d3e.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T095456-af36af67db9f.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T095726-bc14e92ba0bb.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T095849-a2ab7279c93c.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T095952-27fa24d29df3.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T100015-3e3f68b6e2f2.md) | 개발 검증: cargo.EXE | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T100030-820e95f0ddca.md) | 전역 프로젝트별 잔여량 기준의 등록 확인과 재입력 | 39a6f77d420eebb43e547db3d2d61b33a18f252b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T102219-8a2f9e3c5968.md) | 개발 검증: cargo.EXE | b4a2bcdcf7da48803786a0c1ede34d232f78c547 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T103328-13c97b30fb23.md) | 개발 검증: cargo.EXE | b4a2bcdcf7da48803786a0c1ede34d232f78c547 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T103432-16ebd189dafa.md) | 개발 검증: cargo.EXE | b4a2bcdcf7da48803786a0c1ede34d232f78c547 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T103458-a860bf2bf722.md) | 개발 검증: cargo.EXE | b4a2bcdcf7da48803786a0c1ede34d232f78c547 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T103616-52735532e18a.md) | 개발 검증: cargo.EXE | b4a2bcdcf7da48803786a0c1ede34d232f78c547 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T110447-6832eb0f7111.md) | 개발 검증: cargo.EXE | 447e5698267a01e299838cd7e473f766c327bc9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T111420-6220350206d4.md) | 개발 검증: cargo.EXE | 447e5698267a01e299838cd7e473f766c327bc9d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T112330-85273ec8c7e0.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T113241-65a8367a18d9.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T113959-97eda8eaf497.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T114408-d4545c336090.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T115522-138ba876bd00.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T115548-eb89e4ad1ac8.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T115627-ad58e2b9297a.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T115820-429e41d02657.md) | 위키 해제의 실제 종료·색인 원문 복원·같은 명령 재개 | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T120643-0a75c25997b1.md) | 위키 해제의 실제 종료·색인 원문 복원·같은 명령 재개 | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T120856-07fa794a7ffa.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T121048-fb41fde79270.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T121058-ea25c19e0311.md) | 위키 해제의 실제 종료·색인 원문 복원·같은 명령 재개 | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T123357-6b1f1bcf86eb.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T123413-975626ee8d58.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T123838-4eefd0d4ac3e.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T124223-64a57ccafed2.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T124544-0cb475bcfdc9.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T124611-daf7ee100595.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T124746-b23be2b08096.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T124804-d0ec001eccf9.md) | 개발 검증: cargo.EXE | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T124923-986272d6c741.md) | 위키 해제의 실제 종료·색인 원문 복원·같은 명령 재개 | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T125034-8c382de4526c.md) | Linux 격리 컨테이너의 설정 복구 검사: knowledge_lock | 48a2ddeb6ea8c26717fd668bfe6d8688ac971aa3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T125326-b8b24cc3686a.md) | Linux 격리 컨테이너의 설정 복구 검사: index_removal | 2081dfb3865813daa0f0ba12424fdcb870321208 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T125504-b2f10af88625.md) | 개발 검증: cargo.EXE | 2081dfb3865813daa0f0ba12424fdcb870321208 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T125643-0bdd88b51a2c.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T125915-1feb36491cd6.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T130050-1385812cc0a5.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T130201-1464111e26ff.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T130259-1a71bda36ea5.md) | 전역 설정 변경에서 접근 불가 프로젝트의 기존 색인 보존 | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T130342-54a21e342add.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T131235-02878c78377b.md) | 개발 검증: cargo.EXE | a2730729cb9fe507d1ee1056b1ba805bfa0812a7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T134234-f16cc789b771.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T134257-9d19b85bea8d.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T134336-d1e8c00c4d77.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T134420-eadceed9fc89.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T134436-aeaa9975a822.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T134513-7fb816fa957b.md) | 개발 검증: cargo.EXE | 4125be076f2624ce7f0f7987bf14abb06cf3a64f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T134752-e0e62c57c875.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T134943-13222bb92d27.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135034-488beeb44ca5.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135106-13465c6c9151.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135145-64e1af3536f4.md) | 위키 재활성화의 별도 동의·거부·종료·파일 입력·재개 | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135402-8484313b9740.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135536-db7f91a34668.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135627-44e7814e5520.md) | 개발 검증: cargo.EXE | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T135637-9ea43d3517c8.md) | 위키 재활성화의 별도 동의·거부·종료·파일 입력·재개 | 89b1e9da0aef9b82d064263cb2b79b772937a8c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T140050-b60bb789d390.md) | 개발 검증: cargo.EXE | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T140235-6c70cb2ce06c.md) | 개발 검증: cargo.EXE | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T140340-82c9ab87a6fd.md) | 개발 검증: cargo.EXE | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T140355-6eb4a90ab56f.md) | 개발 검증: cargo.EXE | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T140453-07934dfca0ff.md) | 승인된 색인 게시의 여섯 종료 지점과 동일 설정 재개 | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T140728-da61912093f5.md) | 승인된 색인 게시의 여섯 종료 지점과 동일 설정 재개 | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T140947-2c2863dff89e.md) | 개발 검증: cargo.EXE | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T141025-67f161bc42c4.md) | 일반 답안 파일의 명시 색인 범위 전달과 반복 실행 | f19cbea1ea278194c03cae745acff462125b2a3b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T141133-9a9a8288bfeb.md) | 승인된 색인 게시의 여섯 종료 지점과 동일 설정 재개 | 01c4b1d53d8a54995304efd39f8682da1186df9f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T141334-a4f7806fcae0.md) | Linux 격리 컨테이너의 설정 복구 검사: setup_rebuild | 01c4b1d53d8a54995304efd39f8682da1186df9f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T142032-6f6dac566ee5.md) | 개발 검증: cargo.EXE | c76b07799f30368d8550599d58cc39abaea07527 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T142218-cc701d9f7e82.md) | 개발 검증: cargo.EXE | c76b07799f30368d8550599d58cc39abaea07527 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T142334-ecabf7b847fe.md) | 개발 검증: cargo.EXE | c76b07799f30368d8550599d58cc39abaea07527 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T142400-aa93bd9bda3a.md) | 개발 검증: cargo.EXE | c76b07799f30368d8550599d58cc39abaea07527 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T142617-89adc2baa125.md) | 개발 검증: cargo.EXE | c76b07799f30368d8550599d58cc39abaea07527 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T143530-c4f5ddffdc9e.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T143733-87ef8e21746b.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T143824-1263a9fbb47e.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T144132-4e0888ea976f.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T144628-8931178577f3.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145007-0004dde8958d.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145052-53cfd99f9d5f.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145322-431fb005ee60.md) | 일반 v2 보호 해제의 격리 예약 제거·대역 감시 종료·중단 재개 | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145516-13f68ed3b446.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145744-ae14967b56a9.md) | 개발 검증: cargo.EXE | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T145919-0e0b2be74fed.md) | Linux 격리 컨테이너의 설정 복구 검사: user_setup | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T150244-6d34b188f298.md) | 승인된 색인 게시의 여섯 종료 지점과 동일 설정 재개 | d58b785f69a8a118c4e0aacebfbaad173b382b0a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T154056-375ae19d85ba.md) | 개발 검증: cargo.EXE | 0e3041748f751294ff8b780de5e41c98df9a595b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T154624-5377cbeec81a.md) | 개발 검증: cargo.EXE | 0e3041748f751294ff8b780de5e41c98df9a595b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T154851-153e4de64353.md) | 설정 조회의 저장 선택·확인된 종료·손상 상태 분리와 무쓰기 | 0e3041748f751294ff8b780de5e41c98df9a595b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T154947-c8dc96ae6533.md) | 개발 검증: cargo.EXE | 0e3041748f751294ff8b780de5e41c98df9a595b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T155456-774b9e4a2f1c.md) | 개발 검증: cargo.EXE | 0e3041748f751294ff8b780de5e41c98df9a595b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T161354-e2d0bc157a92.md) | 개발 검증: cargo.EXE | 27c9d6c276a4fc379135514a48b27bd36870652e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T162246-bab1b381be45.md) | 개발 검증: cargo.EXE | 27c9d6c276a4fc379135514a48b27bd36870652e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T162354-23aa6b569133.md) | 개발 검증: cargo.EXE | 27c9d6c276a4fc379135514a48b27bd36870652e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T170749-2577a8bff438.md) | 개발 검증: cargo.EXE | bae919808c4d55f2f4d2565976d9b44b2d0be989 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T171041-76b0c086588a.md) | 개발 검증: cargo.EXE | bae919808c4d55f2f4d2565976d9b44b2d0be989 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T171427-aa76e1767f52.md) | 개발 검증: cargo.EXE | bae919808c4d55f2f4d2565976d9b44b2d0be989 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T172438-075d2d28ebba.md) | 개발 검증: cargo.EXE | 960d3940a26d0e21cf8b7a82757ec41e463c7ae4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T172755-3c5dc660c594.md) | 개발 검증: cargo.EXE | 960d3940a26d0e21cf8b7a82757ec41e463c7ae4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T172904-98f8fc9cef8c.md) | 개발 검증: cargo.EXE | 960d3940a26d0e21cf8b7a82757ec41e463c7ae4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T173243-8b9acece0679.md) | 개발 검증: cargo.EXE | 960d3940a26d0e21cf8b7a82757ec41e463c7ae4 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T180744-041b4a0e8435.md) | 개발 검증: uv.EXE | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T181046-4c62255d0365.md) | 감시 예약의 현재 사용자 소유 확인과 비활성 예약 시작 거부 | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T181422-ecdbf28f5182.md) | 개발 검증: cargo.EXE | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T181608-fbac9c9e4664.md) | 감시 예약의 현재 사용자 소유 확인과 비활성 예약 시작 거부 | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T181632-dde2fc8e8f92.md) | 개발 검증: uv.EXE | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T181649-37f11bfa762a.md) | 감시 예약의 현재 사용자 소유 확인과 비활성 예약 시작 거부 | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T181708-a4cc682c61cd.md) | 개발 검증: cargo.EXE | 16d3aba9a2fe751b58093a8e4ddb57b15777ea5d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T184150-afb188df25b9.md) | 개발 검증: cargo.EXE | 1b09c32848d84904dc619b9674a12c93b800a118 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T184813-6c12eb2d0f2a.md) | 개발 검증: cargo.EXE | 1b09c32848d84904dc619b9674a12c93b800a118 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T185328-f05623d066f1.md) | 개발 검증: cargo.EXE | 1b09c32848d84904dc619b9674a12c93b800a118 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T185602-1e3ed5a55cf9.md) | 개발 검증: cargo.EXE | 1b09c32848d84904dc619b9674a12c93b800a118 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T190110-c4e4457fcc5e.md) | 개발 검증: cargo.EXE | 1b09c32848d84904dc619b9674a12c93b800a118 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T192525-a5d0aae7acfb.md) | M00 CLI 시험 격리의 경로와 명령 거부 검사 | fe68e611056395b9b0ced3b29e5f019cd63bee8d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T192546-e794eda20477.md) | M00 개인 경로 명령 및 Windows junction 탈출 거부 | fe68e611056395b9b0ced3b29e5f019cd63bee8d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261024T192555-6c216aa09f0d.md) | M00 격리 환경의 실제 개발 CLI 설명 조회 | fe68e611056395b9b0ced3b29e5f019cd63bee8d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261024T192614-ea174782ecfc.md) | M00 실제 CLI 설명 조회의 격리 호환 및 경로 회귀 | fe68e611056395b9b0ced3b29e5f019cd63bee8d | Windows-11-10.0.26300-SP0 |
