@@ -297,7 +297,14 @@ pub fn load_project_registry_metadata(user_root: &Path) -> Result<ProjectRegistr
     let Some(bytes) = read_project_registry_bytes(user_root)? else {
         return Ok(ProjectRegistry { schema_version: 1, projects: Vec::new() });
     };
-    let registry: ProjectRegistry = serde_yaml::from_slice(&bytes)
+    parse_registry_metadata(user_root, &bytes)
+}
+
+fn parse_registry_metadata(user_root: &Path, bytes: &[u8]) -> Result<ProjectRegistry, WikiError> {
+    if bytes.len() > MAX_REGISTRY_BYTES {
+        return Err(WikiError::InvalidInput("project registry exceeds the 1 MiB limit".into()));
+    }
+    let registry: ProjectRegistry = serde_yaml::from_slice(bytes)
         .map_err(|error| WikiError::InvalidInput(format!("invalid project registry: {error}")))?;
     validate_registry_metadata(user_root, &registry)?;
     Ok(registry)
@@ -348,13 +355,31 @@ fn read_project_registry_bytes(user_root: &Path) -> Result<Option<Vec<u8>>, Wiki
 /// Returns an error for an unsafe user root, malformed existing registry, concurrent
 /// replacement, or failed activation.
 pub fn ensure_project_registry(user_root: &Path) -> Result<ProjectRegistryOutcome, WikiError> {
+    ensure_project_registry_with_scope(user_root, true)
+}
+
+/// Initialize missing registration metadata without inspecting registered project directories.
+///
+/// # Errors
+/// Rejects unsafe storage, malformed metadata, concurrent writes, or failed publication.
+pub fn ensure_project_registry_metadata(user_root: &Path, root: &Dir) -> Result<ProjectRegistryOutcome, WikiError> {
+    RagStore::open_bound(user_root, root)?;
+    ensure_project_registry_on_root(user_root, root, false)
+}
+
+fn ensure_project_registry_with_scope(user_root: &Path, inspect_projects: bool) -> Result<ProjectRegistryOutcome, WikiError> {
     validate_absolute_root(user_root, "user root")?;
     let root = Dir::open_ambient_dir(user_root, ambient_authority())
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
-    let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
-    let prior = crate::read_capability_optional(&root, Path::new(PROJECT_REGISTRY_RELATIVE))?;
+    ensure_project_registry_on_root(user_root, &root, inspect_projects)
+}
+
+fn ensure_project_registry_on_root(user_root: &Path, root: &Dir, inspect_projects: bool) -> Result<ProjectRegistryOutcome, WikiError> {
+    let _lock = crate::CapabilityKnowledgeLock::acquire(root)?;
+    let prior = crate::read_capability_optional(root, Path::new(PROJECT_REGISTRY_RELATIVE))?;
     if let Some(bytes) = prior.as_deref() {
-        let registry = validate_project_registry_bytes(user_root, bytes)?;
+        let registry = if inspect_projects { validate_project_registry_bytes(user_root, bytes)? }
+            else { parse_registry_metadata(user_root, bytes)? };
         return Ok(ProjectRegistryOutcome {
             changed_paths: Vec::new(),
             project_count: registry.projects.len(),
@@ -370,11 +395,14 @@ pub fn ensure_project_registry(user_root: &Path) -> Result<ProjectRegistryOutcom
         .into_bytes();
     let registry_digest = sha256_digest(&bytes);
     let mut snapshots = [crate::CapabilityFileSnapshot::capture(
-        &root,
+        root,
         Path::new(PROJECT_REGISTRY_RELATIVE),
     )?];
-    let changed = crate::transactional_capability(&root, &mut snapshots, |snapshots| {
-        snapshots[0].install_staged(&root, &bytes)
+    if !matches!(snapshots[0].original, crate::CapabilityFileState::Missing) {
+        return Err(WikiError::Conflict("project registration appeared during initialization; preserved".into()));
+    }
+    let changed = crate::transactional_capability(root, &mut snapshots, |snapshots| {
+        snapshots[0].install_staged(root, &bytes)
     })?;
     Ok(ProjectRegistryOutcome {
         changed_paths: if changed {
@@ -1938,6 +1966,9 @@ mod tests {
         let bytes = serde_yaml::to_string(&registry).unwrap().into_bytes();
         fs::write(&path, &bytes).unwrap();
         assert_eq!(load_project_registry_metadata(&user).unwrap(), registry);
+        let pinned = Dir::open_ambient_dir(&user, ambient_authority()).unwrap();
+        assert!(ensure_project_registry_metadata(&user, &pinned).unwrap().changed_paths.is_empty());
+        assert!(ensure_project_registry(&user).is_err());
         assert!(load_project_registry(&user).is_err());
         assert!(rebuild_shared_index(&user).is_err());
         assert_eq!(fs::read(path).unwrap(), bytes);
@@ -1962,6 +1993,17 @@ mod tests {
             assert!(load_project_registry_metadata(&user).is_err());
             assert_eq!(fs::read(&path).unwrap(), bytes);
         }
+    }
+
+    #[test]
+    fn metadata_initialization_uses_the_already_pinned_setup_directory() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        let pinned = Dir::open_ambient_dir(first.path(), ambient_authority()).unwrap();
+        assert!(ensure_project_registry_metadata(second.path(), &pinned).is_err());
+        assert!(!second.path().join(".hive").exists());
+        assert_eq!(ensure_project_registry_metadata(first.path(), &pinned).unwrap().project_count, 0);
+        assert!(first.path().join(PROJECT_REGISTRY_RELATIVE).is_file());
     }
     use std::fs;
 

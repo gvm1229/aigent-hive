@@ -2560,14 +2560,19 @@ fn rebuild_root_index(arguments: &UserArguments, transaction: &mut UserTransacti
     if setup.wiki.backend == crate::user_setup::WikiBackend::Notion {
         return Ok(());
     }
-    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
-        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+    prepare_user_root_index(arguments)
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
-                "shared knowledge index rebuild failed after installation: {error}"
+                "user-scope knowledge index preparation failed after installation: {error}"
             ))
         })
+}
+
+fn prepare_user_root_index(arguments: &UserArguments) -> Result<hive_wiki::store::StoreCommit, hive_wiki::WikiError> {
+    let store = hive_wiki::store::RagStore::open_bound(&arguments.user_root, &arguments.root_cap)?;
+    hive_wiki::shared::ensure_project_registry_metadata(&arguments.user_root, &arguments.root_cap)?;
+    store.ensure_user_setup_index()
 }
 
 fn validate_applied_bytes(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
@@ -5803,8 +5808,7 @@ fn reconcile_root_index_after_rollback(
     if !index_existed {
         return remove_disposable_root_index(&arguments.root_cap);
     }
-    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
-        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+    prepare_user_root_index(arguments)
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
