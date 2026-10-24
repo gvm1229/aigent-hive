@@ -77,6 +77,8 @@ pub(super) struct SetupProgress {
     pub extras_approval_digest: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub index_rebuild_scope: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor_stop: Option<crate::usage_monitor::SavedMonitorChoice>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -248,6 +250,7 @@ impl ProgressStore {
             extras_draft: None,
             extras_approval_digest: None,
             index_rebuild_scope: None,
+            monitor_stop: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -379,6 +382,7 @@ impl ProgressStore {
         complete.extras_draft = None;
         complete.extras_approval_digest = None;
         complete.index_rebuild_scope = None;
+        complete.monitor_stop = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -466,6 +470,11 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
+        if progress.monitor_stop.as_ref().is_some_and(|choice|
+            self.binding.scope != PreferenceScope::User || !choice.configured
+                || !valid_hash(&choice.config_digest) || progress.legacy_migration.is_some()) {
+            return Err(SetupError::Verification("invalid setup monitor stop binding".into()));
+        }
         if progress.index_rebuild_scope.as_ref().is_some_and(|digest|
             self.binding.scope != PreferenceScope::User || !valid_hash(digest)
                 || progress.answers["wiki"]["enabled"] != true) {

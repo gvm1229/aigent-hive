@@ -11,6 +11,7 @@ mod file_input;
 mod file_apply;
 mod file_policy;
 mod index_rebuild;
+mod monitor_stop;
 mod project;
 pub(in crate::user_setup) use project::run as run_project;
 pub(in crate::user_setup) use file_input::{file_options, execute as execute_file, FileOptions};

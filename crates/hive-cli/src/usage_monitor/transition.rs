@@ -78,6 +78,24 @@ pub(super) fn disable(
     quiesce(root, call, timeout, None).map(|stopped| stopped.result.clone())
 }
 
+pub(super) fn verify_stopped(root: &PinnedTarget) -> Result<(), AdapterError> {
+    if authenticated_config(root)?.is_none() {
+        return Err(error("monitor stop configuration is missing"));
+    }
+    let _control = lock(root, "control.lock")?;
+    let _controller = lock(root, "controller.lock")?;
+    let config = authenticated_config(root)?.ok_or_else(|| error("monitor stop configuration is missing"))?;
+    let journal: Value = load(root, JOURNAL)?.ok_or_else(|| error("monitor stop receipt is missing"))?;
+    let bytes = root.read_required(std::path::Path::new(CONFIG), 65536)?;
+    if config.enabled || journal["schema_version"] != 1 || journal["operation"] != "disable"
+        || journal["phase"] != "complete" || journal["completed_at"].as_u64().is_none()
+        || journal["after_digest"] != sha256_digest(&bytes)
+        || super::serialize(&config)? != bytes {
+        return Err(error("monitor stop is incomplete or its saved configuration changed"));
+    }
+    root.verify_current()
+}
+
 pub(crate) struct StoppedReader {
     _control: std::fs::File,
     _controller: std::fs::File,
@@ -357,6 +375,22 @@ mod tests {
             load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
             "incomplete"
         );
+        assert!(verify_stopped(&root).is_err());
+    }
+
+    #[test]
+    fn setup_stop_verification_requires_a_matching_receipt_and_no_live_controller() {
+        let (_temp, root) = fixture();
+        assert!(verify_stopped(&root).is_err());
+        disable(&root, |_, _| Ok(json!({"removed":true})), Duration::ZERO).unwrap();
+        verify_stopped(&root).unwrap();
+        let lease = lock(&root, "controller.lock").unwrap();
+        assert!(verify_stopped(&root).is_err());
+        drop(lease);
+        let mut journal: Value = load(&root, JOURNAL).unwrap().unwrap();
+        journal["after_digest"] = json!(sha256_digest(b"another configuration"));
+        write(&root, JOURNAL, &journal).unwrap();
+        assert!(verify_stopped(&root).is_err());
     }
 
     #[test]

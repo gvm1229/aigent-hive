@@ -761,6 +761,11 @@ fn preview_apply<R: BufRead, W: Write>(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    super::monitor_stop::bind(root, &mut progress.record)?;
+    if progress.monitor_stop.is_some() {
+        terminal.say("Hive가 등록한 상시 감시를 해제하고 종료를 확인합니다. 지난 사용량 기록은 보존합니다.",
+            "Remove the owned Hive monitor registration and confirm that it stopped. Keep usage history.")?;
+    }
     if !super::index_rebuild::collect(root, root_cap, store, progress, terminal)? {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }

@@ -155,14 +155,14 @@ pub(super) fn bind_file(
     Ok(())
 }
 
-pub(super) fn apply(arguments: &Arguments, progress: &SetupProgress) -> Result<(), SetupError> {
+pub(super) fn preflight(arguments: &Arguments, progress: &SetupProgress) -> Result<(), SetupError> {
     if progress.answers["wiki"]["enabled"] != true {
         return Ok(());
     }
     let store = open(&arguments.user_root, &arguments.root_cap)?;
     if let Some(digest) = &progress.index_rebuild_scope {
         store
-            .rebuild_setup_index(digest)
+            .validate_setup_index_scope(digest)
             .map_err(|error| SetupError::Conflict(error.to_string()))?;
     } else if store
         .preview_setup_index_rebuild()
@@ -172,6 +172,16 @@ pub(super) fn apply(arguments: &Arguments, progress: &SetupProgress) -> Result<(
         return Err(SetupError::Conflict(
             "index rebuild has no approved source scope".into(),
         ));
+    }
+    Ok(())
+}
+
+pub(super) fn apply(arguments: &Arguments, progress: &SetupProgress) -> Result<(), SetupError> {
+    preflight(arguments, progress)?;
+    if let Some(digest) = progress.index_rebuild_scope.as_ref()
+        .filter(|_| progress.answers["wiki"]["enabled"] == true) {
+        open(&arguments.user_root, &arguments.root_cap)?.rebuild_setup_index(digest)
+            .map_err(|error| SetupError::Conflict(error.to_string()))?;
     }
     Ok(())
 }

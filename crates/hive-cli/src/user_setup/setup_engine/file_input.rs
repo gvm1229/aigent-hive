@@ -130,6 +130,7 @@ pub(in crate::user_setup) fn execute(
     let mut result = user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
     if arguments.mode == SetupMode::DryRun {
         super::index_rebuild::describe(arguments, &config, &mut result)?;
+        super::monitor_stop::describe(arguments, &config, &mut result)?;
     }
     Ok(result)
 }

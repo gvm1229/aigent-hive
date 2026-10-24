@@ -228,6 +228,10 @@ pub(crate) fn quiesce_for_setup(
         Some(&choice.config_digest), Some(operation_id))
 }
 
+pub(crate) fn verify_stopped_for_setup(user_root: &Path) -> Result<(), AdapterError> {
+    transition::verify_stopped(&PinnedTarget::open_usage(user_root)?)
+}
+
 pub(crate) fn threshold_already_handled(
     root: &PinnedTarget,
     policy: &crate::usage_control::MonitorPolicy,

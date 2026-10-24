@@ -30,16 +30,16 @@ impl RagStore {
     /// Check an operation's source approval without reading documents or rebuilding an index.
     ///
     /// # Errors
-    /// Rejects dirty state, invalid metadata, or a changed source scope.
+    /// Rejects unrelated dirty state, invalid metadata, or a changed source scope.
     pub fn validate_setup_index_scope(&self, approved_digest: &str) -> Result<(), WikiError> {
         let _lock = self.acquire_authorization_lock()?;
-        self.reject_dirty_mutation()?;
-        let (preview, _) = self.setup_rebuild_scope()?;
+        let (preview, scope) = self.setup_rebuild_scope()?;
         if preview.scope_digest != approved_digest {
             return Err(WikiError::Conflict(
                 "setup index sources changed after approval".into(),
             ));
         }
+        self.validate_setup_recovery(&scope)?;
         Ok(())
     }
 
@@ -250,11 +250,14 @@ mod tests {
         let journal = root.path().join(RAG_DIRTY_RELATIVE);
         let original = std::fs::read(&journal).unwrap();
         assert!(store.preview_setup_index_rebuild().is_err());
+        store.validate_setup_index_scope(&preview.scope_digest).unwrap();
+        assert_eq!(std::fs::read(&journal).unwrap(), original);
         let mut wrong: super::super::PersistentDirtyState =
             serde_json::from_slice(&original).unwrap();
         wrong.base_manifest_digest = sha256_digest(b"different lineage");
         let changed = serde_json::to_vec(&wrong).unwrap();
         std::fs::write(&journal, &changed).unwrap();
+        assert!(store.validate_setup_index_scope(&preview.scope_digest).is_err());
         assert!(store.rebuild_setup_index(&preview.scope_digest).is_err());
         assert_eq!(std::fs::read(&journal).unwrap(), changed);
         std::fs::write(&journal, &original).unwrap();

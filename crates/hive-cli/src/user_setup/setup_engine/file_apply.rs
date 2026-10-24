@@ -70,6 +70,7 @@ pub(super) fn apply(
     };
     progress.answers = answers;
     progress.legacy_migration = migration;
+    super::monitor_stop::bind(&arguments.user_root, &mut progress)?;
     super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
     progress.phase = ProgressPhase::Applying;
     store.save(&snapshot, &progress)?;
