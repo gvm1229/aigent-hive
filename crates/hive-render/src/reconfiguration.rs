@@ -18,6 +18,45 @@ pub struct ProjectReconfigurationCandidate {
     pub resolved_owner: String,
 }
 
+/// Fingerprint the exact planned tree after the caller's preserving merge.
+#[must_use]
+pub fn reconfiguration_tree_digest(files: &BTreeMap<PathBuf, Vec<u8>>) -> String {
+    super::digest_tree(files)
+}
+
+/// Validate the merged projection, including preservation receipts, in disposable staging.
+///
+/// # Errors
+/// Rejects unsafe paths, invalid staged configuration, or unbound preserved file content.
+pub fn validate_reconfiguration_tree(
+    request: &SetupRequest<'_>,
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    canonical: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
+    super::ensure_consumer_target(request.target)
+        .map_err(|error| RenderError::Input(error.to_string()))?;
+    let (answers, _) = super::load_answers(request.answers)?;
+    let resolution = super::load_resolution(request.capabilities)?;
+    let desired = super::validate_desired_projection_ownership(canonical, &answers)?;
+    super::validate_owned_paths(canonical.keys(), &desired, None)?;
+    super::validate_owned_paths(files.keys(), &desired, None)?;
+    if files.keys().any(|path| {
+        !canonical.contains_key(path) && path.as_path() != Path::new(super::PROJECT_OVERRIDES_PATH)
+    }) {
+        return Err(RenderError::Conflict(
+            "merged setup contains an unplanned output path".into(),
+        ));
+    }
+    super::activation::stage_and_validate_against(
+        Some(request.target),
+        files,
+        canonical,
+        &answers,
+        &resolution,
+        super::staging_corruption_from_environment(),
+    )
+}
+
 /// Render and stage-validate new project preferences without changing the target.
 /// Existing roles keep their body, assignment, and handoff; changing a definition
 /// still requires the request's explicit role id.

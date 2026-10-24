@@ -41,6 +41,8 @@ const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
 ];
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
 mod skill_merge;
+mod reconfiguration;
+pub(crate) use reconfiguration::prepare as prepare_reconfiguration;
 use skill_merge::SkillMergeRequest;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
 
@@ -397,12 +399,22 @@ fn prepare_with_plugin(
     prepare_with_reviewed_skills(target, plugin, None)
 }
 
-#[allow(clippy::too_many_lines)]
 fn prepare_with_reviewed_skills(
     target: &Dir,
     plugin: &hive_render::skill_delivery::PluginSkillFiles,
     review: Option<&SkillMergeRequest>,
 ) -> Result<UpgradePlan, UpdateError> {
+    prepare_candidate(target, plugin, review, None)
+}
+
+#[allow(clippy::too_many_lines)]
+fn prepare_candidate(
+    target: &Dir,
+    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    review: Option<&SkillMergeRequest>,
+    incoming: Option<hive_render::ProjectUpgradeCandidate>,
+) -> Result<UpgradePlan, UpdateError> {
+    let reconfiguration = incoming.is_some();
     let base = read_base_ledger(target, None)?;
     let candidate = project_upgrade_candidate_in(target).map_err(render_error)?;
     if let Some(ledger) = base
@@ -411,8 +423,10 @@ fn prepare_with_reviewed_skills(
     {
         authenticate_current_base(ledger, &candidate.files)?;
     }
-    let candidate = hive_render::project_upgrade_candidate_with_plugin_in(target, plugin)
-        .map_err(render_error)?;
+    let candidate = match incoming {
+        Some(candidate) => candidate,
+        None => hive_render::project_upgrade_candidate_with_plugin_in(target, plugin).map_err(render_error)?,
+    };
     let reviewed_files = review
         .map(|request| request.validate(target, base.as_ref(), &candidate.files))
         .transpose()?
@@ -489,6 +503,9 @@ fn prepare_with_reviewed_skills(
         } else {
             three_way_merge(Path::new(&path), effective_base, merge_local, incoming)?
         };
+        if reconfiguration && (merged.omitted_incoming_hunks > 0 || (incoming.is_none() && merged.bytes.is_some())) {
+            return Err(UpdateError::Conflict(format!("requested settings conflict with preserved local changes: {path}; original files were not changed")));
+        }
         let final_full = materialize_final(target, &path, merged.bytes.as_deref())?;
         let local_full = read_full_optional(target, Path::new(&path))?;
         let changed = local_full.as_deref() != final_full.as_deref();

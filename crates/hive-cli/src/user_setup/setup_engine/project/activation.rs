@@ -1,5 +1,7 @@
 //! Apply a confirmed render through the existing scoped recovery journal.
-use super::{execute_core, request, write_answers, Options, ProgressStore, SetupError};
+use super::{
+    execute_core, prepare_settings, request, write_answers, Options, ProgressStore, SetupError,
+};
 use crate::user_setup::{
     progress_store::{ProjectContext, SetupProgress},
     AppliedProjection, ProjectionChange,
@@ -121,14 +123,7 @@ pub(super) fn apply(
         crate::user_setup::projection_journal::apply_to(&root, &output, store, progress, || {
             let prepared = match prepared {
                 Some(prepared) => prepared,
-                None => hive_render::prepare_setup(&request(
-                    options,
-                    answers.path(),
-                    caps.path(),
-                    global,
-                    SetupMode::DryRun,
-                ))
-                .map_err(|error| SetupError::Verification(error.to_string()))?,
+                None => prepare_settings(options, answers.path(), caps.path(), global)?,
             };
             if plan_digest(&prepared.outcome)? != context.plan_digest {
                 return Err(SetupError::Conflict(

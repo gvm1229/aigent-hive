@@ -401,6 +401,48 @@ fn execute_core(
         .map_err(|e| SetupError::Verification(e.to_string()))
 }
 
+fn prepare_settings(
+    options: &Options,
+    answers: &Path,
+    caps: &Path,
+    global: &hive_render::GlobalProjectPreferences,
+) -> Result<hive_render::PreparedSetup, SetupError> {
+    let target = crate::user_install::open_user_root_for_setup(&options.target)
+        .map_err(SetupError::Conflict)?;
+    let existing = crate::user_install::read_user_setup_file(
+        &target,
+        Path::new(".hive/setup-answers.yml"),
+        user_setup::MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    let request = request(
+        options,
+        answers,
+        caps,
+        global,
+        hive_render::SetupMode::DryRun,
+    );
+    let mut prepared = if existing.is_some() {
+        crate::project_upgrade::prepare_reconfiguration(&request)
+            .map_err(|error| SetupError::Conflict(error.to_string()))?
+    } else {
+        hive_render::prepare_setup(&request)
+            .map_err(|error| SetupError::Verification(error.to_string()))?
+    };
+    if let Some(preferences) = prepared.outcome.effective_preferences.as_ref() {
+        crate::reconcile_project_registry(
+            &options.root,
+            &options.target,
+            preferences,
+            hive_render::SetupMode::DryRun,
+            global.wiki_enabled,
+            &mut prepared.outcome.changed_paths,
+        )
+        .map_err(|error| SetupError::Verification(error.to_string()))?;
+    }
+    Ok(prepared)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn apply<R: BufRead, W: Write>(
     options: &Options,
@@ -411,17 +453,7 @@ fn apply<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
 ) -> Result<ActionResult, SetupError> {
     let (answers, caps, facts) = prepare_files(options, &progress.answers)?;
-    let preview = execute_core(
-        &request(
-            options,
-            answers.path(),
-            caps.path(),
-            global,
-            hive_render::SetupMode::DryRun,
-        ),
-        &options.root,
-        global,
-    )?;
+    let preview = prepare_settings(options, answers.path(), caps.path(), global)?.outcome;
     terminal.say(
         "프로젝트 설정 미리보기: 선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.",
         "Project preview: write Hive files only in the selected target; preserve user files.",
@@ -459,14 +491,7 @@ fn apply<R: BufRead, W: Write>(
     let answers = write_answers(&progress.answers)?;
     let capability_bytes =
         user_setup::read_bounded_regular(caps.path(), user_setup::MAX_USER_SETUP_BYTES)?;
-    let prepared = hive_render::prepare_setup(&request(
-        options,
-        answers.path(),
-        caps.path(),
-        global,
-        hive_render::SetupMode::DryRun,
-    ))
-    .map_err(|error| SetupError::Verification(error.to_string()))?;
+    let prepared = prepare_settings(options, answers.path(), caps.path(), global)?;
     activation::verify_preview(&preview, &prepared.outcome)?;
     activation::bind_context(progress, global, &capability_bytes, &prepared.outcome)?;
     progress.phase = ProgressPhase::Applying;
