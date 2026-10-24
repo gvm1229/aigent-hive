@@ -202,7 +202,7 @@ impl ProgressStore {
             self.validate_state(path, current)?;
             let hash = sha256_digest(current);
             let mode = host_policy_mode(&self.root, path).map_err(SetupError::Conflict)?;
-            let installed_mode = if cfg!(unix) { Some(0o644) } else { None };
+            let installed_mode = crate::user_install::setup_file_mode(path);
             if !((hash == intent.before && mode == intent.before_mode)
                 || (hash == intent.after && mode == installed_mode))
             {

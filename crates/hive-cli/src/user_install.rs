@@ -1963,7 +1963,7 @@ pub(crate) fn inspect_setup_write_claim(root: &Dir, relative: &Path, limit: u64)
     let staged = read_optional_regular(&claim, Path::new("replacement.bin"), limit)
         .map_err(|error| error.message().to_owned())?;
     if staged.is_some() && file_permissions(&claim, Path::new("replacement.bin"))
-        .map_err(|error| error.message().to_owned())? != installed_file_permissions(false) {
+        .map_err(|error| error.message().to_owned())? != setup_file_permissions(relative) {
         return Err("setup state replacement permissions changed".into());
     }
     Ok(Some(SetupWriteClaim { before, before_mode, staged }))
@@ -1988,12 +1988,22 @@ pub(crate) fn replace_user_setup_file(
                 .expect("existing setup file requires a permission token"),
         }),
         desired,
-        FilePermissions {
-            executable: false,
-            unix_mode: None,
-        },
+        setup_file_permissions(relative),
     )
     .map_err(|error| error.message().to_owned())
+}
+
+fn setup_file_permissions(relative: &Path) -> FilePermissions {
+    let mut permissions = installed_file_permissions(false);
+    if cfg!(unix) && (relative.starts_with(".hive/config/setup-progress")
+        || relative.starts_with(".hive/history/lifecycle")) {
+        permissions.unix_mode = Some(0o600);
+    }
+    permissions
+}
+
+pub(crate) fn setup_file_mode(relative: &Path) -> Option<u32> {
+    setup_file_permissions(relative).unix_mode
 }
 
 /// Reuse the owned-file CAS while retaining the permissions of foreign host settings.
@@ -2053,7 +2063,7 @@ pub(crate) fn recover_user_setup_file(
     if finish_setup_claim(root, relative, before, after, mode).map_err(|error| error.message().to_owned())? {
         return Ok(());
     }
-    recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
+    recover_bound_user_file(root, relative, before, after, mode, setup_file_mode(relative))
 }
 
 /// Restore an interrupted journal removal so its bound payload remains available for replay.
@@ -2064,7 +2074,7 @@ pub(crate) fn recover_user_setup_record(
     after: &str,
     mode: Option<u32>,
 ) -> Result<(), String> {
-    recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
+    recover_bound_user_file(root, relative, before, after, mode, setup_file_mode(relative))
 }
 
 fn finish_setup_claim(root: &Dir, relative: &Path, before: &str, after: &str, mode: Option<u32>) -> Result<bool, InstallError> {
@@ -2077,7 +2087,7 @@ fn finish_setup_claim(root: &Dir, relative: &Path, before: &str, after: &str, mo
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
         Err(error) => return Err(io_internal("open setup recovery claim", relative, error)),
     };
-    if current.is_some() && file_permissions(root, relative)? != installed_file_permissions(false) {
+    if current.is_some() && file_permissions(root, relative)? != setup_file_permissions(relative) {
         return Ok(false);
     }
     let names = claim.entries().map_err(|error| io_internal("read setup recovery claim", relative, error))?
@@ -2087,7 +2097,7 @@ fn finish_setup_claim(root: &Dir, relative: &Path, before: &str, after: &str, mo
         let (digest, permissions) = if name == OsStr::new("claimed.bin") {
             (Some(before), Some(FilePermissions { executable: !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0), unix_mode:mode }))
         } else if name == OsStr::new("replacement.bin") {
-            ((after != "absent").then_some(after), (after != "absent").then(|| installed_file_permissions(false)))
+            ((after != "absent").then_some(after), (after != "absent").then(|| setup_file_permissions(relative)))
         } else { return Err(InstallError::Conflict("setup recovery claim contains an unrecognized object".into())); };
         validate_retained_object(&claim, Path::new(name), digest, permissions, relative, "setup")?;
     }
@@ -2114,9 +2124,9 @@ pub(crate) fn interrupt_setup_replace(root: &Dir, relative: &Path, before: &[u8]
     let permissions = file_permissions(root, relative).unwrap();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = cas_activate_with_barrier(root, relative, Some(ExpectedFile {bytes:before,permissions}), Some(after),
-            FilePermissions {executable:false,unix_mode:None}, Some(&|parent, name, claim| {
+            setup_file_permissions(relative), Some(&|parent, name, claim| {
                 if published {
-                    stage_file(claim, "replacement.bin", after, FilePermissions {executable:false,unix_mode:None}, relative).unwrap();
+                    stage_file(claim, "replacement.bin", after, setup_file_permissions(relative), relative).unwrap();
                     publish_exclusive(claim, OsStr::new("replacement.bin"), parent, name).unwrap();
                 }
                 panic!("injected setup replacement interruption");
@@ -2130,7 +2140,7 @@ pub(crate) fn interrupt_setup_remove(root: &Dir, relative: &Path, before: &[u8])
     let permissions = file_permissions(root, relative).unwrap();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = cas_activate_with_barrier(root, relative, Some(ExpectedFile { bytes:before, permissions }), None,
-            installed_file_permissions(false), Some(&|_, _, _| panic!("injected removal interruption")));
+            setup_file_permissions(relative), Some(&|_, _, _| panic!("injected removal interruption")));
     }));
     assert!(result.is_err());
 }
@@ -2142,7 +2152,7 @@ pub(crate) fn interrupt_setup_creation(root: &Dir, relative: &Path, desired: Opt
     parent.create_dir(&claim_name).unwrap();
     let claim = parent.open_dir_nofollow(&claim_name).unwrap();
     if let Some(bytes) = desired {
-        stage_file(&claim, "replacement.bin", bytes, installed_file_permissions(false), relative).unwrap();
+        stage_file(&claim, "replacement.bin", bytes, setup_file_permissions(relative), relative).unwrap();
         if published { publish_exclusive(&claim, OsStr::new("replacement.bin"), &parent, &name).unwrap(); }
     }
 }
@@ -7147,6 +7157,42 @@ fn unix_seconds() -> Result<u64, InstallError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn private_setup_records_use_owner_only_modes_and_recover_old_public_records() {
+        use std::os::unix::fs::PermissionsExt;
+        for published in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = Dir::open_ambient_dir(temp.path(), ambient_authority()).unwrap();
+            for relative in [".hive/config/setup-progress/recovery/test.projection.json", ".hive/history/lifecycle/test.json"] {
+                let relative = Path::new(relative);
+                replace_user_setup_file(&root, relative, None, Some(b"before")).unwrap();
+                assert_eq!(host_policy_mode(&root, relative).unwrap(), Some(0o600));
+                fs::set_permissions(temp.path().join(relative), fs::Permissions::from_mode(0o644)).unwrap();
+                interrupt_setup_replace(&root, relative, b"before", b"after", published);
+                recover_user_setup_file(&root, relative, &sha256_digest(b"before"), &sha256_digest(b"after"), Some(0o644)).unwrap();
+                let expected = if published { b"after".as_slice() } else { b"before".as_slice() };
+                assert_eq!(read_user_setup_file(&root, relative, 64).unwrap().unwrap(), expected);
+                replace_user_setup_file(&root, relative, Some(expected), Some(b"final")).unwrap();
+                assert_eq!(host_policy_mode(&root, relative).unwrap(), Some(0o600));
+            }
+        }
+        assert_eq!(setup_file_mode(Path::new(".hive/config/harness.toml")), Some(0o644));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn widening_published_recovery_record_permissions_refuses_recovery() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let root = Dir::open_ambient_dir(temp.path(), ambient_authority()).unwrap();
+        let relative = Path::new(".hive/config/setup-progress/user.yml");
+        interrupt_setup_creation(&root, relative, Some(b"pending"), true);
+        fs::set_permissions(temp.path().join(relative), fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(recover_user_setup_file(&root, relative, "absent", &sha256_digest(b"pending"), None).is_err());
+        assert_eq!(fs::read(temp.path().join(relative)).unwrap(), b"pending");
+    }
     use crate::usage::{CommandOutput, QualifiedExecutable, SensorError};
     use crate::user_setup::DiscordGuardPreferences;
     use std::sync::Mutex;
