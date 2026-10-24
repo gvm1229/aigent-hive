@@ -16,6 +16,9 @@ const INPUT_LIMIT: u64 = 4 * 1024 * 1024;
 const OUTPUT_LIMIT: u64 = 4 * 1024 * 1024;
 static WORKER_DEADLINE: OnceLock<Instant> = OnceLock::new();
 
+#[cfg(target_os = "linux")]
+mod lifetime;
+
 pub(in crate::user_setup) fn command_timeout(requested: Duration) -> Duration {
     WORKER_DEADLINE.get().map_or(requested, |deadline| {
         requested.min(deadline.saturating_duration_since(Instant::now()))
@@ -29,6 +32,8 @@ struct Request {
     package_version: String,
     catalog_digest: String,
     deadline_unix_millis: u64,
+    #[serde(default)]
+    parent_process_id: u32,
     user_root: PathBuf,
     operation_id: String,
     answers: String,
@@ -92,6 +97,8 @@ fn receive_and_apply() -> Result<ActionResult, SetupError> {
         .saturating_sub(unix_millis()?)
         .min(90_000);
     WORKER_DEADLINE.get_or_init(|| Instant::now() + Duration::from_millis(remaining));
+    #[cfg(target_os = "linux")]
+    let _lifetime = lifetime::OwnedGroup::start(request.parent_process_id)?;
     apply_request(&request)
 }
 
@@ -181,6 +188,7 @@ pub(super) fn apply(
     let encode = |value: &[u8]| base64::engine::general_purpose::STANDARD.encode(value);
     let request = Request {
         schema_version: 1,
+        parent_process_id: std::process::id(),
         package_version: env!("HIVE_PACKAGE_VERSION").into(),
         catalog_digest: hive_core::sha256_digest(super::QUESTIONS.as_bytes()),
         deadline_unix_millis: unix_millis()?.saturating_add(
@@ -327,6 +335,7 @@ mod tests {
     fn request(root: &std::path::Path) -> Request {
         Request {
             schema_version: 1,
+            parent_process_id: std::process::id(),
             package_version: env!("HIVE_PACKAGE_VERSION").into(),
             catalog_digest: hive_core::sha256_digest(super::super::QUESTIONS.as_bytes()),
             deadline_unix_millis: unix_millis().unwrap() + 90_000,

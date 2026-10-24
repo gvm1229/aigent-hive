@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -80,8 +80,23 @@ else:print('{}')
 environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "LANG": "C.UTF-8",
                "LC_ALL": "C.UTF-8", "CODEX_HOME": str(root / "codex"),
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
-if mode == "slow":
+if mode in {"slow", "parent-exit-apply"}:
     environment["HIVE_TEST_SLOW_ONCE"] = "1"
+if mode == "worker-unowned":
+    request = {"schema_version": 1, "package_version": "0.14.0", "catalog_digest": "sha256:" + "0" * 64,
+        "deadline_unix_millis": int(time.time() * 1000) + 90000, "parent_process_id": os.getpid(),
+        "user_root": str(user), "operation_id": "a" * 64, "answers": "e30=", "expected_config": None}
+    result = subprocess.run(["/build/debug/hive", "__setup-apply-worker"], input=json.dumps(request),
+        env=environment, capture_output=True, text=True, timeout=15)
+    reply = json.loads(result.stdout)
+    assert result.returncode > 0 and reply["phase"] == "incomplete", (result.returncode, reply)
+    assert "own process group" in reply["message"] and not (user / ".hive").exists(), reply
+    evidence = {"scenario": mode, "incoming_source_sha256": source_digest,
+        "caller_survived": True, "shared_group_refused_without_writes": True,
+        "scope": "Linux source14 worker rejected in caller group; no old updater, model or personal installation"}
+    Path("/results", mode + ".json").write_text(json.dumps(evidence, indent=2) + "\n")
+    print(json.dumps(evidence))
+    raise SystemExit(0)
 command = [str(binary), "update", "--channel", "test", "--user-root", str(user)]
 answers = []
 terminal_runs = []
@@ -132,11 +147,14 @@ def terminal_run(command, stop=None):
                         os.write(descriptor, (reply + "\n").encode())
                         answers.append(kind)
                         pending = b""
+            if stop == "parent-exit-apply" and not killed and (user / "slow-pid").exists():
+                os.kill(pid, 15)
+                killed = True
             exited, value = os.waitpid(pid, os.WNOHANG)
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (-15 if stop == "parent-exit" else 2 if stop in {"cancel", "hold", "slow"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -162,13 +180,13 @@ if mode == "confirm":
     result = subprocess.run([*command, "--confirm"], env=environment, input="no\nyes\n", capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
 else:
-    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else mode if mode in {"slow", "parent-exit"} else None)
+    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else mode if mode in {"slow", "parent-exit", "parent-exit-apply"} else None)
 
 config = user / ".hive/config/user-setup.yml"
 progress = (user / ".hive/config/setup-progress/user.yml").read_text()
-if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit"}:
+if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}:
     assert "phase: complete" not in progress
-    if mode != "slow":
+    if mode not in {"slow", "parent-exit-apply"}:
         assert not config.exists() and "phase: awaiting-answers" in progress
     if mode in {"cancel", "cancel-resume"}:
         assert "interface_language: ko" in progress
@@ -179,7 +197,7 @@ if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit"}:
         slow_pid = int((user / "slow-pid").read_text())
         proc = Path(f"/proc/{slow_pid}/stat")
         assert not proc.exists() or proc.read_text().rsplit(") ", 1)[1].split()[0] == "Z", "owned host subprocess survived worker timeout"
-    elif mode == "parent-exit":
+    elif mode in {"parent-exit", "parent-exit-apply"}:
         def live_children():
             result = []
             for entry in Path("/proc").glob("[0-9]*/comm"):
@@ -188,12 +206,17 @@ if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit"}:
                         result.append(entry.parent.name)
                 except FileNotFoundError:
                     pass
+            if mode == "parent-exit-apply":
+                host_pid = int((user / "slow-pid").read_text())
+                host_stat = Path(f"/proc/{host_pid}/stat")
+                if host_stat.exists() and host_stat.read_text().rsplit(") ", 1)[1].split()[0] != "Z":
+                    result.append("owned-host:" + str(host_pid))
             return result
         until = time.monotonic() + 15
         while live_children() and time.monotonic() < until:
             time.sleep(0.1)
-        assert not live_children(), "orphaned setup remained after parent exit"
-    if mode in {"cancel-resume", "deadline", "slow", "parent-exit"}:
+        assert not live_children(), ("orphaned setup remained after parent exit", live_children())
+    if mode in {"cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}:
         answers += terminal_run([str(binary), "update", "--user-root", str(user)])
         saved = config.read_text()
         progress = (user / ".hive/config/setup-progress/user.yml").read_text()

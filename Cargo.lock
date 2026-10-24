@@ -459,6 +459,7 @@ dependencies = [
  "hive-update",
  "hive-wiki",
  "jsonschema",
+ "nix",
  "process-wrap",
  "serde",
  "serde_json",
