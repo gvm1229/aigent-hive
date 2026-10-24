@@ -280,6 +280,25 @@ pub fn validate_project_registry_bytes(
 ///
 /// Returns an error when the canonical ledger is missing, unsafe, too large, or invalid.
 pub fn load_project_registry(user_root: &Path) -> Result<ProjectRegistry, WikiError> {
+    validate_project_registry_bytes(user_root, &read_project_registry_bytes(user_root)?)
+}
+
+/// Read registration declarations for user preferences without opening any project root.
+///
+/// This metadata is not authority to access a project. Knowledge operations must use
+/// [`load_project_registry`] and its live root validation.
+///
+/// # Errors
+/// Rejects unsafe user-root storage, malformed records, duplicate identities, and invalid paths.
+pub fn load_project_registry_metadata(user_root: &Path) -> Result<ProjectRegistry, WikiError> {
+    let bytes = read_project_registry_bytes(user_root)?;
+    let registry: ProjectRegistry = serde_yaml::from_slice(&bytes)
+        .map_err(|error| WikiError::InvalidInput(format!("invalid project registry: {error}")))?;
+    validate_registry_metadata(user_root, &registry)?;
+    Ok(registry)
+}
+
+fn read_project_registry_bytes(user_root: &Path) -> Result<Vec<u8>, WikiError> {
     validate_absolute_root(user_root, "user root")?;
     ensure_no_symlink_ancestors(user_root, Path::new(PROJECT_REGISTRY_RELATIVE))
         .map_err(|error| WikiError::Conflict(error.to_string()))?;
@@ -312,7 +331,7 @@ pub fn load_project_registry(user_root: &Path) -> Result<ProjectRegistry, WikiEr
             "project registry exceeds the 1 MiB limit".to_owned(),
         ));
     }
-    validate_project_registry_bytes(user_root, &bytes)
+    Ok(bytes)
 }
 
 /// Ensure the canonical user-root project registry exists without changing existing entries.
@@ -954,6 +973,30 @@ pub fn query_shared_filtered(
 }
 
 fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(), WikiError> {
+    validate_registry_metadata(user_root, registry)?;
+    let mut roots = BTreeSet::new();
+    for project in &registry.projects {
+        validate_absolute_root(&project.root, "registered project root")?;
+        let canonical = canonical_root(&project.root).map_err(|error| {
+            WikiError::Verification(format!(
+                "registered project root is unavailable {}: {error}",
+                project.root.display()
+            ))
+        })?;
+        if canonical != platform_canonical_root(&portable_canonical_path(&project.root)) {
+            return Err(WikiError::Conflict(format!(
+                "registered project root must be canonical and contain no symlink components: {}",
+                project.root.display()
+            )));
+        }
+        if !roots.insert(canonical) {
+            return Err(WikiError::InvalidInput("duplicate registered project root".to_owned()));
+        }
+    }
+    Ok(())
+}
+
+fn validate_registry_metadata(user_root: &Path, registry: &ProjectRegistry) -> Result<(), WikiError> {
     if registry.schema_version != 1 {
         return Err(WikiError::InvalidInput(
             "project registry schema_version must be 1".to_owned(),
@@ -980,19 +1023,8 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
                 project.id
             )));
         }
-        validate_absolute_root(&project.root, "registered project root")?;
-        let canonical = canonical_root(&project.root).map_err(|error| {
-            WikiError::Verification(format!(
-                "registered project root is unavailable {}: {error}",
-                project.root.display()
-            ))
-        })?;
-        if canonical != platform_canonical_root(&portable_canonical_path(&project.root)) {
-            return Err(WikiError::Conflict(format!(
-                "registered project root must be canonical and contain no symlink components: {}",
-                project.root.display()
-            )));
-        }
+        validate_absolute_root_path(&project.root, "registered project root")?;
+        let canonical = platform_canonical_root(&portable_canonical_path(&project.root));
         if canonical == canonical_user {
             return Err(WikiError::InvalidInput(
                 "user root cannot be registered as a project".to_owned(),
@@ -1008,6 +1040,20 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
 }
 
 fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
+    validate_absolute_root_path(path, name)?;
+    let path = platform_canonical_root(path);
+    let metadata = fs::symlink_metadata(&path).map_err(|error| {
+        WikiError::Io(format!("cannot inspect {name} {}: {error}", path.display()))
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(WikiError::Conflict(format!(
+            "{name} must be a regular directory and not a symlink"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_absolute_root_path(path: &Path, name: &str) -> Result<(), WikiError> {
     let path = platform_canonical_root(path);
     if !path.is_absolute()
         || path
@@ -1016,14 +1062,6 @@ fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
     {
         return Err(WikiError::InvalidInput(format!(
             "{name} must be an absolute normalized path"
-        )));
-    }
-    let metadata = fs::symlink_metadata(&path).map_err(|error| {
-        WikiError::Io(format!("cannot inspect {name} {}: {error}", path.display()))
-    })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
-        return Err(WikiError::Conflict(format!(
-            "{name} must be a regular directory and not a symlink"
         )));
     }
     Ok(())
@@ -1879,6 +1917,41 @@ fn sqlite_error(error: rusqlite::Error) -> WikiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preference_registry_metadata_does_not_open_missing_projects() {
+        let (_temp, user, first, _second) = fixture();
+        let mut registry = load_project_registry(&user).unwrap();
+        registry.projects[0].root = first.join("not-present");
+        let path = user.join(PROJECT_REGISTRY_RELATIVE);
+        let bytes = serde_yaml::to_string(&registry).unwrap().into_bytes();
+        fs::write(&path, &bytes).unwrap();
+        assert_eq!(load_project_registry_metadata(&user).unwrap(), registry);
+        assert!(load_project_registry(&user).is_err());
+        assert!(rebuild_shared_index(&user).is_err());
+        assert_eq!(fs::read(path).unwrap(), bytes);
+        assert!(!first.join("not-present").exists());
+    }
+
+    #[test]
+    fn metadata_query_still_rejects_invalid_versions_duplicate_ids_and_unsafe_paths() {
+        let (_temp, user, _first, _second) = fixture();
+        let registry = load_project_registry(&user).unwrap();
+        let path = user.join(PROJECT_REGISTRY_RELATIVE);
+        for case in 0..4 {
+            let mut changed = registry.clone();
+            match case {
+                0 => changed.schema_version = 99,
+                1 => changed.projects[1].id = changed.projects[0].id.clone(),
+                2 => changed.projects[0].root = PathBuf::from("relative/project"),
+                _ => changed.projects[0].root = user.clone(),
+            }
+            let bytes = serde_yaml::to_string(&changed).unwrap().into_bytes();
+            fs::write(&path, &bytes).unwrap();
+            assert!(load_project_registry_metadata(&user).is_err());
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+        }
+    }
     use std::fs;
 
     fn page(id: &str, body: &str) -> String {
