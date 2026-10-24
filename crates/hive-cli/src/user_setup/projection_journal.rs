@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Component, PathBuf};
 
 const LIMIT: u64 = 32 * 1024 * 1024;
+mod record;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -110,9 +111,8 @@ fn load(
     progress: &SetupProgress,
 ) -> Result<Option<Journal>, SetupError> {
     store.verify_journal_roots(root, output)?;
-    let bytes =
-        read_user_setup_file(root, &path(progress)?, LIMIT).map_err(SetupError::Conflict)?;
     let binding = store.projection_binding(progress, None)?;
+    let bytes = record::read(root, progress, binding.as_deref())?;
     let Some(bytes) = bytes else {
         if binding.is_some() {
             return Err(SetupError::Conflict(
@@ -226,8 +226,7 @@ pub(super) fn apply_to(
                 "projection recovery exceeds its size limit".into(),
             ));
         }
-        replace_user_setup_file(root, &path(progress)?, None, Some(&bytes))
-            .map_err(SetupError::Conflict)?;
+        record::create(root, progress, &bytes)?;
         store.projection_binding(progress, Some(&sha256_digest(&bytes)))?;
         journal
     };
@@ -311,8 +310,7 @@ pub(super) fn cleanup(
     digest: Option<&str>,
 ) -> Result<(), SetupError> {
     let relative = path(progress)?;
-    let Some(bytes) = read_user_setup_file(root, &relative, LIMIT).map_err(SetupError::Conflict)?
-    else {
+    let Some(bytes) = record::read(root, progress, digest)? else {
         return Ok(());
     };
     if digest != Some(sha256_digest(&bytes).as_str()) {
@@ -320,6 +318,8 @@ pub(super) fn cleanup(
             "projection recovery changed before cleanup".into(),
         ));
     }
+    let _lease = crate::user_install::lock_setup_state(root, &progress.binding.target_id[7..])
+        .map_err(SetupError::Conflict)?;
     replace_user_setup_file(root, &relative, Some(&bytes), None).map_err(SetupError::Conflict)
 }
 
@@ -557,6 +557,62 @@ mod tests {
         assert_eq!(
             store.load().unwrap().progress.unwrap().phase,
             ProgressPhase::Complete
+        );
+    }
+
+    #[test]
+    fn interrupted_record_creation_and_removal_recover_without_losing_bound_payloads() {
+        for published in [false, true] {
+            let (_temp, root, store, progress, projection) = fixture();
+            let bytes = save_intent(&root, &store, &progress, projection.clone(), false);
+            let relative = path(&progress).unwrap();
+            replace_user_setup_file(&root, &relative, Some(&bytes), None).unwrap();
+            crate::user_install::interrupt_setup_creation(
+                &root,
+                &relative,
+                Some(&bytes),
+                published,
+            );
+            apply(&root, &store, &progress, || Ok(projection.clone())).unwrap();
+            let binding = store.projection_binding(&progress, None).unwrap();
+            assert_eq!(binding.as_deref(), Some(sha256_digest(&bytes).as_str()));
+            crate::user_install::interrupt_setup_remove(&root, &relative, &bytes);
+            apply(&root, &store, &progress, || {
+                panic!("must restore the saved record")
+            })
+            .unwrap();
+            store.record_completion(&progress).unwrap();
+            assert!(read_user_setup_file(&root, &relative, LIMIT)
+                .unwrap()
+                .is_none());
+        }
+    }
+
+    #[test]
+    fn retained_record_recovery_never_disturbs_a_live_scope_writer_or_changed_payload() {
+        let (_temp, root, store, progress, projection) = fixture();
+        let bytes = save_intent(&root, &store, &progress, projection, true);
+        let relative = path(&progress).unwrap();
+        crate::user_install::interrupt_setup_remove(&root, &relative, &bytes);
+        let lease =
+            crate::user_install::lock_setup_state(&root, &progress.binding.target_id[7..]).unwrap();
+        assert!(apply(&root, &store, &progress, || panic!("must not prepare")).is_err());
+        drop(lease);
+        let mut changed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        changed["candidate_digest"] = serde_json::json!(sha256_digest(b"changed"));
+        let retained = crate::user_install::retained_user_setup_original(&root, &relative)
+            .unwrap()
+            .unwrap();
+        assert_eq!(retained, bytes);
+        // A different visible record cannot authorize restoration over its bytes.
+        root.write(&relative, serde_json::to_vec(&changed).unwrap())
+            .unwrap();
+        assert!(apply(&root, &store, &progress, || panic!("must not prepare")).is_err());
+        assert_eq!(
+            crate::user_install::retained_user_setup_original(&root, &relative)
+                .unwrap()
+                .unwrap(),
+            bytes
         );
     }
 

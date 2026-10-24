@@ -2056,6 +2056,17 @@ pub(crate) fn recover_user_setup_file(
     recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
 }
 
+/// Restore an interrupted journal removal so its bound payload remains available for replay.
+pub(crate) fn recover_user_setup_record(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<(), String> {
+    recover_bound_user_file(root, relative, before, after, mode, installed_unix_mode(false))
+}
+
 fn finish_setup_claim(root: &Dir, relative: &Path, before: &str, after: &str, mode: Option<u32>) -> Result<bool, InstallError> {
     let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
     if current.as_deref().map_or_else(|| "absent".into(), sha256_digest) != after { return Ok(false); }
