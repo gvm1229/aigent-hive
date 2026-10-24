@@ -5,7 +5,10 @@ use super::{
 };
 use crate::user_install::{read_user_setup_file, replace_user_setup_file};
 use cap_std::fs::Dir;
-use hive_core::{preferences::declaration_digest, sha256_digest};
+use hive_core::{
+    preferences::{declaration_digest, PreferenceScope},
+    sha256_digest,
+};
 use serde::{Deserialize, Serialize};
 use std::path::{Component, PathBuf};
 
@@ -39,21 +42,39 @@ fn validate(journal: &Journal, progress: &SetupProgress) -> Result<(), SetupErro
     }
     let mut paths = std::collections::BTreeSet::new();
     for change in &journal.projection.changes {
-        let allowed = matches!(
-            change.path.to_str(),
-            Some(
-                ".agents/directives/00-hive-user.md"
-                    | ".hive/config/user-active-skills.yml"
-                    | ".hive/install/user-projection.json"
-                    | ".agents/skills/user-setup/references/workflow.md"
-                    | ".agents/skills/user-setup/references/questions.md"
-                    | ".agents/skills/user-setup/references/reconfiguration.md"
-                    | ".agents/skills/user-setup/references/recovery.md"
-                    | ".agents/skills/user-setup/references/language.md"
-                    | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+        let allowed = if progress.binding.scope == PreferenceScope::Project {
+            let roles = progress.answers["persistent_roles"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|role| role["role_id"].as_str().map(str::to_owned))
+                .collect();
+            hive_render::setup_recovery_change_is_owned(
+                &hive_render::PreparedSetupChange {
+                    path: change.path.clone(),
+                    before: change.before.clone(),
+                    after: change.after.clone(),
+                },
+                &roles,
             )
-        ) || (change.path.starts_with(".agents/skills")
-            && hive_core::validate_hive_skill_projection_relative(&change.path).is_ok());
+            .map_err(|error| SetupError::Conflict(error.to_string()))?
+        } else {
+            matches!(
+                change.path.to_str(),
+                Some(
+                    ".agents/directives/00-hive-user.md"
+                        | ".hive/config/user-active-skills.yml"
+                        | ".hive/install/user-projection.json"
+                        | ".agents/skills/user-setup/references/workflow.md"
+                        | ".agents/skills/user-setup/references/questions.md"
+                        | ".agents/skills/user-setup/references/reconfiguration.md"
+                        | ".agents/skills/user-setup/references/recovery.md"
+                        | ".agents/skills/user-setup/references/language.md"
+                        | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+                )
+            ) || (change.path.starts_with(".agents/skills")
+                && hive_core::validate_hive_skill_projection_relative(&change.path).is_ok())
+        };
         if !allowed
             || change
                 .path
@@ -84,9 +105,11 @@ fn validate(journal: &Journal, progress: &SetupProgress) -> Result<(), SetupErro
 
 fn load(
     root: &Dir,
+    output: &Dir,
     store: &ProgressStore,
     progress: &SetupProgress,
 ) -> Result<Option<Journal>, SetupError> {
+    store.verify_journal_roots(root, output)?;
     let bytes =
         read_user_setup_file(root, &path(progress)?, LIMIT).map_err(SetupError::Conflict)?;
     let binding = store.projection_binding(progress, None)?;
@@ -111,7 +134,7 @@ fn load(
     for change in &journal.projection.changes {
         if binding.is_some() {
             crate::user_install::recover_user_setup_file(
-                root,
+                output,
                 &change.path,
                 &change
                     .before
@@ -125,7 +148,7 @@ fn load(
             )
             .map_err(SetupError::Conflict)?;
         }
-        let current = read_user_setup_file(root, &change.path, super::MAX_USER_SETUP_BYTES)
+        let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
         if current != change.before && (binding.is_none() || current != change.after) {
             return Err(SetupError::Conflict(format!(
@@ -134,7 +157,7 @@ fn load(
             )));
         }
         verify_mode(
-            root,
+            output,
             change,
             current.as_deref(),
             journal.before_modes[&change.path],
@@ -151,7 +174,7 @@ pub(super) fn preflight(
     store: &ProgressStore,
     progress: &SetupProgress,
 ) -> Result<(), SetupError> {
-    load(root, store, progress).map(|_| ())
+    load(root, root, store, progress).map(|_| ())
 }
 
 pub(super) fn apply(
@@ -160,7 +183,17 @@ pub(super) fn apply(
     progress: &SetupProgress,
     prepare: impl FnOnce() -> Result<AppliedProjection, SetupError>,
 ) -> Result<AppliedProjection, SetupError> {
-    let journal = if let Some(journal) = load(root, store, progress)? {
+    apply_to(root, root, store, progress, prepare)
+}
+
+pub(super) fn apply_to(
+    root: &Dir,
+    output: &Dir,
+    store: &ProgressStore,
+    progress: &SetupProgress,
+    prepare: impl FnOnce() -> Result<AppliedProjection, SetupError>,
+) -> Result<AppliedProjection, SetupError> {
+    let journal = if let Some(journal) = load(root, output, store, progress)? {
         journal
     } else {
         let projection = prepare()?;
@@ -169,7 +202,7 @@ pub(super) fn apply(
             before_modes.insert(
                 change.path.clone(),
                 if change.before.is_some() {
-                    crate::user_install::host_policy_mode(root, &change.path)
+                    crate::user_install::host_policy_mode(output, &change.path)
                         .map_err(SetupError::Conflict)?
                 } else {
                     None
@@ -210,10 +243,10 @@ pub(super) fn apply(
         ..AppliedProjection::default()
     };
     for change in journal.projection.changes {
-        let current = read_user_setup_file(root, &change.path, super::MAX_USER_SETUP_BYTES)
+        let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
         verify_mode(
-            root,
+            output,
             &change,
             current.as_deref(),
             journal.before_modes[&change.path],
@@ -227,7 +260,7 @@ pub(super) fn apply(
             ));
         }
         replace_user_setup_file(
-            root,
+            output,
             &change.path,
             change.before.as_deref(),
             change.after.as_deref(),
@@ -239,7 +272,7 @@ pub(super) fn apply(
         applied.changes.push(change);
     }
     crate::user_install::prune_user_setup_empty_ancestors(
-        root,
+        output,
         removed_skills.iter().map(PathBuf::as_path),
     )
     .map_err(SetupError::Conflict)?;
@@ -338,6 +371,17 @@ mod tests {
         projection: AppliedProjection,
         bind: bool,
     ) -> Vec<u8> {
+        save_intent_to(root, root, store, progress, projection, bind)
+    }
+
+    fn save_intent_to(
+        root: &Dir,
+        output: &Dir,
+        store: &ProgressStore,
+        progress: &SetupProgress,
+        projection: AppliedProjection,
+        bind: bool,
+    ) -> Vec<u8> {
         let journal = Journal {
             schema_version: 1,
             package_version: env!("HIVE_PACKAGE_VERSION").into(),
@@ -349,7 +393,7 @@ mod tests {
                 .map(|change| {
                     (
                         change.path.clone(),
-                        crate::user_install::host_policy_mode(root, &change.path).unwrap(),
+                        crate::user_install::host_policy_mode(output, &change.path).unwrap(),
                     )
                 })
                 .collect(),
@@ -363,6 +407,128 @@ mod tests {
                 .unwrap();
         }
         bytes
+    }
+
+    #[test]
+    fn project_journal_uses_the_bound_output_and_resumes_only_its_remaining_changes() {
+        let user = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let root = crate::user_install::open_user_root_for_setup(user.path()).unwrap();
+        let output = crate::user_install::open_user_root_for_setup(project.path()).unwrap();
+        let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();
+        let mut progress = store
+            .new_progress(
+                "project-mode".into(),
+                serde_json::json!({"persistent_roles":[]}),
+            )
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let projection = AppliedProjection {
+            changes: vec![
+                ProjectionChange {
+                    path: ".hive/config/harness.toml".into(),
+                    before: None,
+                    after: Some(b"first".to_vec()),
+                },
+                ProjectionChange {
+                    path: ".hive/config/role-seeds.yml".into(),
+                    before: None,
+                    after: Some(b"second".to_vec()),
+                },
+            ],
+            ..AppliedProjection::default()
+        };
+        save_intent_to(&root, &output, &store, &progress, projection.clone(), true);
+        replace_user_setup_file(
+            &output,
+            &projection.changes[0].path,
+            None,
+            projection.changes[0].after.as_deref(),
+        )
+        .unwrap();
+        assert!(apply_to(&root, &root, &store, &progress, || panic!(
+            "must not prepare"
+        ))
+        .is_err());
+        assert!(apply_to(&output, &output, &store, &progress, || panic!(
+            "wrong storage"
+        ))
+        .is_err());
+        let changed = apply_to(&root, &output, &store, &progress, || {
+            panic!("must use journal")
+        })
+        .unwrap();
+        assert_eq!(changed.changed_paths, vec![".hive/config/role-seeds.yml"]);
+        assert!(!user.path().join(".hive/config/harness.toml").exists());
+        for change in &projection.changes {
+            assert_eq!(
+                read_user_setup_file(&output, &change.path, 1024).unwrap(),
+                change.after
+            );
+        }
+        store.record_completion(&progress).unwrap();
+        assert!(!user.path().join(path(&progress).unwrap()).exists());
+    }
+
+    #[test]
+    fn project_recovery_preserves_concurrent_content_and_rejects_existing_canonical_data() {
+        let user = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let root = crate::user_install::open_user_root_for_setup(user.path()).unwrap();
+        let output = crate::user_install::open_user_root_for_setup(project.path()).unwrap();
+        let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();
+        let mut progress = store
+            .new_progress(
+                "project-mode".into(),
+                serde_json::json!({"persistent_roles":[{"role_id":"reviewer"}]}),
+            )
+            .unwrap();
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        let path = Path::new(".hive/team/roles/reviewer.md");
+        replace_user_setup_file(&output, path, None, Some(b"user role body")).unwrap();
+        let invalid = AppliedProjection {
+            changes: vec![ProjectionChange {
+                path: path.into(),
+                before: Some(b"user role body".to_vec()),
+                after: Some(b"replacement".to_vec()),
+            }],
+            ..AppliedProjection::default()
+        };
+        assert!(apply_to(&root, &output, &store, &progress, || Ok(invalid)).is_err());
+        assert_eq!(
+            read_user_setup_file(&output, path, 1024).unwrap().unwrap(),
+            b"user role body"
+        );
+        let projection = AppliedProjection {
+            changes: vec![ProjectionChange {
+                path: ".hive/config/harness.toml".into(),
+                before: None,
+                after: Some(b"desired".to_vec()),
+            }],
+            ..AppliedProjection::default()
+        };
+        save_intent_to(&root, &output, &store, &progress, projection.clone(), true);
+        replace_user_setup_file(
+            &output,
+            &projection.changes[0].path,
+            None,
+            Some(b"concurrent"),
+        )
+        .unwrap();
+        assert!(apply_to(&root, &output, &store, &progress, || panic!(
+            "must use journal"
+        ))
+        .is_err());
+        assert_eq!(
+            read_user_setup_file(&output, &projection.changes[0].path, 1024)
+                .unwrap()
+                .unwrap(),
+            b"concurrent"
+        );
     }
 
     #[test]

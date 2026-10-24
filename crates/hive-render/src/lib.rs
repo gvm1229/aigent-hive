@@ -2,7 +2,9 @@
 
 mod activation;
 mod setup_preparation;
-pub use setup_preparation::{prepare_setup, PreparedSetup, PreparedSetupChange};
+pub use setup_preparation::{
+    prepare_setup, setup_recovery_change_is_owned, PreparedSetup, PreparedSetupChange,
+};
 pub mod skill_delivery;
 use activation::{
     activate_staged, open_target_capability, read_capability_optional, stage_and_validate,
@@ -4493,7 +4495,15 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
     relative: &Path,
     marker: &[u8],
 ) -> Result<Vec<u8>, RenderError> {
-    let Some(existing) = read_target_optional(target, relative)? else {
+    merge_shared_marker_bytes(read_target_optional(target, relative)?, relative, marker)
+}
+
+fn merge_shared_marker_bytes(
+    existing: Option<Vec<u8>>,
+    relative: &Path,
+    marker: &[u8],
+) -> Result<Vec<u8>, RenderError> {
+    let Some(existing) = existing else {
         return Ok(marker.to_vec());
     };
     let (marker_start, marker_end) = shared_marker_bounds(relative)?;

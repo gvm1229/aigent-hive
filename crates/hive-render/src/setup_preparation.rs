@@ -30,6 +30,48 @@ pub struct PreparedSetupChange {
     pub after: Option<Vec<u8>>,
 }
 
+/// Limit recovery to managed setup files and exact new canonical seeds or declared roles.
+/// Existing canonical knowledge, role bodies, runs, and foreign files are never replaced here.
+///
+/// # Errors
+/// Rejects unsafe paths or an invalid compiled ownership manifest.
+pub fn setup_recovery_change_is_owned(
+    change: &PreparedSetupChange,
+    declared_roles: &std::collections::BTreeSet<String>,
+) -> Result<bool, RenderError> {
+    if super::is_shared_marker_path(&change.path) {
+        let Some(after) = change.after.as_deref() else {
+            return Ok(false);
+        };
+        let marker = super::extract_exact_marker(&change.path, after)?;
+        return Ok(
+            super::merge_shared_marker_bytes(change.before.clone(), &change.path, &marker)?
+                == after,
+        );
+    }
+    if super::update_path_is_owned(&change.path)? {
+        return Ok(true);
+    }
+    if change.before.is_some() {
+        return Ok(false);
+    }
+    let Some(after) = change.after.as_deref() else {
+        return Ok(false);
+    };
+    let mut seeds = BTreeMap::new();
+    super::insert_static_files(&mut seeds);
+    if seeds
+        .get(&change.path)
+        .is_some_and(|bytes| bytes.as_slice() == after)
+    {
+        return Ok(true);
+    }
+    Ok(declared_roles.iter().any(|role| {
+        super::valid_role_id(role)
+            && change.path == Path::new(".hive/team/roles").join(format!("{role}.md"))
+    }))
+}
+
 /// Prepare recoverable byte changes through the ordinary setup dry-run engine.
 /// Callers must still bind the target and compare the original bytes before writing.
 ///
@@ -109,6 +151,20 @@ mod tests {
             global_preferences: None,
         };
         let prepared = prepare_setup(&request).unwrap();
+        let declared_roles = super::super::load_answers(&answers)
+            .unwrap()
+            .0
+            .persistent_roles
+            .iter()
+            .map(|role| role.role_id.clone())
+            .collect();
+        for change in &prepared.changes {
+            assert!(
+                setup_recovery_change_is_owned(change, &declared_roles).unwrap(),
+                "{}",
+                change.path.display()
+            );
+        }
         assert_eq!(
             prepared.outcome,
             super::super::execute_setup(&request).unwrap()
@@ -163,5 +219,42 @@ mod tests {
             Err(RenderError::Conflict(_))
         ));
         assert_eq!(fs::read(target.join("AGENTS.md")).unwrap(), b"new");
+    }
+
+    #[test]
+    fn recovery_never_replaces_canonical_content_or_foreign_marker_bytes() {
+        let declared = std::collections::BTreeSet::from(["reviewer".into()]);
+        let role = PreparedSetupChange {
+            path: ".hive/team/roles/reviewer.md".into(),
+            before: None,
+            after: Some(b"declared role".to_vec()),
+        };
+        assert!(setup_recovery_change_is_owned(&role, &declared).unwrap());
+        assert!(
+            !setup_recovery_change_is_owned(&role, &std::collections::BTreeSet::new()).unwrap()
+        );
+        assert!(!setup_recovery_change_is_owned(
+            &PreparedSetupChange {
+                before: Some(b"user body".to_vec()),
+                ..role
+            },
+            &declared
+        )
+        .unwrap());
+        let shared = PreparedSetupChange {
+            path: "AGENTS.md".into(),
+            before: Some(b"user bytes\r\n".to_vec()),
+            after: Some(
+                b"replacement\n\n<!-- AIGENT-HIVE:START -->\nnew\n<!-- AIGENT-HIVE:END -->\n"
+                    .to_vec(),
+            ),
+        };
+        assert!(!setup_recovery_change_is_owned(&shared, &declared).unwrap());
+        let foreign = PreparedSetupChange {
+            path: "README.md".into(),
+            before: None,
+            after: Some(b"foreign".to_vec()),
+        };
+        assert!(!setup_recovery_change_is_owned(&foreign, &declared).unwrap());
     }
 }

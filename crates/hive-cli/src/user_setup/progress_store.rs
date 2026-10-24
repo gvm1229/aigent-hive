@@ -396,6 +396,18 @@ impl ProgressStore {
         }
     }
 
+    pub fn verify_journal_roots(&self, storage: &Dir, output: &Dir) -> Result<(), SetupError> {
+        self.verify_directory_binding()?;
+        if directory_identity(storage)? != directory_identity(&self.root)?
+            || directory_identity(output)? != directory_identity(&self.config_root)?
+        {
+            return Err(SetupError::Conflict(
+                "setup output belongs to another target".into(),
+            ));
+        }
+        Ok(())
+    }
+
     fn verify_directory_binding(&self) -> Result<(), SetupError> {
         for (path, pinned) in [(&self.root_path, &self.root), (&self.config_path, &self.config_root)] {
             let (_, current) = open_canonical_user_root_for_setup(path).map_err(SetupError::Conflict)?;
