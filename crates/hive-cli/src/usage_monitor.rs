@@ -45,7 +45,7 @@ const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Configuration {
     schema_version: u8,
@@ -568,7 +568,10 @@ fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
 fn preview(root: &Path) -> Result<Value, AdapterError> {
     let pinned = PinnedTarget::open_usage(root)?;
     let binding = activation::Binding::capture(&pinned)?;
-    let mut config = configuration(root)?;
+    preview_bound(&pinned, &binding)
+}
+fn preview_bound(pinned: &PinnedTarget, binding: &activation::Binding) -> Result<Value, AdapterError> {
+    let mut config = configuration(pinned.requested_path())?;
     let available = cfg!(windows);
     config.enabled = available;
     let changed = if available {
@@ -632,69 +635,9 @@ fn usage_policy_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
 }
 
 fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
-    if usage_policy_disabled(root)? {
-        return Err(error(
-            "enable usage enforcement and explicitly select midway monitoring in Hive setup first",
-        ));
-    }
-    require_app_safe_control()?;
-    let _control = lock(root, "control.lock")?;
-    if preview(root.requested_path())?["preview_digest"].as_str() != Some(confirm) {
-        return Err(error("preview digest changed"));
-    }
-    if load::<Configuration>(root, CONFIG)?.is_some_and(|c| c.enabled) {
-        return Err(error("monitor already enabled"));
-    }
-    let manifest: Value = load(root, ".hive/install/codex.json")?.ok_or_else(|| {
-        error("install the matching Hive Codex version before enabling its monitor")
-    })?;
-    if manifest["product_version"] != env!("CARGO_PKG_VERSION") {
-        return Err(error(
-            "installed Hive Codex version differs; update it before enabling the monitor",
-        ));
-    }
-    require_desktop_inspection(&platform::call(
-        &json!({"operation":"inspect"}),
-        Duration::from_secs(5),
-    )?)?;
-    let config = configuration(root.requested_path())?;
-    let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
-        .map_err(|_| error("cannot stage monitor executable"))?;
-    if sha256_digest(&bytes) != config.executable_digest {
-        return Err(error("monitor executable changed after preview"));
-    }
-    let relative = config
-        .executable
-        .strip_prefix(root.requested_path())
-        .map_err(|_| error("monitor executable escaped root"))?;
-    let before = root.snapshot_bounded(relative, 128 * 1024 * 1024)?;
-    root.publish_runtime(relative, &before, &bytes)?;
-    platform::call(&task_request(&config, "register"), Duration::from_secs(15))?;
-    with_state(root, |s| {
-        prepare_activation(s);
-        Ok(())
-    })?;
-    if let Err(e) = write(root, CONFIG, &config) {
-        let _ = platform::call(
-            &task_request(&config, "unregister"),
-            Duration::from_secs(15),
-        );
-        return Err(e);
-    }
-    if let Err(e) = platform::call(&task_request(&config, "start"), Duration::from_secs(10)) {
-        platform::call(
-            &task_request(&config, "unregister"),
-            Duration::from_secs(15),
-        )?;
-        let mut inactive = config.clone();
-        inactive.enabled = false;
-        write(root, CONFIG, &inactive)?;
-        return Err(e);
-    }
-    Ok(
-        json!({"enabled":true,"activation":"awaiting-first-observation","changed_paths":[CONFIG],"task_name":config.task_name}),
-    )
+    activation::enable(root, confirm)
 }
+
 fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
     transition::disable(root, platform::call, Duration::from_secs(15))
 }

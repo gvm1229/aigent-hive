@@ -8,6 +8,10 @@ use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+mod journal;
+mod runner;
+pub(super) use runner::enable;
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Binding {
@@ -28,18 +32,6 @@ impl Binding {
             }
         }
         let previous = inspect_saved_choice(root.requested_path())?;
-        let identity = root
-            .target_dir()
-            .dir_metadata()
-            .map_err(|_| error("monitor root identity unavailable"))?;
-        let normal = monitor_root_path(root.requested_path())?;
-        let encoded = serde_json::to_vec(&(
-            "monitor-root-v1",
-            identity.dev(),
-            identity.ino(),
-            normal.as_os_str().as_encoded_bytes(),
-        ))
-        .map_err(|_| error("cannot encode monitor root identity"))?;
         let config_after = root.snapshot_bounded(Path::new(CONFIG), 65536)?;
         let disable_after = root.snapshot_bounded(Path::new(transition::JOURNAL), 65536)?;
         root.verify_current()?;
@@ -50,11 +42,27 @@ impl Binding {
             return Err(error("monitor selection changed during preview"));
         }
         Ok(Self {
-            root_identity_digest: sha256_digest(&encoded),
+            root_identity_digest: root_identity(root)?,
             previous,
             disable_digest: digest(disable.bytes()),
         })
     }
+}
+
+fn root_identity(root: &PinnedTarget) -> Result<String, AdapterError> {
+    let identity = root
+        .target_dir()
+        .dir_metadata()
+        .map_err(|_| error("monitor root identity unavailable"))?;
+    let normal = monitor_root_path(root.requested_path())?;
+    let encoded = serde_json::to_vec(&(
+        "monitor-root-v1",
+        identity.dev(),
+        identity.ino(),
+        normal.as_os_str().as_encoded_bytes(),
+    ))
+    .map_err(|_| error("cannot encode monitor root identity"))?;
+    Ok(sha256_digest(&encoded))
 }
 
 fn digest(bytes: Option<&[u8]>) -> String {

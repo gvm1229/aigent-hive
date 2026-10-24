@@ -42,7 +42,7 @@ fn policy_disables_monitor(root: &PinnedTarget) -> Result<bool, AdapterError> {
         .is_some_and(|policy| !policy.enforcement_enabled || !policy.midway.enabled))
 }
 
-fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
+pub(super) fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
     let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
         .map_err(|_| error("cannot stage upgraded monitor executable"))?;
     stage_bytes(root, config, &bytes)
@@ -369,9 +369,10 @@ fn pause_previous(
     }
 }
 
-fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, AdapterError> {
+pub(super) fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, AdapterError> {
     let began = Instant::now();
-    while began.elapsed() < Duration::from_secs(70) {
+    let budget = crate::user_setup::command_timeout(Duration::from_secs(70));
+    while began.elapsed() < budget {
         let config: Configuration =
             load(root, CONFIG)?.ok_or_else(|| error("monitor update configuration missing"))?;
         if !config.enabled || config.executable_digest != expected.executable_digest {
@@ -397,7 +398,7 @@ fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, A
                 );
             }
         }
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(500).min(budget.saturating_sub(began.elapsed())));
     }
     Err(error("monitor update incomplete: new controller and four fresh observations were not verified; choice and history preserved"))
 }
