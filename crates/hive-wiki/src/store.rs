@@ -274,7 +274,11 @@ pub struct RagStore {
 struct UserSetupIndexScope {
     registry: CollectionRegistry,
     declarations: Vec<crate::CapabilityFileSnapshot>,
+    external_approved: bool,
 }
+
+mod setup_index;
+pub use setup_index::{SetupIndexPreview, SetupIndexSource};
 
 impl UserSetupIndexScope {
     fn verify_original(&self, root: &Dir, writes: &[crate::CapabilityFileSnapshot]) -> Result<(), WikiError> {
@@ -288,7 +292,7 @@ impl UserSetupIndexScope {
     }
 
     fn verify_current(&self, root: &Dir, writes: &[crate::CapabilityFileSnapshot]) -> Result<(), WikiError> {
-        if self.registry.collections.iter().any(|collection|
+        if !self.external_approved && self.registry.collections.iter().any(|collection|
             collection.state == CollectionState::Attached && collection.kind != CollectionKind::UserRoot) {
             return Err(WikiError::Conflict("user setup cannot read an external collection".into()));
         }
@@ -452,7 +456,7 @@ impl RagStore {
             ));
         }
         let writes = vec![(PathBuf::from(COLLECTION_REGISTRY_RELATIVE), registry_bytes(&registry)?)];
-        self.commit_scoped_canonical_writes_locked(writes, Some(&UserSetupIndexScope { registry, declarations }))
+        self.commit_scoped_canonical_writes_locked(writes, Some(&UserSetupIndexScope { registry, declarations, external_approved: false }))
     }
 
     /// Synchronize the legacy project registry into the normalized collection registry.
@@ -2410,6 +2414,15 @@ impl RagStore {
         projects: &crate::shared::ProjectRegistry,
         prior: Option<CollectionRegistry>,
     ) -> Result<CollectionRegistry, WikiError> {
+        self.synchronize_project_collection_metadata(projects, prior, true)
+    }
+
+    fn synchronize_project_collection_metadata(
+        &self,
+        projects: &crate::shared::ProjectRegistry,
+        prior: Option<CollectionRegistry>,
+        inspect_roots: bool,
+    ) -> Result<CollectionRegistry, WikiError> {
         let mut registry = prior.unwrap_or(self.default_registry()?);
         let active_ids = projects
             .projects
@@ -2429,8 +2442,13 @@ impl RagStore {
             }
         }
         for project in projects.projects.iter().filter(|project| project.enabled) {
-            let canonical = crate::shared::canonical_root(&project.root)?;
-            let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
+            let canonical = if inspect_roots {
+                let canonical = crate::shared::canonical_root(&project.root)?;
+                let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
+                canonical
+            } else {
+                project.root.clone()
+            };
             let default_visibility = match project.visibility {
                 crate::shared::KnowledgeVisibility::Shared => CollectionVisibility::Shared,
                 crate::shared::KnowledgeVisibility::ProjectPrivate => {
@@ -4880,7 +4898,7 @@ mod tests {
         let declarations = [COLLECTION_REGISTRY_RELATIVE, PROJECT_REGISTRY_RELATIVE].map(|path|
             crate::CapabilityFileSnapshot::capture(&store.root, Path::new(path)).unwrap()).into();
         let planned = registry_bytes(&registry).unwrap();
-        let scope = UserSetupIndexScope { registry: registry.clone(), declarations };
+        let scope = UserSetupIndexScope { registry: registry.clone(), declarations, external_approved: false };
         let mut changed = registry;
         changed.collections[0].aliases.push("user-edited".into());
         let changed = registry_bytes(&changed.canonicalized().unwrap()).unwrap();
