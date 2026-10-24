@@ -77,7 +77,7 @@ pub(super) fn apply(
     progress: &SetupProgress,
     global: &GlobalProjectPreferences,
     prepared: Option<PreparedSetup>,
-) -> Result<usize, SetupError> {
+) -> Result<Vec<String>, SetupError> {
     let context = progress
         .project_context
         .as_ref()
@@ -117,7 +117,7 @@ pub(super) fn apply(
         // Completion may have removed recovery bytes before saving its final receipt.
         // Only fresh validation of both project files and registry can close that gap.
         execute_core(&validation, &options.root, global)?;
-        return Ok(0);
+        return Ok(Vec::new());
     }
     let applied =
         crate::user_setup::projection_journal::apply_to(&root, &output, store, progress, || {
@@ -163,5 +163,9 @@ pub(super) fn apply(
         std::process::exit(87);
     }
     execute_core(&validation, &options.root, global)?;
-    Ok(applied.changed_paths.len() + registry_changes.len())
+    let mut changed = applied.changed_paths;
+    changed.extend(registry_changes);
+    changed.sort();
+    changed.dedup();
+    Ok(changed)
 }

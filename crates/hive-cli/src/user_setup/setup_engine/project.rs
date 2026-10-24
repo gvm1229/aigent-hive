@@ -22,6 +22,8 @@ mod extras;
 mod input;
 mod preferences;
 mod questions;
+mod file_input;
+pub(in crate::user_setup) use file_input::execute as execute_file;
 #[cfg(test)]
 mod tests;
 
@@ -418,20 +420,29 @@ fn execute_core(
         .map_err(|e| SetupError::Verification(e.to_string()))
 }
 
-fn prepare_settings(
+fn prepare_settings(options:&Options, answers:&Path, caps:&Path, global:&hive_render::GlobalProjectPreferences)
+    -> Result<hive_render::PreparedSetup, SetupError> {
+    prepare_settings_raw(options,answers,caps,global).map_err(|error| match error {
+        hive_render::RenderError::Input(message) => SetupError::Input(message),
+        hive_render::RenderError::Conflict(message) | hive_render::RenderError::Safety(message) => SetupError::Conflict(message),
+        hive_render::RenderError::Verification(message) | hive_render::RenderError::Unsupported(message) => SetupError::Verification(message),
+        hive_render::RenderError::Internal(message) | hive_render::RenderError::Rollback(message) => SetupError::Internal(message),
+    })
+}
+fn prepare_settings_raw(
     options: &Options,
     answers: &Path,
     caps: &Path,
     global: &hive_render::GlobalProjectPreferences,
-) -> Result<hive_render::PreparedSetup, SetupError> {
+) -> Result<hive_render::PreparedSetup, hive_render::RenderError> {
     let target = crate::user_install::open_user_root_for_setup(&options.target)
-        .map_err(SetupError::Conflict)?;
+        .map_err(hive_render::RenderError::Conflict)?;
     let existing = crate::user_install::read_user_setup_file(
         &target,
         Path::new(".hive/setup-answers.yml"),
         user_setup::MAX_USER_SETUP_BYTES,
     )
-    .map_err(SetupError::Conflict)?;
+    .map_err(hive_render::RenderError::Conflict)?;
     let request = request(
         options,
         answers,
@@ -440,11 +451,9 @@ fn prepare_settings(
         hive_render::SetupMode::DryRun,
     );
     let mut prepared = if existing.is_some() {
-        crate::project_upgrade::prepare_reconfiguration(&request)
-            .map_err(|error| SetupError::Conflict(error.to_string()))?
+        crate::project_upgrade::prepare_reconfiguration(&request)?
     } else {
-        hive_render::prepare_setup(&request)
-            .map_err(|error| SetupError::Verification(error.to_string()))?
+        hive_render::prepare_setup(&request)?
     };
     if let Some(preferences) = prepared.outcome.effective_preferences.as_ref() {
         crate::reconcile_project_registry(
@@ -455,7 +464,7 @@ fn prepare_settings(
             global.wiki_enabled,
             &mut prepared.outcome.changed_paths,
         )
-        .map_err(|error| SetupError::Verification(error.to_string()))?;
+        .map_err(|error| hive_render::RenderError::Verification(error.to_string()))?;
     }
     Ok(prepared)
 }
@@ -515,19 +524,7 @@ fn apply<R: BufRead, W: Write>(
         user_setup::read_bounded_regular(caps.path(), user_setup::MAX_USER_SETUP_BYTES)?;
     let prepared = prepare_settings(options, answers.path(), caps.path(), global)?;
     activation::verify_preview(&preview, &prepared.outcome)?;
-    activation::bind_context(progress, global, &capability_bytes, &prepared.outcome)?;
-    progress.phase = ProgressPhase::Applying;
-    *snapshot = store.save(snapshot, progress)?;
-    store.record_applying(progress)?;
-    let outcome = activation::apply(options, store, progress, global, Some(prepared));
-    let outcome = match outcome {
-        Ok(value) => value,
-        Err(error) => {
-            store.record_failure(progress)?;
-            return Err(error);
-        }
-    };
-    ProgressStore::open(&options.root, Some(&options.target))?.record_completion(progress)?;
+    let outcome = commit_prepared(options,store,snapshot,progress,global,&capability_bytes,prepared)?;
     Ok(report(
         "success",
         0,
@@ -537,8 +534,28 @@ fn apply<R: BufRead, W: Write>(
             "프로젝트 설정 적용·검증 완료",
             "Project settings applied and verified",
         ],
-        Some(json!({"changed_file_count":outcome,"model_calls":0,"host":facts})),
+        Some(json!({"changed_file_count":outcome.len(),"model_calls":0,"host":facts})),
     ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn commit_prepared(options:&Options,store:&ProgressStore,snapshot:&mut user_setup::progress_store::ProgressSnapshot,
+    progress:&mut user_setup::progress_store::SetupProgress,global:&hive_render::GlobalProjectPreferences,
+    capability_bytes:&[u8],prepared:hive_render::PreparedSetup) -> Result<Vec<String>,SetupError> {
+    activation::bind_context(progress, global, capability_bytes, &prepared.outcome)?;
+    progress.phase = ProgressPhase::Applying;
+    *snapshot = store.save(snapshot, progress)?;
+    store.record_applying(progress)?;
+    let outcome = activation::apply(options, store, progress, global, Some(prepared));
+    let changed = match outcome {
+        Ok(value) => value,
+        Err(error) => {
+            store.record_failure(progress)?;
+            return Err(error);
+        }
+    };
+    ProgressStore::open(&options.root, Some(&options.target))?.record_completion(progress)?;
+    Ok(changed)
 }
 
 fn finish_existing_apply(

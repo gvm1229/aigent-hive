@@ -15,6 +15,7 @@ mod monitor_stop;
 pub(in crate::user_setup) mod monitor_start;
 mod project;
 pub(in crate::user_setup) use project::run as run_project;
+pub(in crate::user_setup) use project::execute_file as execute_project_file;
 pub(in crate::user_setup) use file_input::{file_options, execute as execute_file};
 #[cfg(test)]
 pub(in crate::user_setup) use file_input::FileOptions;

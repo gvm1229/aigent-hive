@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -279,6 +279,58 @@ else:
                 assert blocked.returncode!=0,(blocked.stdout,blocked.stderr)
                 assert config.read_bytes()==before
                 assert not (user/".hive/runtime/usage-monitor/config.json").exists()
+if mode in {"project-file", "project-file-interrupt"}:
+    project=root/"project";project.mkdir()
+    (project/"AGENTS.md").write_text("User-owned preface.\n")
+    document=root/"project-answers.yml"
+    document.write_bytes(Path("/source/tests/fixtures/setup/answers-no-role-no-hook.yml").read_bytes())
+    capfile=root/"project-caps.json"
+    capfile.write_bytes(Path("/source/tests/fixtures/setup/capabilities-codex-host-native.json").read_bytes())
+    args=[str(binary),"setup","--target",str(project),"--user-root",str(user),"--answers",str(document),
+        "--capabilities",str(capfile),"--input-channel","agent","--output","json"]
+    def project_command(command,expected=0,env=None):
+        p=subprocess.run(command,env=environment if env is None else env,capture_output=True,text=True,timeout=90)
+        assert p.returncode==expected,(p.returncode,p.stdout[-4000:],p.stderr[-4000:])
+        return json.loads(p.stdout) if expected==0 else None
+    global_before=config.read_bytes()
+    project_command([*args,"--dry-run"])
+    assert not (project/".hive").exists()
+    if mode=="project-file-interrupt":
+        interrupted=dict(environment,HIVE_PROJECT_SETUP_INTERRUPT_AFTER="intent")
+        project_command([*args,"--apply"],87,interrupted)
+        records=list((user/".hive/config/setup-progress/projects").glob("*.yml"))
+        assert len(records)==1 and "phase: applying" in records[0].read_text()
+        changed=root/"different-project.yml";changed.write_text(document.read_text().replace("phase1-parity","different-project"))
+        changed_args=[str(changed) if arg==str(document) else arg for arg in args]
+        p=subprocess.run([*changed_args,"--apply"],env=environment,capture_output=True,text=True,timeout=30)
+        assert p.returncode!=0 and not (project/".hive/setup-answers.yml").exists()
+        capfile.write_bytes(Path("/source/tests/fixtures/setup/capabilities-claude-host-native.json").read_bytes())
+        p=subprocess.run([*args,"--apply"],env=environment,capture_output=True,text=True,timeout=30)
+        assert p.returncode!=0 and "capability evidence differs" in p.stdout,(p.returncode,p.stdout[-1000:])
+        assert not (project/".hive/setup-answers.yml").exists()
+        capfile.write_bytes(Path("/source/tests/fixtures/setup/capabilities-codex-host-native.json").read_bytes())
+        p=subprocess.run([*args,"--reconfigure-role","unexpected-role","--apply"],env=environment,capture_output=True,text=True,timeout=30)
+        assert p.returncode!=0 and "differs from unfinished setup" in p.stdout,(p.returncode,p.stdout[-1000:])
+        assert not (project/".hive/setup-answers.yml").exists()
+        document.unlink();capfile.unlink()
+        result=project_command([str(binary),"setup","--target",str(project),"--user-root",str(user),"--resume","--output","json"])
+        assert result["code"]=="hive.project-setup-complete"
+    else:
+        result=project_command([*args,"--apply"]);assert result["code"]=="hive.setup-complete"
+        saved=(project/".hive/setup-answers.yml").read_bytes()
+        project_command([*args,"--validate"])
+        assert project_command([*args,"--apply"])["changed_paths"]==[]
+        assert (project/".hive/setup-answers.yml").read_bytes()==saved
+        document.write_text(document.read_text().replace("phase1-parity","renamed-project"))
+        (project/"AGENTS.md").write_text((project/"AGENTS.md").read_text()+"\nUser footer.\n")
+        project_command([*args,"--apply"])
+        assert (project/"AGENTS.md").read_text().endswith("User footer.\n")
+    shown=project_command([str(binary),"setup","--target",str(project),"--user-root",str(user),"--show","--output","json"])
+    stored=shown["data"]["stored"]
+    assert stored["schema_version"]==2 and stored["preference_decisions"]["/project_name"]["input_channel"]=="agent"
+    assert stored["preference_decisions"]["/interface_language"]["origin"]=="inherited"
+    assert (project/"AGENTS.md").read_text().startswith("User-owned preface.\n")
+    assert config.read_bytes()==global_before
 incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,

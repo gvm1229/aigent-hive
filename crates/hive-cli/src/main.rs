@@ -60,7 +60,7 @@ USAGE:
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] --output json
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
@@ -206,6 +206,7 @@ struct SetupArguments {
     user_root: PathBuf,
     mode: SetupMode,
     reconfigure_roles: BTreeSet<String>,
+    input_channel: hive_core::preferences::PreferenceInput,
 }
 
 fn main() -> ExitCode {
@@ -651,28 +652,8 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let parsed = parse_setup(arguments);
     let result = match parsed {
         Ok(arguments) => {
-            let global_preferences =
-                user_setup::project_preferences(&arguments.user_root).map_err(RenderError::Input);
-            let mut global_preferences = match global_preferences {
-                Ok(preferences) => preferences,
-                Err(error) => return emit_setup_result(&failure_result(&error)),
-            };
-            global_preferences.codex_plugin_files =
-                user_install::validated_codex_plugin_files(&arguments.user_root)
-                    .unwrap_or_default();
-            let global_wiki_enabled = global_preferences.wiki_enabled;
             let setup_mode = arguments.mode;
-            let user_root = arguments.user_root.clone();
-            let target = arguments.target.clone();
-            let request = SetupRequest {
-                target: &arguments.target,
-                answers: &arguments.answers,
-                capabilities: &arguments.capabilities,
-                mode: setup_mode,
-                reconfigure_roles: arguments.reconfigure_roles,
-                global_preferences: Some(global_preferences),
-            };
-            match execute_setup_and_registry(&request, &user_root, &target, global_wiki_enabled) {
+            match user_setup::execute_project_file(&arguments) {
                 Ok(outcome) => ActionResult {
                     schema_version: 1,
                     action: "SetupHarness",
@@ -890,14 +871,6 @@ fn reconcile_project_registry(
     Ok(())
 }
 
-fn emit_setup_result(result: &ActionResult) -> ExitCode {
-    emit_json_result(result);
-    if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
-    }
-    ExitCode::from(result.exit_code)
-}
-
 fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     let mut target = None;
     let mut answers = None;
@@ -906,6 +879,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     let mut mode = None;
     let mut output = None;
     let mut reconfigure_roles = BTreeSet::new();
+    let mut input_channel = None;
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].as_str() {
@@ -916,6 +890,14 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             }
             "--user-root" => {
                 user_root = Some(next_value(arguments, &mut index, "--user-root")?);
+            }
+            "--input-channel" => {
+                let channel = match next_value(arguments, &mut index, "--input-channel")?.as_str() {
+                    "answers-file" => hive_core::preferences::PreferenceInput::AnswersFile,
+                    "agent" => hive_core::preferences::PreferenceInput::Agent,
+                    _ => return Err(RenderError::Input("project input channel must be answers-file or agent".into())),
+                };
+                if input_channel.replace(channel).is_some() { return Err(RenderError::Input("duplicate project input channel".into())); }
             }
             "--reconfigure-role" => {
                 reconfigure_roles.insert(next_value(arguments, &mut index, "--reconfigure-role")?);
@@ -946,6 +928,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
         })?,
         reconfigure_roles,
+        input_channel: input_channel.unwrap_or(hive_core::preferences::PreferenceInput::AnswersFile),
     })
 }
 

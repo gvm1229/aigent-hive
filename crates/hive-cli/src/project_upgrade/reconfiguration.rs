@@ -1,22 +1,22 @@
 //! The setup CLI reuses the authenticated release merger, then its shared write journal.
 use super::{
-    is_shared, open_target_capability, prepare_candidate, read_full_optional, render_error,
-    UpdateError,
+    is_shared, open_target_capability, prepare_candidate, read_full_optional, UpdateError,
 };
 use hive_core::sha256_digest;
-use hive_render::{PreparedSetup, PreparedSetupChange, SetupChange, SetupOutcome, SetupRequest};
+use hive_render::{
+    PreparedSetup, PreparedSetupChange, RenderError, SetupChange, SetupOutcome, SetupRequest,
+};
 use std::path::Path;
 
-pub(crate) fn prepare(request: &SetupRequest<'_>) -> Result<PreparedSetup, UpdateError> {
+pub(crate) fn prepare(request: &SetupRequest<'_>) -> Result<PreparedSetup, RenderError> {
     hive_core::ensure_consumer_target(request.target)
-        .map_err(|error| UpdateError::Input(error.to_string()))?;
-    let target = open_target_capability(request.target)?;
-    let candidate =
-        hive_render::project_reconfiguration_candidate(request).map_err(render_error)?;
+        .map_err(|error| RenderError::Safety(error.to_string()))?;
+    let target = open_target_capability(request.target).map_err(as_render)?;
+    let candidate = hive_render::project_reconfiguration_candidate(request)?;
     let plugin = request
         .global_preferences
         .as_ref()
-        .ok_or_else(|| UpdateError::Input("global project preferences are missing".into()))?;
+        .ok_or_else(|| RenderError::Input("global project preferences are missing".into()))?;
     let canonical = candidate.files;
     let mut tree = canonical.clone();
     let plan = prepare_candidate(
@@ -24,12 +24,13 @@ pub(crate) fn prepare(request: &SetupRequest<'_>) -> Result<PreparedSetup, Updat
         &plugin.codex_plugin_files,
         None,
         Some(candidate.projection),
-    )?;
+    )
+    .map_err(as_render)?;
     // Unchanged merged files can still contain preserved local additions.
     for report in &plan.reports {
         let bytes = match plan.final_files.get(&report.path) {
             Some(bytes) => bytes.clone(),
-            None => read_full_optional(&target, Path::new(&report.path))?,
+            None => read_full_optional(&target, Path::new(&report.path)).map_err(as_render)?,
         };
         if let Some(bytes) = bytes {
             tree.insert(report.path.clone().into(), bytes);
@@ -44,21 +45,18 @@ pub(crate) fn prepare(request: &SetupRequest<'_>) -> Result<PreparedSetup, Updat
             tree.remove(Path::new(path));
         }
     }
-    hive_render::validate_reconfiguration_tree(request, &tree, &canonical).map_err(render_error)?;
+    hive_render::validate_reconfiguration_tree(request, &tree, &canonical)?;
     let mut changes = Vec::new();
     let mut evidence = Vec::new();
     for path in &plan.changed_paths {
         let before = plan.expected_before[path].bytes.clone();
         let after = plan.final_files[path].clone();
-        let foreign = |bytes: Option<&[u8]>| -> Result<Option<String>, UpdateError> {
+        let foreign = |bytes: Option<&[u8]>| -> Result<Option<String>, RenderError> {
             if is_shared(path) {
-                Ok(Some(
-                    hive_render::shared_marker_foreign_digest_for_path(
-                        Path::new(path),
-                        bytes.unwrap_or_default(),
-                    )
-                    .map_err(render_error)?,
-                ))
+                Ok(Some(hive_render::shared_marker_foreign_digest_for_path(
+                    Path::new(path),
+                    bytes.unwrap_or_default(),
+                )?))
             } else {
                 Ok(None)
             }
@@ -86,6 +84,19 @@ pub(crate) fn prepare(request: &SetupRequest<'_>) -> Result<PreparedSetup, Updat
         },
         changes,
     })
+}
+
+fn as_render(error: UpdateError) -> RenderError {
+    match error {
+        UpdateError::Input(message) => RenderError::Input(message),
+        UpdateError::Verification(message) => RenderError::Verification(message),
+        UpdateError::Unsupported(message) => RenderError::Unsupported(message),
+        UpdateError::Internal(message) => RenderError::Internal(message),
+        UpdateError::Rollback(message) => RenderError::Rollback(message),
+        UpdateError::Compatibility(message)
+        | UpdateError::Conflict(message)
+        | UpdateError::RecoveryRequired(message) => RenderError::Conflict(message),
+    }
 }
 
 #[cfg(test)]
@@ -300,7 +311,7 @@ mod tests {
             ..initial
         };
         assert!(
-            matches!(prepare(&request),Err(UpdateError::Conflict(message)) if message.contains(".agents/skills/ship/SKILL.md"))
+            matches!(prepare(&request),Err(RenderError::Conflict(message)) if message.contains(".agents/skills/ship/SKILL.md"))
         );
         assert_eq!(fs::read(local).unwrap(), bytes);
         assert_eq!(
