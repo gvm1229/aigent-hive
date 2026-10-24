@@ -117,6 +117,9 @@ fn read_line(reader: &mut impl BufRead) -> Result<Option<String>, SetupError> {
 }
 
 pub(super) fn display_value(question: &Question, value: &Value, korean: bool) -> String {
+    if question.input == InputKind::Structured {
+        return value.to_string();
+    }
     if let Some(values) = value.as_array() {
         return values
             .iter()
@@ -154,6 +157,28 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::io::Cursor;
+
+    #[test]
+    fn structured_defaults_remain_valid_json_when_copied_back_into_the_question() {
+        let catalog = super::super::catalog().unwrap();
+        let question = catalog
+            .questions
+            .iter()
+            .find(|question| question.id == "project-roles")
+            .unwrap();
+        for value in [
+            json!([]),
+            json!([{"role_id":"reviewer","responsibilities":["review"]}]),
+        ] {
+            for korean in [false, true] {
+                let displayed = display_value(question, &value, korean);
+                assert_eq!(serde_json::from_str::<Value>(&displayed).unwrap(), value);
+                assert!(
+                    matches!(question.parse_line(Some(&displayed),None).unwrap(),AnswerInput::Answered {value:parsed,..} if parsed==value)
+                );
+            }
+        }
+    }
 
     #[test]
     fn invalid_answer_repeats_only_the_current_question_and_eof_never_answers_no() {
