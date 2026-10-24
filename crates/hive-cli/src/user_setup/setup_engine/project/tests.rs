@@ -188,6 +188,73 @@ fn interrupted_project_resumes_without_repeating_collected_answers() {
 }
 
 #[test]
+fn custom_project_resume_and_inspection_reuse_its_language_instead_of_the_global_language() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut progress = store
+        .new_progress(
+            "project-mode".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"2\n2\n:cancel\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::Ko,
+    };
+    assert!(
+        !questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap()
+    );
+    let pending_inspection = preferences::inspect(
+        &options(root.path(), target.path()),
+        &store,
+        None,
+        InterfaceLanguage::Ko,
+    )
+    .unwrap();
+    assert_eq!(pending_inspection.message, "Project setup inspection");
+    let mut resumed_options = options(root.path(), target.path());
+    resumed_options.resume = true;
+    let pending_message =
+        resume_without_input(&resumed_options, &store, InterfaceLanguage::Ko).unwrap();
+    assert!(pending_message
+        .message
+        .starts_with("Project setup is pending"));
+    let mut snapshot = store.load().unwrap();
+    let mut progress = snapshot.progress.clone().unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\n\n\n\n\n\n\n\n\n\n\n\n\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::Ko,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap()
+    );
+    assert_eq!(terminal.language, InterfaceLanguage::En);
+    let output = String::from_utf8(terminal.writer).unwrap();
+    assert!(output.contains("Save knowledge in local documents?"));
+    assert!(!output.contains("로컬 문서"));
+    assert!(!output.contains("Choose a language"));
+    let bytes = serde_json::to_vec(&progress.answers).unwrap();
+    let mut options = options(root.path(), target.path());
+    options.show = true;
+    let shown =
+        preferences::inspect(&options, &store, Some(&bytes), InterfaceLanguage::Ko).unwrap();
+    assert_eq!(shown.message, "Project setup inspection");
+    assert_eq!(
+        questions::language(
+            &json!({"setup_mode":"expedited","interface_language":"en"}),
+            InterfaceLanguage::Ko
+        ),
+        InterfaceLanguage::Ko
+    );
+    validate_answers(&progress.answers);
+}
+
+#[test]
 fn inherited_fingerprints_follow_the_declaration_and_show_the_current_parent() {
     let root = tempfile::tempdir().unwrap();
     let target = tempfile::tempdir().unwrap();

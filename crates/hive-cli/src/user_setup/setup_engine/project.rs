@@ -246,6 +246,7 @@ fn execute<R: BufRead, W: Write>(
         .map_or("codex", |host| host.as_str());
     let mut progress = match snapshot.progress.clone() {
         Some(progress) if progress.phase != ProgressPhase::Complete => {
+            terminal.language = questions::language(&progress.answers, terminal.language);
             if !options.resume {
                 return Ok(pending(terminal.language));
             }
@@ -305,6 +306,7 @@ fn resume_without_input(
     let Some(progress) = store.load()?.progress else {
         return Ok(pending(language));
     };
+    let language = questions::language(&progress.answers, language);
     if progress.phase == ProgressPhase::Complete {
         return completed_resume(
             options,
@@ -499,6 +501,7 @@ fn finish_existing_apply(
     global: &hive_render::GlobalProjectPreferences,
     language: InterfaceLanguage,
 ) -> Result<ActionResult, SetupError> {
+    let language = questions::language(&progress.answers, language);
     if !store.questions_match(progress) {
         return Ok(pending(language));
     }
@@ -564,6 +567,7 @@ fn completed_resume(
     .ok_or_else(|| SetupError::Verification("completed project settings are missing".into()))?;
     let value = serde_yaml::from_slice(&bytes)
         .map_err(|_| SetupError::Verification("invalid completed project settings".into()))?;
+    let language = questions::language(&value, language);
     let answers = write_answers(&value)?;
     let capabilities = crate::user_install::read_user_setup_file(
         &cap,

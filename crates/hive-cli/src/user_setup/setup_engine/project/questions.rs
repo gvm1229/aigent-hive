@@ -31,6 +31,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
     global: &hive_render::GlobalProjectPreferences,
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
+    terminal.language = language(&progress.answers, terminal.language);
     let catalog = super::super::catalog()?;
     let mode = catalog
         .questions
@@ -94,6 +95,17 @@ pub(super) fn collect<R: BufRead, W: Write>(
     super::preferences::record_defaults(&mut progress.answers)?;
     *snapshot = store.save(snapshot, progress)?;
     Ok(true)
+}
+
+pub(super) fn language(answers: &Value, inherited: InterfaceLanguage) -> InterfaceLanguage {
+    if answers["setup_mode"] != "custom" {
+        return inherited;
+    }
+    match answers["interface_language"].as_str() {
+        Some("ko") => InterfaceLanguage::Ko,
+        Some("en") => InterfaceLanguage::En,
+        _ => inherited,
+    }
 }
 
 fn seed_overrides(answers: &mut Value, global: &hive_render::GlobalProjectPreferences) {

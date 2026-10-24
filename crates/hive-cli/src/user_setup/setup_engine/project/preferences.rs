@@ -119,6 +119,16 @@ pub(super) fn inspect(
         .map(serde_yaml::from_slice::<Value>)
         .transpose()
         .map_err(|_| SetupError::Verification("invalid project settings".into()))?;
+    let language = stored.as_ref().map_or(language, |value| {
+        super::questions::language(value, language)
+    });
+    let pending = store.load()?.progress;
+    let language = pending
+        .as_ref()
+        .filter(|progress| progress.phase != user_setup::progress_store::ProgressPhase::Complete)
+        .map_or(language, |progress| {
+            super::questions::language(&progress.answers, language)
+        });
     let root = crate::user_install::open_user_root_for_setup(&options.root)
         .map_err(SetupError::Conflict)?;
     let parent_bytes = crate::user_install::read_user_setup_file(
@@ -159,7 +169,7 @@ pub(super) fn inspect(
         let questions = described(section, stored.as_ref(), &sources, &effective)?;
         json!({"section":section,"questions":questions,"parent":parent})
     } else {
-        json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":store.load()?.progress})
+        json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
     };
     Ok(report(
         "success",
