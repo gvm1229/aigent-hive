@@ -11,6 +11,8 @@ pub(super) fn apply(
     config: &UserSetupConfig,
     bytes: &[u8],
     expected: Option<&[u8]>,
+    legacy_input: Option<&UserSetupConfig>,
+    migration: Option<user_setup::progress_store::LegacyMigration>,
 ) -> Result<ActionResult, SetupError> {
     let store = ProgressStore::open(&arguments.user_root, None)?;
     store.recover_pending_state()?;
@@ -20,7 +22,7 @@ pub(super) fn apply(
         .as_ref()
         .filter(|p| p.phase != ProgressPhase::Complete)
     {
-        require_same_intent(pending, config)?;
+        require_same_intent(pending, config, legacy_input)?;
         if matches!(
             pending.phase,
             ProgressPhase::Applying | ProgressPhase::RecoverableFailure
@@ -61,6 +63,7 @@ pub(super) fn apply(
         None => store.new_progress("file-apply".into(), answers.clone())?,
     };
     progress.answers = answers;
+    progress.legacy_migration = migration;
     progress.phase = ProgressPhase::Applying;
     store.save(&snapshot, &progress)?;
     store.record_applying(&progress)?;
@@ -78,12 +81,18 @@ pub(super) fn apply(
 fn require_same_intent(
     progress: &SetupProgress,
     config: &UserSetupConfig,
+    legacy_input: Option<&UserSetupConfig>,
 ) -> Result<(), SetupError> {
     let mut saved = user_setup::parse_and_validate_config(
         &serde_json::to_vec(&progress.answers)
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     )?;
-    let mut requested = config.clone();
+    let mut requested = if saved.schema_version == 1 {
+        legacy_input.unwrap_or(config)
+    } else {
+        config
+    }
+    .clone();
     // A retry's newly computed timestamps are not a new choice. Recovery uses the saved records.
     saved.preference_decisions.clear();
     requested.preference_decisions.clear();
@@ -113,7 +122,7 @@ mod tests {
             .unwrap();
         let config =
             user_setup::parse_and_validate_config(&serde_json::to_vec(&answers).unwrap()).unwrap();
-        assert!(require_same_intent(&progress, &config).is_ok());
+        assert!(require_same_intent(&progress, &config, None).is_ok());
         progress.phase = ProgressPhase::Applying;
         let record = PreferenceDecision::new(
             &json!(false),
@@ -126,10 +135,10 @@ mod tests {
         .unwrap();
         progress.answers["preference_decisions"]["/usage_guard/enforcement_enabled"] =
             json!(record);
-        assert!(require_same_intent(&progress, &config).is_ok());
+        assert!(require_same_intent(&progress, &config, None).is_ok());
         let mut changed = config;
         changed.usage_guard.stop_remaining_percent = 3;
-        assert!(require_same_intent(&progress, &changed).is_err());
+        assert!(require_same_intent(&progress, &changed, None).is_err());
         assert!(!root.path().join(".hive").exists());
     }
 }

@@ -84,6 +84,11 @@ pub(in crate::user_setup) fn execute(
         .map_err(|_| SetupError::Input("invalid answer document".into()))?;
     user_setup::migrate_legacy_skill_names(&mut supplied)?;
     user_setup::migrate_legacy_single_profile(&mut supplied);
+    let legacy_input = (config.schema_version == 1).then(|| config.clone());
+    let normalized = super::file_policy::normalize(
+        &arguments.user_root, &mut config, &mut supplied, current.as_ref(), options.quick,
+        arguments.mode,
+    )?;
     if arguments.mode == SetupMode::Validate {
         // Validation is not a new answer and must not invent provenance for an old file.
         config.preference_decisions = current
@@ -94,7 +99,7 @@ pub(in crate::user_setup) fn execute(
         annotate(
             &mut config,
             &supplied,
-            current.as_ref(),
+            normalized.baseline.as_ref(),
             options,
             if arguments.mode == SetupMode::Apply {
                 Some(user_setup::feature_now_unix()?)
@@ -106,7 +111,7 @@ pub(in crate::user_setup) fn execute(
     let bytes =
         serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     if arguments.mode == SetupMode::Apply {
-        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref());
+        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration);
     }
     user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))
 }
@@ -158,14 +163,16 @@ fn annotate(
     let values = declarations(config)?;
     let mut choices = BTreeMap::new();
     for (key, value) in values {
+        let provided = supplied.pointer(&key).is_some();
         if let Some(prior) = current
             .and_then(|c| c.preference_decisions.get(&key))
             .filter(|d| d.matches_declaration(&value).unwrap_or(false))
+            .filter(|d| !(provided && d.input_channel == PreferenceInput::Migration
+                && matches!(d.origin, DecisionOrigin::LegacyUnknown | DecisionOrigin::Default)))
         {
             choices.insert(key, prior.clone());
             continue;
         }
-        let provided = supplied.pointer(&key).is_some();
         let origin = if !provided {
             DecisionOrigin::Default
         } else if options.quick
@@ -212,6 +219,24 @@ mod tests {
     }
     fn parse(value: &Value) -> UserSetupConfig {
         user_setup::parse_and_validate_config(&serde_json::to_vec(value).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn supplied_v2_choices_replace_unknown_migration_origins_even_when_values_match() {
+        let root = tempfile::tempdir().unwrap();
+        let mut old = input();
+        old["schema_version"] = json!(1);
+        old["usage_guard"] = json!({"enabled":false,"stop_remaining_percent":5});
+        let current = parse(&old);
+        let baseline = user_setup::migration::inspect(root.path(), &current).unwrap().unwrap().candidate;
+        let supplied = serde_json::to_value(&baseline).unwrap();
+        let mut config = baseline.clone();
+        annotate(&mut config, &supplied, Some(&baseline), FileOptions::default(), Some(42)).unwrap();
+        let record = &config.preference_decisions["/usage_guard/enforcement_enabled"];
+        assert_eq!(record.origin, DecisionOrigin::Explicit);
+        assert_eq!(record.input_channel, PreferenceInput::AnswersFile);
+        assert_eq!(record.decided_at, Some(42));
+        assert!(user_setup::migration::pending_questions(&config).is_empty());
     }
 
     #[test]
