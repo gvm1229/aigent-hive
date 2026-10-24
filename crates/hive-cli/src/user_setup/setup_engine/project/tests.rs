@@ -344,3 +344,61 @@ fn changed_global_preferences_after_preview_do_not_apply_the_project() {
         "default"
     );
 }
+
+#[test]
+fn confirmed_project_recovery_rejects_global_drift_and_never_trusts_a_missing_payload_alone() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let options = options(root.path(), target.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["project_identity"] = answers["project_name"].clone();
+    preferences::record_defaults(&mut answers).unwrap();
+    preferences::accept_preview_defaults(&mut answers).unwrap();
+    let input = write_answers(&answers).unwrap();
+    let matrix = capabilities::unverified("codex", "unverified").unwrap();
+    let caps = write_answers(&matrix).unwrap();
+    let prepared = hive_render::prepare_setup(&request(
+        &options,
+        input.path(),
+        caps.path(),
+        &global,
+        hive_render::SetupMode::DryRun,
+    ))
+    .unwrap();
+    let mut progress = store.new_progress("project-mode".into(), answers).unwrap();
+    activation::bind_context(
+        &mut progress,
+        &global,
+        &serde_json::to_vec(&matrix).unwrap(),
+        &prepared.outcome,
+    )
+    .unwrap();
+    progress.phase = ProgressPhase::Applying;
+    store.save(&store.load().unwrap(), &progress).unwrap();
+    store.record_applying(&progress).unwrap();
+    let mut changed = global.clone();
+    changed.interface_language = "en".into();
+    assert!(activation::apply(&options, &store, &progress, &changed, None).is_err());
+    assert!(!target.path().join(".hive").exists());
+    activation::apply(&options, &store, &progress, &global, Some(prepared)).unwrap();
+    let user = crate::user_install::open_user_root_for_setup(root.path()).unwrap();
+    let digest = store.projection_binding(&progress, None).unwrap();
+    crate::user_setup::projection_journal::cleanup(&user, &progress, digest.as_deref()).unwrap();
+    let path = target.path().join(".hive/config/harness.toml");
+    std::fs::write(&path, b"user changed the harness").unwrap();
+    assert!(activation::apply(&options, &store, &progress, &global, None).is_err());
+    assert_eq!(std::fs::read(path).unwrap(), b"user changed the harness");
+    let pending = ProgressStore::open(root.path(), Some(target.path()))
+        .unwrap()
+        .load()
+        .unwrap()
+        .progress
+        .unwrap();
+    assert_eq!(pending.phase, ProgressPhase::Applying);
+    let mut tampered = progress;
+    tampered.project_context.as_mut().unwrap().plan_digest =
+        hive_core::sha256_digest(b"different plan");
+    assert!(store.projection_binding(&tampered, None).is_err());
+}

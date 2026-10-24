@@ -65,6 +65,16 @@ pub(super) struct SetupProgress {
     pub update_hosts: Vec<String>,
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub question_bindings: std::collections::BTreeMap<String, QuestionBinding>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_context: Option<ProjectContext>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ProjectContext {
+    pub global_digest: String,
+    pub plan_digest: String,
+    pub capabilities: Value,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -218,6 +228,7 @@ impl ProgressStore {
             legacy_migration: None,
             update_hosts: Vec::new(),
             question_bindings: questions::capture(self.binding.scope)?,
+            project_context: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -318,6 +329,11 @@ impl ProgressStore {
             prior,
             self.projection_binding(prior, None)?.as_deref(),
         )?;
+        #[cfg(debug_assertions)]
+        if self.binding.scope == PreferenceScope::Project
+            && std::env::var("HIVE_PROJECT_SETUP_INTERRUPT_AFTER").as_deref() == Ok("cleanup") {
+            std::process::exit(87);
+        }
         let backup = recovery_path(prior)?;
         if let Some(bytes) = self.read(&backup)? {
             if optional_digest(Some(&bytes)) != prior.base_config_digest {
@@ -338,6 +354,7 @@ impl ProgressStore {
         complete.phase = ProgressPhase::Complete;
         // Completed progress is a resume receipt, not a second copy of free-form answers.
         complete.answers = serde_json::json!({});
+        complete.project_context = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -425,6 +442,15 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
+        if let Some(context) = &progress.project_context {
+            if self.binding.scope != PreferenceScope::Project || !valid_hash(&context.global_digest)
+                || !valid_hash(&context.plan_digest) {
+                return Err(SetupError::Verification("invalid project setup context scope".into()));
+            }
+            hive_core::run::CapabilityResolution::parse_json(
+                &serde_json::to_vec(&context.capabilities).map_err(|error| SetupError::Internal(error.to_string()))?
+            ).map_err(|error| SetupError::Verification(error.to_string()))?;
+        }
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
             self.binding.scope != PreferenceScope::User
                 || !matches!(migration.from_schema, 1 | 2)

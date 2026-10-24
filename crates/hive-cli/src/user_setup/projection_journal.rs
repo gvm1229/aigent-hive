@@ -177,6 +177,17 @@ pub(super) fn preflight(
     load(root, root, store, progress).map(|_| ())
 }
 
+pub(super) fn bound_payload_is_absent(
+    root: &Dir,
+    output: &Dir,
+    store: &ProgressStore,
+    progress: &SetupProgress,
+) -> Result<bool, SetupError> {
+    store.verify_journal_roots(root, output)?;
+    let binding = store.projection_binding(progress, None)?;
+    Ok(binding.is_some() && record::read(root, progress, binding.as_deref())?.is_none())
+}
+
 pub(super) fn apply(
     root: &Dir,
     store: &ProgressStore,
@@ -241,7 +252,9 @@ pub(super) fn apply_to(
         reports: journal.projection.reports,
         ..AppliedProjection::default()
     };
-    for change in journal.projection.changes {
+    let total_changes = journal.projection.changes.len();
+    for (index, change) in journal.projection.changes.into_iter().enumerate() {
+        interrupt_project_fixture(progress, index);
         let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
             .map_err(SetupError::Conflict)?;
         verify_mode(
@@ -270,12 +283,27 @@ pub(super) fn apply_to(
             .push(change.path.to_string_lossy().into_owned());
         applied.changes.push(change);
     }
+    interrupt_project_fixture(progress, total_changes);
     crate::user_install::prune_user_setup_empty_ancestors(
         output,
         removed_skills.iter().map(PathBuf::as_path),
     )
     .map_err(SetupError::Conflict)?;
     Ok(applied)
+}
+
+fn interrupt_project_fixture(progress: &SetupProgress, index: usize) {
+    #[cfg(debug_assertions)]
+    if progress.binding.scope == PreferenceScope::Project
+        && std::env::var("HIVE_PROJECT_SETUP_INTERRUPT_AFTER")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            == Some(index)
+    {
+        std::process::exit(87);
+    }
+    #[cfg(not(debug_assertions))]
+    let _ = (progress, index);
 }
 
 fn verify_mode(

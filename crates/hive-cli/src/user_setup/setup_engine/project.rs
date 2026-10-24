@@ -15,6 +15,7 @@ use std::{
     process::ExitCode,
 };
 
+mod activation;
 mod capabilities;
 mod preferences;
 mod questions;
@@ -223,7 +224,7 @@ fn execute<R: BufRead, W: Write>(
         return preferences::inspect(options, &store, saved.as_deref(), terminal.language);
     }
     if mode != InteractionMode::Terminal {
-        return Ok(pending(terminal.language));
+        return resume_without_input(options, &store, terminal.language);
     }
     if global_config.is_none() {
         terminal.say(
@@ -291,6 +292,42 @@ fn execute<R: BufRead, W: Write>(
         &global,
         terminal,
     )
+}
+
+fn resume_without_input(
+    options: &Options,
+    store: &ProgressStore,
+    language: InterfaceLanguage,
+) -> Result<ActionResult, SetupError> {
+    if !options.resume {
+        return Ok(pending(language));
+    }
+    let Some(progress) = store.load()?.progress else {
+        return Ok(pending(language));
+    };
+    if progress.phase == ProgressPhase::Complete {
+        return completed_resume(
+            options,
+            &progress,
+            &global_preferences(&options.root)?,
+            language,
+        );
+    }
+    if matches!(
+        progress.phase,
+        ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+    ) && progress.project_context.is_some()
+    {
+        store.recover_pending_state()?;
+        return finish_existing_apply(
+            options,
+            store,
+            &progress,
+            &global_preferences(&options.root)?,
+            language,
+        );
+    }
+    Ok(pending(language))
 }
 
 fn global_preferences(root: &Path) -> Result<hive_render::GlobalProjectPreferences, SetupError> {
@@ -418,20 +455,22 @@ fn apply<R: BufRead, W: Write>(
     }
     preferences::accept_preview_defaults(&mut progress.answers)?;
     let answers = write_answers(&progress.answers)?;
+    let capability_bytes =
+        user_setup::read_bounded_regular(caps.path(), user_setup::MAX_USER_SETUP_BYTES)?;
+    let prepared = hive_render::prepare_setup(&request(
+        options,
+        answers.path(),
+        caps.path(),
+        global,
+        hive_render::SetupMode::DryRun,
+    ))
+    .map_err(|error| SetupError::Verification(error.to_string()))?;
+    activation::verify_preview(&preview, &prepared.outcome)?;
+    activation::bind_context(progress, global, &capability_bytes, &prepared.outcome)?;
     progress.phase = ProgressPhase::Applying;
     *snapshot = store.save(snapshot, progress)?;
     store.record_applying(progress)?;
-    let outcome = execute_core(
-        &request(
-            options,
-            answers.path(),
-            caps.path(),
-            global,
-            hive_render::SetupMode::Apply,
-        ),
-        &options.root,
-        global,
-    );
+    let outcome = activation::apply(options, store, progress, global, Some(prepared));
     let outcome = match outcome {
         Ok(value) => value,
         Err(error) => {
@@ -439,17 +478,6 @@ fn apply<R: BufRead, W: Write>(
             return Err(error);
         }
     };
-    execute_core(
-        &request(
-            options,
-            answers.path(),
-            caps.path(),
-            global,
-            hive_render::SetupMode::Validate,
-        ),
-        &options.root,
-        global,
-    )?;
     ProgressStore::open(&options.root, Some(&options.target))?.record_completion(progress)?;
     Ok(report(
         "success",
@@ -460,9 +488,7 @@ fn apply<R: BufRead, W: Write>(
             "프로젝트 설정 적용·검증 완료",
             "Project settings applied and verified",
         ],
-        Some(
-            json!({"changed_file_count":outcome.changed_paths.len(),"model_calls":0,"host":facts}),
-        ),
+        Some(json!({"changed_file_count":outcome,"model_calls":0,"host":facts})),
     ))
 }
 
@@ -475,6 +501,24 @@ fn finish_existing_apply(
 ) -> Result<ActionResult, SetupError> {
     if !store.questions_match(progress) {
         return Ok(pending(language));
+    }
+    if progress.project_context.is_some() {
+        let root = crate::user_install::open_user_root_for_setup(&options.root)
+            .map_err(SetupError::Conflict)?;
+        let _lease = crate::user_install::lock_user_setup(&root).map_err(SetupError::Conflict)?;
+        activation::apply(options, store, progress, global, None)?;
+        ProgressStore::open(&options.root, Some(&options.target))?.record_completion(progress)?;
+        return Ok(report(
+            "success",
+            0,
+            "hive.project-setup-complete",
+            language,
+            [
+                "남은 프로젝트 설정 적용·검증 완료",
+                "Remaining project settings applied and verified",
+            ],
+            Some(json!({"model_calls":0,"resumed":true})),
+        ));
     }
     store.projection_binding(progress, None)?;
     let (answers, caps, facts) = prepare_files(options, &progress.answers)?;
@@ -520,7 +564,19 @@ fn completed_resume(
     .ok_or_else(|| SetupError::Verification("completed project settings are missing".into()))?;
     let value = serde_yaml::from_slice(&bytes)
         .map_err(|_| SetupError::Verification("invalid completed project settings".into()))?;
-    let (answers, caps, facts) = prepare_files(options, &value)?;
+    let answers = write_answers(&value)?;
+    let capabilities = crate::user_install::read_user_setup_file(
+        &cap,
+        Path::new(".hive/config/capability-resolution.yml"),
+        user_setup::MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    .ok_or_else(|| {
+        SetupError::Verification("completed project capability data is missing".into())
+    })?;
+    let matrix: Value = serde_yaml::from_slice(&capabilities)
+        .map_err(|_| SetupError::Verification("invalid completed project capabilities".into()))?;
+    let caps = write_answers(&matrix)?;
     execute_core(
         &request(
             options,
@@ -541,6 +597,8 @@ fn completed_resume(
             "이미 적용·검증한 프로젝트 설정입니다.",
             "Project setup was already applied and verified.",
         ],
-        Some(json!({"operation_id":progress.operation_id,"model_calls":0,"host":facts})),
+        Some(
+            json!({"operation_id":progress.operation_id,"model_calls":0,"capabilities":"stored-project-document"}),
+        ),
     ))
 }

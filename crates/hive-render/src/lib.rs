@@ -314,7 +314,7 @@ pub struct SetupRequest<'a> {
 /// The boolean fields intentionally remain separate: each represents an
 /// independently consented user preference and has distinct setup semantics.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 pub struct GlobalProjectPreferences {
     /// Files from an authenticated active Codex plugin, supplied by the CLI.
     pub codex_plugin_files: skill_delivery::PluginSkillFiles,
