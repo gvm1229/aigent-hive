@@ -120,6 +120,41 @@ pub(super) fn complete<R: BufRead, W: Write>(
     mode: InteractionMode,
     terminal: &mut Terminal<R, W>,
 ) -> Result<ActionResult, SetupError> {
+    complete_bound(root, mode, terminal, None)
+}
+
+struct LegacyCompletion<'a> {
+    budget: &'a crate::update_bridge::LegacyBudget,
+    hosts: &'a [String],
+}
+
+#[cfg(windows)]
+pub(in crate::user_setup) fn legacy_noninteractive(
+    root: &Path,
+    hosts: &[String],
+    budget: &crate::update_bridge::LegacyBudget,
+) -> ActionResult {
+    let mut terminal = Terminal {
+        reader: io::empty(), writer: io::sink(), language: InterfaceLanguage::En,
+    };
+    let mut result = complete_bound(root, InteractionMode::NonInteractive, &mut terminal,
+        Some(&LegacyCompletion { budget, hosts }))
+        .unwrap_or_else(|failure| user_setup::failure(&failure));
+    if result.exit_code != 0 {
+        result.next_action = Some(crate::update_bridge::resume_command(root));
+    }
+    result
+}
+
+fn complete_bound<R: BufRead, W: Write>(
+    root: &Path,
+    mode: InteractionMode,
+    terminal: &mut Terminal<R, W>,
+    legacy_parent: Option<&LegacyCompletion<'_>>,
+) -> Result<ActionResult, SetupError> {
+    if legacy_parent.is_some_and(|context| !context.budget.is_connected() || context.budget.apply_deadline().is_none()) {
+        return Ok(interactive::pending(terminal.language, "hive.update-input-pending"));
+    }
     let (root, cap) = crate::user_install::open_canonical_user_root_for_setup(root)
         .map_err(SetupError::Conflict)?;
     let existing = crate::user_install::read_user_setup_file(
@@ -137,6 +172,9 @@ pub(super) fn complete<R: BufRead, W: Write>(
     }
     let store = ProgressStore::open(&root, None)?;
     let snapshot = store.load()?;
+    if let (Some(context), Some(progress)) = (legacy_parent, snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete)) {
+        super::host_scope::check_request(progress, context.hosts)?;
+    }
     let selected = route(
         config.as_ref(),
         snapshot.progress.as_ref().map(|progress| progress.phase),
@@ -153,8 +191,10 @@ pub(super) fn complete<R: BufRead, W: Write>(
             &root,
             snapshot.progress.as_ref().expect("recoverable progress"),
             terminal.language,
-            false,
+            legacy_parent.is_some(),
         )?,
+        Route::PreserveDraft if legacy_parent.is_some() =>
+            interactive::pending(terminal.language, "hive.update-input-pending"),
         Route::PreserveDraft => preserve_draft(
             &root,
             cap,
@@ -167,6 +207,7 @@ pub(super) fn complete<R: BufRead, W: Write>(
             &snapshot,
             config.as_ref().expect("saved configuration"),
             existing.as_deref(),
+            legacy_parent,
         )?,
     };
     result.action = "UpdateHiveUser";
@@ -208,9 +249,18 @@ fn apply_saved(
     snapshot: &user_setup::progress_store::ProgressSnapshot,
     config: &UserSetupConfig,
     existing: Option<&[u8]>,
+    legacy_parent: Option<&LegacyCompletion<'_>>,
 ) -> Result<ActionResult, SetupError> {
-    let _lease = crate::user_install::lock_user_setup(&cap).map_err(SetupError::Conflict)?;
+    let _lease = if legacy_parent.is_none() {
+        Some(crate::user_install::lock_user_setup(&cap).map_err(SetupError::Conflict)?)
+    } else { None };
     let mut progress = legacy::transition_progress(root, store, config)?;
+    if let Some(context) = legacy_parent {
+        if !context.budget.is_connected() || context.budget.apply_deadline().is_none() {
+            return Ok(interactive::pending(config.interface_language, "hive.update-input-pending"));
+        }
+        super::host_scope::bind(&mut progress, context.hosts, false, true)?;
+    }
     progress.phase = ProgressPhase::Applying;
     store.save(snapshot, &progress)?;
     store.record_applying(&progress)?;
@@ -222,7 +272,9 @@ fn apply_saved(
         user_root: root.to_owned(),
         root_cap: cap,
     };
-    let applied = legacy::apply(&arguments, &bytes, existing, &progress);
+    let applied = if let Some(context) = legacy_parent {
+        super::worker::apply(&arguments, &bytes, existing, &progress.operation_id, context.budget)
+    } else { legacy::apply(&arguments, &bytes, existing, &progress) };
     match applied {
         Ok(applied) => {
             ProgressStore::open(root, None)?.record_completion(&progress)?;
@@ -364,5 +416,45 @@ mod tests {
             route(None, None, false, InteractionMode::Terminal),
             Route::Questions
         );
+    }
+
+    #[test]
+    fn legacy_machine_completion_never_reads_input_or_replaces_an_unconfirmed_draft() {
+        let root = tempfile::tempdir().unwrap();
+        let config = existing();
+        let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let original = user_setup::canonical_config(&config).unwrap();
+        std::fs::write(&path, &original).unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = legacy::transition_progress(root.path(), &store, &config).unwrap();
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        let draft_path = root.path().join(&store.relative);
+        let draft = std::fs::read(&draft_path).unwrap();
+        let budget = crate::update_bridge::LegacyBudget::testing();
+        let context = LegacyCompletion { budget: &budget, hosts: &["codex".into()] };
+        let mut terminal = Terminal { reader: Cursor::new(b"yes\n"), writer: Vec::new(), language: InterfaceLanguage::En };
+        let result = complete_bound(root.path(), InteractionMode::NonInteractive, &mut terminal, Some(&context)).unwrap();
+        assert_eq!(result.status, "needs-input");
+        assert_eq!(terminal.reader.position(), 0);
+        assert!(terminal.writer.is_empty());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert_eq!(std::fs::read(&draft_path).unwrap(), draft);
+        assert!(!root.path().join(".hive/history/lifecycle").exists());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn legacy_missing_settings_or_disconnected_parent_leave_no_new_progress() {
+        let root = tempfile::tempdir().unwrap();
+        let budget = crate::update_bridge::LegacyBudget::testing();
+        let hosts = ["codex".into()];
+        for disconnected in [false, true] {
+            if disconnected { budget.disconnect(); }
+            let result = legacy_noninteractive(root.path(), &hosts, &budget);
+            assert_eq!(result.status, "needs-input");
+            assert!(result.next_action.is_some());
+            assert!(!root.path().join(".hive").exists());
+        }
     }
 }

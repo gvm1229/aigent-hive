@@ -72,12 +72,20 @@ pub(crate) fn maybe_setup(
         return Ok(None);
     }
     let budget = LegacyBudget::current();
-    let Some((reader, writer)) = windows::connect(user_root, budget.clone())? else {
+    let Some(connection) = windows::connect(user_root, budget.clone())? else {
         return Ok(None);
     };
-    Ok(Some(crate::user_setup::update_with_terminal(
-        user_root, reader, writer, budget, hosts,
-    )))
+    let result = match connection {
+        windows::Connection::Terminal(reader, writer) => crate::user_setup::update_with_terminal(
+            user_root, reader, writer, budget, hosts,
+        ),
+        windows::Connection::Preserve(watch) => {
+            let result = crate::user_setup::update_without_terminal(user_root, hosts, &budget);
+            drop(watch);
+            result
+        }
+    };
+    Ok(Some(result))
 }
 
 #[cfg(not(windows))]

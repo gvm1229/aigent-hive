@@ -45,6 +45,11 @@ pub(crate) fn resume_pending_update(root: &Path, interactive: bool) -> Result<Op
 }
 
 #[cfg(windows)]
+pub(crate) fn update_without_terminal(root: &Path, hosts: &[String], budget: &crate::update_bridge::LegacyBudget) -> ActionResult {
+    setup_engine::update_without_terminal(root, hosts, budget)
+}
+
+#[cfg(windows)]
 pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
     root: &Path,
     reader: R,

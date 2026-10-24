@@ -58,17 +58,18 @@ try {
         if ($matches) { $verified += [string]$candidate.version }
     }
     if ($verified.Count -ne 1) { Reply @{ event='unverified-parent' }; exit 0 }
-    if ($arguments -contains '--confirm') { Reply @{ event='non-interactive-parent'; version=$verified[0] }; exit 0 }
     $image.RequireAlive()
     Reply @{ event='verified-parent'; version=$verified[0]; process_id=[int]$parent.ProcessId;
         creation_filetime=$image.CreationFileTime; executable=$image.ExecutablePath; arguments=$arguments }
     $request = Request
-    if ($null -eq $request -or $request.operation -ne 'open') { exit 0 }
+    if ($null -eq $request -or $request.operation -notin @('open','watch')) { exit 0 }
     $image.RequireAlive()
-    Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{{CONSOLE_SOURCE}}'))) -Language CSharp
-    $callerCreated = ([DateTime]$caller.CreationDate).ToUniversalTime().ToFileTimeUtc()
-    $console = [HiveUpdateConsole]::new([int]$parent.ProcessId,[int]$caller.ProcessId,$image.CreationFileTime,$callerCreated)
-    Reply @{ event='opened' }
+    if ($request.operation -eq 'open') {
+        Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{{CONSOLE_SOURCE}}'))) -Language CSharp
+        $callerCreated = ([DateTime]$caller.CreationDate).ToUniversalTime().ToFileTimeUtc()
+        $console = [HiveUpdateConsole]::new([int]$parent.ProcessId,[int]$caller.ProcessId,$image.CreationFileTime,$callerCreated)
+        Reply @{ event='opened' }
+    } else { Reply @{ event='watching' } }
     while ($null -ne ($request = Request)) {
         $image.RequireAlive()
         switch ([string]$request.operation) {

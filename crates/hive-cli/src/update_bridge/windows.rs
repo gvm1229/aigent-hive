@@ -23,6 +23,15 @@ struct Session {
 
 type Shared = Rc<RefCell<Session>>;
 
+pub(super) enum Connection {
+    Terminal(Reader, Writer),
+    Preserve(ParentWatch),
+}
+
+pub(super) struct ParentWatch {
+    _session: Session,
+}
+
 pub(super) struct Reader {
     session: Shared,
     bytes: Vec<u8>,
@@ -45,32 +54,36 @@ struct Parent {
 pub(super) fn connect(
     root: &Path,
     budget: LegacyBudget,
-) -> Result<Option<(Reader, Writer)>, String> {
+) -> Result<Option<Connection>, String> {
     let mut session = Session::spawn(budget)?;
     let reply = session.exchange(
         &json!({"operation":"inspect","caller_pid":std::process::id(),"registry":REGISTRY}),
         Instant::now() + Duration::from_secs(20),
     )?;
     match reply["event"].as_str() {
-        Some("not-legacy-parent" | "non-interactive-parent") => return Ok(None),
+        Some("not-legacy-parent") => return Ok(None),
         Some("verified-parent") => {}
         _ => return Err("legacy updater parent could not be verified; settings preserved".into()),
     }
     let parent: Parent =
         serde_json::from_value(reply).map_err(|_| "invalid legacy parent proof")?;
     let executable = std::env::current_exe().map_err(|_| "current executable is unavailable")?;
-    if !interactive_parent(&parent, root, &executable)? {
-        return Ok(None);
-    }
+    let interactive = interactive_parent(&parent, root, &executable)?;
     let opened = session.exchange(
-        &json!({"operation":"open"}),
+        &json!({"operation":if interactive {"open"} else {"watch"}}),
         Instant::now() + Duration::from_secs(10),
     )?;
+    if !interactive {
+        if opened["event"] != "watching" {
+            return Err("legacy updater lifetime could not be bound; settings preserved".into());
+        }
+        return Ok(Some(Connection::Preserve(ParentWatch { _session: session })));
+    }
     if opened["event"] != "opened" {
         return Err("legacy updater console is unavailable; settings preserved".into());
     }
     let shared = Rc::new(RefCell::new(session));
-    Ok(Some((
+    Ok(Some(Connection::Terminal(
         Reader {
             session: Rc::clone(&shared),
             bytes: Vec::new(),

@@ -15,6 +15,8 @@ mod terminal;
 mod worker;
 mod update;
 pub(in crate::user_setup) use update::run as run_update_completion;
+#[cfg(windows)]
+pub(in crate::user_setup) use update::legacy_noninteractive as update_without_terminal;
 pub(super) use interactive::resume_pending_update;
 #[cfg(windows)]
 pub(super) use interactive::update_with_terminal;
