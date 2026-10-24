@@ -591,6 +591,11 @@ fn ask<R: BufRead, W: Write>(
             continue;
         }
         if config_answer_valid(question, &progress.answers, &value)? {
+            if question.id == "usage-project-overrides" && !registered_overrides(store, &progress.answers, &value)? {
+                terminal.say("등록된 프로젝트 식별자와 전역 기준 이상의 값을 입력해 주세요. 프로젝트 파일은 조사하지 않습니다.",
+                    "Use registered identities and values at or above the global threshold. Project files are not inspected.")?;
+                continue;
+            }
             break (value, origin);
         }
         terminal.say(
@@ -657,6 +662,19 @@ pub(super) fn config_answer_valid(
         path == question.key || path.starts_with(&nested)
     });
     Ok(!invalid)
+}
+
+fn registered_overrides(store: &ProgressStore, answers: &Value, value: &Value) -> Result<bool, SetupError> {
+    let values = value.as_object().expect("validated threshold map");
+    if values.is_empty() { return Ok(true); }
+    let threshold = answers["usage_guard"]["stop_remaining_percent"].as_u64()
+        .ok_or_else(|| SetupError::Input("global threshold must be selected first".into()))?;
+    if values.values().any(|value| value.as_u64().is_none_or(|value| value < threshold)) {
+        return Ok(false);
+    }
+    let registry = hive_wiki::shared::load_project_registry_metadata(store.user_root_path())
+        .map_err(|error| SetupError::Input(format!("cannot read registered project identities: {error}")))?;
+    Ok(values.keys().all(|id| registry.projects.iter().any(|project| &project.id == id)))
 }
 
 pub(super) fn answered(progress: &SetupProgress, question: &Question) -> bool {
@@ -959,6 +977,40 @@ fn result(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn project_overrides_validate_registered_metadata_without_opening_project_directories() {
+        let root = tempfile::tempdir().unwrap();
+        let missing = root.path().join("unavailable-project");
+        let registry = json!({"schema_version":1,"projects":[{"id":"known-project","root":missing,
+            "enabled":true,"language":"en","visibility":"shared"}]});
+        let path = root.path().join(hive_wiki::shared::PROJECT_REGISTRY_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let bytes = serde_json::to_vec(&registry).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = conversation(&store);
+        progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
+        let catalog = catalog().unwrap();
+        let question = catalog.questions.iter().find(|q| q.id=="usage-project-overrides").unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"{\"missing\":30}\n{\"known-project\":101}\n{\"known-project\":19}\n{\"known-project\":40}\n"),
+            writer: Vec::new(), language: InterfaceLanguage::En,
+        };
+        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        user_setup::validate_registered_project_overrides(&config, root.path()).unwrap();
+        assert_eq!(config.usage_guard.project_overrides["known-project"], 40);
+        assert_eq!(String::from_utf8(terminal.writer).unwrap().matches(&question.prompt.en).count(), 4);
+        assert_eq!(std::fs::read(path).unwrap(), bytes);
+        assert!(!missing.exists());
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        let empty = tempfile::tempdir().unwrap();
+        let empty_store = ProgressStore::open(empty.path(), None).unwrap();
+        assert!(!registered_overrides(&empty_store, &progress.answers, &json!({"unknown":30})).unwrap());
+        assert!(registered_overrides(&empty_store, &progress.answers, &json!({})).unwrap());
+        assert!(!empty.path().join(".hive").exists());
+    }
 
     #[test]
     fn only_confirmed_noninteractive_resume_passes_the_input_gate() {

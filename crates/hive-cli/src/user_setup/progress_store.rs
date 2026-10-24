@@ -124,6 +124,10 @@ pub(super) struct ProgressStore {
 }
 
 impl ProgressStore {
+    pub fn user_root_path(&self) -> &Path {
+        &self.root_path
+    }
+
     pub fn open(user_root: &Path, target: Option<&Path>) -> Result<Self, SetupError> {
         let (user_path, root) =
             open_canonical_user_root_for_setup(user_root).map_err(SetupError::Conflict)?;

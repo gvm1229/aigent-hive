@@ -280,25 +280,30 @@ pub fn validate_project_registry_bytes(
 ///
 /// Returns an error when the canonical ledger is missing, unsafe, too large, or invalid.
 pub fn load_project_registry(user_root: &Path) -> Result<ProjectRegistry, WikiError> {
-    validate_project_registry_bytes(user_root, &read_project_registry_bytes(user_root)?)
+    let bytes = read_project_registry_bytes(user_root)?
+        .ok_or_else(|| WikiError::Io("project registry is missing".to_owned()))?;
+    validate_project_registry_bytes(user_root, &bytes)
 }
 
 /// Read registration declarations for user preferences without opening any project root.
 ///
 /// This metadata is not authority to access a project. Knowledge operations must use
 /// [`load_project_registry`] and its live root validation.
+/// A missing registration file means no registrations and creates no file.
 ///
 /// # Errors
 /// Rejects unsafe user-root storage, malformed records, duplicate identities, and invalid paths.
 pub fn load_project_registry_metadata(user_root: &Path) -> Result<ProjectRegistry, WikiError> {
-    let bytes = read_project_registry_bytes(user_root)?;
+    let Some(bytes) = read_project_registry_bytes(user_root)? else {
+        return Ok(ProjectRegistry { schema_version: 1, projects: Vec::new() });
+    };
     let registry: ProjectRegistry = serde_yaml::from_slice(&bytes)
         .map_err(|error| WikiError::InvalidInput(format!("invalid project registry: {error}")))?;
     validate_registry_metadata(user_root, &registry)?;
     Ok(registry)
 }
 
-fn read_project_registry_bytes(user_root: &Path) -> Result<Vec<u8>, WikiError> {
+fn read_project_registry_bytes(user_root: &Path) -> Result<Option<Vec<u8>>, WikiError> {
     validate_absolute_root(user_root, "user root")?;
     ensure_no_symlink_ancestors(user_root, Path::new(PROJECT_REGISTRY_RELATIVE))
         .map_err(|error| WikiError::Conflict(error.to_string()))?;
@@ -306,9 +311,11 @@ fn read_project_registry_bytes(user_root: &Path) -> Result<Vec<u8>, WikiError> {
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
     let mut options = CapOpenOptions::new();
     options.read(true).follow(FollowSymlinks::No);
-    let file = root
-        .open_with(PROJECT_REGISTRY_RELATIVE, &options)
-        .map_err(|error| WikiError::Io(format!("cannot open project registry: {error}")))?;
+    let file = match root.open_with(PROJECT_REGISTRY_RELATIVE, &options) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(WikiError::Io(format!("cannot open project registry: {error}"))),
+    };
     let metadata = file
         .metadata()
         .map_err(|error| WikiError::Io(format!("cannot inspect project registry: {error}")))?;
@@ -331,7 +338,7 @@ fn read_project_registry_bytes(user_root: &Path) -> Result<Vec<u8>, WikiError> {
             "project registry exceeds the 1 MiB limit".to_owned(),
         ));
     }
-    Ok(bytes)
+    Ok(Some(bytes))
 }
 
 /// Ensure the canonical user-root project registry exists without changing existing entries.
@@ -1920,6 +1927,10 @@ mod tests {
 
     #[test]
     fn preference_registry_metadata_does_not_open_missing_projects() {
+        let empty = tempfile::tempdir().unwrap();
+        assert!(load_project_registry_metadata(empty.path()).unwrap().projects.is_empty());
+        assert!(load_project_registry(empty.path()).is_err());
+        assert!(!empty.path().join(".hive").exists());
         let (_temp, user, first, _second) = fixture();
         let mut registry = load_project_registry(&user).unwrap();
         registry.projects[0].root = first.join("not-present");

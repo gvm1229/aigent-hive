@@ -2137,7 +2137,7 @@ fn validate_registered_project_overrides(
     if config.usage_guard.project_overrides.is_empty() {
         return Ok(());
     }
-    let registry = hive_wiki::shared::load_project_registry(user_root).map_err(|error| {
+    let registry = hive_wiki::shared::load_project_registry_metadata(user_root).map_err(|error| {
         SetupError::Input(format!(
             "usage guard project overrides require a valid registered-project list: {error}"
         ))
@@ -5035,7 +5035,7 @@ usage_guard: {}
         let error = validate_registered_project_overrides(&config, temporary.path())
             .expect_err("unregistered project override");
 
-        assert!(error.message().contains("registered-project"));
+        assert!(error.message().contains("not a registered project identity"));
     }
 
     #[test]

@@ -238,6 +238,16 @@ questions:
     default: 20
     minimum: 0
     maximum: 99
+  - id: usage-project-overrides
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/project_overrides"
+    input: "structured"
+    prompt: {"ko":"프로젝트별 잔여량 기준을 JSON으로 입력해 주세요.","en":"Enter project-specific remaining-quota thresholds as JSON."}
+    help: {"ko":"등록된 식별자와 전역 기준 이상인 0~99 정수만 사용. 예: {\"my-project\":30}. {}는 별도 기준 없음. 프로젝트 파일 변경 없음.","en":"Use registered identities and integers from 0 to 99 at or above the global threshold, for example {\"my-project\":30}. {} means no overrides. Project files are not changed."}
+    default: {}
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
   - id: usage-preflight-threshold
     revision: 1
     scope: "user"
