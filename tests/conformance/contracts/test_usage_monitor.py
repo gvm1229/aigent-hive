@@ -303,6 +303,55 @@ if(-not $rejected){throw 'Foreign task accepted'}
 """
             self.assertTrue(self.powershell(source)["rejected"])
 
+    def test_exact_scheduler_replay_does_not_repeat_registration_or_running_start(self):
+        script = self.adapter_functions().replace("exit 1", "throw")
+        fixture = r"""
+$identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+$task=[pscustomobject]@{Description='Aigent Hive version-bound Codex usage protection';
+ Actions=@([pscustomobject]@{Execute='owned';Arguments='owned'});
+ Principal=[pscustomobject]@{UserId=$identity.User.Value;LogonType=3;RunLevel=0};
+ Settings=[pscustomobject]@{Enabled=$true};State='Running'}
+function Get-ScheduledTask {$task}
+function Register-ScheduledTask {throw 'Unexpected duplicate registration'}
+function Start-ScheduledTask {throw 'Unexpected duplicate start'}
+$request=[pscustomobject]@{operation='OP';task_name='AigentHive-UsageMonitor-0123456789abcdef';executable='owned';arguments='owned';allow_existing_exact=$true}
+"""
+        for identity in ["$identity.User.Value", "([Environment]::UserName)"]:
+            for operation, field in [("register", "registered"), ("start", "started"), ("inspect-task", "owned")]:
+                source = fixture.replace("UserId=$identity.User.Value", "UserId=" + identity).replace("'OP'", repr(operation))
+                result = self.powershell(source + script)
+                self.assertTrue(result[field])
+                if operation != "inspect-task":
+                    self.assertTrue(result["reused"])
+
+    def test_scheduler_replay_preserves_disabled_foreign_owner_and_elevated_tasks(self):
+        script = self.adapter_functions().replace("exit 1", "throw")
+        fixture = r"""
+$identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+$task=[pscustomobject]@{Description='Aigent Hive version-bound Codex usage protection';
+ Actions=@([pscustomobject]@{Execute='owned';Arguments='owned'});
+ Principal=[pscustomobject]@{UserId=$identity.User.Value;LogonType=3;RunLevel=0};
+ Settings=[pscustomobject]@{Enabled=$true};State='Ready'}
+function Get-ScheduledTask {$task}
+function Register-ScheduledTask {throw 'Unexpected registration'}
+function Start-ScheduledTask {throw 'Unexpected start'}
+function Unregister-ScheduledTask {throw 'Unexpected removal'}
+function Stop-ScheduledTask {throw 'Unexpected stop'}
+$request=[pscustomobject]@{operation='OP';task_name='AigentHive-UsageMonitor-0123456789abcdef';executable='owned';arguments='owned';allow_existing_exact=$true}
+CHANGE
+$rejected=$false
+try {
+"""
+        for change in ["$task.Principal.UserId='foreign-user'", "$task.Principal.RunLevel=1", "$task.Settings.Enabled=$false"]:
+            operations = ("register", "start") if "Enabled" in change else ("register", "start", "unregister")
+            for operation in operations:
+                source = fixture.replace("'OP'", repr(operation)).replace("CHANGE", change) + script + r"""
+} catch {$rejected=$true}
+if(-not $rejected){throw 'Changed task accepted'}
+@{rejected=$true}|ConvertTo-Json -Compress
+"""
+                self.assertTrue(self.powershell(source)["rejected"])
+
     def test_background_catalog_requires_owner_confirmation(self):
         source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding="utf-8")
         body=source.split("} elseif ($request.method -eq 'thread-owner-discovery') {",1)[1].split("} elseif",1)[0]
