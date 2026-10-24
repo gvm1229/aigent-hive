@@ -1889,6 +1889,18 @@ pub(crate) fn read_user_setup_file(
     read_optional_regular(root, relative, maximum).map_err(|error| error.message().to_owned())
 }
 
+pub(crate) fn inspect_setup_host(host: crate::user_setup::SelectedHost) -> (bool, Option<String>) {
+    let host = match host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let runner = SystemCommandRunner;
+    let program = if host == UserHost::Antigravity { "agy" } else { host.as_str() };
+    let Ok(executable) = runner.qualify(program) else { return (false, None) };
+    (true, probe_supported_host_version(host, &executable, &runner).ok())
+}
+
 pub(crate) fn lock_user_setup(root: &Dir) -> Result<std::fs::File, String> {
     let (parent, name) = capability_parent(root, Path::new(".hive/config/setup-apply.lock"), true)
         .map_err(|error| error.message().to_owned())?

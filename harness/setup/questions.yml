@@ -165,8 +165,8 @@ questions:
     key: "/skills"
     input: "structured"
     prompt: {"ko":"사용할 기능 묶음 또는 기능 목록을 JSON으로 입력해 주세요.","en":"Enter the feature bundle or feature selection as JSON."}
-    help: {"ko":"예: {\"mode\":\"all\"}. 기능 설치와 외부 연결 동의는 별도 처리.","en":"Example: {\"mode\":\"all\"}. Installation and external connections require separate consent."}
-    default: {"mode":"all"}
+    help: {"ko":"예: {\"mode\":\"recommended\",\"recommended_suite\":\"daily-work\"}. 직접 선택은 {\"mode\":\"individual\",\"selected\":[]}. 기능 설치와 외부 연결 동의는 별도 처리.","en":"Example: {\"mode\":\"recommended\",\"recommended_suite\":\"daily-work\"}. Select individually with {\"mode\":\"individual\",\"selected\":[]}. Installation and external connections require separate consent."}
+    default: {"mode":"recommended","recommended_suite":"daily-work"}
   - id: user-contexts
     revision: 1
     scope: "user"

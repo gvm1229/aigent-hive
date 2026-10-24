@@ -36,6 +36,10 @@ pub(crate) fn run_update_completion(arguments: &[String]) -> ExitCode {
     setup_engine::run_update_completion(arguments)
 }
 
+pub(crate) fn run_project_setup(arguments: &[String]) -> ExitCode {
+    setup_engine::run_project(arguments)
+}
+
 pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Duration {
     setup_engine::command_timeout(requested)
 }

@@ -58,6 +58,8 @@ USAGE:
     hive uninstall [--user-root <dir>] [--output json]
     hive check-target <path>
     hive setup --help
+    hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
@@ -109,6 +111,8 @@ const SETUP_USAGE: &str = "\
 Create or validate an installed Aigent Hive consumer harness.
 
 USAGE:
+    hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
 
 MODES:
@@ -641,6 +645,9 @@ fn wants_json(arguments: &[String]) -> bool {
 }
 
 fn run_setup(arguments: &[String]) -> ExitCode {
+    if !arguments.iter().any(|argument| argument == "--answers") {
+        return user_setup::run_project_setup(arguments);
+    }
     let parsed = parse_setup(arguments);
     let result = match parsed {
         Ok(arguments) => {

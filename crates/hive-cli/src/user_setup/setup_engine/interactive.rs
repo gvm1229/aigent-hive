@@ -612,7 +612,7 @@ fn ask<R: BufRead, W: Write>(
     Ok(true)
 }
 
-fn config_answer_valid(
+pub(super) fn config_answer_valid(
     question: &Question,
     answers: &Value,
     value: &Value,
