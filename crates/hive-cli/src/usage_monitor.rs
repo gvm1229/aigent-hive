@@ -1,4 +1,5 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
+mod activation;
 mod desktop;
 mod platform;
 mod preferences;
@@ -565,6 +566,8 @@ fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
     Ok(root.to_owned())
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
+    let pinned = PinnedTarget::open_usage(root)?;
+    let binding = activation::Binding::capture(&pinned)?;
     let mut config = configuration(root)?;
     let available = cfg!(windows);
     config.enabled = available;
@@ -578,7 +581,8 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
         "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"compatibility_policy":"protocol","automatic_control_available":available,
         "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
-        "supports_current_os":available,"remote_execution_supported":false});
+        "supports_current_os":available,"remote_execution_supported":false,"activation_binding":binding});
+    pinned.verify_current()?;
     let digest = sha256_digest(&serialize(&data)?);
     data["preview_digest"] = json!(digest);
     Ok(data)
