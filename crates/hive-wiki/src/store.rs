@@ -324,6 +324,22 @@ impl RagStore {
         Ok(Self { root_path, root })
     }
 
+    /// Open the same directory already pinned by a setup or installation operation.
+    ///
+    /// # Errors
+    /// Rejects path replacement instead of writing a newly selected directory through the path.
+    pub fn open_bound(user_root: &Path, expected: &Dir) -> Result<Self, WikiError> {
+        let live = Self::open(user_root)?;
+        let original = expected.dir_metadata().map_err(|error| WikiError::Io(error.to_string()))?;
+        let current = live.root.dir_metadata().map_err(|error| WikiError::Io(error.to_string()))?;
+        if (CapMetadataExt::dev(&original), CapMetadataExt::ino(&original))
+            != (CapMetadataExt::dev(&current), CapMetadataExt::ino(&current)) {
+            return Err(WikiError::Conflict("user root changed before index preparation".into()));
+        }
+        Ok(Self { root_path: live.root_path,
+            root: expected.try_clone().map_err(|error| WikiError::Io(error.to_string()))? })
+    }
+
     pub(crate) fn from_pinned(root_path: PathBuf, root: Dir) -> Self {
         Self { root_path, root }
     }
@@ -4804,6 +4820,18 @@ mod tests {
         store.ensure_user_setup_index().unwrap();
         store.validate_current().unwrap();
         assert!(!root.path().join(PROJECT_REGISTRY_RELATIVE).exists());
+    }
+
+    #[test]
+    fn user_setup_index_rejects_a_different_directory_from_the_installation_binding() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        let pinned = Dir::open_ambient_dir(first.path(), ambient_authority()).unwrap();
+        assert!(RagStore::open_bound(second.path(), &pinned).is_err());
+        assert!(!second.path().join(".hive").exists());
+        RagStore::open_bound(first.path(), &pinned).unwrap().ensure_user_setup_index().unwrap();
+        assert!(first.path().join(SHARED_INDEX_RELATIVE).is_file());
+        assert!(!second.path().join(".hive").exists());
     }
 
     #[test]
