@@ -83,6 +83,8 @@ pub(super) struct SetupProgress {
     pub monitor_start: Option<super::setup_engine::monitor_start::Approval>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vector_choice: Option<super::setup_engine::vector_choice::Selection>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub host_deactivations: Vec<crate::user_install::deactivation::Plan>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -257,6 +259,7 @@ impl ProgressStore {
             monitor_stop: None,
             monitor_start: None,
             vector_choice: None,
+            host_deactivations: Vec::new(),
         };
         self.validate(&progress)?;
         Ok(progress)

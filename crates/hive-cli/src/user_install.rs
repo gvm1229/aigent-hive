@@ -1,5 +1,6 @@
 mod host_state;
 mod index_removal;
+pub(crate) mod deactivation;
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
@@ -8423,6 +8424,77 @@ mod tests {
             ),
         )
         .expect("user setup");
+    }
+
+    #[test]
+    fn host_deactivation_preserves_user_bytes_sources_and_supports_reselection() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let root = tempdir().unwrap();
+            write_operational_setup(root.path(), &["codex", "claude"]);
+            let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+            let install = args(root.path(), host, UserMode::Apply);
+            let guidance = guidance_path(host, &install.root_cap).unwrap();
+            fs::create_dir_all(root.path().join(&guidance).parent().unwrap()).unwrap();
+            fs::write(root.path().join(&guidance), b"User preface.\n").unwrap();
+            execute(UserOperation::Install, &install, &runner).unwrap();
+            let config = fs::read(root.path().join(".hive/config/user-setup.yml")).unwrap();
+            let manifest_path = root.path().join(format!(".hive/install/{}.json", host.as_str()));
+            let manifest_bytes = fs::read(&manifest_path).unwrap();
+            let manifest: UserOwnershipManifest = serde_json::from_slice(&manifest_bytes).unwrap();
+            let source = manifest.entries.iter().filter(|entry| is_managed_ownership(&entry.ownership))
+                .map(|entry| (entry.path.clone(), fs::read(root.path().join(&entry.path)).unwrap())).collect::<Vec<_>>();
+            let selected = if host == UserHost::Codex { crate::user_setup::SelectedHost::Codex } else { crate::user_setup::SelectedHost::Claude };
+            let plans = deactivation::preview_using(root.path(), &[selected], &runner).unwrap();
+            assert!(runner.plugin_installed.lock().unwrap().to_owned());
+            assert_eq!(deactivation::apply_using(root.path(), &plans, &runner).unwrap(), vec![portable(&guidance)]);
+            assert_eq!(fs::read(root.path().join(&guidance)).unwrap(), b"User preface.\n");
+            assert_eq!(fs::read(&manifest_path).unwrap(), manifest_bytes);
+            assert_eq!(fs::read(root.path().join(".hive/config/user-setup.yml")).unwrap(), config);
+            for (path, bytes) in source { assert_eq!(fs::read(root.path().join(path)).unwrap(), bytes); }
+            runner.calls.lock().unwrap().clear();
+            assert!(deactivation::apply_using(root.path(), &plans, &runner).unwrap().is_empty());
+            assert!(runner.calls.lock().unwrap().iter().all(|call| !call.contains("remove") && !call.contains("uninstall")));
+            execute(UserOperation::Install, &install, &runner).unwrap();
+            assert!(*runner.plugin_installed.lock().unwrap());
+        }
+    }
+
+    #[test]
+    fn host_deactivation_resumes_after_plugin_removal_and_preserves_external_edits() {
+        let root = tempdir().unwrap();
+        write_operational_setup(root.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+        let install = args(root.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let plans = deactivation::preview_using(root.path(), &[crate::user_setup::SelectedHost::Codex], &runner).unwrap();
+        *runner.plugin_installed.lock().unwrap() = false;
+        runner.calls.lock().unwrap().clear();
+        deactivation::apply_using(root.path(), &plans, &runner).unwrap();
+        assert!(!runner.calls.lock().unwrap().iter().any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
+        assert!(runner.calls.lock().unwrap().iter().any(|call| call == "plugin marketplace remove aigent-hive --json"));
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let plans = deactivation::preview_using(root.path(), &[crate::user_setup::SelectedHost::Codex], &runner).unwrap();
+        let path = root.path().join(guidance_path(UserHost::Codex, &install.root_cap).unwrap());
+        let changed = [fs::read(&path).unwrap(), b"\nUser edit after preview.\n".to_vec()].concat();
+        fs::write(&path, &changed).unwrap();
+        assert!(deactivation::apply_using(root.path(), &plans, &runner).is_err());
+        assert!(*runner.plugin_installed.lock().unwrap());
+        assert_eq!(fs::read(path).unwrap(), changed);
+    }
+
+    #[test]
+    fn host_deactivation_rejects_missing_ownership_and_unsupported_native_versions() {
+        let root = tempdir().unwrap();
+        write_operational_setup(root.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+        let install = args(root.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let selected = [crate::user_setup::SelectedHost::Codex];
+        let unsupported = VersionRunner { stdout: b"codex-cli 0.1.0".to_vec(), success: true };
+        assert!(deactivation::preview_using(root.path(), &selected, &unsupported).is_err());
+        fs::remove_file(root.path().join(".hive/install/codex.json")).unwrap();
+        assert!(deactivation::preview_using(root.path(), &selected, &runner).is_err());
+        assert!(*runner.plugin_installed.lock().unwrap());
     }
 
     #[test]

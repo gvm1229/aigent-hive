@@ -245,6 +245,8 @@ pub(super) fn checkpoint(
                 .map_err(|failure| SetupError::Verification(failure.message().into()))
         })?
     } else { expected.map(<[u8]>::to_vec) };
+    crate::user_install::deactivation::apply(&arguments.user_root, &progress.host_deactivations)
+        .map_err(SetupError::Verification)?;
     super::index_rebuild::apply(arguments, progress)?;
     Ok(baseline)
 }

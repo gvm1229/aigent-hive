@@ -36,6 +36,8 @@ pub(super) fn resume(
     }
     user_setup::progress_store::recover_config(&arguments.root_cap, &store, progress)?;
     super::vector_choice::apply(&arguments.root_cap, progress)?;
+    crate::user_install::deactivation::apply(root, &progress.host_deactivations)
+        .map_err(SetupError::Verification)?;
     let validated = user_setup::execute_answers(&arguments, &bytes, user_setup::SetupBase::Current);
     let repaired = validated.is_err();
     let mut result = if let Ok(result) = validated {

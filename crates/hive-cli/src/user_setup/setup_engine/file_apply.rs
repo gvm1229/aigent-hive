@@ -59,7 +59,7 @@ pub(super) fn apply(
             .try_clone()
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
-    user_setup::execute_answers(&preview, bytes, user_setup::SetupBase::Expected(expected))?;
+    let preview = user_setup::execute_answers(&preview, bytes, user_setup::SetupBase::Expected(expected))?;
     let answers: serde_json::Value =
         serde_json::from_slice(bytes).map_err(|error| SetupError::Internal(error.to_string()))?;
     let mut progress = match snapshot
@@ -71,6 +71,7 @@ pub(super) fn apply(
         None => store.new_progress("file-apply".into(), answers.clone())?,
     };
     progress.answers = answers;
+    super::host_scope::bind_deactivations(&preview, &mut progress)?;
     progress.legacy_migration = migration;
     super::monitor_stop::bind(&arguments.user_root, &mut progress)?;
     super::monitor_start::bind_file(&arguments.user_root, expected, &mut progress,

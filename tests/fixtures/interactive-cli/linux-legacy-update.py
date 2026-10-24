@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -74,9 +74,34 @@ if args[:2]==['plugin','install']:
     shutil.copytree(args[2],stage)
 if args==['plugin','list']:
     print(json.dumps({'imports':[{'name':'aigent-hive','source':'antigravity','importedAt':'2026-07-27T00:00:00Z','components':['skills']}]} if stage.exists() else {'imports':[]}))
+elif args==['plugin','uninstall','aigent-hive']:
+    if stage.exists():shutil.rmtree(stage)
+    print('{}')
 else:print('{}')
 ''')
 (shim / "agy").chmod(0o755)
+if mode == "host-deselect":
+    (shim/"codex").write_text('''#!/usr/bin/python3
+import json,os,sys
+from pathlib import Path
+root=Path('/tmp/hive-first-update/user');args=sys.argv[1:];path=root/'fake-codex.json'
+state=json.loads(path.read_text()) if path.exists() else {'marketplace':False,'plugin':False}
+with (root/'fake-codex-calls.jsonl').open('a') as log:log.write(json.dumps(args)+'\\n')
+market=str(root/'.hive/marketplaces/codex')
+if args==['--version']:print('codex-cli 0.145.0');raise SystemExit(0)
+if args==['plugin','marketplace','list','--json']:
+    print(json.dumps({'marketplaces':[{'name':'aigent-hive','root':market}] if state['marketplace'] else []}));raise SystemExit(0)
+if args==['plugin','list','--json']:
+    entries=[{'pluginId':'aigent-hive@aigent-hive','version':'0.14.0','enabled':True,'source':{'path':market+'/plugins/aigent-hive'},'marketplaceSource':{'source':market}}] if state['plugin'] else []
+    print(json.dumps({'installed':entries+[{'pluginId':'foreign@foreign'}],'available':[]}));raise SystemExit(0)
+if args[:3]==['plugin','marketplace','add'] and args[3:]==[market,'--json']:state['marketplace']=True
+elif args==['plugin','add','aigent-hive@aigent-hive','--json']:state['plugin']=True
+elif args==['plugin','remove','aigent-hive@aigent-hive','--json']:state['plugin']=False
+elif args==['plugin','marketplace','remove','aigent-hive','--json']:state['marketplace']=False
+else:raise SystemExit('unsupported fake Codex command '+repr(args))
+path.write_text(json.dumps(state));print('{}')
+''')
+    (shim/"codex").chmod(0o755)
 environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "LANG": "C.UTF-8",
                "LC_ALL": "C.UTF-8", "CODEX_HOME": str(root / "codex"),
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
@@ -136,7 +161,9 @@ def terminal_run(command, stop=None):
                         elif stop == "hold" and ("Korean" in text or "한국어" in text) and "English" in text:
                             reply, kind = None, "held"
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
-                            reply, kind = "yes", "final"
+                            reply, kind = ("no", "decline-final") if stop == "decline-final" else ("yes", "final")
+                        elif mode == "host-deselect" and "사용할 앱" in text:
+                            reply, kind = "antigravity", "select-antigravity"
                         elif mode == "vector-choice" and "뜻이 비슷한 지식도 찾는 의미 검색" in text:
                             reply, kind = (":cancel", "vector-cancel") if stop == "vector-cancel" else ("yes", "vector-yes") if not terminal_runs else ("no", "vector-no")
                         elif mode == "monitor-decline" and "설정 방식을" in text and "맞춤 설정" in text:
@@ -166,7 +193,7 @@ def terminal_run(command, stop=None):
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel", "decline-final"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -281,6 +308,46 @@ else:
                 assert blocked.returncode!=0,(blocked.stdout,blocked.stderr)
                 assert config.read_bytes()==before
                 assert not (user/".hive/runtime/usage-monitor/config.json").exists()
+if mode == "host-deselect":
+    setup=[str(binary),"setup","--scope","user","--user-root",str(user)]
+    def call(args,expected=0,env=environment):
+        p=subprocess.run(args,env=env,capture_output=True,text=True,timeout=90)
+        assert p.returncode==expected,(p.returncode,p.stdout[-4000:],p.stderr[-4000:])
+        return json.loads(p.stdout) if expected==0 else None
+    settings=call([*setup,"--show","--output","json"])["data"]["stored"]
+    settings["selected_hosts"]=["codex","antigravity"]
+    document=root/"user-answers.json";document.write_text(json.dumps(settings))
+    file_args=[*setup,"--answers",str(document),"--input-channel","agent","--output","json"]
+    call([*file_args,"--apply"])
+    state=user/"fake-codex.json";before=state.read_bytes();config_before=config.read_bytes()
+    manifest=json.loads((user/".hive/install/codex.json").read_text())
+    guidance=user/manifest["guidance_path"]
+    guidance.write_bytes(b"User preface.\n"+guidance.read_bytes()+b"User footer.\n")
+    sources={entry["path"]:hashlib.sha256((user/entry["path"]).read_bytes()).hexdigest()
+        for entry in manifest["entries"] if entry["ownership"] not in {"shared-marker","shared-migration-state","canonical-data-protected"}}
+    foreign=user/".gemini/config/plugins/foreign";foreign.mkdir();(foreign/"data").write_bytes(b"foreign bytes")
+    settings["selected_hosts"]=["antigravity"];document.write_text(json.dumps(settings))
+    dry=call([*file_args,"--dry-run"])
+    assert [plan["host"] for plan in dry["data"]["host_deactivations"]]==["codex"]
+    assert state.read_bytes()==before and config.read_bytes()==config_before
+    terminal_run([*setup,"--section","hosts"],"decline-final")
+    assert state.read_bytes()==before and config.read_bytes()==config_before
+    terminal_run([*setup,"--resume"])
+    assert json.loads(state.read_text())=={"marketplace":False,"plugin":False}
+    assert guidance.read_bytes()==b"User preface.\nUser footer.\n"
+    for path,digest in sources.items():assert hashlib.sha256((user/path).read_bytes()).hexdigest()==digest
+    assert (foreign/"data").read_bytes()==b"foreign bytes"
+    settings["selected_hosts"]=["codex","antigravity"];document.write_text(json.dumps(settings))
+    call([*file_args,"--apply"])
+    assert all(json.loads(state.read_text()).values())
+    settings["selected_hosts"]=["antigravity"];document.write_text(json.dumps(settings))
+    call([*file_args,"--apply"],87,dict(environment,HIVE_USER_SETUP_INTERRUPT_AFTER="0"))
+    def removes():return [line for line in (user/"fake-codex-calls.jsonl").read_text().splitlines() if '"remove"' in line]
+    removed=removes()
+    call([*setup,"--resume","--output","json"])
+    assert removes()==removed and not any(json.loads(state.read_text()).values())
+    assert guidance.read_bytes()==b"User preface.\nUser footer.\n"
+    assert (foreign/"data").read_bytes()==b"foreign bytes"
 if mode == "vector-choice":
     ledger=user/".hive/config/user-feature-answers.yml"
     first=ledger.read_bytes()

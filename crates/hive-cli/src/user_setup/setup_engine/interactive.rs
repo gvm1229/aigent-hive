@@ -760,7 +760,9 @@ fn preview_apply<R: BufRead, W: Write>(
             .try_clone()
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
-    user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    let preview = user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    super::host_scope::bind_deactivations(&preview, &mut progress.record)?;
+    super::host_scope::display_deactivations(&progress.record, terminal)?;
     if !super::vector_choice::collect(root_cap, store, progress, terminal)? {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }

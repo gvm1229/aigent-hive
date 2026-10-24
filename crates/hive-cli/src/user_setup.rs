@@ -1438,12 +1438,16 @@ fn execute_answers(
     }
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
-    if matches!(arguments.mode, SetupMode::DryRun | SetupMode::Apply) {
-        reject_host_deselection(existing.as_deref(), &config)?;
+    let removed = host_deselections(existing.as_deref(), &config)?;
+    if arguments.mode == SetupMode::Apply && !removed.is_empty()
+        && !matches!(expected_config, SetupBase::Bound { .. }) {
+        return Err(SetupError::Conflict("host deselection requires the common confirmed setup journal".into()));
     }
 
     match arguments.mode {
         SetupMode::DryRun => {
+            let deactivations = super::user_install::deactivation::preview(&arguments.user_root, &removed)
+                .map_err(SetupError::Verification)?;
             let projection =
                 plan_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
             let mut changed_paths = projection.changed_paths;
@@ -1467,7 +1471,7 @@ fn execute_answers(
             }
             changed_paths.sort();
             changed_paths.dedup();
-            Ok(success(
+            let mut result = success(
                 arguments,
                 &config,
                 &resolved_skills,
@@ -1478,7 +1482,9 @@ fn execute_answers(
                 answer_bytes,
                 &desired,
                 &projection.reports,
-            ))
+            );
+            if let Some(data) = result.data.as_mut() { data["host_deactivations"] = json!(deactivations); }
+            Ok(result)
         }
         SetupMode::Validate => {
             let installed = existing.ok_or_else(|| {
@@ -2257,12 +2263,12 @@ fn validate_user_profile(profile: &UserProfile) -> Result<(), SetupError> {
     Ok(())
 }
 
-fn reject_host_deselection(
+fn host_deselections(
     installed: Option<&[u8]>,
     desired: &UserSetupConfig,
-) -> Result<(), SetupError> {
+) -> Result<Vec<SelectedHost>, SetupError> {
     let Some(installed) = installed else {
-        return Ok(());
+        return Ok(Vec::new());
     };
     let installed = parse_and_validate_installed_config(installed).map_err(|error| {
         SetupError::Conflict(format!(
@@ -2286,16 +2292,12 @@ fn reject_host_deselection(
         .iter()
         .copied()
         .filter(|host| !desired_hosts.contains(host))
-        .map(SelectedHost::as_str)
         .collect::<Vec<_>>();
-    if removed.is_empty() {
-        Ok(())
-    } else {
-        Err(SetupError::Conflict(format!(
-            "cannot remove configured hosts until transactional host deactivation is available; keep these selected_hosts entries: {}",
-            removed.join(", ")
-        )))
+    if removed.contains(&SelectedHost::Codex) && desired.usage_guard.policy.as_ref()
+        .is_some_and(|policy| policy.enforcement_enabled && policy.midway.enabled) {
+        return Err(SetupError::Input("turn off Codex background monitoring before deselecting Codex".into()));
     }
+    Ok(removed)
 }
 
 fn validate_sorted_unique_hosts(hosts: &[SelectedHost]) -> Result<(), SetupError> {
@@ -5193,20 +5195,13 @@ usage_guard:
     }
 
     #[test]
-    fn reconfigure_rejects_host_deselection_with_actionable_conflict() {
+    fn reconfigure_identifies_only_the_deselected_hosts_for_confirmed_deactivation() {
         let installed = valid_config();
         let installed_bytes = canonical_config(&installed).expect("installed bytes");
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex];
 
-        let error = reject_host_deselection(Some(&installed_bytes), &desired)
-            .expect_err("host deselection must fail closed");
-
-        assert_eq!(error.status(), "conflict");
-        assert_eq!(
-            error.message(),
-            "cannot remove configured hosts until transactional host deactivation is available; keep these selected_hosts entries: claude"
-        );
+        assert_eq!(host_deselections(Some(&installed_bytes), &desired).unwrap(), vec![SelectedHost::Claude]);
     }
 
     #[test]
@@ -5217,7 +5212,7 @@ usage_guard:
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex, SelectedHost::Claude];
 
-        reject_host_deselection(Some(&installed_bytes), &desired).expect("host addition");
+        assert!(host_deselections(Some(&installed_bytes), &desired).unwrap().is_empty());
     }
 
     #[test]
