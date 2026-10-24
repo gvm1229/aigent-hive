@@ -11712,6 +11712,21 @@ mod tests {
     }
 
     #[test]
+    fn unchanged_forward_prestate_recovers_without_adopting_an_unobserved_mutation() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            for sabotage in [HostSabotage::FailBeforeMarketplaceMutation, HostSabotage::FailBeforePluginMutation] {
+                let temporary = tempdir().unwrap();
+                let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+                let arguments = args(temporary.path(), host, UserMode::Apply);
+                assert!(execute(UserOperation::Install, &arguments, &runner).is_err());
+                recover(&arguments, &runner).expect("exact unchanged prestate can be restored");
+                assert_eq!(runner.external_state(), (false, false));
+                assert!(!temporary.path().join(format!(".hive/install-transactions/{}.json", host.as_str())).exists());
+            }
+        }
+    }
+
+    #[test]
     fn concurrent_drift_before_first_host_mutation_is_preserved_for_both_hosts() {
         for host in [UserHost::Codex, UserHost::Claude] {
             let temporary = tempdir().expect("tempdir");
