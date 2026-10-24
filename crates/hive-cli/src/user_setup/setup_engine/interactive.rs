@@ -525,7 +525,7 @@ fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
-        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild" | "user-monitor-activation") {
+        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild" | "user-monitor-activation" | "user-vector-search") {
             continue;
         }
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
@@ -761,6 +761,9 @@ fn preview_apply<R: BufRead, W: Write>(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    if !super::vector_choice::collect(root_cap, store, progress, terminal)? {
+        return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
     if !super::monitor_start::collect(root, existing, store, progress, terminal)? {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }
@@ -773,6 +776,7 @@ fn preview_apply<R: BufRead, W: Write>(
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }
     let displayed = display_preview(&progress.answers, terminal)?;
+    super::vector_choice::display(&progress.record, terminal)?;
     progress.phase = ProgressPhase::Previewed;
     persist(store, progress)?;
     if options.dry_run || !terminal.confirm()? {
@@ -914,6 +918,8 @@ fn inspect_settings<R: BufRead, W: Write>(
                 .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
         });
     let monitor = crate::usage_monitor::setup_status(root);
+    let root_cap = crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
+    let (_, feature_preferences) = user_setup::load_feature_answers(&root_cap)?;
     if !json_output {
         if let Some(config) = migration
             .as_ref()
@@ -941,6 +947,7 @@ fn inspect_settings<R: BufRead, W: Write>(
         Some(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
+            "feature_preferences":feature_preferences,"vector_runtime_verification":"not-performed",
             "migration_preview":migration,"pending_questions":config.map(user_setup::migration::pending_questions).unwrap_or_default()}),
         ),
         None,

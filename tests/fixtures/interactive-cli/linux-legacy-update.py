@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -137,6 +137,8 @@ def terminal_run(command, stop=None):
                             reply, kind = None, "held"
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
                             reply, kind = "yes", "final"
+                        elif mode == "vector-choice" and "뜻이 비슷한 지식도 찾는 의미 검색" in text:
+                            reply, kind = (":cancel", "vector-cancel") if stop == "vector-cancel" else ("yes", "vector-yes") if not terminal_runs else ("no", "vector-no")
                         elif mode == "monitor-decline" and "설정 방식을" in text and "맞춤 설정" in text:
                             reply, kind = "2", "custom"
                         elif mode == "monitor-decline" and "사용량에 따라 작업을 막거나 중단하는 기능" in text and "이 변경을 적용할까요?" not in text:
@@ -164,7 +166,7 @@ def terminal_run(command, stop=None):
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -279,6 +281,26 @@ else:
                 assert blocked.returncode!=0,(blocked.stdout,blocked.stderr)
                 assert config.read_bytes()==before
                 assert not (user/".hive/runtime/usage-monitor/config.json").exists()
+if mode == "vector-choice":
+    ledger=user/".hive/config/user-feature-answers.yml"
+    first=ledger.read_bytes()
+    assert 'vector_search: "yes"' in first.decode() and "input_channel: terminal" in first.decode()
+    assert "vector-yes" in answers
+    setup=[str(binary),"setup","--scope","user","--user-root",str(user)]
+    kept=terminal_run([*setup,"--section","persona"])
+    assert "vector-yes" not in kept and "vector-no" not in kept and ledger.read_bytes()==first
+    terminal_run([*setup,"--section","vector"],"vector-cancel")
+    assert ledger.read_bytes()==first
+    resumed=terminal_run([*setup,"--resume"])
+    assert "vector-no" in resumed and 'vector_search: "no"' in ledger.read_text()
+    assert not (user/".hive/index/vector").exists()
+    assert not (user/".hive/config/vector-state").exists()
+    shown=subprocess.run([*setup,"--show","--output","json"],env=environment,capture_output=True,text=True,check=True)
+    feature=json.loads(shown.stdout)["data"]
+    assert feature["feature_preferences"]["vector_search"]=="no"
+    assert feature["vector_runtime_verification"]=="not-performed"
+    assert not (user/".hive/runtime/usage-monitor/config.json").exists()
+    assert (root/"install-count").read_text()=="1"
 if mode in {"project-file", "project-file-interrupt"}:
     project=root/"project";project.mkdir()
     (project/"AGENTS.md").write_text("User-owned preface.\n")

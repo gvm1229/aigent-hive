@@ -32,6 +32,7 @@ questions:
       - {"value":"all","label":{"ko":"전체 설정 검토","en":"Review all settings"}}
       - {"value":"language","label":{"ko":"화면 언어","en":"Interface language"}}
       - {"value":"wiki","label":{"ko":"위키","en":"Knowledge documents"}}
+      - {"value":"vector","label":{"ko":"의미 검색 희망 여부","en":"Semantic search preference"}}
       - {"value":"profile","label":{"ko":"배경과 관심사","en":"Background and interests"}}
       - {"value":"persona","label":{"ko":"답변 방식","en":"Response style"}}
       - {"value":"hosts","label":{"ko":"사용할 앱","en":"Apps"}}
@@ -69,6 +70,15 @@ questions:
     help: {"ko":"문서 원문은 바꾸지 않습니다. 아니요를 고르면 설정을 적용하지 않고 답안을 보관합니다.","en":"Source documents stay unchanged. No keeps your answers pending without applying settings."}
     default: false
     when: [{"key":"/wiki/enabled","equals":true}]
+  - id: user-vector-search
+    revision: 1
+    scope: "user"
+    section: "vector"
+    key: "/operation/vector_search"
+    input: "boolean"
+    prompt: {"ko":"뜻이 비슷한 지식도 찾는 의미 검색을 사용하고 싶나요?","en":"Would you like semantic search to find knowledge with similar meanings?"}
+    help: {"ko":"희망 여부만 저장합니다. 기존 정확 검색은 계속 사용 가능하며, 추가 파일 다운로드와 실제 활성화에는 별도 미리보기·동의가 필요합니다.","en":"This saves your preference only. Exact search remains available. Downloads and activation require a separate preview and consent."}
+    default: false
   - id: user-persona
     revision: 1
     scope: "user"

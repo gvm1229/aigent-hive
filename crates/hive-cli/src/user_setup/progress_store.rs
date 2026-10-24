@@ -81,6 +81,8 @@ pub(super) struct SetupProgress {
     pub monitor_stop: Option<crate::usage_monitor::SavedMonitorChoice>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub monitor_start: Option<super::setup_engine::monitor_start::Approval>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vector_choice: Option<super::setup_engine::vector_choice::Selection>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -254,6 +256,7 @@ impl ProgressStore {
             index_rebuild_scope: None,
             monitor_stop: None,
             monitor_start: None,
+            vector_choice: None,
         };
         self.validate(&progress)?;
         Ok(progress)

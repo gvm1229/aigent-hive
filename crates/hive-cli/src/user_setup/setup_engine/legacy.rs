@@ -235,6 +235,7 @@ pub(super) fn checkpoint(
     progress: &SetupProgress,
 ) -> Result<Option<Vec<u8>>, SetupError> {
     user_setup::progress_store::prepare_config_backup(&arguments.root_cap, progress, expected)?;
+    super::vector_choice::apply(&arguments.root_cap, progress)?;
     super::index_rebuild::preflight(arguments, progress)?;
     super::monitor_stop::validate_intent(progress)?;
     let baseline = if let Some(choice) = progress.legacy_migration.as_ref()

@@ -35,6 +35,7 @@ pub(super) fn resume(
         return Err(SetupError::Conflict("setup recovery inputs changed".into()));
     }
     user_setup::progress_store::recover_config(&arguments.root_cap, &store, progress)?;
+    super::vector_choice::apply(&arguments.root_cap, progress)?;
     let validated = user_setup::execute_answers(&arguments, &bytes, user_setup::SetupBase::Current);
     let repaired = validated.is_err();
     let mut result = if let Ok(result) = validated {

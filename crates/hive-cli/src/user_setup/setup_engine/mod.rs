@@ -12,6 +12,7 @@ mod file_apply;
 mod file_policy;
 mod index_rebuild;
 mod monitor_stop;
+pub(in crate::user_setup) mod vector_choice;
 pub(in crate::user_setup) mod monitor_start;
 mod project;
 pub(in crate::user_setup) use project::run as run_project;
@@ -115,11 +116,19 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         .map(serde_json::to_value)
         .transpose()
         .map_err(|error| SetupError::Internal(format!("cannot inspect preferences: {error}")))?;
-    let current = if scope == PreferenceScope::User {
+    let mut current = if scope == PreferenceScope::User {
         current
     } else {
         None
     };
+    if scope == PreferenceScope::User && section == "vector" {
+        let (_, feature) = super::load_feature_answers(&root_cap)?;
+        if let Some(answer) = feature.vector_search {
+            let values = current.get_or_insert_with(|| json!({}));
+            values["operation"] = json!({"vector_search":answer == super::VectorFeatureAnswer::Yes});
+            values["preference_decisions"]["/operation/vector_search"] = json!(feature.decision);
+        }
+    }
     let questions = section_data(scope, &section, current.as_ref())?;
     let korean = config
         .as_ref()

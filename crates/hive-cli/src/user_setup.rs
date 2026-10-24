@@ -427,6 +427,10 @@ struct UserFeatureAnswers {
     answered_at_unix: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     question_claimed_at_unix: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    decision: Option<hive_core::preferences::PreferenceDecision>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    setup_operation: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -697,6 +701,8 @@ fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswe
             introduced_in: None,
             answered_at_unix: None,
             question_claimed_at_unix: None,
+            decision: None,
+            setup_operation: None,
         },
     };
     if answers.schema_version != 1 {
@@ -751,6 +757,14 @@ fn save_feature_answers(
         desired.push_str("question_claimed_at_unix: ");
         desired.push_str(&question_claimed_at_unix.to_string());
         desired.push('\n');
+    }
+    if let Some(decision) = &answers.decision {
+        desired.push_str(&serde_yaml::to_string(&serde_json::json!({"decision":decision}))
+            .map_err(|error| SetupError::Internal(error.to_string()))?);
+    }
+    if let Some(operation) = &answers.setup_operation {
+        desired.push_str(&serde_yaml::to_string(&serde_json::json!({"setup_operation":operation}))
+            .map_err(|error| SetupError::Internal(error.to_string()))?);
     }
     super::user_install::replace_user_setup_file(
         root,
@@ -832,6 +846,9 @@ fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupEr
             )
         }
         FeatureAction::Answer(answer) => {
+            // This legacy command does not identify its input channel.
+            answers.decision = None;
+            answers.setup_operation = None;
             answers.vector_search = Some(answer);
             answers
                 .introduced_in
