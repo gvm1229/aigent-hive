@@ -280,6 +280,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [전역 맞춤 설정과 범위 검사](research/cli-user-settings-0.14.0.md): 알림·배경 설명·프로젝트별 기준·등록 정보 조회와 남은 색인 범위
 - [색인 범위와 종료 복구](research/cli-index-lifecycle-0.14.0.md): 게시 색인 보존·해제 원문 복원·잠금 재사용·실제 종료 재개
 - [위키 재활성화와 색인 게시 복구](research/cli-index-reactivation-0.14.0.md): 외부 폴더 범위 동의·일반 파일 승인·여섯 종료 지점 재개
+- [사용량 경고와 일반 설정의 감시 해제](research/cli-usage-settings-0.14.0.md): 기준별 경고 이력·종료 확인·해제 보존·분리한 예약 시험
 - [CLI 기반 구현의 누적 상태 보존](archive/state/0.14.0-cli-foundations-2026-10-24.md): 과거 단계별 검사 횟수와 당시 증명 한계
 - [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
 - [첫 갱신 시험의 격리 실수와 복구](research/legacy-update-test-isolation-0.14.0.md): 잘못된 npm 대역·기존13.1 복구·시험 설치 경로 제한
