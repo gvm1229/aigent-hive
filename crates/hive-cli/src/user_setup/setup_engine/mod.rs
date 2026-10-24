@@ -7,6 +7,8 @@ use hive_core::setup::QuestionCatalog;
 use serde_json::{json, Value};
 
 mod interactive;
+mod file_input;
+pub(in crate::user_setup) use file_input::{file_options, execute as execute_file, FileOptions};
 mod host_scope;
 pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
 mod legacy;

@@ -88,7 +88,7 @@ Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --describe --output json
-    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] --output json
     hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
     hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
     hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
@@ -577,8 +577,13 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if setup_engine::handles(arguments) {
         return setup_engine::run(arguments);
     }
-    let result = parse(arguments)
-        .and_then(|arguments| execute(&arguments))
+    let result = setup_engine::file_options(arguments)
+        .and_then(|(arguments, options)| parse(&arguments)
+            .and_then(|arguments| {
+                if options.channel == hive_core::preferences::PreferenceInput::AnswersFile && !options.quick {
+                    execute(&arguments)
+                } else { setup_engine::execute_file(&arguments, options) }
+            }))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
 }
@@ -1358,13 +1363,7 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
 }
 
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
-    let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
-    let _lease = if arguments.mode == SetupMode::Apply {
-        Some(crate::user_install::lock_user_setup(&arguments.root_cap).map_err(SetupError::Conflict)?)
-    } else {
-        None
-    };
-    execute_answers(arguments, &answer_bytes, SetupBase::Current)
+    setup_engine::execute_file(arguments, setup_engine::FileOptions::default())
 }
 
 #[derive(Clone, Copy)]
