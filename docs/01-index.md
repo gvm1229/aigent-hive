@@ -274,6 +274,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
 - [전역 CLI의 로컬 검증](research/cli-local-validation-0.14.0.md): 설정 이전·실패 뒤 재개·증명 범위와 이전 근거
 - [갱신 연결의 Windows 검증](research/cli-update-validation-0.14.0.md): 공개0.13.1 원본의 첫 질문·적용, 콘솔 입력 수정, 새 명령의 무입력 결과
+- [진행 기록의 대상과 쓰기 복구](research/cli-state-recovery-0.14.0.md): 같은 경로의 다른 폴더 구분, 중단된 기록 교체, 범위별 복구
 - [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
 - [첫 갱신 시험의 격리 실수와 복구](research/legacy-update-test-isolation-0.14.0.md): 잘못된 npm 대역·기존13.1 복구·시험 설치 경로 제한
 - [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)
