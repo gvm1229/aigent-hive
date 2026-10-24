@@ -274,12 +274,17 @@ pub(super) fn apply_to(
                 "projection changed before recovery write".into(),
             ));
         }
-        replace_user_setup_file(
-            output,
-            &change.path,
-            change.before.as_deref(),
-            change.after.as_deref(),
-        )
+        if change.before.is_some() {
+            crate::user_install::replace_host_policy_file(
+                output,
+                &change.path,
+                change.before.as_deref(),
+                change.after.as_deref(),
+                journal.before_modes[&change.path],
+            )
+        } else {
+            replace_user_setup_file(output, &change.path, None, change.after.as_deref())
+        }
         .map_err(SetupError::Conflict)?;
         applied
             .changed_paths
@@ -318,7 +323,7 @@ fn verify_mode(
     before_mode: Option<u32>,
 ) -> Result<(), SetupError> {
     if current.is_some() {
-        let expected = if current == change.before.as_deref() {
+        let expected = if change.before.is_some() {
             before_mode
         } else if cfg!(unix) {
             Some(0o644)
@@ -361,6 +366,53 @@ mod tests {
     use super::*;
     use crate::user_setup::{progress_store::ProgressPhase, ProjectionChange};
     use std::path::Path;
+
+    #[cfg(unix)]
+    #[test]
+    fn projection_apply_and_resume_preserve_modes_and_reject_later_chmod() {
+        use std::os::unix::fs::PermissionsExt;
+        let (temp, root, store, progress, mut projection) = fixture();
+        let first = projection.changes[0].path.clone();
+        std::fs::set_permissions(
+            temp.path().join(&first),
+            std::fs::Permissions::from_mode(0o640),
+        )
+        .unwrap();
+        let new = PathBuf::from(".agents/skills/usage-guard/SKILL.md");
+        projection.changes.push(ProjectionChange {
+            path: new.clone(),
+            before: None,
+            after: Some(b"new".to_vec()),
+        });
+        apply(&root, &store, &progress, || Ok(projection)).unwrap();
+        assert_eq!(
+            crate::user_install::host_policy_mode(&root, &first).unwrap(),
+            Some(0o640)
+        );
+        assert_eq!(
+            crate::user_install::host_policy_mode(&root, &new).unwrap(),
+            Some(0o644)
+        );
+        let repeated = apply(&root, &store, &progress, || {
+            panic!("must reuse the journal")
+        })
+        .unwrap();
+        assert!(repeated.changed_paths.is_empty());
+        std::fs::set_permissions(
+            temp.path().join(&first),
+            std::fs::Permissions::from_mode(0o660),
+        )
+        .unwrap();
+        assert!(apply(&root, &store, &progress, || panic!(
+            "must reuse the journal"
+        ))
+        .is_err());
+        assert_eq!(std::fs::read(temp.path().join(&first)).unwrap(), b"after");
+        assert_eq!(
+            crate::user_install::host_policy_mode(&root, &first).unwrap(),
+            Some(0o660)
+        );
+    }
 
     fn fixture() -> (
         tempfile::TempDir,
