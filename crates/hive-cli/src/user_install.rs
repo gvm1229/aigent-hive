@@ -1,4 +1,5 @@
 mod host_state;
+mod index_removal;
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
@@ -427,6 +428,8 @@ struct UserBackupManifest {
     host_mutations: Vec<HostMutation>,
     #[serde(default)]
     index_existed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    index_removal: Option<index_removal::RemovalBackup>,
     #[serde(default)]
     codex_state_before: Option<CodexHostState>,
     #[serde(default)]
@@ -460,7 +463,8 @@ struct UserBackupEntry {
     unix_mode: Option<u32>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 struct FilePermissions {
     executable: bool,
     unix_mode: Option<u32>,
@@ -2241,6 +2245,11 @@ fn execute(
     if arguments.mode == UserMode::Recover {
         return recover(arguments, runner);
     }
+    if arguments.mode == UserMode::Validate && has_open_transaction(arguments)? {
+        return Err(InstallError::Conflict(
+            "user installation has an unfinished transaction; recover it before validation".into(),
+        ));
+    }
     let mut plan = match build_plan(arguments) {
         Ok(plan) => plan,
         Err(error)
@@ -2420,7 +2429,7 @@ fn execute_apply(
         if operation == UserOperation::Update {
             Ok(())
         } else {
-            rebuild_root_index(arguments)
+            rebuild_root_index(arguments, &mut transaction)
         }
     })
     .and_then(|()| {
@@ -2536,7 +2545,7 @@ fn execute_apply(
     Ok(result)
 }
 
-fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
+fn rebuild_root_index(arguments: &UserArguments, transaction: &mut UserTransaction) -> Result<(), InstallError> {
     let installed = crate::user_setup::load_operational_config(&arguments.root_cap)
         .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
     let setup = arguments
@@ -2544,10 +2553,11 @@ fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
         .as_ref()
         .map(|(config, _)| config)
         .or(installed.as_ref());
-    if setup.as_ref().is_none_or(|config| !config.wiki.enabled) {
-        return remove_disposable_root_index(&arguments.root_cap);
+    let Some(setup) = setup else { return Ok(()) };
+    if !setup.wiki.enabled {
+        return index_removal::apply(arguments, transaction);
     }
-    if setup.is_some_and(|config| config.wiki.backend == crate::user_setup::WikiBackend::Notion) {
+    if setup.wiki.backend == crate::user_setup::WikiBackend::Notion {
         return Ok(());
     }
     hive_wiki::shared::ensure_project_registry(&arguments.user_root)
@@ -4902,6 +4912,7 @@ fn apply_plan(
         plan_digest: plan.plan_digest.clone(),
         host_mutations: Vec::new(),
         index_existed,
+        index_removal: None,
         codex_state_before,
         claude_state_before,
         antigravity_state_before,
@@ -5181,7 +5192,8 @@ fn recover(
     .ok_or_else(|| InstallError::Verification("user backup manifest is missing".to_owned()))?;
     let mut backup: UserBackupManifest = serde_json::from_slice(&backup_bytes)
         .map_err(|_| InstallError::Verification("user backup manifest is malformed".to_owned()))?;
-    if !(1..=2).contains(&backup.schema_version) || backup.host != arguments.host {
+    if !(1..=3).contains(&backup.schema_version) || backup.host != arguments.host
+        || (backup.schema_version == 3) != backup.index_removal.is_some() {
         return Err(InstallError::Verification(
             "user backup manifest binding is invalid".to_owned(),
         ));
@@ -5227,7 +5239,7 @@ fn recover(
         )?;
     }
     let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
-    reconcile_root_index_after_rollback(arguments, backup.index_existed)?;
+    restore_root_index_after_rollback(arguments, &backup_relative, &backup)?;
     compensate_host_mutations(
         arguments,
         &backup_relative,
@@ -5389,11 +5401,16 @@ fn restore_backup_files(
     Ok(changed)
 }
 
+fn reconcile_retained_claim(root: &Dir, relative: &Path, entry: &UserBackupEntry) -> Result<(), InstallError> {
+    reconcile_retained_claim_bounded(root, relative, entry, MAX_USER_FILE_BYTES)
+}
+
 #[allow(clippy::too_many_lines)]
-fn reconcile_retained_claim(
+fn reconcile_retained_claim_bounded(
     root: &Dir,
     relative: &Path,
     entry: &UserBackupEntry,
+    maximum: u64,
 ) -> Result<(), InstallError> {
     let Some((parent, destination)) = capability_parent(root, relative, false)? else {
         return Ok(());
@@ -5432,13 +5449,14 @@ fn reconcile_retained_claim(
     let prior_permissions = prior_backup_permissions(entry)?;
     let installed_permissions = installed_backup_permissions(entry)?;
     if names.iter().any(|name| name == OsStr::new("published.bin")) {
-        validate_retained_object(
+        validate_retained_object_bounded(
             &claim,
             Path::new("published.bin"),
             entry.installed_digest.as_deref(),
             installed_permissions,
             relative,
             "published",
+            maximum,
         )?;
         return Err(InstallError::Conflict(format!(
             "retained user installation claim has an unresolved published object at {}",
@@ -5449,23 +5467,24 @@ fn reconcile_retained_claim(
         .iter()
         .any(|name| name == OsStr::new("replacement.bin"))
     {
-        validate_retained_object(
+        validate_retained_object_bounded(
             &claim,
             Path::new("replacement.bin"),
             entry.installed_digest.as_deref(),
             installed_permissions,
             relative,
             "replacement",
+            maximum,
         )?;
     }
-    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    let current = read_optional_regular(root, relative, maximum)?;
     let current_digest = current.as_deref().map(sha256_digest);
     let current_permissions = current
         .as_ref()
         .map(|_| file_permissions(root, relative))
         .transpose()?;
     if entry.existed {
-        let claimed = read_optional_regular(&claim, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)?
+        let claimed = read_optional_regular(&claim, Path::new("claimed.bin"), maximum)?
             .ok_or_else(|| {
                 InstallError::Verification(format!(
                     "retained user installation claim omitted prior bytes at {}",
@@ -5492,7 +5511,7 @@ fn reconcile_retained_claim(
                 .rename(&destination, &claim, OsStr::new("published.bin"))
                 .map_err(|error| retained_claim_error(relative, "claim published bytes", error))?;
             let published =
-                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
+                read_optional_regular(&claim, Path::new("published.bin"), maximum)?
                     .ok_or_else(|| {
                         retained_claim_error(relative, "verify published bytes", "missing")
                     })?;
@@ -5534,7 +5553,7 @@ fn reconcile_retained_claim(
                 .rename(&destination, &claim, OsStr::new("published.bin"))
                 .map_err(|error| retained_claim_error(relative, "claim created bytes", error))?;
             let published =
-                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
+                read_optional_regular(&claim, Path::new("published.bin"), maximum)?
                     .ok_or_else(|| {
                         retained_claim_error(relative, "verify created bytes", "missing")
                     })?;
@@ -5563,7 +5582,7 @@ fn reconcile_retained_claim(
         .any(|name| name == OsStr::new("replacement.bin"))
     {
         let replacement =
-            read_optional_regular(&claim, Path::new("replacement.bin"), MAX_USER_FILE_BYTES)?
+            read_optional_regular(&claim, Path::new("replacement.bin"), maximum)?
                 .ok_or_else(|| {
                     retained_claim_error(relative, "verify staged replacement", "missing")
                 })?;
@@ -5595,7 +5614,19 @@ fn validate_retained_object(
     relative: &Path,
     label: &str,
 ) -> Result<(), InstallError> {
-    let bytes = read_optional_regular(claim, name, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+    validate_retained_object_bounded(claim, name, expected_digest, expected_permissions, relative, label, MAX_USER_FILE_BYTES)
+}
+
+fn validate_retained_object_bounded(
+    claim: &Dir,
+    name: &Path,
+    expected_digest: Option<&str>,
+    expected_permissions: Option<FilePermissions>,
+    relative: &Path,
+    label: &str,
+    maximum: u64,
+) -> Result<(), InstallError> {
+    let bytes = read_optional_regular(claim, name, maximum)?.ok_or_else(|| {
         retained_claim_error(
             relative,
             &format!("verify retained {label} object"),
@@ -5782,6 +5813,18 @@ fn reconcile_root_index_after_rollback(
         })
 }
 
+fn restore_root_index_after_rollback(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    if let Some(index) = &backup.index_removal {
+        index_removal::restore(arguments, backup_relative, index)
+    } else {
+        reconcile_root_index_after_rollback(arguments, backup.index_existed)
+    }
+}
+
 fn qualify_recovery_host(
     arguments: &UserArguments,
     backup: &UserBackupManifest,
@@ -5841,7 +5884,7 @@ fn rollback_after_failure(
         ));
     }
     if let Err(error) =
-        reconcile_root_index_after_rollback(arguments, transaction.backup.index_existed)
+        restore_root_index_after_rollback(arguments, &transaction.backup_relative, &transaction.backup)
     {
         return InstallError::Internal(format!(
             "{}; root index rollback failed: {}",
