@@ -18,6 +18,7 @@ use std::{
 mod activation;
 mod capabilities;
 mod existing;
+mod input;
 mod preferences;
 mod questions;
 #[cfg(test)]
@@ -217,12 +218,7 @@ fn execute<R: BufRead, W: Write>(
     if let Some(config) = &global_config {
         terminal.language = config.interface_language;
     }
-    let saved = crate::user_install::read_user_setup_file(
-        &project,
-        Path::new(".hive/setup-answers.yml"),
-        user_setup::MAX_USER_SETUP_BYTES,
-    )
-    .map_err(SetupError::Conflict)?;
+    let saved = existing::read(&project)?;
     let store = ProgressStore::open(&options.root, Some(&target))?;
     if options.show || options.describe {
         return preferences::inspect(options, &store, saved.as_deref(), terminal.language);
@@ -290,7 +286,9 @@ fn execute<R: BufRead, W: Write>(
     if !questions::collect(&store, &mut snapshot, &mut progress, &global, terminal)? {
         return Ok(pending(terminal.language));
     }
-    if !existing::confirm_roles(options, &store, &mut snapshot, &mut progress, terminal)? {
+    if !existing::bind_knowledge(options, &store, &mut snapshot, &mut progress, terminal)?
+        || !existing::confirm_roles(options, &store, &mut snapshot, &mut progress, terminal)?
+    {
         return Ok(pending(terminal.language));
     }
     let mut confirmed = options.clone();

@@ -6,6 +6,72 @@ use hive_core::preferences::{
 use serde_json::{json, Value};
 use std::path::Path;
 
+pub(super) fn read(root: &cap_std::fs::Dir) -> Result<Option<Vec<u8>>, SetupError> {
+    crate::user_install::read_user_setup_file(
+        root,
+        Path::new(".hive/setup-answers.yml"),
+        user_setup::MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)
+}
+
+pub(super) fn bind_knowledge<R: std::io::BufRead, W: std::io::Write>(
+    options: &super::Options,
+    store: &super::ProgressStore,
+    snapshot: &mut user_setup::progress_store::ProgressSnapshot,
+    progress: &mut user_setup::progress_store::SetupProgress,
+    terminal: &mut super::Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    if progress.answers["root_knowledge_promotion_categories"]
+        .as_array()
+        .is_none_or(Vec::is_empty)
+    {
+        return Ok(true);
+    }
+    let root = hive_wiki::shared::canonical_root(&options.root)
+        .map_err(|error| SetupError::Conflict(error.to_string()))?;
+    let binding = hive_core::sha256_digest(root.to_string_lossy().as_bytes());
+    if progress.answers["user_store_binding"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty() && value != binding)
+    {
+        let catalog = super::super::catalog()?;
+        let question = catalog
+            .questions
+            .iter()
+            .find(|q| q.id == "project-knowledge-root")
+            .expect("knowledge root question");
+        progress.step.clone_from(&question.id);
+        *snapshot = store.save(snapshot, progress)?;
+        writeln!(terminal.writer, "{}", options.root.display())
+            .map_err(|error| SetupError::Internal(error.to_string()))?;
+        let hive_core::setup::AnswerInput::Answered { value, .. } = terminal.ask(question, None)?
+        else {
+            return Ok(false);
+        };
+        if value != json!(true) {
+            progress
+                .answered_questions
+                .remove("project-knowledge-promotion");
+            *snapshot = store.save(snapshot, progress)?;
+            terminal.say(
+                "재개하면 공유할 지식 종류를 다시 선택합니다.",
+                "Resume to choose the sharing categories again.",
+            )?;
+            return Ok(false);
+        }
+        progress
+            .answered_questions
+            .insert(question.id.clone(), question.revision);
+        progress
+            .question_bindings
+            .insert(question.id.clone(), question.into());
+    }
+    progress.answers["user_store_binding"] = json!(binding);
+    *snapshot = store.save(snapshot, progress)?;
+    Ok(true)
+}
+
 pub(super) fn confirm_roles<R: std::io::BufRead, W: std::io::Write>(
     options: &super::Options,
     store: &super::ProgressStore,
@@ -143,13 +209,7 @@ pub(super) fn answers(bytes: &[u8]) -> Result<Value, SetupError> {
 pub(super) fn capabilities(target: &Path, requested: &Value) -> Result<Option<Value>, SetupError> {
     let root =
         crate::user_install::open_user_root_for_setup(target).map_err(SetupError::Conflict)?;
-    let Some(bytes) = crate::user_install::read_user_setup_file(
-        &root,
-        Path::new(".hive/setup-answers.yml"),
-        user_setup::MAX_USER_SETUP_BYTES,
-    )
-    .map_err(SetupError::Conflict)?
-    else {
+    let Some(bytes) = read(&root)? else {
         return Ok(None);
     };
     let saved = hive_render::normalized_project_answers(&bytes)

@@ -116,6 +116,136 @@ fn validate_answers(answers: &Value) {
 }
 
 #[test]
+fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let mut global = global(root.path());
+    global.wiki_enabled = false;
+    global.usage_guard_enabled = true;
+    global.usage_stop_remaining_percent = 45;
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut progress = store
+        .new_progress(
+            "project-mode".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"2\n2\nyes\nno\n\n\n\n\n\n0\n45\n\n../outside\ndocs\n\n3,1\n1\n2\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::Ko,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap(),
+        "{}",
+        String::from_utf8_lossy(&terminal.writer)
+    );
+    let output = String::from_utf8(terminal.writer).unwrap();
+    assert!(output.contains("Enable global knowledge storage"));
+    assert!(output.contains("below the global threshold"));
+    assert!(output.contains("relative to this project"));
+    assert!(output.contains("cannot also be confidential"));
+    assert_eq!(output.matches("Enter the project name.").count(), 1);
+    assert_eq!(
+        progress.answers["root_knowledge_promotion_categories"],
+        json!(["fact", "workflow"])
+    );
+    assert_eq!(
+        progress.answers["confidential_knowledge_categories"],
+        json!(["preference"])
+    );
+    let mut binding = Terminal {
+        reader: Cursor::new(b""),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(existing::bind_knowledge(
+        &options(root.path(), target.path()),
+        &store,
+        &mut snapshot,
+        &mut progress,
+        &mut binding
+    )
+    .unwrap());
+    assert!(binding.writer.is_empty());
+    assert!(progress.answers["user_store_binding"]
+        .as_str()
+        .unwrap()
+        .starts_with("sha256:"));
+    validate_answers(&progress.answers);
+}
+
+#[test]
+fn changing_an_existing_sharing_destination_requires_an_answer_and_keeps_the_old_binding_on_no() {
+    let root = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut answers = questions::defaults(target.path(), &global, "codex");
+    answers["root_knowledge_promotion_categories"] = json!(["fact"]);
+    let old = hive_core::sha256_digest(b"previous user store");
+    answers["user_store_binding"] = json!(old);
+    let mut progress = store
+        .new_progress("project-knowledge-promotion".into(), answers)
+        .unwrap();
+    let options = options(root.path(), target.path());
+    for input in [b"".as_slice(), b"no\n".as_slice()] {
+        let mut terminal = Terminal {
+            reader: Cursor::new(input),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(!existing::bind_knowledge(
+            &options,
+            &store,
+            &mut snapshot,
+            &mut progress,
+            &mut terminal
+        )
+        .unwrap());
+        assert_eq!(progress.answers["user_store_binding"], old);
+    }
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"yes\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(existing::bind_knowledge(
+        &options,
+        &store,
+        &mut snapshot,
+        &mut progress,
+        &mut terminal
+    )
+    .unwrap());
+    assert_ne!(progress.answers["user_store_binding"], old);
+    assert!(!target.path().join(".hive").exists());
+    progress.answers["user_store_binding"] = json!(old);
+    let mut no = Terminal {
+        reader: Cursor::new(b"no\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        !existing::bind_knowledge(&options, &store, &mut snapshot, &mut progress, &mut no).unwrap()
+    );
+    let mut revise = Terminal {
+        reader: Cursor::new(b"\n\n\n\n[]\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut revise).unwrap()
+    );
+    assert_eq!(
+        progress.answers["root_knowledge_promotion_categories"],
+        json!([])
+    );
+}
+
+#[test]
 fn existing_project_answers_keep_legacy_values_without_inventing_original_choice_times() {
     let bytes = include_bytes!("../../../../../../tests/fixtures/setup/answers-base.yml");
     let original: Value = serde_yaml::from_slice(bytes).unwrap();

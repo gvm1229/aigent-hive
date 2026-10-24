@@ -32,6 +32,8 @@ pub(super) fn collect<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     terminal.language = language(&progress.answers, terminal.language);
+    let review_sharing = progress.step == "project-knowledge-root";
+    let review_roles = progress.step == "project-role-update";
     let catalog = super::super::catalog()?;
     let mode = catalog
         .questions
@@ -39,7 +41,7 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .find(|q| q.id == "project-mode")
         .expect("project mode");
     if !super::super::interactive::answered(progress, mode)
-        && !ask(store, snapshot, progress, mode, terminal)?
+        && !ask(store, snapshot, progress, mode, global, terminal)?
     {
         return Ok(false);
     }
@@ -52,21 +54,30 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::Project)
     {
-        if matches!(question.id.as_str(), "project-mode" | "project-role-update")
-            || (quick
-                && !matches!(
-                    question.id.as_str(),
-                    "project-name" | "project-kind" | "project-host"
-                ))
+        let quick_question = matches!(
+            question.id.as_str(),
+            "project-name" | "project-kind" | "project-host"
+        ) || (review_sharing && question.id == "project-knowledge-promotion")
+            || (review_roles && question.id == "project-roles");
+        if matches!(
+            question.id.as_str(),
+            "project-mode" | "project-role-update" | "project-knowledge-root"
+        ) || (quick && !quick_question)
         {
             continue;
         }
         if !question.applicable(&progress.answers)
-            || super::super::interactive::answered(progress, question)
+            || (super::super::interactive::answered(progress, question)
+                && progress
+                    .answers
+                    .pointer(&question.key)
+                    .is_some_and(|value| {
+                        super::input::error(question, &progress.answers, value, global).is_none()
+                    }))
         {
             continue;
         }
-        if !ask(store, snapshot, progress, question, terminal)? {
+        if !ask(store, snapshot, progress, question, global, terminal)? {
             return Ok(false);
         }
         if question.id == "project-language" {
@@ -172,18 +183,29 @@ fn ask<R: BufRead, W: Write>(
     snapshot: &mut ProgressSnapshot,
     progress: &mut SetupProgress,
     question: &Question,
+    global: &hive_render::GlobalProjectPreferences,
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
     *snapshot = store.save(snapshot, progress)?;
     let (value, origin) = loop {
+        let fallback = super::input::fallback(question, global);
         let current = progress
             .answers
             .pointer(&question.key)
-            .filter(|value| question.validate_value(value).is_ok());
-        let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
+            .filter(|value| {
+                question.validate_value(value).is_ok()
+                    && super::input::error(question, &progress.answers, value, global).is_none()
+            })
+            .or(fallback.as_ref());
+        let AnswerInput::Answered { mut value, origin } = terminal.ask(question, current)? else {
             return Ok(false);
         };
+        super::input::normalize(question, &mut value);
+        if let Some((ko, en)) = super::input::error(question, &progress.answers, &value, global) {
+            terminal.say(ko, en)?;
+            continue;
+        }
         if super::super::interactive::config_answer_valid(question, &progress.answers, &value)? {
             break (value, origin);
         }

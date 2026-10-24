@@ -462,6 +462,15 @@ questions:
     options: [{"value":"fact","label":{"ko":"사실","en":"Facts"}},{"value":"preference","label":{"ko":"선호","en":"Preferences"}},{"value":"workflow","label":{"ko":"작업 방식","en":"Workflows"}}]
     minimum: 0
     maximum: 3
+  - id: project-knowledge-root
+    revision: 1
+    scope: "project"
+    section: "knowledge"
+    key: "/_control/knowledge_root"
+    input: "boolean"
+    prompt: {"ko":"지식 공유 대상을 지금 선택한 전역 저장소로 바꿀까요?","en":"Change the knowledge sharing destination to the selected user store?"}
+    help: {"ko":"기존 문서 이동 없이 앞으로의 공유 대상만 변경.","en":"Changes the destination for future sharing. Existing documents are not moved."}
+    default: false
   - id: monitor-popup
     revision: 1
     scope: "user"
