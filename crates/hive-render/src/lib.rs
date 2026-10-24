@@ -2,6 +2,8 @@
 
 mod activation;
 mod local_overrides;
+mod reconfiguration;
+pub use reconfiguration::{project_reconfiguration_candidate, ProjectReconfigurationCandidate};
 mod setup_preparation;
 pub use setup_preparation::{
     prepare_setup, setup_recovery_change_is_owned, PreparedSetup, PreparedSetupChange,
