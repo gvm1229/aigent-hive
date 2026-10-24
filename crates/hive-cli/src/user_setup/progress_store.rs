@@ -75,6 +75,8 @@ pub(super) struct SetupProgress {
     pub extras_draft: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extras_approval_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index_rebuild_scope: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -245,6 +247,7 @@ impl ProgressStore {
             role_approval_digest: None,
             extras_draft: None,
             extras_approval_digest: None,
+            index_rebuild_scope: None,
         };
         self.validate(&progress)?;
         Ok(progress)
@@ -375,6 +378,7 @@ impl ProgressStore {
         complete.role_approval_digest = None;
         complete.extras_draft = None;
         complete.extras_approval_digest = None;
+        complete.index_rebuild_scope = None;
         complete.answered_questions.clear();
         self.save(&snapshot, &complete).map(|_| ())
     }
@@ -462,6 +466,11 @@ impl ProgressStore {
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
+        if progress.index_rebuild_scope.as_ref().is_some_and(|digest|
+            self.binding.scope != PreferenceScope::User || !valid_hash(digest)
+                || progress.answers["wiki"]["enabled"] != true) {
+            return Err(SetupError::Verification("index rebuild approval has an invalid scope".into()));
+        }
         if progress.extras_draft.as_ref().is_some_and(|draft| self.binding.scope != PreferenceScope::Project || super::progress_contains_secret(draft)) {
             return Err(SetupError::Verification("optional feature draft has an invalid scope or secret".into()));
         }

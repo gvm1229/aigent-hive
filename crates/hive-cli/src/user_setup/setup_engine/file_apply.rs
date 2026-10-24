@@ -6,6 +6,7 @@ use crate::user_setup::{
 };
 use crate::ActionResult;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn apply(
     arguments: &Arguments,
     config: &UserSetupConfig,
@@ -13,6 +14,7 @@ pub(super) fn apply(
     expected: Option<&[u8]>,
     legacy_input: Option<&UserSetupConfig>,
     migration: Option<user_setup::progress_store::LegacyMigration>,
+    index_rebuild_scope: Option<&str>,
 ) -> Result<ActionResult, SetupError> {
     let store = ProgressStore::open(&arguments.user_root, None)?;
     store.recover_pending_state()?;
@@ -23,6 +25,10 @@ pub(super) fn apply(
         .filter(|p| p.phase != ProgressPhase::Complete)
     {
         require_same_intent(pending, config, legacy_input)?;
+        if index_rebuild_scope.is_some_and(|digest| pending.index_rebuild_scope.as_deref()
+            .is_some_and(|saved| saved != digest)) {
+            return Err(SetupError::Conflict("index rebuild approval differs from the pending setup".into()));
+        }
         if matches!(
             pending.phase,
             ProgressPhase::Applying | ProgressPhase::RecoverableFailure
@@ -64,6 +70,7 @@ pub(super) fn apply(
     };
     progress.answers = answers;
     progress.legacy_migration = migration;
+    super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
     progress.phase = ProgressPhase::Applying;
     store.save(&snapshot, &progress)?;
     store.record_applying(&progress)?;

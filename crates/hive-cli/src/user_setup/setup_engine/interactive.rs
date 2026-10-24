@@ -525,7 +525,7 @@ fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
-        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section") {
+        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild") {
             continue;
         }
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
@@ -614,6 +614,9 @@ fn ask<R: BufRead, W: Write>(
         progress.answers["preference_decisions"].as_object_mut()
             .expect("choice records").remove("/usage_guard/discord/webhook_url_env");
         progress.answered_questions.remove("discord-environment");
+    }
+    if question.id == "user-wiki" && value == json!(false) {
+        progress.index_rebuild_scope = None;
     }
     let mut decision = PreferenceDecision::new(
         &value,
@@ -758,6 +761,9 @@ fn preview_apply<R: BufRead, W: Write>(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    if !super::index_rebuild::collect(root, root_cap, store, progress, terminal)? {
+        return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
     let displayed = display_preview(&progress.answers, terminal)?;
     progress.phase = ProgressPhase::Previewed;
     persist(store, progress)?;

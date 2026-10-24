@@ -7,10 +7,11 @@ use hive_core::preferences::{
 use serde_json::Value;
 use std::{collections::BTreeMap, path::Path};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(in crate::user_setup) struct FileOptions {
     pub channel: PreferenceInput,
     pub quick: bool,
+    pub index_rebuild_scope: Option<String>,
 }
 
 impl Default for FileOptions {
@@ -18,6 +19,7 @@ impl Default for FileOptions {
         Self {
             channel: PreferenceInput::AnswersFile,
             quick: false,
+            index_rebuild_scope: None,
         }
     }
 }
@@ -48,6 +50,15 @@ pub(in crate::user_setup) fn file_options(
             };
             seen = true;
             index += 2;
+        } else if arguments[index] == "--index-rebuild-scope" {
+            let digest = arguments.get(index + 1).filter(|value|
+                value.len() == 71 && value.starts_with("sha256:")
+                    && value[7..].bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+                .ok_or_else(|| SetupError::Input("index rebuild scope requires a SHA-256 digest".into()))?;
+            if options.index_rebuild_scope.replace(digest.clone()).is_some() {
+                return Err(SetupError::Input("duplicate index rebuild scope".into()));
+            }
+            index += 2;
         } else {
             filtered.push(arguments[index].clone());
             index += 1;
@@ -58,8 +69,11 @@ pub(in crate::user_setup) fn file_options(
 
 pub(in crate::user_setup) fn execute(
     arguments: &Arguments,
-    options: FileOptions,
+    options: &FileOptions,
 ) -> Result<ActionResult, SetupError> {
+    if options.index_rebuild_scope.is_some() && arguments.mode != SetupMode::Apply {
+        return Err(SetupError::Input("index rebuild approval requires --apply".into()));
+    }
     let input =
         user_setup::read_bounded_regular(&arguments.answers, user_setup::MAX_ANSWERS_BYTES)?;
     let existing = crate::user_install::read_user_setup_file(
@@ -111,9 +125,13 @@ pub(in crate::user_setup) fn execute(
     let bytes =
         serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     if arguments.mode == SetupMode::Apply {
-        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration);
+        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration, options.index_rebuild_scope.as_deref());
     }
-    user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))
+    let mut result = user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
+    if arguments.mode == SetupMode::DryRun {
+        super::index_rebuild::describe(arguments, &config, &mut result)?;
+    }
+    Ok(result)
 }
 
 fn declarations(config: &UserSetupConfig) -> Result<BTreeMap<String, Value>, SetupError> {
@@ -156,7 +174,7 @@ fn annotate(
     config: &mut UserSetupConfig,
     supplied: &Value,
     current: Option<&UserSetupConfig>,
-    options: FileOptions,
+    options: &FileOptions,
     answered_at: Option<u64>,
 ) -> Result<(), SetupError> {
     let defaults = super::default_answers(Some(config.interface_language));
@@ -216,6 +234,20 @@ mod tests {
     use crate::user_setup::InterfaceLanguage;
     use serde_json::json;
 
+    #[test]
+    fn index_scope_option_requires_one_exact_digest_and_is_not_implied_by_apply() {
+        let args = ["--apply".into(), "--answers".into(), "input.yml".into()];
+        assert!(file_options(&args).unwrap().1.index_rebuild_scope.is_none());
+        assert!(file_options(&["--index-rebuild-scope".into(), "yes".into()]).is_err());
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let args = ["--apply".into(), "--index-rebuild-scope".into(), digest.clone()];
+        let (filtered, options) = file_options(&args).unwrap();
+        assert_eq!(filtered, ["--apply"]);
+        assert_eq!(options.index_rebuild_scope.as_deref(), Some(digest.as_str()));
+        let doubled = [args.as_slice(), &args[1..]].concat();
+        assert!(file_options(&doubled).is_err());
+    }
+
     fn input() -> Value {
         super::super::default_answers(Some(InterfaceLanguage::Ko))
     }
@@ -233,7 +265,7 @@ mod tests {
         let baseline = user_setup::migration::inspect(root.path(), &current).unwrap().unwrap().candidate;
         let supplied = serde_json::to_value(&baseline).unwrap();
         let mut config = baseline.clone();
-        annotate(&mut config, &supplied, Some(&baseline), FileOptions::default(), Some(42)).unwrap();
+        annotate(&mut config, &supplied, Some(&baseline), &FileOptions::default(), Some(42)).unwrap();
         let record = &config.preference_decisions["/usage_guard/enforcement_enabled"];
         assert_eq!(record.origin, DecisionOrigin::Explicit);
         assert_eq!(record.input_channel, PreferenceInput::AnswersFile);
@@ -249,11 +281,11 @@ mod tests {
             PreferenceInput::Terminal, PreferenceScope::User, "0.14.0", Some(42)).unwrap();
         current.preference_decisions.insert("/profile/description".into(), removal.clone());
         let mut config = parse(&supplied);
-        annotate(&mut config, &supplied, Some(&current), FileOptions::default(), Some(99)).unwrap();
+        annotate(&mut config, &supplied, Some(&current), &FileOptions::default(), Some(99)).unwrap();
         assert_eq!(config.preference_decisions["/profile/description"], removal);
         supplied["profile"]["description"] = json!("New details");
         let mut changed = parse(&supplied);
-        annotate(&mut changed, &supplied, Some(&current), FileOptions::default(), Some(99)).unwrap();
+        annotate(&mut changed, &supplied, Some(&current), &FileOptions::default(), Some(99)).unwrap();
         assert_eq!(changed.preference_decisions["/profile/description"].input_channel, PreferenceInput::AnswersFile);
         assert_eq!(changed.preference_decisions["/profile/description"].decided_at, Some(99));
     }
@@ -267,7 +299,7 @@ mod tests {
             &mut config,
             &value,
             None,
-            FileOptions {
+            &FileOptions {
                 quick: true,
                 ..FileOptions::default()
             },
@@ -319,9 +351,10 @@ mod tests {
             &mut config,
             &value,
             None,
-            FileOptions {
+            &FileOptions {
                 channel: PreferenceInput::Agent,
                 quick: false,
+                ..FileOptions::default()
             },
             Some(42),
         )
@@ -341,7 +374,7 @@ mod tests {
             &mut original,
             &value,
             None,
-            FileOptions::default(),
+            &FileOptions::default(),
             Some(42),
         )
         .unwrap();
@@ -350,9 +383,10 @@ mod tests {
             &mut repeated,
             &value,
             Some(&original),
-            FileOptions {
+            &FileOptions {
                 channel: PreferenceInput::Agent,
                 quick: true,
+                ..FileOptions::default()
             },
             Some(99),
         )
@@ -365,7 +399,7 @@ mod tests {
             &mut revised,
             &changed,
             Some(&original),
-            FileOptions::default(),
+            &FileOptions::default(),
             Some(99),
         )
         .unwrap();

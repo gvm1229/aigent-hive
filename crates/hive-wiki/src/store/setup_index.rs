@@ -27,6 +27,22 @@ pub struct SetupIndexPreview {
 }
 
 impl RagStore {
+    /// Check an operation's source approval without reading documents or rebuilding an index.
+    ///
+    /// # Errors
+    /// Rejects dirty state, invalid metadata, or a changed source scope.
+    pub fn validate_setup_index_scope(&self, approved_digest: &str) -> Result<(), WikiError> {
+        let _lock = self.acquire_authorization_lock()?;
+        self.reject_dirty_mutation()?;
+        let (preview, _) = self.setup_rebuild_scope()?;
+        if preview.scope_digest != approved_digest {
+            return Err(WikiError::Conflict(
+                "setup index sources changed after approval".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Preview an external rebuild only when setup cannot preserve a complete index.
     /// No registered project or directory is opened by this method.
     ///

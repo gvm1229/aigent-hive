@@ -59,6 +59,16 @@ questions:
     help: {"ko":"","en":""}
     options: [{"value":"ko","label":{"ko":"한국어","en":"Korean"}},{"value":"en","label":{"ko":"영어","en":"English"}},{"value":"both","label":{"ko":"두 언어","en":"Both languages"}}]
     when: [{"key":"/wiki/enabled","equals":true}]
+  - id: user-index-rebuild
+    revision: 1
+    scope: "user"
+    section: "wiki"
+    key: "/operation/index_rebuild"
+    input: "boolean"
+    prompt: {"ko":"표시한 폴더의 지식 문서를 읽어 검색 색인을 복구할까요?","en":"Read knowledge documents in the listed folders to restore the search index?"}
+    help: {"ko":"문서 원문은 바꾸지 않습니다. 아니요를 고르면 설정을 적용하지 않고 답안을 보관합니다.","en":"Source documents stay unchanged. No keeps your answers pending without applying settings."}
+    default: false
+    when: [{"key":"/wiki/enabled","equals":true}]
   - id: user-persona
     revision: 1
     scope: "user"

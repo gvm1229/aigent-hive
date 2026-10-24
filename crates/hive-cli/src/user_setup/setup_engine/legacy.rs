@@ -235,6 +235,7 @@ pub(super) fn checkpoint(
     progress: &SetupProgress,
 ) -> Result<Option<Vec<u8>>, SetupError> {
     user_setup::progress_store::prepare_config_backup(&arguments.root_cap, progress, expected)?;
+    super::index_rebuild::apply(arguments, progress)?;
     let Some(binding) = &progress.legacy_migration else {
         return Ok(expected.map(<[u8]>::to_vec));
     };

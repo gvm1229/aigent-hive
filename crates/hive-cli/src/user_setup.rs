@@ -103,6 +103,7 @@ MODES:
     --dry-run    Validate answers and preview the owned user configuration change
     --apply      Validate and atomically apply the owned user configuration
     --validate   Validate the installed operational user configuration
+    --index-rebuild-scope <digest>  Approve only the source scope shown by --dry-run; requires --apply
 ";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -586,7 +587,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             .and_then(|arguments| {
                 if options.channel == hive_core::preferences::PreferenceInput::AnswersFile && !options.quick {
                     execute(&arguments)
-                } else { setup_engine::execute_file(&arguments, options) }
+                } else { setup_engine::execute_file(&arguments, &options) }
             }))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
@@ -1367,7 +1368,7 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
 }
 
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
-    setup_engine::execute_file(arguments, setup_engine::FileOptions::default())
+    setup_engine::execute_file(arguments, &setup_engine::FileOptions::default())
 }
 
 #[derive(Clone, Copy)]
