@@ -13,6 +13,12 @@ use std::{
 
 pub(super) const JOURNAL: &str = ".hive/runtime/usage-monitor/disable.json";
 
+fn selection_id() -> Result<String, AdapterError> {
+    let mut bytes = [0_u8; 16];
+    getrandom::fill(&mut bytes).map_err(|_| error("cannot identify monitor selection"))?;
+    Ok(sha256_digest(&bytes))
+}
+
 /// Missing configuration is distinct from malformed or unverifiable configuration.
 pub(super) fn selection(root: &PinnedTarget) -> Result<Option<bool>, AdapterError> {
     let Some(config) = authenticated_config(root)? else {
@@ -134,15 +140,23 @@ pub(super) fn quiesce_operation(
         }
     }
     let Some(mut config) = authenticated_config(root)? else {
+        let controller = lock(root, "controller.lock")?;
+        // A later explicit disable must cancel a pending activation even if no configuration
+        // has been written yet. This records intent, not an ownership or execution grant.
+        write(root, JOURNAL, &json!({"schema_version":1,"operation":"disable",
+            "selection_id":selection_id()?,"operation_id":operation_id,
+            "before_digest":"absent","after_digest":"absent","configured":false,
+            "phase":"complete","started_at":now(),"completed_at":now(),"error":null}))?;
         return Ok(StoppedReader {
             _control: control,
-            _controller: lock(root, "controller.lock")?,
-            result: json!({"enabled":false,"configured":false,"controller_stopped":null}),
+            _controller: controller,
+            result: json!({"enabled":false,"configured":false,"controller_stopped":null,"changed_paths":[JOURNAL]}),
         });
     };
     // Persist the requested stop before touching the scheduler. A retry must never re-enable it.
     config.enabled = false;
     let mut journal = json!({"schema_version":1,"operation":"disable","started_at":now(),
+        "selection_id":selection_id()?,
         "operation_id":operation_id,"before_digest":expected_digest.unwrap_or(&digest),
         "after_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
         "completed_at":null,"error":null});
@@ -205,6 +219,31 @@ mod tests {
         std::fs::write(root.requested_path().join(path), b"old binary").unwrap();
         write(&root, CONFIG, &config).unwrap();
         (temp, root)
+    }
+
+    #[test]
+    fn repeated_disable_has_a_new_identity_even_without_configuration_or_value_changes() {
+        let temp = tempfile::tempdir().unwrap();
+        let empty = PinnedTarget::open_usage(temp.path()).unwrap();
+        let (_configured, configured) = fixture();
+        for root in [&empty, &configured] {
+            let expected_configured = selection(root).unwrap().is_some();
+            let call = |_: &Value, _: Duration| {
+                assert!(expected_configured, "no scheduler access without an owned configuration");
+                Ok(json!({"removed":true}))
+            };
+            disable(root, call, Duration::ZERO).unwrap();
+            let first: Value = load(root, JOURNAL).unwrap().unwrap();
+            let configuration = root.read_optional(std::path::Path::new(CONFIG), 65536).unwrap();
+            disable(root, call, Duration::ZERO).unwrap();
+            let second: Value = load(root, JOURNAL).unwrap().unwrap();
+            assert_ne!(first["selection_id"], second["selection_id"]);
+            assert!(crate::is_sha256_digest(second["selection_id"].as_str().unwrap()));
+            assert_eq!(first["after_digest"], second["after_digest"]);
+            assert_eq!(second["phase"], "complete");
+            assert_eq!(root.read_optional(std::path::Path::new(CONFIG), 65536).unwrap(), configuration);
+            assert_eq!(selection(root).unwrap(), expected_configured.then_some(false));
+        }
     }
 
     #[test]
