@@ -116,6 +116,8 @@ pub fn project_reconfiguration_candidate(
         RenderError::Input("project reconfiguration requires global preferences".into())
     })?;
     let effective = super::resolve_effective_project_preferences(&answers, Some(global))?;
+    let retired_hooks =
+        super::stale_hook_deletions(&target, &answers.approved_fallback_hooks, &resolution)?;
     let files = super::render_tree_with_preferences(
         &target,
         &answers,
@@ -171,6 +173,7 @@ pub fn project_reconfiguration_candidate(
             skill_merges: Vec::new(),
             files: mergeable,
             support_files: support,
+            deleted_support_files: retired_hooks,
             base_ledger,
         },
         files,

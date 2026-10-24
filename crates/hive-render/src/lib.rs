@@ -241,6 +241,8 @@ pub struct ProjectUpgradeCandidate {
     pub files: BTreeMap<String, Vec<u8>>,
     /// Generated support files replaced exactly after the merge succeeds.
     pub support_files: BTreeMap<String, Vec<u8>>,
+    /// Exact retired support paths, validated against their previous consent before preparation.
+    pub deleted_support_files: BTreeSet<PathBuf>,
     /// Canonical base ledger bytes to activate after a successful merge.
     pub base_ledger: Vec<u8>,
 }
@@ -998,6 +1000,7 @@ pub fn project_upgrade_candidate_with_plugin_in(
         skill_merges,
         files: mergeable,
         support_files,
+        deleted_support_files: BTreeSet::new(),
         base_ledger,
     })
 }

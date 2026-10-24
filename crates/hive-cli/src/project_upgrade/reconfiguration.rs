@@ -112,6 +112,81 @@ mod tests {
     }
 
     #[test]
+    fn revoked_hooks_are_removed_with_the_settings_and_foreign_hook_files_are_preserved() {
+        let user = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let global = global(user.path());
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+        let answers = fixtures.join("answers-all-hooks.yml");
+        let caps = fixtures.join("capabilities-codex-host-native-hooks.json");
+        let initial = SetupRequest {
+            target: target.path(),
+            answers: &answers,
+            capabilities: &caps,
+            mode: hive_render::SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(global),
+        };
+        hive_render::execute_setup(&initial).unwrap();
+        let foreign = target.path().join(".hive/hooks/user-owned");
+        fs::write(&foreign, b"preserve this file").unwrap();
+        let mut value: Value = serde_yaml::from_slice(&fs::read(&answers).unwrap()).unwrap();
+        value["approved_fallback_hooks"]
+            .as_array_mut()
+            .unwrap()
+            .truncate(1);
+        let changed = user.path().join("changed.yml");
+        fs::write(&changed, serde_json::to_vec(&value).unwrap()).unwrap();
+        let request = SetupRequest {
+            answers: &changed,
+            ..initial
+        };
+        let partial = prepare(&request).unwrap();
+        assert!(!partial.changes.iter().any(|change| change.path
+            == Path::new(".hive/hooks/protect-hive-owned-state")
+            && change.after.is_none()));
+        assert!(partial.changes.iter().any(|change| change.path
+            == Path::new(".hive/hooks/update-integrity-guard")
+            && change.after.is_none()));
+        value["approved_fallback_hooks"] = json!([]);
+        fs::write(&changed, serde_json::to_vec(&value).unwrap()).unwrap();
+        let owned = target.path().join(".hive/hooks/protect-hive-owned-state");
+        let original = fs::read(&owned).unwrap();
+        fs::write(&owned, b"user changed this descriptor").unwrap();
+        assert!(prepare(&request).is_err());
+        assert_eq!(fs::read(&owned).unwrap(), b"user changed this descriptor");
+        fs::write(&owned, original).unwrap();
+        let prepared = prepare(&request).unwrap();
+        assert!(prepared.changes.iter().any(|change| change.path
+            == Path::new(".hive/config/approved-hooks.yml")
+            && change.after.is_none()));
+        assert!(!prepared
+            .changes
+            .iter()
+            .any(|change| change.path == Path::new(".hive/hooks/user-owned")));
+        let root = crate::user_install::open_user_root_for_setup(target.path()).unwrap();
+        for change in prepared.changes {
+            crate::user_install::replace_user_setup_file(
+                &root,
+                &change.path,
+                change.before.as_deref(),
+                change.after.as_deref(),
+            )
+            .unwrap();
+        }
+        assert!(!target
+            .path()
+            .join(".hive/hooks/protect-hive-owned-state")
+            .exists());
+        assert_eq!(fs::read(foreign).unwrap(), b"preserve this file");
+        hive_render::execute_setup(&SetupRequest {
+            mode: hive_render::SetupMode::Validate,
+            ..request
+        })
+        .unwrap();
+    }
+
+    #[test]
     fn settings_merge_preserves_local_text_and_prepares_a_valid_new_configuration() {
         let user = tempfile::tempdir().unwrap();
         let target = tempfile::tempdir().unwrap();

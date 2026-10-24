@@ -540,6 +540,15 @@ fn prepare_candidate(
     for (path, bytes) in candidate.support_files {
         insert_exact_if_changed(target, &mut final_files, path, bytes)?;
     }
+    for path in candidate.deleted_support_files {
+        validate_mutation_path(&path)?;
+        if !hive_render::update_path_is_owned(&path).map_err(render_error)? {
+            return Err(UpdateError::Conflict("retired setup support path is not owned".into()));
+        }
+        if read_full_optional(target,&path)?.is_some() {
+            final_files.insert(path.to_string_lossy().into_owned(),None);
+        }
+    }
     insert_exact_if_changed(
         target,
         &mut final_files,
