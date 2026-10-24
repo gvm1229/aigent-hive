@@ -1,6 +1,7 @@
 //! Deterministic setup rendering and safe consumer-project activation.
 
 mod activation;
+mod local_overrides;
 mod setup_preparation;
 pub use setup_preparation::{
     prepare_setup, setup_recovery_change_is_owned, PreparedSetup, PreparedSetupChange,
@@ -5043,6 +5044,11 @@ fn prepare_projection_transition_with_source<T: TargetRead + ?Sized>(
     answers: &SetupAnswers,
     release_source_version: Option<&str>,
 ) -> Result<ProjectionTransition, RenderError> {
+    if release_source_version.is_none()
+        && local_overrides::has_records(target, env!("CARGO_PKG_VERSION"))?
+    {
+        return Err(RenderError::Conflict("preserved project edits require the preserving reconfiguration path; original files were not changed".to_owned()));
+    }
     let desired = validate_desired_projection_ownership(desired_files, answers)?;
     let active_path = Path::new(".hive/config/active-skills.yml");
     if read_target_optional(target, active_path)?.is_none() {
@@ -5370,12 +5376,15 @@ fn reproduce_projection_ownership<T: TargetRead + ?Sized>(
         &mut read_projected,
     )?;
     if authenticate_directives {
-        authenticate_projected_directive_files(source_version, &mut read_projected, &mut files)?;
+        authenticate_projected_directive_files(
+            target, source_version, &mut read_projected, &mut files,
+        )?;
     }
     Ok(ValidatedProjectionOwnership { files })
 }
 
-fn authenticate_projected_directive_files(
+fn authenticate_projected_directive_files<T: TargetRead + ?Sized>(
+    target: Option<&T>,
     source_version: &str,
     read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
@@ -5437,11 +5446,16 @@ fn authenticate_projected_directive_files(
         )))
         }
     };
+    let expected = directives.iter().map(|(path, bytes)| (path.to_path_buf(), bytes.to_vec())).collect();
+    let preserved = target
+        .map(|target| local_overrides::paths(target, source_version, &expected, local_overrides::Scope::Directives))
+        .transpose()?
+        .unwrap_or_default();
     for (relative, expected) in directives {
         validate_hive_directive_projection_relative(relative)
             .map_err(|error| RenderError::Verification(error.to_string()))?;
         let installed = read_projected(relative, "projected directive")?;
-        if installed != expected {
+        if installed != expected && !preserved.contains(relative) {
             return Err(RenderError::Verification(format!(
                 "projected directive bytes changed: {}",
                 relative.display()
@@ -5610,76 +5624,9 @@ fn local_preserved_skill_paths<T: TargetRead + ?Sized>(
     source_version: &str,
     expected_files: &BTreeMap<PathBuf, Vec<u8>>,
 ) -> Result<BTreeSet<PathBuf>, RenderError> {
-    let relative = Path::new(PROJECT_OVERRIDES_PATH);
-    let Some(bytes) = read_target_optional(target, relative)? else {
-        return Ok(BTreeSet::new());
-    };
-    let ledger: ProjectOverrideLedger = serde_json::from_slice(&bytes).map_err(|error| {
-        RenderError::Verification(format!(
-            "invalid project override ledger; run hive project upgrade --apply after restoring valid Hive projection bytes: {error}"
-        ))
-    })?;
-    if ledger.schema_version != 1 || ledger.product_version != source_version {
-        return Err(RenderError::Verification(
-            "project override ledger does not match the installed Hive version; run hive project upgrade --apply"
-                .to_owned(),
-        ));
-    }
-    let mut unsigned =
-        serde_json::to_value(&ledger).map_err(|error| RenderError::Internal(error.to_string()))?;
-    unsigned
-        .as_object_mut()
-        .expect("override ledger serializes to an object")
-        .remove("ledger_digest");
-    let canonical_unsigned = serde_json_canonicalizer::to_vec(&unsigned)
-        .map_err(|error| RenderError::Internal(error.to_string()))?;
-    if ledger.ledger_digest != sha256_digest(&canonical_unsigned) {
-        return Err(RenderError::Verification(
-            "project override ledger digest is invalid; run hive project upgrade --apply"
-                .to_owned(),
-        ));
-    }
-    let mut canonical_full = serde_json_canonicalizer::to_vec(&ledger)
-        .map_err(|error| RenderError::Internal(error.to_string()))?;
-    canonical_full.push(b'\n');
-    if bytes != canonical_full {
-        return Err(RenderError::Verification(
-            "project override ledger bytes are not canonical; run hive project upgrade --apply"
-                .to_owned(),
-        ));
-    }
-
-    let mut preserved = BTreeSet::new();
-    for entry in ledger.files {
-        let path = PathBuf::from(&entry.path);
-        validate_hive_skill_projection_relative(&path)
-            .map_err(|error| RenderError::Verification(error.to_string()))?;
-        let expected = expected_files.get(&path).ok_or_else(|| {
-            RenderError::Verification(format!(
-                "project override path is not an active Hive Skill projection; run hive project upgrade --apply: {}",
-                path.display()
-            ))
-        })?;
-        if sha256_digest(expected) != entry.base_digest {
-            return Err(RenderError::Verification(format!(
-                "project override base digest is stale; run hive project upgrade --apply: {}",
-                path.display()
-            )));
-        }
-        let current = read_target_required(target, &path, "local-preserved Skill projection")?;
-        if sha256_digest(&current) != entry.local_digest {
-            return Err(RenderError::Verification(format!(
-                "local-preserved Skill bytes changed after project upgrade; run hive project upgrade --apply: {}",
-                path.display()
-            )));
-        }
-        if !preserved.insert(path) {
-            return Err(RenderError::Verification(
-                "project override ledger contains duplicate Skill paths".to_owned(),
-            ));
-        }
-    }
-    Ok(preserved)
+    local_overrides::paths(
+        target, source_version, expected_files, local_overrides::Scope::Skills,
+    )
 }
 
 fn frozen_skill_metadata(source_version: &str, name: &str) -> Option<&'static [u8]> {
@@ -6260,7 +6207,17 @@ fn validate_installed_marker(
     let desired = render_agents_marker(answers, resolution, effective_preferences.as_ref());
     let merged =
         merge_shared_marker(target, relative, desired.as_bytes()).map_err(as_verification)?;
-    if current != merged {
+    let redirect = format!("{MARKER_START}\n@AGENTS.md\n{MARKER_END}\n");
+    let expected = BTreeMap::from([
+        (PathBuf::from("AGENTS.md"), desired.as_bytes().to_vec()),
+        (PathBuf::from("CLAUDE.md"), redirect.as_bytes().to_vec()),
+        (PathBuf::from("GEMINI.md"), redirect.into_bytes()),
+        (PathBuf::from(".prettierignore"), FORMATTER_IGNORE.as_bytes().to_vec()),
+    ]);
+    let preserved = local_overrides::paths(
+        target, &harness.harness_version, &expected, local_overrides::Scope::Shared,
+    )?;
+    if current != merged && !preserved.contains(relative) {
         return Err(RenderError::Verification(
             "installed AGENTS.md Hive marker is stale or malformed".to_owned(),
         ));
@@ -6318,13 +6275,18 @@ fn validate_installed_against(
                 .to_owned(),
         ));
     }
-    let expected_skill_files = planned
+    let expected_projection_files = planned
         .iter()
-        .filter(|(path, _)| is_hive_skill_projection_path(path))
+        .filter(|(path, _)| {
+            is_hive_skill_projection_path(path)
+                || is_hive_directive_projection_path(path)
+                || is_shared_marker_path(path)
+        })
         .map(|(path, bytes)| (path.clone(), bytes.clone()))
         .collect::<BTreeMap<_, _>>();
-    let local_preserved =
-        local_preserved_skill_paths(target, env!("CARGO_PKG_VERSION"), &expected_skill_files)?;
+    let local_preserved = local_overrides::paths(
+        target, env!("CARGO_PKG_VERSION"), &expected_projection_files, local_overrides::Scope::All,
+    )?;
     for (relative, expected) in planned {
         let current =
             read_target_required(target, relative, "managed output").map_err(as_verification)?;
