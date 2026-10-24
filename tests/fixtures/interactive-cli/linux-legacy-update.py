@@ -271,6 +271,8 @@ else:
             assert dry.returncode==0,(dry.stdout,dry.stderr)
             scope=json.loads(dry.stdout)["data"]["monitor_activation"]
             assert not scope["platform_eligible"] and scope["requires_separate_confirmation"]
+            misuse=subprocess.run([*args,"--dry-run","--monitor-confirm",scope["confirmation_digest"]],env=environment,capture_output=True,text=True,timeout=30)
+            assert misuse.returncode!=0 and "monitor confirmation requires --apply" in misuse.stdout,("monitor confirmation option was discarded",misuse.returncode)
             before=config.read_bytes()
             for flags in [[],["--monitor-confirm",scope["confirmation_digest"]]]:
                 blocked=subprocess.run([*args,"--apply",*flags],env=environment,capture_output=True,text=True,timeout=30)
