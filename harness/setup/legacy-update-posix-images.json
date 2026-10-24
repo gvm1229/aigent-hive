@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "images": [
+    {
+      "platform": "linux-x64",
+      "version": "0.13.1",
+      "package_integrity": "sha512-XJjl1SQeRhXBj0o8RvR4aJ/lt39X8hv4mQEXvKn5AAHOA//ZpZDVhx/8r0tW8WOOcVh4jfMVZVk6n0DRHQQDhw==",
+      "binary_sha256": "c0ed023cd25463e9c2aa43a521d5717e5471e3748c3c3d65803e76b47de71c6d"
+    }
+  ]
+}

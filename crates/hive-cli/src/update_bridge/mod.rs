@@ -5,6 +5,8 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "linux")]
+mod linux;
 #[cfg(windows)]
 mod windows;
 
@@ -21,7 +23,7 @@ pub(crate) struct LegacyBudget {
 }
 
 impl LegacyBudget {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     pub(crate) fn current() -> Self {
         Self {
             started: *STARTED.get_or_init(Instant::now),
@@ -29,7 +31,7 @@ impl LegacyBudget {
         }
     }
 
-    #[cfg(any(windows, test))]
+    #[cfg(any(windows, target_os = "linux", test))]
     pub(crate) fn question_deadline(&self) -> Instant {
         self.started + Duration::from_mins(7)
     }
@@ -48,7 +50,7 @@ impl LegacyBudget {
         self.connected.load(Ordering::Acquire)
     }
 
-    #[cfg(any(windows, test))]
+    #[cfg(any(windows, target_os = "linux", test))]
     pub(crate) fn disconnect(&self) {
         self.connected.store(false, Ordering::Release);
     }
@@ -76,9 +78,9 @@ pub(crate) fn maybe_setup(
         return Ok(None);
     };
     let result = match connection {
-        windows::Connection::Terminal(reader, writer) => crate::user_setup::update_with_terminal(
-            user_root, reader, writer, budget, hosts,
-        ),
+        windows::Connection::Terminal(reader, writer) => {
+            crate::user_setup::update_with_terminal(user_root, reader, writer, budget, hosts)
+        }
         windows::Connection::Preserve(watch) => {
             let result = crate::user_setup::update_without_terminal(user_root, hosts, &budget);
             drop(watch);
@@ -88,7 +90,32 @@ pub(crate) fn maybe_setup(
     Ok(Some(result))
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+pub(crate) fn maybe_setup(
+    user_root: &std::path::Path,
+    hosts: &[String],
+) -> Result<Option<crate::ActionResult>, String> {
+    if !std::env::args().any(|argument| argument == "--scope") {
+        return Ok(None);
+    }
+    let budget = LegacyBudget::current();
+    let Some(connection) = linux::connect(user_root, budget.clone())? else {
+        return Ok(None);
+    };
+    let result = match connection {
+        linux::Connection::Terminal(reader, writer) => {
+            crate::user_setup::update_with_terminal(user_root, reader, writer, budget, hosts)
+        }
+        linux::Connection::Preserve(watch) => {
+            let result = crate::user_setup::update_without_terminal(user_root, hosts, &budget);
+            drop(watch);
+            result
+        }
+    };
+    Ok(Some(result))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn maybe_setup(
     _user_root: &std::path::Path,
