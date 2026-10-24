@@ -585,7 +585,8 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let result = setup_engine::file_options(arguments)
         .and_then(|(arguments, options)| parse(&arguments)
             .and_then(|arguments| {
-                if options.channel == hive_core::preferences::PreferenceInput::AnswersFile && !options.quick {
+                if options.channel == hive_core::preferences::PreferenceInput::AnswersFile && !options.quick
+                    && options.index_rebuild_scope.is_none() {
                     execute(&arguments)
                 } else { setup_engine::execute_file(&arguments, &options) }
             }))
