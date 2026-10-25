@@ -4834,7 +4834,10 @@ mod tests {
         };
 
         assert_eq!(error.code(), "hive.knowledge-io-error");
-        assert!(error.to_string().contains("cannot open project registry"));
+        assert!(
+            error.to_string().contains("project registry is missing"),
+            "{error}"
+        );
         assert!(!user.path().join(SHARED_INDEX_RELATIVE).exists());
         assert!(!project.path().join(SHARED_INDEX_RELATIVE).exists());
     }
