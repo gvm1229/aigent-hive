@@ -214,6 +214,7 @@ else:
         self,
         *arguments: str,
         environment: dict[str, str] | None = None,
+        expected_exit: int = 0,
     ) -> tuple[subprocess.CompletedProcess[str], dict]:
         process = subprocess.run(
             [str(self.hive_binary), *arguments, "--output", "json"],
@@ -236,7 +237,7 @@ else:
             format_checker=FormatChecker(),
         ).validate(result)
         self.assertEqual(process.returncode, result["exit_code"], process.stderr)
-        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(process.returncode, expected_exit, (process.stdout, process.stderr))
         return process, result
 
     def test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall(self) -> None:
@@ -322,7 +323,15 @@ else:
         )
         saved_answers = user_root / ".hive/config/user-setup.yml"
         before = saved_answers.read_bytes()
-        self.invoke("uninstall", "--user-root", str(user_root), environment=environment)
+        _, removed = self.invoke("uninstall", "--confirm", "--user-root", str(user_root), environment=environment, expected_exit=2)
+        self.assertEqual(removed["code"], "hive.user-uninstall-pending")
+        self.assertEqual(removed["data"]["core"]["owner"], "unverified")
+        self.assertFalse(removed["data"]["completion_verified"])
+        self.assertEqual(removed["data"]["steps"]["host_activation"], "removed")
+        self.assertFalse((user_root / ".hive/install/codex.json").exists())
+        removed_host = json.loads(host_state.read_text(encoding="utf-8"))
+        self.assertFalse(removed_host["plugin"])
+        self.assertFalse(removed_host["marketplace"])
         self.assertEqual(saved_answers.read_bytes(), before)
         self.assertEqual(
             knowledge.read_bytes(),

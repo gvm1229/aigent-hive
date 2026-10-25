@@ -1,5 +1,6 @@
 mod host_state;
 mod index_removal;
+mod uninstall;
 pub(crate) mod deactivation;
 mod monitor_claim_retirement;
 pub(crate) use monitor_claim_retirement::{retire_monitor_config_claim, retire_monitor_state_claim};
@@ -623,13 +624,16 @@ const USER_UNINSTALL_USAGE: &str = "\
 Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge.
 
 USAGE:
-    hive uninstall [--user-root <absolute-dir>] [--output json]
+    hive uninstall [--user-root <absolute-dir>] [--dry-run | --confirm] [--output json]
+    hive uninstall --user-root <absolute-dir> --resume <operation-id> [--output json]
 
 RESULT:
-    Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Always preserve `.hive/knowledge/` and saved user preferences.
+    Preview removal and preservation before confirmation. JSON and redirected input do not grant consent.
+    Preserve saved preferences, knowledge, lifecycle history, and project source files.
 ";
 
 struct UserUninstallArguments {
+    user_root: PathBuf,
     root_cap: Dir,
 }
 
@@ -638,10 +642,11 @@ pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
         print!("{USER_UNINSTALL_USAGE}");
         return ExitCode::SUCCESS;
     }
-    let result = parse_uninstall(arguments)
-        .and_then(|arguments| execute_uninstall(&arguments, &SystemCommandRunner))
-        .unwrap_or_else(|error| failure("UninstallHiveUser", &error));
-    emit_action_result(&result)
+    uninstall::run(arguments)
+}
+
+pub(crate) fn run_uninstall_completion(arguments: &[String]) -> ExitCode {
+    uninstall::complete_helper(arguments)
 }
 
 fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, InstallError> {
@@ -676,9 +681,18 @@ fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, Insta
     }
     let requested_user_root =
         user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let (_, root_cap) = open_canonical_user_root(&requested_user_root)?;
-    Ok(UserUninstallArguments { root_cap })
+    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserUninstallArguments { user_root, root_cap })
 }
+
+const UNINSTALL_TREES: &[&str] = &[
+    ".hive/install", ".hive/install-transactions", ".hive/backups", ".hive/marketplaces",
+    ".hive/plugins", ".hive/index", ".hive/runtime", ".hive/claims", ".hive/guides",
+];
+const UNINSTALL_FILES: &[&str] = &[
+    ROOT_INDEX_RELATIVE, ".hive/config/user-active-skills.yml", ".hive/config/user-setup-progress.yml",
+    ".hive/config/user-setup-review.yml", ".hive/config/projects.yml",
+];
 
 fn execute_uninstall(
     arguments: &UserUninstallArguments,
@@ -726,26 +740,10 @@ fn execute_uninstall(
     {
         remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
     }
-    for relative in [
-        ".hive/install",
-        ".hive/install-transactions",
-        ".hive/backups",
-        ".hive/marketplaces",
-        ".hive/plugins",
-        ".hive/index",
-        ".hive/runtime",
-        ".hive/claims",
-        ".hive/guides",
-    ] {
+    for relative in UNINSTALL_TREES {
         remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
-    for relative in [
-        ROOT_INDEX_RELATIVE,
-        ".hive/config/user-active-skills.yml",
-        ".hive/config/user-setup-progress.yml",
-        ".hive/config/user-setup-review.yml",
-        ".hive/config/projects.yml",
-    ] {
+    for relative in UNINSTALL_FILES {
         remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
     for relative in [
@@ -2374,8 +2372,8 @@ fn execute_preserving_reinstall(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
-    let (_, root_cap) = open_canonical_user_root(&arguments.user_root)?;
-    let removed = execute_uninstall(&UserUninstallArguments { root_cap }, runner)?;
+    let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let removed = execute_uninstall(&UserUninstallArguments { user_root, root_cap }, runner)?;
     let mut reinstalled = execute(operation, arguments, runner)?;
     reinstalled.code = match operation {
         UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
@@ -7971,6 +7969,7 @@ mod tests {
         let user_root = root.canonicalize().expect("canonical user root");
         UserUninstallArguments {
             root_cap: open_user_root(&user_root).expect("pinned user root"),
+            user_root,
         }
     }
 

@@ -1,5 +1,7 @@
 mod completion;
 mod output;
+mod removal;
+pub(crate) use removal::remove_owned_core;
 
 use crate::usage::{CommandRunner, SystemCommandRunner};
 use hive_core::sha256_digest;
@@ -421,6 +423,21 @@ pub(crate) fn result_guidance(result: &crate::ActionResult) -> Vec<String> {
     output::guidance(result)
 }
 
+pub(crate) fn uninstall_owner_preview(executable: &Path) -> Result<serde_json::Value, String> {
+    let version = env!("CARGO_PKG_VERSION").parse().map_err(|_| "invalid compiled version")?;
+    let owner = discover_owner(executable, version)?;
+    let binary=fs::read(executable).map_err(|_|"cannot fingerprint the installed program")?;
+    let receipt = match &owner {
+        InstallOwner::Direct {prefix,..} => Some(sha256_digest(&fs::read(prefix.join("share/aigent-hive/install-receipt.json"))
+            .map_err(|_|"cannot fingerprint the direct receipt")?)),
+        InstallOwner::Npm {..} => None,
+    };
+    Ok(serde_json::json!({"owner":owner.label(),"package_version":owner.package_version().exact,
+        "executable":executable.canonicalize().map_err(|_|"cannot resolve installed program")?,
+        "executable_digest":sha256_digest(&binary),"receipt_digest":receipt,
+        "prefix":match &owner { InstallOwner::Direct {prefix,..}=>Some(prefix), InstallOwner::Npm {..}=>None }}))
+}
+
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     let mut channel = UpdateChannel::Stable;
     let mut channel_seen = false;
@@ -573,7 +590,7 @@ fn spawn_windows_direct_handoff(
     Ok(record)
 }
 
-fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
+pub(crate) fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
     if !cfg!(windows) {
         return Ok(());
     }

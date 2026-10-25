@@ -37,7 +37,7 @@ fn digest(bytes: Option<&[u8]>) -> String {
     bytes.map_or_else(|| "absent".into(), sha256_digest)
 }
 
-fn without_marker(bytes: &[u8]) -> Result<Vec<u8>, InstallError> {
+pub(super) fn without_marker(bytes: &[u8]) -> Result<Vec<u8>, InstallError> {
     match (
         find_all(bytes, USER_MARKER_START).as_slice(),
         find_all(bytes, USER_MARKER_END).as_slice(),
@@ -242,6 +242,22 @@ fn transitions(before: &HostStateSnapshot) -> Vec<(&'static [&'static str], Host
 
 pub(crate) fn apply(root: &Path, plans: &[Plan]) -> Result<Vec<String>, String> {
     apply_using(root, plans, &SystemCommandRunner).map_err(|e| e.message().into())
+}
+
+pub(super) fn verify_removed(plans: &[Plan], runner: &impl CommandRunner) -> Result<(), InstallError> {
+    for plan in plans {
+        let host = host(plan.host);
+        let program = match host {UserHost::Codex=>"codex",UserHost::Claude=>"claude",UserHost::Antigravity=>"agy"};
+        let exe = runner.qualify(program).map_err(|_|InstallError::Unsupported("cannot verify removed host activation".into()))?;
+        probe_supported_host_version(host,&exe,runner)?;
+        let absent=match probe_host_snapshot(host,&exe,runner)? {
+            HostStateSnapshot::Codex(state)=>state.plugin.is_none() && state.marketplace.is_none(),
+            HostStateSnapshot::Claude(state)=>state.plugin.is_none() && state.marketplace.is_none(),
+            HostStateSnapshot::Antigravity(state)=>state.plugin.is_none(),
+        };
+        if !absent {return Err(InstallError::Conflict("host activation changed during removal; program preserved".into()));}
+    }
+    Ok(())
 }
 
 pub(super) fn apply_using(

@@ -111,6 +111,7 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         foreign = self.setup_user_root / ".gemini/GEMINI.md"
         foreign.parent.mkdir()
         foreign.write_text("User-owned preface.\n", encoding="utf-8")
+        foreign_before = foreign.read_bytes()
         interrupted = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
             "--answers",str(document),"--apply","--output","json"],
             env={**environment,"HIVE_USER_SETUP_INTERRUPT_AFTER":"0"},capture_output=True,text=True,timeout=30)
@@ -149,6 +150,29 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         self.assertEqual(repeated.returncode,2,(repeated.stdout,repeated.stderr))
         self.assertEqual(json.loads(repeated.stdout)["code"],"hive.update-needs-input")
         self.assertEqual(snapshot_tree(self.setup_user_root),before)
+        settings_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        settings_before = settings_path.read_bytes()
+        knowledge = self.setup_user_root / ".hive/knowledge/retained.md"
+        knowledge.parent.mkdir(parents=True, exist_ok=True)
+        knowledge.write_bytes(b"User-owned knowledge.\n")
+        removal = subprocess.run([str(self.hive_binary),"uninstall","--confirm","--user-root",str(self.setup_user_root),
+            "--output","json"],env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(removal.returncode,2,(removal.stdout,removal.stderr))
+        removal_result=json.loads(removal.stdout)
+        self.assertEqual(removal_result["code"],"hive.user-uninstall-pending")
+        self.assertEqual(removal_result["data"]["core"]["owner"],"unverified")
+        self.assertEqual(removal_result["data"]["steps"]["host_activation"],"removed")
+        self.assertFalse((self.setup_user_root / ".hive/install/antigravity.json").exists())
+        self.assertFalse(json.loads((self.work_root / "host-actions.antigravity.state").read_text())["plugin"])
+        self.assertEqual(settings_path.read_bytes(),settings_before)
+        self.assertEqual(foreign.read_bytes(),foreign_before)
+        self.assertEqual(knowledge.read_bytes(),b"User-owned knowledge.\n")
+        document.write_text(json.dumps(read_yaml(settings_path)),encoding="utf-8")
+        restored=subprocess.run([str(self.hive_binary),"setup","--scope","user","--answers",str(document),
+            "--apply","--user-root",str(self.setup_user_root),"--output","json"],env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(restored.returncode,0,(restored.stdout,restored.stderr))
+        self.assertEqual(settings_path.read_bytes(),settings_before)
+        self.assertEqual(knowledge.read_bytes(),b"User-owned knowledge.\n")
 
     def test_failed_harness_is_incomplete_and_does_not_report_effective_policy(self):
         process=subprocess.run([str(self.hive_binary),"__complete-user-update","--user-root",str(self.setup_user_root),

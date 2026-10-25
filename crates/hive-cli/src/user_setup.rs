@@ -3234,18 +3234,7 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     let mut previous = None;
     for entry in &manifest.entries {
         let path = Path::new(&entry.path);
-        let allowed = matches!(
-            entry.path.as_str(),
-            ".agents/directives/00-hive-user.md"
-                | ".hive/config/user-active-skills.yml"
-                | ".agents/skills/user-setup/references/workflow.md"
-                | ".agents/skills/user-setup/references/questions.md"
-                | ".agents/skills/user-setup/references/reconfiguration.md"
-                | ".agents/skills/user-setup/references/recovery.md"
-                | ".agents/skills/user-setup/references/language.md"
-                | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
-        ) || (path.starts_with(".agents/skills/")
-            && hive_core::validate_hive_skill_projection_relative(path).is_ok());
+        let allowed = valid_user_projection_path(path);
         if path.is_absolute()
             || !allowed
             || path
@@ -3261,6 +3250,15 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
         previous = Some(entry.path.as_str());
     }
     Ok(manifest)
+}
+
+pub(crate) fn valid_user_projection_path(path: &Path) -> bool {
+    matches!(path.to_str(), Some(
+        ".agents/directives/00-hive-user.md" | ".hive/config/user-active-skills.yml"
+        | ".agents/skills/user-setup/references/workflow.md" | ".agents/skills/user-setup/references/questions.md"
+        | ".agents/skills/user-setup/references/reconfiguration.md" | ".agents/skills/user-setup/references/recovery.md"
+        | ".agents/skills/user-setup/references/language.md" | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+    )) || (path.starts_with(".agents/skills/") && hive_core::validate_hive_skill_projection_relative(path).is_ok())
 }
 
 pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
@@ -3295,6 +3293,25 @@ pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, Set
     paths.push(manifest_path.to_path_buf());
     paths.sort();
     paths.dedup();
+    Ok(paths)
+}
+
+pub(crate) fn verified_uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
+    let path = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let Some(bytes) = super::user_install::read_user_setup_file(root, path, MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)? else { return Ok(Vec::new()); };
+    let manifest = parse_projection_manifest(&bytes)?;
+    let mut paths = Vec::new();
+    for entry in manifest.entries {
+        let relative = PathBuf::from(entry.path);
+        let current = super::user_install::read_user_setup_file(root, &relative, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+        if current.as_deref().is_some_and(|bytes| sha256_digest(bytes) != entry.digest) {
+            return Err(SetupError::Conflict(format!("user projection changed; preserved: {}", relative.display())));
+        }
+        paths.push(relative);
+    }
+    paths.push(path.to_owned());
     Ok(paths)
 }
 

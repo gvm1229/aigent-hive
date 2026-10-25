@@ -253,6 +253,15 @@ pub(crate) fn verify_stopped_for_setup(user_root: &Path) -> Result<(), AdapterEr
     transition::verify_stopped(&PinnedTarget::open_usage(user_root)?)
 }
 
+pub(crate) fn quiesce_for_uninstall(user_root: &Path, choice: &SavedMonitorChoice, operation_id: &str)
+    -> Result<transition::StoppedReader, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let stopped = transition::quiesce_operation(&root, platform::call, Duration::from_secs(15),
+        Some(&choice.config_digest), Some(operation_id))?;
+    activation::retire_disabled(&root)?;
+    Ok(stopped)
+}
+
 pub(crate) fn threshold_already_handled(
     root: &PinnedTarget,
     policy: &crate::usage_control::MonitorPolicy,
