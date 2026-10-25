@@ -1,11 +1,11 @@
 # 현재 상태
 
 - 제품 버전: `0.14.0`
-- 현재 단계: M00·M01·M03–M06 완료, M02 핵심 동의(`99c04b62`)·옛 동의 폐기(`5f02ca62`)·M10·M11 Linux 부분 통과. 다음 M02 쓰기 보관 복구/설정 재검토, 이후 M07–M09. 공식 1/15 유지
-- 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 격리 확인→미커밋 감시 처리 종료→POSIX 첫 갱신/기한 관문 선행. 반복 검토 축소·단위별 ship·실제 0.13.1 설치 변경 금지
+- 현재 단계: M00·M01·M03–M06 완료, M02-C2 철회/재개 `2386b52c` 완료. M02 실제 Windows 감시 미검증, M10·M11 Linux 부분 통과. 다음 M07–M09, 공식 1/15 유지
+- 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). M02-C2 보존→M07 기존 선택 이전 통합. 단위별 ship·실제 0.13.1 설치 변경 금지
 - 실제 제품 소스 메타데이터0.14.0, 실제 공개 안정판과 사용자 설치0.13.1.0.14.0은 사용자가 새로 선택한 구현 목표
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 재개 실행 순서는 위 M00–M24 문서 기준
-- 재개 위치: C1 `d787b4e0` 검증 완료, C2 설계 초안부터 계속. 반복된 응답 이상으로 모델/문맥 재시작 필요, 제품 완료·계획 일시 중지와 구분
+- 재개 위치: M07. [C2 근거와 한계](../plans/details/monitor-setup-review-0.14.0.md)에 철회·설정 적용·실패 뒤 비활성 보존·재개 기록. Linux 기본 동시 실행의 실행 파일 읽기 실패는 Q140-002 조사 유지
 
 ## 생성된 구현·수용 항목
 
@@ -49,7 +49,7 @@
 
 ## 다음 구현과 수용
 
-- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·C1 `d787b4e0` [취소/인계 기록](../plans/details/monitor-setup-review-0.14.0.md) 부분 통과. 두 OS 회귀 통과, CLI 질문/실제 적용 연결·격리 Windows 긍정 수용 미완료
+- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역/제한 동시 실행 회귀 통과, 격리 Windows 긍정 수용 미완료
 
 - M04 `06d35f5a` [벡터 선택](../plans/details/vector-choice-0.14.0.md)·M05 `3623df57` [앱 해제/보존/재개](../plans/details/host-deselection-0.14.0.md) 완료, 실행 범위·한계는 각 근거
 - M06 `54c4d6dc` [언어/입력](../plans/details/setup-language-input-0.14.0.md): Windows 설정208·최종 관련20·clippy, Linux 전체211·실제 무입력/언어 변경/거부/Ctrl-C 재개 통과. 이전 Linux207 중 잠금1실패는 현재 미재현, 원인 미확인/Q140-002 조사 유지
