@@ -19,6 +19,11 @@ pub(super) fn resume(
             "hive.update-input-pending",
         ));
     }
+    let handoff=ProgressStore::open(root,None)?;
+    if handoff.recover_monitor_handoff()? {
+        let next=handoff.load()?.progress.ok_or_else(||SetupError::Conflict("monitor handoff has no replacement setup".into()))?;
+        return resume(root,&next,language,false);
+    }
     let bytes = serde_json::to_vec(&progress.answers)
         .map_err(|error| SetupError::Internal(error.to_string()))?;
     let (user_root, root_cap) = crate::user_install::open_canonical_user_root_for_setup(root)

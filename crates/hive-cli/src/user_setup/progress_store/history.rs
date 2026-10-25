@@ -31,6 +31,10 @@ struct Receipt {
     completed_at_unix_nanos: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    cancelled_by_operation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    cancelled_replacement_digest: Option<String>,
 }
 
 fn path(id: &str) -> Result<PathBuf, SetupError> {
@@ -46,6 +50,16 @@ fn path(id: &str) -> Result<PathBuf, SetupError> {
     Ok(Path::new(DIRECTORY).join(format!("{id}.json")))
 }
 
+fn valid_cancel_marker(receipt:&Receipt)->bool {
+    match (&receipt.cancelled_by_operation,&receipt.cancelled_replacement_digest) {
+        (None,None)=>true,
+        (Some(operation),Some(digest))=>path(operation).is_ok() && operation!=&receipt.operation_id
+            && super::valid_hash(digest) && receipt.phase==ProgressPhase::RecoverableFailure
+            && receipt.completed_at_unix_nanos.is_some() && receipt.after_digest.as_ref().is_some_and(|v|super::valid_hash(v)),
+        _=>false,
+    }
+}
+
 pub(super) fn is_record_path(relative: &Path) -> bool {
     relative.file_name().and_then(|name| name.to_str()).and_then(|name| name.strip_suffix(".json"))
         .and_then(|id| path(id).ok()).as_deref() == Some(relative)
@@ -55,13 +69,13 @@ pub(super) fn validate_scope(store: &ProgressStore, relative: &Path, bytes: &[u8
     let receipt: Receipt = serde_json::from_slice(bytes)
         .map_err(|_| SetupError::Verification("invalid retained lifecycle record".into()))?;
     if receipt.schema_version != 1 || receipt.operation != "setup" || receipt.binding != store.binding
-        || path(&receipt.operation_id)?.as_path() != relative {
+        || path(&receipt.operation_id)?.as_path() != relative || !valid_cancel_marker(&receipt) {
         return Err(SetupError::Conflict("retained lifecycle record scope changed".into()));
     }
     Ok(())
 }
 
-fn intent_digest(progress: &SetupProgress) -> Result<String, SetupError> {
+pub(super) fn intent_digest(progress: &SetupProgress) -> Result<String, SetupError> {
     // Bind every persisted execution input, including migration/monitor metadata.
     // Phase changes during recovery; the confirmed intent must remain unchanged.
     let mut intent =
@@ -94,6 +108,7 @@ pub(super) fn confirm_completion(
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
         || receipt.question_revision != progress.question_revision
+        || !valid_cancel_marker(&receipt)
         || receipt.phase != ProgressPhase::Complete
         || receipt.after_digest.as_ref() != Some(&store.base_config_digest)
         || receipt.completed_at_unix_nanos.is_none()
@@ -140,6 +155,8 @@ pub(super) fn record(
             started_at_unix_nanos: recorded_now()?,
             completed_at_unix_nanos: None,
             projection_digest: None,
+            cancelled_by_operation: None,
+            cancelled_replacement_digest: None,
         }
     };
     if receipt.schema_version != 1
@@ -154,6 +171,8 @@ pub(super) fn record(
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
         || receipt.question_revision != progress.question_revision
+        || receipt.cancelled_by_operation.is_some()
+        || !valid_cancel_marker(&receipt)
         || (receipt.phase == ProgressPhase::Complete && phase != ProgressPhase::Complete)
     {
         return Err(SetupError::Conflict(
@@ -177,6 +196,47 @@ pub(super) fn record(
     store.write_state(&relative, before.as_deref(), Some(&bytes))
 }
 
+pub(super) fn cancel_for_monitor_review(store: &ProgressStore, old: &SetupProgress,
+    replacement: &SetupProgress) -> Result<(), SetupError> {
+    let relative = path(&old.operation_id)?;
+    let current = store.read_state(&relative,LIMIT)?.ok_or_else(|| SetupError::Verification("cancelled setup intent is missing".into()))?;
+    let mut receipt: Receipt=serde_json::from_slice(&current).map_err(|_| SetupError::Verification("invalid cancelled setup intent".into()))?;
+    if receipt.cancelled_by_operation.is_some() {
+        return verify_monitor_replacement(store,&old.operation_id,&intent_digest(old)?,replacement);
+    }
+    if receipt.phase == ProgressPhase::Complete {
+        return Err(SetupError::Conflict("completed setup cannot be cancelled as pending monitoring".into()));
+    }
+    record(store,old,ProgressPhase::RecoverableFailure)?;
+    receipt.phase=ProgressPhase::RecoverableFailure;
+    let expected=serde_json::to_vec_pretty(&receipt).map_err(|e|SetupError::Internal(e.to_string()))?;
+    let before=store.read_state(&relative,LIMIT)?.ok_or_else(|| SetupError::Verification("setup cancellation record disappeared".into()))?;
+    if before!=expected { return Err(SetupError::Conflict("setup cancellation record changed; preserved".into())); }
+    let mut receipt:Receipt=serde_json::from_slice(&before).map_err(|_| SetupError::Verification("invalid setup cancellation record".into()))?;
+    receipt.cancelled_by_operation=Some(replacement.operation_id.clone());
+    receipt.cancelled_replacement_digest=Some(intent_digest(replacement)?);
+    receipt.after_digest=Some(store.base_config_digest.clone());
+    receipt.completed_at_unix_nanos=Some(recorded_now()?);
+    let bytes=serde_json::to_vec_pretty(&receipt).map_err(|e|SetupError::Internal(e.to_string()))?;
+    store.write_state(&relative,Some(&before),Some(&bytes))
+}
+
+pub(super) fn verify_monitor_replacement(store:&ProgressStore, old_id:&str, old_intent:&str,
+    replacement:&SetupProgress)->Result<(),SetupError> {
+    let relative=path(old_id)?;
+    let bytes=store.read_state(&relative,LIMIT)?.ok_or_else(||SetupError::Verification("cancelled setup record is missing".into()))?;
+    let receipt:Receipt=serde_json::from_slice(&bytes).map_err(|_|SetupError::Verification("invalid cancelled setup record".into()))?;
+    if receipt.schema_version!=1 || receipt.operation!="setup" || receipt.binding!=store.binding
+        || receipt.product_version!=env!("CARGO_PKG_VERSION") || receipt.operation_id!=old_id
+        || receipt.intent_digest.as_deref()!=Some(old_intent)
+        || receipt.cancelled_by_operation.as_deref()!=Some(&replacement.operation_id)
+        || receipt.cancelled_replacement_digest.as_ref()!=Some(&intent_digest(replacement)?)
+        || receipt.phase!=ProgressPhase::RecoverableFailure || receipt.completed_at_unix_nanos.is_none() {
+        return Err(SetupError::Conflict("cancelled setup replacement changed; preserved".into()));
+    }
+    Ok(())
+}
+
 pub(super) fn projection_binding(
     store: &ProgressStore,
     progress: &SetupProgress,
@@ -188,6 +248,9 @@ pub(super) fn projection_binding(
         .ok_or_else(|| SetupError::Verification("setup intent record is missing".into()))?;
     let mut receipt: Receipt = serde_json::from_slice(&before)
         .map_err(|_| SetupError::Verification("invalid setup intent record".into()))?;
+    if receipt.cancelled_by_operation.is_some() || !valid_cancel_marker(&receipt) {
+        return Err(SetupError::Conflict("cancelled setup cannot resume its old projection".into()));
+    }
     if receipt.schema_version != 1
         || receipt.operation != "setup"
         || receipt.product_version != env!("CARGO_PKG_VERSION")
@@ -268,7 +331,8 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
             && receipt.operation == "setup"
             && receipt.operation_id == id
             && receipt.binding == store.binding
-            && receipt.phase == ProgressPhase::Complete
+            && valid_cancel_marker(&receipt)
+            && (receipt.phase == ProgressPhase::Complete || receipt.cancelled_by_operation.is_some())
         {
             if let Some(time) = receipt.completed_at_unix_nanos {
                 completed.push((id == current, time, relative, bytes));

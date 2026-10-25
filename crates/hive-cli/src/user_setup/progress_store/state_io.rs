@@ -52,6 +52,8 @@ impl ProgressStore {
 
     fn state_path(&self, relative: &Path) -> bool {
         relative == self.relative
+            || (self.binding.scope == hive_core::preferences::PreferenceScope::User
+                && relative == Path::new(super::monitor_review::PATH))
             || history::is_record_path(relative)
             || (self.binding.scope == hive_core::preferences::PreferenceScope::User
                 && relative == Path::new(super::LEGACY_PROGRESS))
@@ -66,6 +68,8 @@ impl ProgressStore {
             && self.binding.scope == hive_core::preferences::PreferenceScope::User
         {
             super::parse_progress_file(bytes).map(|_| ())
+        } else if relative == Path::new(super::monitor_review::PATH) {
+            super::monitor_review::validate_scope(self,bytes).map(|_|())
         } else {
             history::validate_scope(self, relative, bytes)
         }

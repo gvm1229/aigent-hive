@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 mod history;
 mod state_io;
 mod questions;
+mod monitor_review;
 pub(super) use questions::QuestionBinding;
 
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";

@@ -272,6 +272,9 @@ fn execute_inner<R: BufRead, W: Write>(
         terminal.language = config.interface_language;
     }
     let store = ProgressStore::open(&root_path, None)?;
+    if !options.show && !options.dry_run && mode!=InteractionMode::NeedsInput {
+        store.recover_monitor_handoff()?;
+    }
     if !options.show && mode != InteractionMode::NeedsInput {
         store.recover_pending_state()?;
     }
