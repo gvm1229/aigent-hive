@@ -5,11 +5,33 @@ import subprocess
 
 from jsonschema import Draft202012Validator
 from tests.conformance.support.harness import (
-    ACTION_RESULT_SCHEMA, Phase1CliTestCase, read_yaml, snapshot_tree, write_yaml,
+    ACTION_RESULT_SCHEMA, FIXTURE_ROOT, REPOSITORY_ROOT, Phase1CliTestCase, read_yaml, snapshot_tree, write_yaml,
 )
 
 
 class SetupSummaryConformance(Phase1CliTestCase):
+    def test_explicit_project_setup_skill_delivers_only_its_owned_companions(self):
+        target = self.work_root / "selected-setup"
+        target.mkdir()
+        answers = read_yaml(FIXTURE_ROOT / "answers-no-role-no-hook.yml")
+        answers.update({"setup_mode":"custom", "interface_language":"en",
+            "wiki":{"enabled":False,"language":"en"}, "persona":{"id":"balanced"},
+            "skills":{"mode":"individual","selected":["project-setup"]}})
+        document = self.work_root / "answers.json"
+        document.write_text(json.dumps(answers), encoding="utf-8")
+        foreign = target / ".agents/skills/project-setup/references/foreign.md"
+        foreign.parent.mkdir(parents=True)
+        foreign.write_bytes(b"Unrelated user note.\r\n")
+        for mode in ("--apply", "--validate"):
+            process, result = self.invoke_setup(target, answers=document, mode=mode,
+                extra_arguments=("--summary",))
+            self.assertEqual(process.returncode, 0, (process.stdout, process.stderr))
+            self.assertEqual(result["status"], "success")
+            self.assertEqual(foreign.read_bytes(), b"Unrelated user note.\r\n")
+            for name in ("advanced-setup.md", "directive-recovery.md", "structured-choices.md"):
+                self.assertEqual((foreign.parent / name).read_bytes(),
+                    (REPOSITORY_ROOT / "harness/skills/project-setup/references" / name).read_bytes())
+
     def setup_result(self, *flags, expected=0, limit=8192):
         process = subprocess.run(
             [str(self.hive_binary), "setup", *map(str, flags), "--user-root",

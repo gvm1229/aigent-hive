@@ -227,6 +227,36 @@ pattern = ".claude/skills/amend-directive/references/transplant.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
+[[paths]]
+pattern = ".agents/skills/project-setup/references/advanced-setup.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/project-setup/references/directive-recovery.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/project-setup/references/structured-choices.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/project-setup/references/advanced-setup.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/project-setup/references/directive-recovery.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/project-setup/references/structured-choices.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
 [[forbidden_paths]]
 pattern = ".omx/**"
 
