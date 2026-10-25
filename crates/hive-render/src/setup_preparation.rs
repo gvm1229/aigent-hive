@@ -208,7 +208,10 @@ mod tests {
         }
         request.mode = SetupMode::Validate;
         super::super::execute_setup(&request).unwrap();
-        assert!(prepare_setup(&request).unwrap().changes.is_empty());
+        assert_eq!(
+            prepare_setup(&request).unwrap().changes,
+            Vec::<PreparedSetupChange>::new()
+        );
     }
 
     #[test]

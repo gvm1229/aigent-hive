@@ -5410,9 +5410,10 @@ usage_guard:
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex, SelectedHost::Claude];
 
-        assert!(host_deselections(Some(&installed_bytes), &desired)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            host_deselections(Some(&installed_bytes), &desired).unwrap(),
+            Vec::<SelectedHost>::new()
+        );
     }
 
     #[test]

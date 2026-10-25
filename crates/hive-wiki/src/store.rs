@@ -4959,7 +4959,7 @@ mod tests {
         project.close().unwrap();
         let preserved = store.ensure_user_setup_index().unwrap();
         assert_eq!(preserved.generation, generation);
-        assert!(preserved.changed_paths.is_empty());
+        assert_eq!(preserved.changed_paths, Vec::<String>::new());
         for path in paths {
             assert_eq!(std::fs::read(root.path().join(path)).unwrap(), before[path]);
         }

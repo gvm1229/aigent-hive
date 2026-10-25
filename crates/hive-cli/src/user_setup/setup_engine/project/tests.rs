@@ -57,7 +57,7 @@ fn noninteractive_new_project_never_reads_or_creates_settings() {
     .unwrap();
     assert_eq!(result.status, "needs-input");
     assert_eq!(terminal.reader.position(), 0);
-    assert!(terminal.writer.is_empty());
+    assert_eq!(terminal.writer, Vec::<u8>::new());
     assert!(!root.path().join(".hive").exists());
     assert!(!target.path().join(".hive").exists());
 }
@@ -214,7 +214,7 @@ fn assert_extra_review_binding(
         language: InterfaceLanguage::En,
     };
     assert!(extras::configure(options, store, snapshot, progress, &mut no_input).unwrap());
-    assert!(no_input.writer.is_empty());
+    assert_eq!(no_input.writer, Vec::<u8>::new());
     let original = progress.clone();
     progress.answers["approved_optional_skills"] = json!([]);
     assert!(!extras::configure(options, store, snapshot, progress, &mut no_input).unwrap());
@@ -389,7 +389,7 @@ fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
         &mut binding
     )
     .unwrap());
-    assert!(binding.writer.is_empty());
+    assert_eq!(binding.writer, Vec::<u8>::new());
     assert!(progress.answers["user_store_binding"]
         .as_str()
         .unwrap()
@@ -946,7 +946,7 @@ fn existing_role_changes_require_a_saved_confirmation_and_preserve_the_user_body
         &mut no_input
     )
     .unwrap());
-    assert!(no_input.writer.is_empty());
+    assert_eq!(no_input.writer, Vec::<u8>::new());
     assert_changed_role_needs_approval(&options, &store, &mut snapshot, &progress);
     options.reconfigure_roles = progress.reconfigure_roles.clone();
     let input = write_answers(&progress.answers).unwrap();

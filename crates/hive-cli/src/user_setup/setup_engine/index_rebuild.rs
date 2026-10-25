@@ -295,7 +295,7 @@ mod tests {
             &mut resumed
         )
         .unwrap());
-        assert!(resumed.writer.is_empty());
+        assert_eq!(resumed.writer, Vec::<u8>::new());
         apply(&args, &progress).unwrap();
         assert!(root.path().join(SHARED_INDEX_RELATIVE).is_file());
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());

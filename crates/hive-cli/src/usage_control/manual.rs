@@ -24,7 +24,7 @@ fn parse(arguments: &[String]) -> Result<Options, AdapterError> {
         return Err(AdapterError::Input("usage show option has no value".into()));
     }
     let mut values = BTreeMap::new();
-    for pair in arguments.chunks_exact(2) {
+    for pair in arguments.as_chunks::<2>().0 {
         if !matches!(
             pair[0].as_str(),
             "--host" | "--user-root" | "--account-digest" | "--output"
@@ -308,7 +308,7 @@ mod tests {
         assert_eq!(data["snapshot"]["windows"][0]["remaining_percent"], 0.0);
         assert_eq!(data["authorizes_dispatch"], false);
         assert_eq!(data["writes_hive_state"], false);
-        assert!(result.changed_paths.is_empty());
+        assert_eq!(result.changed_paths, Vec::<String>::new());
         assert_eq!(
             std::fs::read(root.path().join(USER_CONFIG_PATH)).unwrap(),
             before

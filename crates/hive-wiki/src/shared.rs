@@ -1985,10 +1985,12 @@ mod tests {
     #[test]
     fn preference_registry_metadata_does_not_open_missing_projects() {
         let empty = tempfile::tempdir().unwrap();
-        assert!(load_project_registry_metadata(empty.path())
-            .unwrap()
-            .projects
-            .is_empty());
+        assert_eq!(
+            load_project_registry_metadata(empty.path())
+                .unwrap()
+                .projects,
+            Vec::<RegisteredProject>::new()
+        );
         assert!(load_project_registry(empty.path()).is_err());
         assert!(!empty.path().join(".hive").exists());
         let (_temp, user, first, _second) = fixture();
@@ -1999,10 +2001,12 @@ mod tests {
         fs::write(&path, &bytes).unwrap();
         assert_eq!(load_project_registry_metadata(&user).unwrap(), registry);
         let pinned = Dir::open_ambient_dir(&user, ambient_authority()).unwrap();
-        assert!(ensure_project_registry_metadata(&user, &pinned)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            ensure_project_registry_metadata(&user, &pinned)
+                .unwrap()
+                .changed_paths,
+            Vec::<String>::new()
+        );
         assert!(ensure_project_registry(&user).is_err());
         assert!(load_project_registry(&user).is_err());
         assert!(rebuild_shared_index(&user).is_err());

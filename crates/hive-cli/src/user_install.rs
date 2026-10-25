@@ -8787,9 +8787,10 @@ mod tests {
                 assert_eq!(fs::read(root.path().join(path)).unwrap(), bytes);
             }
             runner.calls.lock().unwrap().clear();
-            assert!(deactivation::apply_using(root.path(), &plans, &runner)
-                .unwrap()
-                .is_empty());
+            assert_eq!(
+                deactivation::apply_using(root.path(), &plans, &runner).unwrap(),
+                Vec::<String>::new()
+            );
             assert!(runner
                 .calls
                 .lock()

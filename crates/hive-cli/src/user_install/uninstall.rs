@@ -553,7 +553,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(result.code, code);
-            assert!(result.changed_paths.is_empty());
+            assert_eq!(result.changed_paths, Vec::<String>::new());
             assert_eq!(fs::read_dir(root.path()).unwrap().count(), 1);
             assert_eq!(fs::read(root.path().join("foreign.txt")).unwrap(), b"keep");
         }

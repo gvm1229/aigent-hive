@@ -4031,7 +4031,7 @@ mod tests {
             let enforced = enforce(&args).unwrap();
             assert_eq!(enforced.code, "hive.usage-disabled");
             assert_eq!(enforced.exit_code, 0);
-            assert!(enforced.changed_paths.is_empty());
+            assert_eq!(enforced.changed_paths, Vec::<String>::new());
             let data = enforced.data.unwrap();
             assert_eq!(data["policy_evaluated"], true);
             assert_eq!(data["enforcement_enabled"], false);

@@ -465,7 +465,7 @@ mod tests {
             )))
             .unwrap()
         );
-        assert!(terminal.writer.is_empty());
+        assert_eq!(terminal.writer, Vec::<u8>::new());
         assert_eq!(progress.monitor_start, Some(saved.clone()));
         finish_using(
             &serde_json::to_vec(&progress.answers).unwrap(),

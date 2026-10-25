@@ -298,14 +298,14 @@ mod tests {
             )
         };
         assert_eq!(check(10.0, 1)[0]["kind"], "quota-low");
-        assert!(check(10.0, 2).is_empty());
+        assert_eq!(check(10.0, 2), Vec::<serde_json::Value>::new());
         assert_eq!(check(0.0, 3)[0]["kind"], "quota-empty");
-        assert!(check(0.0, 4).is_empty());
-        assert!(check(50.0, 5).is_empty());
-        assert!(check(50.0, 5).is_empty());
-        assert!(check(10.0, 6).is_empty());
-        assert!(check(50.0, 7).is_empty());
-        assert!(check(50.0, 8).is_empty());
+        assert_eq!(check(0.0, 4), Vec::<serde_json::Value>::new());
+        assert_eq!(check(50.0, 5), Vec::<serde_json::Value>::new());
+        assert_eq!(check(50.0, 5), Vec::<serde_json::Value>::new());
+        assert_eq!(check(10.0, 6), Vec::<serde_json::Value>::new());
+        assert_eq!(check(50.0, 7), Vec::<serde_json::Value>::new());
+        assert_eq!(check(50.0, 8), Vec::<serde_json::Value>::new());
         assert_eq!(check(10.0, 9).len(), 1);
         assert_eq!(check(0.0, 10).len(), 1);
     }
@@ -328,16 +328,16 @@ mod tests {
         };
         assert_eq!(check(20, 10.0, 1, 10000).len(), 1);
         assert_eq!(check(40, 10.0, 2, 10000).len(), 1);
-        assert!(check(20, 10.0, 3, 10000).is_empty());
-        assert!(check(40, 10.0, 4, 10000).is_empty());
-        assert!(check(40, 30.0, 5, 10000).is_empty());
-        assert!(check(40, 30.0, 5, 10000).is_empty());
-        assert!(check(40, 30.0, 6, 10000).is_empty());
+        assert_eq!(check(20, 10.0, 3, 10000), Vec::<serde_json::Value>::new());
+        assert_eq!(check(40, 10.0, 4, 10000), Vec::<serde_json::Value>::new());
+        assert_eq!(check(40, 30.0, 5, 10000), Vec::<serde_json::Value>::new());
+        assert_eq!(check(40, 30.0, 5, 10000), Vec::<serde_json::Value>::new());
+        assert_eq!(check(40, 30.0, 6, 10000), Vec::<serde_json::Value>::new());
         assert_eq!(check(20, 10.0, 7, 10000).len(), 1);
-        assert!(check(40, 10.0, 8, 10000).is_empty());
+        assert_eq!(check(40, 10.0, 8, 10000), Vec::<serde_json::Value>::new());
         assert_eq!(check(40, 10.0, 9, 11000).len(), 1);
         assert_eq!(check(20, 10.0, 10, 11000).len(), 1);
-        assert!(check(40, 10.0, 1, 10000).is_empty());
+        assert_eq!(check(40, 10.0, 1, 10000), Vec::<serde_json::Value>::new());
     }
 
     #[test]
@@ -366,14 +366,20 @@ mod tests {
             zero_shown: false,
         };
         std::fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
-        assert!(observe(None, &root, &config, &[sample(10.0, 2)], 2).is_empty());
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 2)], 2),
+            Vec::<serde_json::Value>::new()
+        );
         config.threshold = 40;
         assert_eq!(
             observe(None, &root, &config, &[sample(10.0, 3)], 3).len(),
             1
         );
         config.threshold = 20;
-        assert!(observe(None, &root, &config, &[sample(10.0, 4)], 4).is_empty());
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 4)], 4),
+            Vec::<serde_json::Value>::new()
+        );
         let saved: Episode = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         assert_eq!(saved.schema_version, 2);
         assert_eq!(saved.policies.len(), 2);
@@ -389,8 +395,14 @@ mod tests {
         value.measured_at_unix_seconds = 2;
         value.resets_at_unix_seconds += 1000;
         assert_eq!(observe(None, &root, &config, &[value.clone()], 2).len(), 1);
-        assert!(observe(None, &root, &config, &[sample(10.0, 1)], 2).is_empty());
-        assert!(observe(None, &root, &config, &[value.clone()], 2).is_empty());
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 1)], 2),
+            Vec::<serde_json::Value>::new()
+        );
+        assert_eq!(
+            observe(None, &root, &config, &[value.clone()], 2),
+            Vec::<serde_json::Value>::new()
+        );
         value.account_scope_digest = sha256_digest(b"another account");
         assert_eq!(observe(None, &root, &config, &[value.clone()], 2).len(), 1);
         config.threshold = 30;
@@ -406,7 +418,10 @@ mod tests {
             .unwrap()
             .is_none());
         config.policy.as_mut().unwrap().warnings_enabled = false;
-        assert!(observe(None, &root, &config, &[sample(10.0, 1)], 1).is_empty());
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 1)], 1),
+            Vec::<serde_json::Value>::new()
+        );
         config.policy.as_mut().unwrap().warnings_enabled = true;
         assert_eq!(
             observe(None, &root, &config, &[sample(10.0, 1)], 1).len(),
@@ -414,7 +429,10 @@ mod tests {
         );
         let empty = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(empty.path()).unwrap();
-        assert!(observe(None, &root, &config, &[sample(10.0, 1)], 500).is_empty());
+        assert_eq!(
+            observe(None, &root, &config, &[sample(10.0, 1)], 500),
+            Vec::<serde_json::Value>::new()
+        );
         assert!(!empty.path().join(".hive").exists());
     }
 

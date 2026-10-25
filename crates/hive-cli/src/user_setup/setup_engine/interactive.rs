@@ -1264,7 +1264,7 @@ mod tests {
                 let result = execute(&options(root.path()), mode, &mut terminal).unwrap();
                 assert_eq!(result.status, "needs-input");
                 assert_eq!(terminal.language, pending);
-                assert!(terminal.writer.is_empty());
+                assert_eq!(terminal.writer, Vec::<u8>::new());
                 assert_eq!(std::fs::read(&file).unwrap(), before);
             }
         }
@@ -1364,7 +1364,7 @@ mod tests {
             "--dry-run".into()
         ])
         .is_err());
-        assert!(terminal.writer.is_empty());
+        assert_eq!(terminal.writer, Vec::<u8>::new());
         assert!(!root.path().join(".hive").exists());
     }
 
@@ -1581,7 +1581,7 @@ mod tests {
             &mut resumed
         )
         .unwrap());
-        assert!(resumed.writer.is_empty());
+        assert_eq!(resumed.writer, Vec::<u8>::new());
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
 
@@ -1629,7 +1629,7 @@ mod tests {
         let config =
             user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
                 .unwrap();
-        assert!(config.profile.contexts.is_empty());
+        assert_eq!(config.profile.contexts, Vec::<String>::new());
         assert_eq!(config.profile.description.as_deref(), Some("Local work"));
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
@@ -1672,7 +1672,7 @@ mod tests {
         );
         assert_eq!(data["actual_monitor_state"]["sensor_queries"], 0);
         assert_eq!(terminal.reader.position(), 0);
-        assert!(terminal.writer.is_empty());
+        assert_eq!(terminal.writer, Vec::<u8>::new());
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert!(!root.path().join(".hive/runtime").exists());
         assert!(!root.path().join(".hive/config/setup-progress").exists());
@@ -1799,7 +1799,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(terminal.reader.position(), 0);
-            assert!(terminal.writer.is_empty());
+            assert_eq!(terminal.writer, Vec::<u8>::new());
             assert!(!root.path().join(".hive").exists());
         }
     }

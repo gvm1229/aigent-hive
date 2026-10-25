@@ -411,7 +411,10 @@ mod tests {
         assert_eq!(record.origin, DecisionOrigin::Explicit);
         assert_eq!(record.input_channel, PreferenceInput::AnswersFile);
         assert_eq!(record.decided_at, Some(42));
-        assert!(user_setup::migration::pending_questions(&config).is_empty());
+        assert_eq!(
+            user_setup::migration::pending_questions(&config),
+            Vec::<&str>::new()
+        );
     }
 
     #[test]

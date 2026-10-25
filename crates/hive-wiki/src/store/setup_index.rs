@@ -335,11 +335,13 @@ mod tests {
         store.validate_current().unwrap();
         let published = std::fs::read(root.path().join(SHARED_INDEX_RELATIVE)).unwrap();
         assert!(store.preview_setup_index_rebuild().unwrap().is_none());
-        assert!(store
-            .rebuild_setup_index(&preview.scope_digest)
-            .unwrap()
-            .changed_paths
-            .is_empty());
+        assert_eq!(
+            store
+                .rebuild_setup_index(&preview.scope_digest)
+                .unwrap()
+                .changed_paths,
+            Vec::<String>::new()
+        );
         assert_eq!(
             std::fs::read(root.path().join(SHARED_INDEX_RELATIVE)).unwrap(),
             published

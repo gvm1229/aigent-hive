@@ -40,7 +40,7 @@ fn parse(arguments: &[String]) -> Result<(PathBuf, InteractionRequest), SetupErr
             "invalid update completion arguments".into(),
         ));
     }
-    for pair in arguments.chunks_exact(2) {
+    for pair in arguments.as_chunks::<2>().0 {
         match pair[0].as_str() {
             "--user-root" if root.is_none() => root = Some(PathBuf::from(&pair[1])),
             "--interaction" if mode.is_none() => mode = Some(pair[1].as_str()),
@@ -430,7 +430,7 @@ mod tests {
         let result = complete(root.path(), InteractionMode::NonInteractive, &mut terminal).unwrap();
         assert_eq!(result.code, "hive.update-input-pending");
         assert_eq!(terminal.reader.position(), 0);
-        assert!(terminal.writer.is_empty());
+        assert_eq!(terminal.writer, Vec::<u8>::new());
         assert!(!root.path().join(".hive").exists());
     }
 
@@ -497,7 +497,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.status, "needs-input");
         assert_eq!(terminal.reader.position(), 0);
-        assert!(terminal.writer.is_empty());
+        assert_eq!(terminal.writer, Vec::<u8>::new());
         assert_eq!(std::fs::read(&path).unwrap(), original);
         assert_eq!(std::fs::read(&draft_path).unwrap(), draft);
         assert!(!root.path().join(".hive/history/lifecycle").exists());
