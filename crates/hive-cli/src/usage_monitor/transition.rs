@@ -81,7 +81,17 @@ pub(super) fn disable(
     call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
     timeout: Duration,
 ) -> Result<Value, AdapterError> {
-    quiesce(root, call, timeout, None).map(|stopped| stopped.result.clone())
+    quiesce(root, call, timeout, None).map(|stopped| {
+        let mut result = stopped.result.clone();
+        match super::activation::retire_disabled(root) {
+            Ok(retired) => result["activation_retirement"] = json!(if retired { "cancelled" } else { "not-needed" }),
+            Err(error) => {
+                result["activation_retirement"] = json!("pending");
+                result["activation_retirement_error"] = json!(error.message());
+            }
+        }
+        result
+    })
 }
 
 pub(super) fn verify_stopped(root: &PinnedTarget) -> Result<(), AdapterError> {

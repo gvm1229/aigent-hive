@@ -10,6 +10,29 @@ use std::path::Path;
 
 mod journal;
 mod runner;
+
+/// The caller holds the verified disable's control and stopped-controller leases.
+pub(super) fn retire_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
+    let binding = Binding::capture(root)?;
+    let stopped: serde_json::Value = super::load(root, transition::JOURNAL)?
+        .ok_or_else(|| error("monitor disable receipt is missing"))?;
+    if binding.previous.enabled || stopped["phase"] != "complete"
+        || stopped["after_digest"] != binding.previous.config_digest
+        || stopped["completed_at"].as_u64().is_none() {
+        return Err(error("monitor disable has not completed"));
+    }
+    let (mut store, record) = journal::Store::open(root)?;
+    let Some(mut record) = record else { return Ok(false) };
+    if matches!(record.phase, journal::Phase::Complete | journal::Phase::Cancelled) { return Ok(false); }
+    if record.binding.root_identity_digest != binding.root_identity_digest
+        || record.binding.disable_digest == binding.disable_digest {
+        return Err(error("monitor activation has no newer disable selection"));
+    }
+    record.phase = journal::Phase::Cancelled;
+    record.completed_at = Some(super::now());
+    store.save(&record)?;
+    Ok(true)
+}
 pub(super) use runner::enable;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

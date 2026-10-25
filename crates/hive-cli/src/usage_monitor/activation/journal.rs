@@ -27,6 +27,7 @@ pub(super) enum Phase {
     Starting,
     Checking,
     Complete,
+    Cancelled,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

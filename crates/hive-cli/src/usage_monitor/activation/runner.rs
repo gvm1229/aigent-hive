@@ -54,8 +54,9 @@ fn run_with(
     let control = lock(root, "control.lock")?;
     let (mut store, saved) = Store::open(root)?;
     let mut record = match saved {
+        Some(record) if record.phase == Phase::Cancelled && record.approval == approval => return Err(error("this monitor activation consent was cancelled; request a fresh preview")),
         Some(record) if record.approval==approval => record,
-        Some(record) if record.phase!=Phase::Complete => return Err(error("another monitor activation is incomplete; resume its recorded preview or keep it disabled")),
+        Some(record) if !matches!(record.phase, Phase::Complete | Phase::Cancelled) => return Err(error("another monitor activation is incomplete; resume its recorded preview or keep it disabled")),
         _ => {
             if preview(root.requested_path())?["preview_digest"] != approval { return Err(error("monitor preview changed")); }
             let binding=Binding::capture(root)?;
@@ -532,6 +533,34 @@ pub(super) mod tests {
                 .unwrap(),
             marker
         );
+    }
+
+    #[test]
+    fn explicit_disable_retires_old_consent_and_only_a_fresh_preview_can_activate() {
+        let (_temp, root, approval) = fixture();
+        let scheduler = Scheduler::default();
+        STOP_AT.with(|point| point.set(Some(Phase::Prepared)));
+        assert!(run_with(&root, &approval, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b)).is_err());
+        let original = Store::open(&root).unwrap().1.unwrap();
+        assert!(run_with(&root, &hive_core::sha256_digest(b"unapproved preview"),
+            |_,_| panic!("unapproved schedule"), |_,_| panic!("unapproved observe")).is_err());
+        let result = super::super::super::transition::disable(&root,
+            |_,_| panic!("no configured task"), Duration::ZERO).unwrap();
+        assert_eq!(result["activation_retirement"], "cancelled");
+        let retired = Store::open(&root).unwrap().1.unwrap();
+        assert_eq!(retired.operation_id, original.operation_id);
+        assert_eq!(retired.phase, Phase::Cancelled);
+        assert!(retired.completed_at.is_some());
+        assert!(run_with(&root, &approval, |_,_| panic!("old consent scheduled"),
+            |_,_| panic!("old consent observed")).is_err());
+        let fresh = preview(root.requested_path()).unwrap()["preview_digest"].as_str().unwrap().to_owned();
+        assert_ne!(approval, fresh);
+        let result = run_with(&root, &fresh, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b)).unwrap();
+        assert_eq!(result["activation"], "verified");
+        let latest = Store::open(&root).unwrap().1.unwrap();
+        assert_ne!(latest.operation_id, original.operation_id);
+        assert_eq!(latest.phase, Phase::Complete);
+        assert_eq!(*scheduler.effects.borrow(), ["register", "start"]);
     }
 
     #[test]
