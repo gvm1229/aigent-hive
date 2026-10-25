@@ -48,7 +48,7 @@
 
 ## 다음 구현과 수용
 
-- M02-A `5f02ca62`: [명시 해제 뒤 옛 동의 폐기·새 동의 허용](../plans/details/monitor-consent-withdrawal-0.14.0.md). Windows/Linux 대역 통과, 남은 쓰기 보관의 취소 복구·공통 설정 연결·격리 Windows 긍정 수용 미완료
+- M02-A `5f02ca62`·B1 `d303f57a`: [옛 동의 폐기·게시된 구성 보관 이관](../plans/details/monitor-consent-withdrawal-0.14.0.md). 두 OS 대역 통과, 미게시 구성/관측 보관·공통 설정 연결·격리 Windows 긍정 수용 미완료
 
 - M04 `06d35f5a` [벡터 선택](../plans/details/vector-choice-0.14.0.md)·M05 `3623df57` [앱 해제/보존/재개](../plans/details/host-deselection-0.14.0.md) 완료, 실행 범위·한계는 각 근거
 - M06 `54c4d6dc` [언어/입력](../plans/details/setup-language-input-0.14.0.md): Windows 설정208·최종 관련20·clippy, Linux 전체211·실제 무입력/언어 변경/거부/Ctrl-C 재개 통과. 이전 Linux207 중 잠금1실패는 현재 미재현, 원인 미확인/Q140-002 조사 유지
