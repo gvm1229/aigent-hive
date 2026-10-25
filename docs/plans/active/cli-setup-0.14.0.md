@@ -16,6 +16,8 @@
 
 ## S140-001 — 공통 엔진
 
+- M06: [언어·입력 계약](../details/setup-language-input-0.14.0.md) `54c4d6dc`, 언어 오류·미완료 언어 우선순위·실제 무입력/Ctrl-C 재개 검증
+
 - 소유: `user_setup.rs`, `main.rs::run_setup`, 기존 설정 스키마·질문 목록. 질문 순서·조건·기본값·검증·미리보기·적용을 새 setup_engine 모듈로 추출, 기존 renderer·소유권 검증 재사용
 - Question 자료: id, revision, type(bool/enum/list/text/integer), en/ko 설명, options, current/default, source, 조건, 검증 규칙. 코드와 Skill의 독립 질문 목록 제거, 정본 catalog에서 CLI/describe/문서 생성
 - 터미널 입력은 번호 선택·예/아니요·텍스트 입력 제공. 잘못된 값은 해당 질문만 반복. 입력 종료/Ctrl-C는답변 취소, 이전 답안 보존. 컬러·화면 지우기 없는 단순 줄 기반 UI를 기본으로 선택
