@@ -4545,8 +4545,9 @@ usage_guard:
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive");
+            .replace("# Global setup through the CLI", "# Earlier Setup Hive");
         base = replaced.into_bytes();
+        assert_ne!(base, incoming, "synthetic old heading must differ");
 
         let (planned, expected, target) = seeded_projection_plan(&base, base.clone());
         let report = planned
@@ -4574,10 +4575,11 @@ usage_guard:
         let files = user_projection_files(&config, &skills).expect("desired files");
         let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let incoming = files.get(&path).expect("user-setup source").clone();
-        let base = String::from_utf8(incoming)
+        let base = String::from_utf8(incoming.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive")
+            .replace("# Global setup through the CLI", "# Earlier Setup Hive")
             .into_bytes();
+        assert_ne!(base, incoming, "synthetic old heading must differ");
 
         let mut disjoint_local = base.clone();
         disjoint_local.extend_from_slice(b"\n<!-- local note -->\n");
