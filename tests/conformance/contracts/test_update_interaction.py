@@ -112,6 +112,18 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         foreign.parent.mkdir()
         foreign.write_text("User-owned preface.\n", encoding="utf-8")
         foreign_before = foreign.read_bytes()
+        preview_answers = self.work_root / "preview.json"
+        draft = json.loads(document.read_text())
+        draft["wiki"]["enabled"] = True
+        preview_answers.write_text(json.dumps(draft), encoding="utf-8")
+        preview_before = snapshot_tree(self.setup_user_root)
+        self.assertFalse((self.setup_user_root / ".hive/index").exists())
+        preview = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
+            "--answers",str(preview_answers),"--dry-run","--output","json"],
+            env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(preview.returncode,0,(preview.stdout,preview.stderr))
+        self.assertEqual(json.loads(preview.stdout)["code"],"hive.user-setup-dry-run-complete")
+        self.assertEqual(snapshot_tree(self.setup_user_root),preview_before)
         interrupted = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
             "--answers",str(document),"--apply","--output","json"],
             env={**environment,"HIVE_USER_SETUP_INTERRUPT_AFTER":"0"},capture_output=True,text=True,timeout=30)

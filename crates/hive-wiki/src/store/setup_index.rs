@@ -49,13 +49,18 @@ impl RagStore {
     /// # Errors
     /// Rejects dirty state, invalid local metadata, or concurrent declaration changes.
     pub fn preview_setup_index_rebuild(&self) -> Result<Option<SetupIndexPreview>, WikiError> {
-        let _lock = self.acquire_authorization_lock()?;
+        // Preview grants no write authority. Its declaration snapshots detect drift;
+        // validation and rebuilding still recheck the scope under the publication lock.
         self.reject_dirty_mutation()?;
-        if self.index_state_is_complete()? && self.load_registry_optional()?.is_some() {
-            return Ok(None);
-        }
-        let (preview, _) = self.setup_rebuild_scope()?;
-        Ok((!preview.sources.is_empty()).then_some(preview))
+        let result = if self.index_state_is_complete()? && self.load_registry_optional()?.is_some()
+        {
+            None
+        } else {
+            let (preview, _) = self.setup_rebuild_scope()?;
+            (!preview.sources.is_empty()).then_some(preview)
+        };
+        self.reject_dirty_mutation()?;
+        Ok(result)
     }
 
     /// Rebuild only the source declarations displayed by the matching setup preview.
@@ -217,6 +222,18 @@ mod tests {
         KnowledgeLanguage, KnowledgeVisibility, RegisteredProject, PROJECT_REGISTRY_RELATIVE,
     };
     use crate::store::RAG_DIRTY_RELATIVE;
+
+    #[test]
+    fn first_setup_preview_does_not_create_a_lock_directory_or_any_user_file() {
+        let root = tempfile::tempdir().unwrap();
+        let store = RagStore::open(root.path()).unwrap();
+        assert_eq!(store.preview_setup_index_rebuild().unwrap(), None);
+        let entries = std::fs::read_dir(root.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        assert_eq!(entries, Vec::<std::ffi::OsString>::new());
+    }
 
     fn registered() -> (tempfile::TempDir, tempfile::TempDir, RagStore) {
         let root = tempfile::tempdir().unwrap();
