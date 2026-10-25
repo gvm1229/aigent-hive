@@ -60,6 +60,8 @@ USAGE:
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
+    hive setup --target <dir> --user-root <dir> --show --summary --output json
+    hive setup --target <dir> --user-root <dir> --describe --question <question-id> --output json
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] --output json
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
@@ -116,6 +118,7 @@ USAGE:
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
 
 MODES:
+    --summary    Bound JSON status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
@@ -650,7 +653,11 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     if !arguments.iter().any(|argument| argument == "--answers") {
         return user_setup::run_project_setup(arguments);
     }
-    let parsed = parse_setup(arguments);
+    let (filtered, summary) = match user_setup::setup_output_arguments(arguments) {
+        Ok(value) => value,
+        Err(error) => return emit_action_result(&failure_result(&RenderError::Input(error.message().to_owned()))),
+    };
+    let parsed = parse_setup(&filtered);
     let result = match parsed {
         Ok(arguments) => {
             let setup_mode = arguments.mode;
@@ -691,6 +698,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
         }
         Err(error) => failure_result(&error),
     };
+    let result = user_setup::setup_summary(result, summary);
     emit_json_result(&result);
     if result.exit_code != 0 {
         eprintln!("error: {}", result.message);

@@ -151,6 +151,38 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         self.assertEqual(json.loads(repeated.stdout)["code"],"hive.update-needs-input")
         self.assertEqual(snapshot_tree(self.setup_user_root),before)
         settings_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        old_choices = read_yaml(settings_path)["preference_decisions"]
+        document.write_text(json.dumps({"schema_version":1,"kind":"hive.setup-answer-patch",
+            "answers":{"persona":{"id":"friendly"}}}),encoding="utf-8")
+        patched = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
+            "--answers",str(document),"--input-channel","agent","--apply","--summary","--output","json"],
+            env={**environment,"HIVE_USER_SETUP_INTERRUPT_AFTER":"0"},capture_output=True,text=True,timeout=30)
+        self.assertEqual(patched.returncode,87,(patched.stdout,patched.stderr))
+        patch_progress = read_yaml(progress_path)
+        self.assertNotEqual(patch_progress["operation_id"],progress["operation_id"])
+        document.unlink()
+        recovered = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
+            "--resume","--summary","--output","json"],env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(recovered.returncode,0,(recovered.stdout,recovered.stderr))
+        patch_result = json.loads(recovered.stdout)
+        Draft202012Validator(ACTION_RESULT_SCHEMA).validate(patch_result)
+        self.assertTrue(patch_result["data"]["completion_verified"])
+        self.assertLessEqual(len(recovered.stdout.encode("utf-8")),8192)
+        self.assertEqual(read_yaml(progress_path)["operation_id"],patch_progress["operation_id"])
+        settings = read_yaml(settings_path)
+        self.assertEqual(settings["persona"]["id"],"friendly")
+        self.assertEqual(settings["preference_decisions"]["/persona/id"]["origin"],"external-change")
+        self.assertIsNone(settings["preference_decisions"]["/persona/id"]["decided_at"])
+        for key, value in old_choices.items():
+            if key != "/persona/id":
+                self.assertEqual(settings["preference_decisions"][key],value,key)
+        after_apply = snapshot_tree(self.setup_user_root)
+        inspected = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
+            "--show","--summary","--output","json"],env=environment,input="",capture_output=True,text=True,timeout=15)
+        self.assertEqual(inspected.returncode,0,(inspected.stdout,inspected.stderr))
+        self.assertEqual(json.loads(inspected.stdout)["data"]["settings"]["persona"]["id"],"friendly")
+        self.assertLessEqual(len(inspected.stdout.encode("utf-8")),4096)
+        self.assertEqual(snapshot_tree(self.setup_user_root),after_apply)
         settings_before = settings_path.read_bytes()
         knowledge = self.setup_user_root / ".hive/knowledge/retained.md"
         knowledge.parent.mkdir(parents=True, exist_ok=True)

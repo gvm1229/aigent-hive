@@ -67,6 +67,14 @@ Enforce or control only the installed Hive usage policy and the current host ses
 8. `status` is inspection only and never substitutes for an automatic-dispatch preflight. After mutation, run `enforce` only for pending automatic dispatch or the same-session recheck required by the control reference. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
 9. Report saved global and project thresholds, active threshold, selected window, effective session state, changed Hive path, and exact CLI code. With a canonical `--run`, Discord receives only run title and checklist count; never raw prompts, session IDs, absolute paths, or credentials.
 
+## Setup and manual inspection
+
+For ordinary global preference setup, use user-setup's single status/CLI/result flow. Do not turn
+this Skill into another questionnaire or infer an opt-out from a setup/resume request. Existing
+preflight, session and monitor authority below still applies to their exact operations.
+`hive usage show --host <selected-host> --user-root <user-root> --output json` is a manual reading,
+not a dispatch permit or policy change. A settings summary does not query a sensor.
+
 ## Boundaries
 
 - Change global `.hive/config/user-setup.yml` only through explicit `hive usage threshold --user-root`

@@ -1440,6 +1440,11 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
         }
     }
     let resources: &[(&str, &[u8])] = match name {
+        "project-setup" => &[
+            ("references/advanced-setup.md", include_bytes!("../../../harness/skills/project-setup/references/advanced-setup.md")),
+            ("references/directive-recovery.md", include_bytes!("../../../harness/skills/project-setup/references/directive-recovery.md")),
+            ("references/structured-choices.md", include_bytes!("../../../harness/skills/project-setup/references/structured-choices.md")),
+        ],
         "amend-directive" => &[(
             "references/transplant.md",
             include_bytes!("../../../harness/skills/amend-directive/references/transplant.md"),
@@ -3148,16 +3153,23 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn setup_router_resources_are_complete_for_each_host() {
-        let selected = vec!["user-setup".to_owned()];
+        let selected = vec!["user-setup".to_owned(), "project-setup".to_owned()];
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
             let projection = compile_user_projection(host, &selected, &[]).expect("projection");
             for (relative, source) in user_setup_resources() {
                 let path = format!("{}/user-setup/{relative}", host.skill_root());
                 assert_eq!(projection.files.get(&path).map(Vec::as_slice), Some(source));
             }
+            for resource in ["advanced-setup.md", "directive-recovery.md", "structured-choices.md"] {
+                let relative = format!("{}/project-setup/references/{resource}", host.skill_root());
+                let source = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../harness/skills/project-setup/references").join(resource)).unwrap();
+                assert_eq!(projection.files.get(&relative), Some(&source));
+            }
             let other = compile_user_projection(host, &["quick-answer".to_owned()], &[])
                 .expect("unrelated skill");
             assert!(!other.files.keys().any(|path| path.contains("/user-setup/")));
+            assert!(!other.files.keys().any(|path| path.contains("/project-setup/")));
         }
     }
 

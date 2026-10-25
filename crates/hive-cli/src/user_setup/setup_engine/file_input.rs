@@ -97,6 +97,21 @@ pub(in crate::user_setup) fn execute(
         .map(user_setup::parse_and_validate_installed_config)
         .transpose()
         .map_err(|error| SetupError::Conflict(format!("installed user setup is invalid: {}", error.message())))?;
+    let patch = super::answer_patch::read(&input)?;
+    let prepared = patch.as_ref().map(|_|super::file_policy::prepare_baseline(&arguments.user_root,current.as_ref())).transpose()?;
+    let input = if let Some(supplied) = &patch {
+        let mut base = if let Some(current) = prepared.as_ref().and_then(|prepared|prepared.baseline.as_ref()) {
+            serde_json::to_value(current)
+                .map_err(|error| SetupError::Internal(error.to_string()))?
+        } else {
+            super::answer_patch::require_initial(supplied, &["interface_language", "selected_hosts"])?;
+            let language = serde_json::from_value(supplied["interface_language"].clone())
+                .map_err(|_| SetupError::Input("invalid initial interface language".into()))?;
+            super::default_answers(Some(language))
+        };
+        super::answer_patch::merge(&mut base, supplied)?;
+        serde_json::to_vec(&base).map_err(|error| SetupError::Internal(error.to_string()))?
+    } else { input };
     let allow_legacy = existing.as_deref() == Some(input.as_slice())
         && user_setup::has_legacy_recommended_skill_selection(&input)?;
     let mut config = if allow_legacy {
@@ -104,15 +119,16 @@ pub(in crate::user_setup) fn execute(
     } else {
         user_setup::parse_and_validate_config(&input)?
     };
-    let mut supplied: Value = serde_yaml::from_slice(&input)
-        .map_err(|_| SetupError::Input("invalid answer document".into()))?;
+    let mut supplied: Value = if let Some(patch) = patch { patch } else {
+        serde_yaml::from_slice(&input).map_err(|_| SetupError::Input("invalid answer document".into()))?
+    };
     user_setup::migrate_legacy_skill_names(&mut supplied)?;
     user_setup::migrate_legacy_single_profile(&mut supplied);
     let legacy_input = (config.schema_version == 1).then(|| config.clone());
-    let normalized = super::file_policy::normalize(
-        &arguments.user_root, &mut config, &mut supplied, current.as_ref(), options.quick,
-        arguments.mode,
-    )?;
+    let normalized = match prepared {
+        Some(prepared) => prepared,
+        None => super::file_policy::normalize(&arguments.user_root, &mut config, &mut supplied, current.as_ref(), options.quick, arguments.mode)?,
+    };
     if arguments.mode == SetupMode::Validate {
         // Validation is not a new answer and must not invent provenance for an old file.
         config.preference_decisions = current
@@ -207,13 +223,13 @@ fn annotate(
         }
         let origin = if !provided {
             DecisionOrigin::Default
+        } else if options.channel == PreferenceInput::Agent {
+            DecisionOrigin::ExternalChange
         } else if options.quick
             && key != "/interface_language"
             && defaults.pointer(&key) == Some(&value)
         {
             DecisionOrigin::AcceptedDefault
-        } else if options.channel == PreferenceInput::Agent {
-            DecisionOrigin::ExternalChange
         } else {
             DecisionOrigin::Explicit
         };
@@ -356,6 +372,29 @@ mod tests {
         assert_eq!(choices["/skills"].origin, DecisionOrigin::AcceptedDefault);
         assert!(!choices.contains_key("/skills/mode"));
         user_setup::parse_and_validate_config(&serde_json::to_vec(&config).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn agent_quick_patch_preserves_unmentioned_unknown_choices_without_claiming_human_acceptance() {
+        let value = input();
+        let mut previous = parse(&value);
+        annotate(&mut previous, &value, None, &FileOptions::default(), Some(42)).unwrap();
+        let key = "/usage_guard/enforcement_enabled";
+        previous.preference_decisions.insert(key.into(), PreferenceDecision::new(
+            &value["usage_guard"]["enforcement_enabled"], DecisionOrigin::LegacyUnknown,
+            PreferenceInput::Migration, PreferenceScope::User, env!("CARGO_PKG_VERSION"), None).unwrap());
+        let supplied = json!({"persona":{"id":"friendly"}});
+        let mut merged = serde_json::to_value(&previous).unwrap();
+        super::super::answer_patch::merge(&mut merged, &supplied).unwrap();
+        let mut config = parse(&merged);
+        annotate(&mut config, &supplied, Some(&previous), &FileOptions {channel:PreferenceInput::Agent,quick:true,..FileOptions::default()}, Some(99)).unwrap();
+        assert_eq!(config.preference_decisions[key],previous.preference_decisions[key]);
+        assert_eq!(config.preference_decisions["/persona/id"].origin,DecisionOrigin::ExternalChange);
+        assert_eq!(config.preference_decisions["/persona/id"].decided_at,None);
+        let mut defaults = parse(&value);
+        annotate(&mut defaults,&value,None,&FileOptions {channel:PreferenceInput::Agent,quick:true,..FileOptions::default()},Some(99)).unwrap();
+        assert_eq!(defaults.preference_decisions[key].origin,DecisionOrigin::ExternalChange);
+        assert_eq!(defaults.preference_decisions[key].decided_at,None);
     }
 
     #[test]

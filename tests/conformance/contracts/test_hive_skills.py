@@ -147,6 +147,29 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         ):
             self.assertIn(expected, text)
 
+    def test_setup_routers_use_one_cli_state_and_no_duplicate_questionnaire(self) -> None:
+        for name in ("user-setup", "project-setup"):
+            text = (SKILL_ROOT / name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("--show", text)
+            self.assertIn("--summary --output json", text)
+            self.assertIn("hidden tool", text.lower())
+            self.assertIn("user terminal", text.lower())
+            self.assertIn("--input-channel agent", text)
+            self.assertNotIn("## Setup Question Sequence", text)
+            self.assertNotIn("## Required order", text)
+        questions = (SKILL_ROOT / "user-setup/references/questions.md").read_text(encoding="utf-8")
+        self.assertIn("--question", questions)
+        self.assertNotIn("Enabled (recommended)", questions)
+        self.assertNotIn("Expedited setup enables protection", questions)
+        for reference in ("advanced-setup.md", "directive-recovery.md", "structured-choices.md"):
+            source = (SKILL_ROOT / "project-setup/references" / reference).read_bytes()
+            for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                self.assertEqual((destination / "project-setup/references" / reference).read_bytes(), source)
+        recovery = (SKILL_ROOT / "project-setup/references/directive-recovery.md").read_text(encoding="utf-8")
+        self.assertIn("exact preview", recovery)
+        self.assertIn("Antigravity context recovery is unavailable", recovery)
+        self.assertIn("4,096 UTF-8 byte limit", recovery)
+
     def test_verified_workflow_keeps_role_parity_on_one_strict_judge_path(self) -> None:
         text = (SKILL_ROOT / "verified-workflow" / "SKILL.md").read_text(encoding="utf-8")
         for route in (

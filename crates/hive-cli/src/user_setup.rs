@@ -96,6 +96,8 @@ Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --describe --output json
+    hive setup --scope user --user-root <dir> --show --summary --output json
+    hive setup --scope user --user-root <dir> --describe --question <question-id> --output json
     hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] --output json
     hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
     hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
@@ -104,6 +106,7 @@ USAGE:
     hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] --output json
 
 MODES:
+    --summary    Bound JSON status/completion output; not an approval preview
     --dry-run    Validate answers and preview the owned user configuration change
     --apply      Validate and atomically apply the owned user configuration
     --validate   Validate the installed operational user configuration
@@ -578,6 +581,11 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    let (filtered, summary) = match setup_engine::summary_arguments(arguments) {
+        Ok(value) => value,
+        Err(error) => return emit_action_result(&setup_engine::messages::failure(&error, setup_engine::messages::language(arguments))),
+    };
+    let arguments = filtered.as_slice();
     if arguments.iter().any(|argument| argument == "--describe") {
         return run_describe(arguments);
     }
@@ -588,14 +596,16 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         return run_feature(&arguments[1..]);
     }
     if setup_engine::handles(arguments) {
-        return setup_engine::run(arguments);
+        return setup_engine::run(arguments, summary);
     }
     let result = setup_engine::file_options(arguments)
         .and_then(|(arguments, options)| parse(&arguments)
             .and_then(|arguments| setup_engine::execute_file(&arguments, &options)))
         .unwrap_or_else(|error| setup_engine::messages::failure(&error, setup_engine::messages::language(arguments)));
-    emit_action_result(&result)
+    emit_action_result(&setup_engine::compact_result(result, summary))
 }
+
+pub(crate) use setup_engine::{summary_arguments as setup_output_arguments, compact_result as setup_summary};
 
 #[derive(Clone, Copy, Debug)]
 enum FeatureAction {
@@ -952,7 +962,7 @@ fn vector_setup_prompt(
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
-    if arguments.iter().any(|value| value == "--section") {
+    if arguments.iter().any(|value| matches!(value.as_str(), "--section" | "--question")) {
         return emit_action_result(
             &setup_engine::describe_section(arguments).unwrap_or_else(|error| failure(&error)),
         );

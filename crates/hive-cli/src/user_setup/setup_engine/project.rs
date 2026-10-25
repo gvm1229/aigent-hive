@@ -39,6 +39,7 @@ struct Options {
     dry_run: bool,
     describe: bool,
     section: Option<String>,
+    question: Option<String>,
     capabilities: Option<PathBuf>,
     reconfigure_roles: BTreeSet<String>,
 }
@@ -53,6 +54,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         dry_run: false,
         describe: false,
         section: None,
+        question: None,
         capabilities: None,
         reconfigure_roles: BTreeSet::new(),
     };
@@ -70,7 +72,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
             "--show" => options.show = true,
             "--dry-run" => options.dry_run = true,
             "--describe" => options.describe = true,
-            "--target" | "--user-root" | "--output" | "--section" | "--capabilities" => {
+            "--target" | "--user-root" | "--output" | "--section" | "--question" | "--capabilities" => {
                 let value = arguments
                     .get(index + 1)
                     .filter(|value| !value.starts_with("--"))
@@ -82,6 +84,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
                     "--user-root" => options.root = PathBuf::from(value),
                     "--output" if value == "json" => options.interaction.json = true,
                     "--section" => options.section = Some(value.clone()),
+                    "--question" => options.question = Some(value.clone()),
                     "--capabilities" => options.capabilities = Some(PathBuf::from(value)),
                     _ => {
                         return Err(SetupError::Input(
@@ -103,6 +106,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         || (options.show && (options.resume || options.dry_run || options.describe))
         || (options.describe && (options.resume || options.dry_run || !options.interaction.json))
         || (options.section.is_some() && !options.describe)
+        || (options.question.is_some() && (!options.describe || options.section.is_some()))
     {
         return Err(SetupError::Input(
             "invalid project setup scope or mode".into(),
@@ -112,6 +116,15 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
 }
 
 pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
+    let (filtered, summary) = match super::summary_arguments(arguments) {
+        Ok(value) => value,
+        Err(error) => {
+            let mut result = super::messages::failure(&error, super::messages::language(arguments));
+            result.action = "SetupHarness";
+            return crate::emit_action_result(&result);
+        }
+    };
+    let arguments = filtered.as_slice();
     let json_output = arguments
         .windows(2)
         .any(|pair| pair == ["--output", "json"]);
@@ -145,7 +158,7 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "SetupHarness";
     if json_output {
-        return crate::emit_action_result(&result);
+        return crate::emit_action_result(&super::compact_result(result, summary));
     }
     let _ = writeln!(terminal.writer, "{}", result.message);
     if let Some(next) = result.next_action {

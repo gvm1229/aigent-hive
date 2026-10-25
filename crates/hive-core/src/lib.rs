@@ -354,6 +354,7 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
         return matches!(
             (parts[2], parts[4]),
             ("usage-guard", "control.md" | "sensors.md")
+                | ("project-setup", "advanced-setup.md" | "directive-recovery.md" | "structured-choices.md")
                 | ("knowledge-recall", "confidential.md")
                 | ("knowledge-capture", "ingest.md")
                 | ("run-checkpoint", "policy-review.md")
@@ -586,6 +587,9 @@ mod tests {
             ".agents/skills/hive-simple-question/agents/openai.yaml",
             ".agents/skills/local-inspect/SKILL.md",
             ".claude/skills/setup-harness/SKILL.md",
+            ".agents/skills/project-setup/references/advanced-setup.md",
+            ".claude/skills/project-setup/references/directive-recovery.md",
+            ".agents/skills/project-setup/references/structured-choices.md",
         ] {
             let path = PathBuf::from(path);
             assert!(is_hive_skill_projection_path(&path));
@@ -603,6 +607,7 @@ mod tests {
             ".agents/skills/local-inspect/README.md",
             ".agents/skills/local-inspect/references/extra.md",
             ".agents/skills/amend-directive/references/extra.md",
+            ".agents/skills/project-setup/references/extra.md",
             ".agents/skills/local-inspect/agents",
             ".agents/skills/local-inspect/agents/other.yaml",
             ".claude/skills/local-inspect/agents/openai.yaml",

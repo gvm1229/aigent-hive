@@ -26,6 +26,7 @@
         "SetupHiveUser",
         "DescribeHiveUserSetup",
         "DescribeHiveSetupSection",
+        "DescribeHiveSetupQuestion",
         "SaveUserSetupProgress",
         "InspectUserSetupProgress",
         "ClearUserSetupProgress",

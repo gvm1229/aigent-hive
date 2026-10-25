@@ -40,8 +40,8 @@ CANONICAL_VISIBLE_PATHS = (
 )
 BUILTIN_SKILL_NAMES = tuple(sorted(next(item["skills"] for item in read_yaml(REPOSITORY_ROOT / "harness/project-setup/skill-suites.yml")["project_skill_suites"] if item["id"] == "daily-work")))
 CODEX_HIVE_PROJECTION_PATHS = {
-    *{f"skills/{relative}" for relative in BUILTIN_REFERENCE_PATHS},
-    *{f"skills/{Path(relative).parent.as_posix()}" for relative in BUILTIN_REFERENCE_PATHS},
+    *{f"skills/{relative}" for relative in BUILTIN_REFERENCE_PATHS if relative.split("/",1)[0] in BUILTIN_SKILL_NAMES},
+    *{f"skills/{Path(relative).parent.as_posix()}" for relative in BUILTIN_REFERENCE_PATHS if relative.split("/",1)[0] in BUILTIN_SKILL_NAMES},
     "directives",
     "directives/00-project-harness.md",
     "directives/01-project-knowledge.md",

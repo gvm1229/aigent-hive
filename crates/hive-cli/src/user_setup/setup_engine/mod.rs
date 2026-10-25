@@ -8,6 +8,9 @@ use serde_json::{json, Value};
 
 mod interactive;
 mod file_input;
+mod answer_patch;
+mod summary;
+pub(crate) use summary::{arguments as summary_arguments, compact as compact_result};
 mod file_apply;
 mod application;
 mod monitor_review;
@@ -68,6 +71,7 @@ pub(in crate::user_setup) fn default_answers(language: Option<InterfaceLanguage>
 pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, SetupError> {
     let mut scope = None;
     let mut section = None;
+    let mut question = None;
     let mut root = None;
     let mut output = None;
     let mut describe = false;
@@ -82,6 +86,7 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         let slot = match option {
             "--scope" => &mut scope,
             "--section" => &mut section,
+            "--question" => &mut question,
             "--user-root" => &mut root,
             "--output" => &mut output,
             _ => return Err(SetupError::Input("unknown describe option".to_owned())),
@@ -109,22 +114,24 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
             ))
         }
     };
-    let section =
-        section.ok_or_else(|| SetupError::Input("missing question section".to_owned()))?;
+    let section = question_section(scope, section, question.as_deref())?;
     let user_root = root.map_or_else(super::resolve_user_root, |path| Ok(path.into()))?;
     let root_cap =
         crate::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
     let config = super::load_operational_config(&root_cap)?;
-    let current = config
+    let mut current = config
         .as_ref()
+        .filter(|_| scope == PreferenceScope::User)
         .map(serde_json::to_value)
         .transpose()
         .map_err(|error| SetupError::Internal(format!("cannot inspect preferences: {error}")))?;
-    let mut current = if scope == PreferenceScope::User {
-        current
-    } else {
-        None
-    };
+    if question.is_some() && scope == PreferenceScope::User {
+        if let Some(config) = &config {
+            if let Some(migration) = super::migration::inspect(&user_root, config)? {
+                current = Some(serde_json::to_value(migration.candidate).map_err(|e| SetupError::Internal(e.to_string()))?);
+            }
+        }
+    }
     if scope == PreferenceScope::User && section == "vector" {
         let (_, feature) = super::load_feature_answers(&root_cap)?;
         if let Some(answer) = feature.vector_search {
@@ -133,16 +140,19 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
             values["preference_decisions"]["/operation/vector_search"] = json!(feature.decision);
         }
     }
-    let questions = section_data(scope, &section, current.as_ref())?;
+    let mut questions = section_data(scope, &section, current.as_ref())?;
     let korean = config
         .as_ref()
         .is_some_and(|c| c.interface_language == InterfaceLanguage::Ko);
+    if let Some(id) = &question {
+        questions = summary::one_question(questions, id, korean)?;
+    }
     Ok(ActionResult {
         schema_version: 1,
-        action: "DescribeHiveSetupSection",
+        action: if question.is_some() {"DescribeHiveSetupQuestion"} else {"DescribeHiveSetupSection"},
         status: "success",
         exit_code: 0,
-        code: "hive.setup-section-described",
+        code: if question.is_some() {"hive.setup-question-described"} else {"hive.setup-section-described"},
         message: if korean {
             "요청한 설정 질문 목록"
         } else {
@@ -158,6 +168,15 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         next_action: None,
         data: Some(json!({"section":section,"scope":scope,"questions":questions})),
     })
+}
+
+fn question_section(scope: PreferenceScope, section: Option<String>, question: Option<&str>) -> Result<String, SetupError> {
+    match (section,question) {
+        (Some(section),None)=>Ok(section),
+        (None,Some(id))=>catalog()?.questions.into_iter().find(|q|q.scope==scope && q.id==id)
+            .map(|q|q.section).ok_or_else(||SetupError::Input("unknown setup question".into())),
+        _=>Err(SetupError::Input("choose one question or one section".into())),
+    }
 }
 
 fn section_data(

@@ -165,11 +165,15 @@ pub(super) fn inspect(
         ));
     }
     let data = if options.describe {
-        let section = options
-            .section
-            .as_ref()
-            .ok_or_else(|| SetupError::Input("project describe requires --section".into()))?;
-        let questions = described(section, stored.as_ref(), &sources, &effective)?;
+        let selected_section = if let Some(id) = &options.question {
+            super::super::catalog()?.questions.into_iter().find(|q|q.scope == PreferenceScope::Project && q.id == *id)
+                .map(|q|q.section).ok_or_else(||SetupError::Input("unknown project setup question".into()))?
+        } else { options.section.clone().ok_or_else(||SetupError::Input("project describe requires --section or --question".into()))? };
+        let section = selected_section.as_str();
+        let mut questions = described(section, stored.as_ref(), &sources, &effective)?;
+        if let Some(id) = &options.question {
+            questions = super::super::summary::one_question(questions, id, language == InterfaceLanguage::Ko)?;
+        }
         json!({"section":section,"questions":questions,"parent":parent})
     } else {
         json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
@@ -177,7 +181,7 @@ pub(super) fn inspect(
     Ok(report(
         "success",
         0,
-        "hive.project-setup-shown",
+        if options.question.is_some() {"hive.setup-question-described"} else {"hive.project-setup-shown"},
         language,
         ["프로젝트 설정 조회 결과", "Project setup inspection"],
         Some(data),

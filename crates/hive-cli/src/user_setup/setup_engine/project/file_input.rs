@@ -36,13 +36,27 @@ fn normalize(
     channel: PreferenceInput,
     answered_at: Option<u64>,
 ) -> Result<Value, RenderError> {
-    let supplied: Value =
-        serde_yaml::from_slice(input).map_err(|e| RenderError::Input(e.to_string()))?;
-    let mut answers = hive_render::normalized_project_answers(input)?;
+    let patch = super::super::answer_patch::read(input).map_err(as_render)?;
+    let full = if patch.is_none() {
+        Some((serde_yaml::from_slice::<Value>(input).map_err(|e| RenderError::Input(e.to_string()))?, hive_render::normalized_project_answers(input)?))
+    } else {None};
     let previous = stored
         .map(existing::answers)
         .transpose()
         .map_err(as_render)?;
+    let is_patch = patch.is_some();
+    let (supplied, mut answers) = if let Some(patch) = patch {
+        if previous.is_none() {
+            super::super::answer_patch::require_initial(&patch, &["setup_mode", "project_kind", "project_name", "primary_host"])
+                .map_err(as_render)?;
+        }
+        let mut base = previous.clone().unwrap_or_else(|| json!({"schema_version":2}));
+        super::super::answer_patch::merge(&mut base, &patch).map_err(as_render)?;
+        let bytes = serde_json::to_vec(&base).map_err(|e| RenderError::Internal(e.to_string()))?;
+        (patch, hive_render::normalized_project_answers(&bytes)?)
+    } else {
+        full.expect("full answer document parsed before stored state")
+    };
     if supplied
         .get("project_identity")
         .is_none_or(|value| value.as_str() == Some(""))
@@ -76,7 +90,7 @@ fn normalize(
             *inherited = prior.clone();
         } else {
             inherited.input_channel = channel;
-            inherited.decided_at = answered_at.filter(|_| supplied.get("setup_mode").is_some());
+            inherited.decided_at = answered_at.filter(|_| supplied.get("setup_mode").is_some() && channel != PreferenceInput::Agent);
         }
     }
     let entries = answers
@@ -104,13 +118,13 @@ fn normalize(
             .filter(|(path, record)| {
                 unchanged
                     && (*path == &pointer || path.starts_with(&prefix))
-                    && !matches!(
+                    && ((is_patch && supplied.get(&key).is_none()) || (!matches!(
                         record.origin,
                         DecisionOrigin::LegacyUnknown
                             | DecisionOrigin::ExternalChange
                             | DecisionOrigin::Inherited
                     )
-                    && (record.origin != DecisionOrigin::Default || supplied.get(&key).is_none())
+                    && (record.origin != DecisionOrigin::Default || supplied.get(&key).is_none())))
             })
             .collect::<Vec<_>>();
         records.retain(|path, _| path != &pointer && !path.starts_with(&prefix));
@@ -122,7 +136,9 @@ fn normalize(
                 pointer,
                 PreferenceDecision::new(
                     &value,
-                    if explicit {
+                    if explicit && channel == PreferenceInput::Agent {
+                        DecisionOrigin::ExternalChange
+                    } else if explicit {
                         DecisionOrigin::Explicit
                     } else {
                         DecisionOrigin::Default
@@ -130,12 +146,23 @@ fn normalize(
                     channel,
                     PreferenceScope::Project,
                     env!("CARGO_PKG_VERSION"),
-                    answered_at.filter(|_| explicit),
+                    answered_at.filter(|_| explicit && channel != PreferenceInput::Agent),
                 )
                 .map_err(RenderError::Input)?,
             );
         } else {
             for (path, record) in trusted {
+                records.insert(path.clone(), record.clone());
+            }
+        }
+    }
+    if is_patch {
+        // A nested patch must not erase a separate choice recorded for an untouched sibling.
+        for (path, record) in &old {
+            if !records.contains_key(path)
+                && supplied.pointer(path).is_none()
+                && previous.as_ref().and_then(|value| value.pointer(path)) == answers.pointer(path)
+            {
                 records.insert(path.clone(), record.clone());
             }
         }
@@ -175,6 +202,7 @@ fn file_scope(
         dry_run: arguments.mode == SetupMode::DryRun,
         describe: false,
         section: None,
+        question: None,
         capabilities: Some(arguments.capabilities.clone()),
         reconfigure_roles: arguments.reconfigure_roles.clone(),
     };
@@ -394,9 +422,9 @@ mod tests {
         let values = normalize(&input(), None, PreferenceInput::Agent, Some(123)).unwrap();
         assert_eq!(values["schema_version"], 2);
         let records = &values["preference_decisions"];
-        assert_eq!(records["/project_name"]["origin"], "explicit");
+        assert_eq!(records["/project_name"]["origin"], "external-change");
         assert_eq!(records["/project_name"]["input_channel"], "agent");
-        assert_eq!(records["/project_name"]["decided_at"], 123);
+        assert!(records["/project_name"]["decided_at"].is_null());
         assert_eq!(records["/project_identity"]["origin"], "default");
         assert!(records["/project_identity"]["decided_at"].is_null());
         assert_eq!(records["/interface_language"]["origin"], "inherited");
@@ -419,10 +447,47 @@ mod tests {
         )
         .unwrap();
         assert_eq!(changed["project_identity"], first["project_identity"]);
-        assert_eq!(
-            changed["preference_decisions"]["/project_name"]["decided_at"],
-            456
-        );
+        assert!(changed["preference_decisions"]["/project_name"]["decided_at"].is_null());
+        assert_eq!(changed["preference_decisions"]["/project_name"]["origin"],"external-change");
+    }
+
+    #[test]
+    fn project_patch_preserves_unmentioned_values_and_unknown_provenance() {
+        let mut previous = normalize(&input(), None, PreferenceInput::Agent, None).unwrap();
+        previous["preference_decisions"]["/primary_host"] = json!(PreferenceDecision::new(
+            &previous["primary_host"], DecisionOrigin::LegacyUnknown, PreferenceInput::Migration,
+            PreferenceScope::Project, env!("CARGO_PKG_VERSION"), None).unwrap());
+        let stored = serde_json::to_vec(&previous).unwrap();
+        let patch = br#"{"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"project_name":"chosen name"}}"#;
+        let changed = normalize(patch, Some(&stored), PreferenceInput::Agent, Some(99)).unwrap();
+        assert_eq!(changed["primary_host"],previous["primary_host"]);
+        assert_eq!(changed["persistent_roles"],previous["persistent_roles"]);
+        assert_eq!(changed["preference_decisions"]["/primary_host"],previous["preference_decisions"]["/primary_host"]);
+        assert_eq!(changed["preference_decisions"]["/setup_mode"],previous["preference_decisions"]["/setup_mode"]);
+        assert_eq!(changed["preference_decisions"]["/project_name"]["origin"],"external-change");
+        assert!(changed["preference_decisions"]["/project_name"]["decided_at"].is_null());
+        let repeated = normalize(patch,Some(&serde_json::to_vec(&changed).unwrap()),PreferenceInput::Agent,Some(100)).unwrap();
+        assert_eq!(repeated,changed);
+    }
+
+    #[test]
+    fn nested_patch_preserves_a_separately_recorded_sibling_choice() {
+        let mut supplied: Value = serde_yaml::from_slice(&input()).unwrap();
+        supplied["setup_mode"] = json!("custom");
+        supplied["interface_language"] = json!("en");
+        supplied["wiki"] = json!({"enabled":true,"language":"en"});
+        supplied["persona"] = json!({"id":"balanced"});
+        supplied["skills"] = json!({"mode":"individual","selected":[]});
+        let mut previous = normalize(&serde_json::to_vec(&supplied).unwrap(),None,PreferenceInput::AnswersFile,Some(42)).unwrap();
+        previous["preference_decisions"].as_object_mut().unwrap().remove("/wiki");
+        let decision = PreferenceDecision::new(&json!(true), DecisionOrigin::Explicit,
+            PreferenceInput::Terminal, PreferenceScope::Project, env!("CARGO_PKG_VERSION"),Some(41)).unwrap();
+        previous["preference_decisions"]["/wiki/enabled"] = json!(decision);
+        let patch = br#"{"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"wiki":{"language":"ko"}}}"#;
+        let changed = normalize(patch,Some(&serde_json::to_vec(&previous).unwrap()),PreferenceInput::Agent,Some(99)).unwrap();
+        assert_eq!(changed["wiki"],json!({"enabled":true,"language":"ko"}));
+        assert_eq!(changed["preference_decisions"]["/wiki/enabled"],json!(decision));
+        assert_eq!(changed["preference_decisions"]["/wiki"]["origin"],"external-change");
     }
 
     #[test]
@@ -450,10 +515,8 @@ mod tests {
             values["preference_decisions"]["/project_name"]["input_channel"],
             "agent"
         );
-        assert_eq!(
-            values["preference_decisions"]["/project_name"]["decided_at"],
-            123
-        );
+        assert!(values["preference_decisions"]["/project_name"]["decided_at"].is_null());
+        assert_eq!(values["preference_decisions"]["/project_name"]["origin"],"external-change");
     }
 
     #[test]

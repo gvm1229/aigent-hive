@@ -119,7 +119,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
     Ok(options)
 }
 
-pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
+pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCode {
     let json_output = arguments
         .windows(2)
         .any(|pair| pair == ["--output", "json"]);
@@ -137,7 +137,7 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     if json_output {
-        return crate::emit_action_result(&result);
+        return crate::emit_action_result(&super::compact_result(result, summary));
     }
     eprintln!("{}", result.message);
     if let Some(next) = &result.next_action {
