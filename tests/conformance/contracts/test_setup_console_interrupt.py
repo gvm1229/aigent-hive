@@ -51,20 +51,51 @@ public static class SetupConsoleFixture {
         }
         throw new InvalidOperationException("CLI did not reach the expected private question");
     }
+    static string WaitProjectStep(Process child, string root, string step) {
+        string directory=Path.Combine(root,".hive/config/setup-progress/projects");
+        var deadline=Stopwatch.StartNew();
+        while(deadline.ElapsedMilliseconds<15000 && !child.HasExited) {
+            if(Directory.Exists(directory)) foreach(string path in Directory.GetFiles(directory,"*.yml")) {
+                try { if(File.ReadAllText(path).Contains("step: "+step)) return path; }
+                catch(IOException) { }
+            }
+            Thread.Sleep(25);
+        }
+        throw new InvalidOperationException("project CLI did not reach the expected private question");
+    }
+    static int ProjectFlow(Process child, SafeFileHandle input, string[] args) {
+        WaitProjectStep(child,args[1],"project-mode"); Send(input,"\r");
+        string progress=WaitProjectStep(child,args[1],"project-name");
+        File.WriteAllText(Path.Combine(args[6],"question.ready"),progress);
+        var deadline=Stopwatch.StartNew();
+        while(!File.Exists(Path.Combine(args[6],"continue-user"))) {
+            if(child.HasExited || deadline.ElapsedMilliseconds>20000) return 27;
+            Thread.Sleep(25);
+        }
+        Send(input,"Connection loss fixture\r\r\ryes\r");
+        if(!child.WaitForExit(30000)) return 28;
+        File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
+        return child.ExitCode;
+    }
     public static int Main(string[] args) {
         Process child=null;
         try {
-            if(args.Length!=4) return 20;
+            bool project=args.Length==7 && args[3]=="connection-loss";
+            if(args.Length!=4 && !project) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
-                var start=new ProcessStartInfo(args[0],"setup --scope user --section usage --interactive --user-root \""+args[1]+"\"");
+                string command=project
+                    ? "setup --target \""+args[4]+"\" --capabilities \""+args[5]+"\" --interactive --user-root \""+args[1]+"\""
+                    : "setup --scope user --section usage --interactive --user-root \""+args[1]+"\"";
+                var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
                 start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
+                if(project) return ProjectFlow(child,input,args);
                 string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
                 WaitStep(child,progress,"user-language"); Send(input,"1\r");
                 WaitStep(child,progress,"usage-enforcement"); Thread.Sleep(100);
@@ -82,6 +113,25 @@ public static class SetupConsoleFixture {
 '''
 
 
+def compile_console_fixture(work_root):
+    """Only the fixed compiler process sees its real runtime directory, never Hive."""
+    source = work_root / "console.cs"
+    helper = work_root / "console.exe"
+    source.write_text(FIXTURE, encoding="utf-8")
+    system = Path(os.environ.get("HIVE_TEST_CONSOLE_SYSTEM_ROOT", os.environ["SystemRoot"]))
+    framework = system / "Microsoft.NET/Framework64/v4.0.30319"
+    compiler = framework / "csc.exe"
+    result = subprocess.run(
+        [str(compiler), "/nologo", "/noconfig", "/target:exe", f"/out:{helper}",
+         f"/reference:{framework / 'System.dll'}", str(source)],
+        env={**os.environ, "SystemRoot":str(system), "WINDIR":str(system)},
+        capture_output=True, text=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    if result.returncode:
+        raise AssertionError((result.stdout, result.stderr))
+    return helper
+
+
 @unittest.skipUnless(os.name == "nt", "native Ctrl-C regression requires a private Windows console")
 class SetupConsoleInterruptConformance(Phase1CliTestCase):
     def test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume(self):
@@ -91,17 +141,7 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
         self.check_interruption("eof")
 
     def check_interruption(self, kind):
-        source = self.work_root / "console.cs"
-        helper = self.work_root / "console.exe"
-        source.write_text(FIXTURE, encoding="utf-8")
-        shell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
-        build = subprocess.run(
-            [str(shell), "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command",
-             "Add-Type -Path $env:HIVE_TEST_CONSOLE_SOURCE -OutputAssembly $env:HIVE_TEST_CONSOLE_EXE -OutputType ConsoleApplication"],
-            env={**os.environ, "HIVE_TEST_CONSOLE_SOURCE":str(source), "HIVE_TEST_CONSOLE_EXE":str(helper)},
-            capture_output=True, text=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW,
-        )
-        self.assertEqual(build.returncode, 0, build.stderr)
+        helper = compile_console_fixture(self.work_root)
         root = self.work_root / "signal-user"
         root.mkdir()
         result_path = self.work_root / "result.json"
