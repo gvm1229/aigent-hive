@@ -590,8 +590,8 @@ mod tests {
 
     #[test]
     fn legacy_file_apply_uses_the_same_preserving_pipeline_and_validates_without_writes() {
-        let root = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let mut global = super::super::super::default_answers(Some(InterfaceLanguage::Ko));
         global["selected_hosts"] = json!(["codex"]);
         let path = root.path().join(user_setup::USER_SETUP_RELATIVE);

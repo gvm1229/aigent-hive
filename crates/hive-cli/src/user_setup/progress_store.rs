@@ -816,7 +816,7 @@ mod tests {
     use std::fs;
 
     fn config_fixture() -> (tempfile::TempDir, Dir, SetupProgress, Vec<u8>, Vec<u8>) {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let prior = serde_json::to_vec(&json!({"schema_version":1,"interface_language":"ko",
             "wiki":{"language":"ko"},"profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
             "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":{"enabled":true,"stop_remaining_percent":5}})).unwrap();
@@ -956,9 +956,9 @@ mod tests {
 
     #[test]
     fn global_and_two_project_answers_have_separate_locations_and_bindings() {
-        let root = tempfile::tempdir().unwrap();
-        let first = tempfile::tempdir().unwrap();
-        let second = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let first = crate::test_tempdir();
+        let second = crate::test_tempdir();
         let user = ProgressStore::open(root.path(), None).unwrap();
         let a = ProgressStore::open(root.path(), Some(first.path())).unwrap();
         let b = ProgressStore::open(root.path(), Some(second.path())).unwrap();
@@ -976,7 +976,7 @@ mod tests {
 
     #[test]
     fn concurrent_progress_saves_preserve_the_first_completed_answer() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         save_answer(&store, json!({"profile":"expedited"}));
         let first = store.load().unwrap();
@@ -992,8 +992,8 @@ mod tests {
 
     #[test]
     fn copied_or_moved_project_cannot_adopt_the_previous_progress() {
-        let root = tempfile::tempdir().unwrap();
-        let projects = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let projects = crate::test_tempdir();
         let original = projects.path().join("original");
         let moved = projects.path().join("moved");
         fs::create_dir(&original).unwrap();
@@ -1010,8 +1010,8 @@ mod tests {
 
     #[test]
     fn another_directory_at_the_same_project_path_cannot_reuse_saved_answers() {
-        let user = tempfile::tempdir().unwrap();
-        let projects = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let projects = crate::test_tempdir();
         let path = projects.path().join("project");
         fs::create_dir(&path).unwrap();
         let store = ProgressStore::open(user.path(), Some(&path)).unwrap();
@@ -1051,7 +1051,7 @@ mod tests {
 
     #[test]
     fn copied_user_progress_at_the_same_path_is_not_a_resume_authority() {
-        let parent = tempfile::tempdir().unwrap();
+        let parent = crate::test_tempdir();
         let path = parent.path().join("user");
         fs::create_dir(&path).unwrap();
         let store = ProgressStore::open(&path, None).unwrap();
@@ -1078,8 +1078,8 @@ mod tests {
 
     #[test]
     fn normal_project_file_changes_do_not_replace_the_target_identity() {
-        let user = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let project = crate::test_tempdir();
         let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();
         let progress = save_answer(&store, json!({"project_name":"same"}));
         fs::write(project.path().join("README.md"), "new project text").unwrap();
@@ -1090,7 +1090,7 @@ mod tests {
 
     #[test]
     fn changed_base_config_and_question_revision_do_not_overwrite_pending_answers() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let prior = save_answer(&store, json!({"interface_language":"ko"}));
         let snapshot = store.load().unwrap();
@@ -1107,7 +1107,7 @@ mod tests {
 
     #[test]
     fn legacy_progress_is_read_without_writes_and_kept_until_explicit_clear() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let path = root.path().join(LEGACY_PROGRESS);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         let original = "schema_version: 1\nstep: persona\nanswers:\n  interface_language: ko\n";
@@ -1127,7 +1127,7 @@ mod tests {
 
     #[test]
     fn corrupt_records_and_secret_answers_are_rejected_without_replacing_evidence() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         save_answer(&store, json!({"interface_language":"ko"}));
         assert!(store
@@ -1150,8 +1150,8 @@ mod tests {
 
     #[test]
     fn source_workspace_never_becomes_a_project_progress_target() {
-        let root = tempfile::tempdir().unwrap();
-        let source = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let source = crate::test_tempdir();
         fs::write(source.path().join("hive-source.json"), "{}").unwrap();
         assert!(ProgressStore::open(root.path(), Some(source.path())).is_err());
         assert!(!root.path().join(".hive").exists());
@@ -1160,8 +1160,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn linked_progress_parent_cannot_redirect_writes_outside_the_user_root() {
-        let root = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let outside = crate::test_tempdir();
         fs::create_dir_all(root.path().join(".hive/config")).unwrap();
         std::os::unix::fs::symlink(
             outside.path(),

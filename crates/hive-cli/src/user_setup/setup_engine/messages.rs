@@ -95,8 +95,8 @@ mod tests {
     use super::*;
     #[test]
     fn language_lookup_is_read_only_and_uses_pending_project_then_global_choices() {
-        let root = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let project = crate::test_tempdir();
         assert_eq!(language_at(root.path(), None), InterfaceLanguage::En);
         assert!(!root.path().join(".hive").exists());
         let file = root.path().join(user_setup::USER_SETUP_RELATIVE);

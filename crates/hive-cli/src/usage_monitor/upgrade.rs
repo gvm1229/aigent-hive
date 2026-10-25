@@ -454,8 +454,18 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
 
+    fn restore_owned_launcher(config: &mut Configuration) {
+        // Keep the saved argument spelling, including legitimate Windows short paths.
+        let root = config
+            .arguments
+            .strip_prefix("usage monitor run --user-root \"")
+            .and_then(|value| value.strip_suffix("\" --output json"))
+            .unwrap();
+        config.launcher = super::super::task_launcher(&config.executable, root);
+    }
+
     fn fixture(enabled: bool) -> (tempfile::TempDir, PinnedTarget) {
-        let directory = tempfile::tempdir().unwrap();
+        let directory = crate::test_tempdir();
         let root = PinnedTarget::open_usage(directory.path()).unwrap();
         let mut old = configuration(root.requested_path()).unwrap();
         old.enabled = enabled;
@@ -584,9 +594,7 @@ mod tests {
         for (master, midway) in [(false, true), (true, false)] {
             let (_directory, root) = fixture(true);
             let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
-            let root_text = monitor_root_path(root.requested_path()).unwrap();
-            old.launcher =
-                super::super::task_launcher(&old.executable, &root_text.to_string_lossy());
+            restore_owned_launcher(&mut old);
             write(&root, CONFIG, &old).unwrap();
             let policy = hive_core::preferences::UsageProtection {
                 enforcement_enabled: master,
@@ -843,7 +851,7 @@ mod tests {
     #[test]
     fn previous_arguments_must_name_the_same_root_with_the_known_command() {
         let (_directory, root) = fixture(false);
-        let foreign = tempfile::tempdir().unwrap();
+        let foreign = crate::test_tempdir();
         let original: Configuration = load(&root, CONFIG).unwrap().unwrap();
         for arguments in [
             "unrelated-command".into(),
@@ -911,12 +919,7 @@ mod tests {
     fn setup_resume_activates_only_the_new_reader_and_honors_a_later_manual_disable() {
         let (_directory, root) = fixture(false);
         let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
-        old.launcher = super::super::task_launcher(
-            &old.executable,
-            &monitor_root_path(root.requested_path())
-                .unwrap()
-                .to_string_lossy(),
-        );
+        restore_owned_launcher(&mut old);
         write(&root, CONFIG, &old).unwrap();
         let before = sha256_digest(&super::super::serialize(&old).unwrap());
         let stopped = super::super::transition::quiesce_operation(

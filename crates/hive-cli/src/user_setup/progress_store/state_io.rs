@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn interrupted_progress_reads_are_pure_and_explicit_recovery_keeps_published_answers() {
         for published in [false, true] {
-            let root = tempfile::tempdir().unwrap();
+            let root = crate::test_tempdir();
             let store = ProgressStore::open(root.path(), None).unwrap();
             let before_progress = sample(&store);
             let before = fs::read(root.path().join(&store.relative)).unwrap();
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn lifecycle_record_write_can_resume_before_and_after_publication() {
         for published in [false, true] {
-            let root = tempfile::tempdir().unwrap();
+            let root = crate::test_tempdir();
             let store = ProgressStore::open(root.path(), None).unwrap();
             let mut progress = sample(&store);
             progress.phase = super::super::ProgressPhase::Applying;
@@ -426,7 +426,7 @@ mod tests {
     #[test]
     fn the_write_record_itself_recovers_creation_and_deletion_without_changing_data() {
         for stage in ["empty", "staged", "published", "deleted"] {
-            let root = tempfile::tempdir().unwrap();
+            let root = crate::test_tempdir();
             let store = ProgressStore::open(root.path(), None).unwrap();
             sample(&store);
             let original = fs::read(root.path().join(&store.relative)).unwrap();
@@ -459,7 +459,7 @@ mod tests {
 
     #[test]
     fn a_live_writer_and_changed_retained_bytes_block_recovery_without_overwrite() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         sample(&store);
         let before = fs::read(root.path().join(&store.relative)).unwrap();
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn invalid_write_scope_cannot_select_other_settings_or_discard_the_record() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         sample(&store);
         let original = fs::read(root.path().join(&store.relative)).unwrap();
@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn first_progress_creation_and_confirmed_clear_recover_without_resurrecting_answers() {
         for published in [false, true] {
-            let root = tempfile::tempdir().unwrap();
+            let root = crate::test_tempdir();
             let store = ProgressStore::open(root.path(), None).unwrap();
             let progress = store
                 .new_progress("user-language".into(), json!({"interface_language":"ko"}))
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn changed_original_fingerprint_and_copied_scope_records_are_preserved_and_rejected() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         sample(&store);
         let before = fs::read(root.path().join(&store.relative)).unwrap();
@@ -564,7 +564,7 @@ mod tests {
             Some(before)
         );
 
-        let other = tempfile::tempdir().unwrap();
+        let other = crate::test_tempdir();
         let other_store = ProgressStore::open(other.path(), None).unwrap();
         let other_progress = sample(&other_store);
         replace_user_setup_file(
@@ -584,8 +584,8 @@ mod tests {
 
     #[test]
     fn user_completion_does_not_recover_or_block_on_a_different_projects_write() {
-        let root = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let project = ProgressStore::open(root.path(), Some(target.path())).unwrap();
         let mut progress = project
             .new_progress("profile".into(), json!({"project_name":"other"}))

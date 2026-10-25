@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn withdrawal_scope_is_read_only_and_does_not_bind_live_observations() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = crate::test_tempdir();
         let root = PinnedTarget::open_usage(dir.path()).unwrap();
         let first = scope(dir.path()).unwrap();
         assert!(!dir.path().join(".hive").exists());
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn withdrawal_failure_keeps_consent_and_only_same_scope_can_resume() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = crate::test_tempdir();
         let root = PinnedTarget::open_usage(dir.path()).unwrap();
         let config = super::super::configuration(dir.path()).unwrap();
         super::super::write(&root, CONFIG, &config).unwrap();
@@ -227,7 +227,7 @@ mod tests {
         .unwrap();
         assert!(super::super::lock(&root, "control.lock").is_err());
         stopped.verify_root(dir.path()).unwrap();
-        let other = tempfile::tempdir().unwrap();
+        let other = crate::test_tempdir();
         assert!(stopped.verify_root(other.path()).is_err());
         drop(stopped);
         transition::verify_stopped(&root).unwrap();
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn a_changed_activation_or_scope_refuses_before_any_scheduler_call() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = crate::test_tempdir();
         let root = PinnedTarget::open_usage(dir.path()).unwrap();
         let approved = consent(dir.path());
         crate::user_install::replace_user_setup_file(

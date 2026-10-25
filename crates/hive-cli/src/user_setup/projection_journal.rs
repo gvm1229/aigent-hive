@@ -421,7 +421,7 @@ mod tests {
         SetupProgress,
         AppliedProjection,
     ) {
-        let temp = tempfile::tempdir().unwrap();
+        let temp = crate::test_tempdir();
         let (_, root) =
             crate::user_install::open_canonical_user_root_for_setup(temp.path()).unwrap();
         let store = ProgressStore::open(temp.path(), None).unwrap();
@@ -500,8 +500,8 @@ mod tests {
 
     #[test]
     fn project_journal_uses_the_bound_output_and_resumes_only_its_remaining_changes() {
-        let user = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let project = crate::test_tempdir();
         let root = crate::user_install::open_user_root_for_setup(user.path()).unwrap();
         let output = crate::user_install::open_user_root_for_setup(project.path()).unwrap();
         let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();
@@ -563,8 +563,8 @@ mod tests {
 
     #[test]
     fn project_recovery_preserves_concurrent_content_and_rejects_existing_canonical_data() {
-        let user = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let project = crate::test_tempdir();
         let root = crate::user_install::open_user_root_for_setup(user.path()).unwrap();
         let output = crate::user_install::open_user_root_for_setup(project.path()).unwrap();
         let store = ProgressStore::open(user.path(), Some(project.path())).unwrap();

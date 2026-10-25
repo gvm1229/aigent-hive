@@ -45,6 +45,17 @@ mod usage;
 mod usage_control;
 mod usage_install;
 mod usage_monitor;
+
+#[cfg(test)]
+pub(crate) fn test_tempdir() -> tempfile::TempDir {
+    let parent = std::env::temp_dir();
+    // macOS exposes its temporary root through /var; target guards reject aliases.
+    #[cfg(unix)]
+    let parent = parent
+        .canonicalize()
+        .expect("canonical test temporary parent");
+    tempfile::tempdir_in(parent).expect("private test directory")
+}
 mod user_directives;
 mod user_install;
 mod user_setup;

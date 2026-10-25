@@ -4018,7 +4018,7 @@ usage_guard:
 
     #[test]
     fn setup_preview_snapshot_rejects_changed_config_before_any_host_mutation() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let path = root.path().join(USER_SETUP_RELATIVE);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, b"changed after preview").unwrap();
@@ -4057,7 +4057,7 @@ usage_guard:
             let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
             canonical_config(&config).unwrap()
         };
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
         let path = Path::new(USER_SETUP_RELATIVE);
         let first = choice(25, DecisionOrigin::Explicit);
@@ -4119,7 +4119,7 @@ usage_guard:
 
     #[test]
     fn optional_feature_question_keeps_an_existing_setup_operational() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
         let config = canonical_config(&valid_config()).unwrap();
         super::super::user_install::replace_user_setup_file(
@@ -4143,7 +4143,7 @@ usage_guard:
 
     #[test]
     fn version_two_projection_keeps_reset_only_protection_and_masks_dormant_integrations() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
         let mut value = v2_config_value();
         value["usage_guard"]["enforcement_enabled"] = json!(true);
@@ -5160,8 +5160,8 @@ usage_guard: {}
 
     #[test]
     fn project_progress_requires_the_target_and_reports_its_scope() {
-        let root = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let project = crate::test_tempdir();
         let mut arguments = vec![
             "status".to_owned(),
             "--scope".to_owned(),
@@ -5865,7 +5865,7 @@ usage_guard:
 
     #[test]
     fn codex_user_projection_retires_all_exact_resources_and_is_idempotent() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
         let applied = apply_user_projection(&root, &config, &skills, &answers).unwrap();
@@ -5889,7 +5889,7 @@ usage_guard:
     #[test]
     fn codex_user_projection_preserves_the_entire_modified_or_extended_skill() {
         for suffix in ["SKILL.md", "references/workflow.md", "custom.txt"] {
-            let temporary = tempfile::tempdir().unwrap();
+            let temporary = crate::test_tempdir();
             let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
             let changed = temporary
                 .path()
@@ -5921,7 +5921,7 @@ usage_guard:
 
     #[test]
     fn codex_user_projection_rejects_a_change_after_the_cleanup_preview() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
         let preview = plan_user_projection(&root, &config, &skills, &answers).unwrap();
@@ -5937,7 +5937,7 @@ usage_guard:
 
     #[test]
     fn codex_cleanup_does_not_trust_a_self_consistent_forged_original() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let path = ".agents/skills/user-setup/SKILL.md";
         let custom = b"User-created Skill content\n";

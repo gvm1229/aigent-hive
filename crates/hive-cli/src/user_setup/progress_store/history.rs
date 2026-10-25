@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn migration_summary_survives_completion_and_later_choices_but_rejects_changed_metadata() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = migration_progress(&store);
         let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
@@ -538,7 +538,7 @@ mod tests {
 
     #[test]
     fn older_migration_receipts_without_summary_keep_their_existing_recovery_contract() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = migration_progress(&store);
         let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
@@ -574,7 +574,7 @@ mod tests {
 
     #[test]
     fn completion_keeps_hashes_and_removes_free_form_answers_from_progress() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let legacy = root.path().join(super::super::LEGACY_PROGRESS);
         fs::create_dir_all(legacy.parent().unwrap()).unwrap();
         fs::write(
@@ -604,8 +604,8 @@ mod tests {
 
     #[test]
     fn retention_keeps_one_hundred_per_scope_and_never_removes_incomplete_or_foreign_records() {
-        let root = tempfile::tempdir().unwrap();
-        let project = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let project = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let other = ProgressStore::open(root.path(), Some(project.path())).unwrap();
         let other_progress = applying(&other, "other");
@@ -640,7 +640,7 @@ mod tests {
 
     #[test]
     fn another_operation_cannot_finish_or_replace_the_current_receipt() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = applying(&store, "first");
         let path = root.path().join(path(&progress.operation_id).unwrap());
@@ -654,7 +654,7 @@ mod tests {
 
     #[test]
     fn edited_execution_metadata_cannot_resume_apply_projection_or_completion() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut progress = store
             .new_progress("usage-enforcement".into(), json!({}))
@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn missing_intent_or_different_product_cannot_authorize_recovery() {
-        let root = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = applying(&store, "same answers");
         let receipt_path = root.path().join(path(&progress.operation_id).unwrap());

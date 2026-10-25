@@ -124,8 +124,8 @@ mod tests {
 
     #[test]
     fn revoked_hooks_are_removed_with_the_settings_and_foreign_hook_files_are_preserved() {
-        let user = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let global = global(user.path());
         let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
         let answers = fixtures.join("answers-all-hooks.yml");
@@ -199,8 +199,8 @@ mod tests {
 
     #[test]
     fn settings_merge_preserves_local_text_and_prepares_a_valid_new_configuration() {
-        let user = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let mut global = global(user.path());
         let (answers, caps) = fixtures();
         fs::write(target.path().join("AGENTS.md"), b"User-owned preface\r\n").unwrap();
@@ -280,8 +280,8 @@ mod tests {
 
     #[test]
     fn removing_a_modified_feature_defers_the_settings_change_without_deleting_local_content() {
-        let user = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let user = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let global = global(user.path());
         let (answers, caps) = fixtures();
         let initial = SetupRequest {

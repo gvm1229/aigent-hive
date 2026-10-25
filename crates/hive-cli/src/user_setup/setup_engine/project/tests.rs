@@ -22,7 +22,7 @@ fn options(root: &Path, target: &Path) -> Options {
 
 #[test]
 fn conflicting_modes_and_missing_target_fail_before_input() {
-    let root = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
     let base = ["--user-root".into(), root.path().display().to_string()];
     assert!(parse(&base).is_err());
     for extra in [
@@ -42,8 +42,8 @@ fn conflicting_modes_and_missing_target_fail_before_input() {
 
 #[test]
 fn noninteractive_new_project_never_reads_or_creates_settings() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let mut terminal = Terminal {
         reader: Cursor::new(b"yes\n"),
         writer: Vec::new(),
@@ -64,8 +64,8 @@ fn noninteractive_new_project_never_reads_or_creates_settings() {
 
 #[test]
 fn quick_project_inherits_preferences_and_does_not_invent_roles_or_knowledge() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -117,8 +117,8 @@ fn validate_answers(answers: &Value) {
 
 #[test]
 fn optional_features_require_confirmation_and_resume_without_repeating_review() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     std::fs::create_dir(target.path().join("vendor")).unwrap();
     std::fs::write(
@@ -248,8 +248,8 @@ fn optional_source_change_after_preview_preserves_unapproved_answers() {
             Ok(())
         }
     }
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let path = target.path().join("SKILL.md");
     std::fs::write(
@@ -300,8 +300,8 @@ fn optional_source_change_after_preview_preserves_unapproved_answers() {
 #[test]
 fn declining_optional_review_keeps_choices_and_eof_does_not_answer() {
     for bytes in [b"".as_slice(), b"no\n".as_slice()] {
-        let root = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
         let global = global(root.path());
         let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
         let mut snapshot = store.load().unwrap();
@@ -338,8 +338,8 @@ fn declining_optional_review_keeps_choices_and_eof_does_not_answer() {
 
 #[test]
 fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let mut global = global(root.path());
     global.wiki_enabled = false;
     global.usage_guard_enabled = true;
@@ -399,8 +399,8 @@ fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
 
 #[test]
 fn changing_an_existing_sharing_destination_requires_an_answer_and_keeps_the_old_binding_on_no() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -495,8 +495,8 @@ fn existing_project_answers_keep_legacy_values_without_inventing_original_choice
 
 #[test]
 fn choosing_custom_preferences_replaces_the_previous_quick_inheritance_records() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -526,8 +526,8 @@ fn choosing_custom_preferences_replaces_the_previous_quick_inheritance_records()
 
 #[test]
 fn custom_project_collects_explicit_preferences_and_repeats_only_invalid_answer() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -559,8 +559,8 @@ fn custom_project_collects_explicit_preferences_and_repeats_only_invalid_answer(
 
 #[test]
 fn interrupted_project_resumes_without_repeating_collected_answers() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -598,8 +598,8 @@ fn interrupted_project_resumes_without_repeating_collected_answers() {
 
 #[test]
 fn custom_project_resume_and_inspection_reuse_its_language_instead_of_the_global_language() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
     let mut snapshot = store.load().unwrap();
@@ -665,8 +665,8 @@ fn custom_project_resume_and_inspection_reuse_its_language_instead_of_the_global
 
 #[test]
 fn inherited_fingerprints_follow_the_declaration_and_show_the_current_parent() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let mut answers = questions::defaults(target.path(), &global, "codex");
     answers["project_identity"] = json!("test");
@@ -719,8 +719,8 @@ fn inherited_fingerprints_follow_the_declaration_and_show_the_current_parent() {
 
 #[test]
 fn preview_acceptance_distinguishes_visible_defaults_and_external_edits() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let mut answers = questions::defaults(target.path(), &global, "codex");
     answers["project_identity"] = json!("test");
@@ -782,8 +782,8 @@ fn changed_global_preferences_after_preview_do_not_apply_the_project() {
             Ok(())
         }
     }
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     global(root.path());
     let caps = root.path().join("capabilities.json");
     std::fs::write(
@@ -823,8 +823,8 @@ fn changed_global_preferences_after_preview_do_not_apply_the_project() {
 
 #[test]
 fn confirmed_project_recovery_rejects_global_drift_and_never_trusts_a_missing_payload_alone() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let options = options(root.path(), target.path());
     let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
@@ -881,8 +881,8 @@ fn confirmed_project_recovery_rejects_global_drift_and_never_trusts_a_missing_pa
 
 #[test]
 fn existing_role_changes_require_a_saved_confirmation_and_preserve_the_user_body() {
-    let root = tempfile::tempdir().unwrap();
-    let target = tempfile::tempdir().unwrap();
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
     let global = global(root.path());
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
     let original = fixtures.join("answers-base.yml");

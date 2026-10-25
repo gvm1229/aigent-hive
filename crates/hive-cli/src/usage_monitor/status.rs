@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn setup_status_keeps_absent_disabled_and_verified_stopped_distinct_without_writes() {
-        let temp = tempfile::tempdir().unwrap();
+        let temp = crate::test_tempdir();
         let root = PinnedTarget::open_usage(temp.path()).unwrap();
         assert_eq!(
             setup_status(temp.path())["controller_state"],

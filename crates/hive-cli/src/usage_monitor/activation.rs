@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn activation_preview_is_stable_without_writes_and_changes_for_each_disable_selection() {
-        let temp = tempfile::tempdir().unwrap();
+        let temp = crate::test_tempdir();
         let root = PinnedTarget::open_usage(temp.path()).unwrap();
         let first = super::super::preview(temp.path()).unwrap();
         assert_eq!(first, super::super::preview(temp.path()).unwrap());
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn activation_preview_binds_configuration_and_replacement_at_the_same_path() {
-        let temp = tempfile::tempdir().unwrap();
+        let temp = crate::test_tempdir();
         let path = temp.path().join("user");
         std::fs::create_dir(&path).unwrap();
         let initial = super::super::preview(&path).unwrap();
