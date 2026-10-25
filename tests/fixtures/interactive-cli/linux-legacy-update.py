@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -136,7 +136,7 @@ def terminal_run(command, stop=None):
     status = None
     killed = False
     try:
-        while time.monotonic() - began < (560 if stop == "hold" else 180):
+        while time.monotonic() - began < (560 if stop == "hold" else 15 if stop == "ctrl-c" else 180):
             readable, _, _ = select.select([descriptor], [], [], 0.2)
             if readable:
                 try:
@@ -153,7 +153,10 @@ def terminal_run(command, stop=None):
                     elif "comma-separated): " in text:
                         reply, kind = "antigravity", "old-host"
                     elif text.endswith("> "):
-                        if stop == "parent-exit":
+                        if stop == "ctrl-c":
+                            if not killed:os.write(descriptor,b"\x03");killed=True
+                            reply, kind = None, "ctrl-c"
+                        elif stop == "parent-exit":
                             if not killed:
                                 os.kill(pid, 15)
                                 killed = True
@@ -176,8 +179,8 @@ def terminal_run(command, stop=None):
                             reply, kind = ("yes", "unsupported-yes") if "unsupported-yes" not in answers else ("no", "runtime-no")
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
                             reply, kind = "yes", "final"
-                        elif ("Korean" in text or "한국어" in text) and "English" in text:
-                            reply, kind = "1", "language"
+                        elif "Choose a language." in text or "사용할 언어를 골라" in text:
+                            reply, kind = ("2", "language-en") if mode == "locale-input" and terminal_runs else ("1", "language")
                         elif stop == "cancel":
                             reply, kind = ":cancel", "cancel"
                         else:
@@ -193,7 +196,7 @@ def terminal_run(command, stop=None):
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (-15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel", "decline-final"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-2 if stop == "ctrl-c" else -15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel", "decline-final"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -308,6 +311,40 @@ else:
                 assert blocked.returncode!=0,(blocked.stdout,blocked.stderr)
                 assert config.read_bytes()==before
                 assert not (user/".hive/runtime/usage-monitor/config.json").exists()
+if mode == "locale-input":
+    setup=[str(binary),"setup","--scope","user","--user-root",str(user)]
+    def inspect_input(arguments):
+        before=config.read_bytes()
+        p=subprocess.run(arguments,env=environment,input="",capture_output=True,text=True,timeout=5)
+        assert p.returncode!=0 and config.read_bytes()==before,(p.returncode,p.stdout,p.stderr)
+        return json.loads(p.stdout)
+    invalid=inspect_input([*setup,"--section","missing","--output","json"])
+    assert "설정" in invalid["message"],invalid
+    conflict=inspect_input([*setup,"--interactive","--output","json"])
+    assert "입력" in conflict["message"],conflict
+    for flags in [["--interactive"],["--interactive","--non-interactive"],[]]:
+        before=config.read_bytes()
+        human=subprocess.run([*setup,*flags],env=environment,input="",capture_output=True,text=True,timeout=5)
+        assert human.returncode==2 and human.stdout=="" and config.read_bytes()==before,(human.returncode,human.stdout,human.stderr)
+    for flags in [["--interactive"],["--non-interactive"],[]]:
+        pending=inspect_input([*setup,*flags,"--output","json"])
+        if "--interactive" not in flags:assert pending["status"]=="needs-input",pending
+    before=config.read_bytes()
+    terminal_run([*setup,"--section","language"],"decline-final")
+    assert config.read_bytes()==before
+    pending=inspect_input([*setup,"--non-interactive","--output","json"])
+    assert pending["status"]=="needs-input" and not any('\uac00'<=c<='\ud7a3' for c in pending["message"]),pending
+    terminal_run([*setup,"--resume"])
+    invalid=inspect_input([*setup,"--section","missing","--output","json"])
+    assert "setting" in invalid["message"].lower() and not any('\uac00'<=c<='\ud7a3' for c in invalid["message"]),invalid
+    before=config.read_bytes()
+    terminal_run([*setup,"--section","language"],"ctrl-c")
+    assert config.read_bytes()==before
+    terminal_run([*setup,"--resume"])
+    project=root/"locale-project";project.mkdir()
+    pending=inspect_input([str(binary),"setup","--target",str(project),"--user-root",str(user),"--non-interactive","--output","json"])
+    assert pending["status"]=="needs-input" and not (project/".hive").exists()
+    assert not any('\uac00'<=c<='\ud7a3' for c in pending["message"]),pending
 if mode == "host-deselect":
     setup=[str(binary),"setup","--scope","user","--user-root",str(user)]
     def call(args,expected=0,env=environment):

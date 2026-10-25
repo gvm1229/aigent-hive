@@ -25,6 +25,7 @@ pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
 mod legacy;
 mod recovery;
 mod terminal;
+pub(in crate::user_setup) mod messages;
 mod worker;
 mod update;
 pub(in crate::user_setup) use update::run as run_update_completion;

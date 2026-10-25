@@ -113,20 +113,19 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     let json_output = arguments
         .windows(2)
         .any(|pair| pair == ["--output", "json"]);
+    let mut terminal = Terminal {
+        reader: io::stdin().lock(), writer: io::stderr().lock(),
+        language: super::messages::language(arguments),
+    };
     let result = parse(arguments)
         .and_then(|options| {
             let mode = options
                 .interaction
                 .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
                 .map_err(SetupError::Input)?;
-            let mut terminal = Terminal {
-                reader: io::stdin().lock(),
-                writer: io::stderr().lock(),
-                language: InterfaceLanguage::En,
-            };
             execute(&options, mode, &mut terminal)
         })
-        .unwrap_or_else(|error| user_setup::failure(&error));
+        .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     if json_output {
         return crate::emit_action_result(&result);
     }
@@ -169,7 +168,7 @@ pub(in crate::user_setup) fn resume_pending_update(
         language: InterfaceLanguage::En,
     };
     let mut result = super::update::complete(root, mode, &mut terminal)
-        .unwrap_or_else(|error| user_setup::failure(&error));
+        .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "UpdateHiveUser";
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
@@ -219,7 +218,7 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         language: InterfaceLanguage::En,
     };
     let mut result = execute(&options, InteractionMode::Terminal, &mut terminal)
-        .unwrap_or_else(|failure| user_setup::failure(&failure));
+        .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }
@@ -283,15 +282,12 @@ fn execute_inner<R: BufRead, W: Write>(
     }
     let mut snapshot = store.load()?;
     if let Some(progress) = snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete) {
+        terminal.language = match progress.answers["interface_language"].as_str() {
+            Some("ko") => InterfaceLanguage::Ko,
+            Some("en") => InterfaceLanguage::En,
+            _ => terminal.language,
+        };
         super::host_scope::check_request(progress, &options.update_hosts)?;
-    }
-    if config.is_none()
-        && snapshot
-            .progress
-            .as_ref()
-            .is_some_and(|p| p.answers["interface_language"] == "ko")
-    {
-        terminal.language = InterfaceLanguage::Ko;
     }
     if let Some(result) =
         preliminary_result(options, mode, &store, &snapshot, config.as_ref(), terminal)?
@@ -1022,6 +1018,29 @@ fn result(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn pending_language_change_controls_input_and_resume_notices_before_config_apply() {
+        for (stored, pending) in [(InterfaceLanguage::Ko, InterfaceLanguage::En),
+            (InterfaceLanguage::En, InterfaceLanguage::Ko)] {
+            let root = tempfile::tempdir().unwrap();
+            let file = root.path().join(user_setup::USER_SETUP_RELATIVE);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            let before = serde_json::to_vec(&super::super::default_answers(Some(stored))).unwrap();
+            std::fs::write(&file, &before).unwrap();
+            let store = ProgressStore::open(root.path(), None).unwrap();
+            let progress = store.new_progress("user-language".into(), super::super::default_answers(Some(pending))).unwrap();
+            store.save(&store.load().unwrap(), &progress).unwrap();
+            for mode in [InteractionMode::NonInteractive, InteractionMode::Terminal] {
+                let mut terminal = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: stored };
+                let result = execute(&options(root.path()), mode, &mut terminal).unwrap();
+                assert_eq!(result.status, "needs-input");
+                assert_eq!(terminal.language, pending);
+                assert!(terminal.writer.is_empty());
+                assert_eq!(std::fs::read(&file).unwrap(), before);
+            }
+        }
+    }
 
     #[test]
     fn project_overrides_validate_registered_metadata_without_opening_project_directories() {

@@ -15,19 +15,18 @@ use std::{
 };
 
 pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
+    let mut terminal = Terminal {
+        reader: io::stdin().lock(), writer: io::stderr().lock(),
+        language: super::messages::language(arguments),
+    };
     let mut result = parse(arguments)
         .and_then(|(root, request)| {
             let mode = request
                 .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
                 .map_err(SetupError::Input)?;
-            let mut terminal = Terminal {
-                reader: io::stdin().lock(),
-                writer: io::stderr().lock(),
-                language: InterfaceLanguage::En,
-            };
             complete(&root, mode, &mut terminal)
         })
-        .unwrap_or_else(|error| user_setup::failure(&error));
+        .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "UpdateHiveUser";
     crate::emit_action_result(&result)
 }
@@ -135,11 +134,11 @@ pub(in crate::user_setup) fn legacy_noninteractive(
     budget: &crate::update_bridge::LegacyBudget,
 ) -> ActionResult {
     let mut terminal = Terminal {
-        reader: io::empty(), writer: io::sink(), language: InterfaceLanguage::En,
+        reader: io::empty(), writer: io::sink(), language: super::messages::language_at(root, None),
     };
     let mut result = complete_bound(root, InteractionMode::NonInteractive, &mut terminal,
         Some(&LegacyCompletion { budget, hosts }))
-        .unwrap_or_else(|failure| user_setup::failure(&failure));
+        .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }

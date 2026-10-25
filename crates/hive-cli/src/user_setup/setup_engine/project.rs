@@ -118,7 +118,7 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     let mut terminal = Terminal {
         reader: io::stdin().lock(),
         writer: io::stderr().lock(),
-        language: InterfaceLanguage::En,
+        language: super::messages::language(arguments),
     };
     let mut result = parse(arguments)
         .and_then(|mut options| {
@@ -136,13 +136,13 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
                 .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
                 .map_err(SetupError::Input)?;
             let mut result = execute(&options, mode, &mut terminal)
-                .unwrap_or_else(|error| user_setup::failure(&error));
+                .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
             if result.exit_code != 0 {
                 result.next_action = Some(resume_command(&options));
             }
             Ok(result)
         })
-        .unwrap_or_else(|error| user_setup::failure(&error));
+        .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "SetupHarness";
     if json_output {
         return crate::emit_action_result(&result);

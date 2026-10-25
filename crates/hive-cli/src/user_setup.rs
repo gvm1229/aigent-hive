@@ -593,7 +593,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let result = setup_engine::file_options(arguments)
         .and_then(|(arguments, options)| parse(&arguments)
             .and_then(|arguments| setup_engine::execute_file(&arguments, &options)))
-        .unwrap_or_else(|error| failure(&error));
+        .unwrap_or_else(|error| setup_engine::messages::failure(&error, setup_engine::messages::language(arguments)));
     emit_action_result(&result)
 }
 
