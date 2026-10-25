@@ -1322,12 +1322,36 @@ fn validate_progress_answers_for_scope(
             "setup progress contains an unknown setting".to_owned(),
         ));
     }
-    if progress_contains_secret(answers) {
+    let mut inspected = answers.clone();
+    if scope == hive_core::preferences::PreferenceScope::Project {
+        if let Some(skills) = inspected["approved_optional_skills"].as_array_mut() {
+            for skill in skills {
+                if skill["source"].as_str().is_some_and(public_skill_source) {
+                    // The original URL remains in the approval. Only this secret scan omits it.
+                    skill["source"] = JsonValue::Null;
+                }
+            }
+        }
+    }
+    if progress_contains_secret(&inspected) {
         return Err(SetupError::Verification(
             "user setup progress cannot contain a webhook URL, token, or secret".to_owned(),
         ));
     }
     Ok(())
+}
+
+fn public_skill_source(value: &str) -> bool {
+    let Ok(uri) = value.parse::<ureq::http::Uri>() else {
+        return false;
+    };
+    matches!(uri.scheme_str(), Some("http" | "https"))
+        && uri
+            .authority()
+            .is_some_and(|authority| !authority.as_str().contains('@'))
+        && uri.query().is_none()
+        && !value.contains('#')
+        && !value.to_ascii_lowercase().contains("webhook")
 }
 
 fn progress_contains_secret(value: &JsonValue) -> bool {
@@ -5156,6 +5180,34 @@ usage_guard: {}
             panic!("progress accepts a webhook URL");
         };
         assert!(rejected.message().contains("webhook URL"));
+    }
+
+    #[test]
+    fn project_progress_preserves_public_skill_sources_without_allowing_secret_urls() {
+        use hive_core::preferences::PreferenceScope;
+        let mut answers = serde_json::json!({"approved_optional_skills":[{
+            "source":"https://example.invalid/fixture-readonly"
+        }]});
+        validate_progress_answers_for_scope(&answers, PreferenceScope::Project).unwrap();
+        assert!(validate_progress_answers_for_scope(&answers, PreferenceScope::User).is_err());
+        for source in [
+            "https://user:password@example.invalid/skill",
+            "https://example.invalid/skill?token=hidden",
+            "https://example.invalid/skill#hidden",
+            "https://discord.example/api/webhooks/hidden",
+        ] {
+            answers["approved_optional_skills"][0]["source"] = source.into();
+            assert!(
+                validate_progress_answers_for_scope(&answers, PreferenceScope::Project).is_err()
+            );
+        }
+        answers["approved_optional_skills"][0]["source"] =
+            "https://example.invalid/fixture-readonly".into();
+        answers["approved_optional_skills"][0]["token"] = "hidden".into();
+        assert!(validate_progress_answers_for_scope(&answers, PreferenceScope::Project).is_err());
+        assert!(progress_contains_secret(&serde_json::json!({
+            "source":"https://example.invalid/fixture-readonly"
+        })));
     }
 
     #[test]
