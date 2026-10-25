@@ -64,6 +64,49 @@ pub(super) struct Store<'a> {
 }
 
 impl<'a> Store<'a> {
+    pub fn open_retiring(root: &'a PinnedTarget) -> Result<(Self, Option<Record>), AdapterError> {
+        let mut store = Self { root, expected: None };
+        // Metadata recovery cannot publish CONFIG or STATE from a cancelled intent.
+        store.recover_intent()?;
+        if let Some(bytes) = store.read(WRITE, LIMIT)? {
+            if store.parse_intent(&bytes)?.path == PATH { store.recover_write()?; }
+        }
+        store.expected = store.read(PATH, LIMIT)?;
+        let record = store.expected.as_deref().map(|bytes| store.parse_record(bytes)).transpose()?;
+        Ok((store, record))
+    }
+
+    pub fn retire_config_write(&self, record: &Record, binding: &Binding) -> Result<(), AdapterError> {
+        let Some(bytes) = self.read(WRITE, LIMIT)? else {
+            if inspect_setup_write_claim(self.root.target_dir(), Path::new(CONFIG), LIMIT)
+                .map_err(AdapterError::Conflict)?.is_some() {
+                return Err(error("monitor configuration claim has no bound write intent; preserved"));
+            }
+            return Ok(());
+        };
+        let intent = self.parse_intent(&bytes)?;
+        if intent.path != CONFIG || intent.disable_digest != record.binding.disable_digest
+            || binding.previous.enabled || !binding.previous.configured {
+            return Err(error("cancelled monitor write needs separate recovery; retained data preserved"));
+        }
+        if let Some(claim) = inspect_setup_write_claim(self.root.target_dir(), Path::new(CONFIG), LIMIT)
+            .map_err(AdapterError::Conflict)? {
+            for retained in [claim.before.as_deref(), claim.staged.as_deref()].into_iter().flatten() {
+                self.validate_payload(CONFIG, retained)?;
+            }
+        }
+        self.root.verify_current()?;
+        crate::user_install::retire_monitor_config_claim(self.root.target_dir(), &record.operation_id,
+            &intent.before, &intent.after, intent.before_mode, &binding.previous.config_digest, &bytes)
+            .map_err(AdapterError::Conflict)?;
+        if digest(self.read(CONFIG, 65536)?.as_deref()) != binding.previous.config_digest
+            || self.disable_digest()? != binding.disable_digest {
+            return Err(error("monitor disable changed during write retirement; preserved"));
+        }
+        replace_user_setup_file(self.root.target_dir(), Path::new(WRITE), Some(&bytes), None)
+            .map_err(AdapterError::Conflict)
+    }
+
     pub fn open(root: &'a PinnedTarget) -> Result<(Self, Option<Record>), AdapterError> {
         let mut store = Self {
             root,
@@ -475,10 +518,11 @@ mod tests {
             &after,
             true,
         );
-        super::super::super::transition::disable(
+        super::super::super::transition::quiesce(
             &root,
             |_, _| Ok(json!({"removed":true})),
             Duration::ZERO,
+            None,
         )
         .unwrap();
         let off = root.read_required(Path::new(CONFIG), 65536).unwrap();
@@ -497,6 +541,61 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[test]
+    fn explicit_disable_archives_published_config_claim_and_allows_a_new_consent() {
+        let (_temp, root, approval) = super::super::runner::tests::fixture();
+        let (mut store, _) = Store::open(&root).unwrap();
+        let record = record(&root, approval.clone());
+        store.save(&record).unwrap();
+        let mut inactive = record.desired.clone(); inactive.enabled = false;
+        let before = serialize(&inactive).unwrap();
+        let after = serialize(&record.desired).unwrap();
+        replace_user_setup_file(root.target_dir(), Path::new(CONFIG), None, Some(&before)).unwrap();
+        save_intent(&root, &intent(&root, CONFIG, Some(&before), &after));
+        crate::user_install::interrupt_setup_replace(root.target_dir(), Path::new(CONFIG), &before, &after, true);
+        let result = super::super::super::transition::disable(&root, |_,_| Ok(serde_json::json!({"removed":true})), std::time::Duration::ZERO).unwrap();
+        assert_eq!(result["activation_retirement"], "cancelled");
+        assert_eq!(root.read_required(Path::new(CONFIG), 65536).unwrap(), before);
+        assert_eq!(Store::open(&root).unwrap().1.unwrap().phase, Phase::Cancelled);
+        assert!(inspect_setup_write_claim(root.target_dir(), Path::new(CONFIG), LIMIT).unwrap().is_none());
+        assert!(root.read_optional(Path::new(WRITE), 1024 * 1024).unwrap().is_none());
+        let archive = format!(".hive/config/setup-progress/cancelled-monitor/{}/config-claim/claimed.bin", record.operation_id);
+        assert_eq!(root.read_required(Path::new(&archive), 65536).unwrap(), before);
+        let again = super::super::super::transition::disable(&root, |_,_| Ok(serde_json::json!({"removed":true})), std::time::Duration::ZERO).unwrap();
+        assert_eq!(again["activation_retirement"], "not-needed");
+        assert_eq!(root.read_required(Path::new(&archive), 65536).unwrap(), before);
+        let fresh = super::super::super::preview(root.requested_path()).unwrap()["preview_digest"].as_str().unwrap().to_owned();
+        assert_ne!(fresh, approval);
+        let result = super::super::runner::tests::activate_fixture(&root, &fresh).unwrap();
+        assert_eq!(result["activation"], "verified");
+    }
+
+    #[test]
+    fn explicit_disable_preserves_changed_claims_and_foreign_archives_as_pending() {
+        for tamper in [true, false] {
+            let (_temp, root, approval) = super::super::runner::tests::fixture();
+            let (mut store, _) = Store::open(&root).unwrap(); let record = record(&root, approval);
+            store.save(&record).unwrap();
+            let mut inactive = record.desired.clone(); inactive.enabled = false;
+            let before = serialize(&inactive).unwrap(); let after = serialize(&record.desired).unwrap();
+            replace_user_setup_file(root.target_dir(), Path::new(CONFIG), None, Some(&before)).unwrap();
+            save_intent(&root, &intent(&root, CONFIG, Some(&before), &after));
+            crate::user_install::interrupt_setup_replace(root.target_dir(), Path::new(CONFIG), &before, &after, true);
+            if tamper {
+                let path = root.requested_path().join(crate::user_install::retained_setup_path_for_test(Path::new(CONFIG)));
+                std::fs::write(path, b"outside change").unwrap();
+            } else {
+                let path = format!(".hive/config/setup-progress/cancelled-monitor/{}/write.json",record.operation_id);
+                replace_user_setup_file(root.target_dir(), Path::new(&path), None, Some(b"outside archive")).unwrap();
+            }
+            let result = super::super::super::transition::disable(&root, |_,_| Ok(serde_json::json!({"removed":true})), std::time::Duration::ZERO).unwrap();
+            assert_eq!(result["activation_retirement"], "pending");
+            assert_eq!(root.read_required(Path::new(CONFIG), 65536).unwrap(), before);
+            assert!(root.read_optional(Path::new(WRITE), 1024 * 1024).unwrap().is_some());
+            assert!(inspect_setup_write_claim(root.target_dir(),Path::new(CONFIG),LIMIT).unwrap().is_some());
+        }
     }
 
     #[test]

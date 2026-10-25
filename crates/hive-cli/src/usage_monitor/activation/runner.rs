@@ -425,6 +425,13 @@ pub(super) mod tests {
         }
     }
 
+    pub(in crate::usage_monitor::activation) fn activate_fixture(root: &PinnedTarget, approval: &str) -> Result<Value, AdapterError> {
+        let scheduler = Scheduler::default();
+        let result = run_with(root, approval, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b))?;
+        assert_eq!(*scheduler.effects.borrow(), ["register", "start"]);
+        Ok(result)
+    }
+
     #[test]
     fn activation_phase_recovery_preserves_one_registration_and_start() {
         for phase in [

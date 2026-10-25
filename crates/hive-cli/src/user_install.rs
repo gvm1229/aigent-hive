@@ -1,6 +1,8 @@
 mod host_state;
 mod index_removal;
 pub(crate) mod deactivation;
+mod monitor_claim_retirement;
+pub(crate) use monitor_claim_retirement::retire_monitor_config_claim;
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
@@ -2138,6 +2140,11 @@ pub(crate) fn interrupt_setup_replace(root: &Dir, relative: &Path, before: &[u8]
             }));
     }));
     assert!(result.is_err());
+}
+
+#[cfg(test)]
+pub(crate) fn retained_setup_path_for_test(relative: &Path) -> PathBuf {
+    recovery_locator(relative)
 }
 
 #[cfg(test)]

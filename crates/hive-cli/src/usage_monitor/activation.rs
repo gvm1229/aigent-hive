@@ -21,13 +21,14 @@ pub(super) fn retire_disabled(root: &PinnedTarget) -> Result<bool, AdapterError>
         || stopped["completed_at"].as_u64().is_none() {
         return Err(error("monitor disable has not completed"));
     }
-    let (mut store, record) = journal::Store::open(root)?;
+    let (mut store, record) = journal::Store::open_retiring(root)?;
     let Some(mut record) = record else { return Ok(false) };
     if matches!(record.phase, journal::Phase::Complete | journal::Phase::Cancelled) { return Ok(false); }
     if record.binding.root_identity_digest != binding.root_identity_digest
         || record.binding.disable_digest == binding.disable_digest {
         return Err(error("monitor activation has no newer disable selection"));
     }
+    store.retire_config_write(&record, &binding)?;
     record.phase = journal::Phase::Cancelled;
     record.completed_at = Some(super::now());
     store.save(&record)?;
