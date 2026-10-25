@@ -31,3 +31,18 @@ After failure or an interrupted AI response, inspect and resume the stored opera
 the same full YAML or retry apply blindly. A stored preference is separate from a verified runtime
 state. Use the CLI's monitor review flow for consent withdrawal. Preserve Wiki Markdown and user
 notes; program removal is a separate explicit request covered by recovery.md.
+
+## Standalone vector feature compatibility
+
+Use this route only when an installed instruction or an explicit request calls for the standalone
+vector-search feature API. Normal CLI setup already owns its vector question; do not ask twice.
+Run `hive setup feature claim --id vector-search --user-root <user-root> --output json`.
+Ask only if `question_required` is true. Explain that exact search remains available and first
+preparation takes time; the measured Windows runtime is about 376MB. If another session holds the
+unanswered claim, wait until that claim expires; never store a host session identifier.
+For an explicit yes, run `hive setup feature answer --id vector-search --answer yes --user-root
+<user-root> --output json`, then `hive setup feature prompt --id vector-search --user-root
+<user-root> --output json`. Give its `prompt` field for a new session. Preserve the fixed collection
+list and `setup_request_digest`; changed scope needs a new preview. Download and index preparation
+retain separate consent. For an explicit no, save `--answer no` and do not ask again unless requested.
+Silence, cancellation and an interrupted response are never a no answer or activation consent.

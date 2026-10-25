@@ -361,19 +361,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
         skill += "\n".join(path.read_text(encoding="utf-8") for path in
                            sorted((SKILLS / "user-setup/references").glob("*.md")))
+        normalized = " ".join(skill.split())
         for required in (
-            "hive setup --scope user --describe --output json",
-            "Get-Command hive",
-            "where.exe hive",
-            "npm prefix -g",
-            "hive setup --progress save --scope user",
-            "활성화 (권장)",
-            "hive usage probe-native --host codex --output json",
-            "Continue from where I left off",
-            "Discord usage notification",
-            "CodexBar fallback",
+            "--show --summary --output json",
+            "hive setup --scope user --user-root <user-root>",
+            "--describe --question <question-id> --output json",
+            "--input-channel agent",
+            "--resume --review",
+            "A hidden tool PTY is not a user terminal",
+            "Never generate the full YAML after each answer",
+            "Optional downloads, external delivery, hooks and monitor interruption retain separate exact consent",
+            "inspect status, not to apply again",
         ):
-            self.assertIn(required, skill)
+            self.assertIn(required, normalized)
+        self.assertNotIn("hive setup --scope user --describe --output json", skill)
+        self.assertNotIn("hive usage probe-native", skill)
         self.assertIn("Do not translate `Skill` as `기술`", skill)
         resolver = SKILLS / "user-setup/scripts/resolve-hive.ps1"
         self.assertTrue(resolver.is_file())
@@ -406,7 +408,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
             encoding="utf-8"
         )
-        user_setup_skill = (SKILLS / "user-setup/references/workflow.md").read_text(encoding="utf-8")
+        user_setup_skill = (SKILLS / "user-setup/references/recovery.md").read_text(encoding="utf-8")
         project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
             encoding="utf-8"
         )

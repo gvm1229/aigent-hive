@@ -17,6 +17,13 @@
   state. Explain the exact unresolved action; never bypass the refusal with automatic uninstall,
   manual host edits, or a new apply.
 
+## Projection refresh ownership
+
+During an authenticated CLI projection refresh, remove a retired Hive Skill only when its
+retired-name ledger entry and historical Hive digest prove ownership. Preserve modified or foreign
+Skills with the same name. Only empty Hive-owned parents are eligible after successful deletion.
+Never replace this verification with manual directory deletion.
+
 ## Preserving removal
 
 - Use removal only when the user requests it. Structural
