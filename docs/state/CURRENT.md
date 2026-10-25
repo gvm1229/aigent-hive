@@ -1,11 +1,11 @@
 # 현재 상태
 
 - 제품 버전: `0.14.0`
-- 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회/재개 `2386b52c` 완료. M02 실제 Windows 감시 미검증, M10·M11 Linux 부분 통과. M08·M09 Windows 부분 검증, M12 승인된 적용 재개 검증. 다음 M13, 공식 1/15(6.7%) 유지
+- 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회/재개 `2386b52c` 완료. M02 실제 Windows 감시 미검증, M10·M11 Linux 부분 통과. M08·M09 Windows 부분 검증, M12 재개·M13 결과 Windows 검증. 다음 M14, 공식 1/15(6.7%) 유지
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 승인된 소스 목표0.14.0, 공개 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
-- M12 `b6c51708`은 Windows 임시 폴더·가짜 앱에서 종료87 뒤 같은 승인 작업 완료, 직접 본체 교체는 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
+- M12 `b6c51708`·M13 `d66eb91a`: [Windows 임시 폴더·가짜 앱의 재개/결과 검증](../research/cli-update-validation-0.14.0.md). 실제 본체 교체는 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
 
 ## 생성된 구현·수용 항목
 
