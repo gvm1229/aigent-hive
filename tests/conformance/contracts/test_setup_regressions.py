@@ -228,7 +228,7 @@ class Phase1ActivationRollback(Phase1CliTestCase):
             "--answers",
             str(answers),
             "--capabilities",
-            str(FIXTURE_ROOT / "capabilities-codex-omx.json"),
+            str(FIXTURE_ROOT / "capabilities-codex-host-native.json"),
             "--user-root",
             str(self.setup_user_root),
             "--apply",
