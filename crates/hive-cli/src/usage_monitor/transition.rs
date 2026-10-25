@@ -149,7 +149,11 @@ pub(super) fn quiesce_operation(
             return Err(error("monitor choice changed since setup preview"));
         }
     }
-    let Some(mut config) = authenticated_config(root)? else {
+    let candidate = if before.is_none() && expected_digest.is_none() && operation_id.is_none() {
+        super::activation::pending_disabled_configuration(root)?
+    } else { None };
+    let config = match candidate { Some(config) => Some(config), None => authenticated_config(root)? };
+    let Some(mut config) = config else {
         let controller = lock(root, "controller.lock")?;
         // A later explicit disable must cancel a pending activation even if no configuration
         // has been written yet. This records intent, not an ownership or execution grant.

@@ -11,6 +11,11 @@ use std::path::Path;
 mod journal;
 mod runner;
 
+pub(super) fn pending_disabled_configuration(root: &PinnedTarget) -> Result<Option<super::Configuration>, AdapterError> {
+    let (store, record) = journal::Store::open_retiring(root)?;
+    record.as_ref().map(|record| store.disabled_candidate(record)).transpose().map(Option::flatten)
+}
+
 /// The caller holds the verified disable's control and stopped-controller leases.
 pub(super) fn retire_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
     let binding = Binding::capture(root)?;
