@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import importlib.util
 import json
 import re
 import struct
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -131,6 +134,37 @@ class Phase3SchemaContract(unittest.TestCase):
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_digest_sync_rejects_crlf_sources_before_replacing_the_ledger(self) -> None:
+        spec = importlib.util.spec_from_file_location("sync_user_plugin", ROOT / "scripts/sync-user-plugin.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module.SOURCE = root / "skills"
+            module.ACTIVE_SKILLS_LEDGER = root / "ledger.yml"
+            source = module.SOURCE / "fixture/SKILL.md"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"# Fixture\r\n")
+            ledger = "- name: fixture\n  source_type: built-in\n  content_digest: sha256:" + "0" * 64 + "\n"
+            module.ACTIVE_SKILLS_LEDGER.write_bytes(ledger.encode())
+            with self.assertRaisesRegex(ValueError, "must use LF"):
+                module.sync_active_skill_digests()
+            self.assertEqual(module.ACTIVE_SKILLS_LEDGER.read_bytes(), ledger.encode())
+            source.write_bytes(b"# Fixture\n")
+            module.sync_active_skill_digests()
+            self.assertIn(hashlib.sha256(source.read_bytes()).hexdigest(), module.ACTIVE_SKILLS_LEDGER.read_text())
+
+    def test_current_skill_ledger_hashes_match_exact_canonical_and_projected_bytes(self) -> None:
+        ledger = (ROOT / "harness/template/.hive/config/active-skills.yml.jinja").read_text()
+        entries = re.findall(r"- name: ([a-z0-9-]+)\n  source_type: built-in\n  content_digest: sha256:([0-9a-f]{64})", ledger)
+        self.assertTrue(entries)
+        for name, expected in entries:
+            canonical = (SKILLS / name / "SKILL.md").read_bytes()
+            self.assertNotIn(b"\r\n", canonical, name)
+            self.assertEqual(hashlib.sha256(canonical).hexdigest(), expected, name)
+            for root in [PLUGIN_SKILLS, TEMPLATE_SKILLS, ROOT / "harness/template/.claude/skills"]:
+                self.assertEqual((root / name / "SKILL.md").read_bytes(), canonical, (root, name))
+
     def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
         workflow = directive_text(".agents/directives/03-workflow.md")
         coordination = directive_text(".agents/directives/06-session-coordination.md")

@@ -118,7 +118,10 @@ def sync_active_skill_digests() -> None:
         if not source.is_file():
             raise ValueError(f"active Skill ledger names missing source: {name}")
         seen.add(name)
-        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        content = source.read_bytes()
+        if b"\r\n" in content:
+            raise ValueError(f"canonical Skill must use LF line endings before digest sync: {name}")
+        digest = hashlib.sha256(content).hexdigest()
         return f"{match.group('prefix')}{digest}"
 
     updated = pattern.sub(replace, text)
