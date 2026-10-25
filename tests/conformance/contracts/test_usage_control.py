@@ -77,6 +77,80 @@ usage_guard:
 
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
+    def manual_policy(self, fallback: bool) -> None:
+        path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(path)
+        config["schema_version"] = 2
+        config["interface_language"] = "ko"
+        config["usage_guard"].pop("enabled", None)
+        config["usage_guard"].pop("quota_reset_guard_enabled", None)
+        config["usage_guard"].update({
+            "enforcement_enabled": False, "warnings_enabled": True, "codexbar_fallback_enabled": fallback,
+            "preflight": {"threshold_enabled": True, "reset_enabled": True,
+                          "zero_quota_enabled": True, "observation_failure": "block"},
+            "midway": {"enabled": True, "threshold_enabled": True, "reset_enabled": True,
+                       "zero_quota_enabled": True, "observation_failure": "stop"},
+        })
+        write_yaml(path, config)
+
+    def test_manual_usage_zero_is_observation_only_with_protection_off(self) -> None:
+        self.manual_policy(True)
+        self.write_halt(session_id="kept-manual", process_id=77, decision="usage-reset")
+        marker = self.setup_user_root / ".hive/runtime/usage-guard/foreign-history.txt"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_bytes(b"old opaque state must stay unchanged")
+        before_user, before_project = snapshot_tree(self.setup_user_root), snapshot_tree(self.consumer)
+        log = self.work_root / "manual-sensor.jsonl"
+        process, result = self.invoke("usage", "show", "--host", "codex", "--user-root", str(self.setup_user_root),
+                                      "--account-digest", ACCOUNT_DIGEST, sensor_case="zero",
+                                      extra_environment={"FAKE_CODEXBAR_LOG": str(log)})
+        self.assert_result(process, result, action="ShowUsageStatus", exit_code=0, status="success", code="hive.usage-observed")
+        data = result["data"]
+        self.assertEqual(data["scope"], "manual-observation")
+        self.assertFalse(data["authorizes_dispatch"])
+        self.assertFalse(data["writes_hive_state"])
+        self.assertTrue(any(window["remaining_percent"] == 0 for window in data["snapshot"]["windows"]))
+        self.assertEqual(data["snapshot"]["account_digest"], ACCOUNT_DIGEST)
+        self.assertIn("사용량", result["message"])
+        self.assertNotIn(RAW_ACCOUNT, process.stdout)
+        calls = [json.loads(line) for line in log.read_text().splitlines()]
+        self.assertEqual(sum(call[:1] == ["usage"] for call in calls), 1)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(self.setup_user_root), before_user)
+        self.assertEqual(snapshot_tree(self.consumer), before_project)
+
+    def test_manual_usage_requires_saved_fallback_and_settings_guide_never_samples(self) -> None:
+        self.manual_policy(False)
+        log = self.work_root / "unwanted-manual-sensor.txt"
+        program = "import os\nfrom pathlib import Path\nPath(os.environ['MANUAL_SENSOR_LOG']).write_text('called')\nraise SystemExit(89)\n"
+        for name in ("codex", "codexbar"):
+            script = self.fake_bin / (name + ".py" if os.name == "nt" else name)
+            script.write_text(("" if os.name == "nt" else f"#!{os.sys.executable}\n") + program, encoding="utf-8")
+        environment = {"MANUAL_SENSOR_LOG": str(log)}
+        before = snapshot_tree(self.setup_user_root)
+        process, shown = self.invoke("setup", "--scope", "user", "--show", "--user-root", str(self.setup_user_root),
+                                     extra_environment=environment)
+        self.assertEqual(process.returncode, 0, shown)
+        self.assertTrue(any("hive usage show --host codex" in value for value in shown["data"]["manual_usage_commands"]))
+        self.assertFalse(log.exists())
+        for quiet in (False, True):
+            command = [str(self.hive_binary), "setup", "--scope", "user", "--show", "--non-interactive",
+                       "--user-root", str(self.setup_user_root), *(["--quiet"] if quiet else [])]
+            view = subprocess.run(command, env={**os.environ, "PATH": str(self.fake_bin), **environment},
+                                  capture_output=True, text=True, timeout=10)
+            self.assertEqual(view.returncode, 0, view.stderr)
+            self.assertEqual("hive usage show" in view.stderr, not quiet)
+            self.assertFalse(log.exists())
+        # Keep native unavailable; a fallback probe would write the separate marker.
+        fallback_log = self.work_root / "forbidden-fallback.jsonl"
+        self._write_fake_codexbar()
+        process, result = self.invoke("usage", "show", "--host", "codex", "--user-root", str(self.setup_user_root),
+                                      extra_environment={**environment, "FAKE_CODEXBAR_LOG": str(fallback_log)})
+        self.assert_result(process, result, action="ShowUsageStatus", exit_code=2, status="error", code="hive.usage-observation-unavailable")
+        self.assertNotIn("snapshot", result["data"])
+        self.assertFalse(fallback_log.exists())
+        self.assertEqual(snapshot_tree(self.setup_user_root), before)
+
     def test_v2_failure_notice_quiet_mode_does_not_claim_or_repeat_the_notice(self) -> None:
         path = self.setup_user_root / ".hive/config/user-setup.yml"
         config = read_yaml(path)

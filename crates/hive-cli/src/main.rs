@@ -338,7 +338,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     }
     if matches!(
         arguments.first().map(String::as_str),
-        Some("enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")
+        Some("show" | "enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")
     ) {
         return usage_control::run_usage_control(arguments);
     }

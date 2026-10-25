@@ -925,6 +925,9 @@ fn inspect_settings<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
     json_output: bool,
 ) -> Result<crate::ActionResult, SetupError> {
+    let manual_commands = config.map(|config| config.selected_hosts.iter()
+        .map(|host| crate::usage_control::manual_usage_command(root, host.as_str())).collect::<Vec<_>>())
+        .unwrap_or_default();
     let migration = config
         .map(|config| user_setup::migration::inspect(root, config))
         .transpose()?
@@ -955,6 +958,11 @@ fn inspect_settings<R: BufRead, W: Write>(
             )?;
         }
         display_monitor(&monitor, terminal)?;
+        if !crate::display_options::quiet() && !manual_commands.is_empty() {
+            terminal.say("경고는 이미 확인한 사용량을 이용하며 추가로 조회하지 않습니다. 보호를 바꾸지 않고 사용량을 직접 확인하려면 다음 명령을 실행하세요.",
+                "Warnings reuse existing measurements without extra queries. To read usage without changing protection, run one of these commands:")?;
+            for command in &manual_commands { terminal.say(command, command)?; }
+        }
     }
     Ok(result(
         "success",
@@ -967,6 +975,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
             "feature_preferences":feature_preferences,"vector_runtime_verification":"not-performed",
+            "manual_usage_commands":manual_commands,
             "migration_preview":migration,"pending_questions":config.map(user_setup::migration::pending_questions).unwrap_or_default()}),
         ),
         None,

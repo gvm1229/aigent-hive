@@ -3,6 +3,8 @@ mod disabled;
 mod monitor;
 mod notices;
 mod observation_warning;
+mod manual;
+pub(crate) use manual::command as manual_usage_command;
 mod token_accounting;
 pub(crate) use monitor::{evaluate_monitor_policy, monitor_policy, MonitorPolicy};
 
@@ -31,6 +33,7 @@ const USAGE_CONTROL: &str = "\
 Inspect or change the installed usage safeguard.
 
 USAGE:
+    hive usage show --host codex|claude|antigravity --user-root <dir> [--account-digest <sha256:...>] --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
@@ -613,6 +616,7 @@ struct LoadedHalt {
 pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
     if arguments == ["enforce", "--help"]
         || arguments == ["status", "--help"]
+        || arguments == ["show", "--help"]
         || arguments == ["threshold", "--help"]
         || arguments == ["session", "--help"]
         || arguments == ["capture", "--help"]
@@ -622,6 +626,7 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let (action, result) = match arguments.first().map(String::as_str) {
+        Some("show") => ("ShowUsageStatus", manual::run(&arguments[1..])),
         Some("enforce") => (
             "CheckUsage",
             parse_enforce(&arguments[1..]).and_then(|parsed| enforce(&parsed)),
