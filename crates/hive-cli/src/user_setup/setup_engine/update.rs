@@ -184,22 +184,23 @@ fn complete_bound<R: BufRead, W: Write>(
             .is_some_and(|progress| progress.legacy_migration.is_some()),
         mode,
     );
-    let mut result = match selected {
-        Route::NeedsInput => interactive::pending(terminal.language, "hive.update-input-pending"),
-        Route::Questions => interactive::execute_update(&root, mode, terminal)?,
+    let before = super::update_summary::baseline(&root, config.as_ref());
+    let application = match selected {
+        Route::NeedsInput => Ok(interactive::pending(terminal.language, "hive.update-input-pending")),
+        Route::Questions => interactive::execute_update(&root, mode, terminal),
         Route::Recover => recovery::resume(
             &root,
             snapshot.progress.as_ref().expect("recoverable progress"),
             terminal.language,
             legacy_parent.is_some(),
-        )?,
+        ),
         Route::PreserveDraft if legacy_parent.is_some() =>
-            interactive::pending(terminal.language, "hive.update-input-pending"),
+            Ok(interactive::pending(terminal.language, "hive.update-input-pending")),
         Route::PreserveDraft => preserve_draft(
             &root,
             cap,
             existing.as_deref().expect("saved configuration"),
-        )?,
+        ),
         Route::ApplySaved => apply_saved(
             &root,
             cap,
@@ -208,11 +209,13 @@ fn complete_bound<R: BufRead, W: Write>(
             config.as_ref().expect("saved configuration"),
             existing.as_deref(),
             legacy_parent,
-        )?,
+        ),
     };
+    let mut result = application.unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "UpdateHiveUser";
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(&root));
+        super::update_summary::incomplete(&root, &mut result);
     }
     if result.exit_code == 0 {
         let cap =
@@ -229,11 +232,8 @@ fn complete_bound<R: BufRead, W: Write>(
         } else {
             "hive.user-update-complete-pending-input"
         };
-        result.data = Some(
-            json!({"pending_questions":pending,"settings_schema":saved.schema_version,
-            "interface_language":saved.interface_language,"selected_hosts":saved.selected_hosts,"stored_usage_policy":saved.usage_guard,
-            "settings_draft_preserved":selected==Route::PreserveDraft,"model_calls":0}),
-        );
+        result.data.get_or_insert_with(|| json!({}))["settings_draft_preserved"] = json!(selected==Route::PreserveDraft);
+        super::update_summary::complete(&root, before.as_ref(), &saved, &mut result)?;
         result.message = match terminal.language {
             InterfaceLanguage::Ko => if pending.is_empty() {"사용자 설정과 지침 갱신·검증 완료"} else {"사용자 지침 갱신·검증 완료. 기존 보호 선택을 보존했으며 선택 질문은 보류했습니다."},
             InterfaceLanguage::En => if pending.is_empty() {"User settings and guidance updated and verified"} else {"User guidance updated and verified. Existing protection was preserved; optional questions remain."},

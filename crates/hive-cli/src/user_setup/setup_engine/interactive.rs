@@ -190,6 +190,12 @@ pub(in crate::user_setup) fn resume_pending_update(
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }
+    let data = result.data.get_or_insert_with(|| json!({}));
+    if !data["steps"].is_object() { data["steps"] = json!({}); }
+    data["steps"]["core"] = json!("not-run");
+    data["from_version"] = Value::Null;
+    data["to_version"] = json!(env!("CARGO_PKG_VERSION"));
+    data["resume_command"] = json!(result.next_action);
     Ok(Some(result))
 }
 
@@ -238,12 +244,28 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         writer,
         language: InterfaceLanguage::En,
     };
+    let saved = crate::user_install::open_user_root_for_setup(root).ok()
+        .and_then(|cap| user_setup::load_operational_config(&cap).ok().flatten());
+    let before = super::update_summary::baseline(root, saved.as_ref());
     let mut result = execute(&options, InteractionMode::Terminal, &mut terminal)
         .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
+    if result.exit_code == 0 {
+        let summary = (|| {
+            let cap = crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
+            let saved = user_setup::load_operational_config(&cap)?
+                .ok_or_else(|| SetupError::Verification("updated settings are missing".into()))?;
+            super::update_summary::complete(root, before.as_ref(), &saved, &mut result)
+        })();
+        if let Err(error) = summary { result = super::messages::failure(&error, terminal.language); }
+    }
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
+        super::update_summary::incomplete(root, &mut result);
     }
     let _ = writeln!(terminal.writer, "{}", result.message);
+    for line in crate::update_activation::result_guidance(&result) {
+        let _ = writeln!(terminal.writer, "{line}");
+    }
     if let Some(next) = &result.next_action {
         let _ = writeln!(terminal.writer, "{next}");
     }

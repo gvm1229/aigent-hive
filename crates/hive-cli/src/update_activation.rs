@@ -150,8 +150,6 @@ impl LiveProjectionRefresher {
         let report = completion::run(executable, root, self.interactive)?;
         let success = report.succeeded();
         let message = format!("{} [{}]",report.message,report.code);
-        if let Some(next) = &report.next_action { eprintln!("{next}"); }
-        if success { eprintln!("{}",report.message); }
         *self.report.borrow_mut()=Some(report);
         if success { Ok(()) } else { Err(message) }
     }
@@ -371,6 +369,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     let mut output = io::stderr().lock();
     let refresher = LiveProjectionRefresher::new(interactive);
+    let mut core_update = output::CoreUpdate::default();
     let outcome = if arguments.confirm {
         let mut input = io::Cursor::new(b"y\n".as_slice());
         update_flow_with_projection_channel(
@@ -388,6 +387,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             },
             &mut input,
             &mut output,
+            &mut core_update,
         )
     } else {
         let mut input = io::stdin().lock();
@@ -406,10 +406,19 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             },
             &mut input,
             &mut output,
+            &mut core_update,
         )
     };
-    let result = output::finished(outcome, refresher.report.borrow().as_ref(), language);
+    let mut result = output::finished(outcome, refresher.report.borrow().as_ref(), language, &core_update);
+    if result.exit_code != 0 && core_update.status == "verified" && result.next_action.is_none() {
+        result.next_action = Some(crate::update_bridge::resume_command(&user_root));
+        result.data.as_mut().expect("update result data")["resume_command"] = serde_json::json!(result.next_action);
+    }
     output::emit(json_output, &result)
+}
+
+pub(crate) fn result_guidance(result: &crate::ActionResult) -> Vec<String> {
+    output::guidance(result)
 }
 
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
@@ -642,9 +651,11 @@ fn update_flow_with_projection(
         },
         input,
         output,
+        &mut output::CoreUpdate::default(),
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_flow_with_projection_channel(
     context: &UpdateFlowContext<'_>,
     registry: &impl RegistrySource,
@@ -653,13 +664,17 @@ fn update_flow_with_projection_channel(
     selection: UpdateSelection,
     input: &mut impl BufRead,
     output: &mut impl Write,
+    core_update: &mut output::CoreUpdate,
 ) -> Result<FlowOutcome, String> {
     let current_product: SemVersion = env!("CARGO_PKG_VERSION")
         .parse()
         .map_err(|error| format!("compiled Hive version is invalid: {error}"))?;
     let owner = discover_owner(context.executable, current_product)?;
+    core_update.from_version = Some(owner.package_version().exact.clone());
+    core_update.to_version.clone_from(&core_update.from_version);
     let metadata = registry.fetch()?;
     let target = target_package(&metadata, selection.channel)?;
+    core_update.requested_version = Some(target.exact.clone());
     if target.product.major != current_product.major {
         return Err(format!(
             "the npm distribution targets product {} and requires explicit major-version authority",
@@ -669,6 +684,7 @@ fn update_flow_with_projection_channel(
     let mut hosts = refresher.authenticated_hosts(context.user_root)?;
     let bootstrap = hosts.is_empty();
     if target <= *owner.package_version() {
+        core_update.status = "unchanged";
         if !bootstrap {
             refresher
                 .refresh_and_validate(context.executable, context.user_root, &hosts)
@@ -701,11 +717,15 @@ fn update_flow_with_projection_channel(
     if bootstrap && refresher.requires_host_selection() {
         hosts = select_bootstrap_hosts(context.language, input, output)?;
     }
+    core_update.status = "unverified";
+    core_update.to_version = None;
     installer.install(&owner, &target)?;
     let activated_owner = discover_owner(context.executable, target.product)?;
     if activated_owner.label() != owner.label() || activated_owner.package_version() != &target {
         return Err("the install owner did not activate the exact requested package".to_owned());
     }
+    core_update.status = "verified";
+    core_update.to_version = Some(target.exact.clone());
     if bootstrap {
         refresher
             .bootstrap_and_validate(context.executable, context.user_root, &hosts)
@@ -1514,6 +1534,7 @@ mod tests {
             },
             &mut input,
             &mut output,
+            &mut output::CoreUpdate::default(),
         )
         .expect("test update installed");
 
@@ -1547,6 +1568,7 @@ mod tests {
             },
             &mut input,
             &mut output,
+            &mut output::CoreUpdate::default(),
         )
         .expect_err("missing test channel");
 
@@ -1796,7 +1818,8 @@ mod tests {
         let mut input = Cursor::new(b"y\n");
         let mut output = Vec::new();
 
-        let error = update_flow_with_projection(
+        let mut core = output::CoreUpdate::default();
+        let error = update_flow_with_projection_channel(
             &UpdateFlowContext {
                 executable: &binary,
                 user_root: user_root.path(),
@@ -1805,11 +1828,15 @@ mod tests {
             &metadata(&target),
             &installer,
             &refresher,
+            UpdateSelection { channel: UpdateChannel::Stable, confirmed: false },
             &mut input,
             &mut output,
+            &mut core,
         )
         .expect_err("refresh failure");
 
+        assert_eq!(core.status, "verified");
+        assert_eq!(core.to_version.as_deref(), Some(target.as_str()));
         assert!(error.contains("binary update completed"));
         assert_eq!(installer.calls.borrow().as_slice(), [target]);
         assert_eq!(refresher.calls.borrow().len(), 1);

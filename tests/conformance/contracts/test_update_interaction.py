@@ -126,10 +126,22 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         Draft202012Validator(ACTION_RESULT_SCHEMA).validate(result)
         self.assertEqual(result["action"],"UpdateHiveUser")
         self.assertEqual(result["code"],"hive.user-update-complete")
+        self.assertTrue(result["data"]["recovered"])
+        self.assertEqual(result["data"]["steps"], {"core":"not-run","settings":"verified","harness":"verified","monitor":"inspected"})
+        self.assertFalse(result["data"]["effective_usage_policy"]["preflight"]["zero_quota_enabled"])
+        self.assertEqual(result["data"]["monitor_state"]["controller_state"],"not-configured")
+        self.assertLessEqual(len(resumed.stdout.encode("utf-8")),8192)
         completed = read_yaml(progress_path)
         self.assertEqual(completed["phase"], "complete")
         self.assertEqual(completed["operation_id"], progress["operation_id"])
         self.assertTrue(foreign.read_text().startswith("User-owned preface.\n"))
+        saved = subprocess.run([str(self.hive_binary),"__complete-user-update","--user-root",str(self.setup_user_root),
+            "--interaction","non-interactive"],env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(saved.returncode,0,(saved.stdout,saved.stderr))
+        saved_result=json.loads(saved.stdout)
+        self.assertEqual(saved_result["data"]["settings_changes"]["changed_keys"],[])
+        self.assertEqual(saved_result["data"]["pending_questions"],[])
+        self.assertFalse(saved_result["data"]["effective_usage_policy"]["authorizes_dispatch"])
         # The source debug binary has no install-owner receipt. Success therefore came from
         # pending setup recovery before package discovery, not from installation/reconciliation.
         before=snapshot_tree(self.setup_user_root)
@@ -137,3 +149,16 @@ if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
         self.assertEqual(repeated.returncode,2,(repeated.stdout,repeated.stderr))
         self.assertEqual(json.loads(repeated.stdout)["code"],"hive.update-needs-input")
         self.assertEqual(snapshot_tree(self.setup_user_root),before)
+
+    def test_failed_harness_is_incomplete_and_does_not_report_effective_policy(self):
+        process=subprocess.run([str(self.hive_binary),"__complete-user-update","--user-root",str(self.setup_user_root),
+            "--interaction","non-interactive"],env={**os.environ,"PATH":str(self.work_root / "absent-commands")},
+            input="",capture_output=True,text=True,timeout=30)
+        self.assertNotEqual(process.returncode,0,(process.stdout,process.stderr))
+        result=json.loads(process.stdout)
+        Draft202012Validator(ACTION_RESULT_SCHEMA).validate(result)
+        self.assertEqual(result["data"]["steps"]["settings"],"incomplete")
+        self.assertEqual(result["data"]["steps"]["harness"],"unverified")
+        self.assertIsNone(result["data"]["effective_usage_policy"])
+        self.assertEqual(result["data"]["monitor_state"]["sensor_queries"],0)
+        self.assertEqual(result["data"]["resume_command"],result["next_action"])

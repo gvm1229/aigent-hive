@@ -30,6 +30,7 @@ mod terminal;
 pub(in crate::user_setup) mod messages;
 mod worker;
 mod update;
+mod update_summary;
 pub(in crate::user_setup) use update::run as run_update_completion;
 #[cfg(any(windows, target_os = "linux"))]
 pub(in crate::user_setup) use update::legacy_noninteractive as update_without_terminal;
