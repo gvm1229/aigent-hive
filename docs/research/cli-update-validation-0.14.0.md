@@ -61,3 +61,14 @@ Windows ReadConsole의 반환값은 실제로 읽은 글자 수. 기존 StringBu
 - 본체·설정·감시·하네스 단계별 완료 결과. 진행/처리 기록 자체의 복구 구현·검증은 [별도 근거](cli-state-recovery-0.14.0.md)로 연결
 - 프로젝트 설정·모든 맞춤 항목·재설정, 보존형 제거, AI 연결·실제 작은 모델 비용, 전체 검사·공개 후보·세 운영체제 수용
 - 이전 [로컬 검증](cli-local-validation-0.14.0.md)과 [시험 격리 사고·복구](legacy-update-test-isolation-0.14.0.md)의 증거·한계 유지
+
+## M12 승인된 적용의 우선 재개
+
+- 확인한 문제: 비대화형 `update`의 소프트웨어 승인 검사가 저장된 Applying/RecoverableFailure 확인보다 먼저 실행. 이미 승인한 남은 설정에도 새 소프트웨어 확인 요구
+- `update_activation.rs`·`user_setup.rs`·`setup_engine/interactive.rs`의 순서/인수만 변경. 승인된 미완료 적용은 패키지 조회·설치보다 먼저 재개. 미확인 초기/이전 질문은 무쓰기 입력 대기, 개인 선택형 초안은 별도 유지
+- 검증: Windows 임시 폴더·가짜 Antigravity·닫힌 명령 경로에서 실제 종료87→답안 삭제→`update --output json` 재개. 새 설치/미확인 질문의 무승인 변경0건, 본체 발견/설치 경로 진입 없음
+- Windows 직접 교체의 동기 완료·옛 실행 파일 정리는 격리 운영체제 미확보로 별도 미완료. 기존 인계의 pending 구분 유지, 실행 중인 옛 파일을 잡고 자식 완료만 기다리는 변경 금지. Linux·macOS·공개 후보 수용과 분리
+
+- `b6c51708`: [Windows 실제 CLI 재개 통과](../../tests/results/runs/20261025T062705-ceaae54c98de.md). 답안 파일 삭제 뒤 같은 operation_id의 Applying→Complete, 다음 무승인 갱신의 전체 폴더 불변 확인
+- [단위 검사](../../tests/results/runs/20261025T062129-3249ef61676b.md)·[개인 초안 보존](../../tests/results/runs/20261025T062244-62bc8de39c7b.md)·[clippy](../../tests/results/runs/20261025T062248-68e49fac33ee.md) 통과. [첫 CLI 검사](../../tests/results/runs/20261025T062610-6ae22544664b.md)의 기존 입력 계약 통과, 새 시험의 Windows 경로 별칭 비교 실패는 같은 폴더 식별로 수정. [중간 실패](../../tests/results/runs/20261025T062640-73bbf924fa54.md)는 출력에 없는 recovered 단정의 오류, 실제 기록의 단계·동일 작업 식별 대조로 교체
+- 현재 실행은 Windows 11의 임시 파일·가짜 앱 범위. OS 격리와 실제 본체 교체 증명 제외. Linux 연결 부재·macOS 환경 부재의 미실행 유지, 전체 U140-002 미완료. 다음 M13 결과·안내
