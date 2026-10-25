@@ -78,7 +78,7 @@ impl Binding {
     }
 }
 
-fn root_identity(root: &PinnedTarget) -> Result<String, AdapterError> {
+pub(super) fn root_identity(root: &PinnedTarget) -> Result<String, AdapterError> {
     let identity = root
         .target_dir()
         .dir_metadata()

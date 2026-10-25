@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -457,6 +457,10 @@ if mode in {"project-file", "project-file-interrupt"}:
     assert stored["preference_decisions"]["/interface_language"]["origin"]=="inherited"
     assert (project/"AGENTS.md").read_text().startswith("User-owned preface.\n")
     assert config.read_bytes()==global_before
+if mode == "monitor-review":
+    import runpy
+    runpy.run_path("/source/tests/fixtures/interactive-cli/linux-monitor-review.py", init_globals={
+        "binary": binary, "root": root, "user": user, "environment": environment, "terminal_run": terminal_run})
 incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,

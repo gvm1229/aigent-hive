@@ -234,14 +234,31 @@ pub(super) fn checkpoint(
     expected: Option<&[u8]>,
     progress: &SetupProgress,
 ) -> Result<Option<Vec<u8>>, SetupError> {
+    checkpoint_inner(arguments, answers, expected, progress, None)
+}
+
+fn checkpoint_inner(
+    arguments: &user_setup::Arguments,
+    answers: &[u8],
+    expected: Option<&[u8]>,
+    progress: &SetupProgress,
+    stopped: Option<&crate::usage_monitor::StoppedReader>,
+) -> Result<Option<Vec<u8>>, SetupError> {
+    if let Some(stopped) = stopped {
+        stopped.verify_root(&arguments.user_root).map_err(|e| SetupError::Conflict(e.message().into()))?;
+    }
     user_setup::progress_store::prepare_config_backup(&arguments.root_cap, progress, expected)?;
     super::vector_choice::apply(&arguments.root_cap, progress)?;
     super::index_rebuild::preflight(arguments, progress)?;
     super::monitor_stop::validate_intent(progress)?;
-    let baseline = if let Some(choice) = progress.legacy_migration.as_ref()
+    let baseline = if stopped.is_some() && progress.monitor_start.is_none() {
+        checkpoint_using(arguments, answers, expected, progress, || Ok(()))?
+    } else if let Some(choice) = progress.legacy_migration.as_ref()
         .map(|binding| &binding.monitor_choice).or(progress.monitor_stop.as_ref()) {
         checkpoint_using(arguments, answers, expected, progress, || {
+            if stopped.is_some() { return Ok(None); }
             crate::usage_monitor::quiesce_for_setup(&arguments.user_root, choice, &progress.operation_id)
+                .map(Some)
                 .map_err(|failure| SetupError::Verification(failure.message().into()))
         })?
     } else { expected.map(<[u8]>::to_vec) };
@@ -354,7 +371,21 @@ pub(super) fn apply(
     expected: Option<&[u8]>,
     progress: &SetupProgress,
 ) -> Result<crate::ActionResult, SetupError> {
-    let baseline = checkpoint(arguments, answers, expected, progress)?;
+    let applied = apply_settings(arguments, answers, expected, progress, None)?;
+    finish_monitor(&arguments.user_root, answers, progress)?;
+    Ok(applied)
+}
+
+pub(super) fn apply_settings(
+    arguments: &user_setup::Arguments,
+    answers: &[u8],
+    expected: Option<&[u8]>,
+    progress: &SetupProgress,
+    stopped: Option<&crate::usage_monitor::StoppedReader>,
+) -> Result<crate::ActionResult, SetupError> {
+    let baseline = if stopped.is_some() {
+        checkpoint_inner(arguments, answers, expected, progress, stopped)?
+    } else { checkpoint(arguments, answers, expected, progress)? };
     let applied = user_setup::execute_answers(
         arguments,
         answers,
@@ -373,8 +404,14 @@ pub(super) fn apply(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     user_setup::execute_answers(&validation, answers, user_setup::SetupBase::Current)?;
-    finish_monitor(&arguments.user_root, answers, progress)?;
     Ok(applied)
+}
+
+pub(super) fn checkpoint_stopped(
+    arguments: &user_setup::Arguments, answers: &[u8], expected: Option<&[u8]>,
+    progress: &SetupProgress, stopped: &crate::usage_monitor::StoppedReader,
+) -> Result<(), SetupError> {
+    checkpoint_inner(arguments, answers, expected, progress, Some(stopped)).map(|_| ())
 }
 
 #[cfg(test)]

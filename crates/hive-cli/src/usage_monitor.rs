@@ -10,6 +10,8 @@ mod state;
 mod status;
 mod threshold;
 mod transition;
+pub(crate) mod review;
+pub(crate) use transition::StoppedReader;
 mod upgrade;
 
 #[cfg(debug_assertions)]

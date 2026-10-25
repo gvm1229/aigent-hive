@@ -78,18 +78,9 @@ pub(super) fn apply(
         options.monitor_confirm.as_deref(), options.channel)?;
     super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
     super::monitor_start::preflight(&arguments.user_root, &progress)?;
-    progress.phase = ProgressPhase::Applying;
-    store.save(&snapshot, &progress)?;
-    store.record_applying(&progress)?;
-    let applied = match super::legacy::apply(arguments, bytes, expected, &progress) {
-        Ok(result) => result,
-        Err(error) => {
-            store.record_failure(&progress)?;
-            return Err(error);
-        }
-    };
-    ProgressStore::open(&arguments.user_root, None)?.record_completion(&progress)?;
-    Ok(applied)
+    super::application::begin(&store, &snapshot, &mut progress)?;
+    super::application::finish(&store, &progress,
+        super::legacy::apply(arguments, bytes, expected, &progress))
 }
 
 fn require_same_intent(

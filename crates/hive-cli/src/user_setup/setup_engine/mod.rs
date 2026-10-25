@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 mod interactive;
 mod file_input;
 mod file_apply;
+mod application;
+mod monitor_review;
 mod file_policy;
 mod index_rebuild;
 mod monitor_stop;

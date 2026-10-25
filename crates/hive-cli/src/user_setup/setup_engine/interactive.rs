@@ -36,10 +36,14 @@ pub(in crate::user_setup) fn handles(arguments: &[String]) -> bool {
         .any(|arg| matches!(arg.as_str(), "--answers" | "--quick-answers"))
 }
 
+// Independent CLI switches; parse rejects conflicting combinations before any write.
+#[allow(clippy::struct_excessive_bools)]
 struct Options {
     root: PathBuf,
     interaction: InteractionRequest,
     resume: bool,
+    review: bool,
+    review_answers: Option<PathBuf>,
     show: bool,
     dry_run: bool,
     section: Option<String>,
@@ -52,6 +56,8 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         root: user_setup::resolve_user_root()?,
         interaction: InteractionRequest::default(),
         resume: false,
+        review: false,
+        review_answers: None,
         show: false,
         dry_run: false,
         section: None,
@@ -70,9 +76,10 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
             "--interactive" => options.interaction.interactive = true,
             "--non-interactive" => options.interaction.non_interactive = true,
             "--resume" => options.resume = true,
+            "--review" => options.review = true,
             "--show" => options.show = true,
             "--dry-run" => options.dry_run = true,
-            "--scope" | "--user-root" | "--output" | "--section" => {
+            "--scope" | "--user-root" | "--output" | "--section" | "--review-answers" => {
                 let value = arguments
                     .get(index + 1)
                     .filter(|value| !value.starts_with("--"))
@@ -81,6 +88,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
                     "--scope" => scope = Some(value.as_str()),
                     "--user-root" => options.root = value.into(),
                     "--section" => options.section = Some(value.clone()),
+                    "--review-answers" => options.review_answers = Some(value.into()),
                     _ if value == "json" => options.interaction.json = true,
                     _ => return Err(SetupError::Input("setup output must be json".to_owned())),
                 }
@@ -96,7 +104,9 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
     }
     if scope != Some("user")
         || (options.show && (options.resume || options.dry_run || options.section.is_some()))
-        || (options.resume && options.dry_run)
+        || (options.resume && options.dry_run && !options.review)
+        || (options.review && (!options.resume || options.show || options.section.is_some()))
+        || (options.review_answers.is_some() && (!options.review || options.dry_run))
     {
         return Err(SetupError::Input(
             "choose user setup or a separate settings inspection".to_owned(),
@@ -185,6 +195,8 @@ pub(super) fn execute_update<R: BufRead, W: Write>(
         root: root.to_owned(),
         interaction: InteractionRequest::default(),
         resume: true,
+        review: false,
+        review_answers: None,
         show: false,
         dry_run: false,
         section: None,
@@ -206,6 +218,8 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         root: root.to_owned(),
         interaction: InteractionRequest::default(),
         resume: true,
+        review: false,
+        review_answers: None,
         show: false,
         dry_run: false,
         section: None,
@@ -235,7 +249,19 @@ fn execute<R: BufRead, W: Write>(
     mode: InteractionMode,
     terminal: &mut Terminal<R, W>,
 ) -> Result<crate::ActionResult, SetupError> {
-    let mut result = execute_inner(options, mode, terminal)?;
+    let execution = if options.review {
+        terminal.language = super::messages::language_at(&options.root, None);
+        super::monitor_review::run(&options.root, mode, options.dry_run,
+            options.review_answers.as_deref(), terminal)
+    } else { execute_inner(options, mode, terminal) };
+    let mut result = match execution {
+        Err(error) if options.review => {
+            let mut result = super::messages::failure(&error, terminal.language);
+            result.next_action = Some("hive setup --scope user --resume".into());
+            result
+        }
+        other => other?,
+    };
     if result.next_action.as_deref() == Some("hive setup --scope user --resume") {
         let path = options.root.to_string_lossy();
         let quoted = if cfg!(windows) {
@@ -244,7 +270,8 @@ fn execute<R: BufRead, W: Write>(
             path.replace('\'', "'\"'\"'")
         };
         result.next_action = Some(format!(
-            "hive setup --scope user --resume --user-root '{quoted}'"
+            "hive setup --scope user --resume --user-root '{quoted}'{}",
+            if options.review { " --review" } else { "" }
         ));
     }
     Ok(result)
@@ -805,23 +832,14 @@ fn preview_apply<R: BufRead, W: Write>(
         .and_then(|()| input.rewind())
         .and_then(|()| input.write_all(&bytes))
         .map_err(|error| SetupError::Internal(error.to_string()))?;
-    progress.phase = ProgressPhase::Applying;
-    persist(store, progress)?;
-    store.record_applying(&progress.record)?;
+    super::application::begin(store, &progress.snapshot, &mut progress.record)?;
     args.mode = user_setup::SetupMode::Apply;
     let application = if let Some(budget) = &options.legacy_budget {
         super::worker::apply(&args, &bytes, existing, &progress.operation_id, budget)
     } else {
         super::legacy::apply(&args, &bytes, existing, &progress.record)
     };
-    let applied = match application {
-        Ok(applied) => applied,
-        Err(failure) => {
-            store.record_failure(&progress.record)?;
-            return Err(failure);
-        }
-    };
-    ProgressStore::open(root, None)?.record_completion(&progress.record)?;
+    let applied = super::application::finish(store, &progress.record, application)?;
     let mut completed = result(
         "success",
         0,
@@ -869,7 +887,7 @@ fn record_bundle_acceptance(
     Ok(())
 }
 
-fn display_preview<R: BufRead, W: Write>(
+pub(super) fn display_preview<R: BufRead, W: Write>(
     answers: &Value,
     terminal: &mut Terminal<R, W>,
 ) -> Result<hive_core::setup::QuestionCatalog, SetupError> {
@@ -955,7 +973,7 @@ fn inspect_settings<R: BufRead, W: Write>(
     ))
 }
 
-fn display_monitor<R: BufRead, W: Write>(monitor: &Value, terminal: &mut Terminal<R, W>) -> Result<(), SetupError> {
+pub(super) fn display_monitor<R: BufRead, W: Write>(monitor: &Value, terminal: &mut Terminal<R, W>) -> Result<(), SetupError> {
     let (saved_ko, saved_en) = match monitor["saved_enabled"].as_bool() {
         Some(true) => ("켜짐", "on"), Some(false) => ("꺼짐", "off"),
         None if monitor["configuration"] == "absent" => ("설정 없음", "not configured"),
@@ -1150,6 +1168,8 @@ mod tests {
             root: root.to_owned(),
             interaction: InteractionRequest::default(),
             resume: false,
+            review: false,
+            review_answers: None,
             show: false,
             dry_run: false,
             section: None,

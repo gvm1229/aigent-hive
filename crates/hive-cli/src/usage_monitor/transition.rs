@@ -113,9 +113,19 @@ pub(super) fn verify_stopped(root: &PinnedTarget) -> Result<(), AdapterError> {
 }
 
 pub(crate) struct StoppedReader {
+    root_identity: String,
     _control: std::fs::File,
     _controller: std::fs::File,
     result: Value,
+}
+
+impl StoppedReader {
+    pub(crate) fn verify_root(&self, path: &std::path::Path) -> Result<(), AdapterError> {
+        if self.root_identity != super::activation::root_identity(&PinnedTarget::open_usage(path)?)? {
+            return Err(error("stopped monitor lease belongs to another user root"));
+        }
+        Ok(())
+    }
 }
 
 pub(super) fn quiesce(
@@ -134,7 +144,29 @@ pub(super) fn quiesce_operation(
     expected_digest: Option<&str>,
     operation_id: Option<&str>,
 ) -> Result<StoppedReader, AdapterError> {
+    quiesce_inner(root, call, timeout, expected_digest, operation_id, None)
+}
+
+pub(super) fn quiesce_review(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    timeout: Duration,
+    consent: &super::review::Withdrawal,
+) -> Result<StoppedReader, AdapterError> {
+    quiesce_inner(root, call, timeout, None, Some(&consent.operation_id), Some(consent))
+}
+
+fn quiesce_inner(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    timeout: Duration,
+    expected_digest: Option<&str>,
+    operation_id: Option<&str>,
+    review: Option<&super::review::Withdrawal>,
+) -> Result<StoppedReader, AdapterError> {
     let control = lock(root, "control.lock")?;
+    if let Some(consent) = review { super::review::check(root, consent)?; }
+    let root_identity = super::activation::root_identity(root)?;
     let before = root.read_optional(std::path::Path::new(CONFIG), 65536)?;
     let digest = before
         .as_deref()
@@ -149,7 +181,7 @@ pub(super) fn quiesce_operation(
             return Err(error("monitor choice changed since setup preview"));
         }
     }
-    let candidate = if before.is_none() && expected_digest.is_none() && operation_id.is_none() {
+    let candidate = if before.is_none() && expected_digest.is_none() && (operation_id.is_none() || review.is_some()) {
         super::activation::pending_disabled_configuration(root)?
     } else { None };
     let config = match candidate { Some(config) => Some(config), None => authenticated_config(root)? };
@@ -157,11 +189,14 @@ pub(super) fn quiesce_operation(
         let controller = lock(root, "controller.lock")?;
         // A later explicit disable must cancel a pending activation even if no configuration
         // has been written yet. This records intent, not an ownership or execution grant.
-        write(root, JOURNAL, &json!({"schema_version":1,"operation":"disable",
+        let mut journal = json!({"schema_version":1,"operation":"disable",
             "selection_id":selection_id()?,"operation_id":operation_id,
             "before_digest":"absent","after_digest":"absent","configured":false,
-            "phase":"complete","started_at":now(),"completed_at":now(),"error":null}))?;
+            "phase":"complete","started_at":now(),"completed_at":now(),"error":null});
+        if let Some(consent) = review { journal["setup_review"] = json!(consent); }
+        write(root, JOURNAL, &journal)?;
         return Ok(StoppedReader {
+            root_identity,
             _control: control,
             _controller: controller,
             result: json!({"enabled":false,"configured":false,"controller_stopped":null,"changed_paths":[JOURNAL]}),
@@ -174,6 +209,7 @@ pub(super) fn quiesce_operation(
         "operation_id":operation_id,"before_digest":expected_digest.unwrap_or(&digest),
         "after_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
         "completed_at":null,"error":null});
+    if let Some(consent) = review { journal["setup_review"] = json!(consent); }
     write(root, JOURNAL, &journal)?;
     write(root, CONFIG, &config)?;
     let result = (|| {
@@ -191,6 +227,7 @@ pub(super) fn quiesce_operation(
         journal["completed_at"] = json!(now());
         write(root, JOURNAL, &journal)?;
         Ok(StoppedReader {
+            root_identity,
             _control: control,
             _controller: controller,
             result: json!({"enabled":false,"configured":true,"controller_stopped":true,

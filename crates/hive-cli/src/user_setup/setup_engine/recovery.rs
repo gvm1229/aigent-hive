@@ -19,16 +19,59 @@ pub(super) fn resume(
             "hive.update-input-pending",
         ));
     }
-    let handoff=ProgressStore::open(root,None)?;
+    let handoff = ProgressStore::open(root, None)?;
     if handoff.recover_monitor_handoff()? {
-        let next=handoff.load()?.progress.ok_or_else(||SetupError::Conflict("monitor handoff has no replacement setup".into()))?;
-        return resume(root,&next,language,false);
+        let next = handoff.load()?.progress.ok_or_else(|| {
+            SetupError::Conflict("monitor handoff has no replacement setup".into())
+        })?;
+        return resume(root, &next, language, false);
     }
-    let bytes = serde_json::to_vec(&progress.answers)
-        .map_err(|error| SetupError::Internal(error.to_string()))?;
-    let (user_root, root_cap) = crate::user_install::open_canonical_user_root_for_setup(root)
+    if let Some(result) = super::monitor_review::resume(root, progress, language)? {
+        return Ok(result);
+    }
+    let (_, root_cap) = crate::user_install::open_canonical_user_root_for_setup(root)
         .map_err(SetupError::Conflict)?;
     let _lease = crate::user_install::lock_user_setup(&root_cap).map_err(SetupError::Conflict)?;
+    let store = ProgressStore::open(root, None)?;
+    let application = (|| {
+        let (result, repaired) = settings(root, progress, None)?;
+        let bytes = serde_json::to_vec(&progress.answers)
+            .map_err(|e| SetupError::Internal(e.to_string()))?;
+        super::legacy::finish_monitor(root, &bytes, progress)?;
+        Ok((result, repaired))
+    })();
+    let repaired = application.as_ref().is_ok_and(|(_, repaired)| *repaired);
+    let mut result =
+        super::application::finish(&store, progress, application.map(|(result, _)| result))?;
+    result.code = "hive.user-setup-complete";
+    result.message = match (language, repaired) {
+        (InterfaceLanguage::Ko, true) => "남아 있던 설정 적용과 검증을 마쳤습니다.",
+        (InterfaceLanguage::En, true) => "The remaining setup steps were applied and verified.",
+        (InterfaceLanguage::Ko, false) => {
+            "저장된 설정의 적용·검증을 확인했습니다. 설치를 반복하지 않았습니다."
+        }
+        (InterfaceLanguage::En, false) => {
+            "Saved setup was applied and verified. Installation was not repeated."
+        }
+    }
+    .into();
+    result.data = Some(
+        serde_json::json!({"operation_id":progress.operation_id,"recovered":true,"remaining_applied":repaired,"model_calls":0}),
+    );
+    super::monitor_review::report(root, progress, language, &mut result)?;
+    Ok(result)
+}
+
+/// The caller owns the user setup lease. Withdrawal deliberately omits monitor activation.
+pub(super) fn settings(
+    root: &Path,
+    progress: &SetupProgress,
+    stopped: Option<&crate::usage_monitor::StoppedReader>,
+) -> Result<(ActionResult, bool), SetupError> {
+    let bytes =
+        serde_json::to_vec(&progress.answers).map_err(|e| SetupError::Internal(e.to_string()))?;
+    let (user_root, root_cap) = crate::user_install::open_canonical_user_root_for_setup(root)
+        .map_err(SetupError::Conflict)?;
     let store = ProgressStore::open(root, None)?;
     let mut arguments = user_setup::Arguments {
         answers: "saved:setup-recovery".into(),
@@ -45,8 +88,7 @@ pub(super) fn resume(
         .map_err(SetupError::Verification)?;
     let validated = user_setup::execute_answers(&arguments, &bytes, user_setup::SetupBase::Current);
     let repaired = validated.is_err();
-    let mut result = if let Ok(result) = validated {
-        super::legacy::finish_monitor(root, &bytes, progress)?;
+    let result = if let Ok(result) = validated {
         result
     } else {
         let current = crate::user_install::read_user_setup_file(
@@ -66,23 +108,7 @@ pub(super) fn resume(
             ));
         }
         arguments.mode = user_setup::SetupMode::Apply;
-        super::legacy::apply(&arguments, &bytes, current.as_deref(), progress)?
+        super::legacy::apply_settings(&arguments, &bytes, current.as_deref(), progress, stopped)?
     };
-    ProgressStore::open(root, None)?.record_completion(progress)?;
-    result.code = "hive.user-setup-complete";
-    result.message = match (language, repaired) {
-        (InterfaceLanguage::Ko, true) => "남아 있던 설정 적용과 검증을 마쳤습니다.",
-        (InterfaceLanguage::En, true) => "The remaining setup steps were applied and verified.",
-        (InterfaceLanguage::Ko, false) => {
-            "저장된 설정의 적용·검증을 확인했습니다. 설치를 반복하지 않았습니다."
-        }
-        (InterfaceLanguage::En, false) => {
-            "Saved setup was applied and verified. Installation was not repeated."
-        }
-    }
-    .into();
-    result.data = Some(
-        serde_json::json!({"operation_id":progress.operation_id,"recovered":true,"remaining_applied":repaired,"model_calls":0}),
-    );
-    Ok(result)
+    Ok((result, repaired))
 }
