@@ -15,6 +15,11 @@ fn as_render(error: SetupError) -> RenderError {
         SetupError::Input(message) => RenderError::Input(message),
         SetupError::Conflict(message) => RenderError::Conflict(message),
         SetupError::Verification(message) => RenderError::Verification(message),
+        SetupError::Internal(message)
+            if message.starts_with("hive.activation-rollback-failed:") =>
+        {
+            RenderError::Rollback(message)
+        }
         SetupError::Internal(message) => RenderError::Internal(message),
     }
 }

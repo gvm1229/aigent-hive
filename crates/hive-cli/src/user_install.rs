@@ -2109,6 +2109,39 @@ pub(crate) fn replace_host_policy_file(
     .map_err(|error| error.message().to_owned())
 }
 
+/// Restore a journaled setup change with its original bytes and permissions.
+pub(crate) fn restore_setup_file(
+    root: &Dir,
+    relative: &Path,
+    published: Option<&[u8]>,
+    original: Option<&[u8]>,
+    original_mode: Option<u32>,
+) -> Result<(), String> {
+    let expected_mode = if original.is_some() {
+        original_mode
+    } else {
+        setup_file_mode(relative)
+    };
+    let permissions = FilePermissions {
+        executable: original_mode.map_or(!cfg!(unix), |mode| mode & 0o111 != 0),
+        unix_mode: original_mode,
+    };
+    cas_activate(
+        root,
+        relative,
+        published.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: FilePermissions {
+                executable: expected_mode.map_or(!cfg!(unix), |mode| mode & 0o111 != 0),
+                unix_mode: expected_mode,
+            },
+        }),
+        original,
+        permissions,
+    )
+    .map_err(|error| error.message().to_owned())
+}
+
 pub(crate) fn host_policy_mode(root: &Dir, relative: &Path) -> Result<Option<u32>, String> {
     file_permissions(root, relative)
         .map(|value| value.unix_mode)

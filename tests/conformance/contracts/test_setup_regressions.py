@@ -296,6 +296,43 @@ class Phase1ActivationRollback(Phase1CliTestCase):
         self.assertIn("rolled back", result["message"])
         self.assertEqual(snapshot_tree(target), before)
 
+    def test_process_interruption_still_resumes_the_bound_project_changes(self) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        first, _ = self.invoke_setup(target)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        answers = self.changed_answers()
+        interrupted = subprocess.run(
+            [str(self.hive_binary), "setup", "--target", str(target),
+             "--user-root", str(self.setup_user_root), "--answers", str(answers),
+             "--capabilities", str(FIXTURE_ROOT / "capabilities-codex-host-native.json"),
+             "--apply", "--output", "json"],
+            env={**os.environ, "HIVE_PROJECT_SETUP_INTERRUPT_AFTER": "2"},
+            check=False, text=True, capture_output=True,
+        )
+        self.assertEqual(interrupted.returncode, 87, interrupted.stderr)
+        resumed, result = self.invoke_setup(target, answers=answers)
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(result["code"], "hive.setup-complete")
+        verified, _ = self.invoke_setup(target, answers=answers, mode="--validate")
+        self.assertEqual(verified.returncode, 0, verified.stderr)
+
+    def test_first_apply_failure_restores_empty_parents_and_same_intent_can_resume(self) -> None:
+        target = self.work_root / "consumer"
+        (target / ".agents").mkdir(parents=True)
+        (target / "user-empty").mkdir()
+        before = snapshot_tree(target)
+        process, result = self.invoke_setup(
+            target, environment={"HIVE_TEST_ACTIVATION_FAIL_AFTER": "2"},
+        )
+        self.assertEqual(process.returncode, 10, process.stderr)
+        self.assertEqual(result["code"], "hive.internal-error", result)
+        self.assertEqual(snapshot_tree(target), before)
+        resumed, result = self.invoke_setup(target)
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(result["code"], "hive.setup-complete")
+        self.assertTrue((target / "user-empty").is_dir())
+
     def test_rollback_failure_returns_explicit_non_success_diagnostic(
         self,
     ) -> None:
@@ -321,6 +358,9 @@ class Phase1ActivationRollback(Phase1CliTestCase):
             result["message"].startswith("hive.activation-rollback-failed"),
             result["message"],
         )
+        resumed, result = self.invoke_setup(target, answers=self.changed_answers())
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(result["code"], "hive.setup-complete")
 
 
 class Phase1HookRevocation(Phase1CliTestCase):

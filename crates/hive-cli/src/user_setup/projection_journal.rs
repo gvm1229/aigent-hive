@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Component, PathBuf};
 
 const LIMIT: u64 = 32 * 1024 * 1024;
+mod project_rollback;
 mod record;
 
 #[derive(Deserialize, Serialize)]
@@ -24,6 +25,8 @@ struct Journal {
     candidate_digest: String,
     projection: AppliedProjection,
     before_modes: std::collections::BTreeMap<PathBuf, Option<u32>>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    new_directories: std::collections::BTreeSet<PathBuf>,
 }
 
 fn path(progress: &SetupProgress) -> Result<PathBuf, SetupError> {
@@ -41,6 +44,7 @@ fn validate(journal: &Journal, progress: &SetupProgress) -> Result<(), SetupErro
             "projection recovery belongs to different answers".into(),
         ));
     }
+    project_rollback::validate_directories(journal, progress)?;
     let mut paths = std::collections::BTreeSet::new();
     for change in &journal.projection.changes {
         let allowed = if progress.binding.scope == PreferenceScope::Project {
@@ -229,6 +233,7 @@ pub(super) fn apply_to(
             operation_id: progress.operation_id.clone(),
             candidate_digest: declaration_digest(&progress.answers)
                 .map_err(SetupError::Internal)?,
+            new_directories: project_rollback::new_directories(output, progress, &projection)?,
             projection,
             before_modes,
         };
@@ -252,44 +257,41 @@ pub(super) fn apply_to(
         .map(|change| change.path.clone())
         .collect();
     let mut applied = AppliedProjection {
-        reports: journal.projection.reports,
+        reports: journal.projection.reports.clone(),
         ..AppliedProjection::default()
     };
     let total_changes = journal.projection.changes.len();
-    for (index, change) in journal.projection.changes.into_iter().enumerate() {
+    let mut operations = 0;
+    for (index, change) in journal.projection.changes.iter().enumerate() {
         interrupt_setup_fixture(progress, index);
-        let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-        verify_mode(
-            output,
-            &change,
-            current.as_deref(),
-            journal.before_modes[&change.path],
-        )?;
-        if current == change.after {
-            continue;
-        }
-        if current != change.before {
-            return Err(SetupError::Conflict(
-                "projection changed before recovery write".into(),
-            ));
-        }
-        if change.before.is_some() {
-            crate::user_install::replace_host_policy_file(
+        let result = project_rollback::inject_failure(progress, operations).and_then(|()| {
+            apply_change(
                 output,
-                &change.path,
-                change.before.as_deref(),
-                change.after.as_deref(),
+                change,
                 journal.before_modes[&change.path],
+                progress.binding.scope,
             )
-        } else {
-            replace_user_setup_file(output, &change.path, None, change.after.as_deref())
+        });
+        match result {
+            Ok(false) => {}
+            Ok(true) => {
+                operations += 1;
+                applied
+                    .changed_paths
+                    .push(change.path.to_string_lossy().into_owned());
+                applied.changes.push(change.clone());
+            }
+            Err(error) => {
+                return Err(project_rollback::on_failure(
+                    output, progress, &journal, error,
+                ))
+            }
         }
-        .map_err(SetupError::Conflict)?;
-        applied
-            .changed_paths
-            .push(change.path.to_string_lossy().into_owned());
-        applied.changes.push(change);
+    }
+    if let Err(error) = project_rollback::inject_failure(progress, operations) {
+        return Err(project_rollback::on_failure(
+            output, progress, &journal, error,
+        ));
     }
     interrupt_setup_fixture(progress, total_changes);
     crate::user_install::prune_user_setup_empty_ancestors(
@@ -298,6 +300,44 @@ pub(super) fn apply_to(
     )
     .map_err(SetupError::Conflict)?;
     Ok(applied)
+}
+
+fn apply_change(
+    output: &Dir,
+    change: &super::ProjectionChange,
+    before_mode: Option<u32>,
+    scope: PreferenceScope,
+) -> Result<bool, SetupError> {
+    let current = read_user_setup_file(output, &change.path, super::MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?;
+    verify_mode(output, change, current.as_deref(), before_mode)?;
+    if current == change.after {
+        return Ok(false);
+    }
+    if current != change.before {
+        return Err(SetupError::Conflict(
+            "projection changed before recovery write".into(),
+        ));
+    }
+    if change.before.is_some() {
+        crate::user_install::replace_host_policy_file(
+            output,
+            &change.path,
+            change.before.as_deref(),
+            change.after.as_deref(),
+            before_mode,
+        )
+    } else {
+        replace_user_setup_file(output, &change.path, None, change.after.as_deref())
+    }
+    .map_err(|message| {
+        if scope == PreferenceScope::Project {
+            SetupError::Internal(message)
+        } else {
+            SetupError::Conflict(message)
+        }
+    })?;
+    Ok(true)
 }
 
 fn interrupt_setup_fixture(progress: &SetupProgress, index: usize) {
@@ -472,6 +512,8 @@ mod tests {
             package_version: env!("HIVE_PACKAGE_VERSION").into(),
             operation_id: progress.operation_id.clone(),
             candidate_digest: declaration_digest(&progress.answers).unwrap(),
+            new_directories: project_rollback::new_directories(output, progress, &projection)
+                .unwrap(),
             before_modes: projection
                 .changes
                 .iter()
