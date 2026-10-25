@@ -6,6 +6,7 @@ owner = "documentation"
 contract = "human documentation, local verification command, and developer-install guidance"
 release_gate = true
 modules = [
+  "tests.conformance.documentation.test_interactive_cli_isolation",
   "tests.conformance.documentation.test_branch_policy",
   "tests.conformance.documentation.test_plan_state",
   "tests.conformance.documentation.test_dev_check",
@@ -34,6 +35,13 @@ owner = "harness-core"
 contract = "CLI capabilities, setup schema, Skills, projections, roles, scheduling, and result contracts"
 release_gate = true
 modules = [
+  "tests.conformance.contracts.test_legacy_bridge_transport",
+  "tests.conformance.contracts.test_setup_connection_loss",
+  "tests.conformance.contracts.test_setup_console_interrupt",
+  "tests.conformance.contracts.test_setup_summary",
+  "tests.conformance.contracts.test_uninstall_interaction",
+  "tests.conformance.contracts.test_update_interaction",
+  "tests.conformance.contracts.test_windows_update_console",
   "tests.conformance.contracts.test_capabilities",
   "tests.conformance.contracts.test_cli_exit_contract",
   "tests.conformance.contracts.test_setup_fixtures",
@@ -92,6 +100,7 @@ owner = "release-engineering"
 contract = "package layout, signed update behavior, and public update discovery"
 release_gate = true
 modules = [
+  "tests.conformance.release.test_legacy_update_images",
   "tests.conformance.release.test_historical_project_bases",
   "tests.conformance.release.test_project_base_coverage",
   "tests.conformance.release.test_npm_packaging",
