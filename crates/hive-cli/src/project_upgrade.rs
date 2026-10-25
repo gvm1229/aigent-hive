@@ -723,6 +723,11 @@ fn validate_base_package_origin(ledger: &BaseLedger) -> Result<(), UpdateError> 
             "project base package origin is invalid".to_owned(),
         ));
     }
+    // The approved 0.14.0 predecessor includes this exact published test package.
+    // read_base_ledger still authenticates every file against its frozen public source.
+    if ledger.product_version == "0.13.2" && package == "0.13.2-test.2" {
+        return Ok(());
+    }
     if ledger.product_version != env!("CARGO_PKG_VERSION")
         || package != env!("HIVE_PACKAGE_VERSION")
     {
