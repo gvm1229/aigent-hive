@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 465
+> Revision: 466
 > 기준일: 2026-10-25
 > Product version: `0.14.0`
 > 공개 Stable: `0.13.1`
-> 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회·설정 재개 연결 완료, 실제 Windows 감시 수용 미실행. M08·M09 Windows 부분 검증·Linux 연결 부재. M12–M16 Windows 부분 검증. 제거의 실제 OS 수용 대기. M17·M18 Windows 설정 연결/중단 검증, M19·M20 Luna 순차 평가 승인 수신, M21 첫 정확한 소스 CI 실패 수정·파일 승인/무쓰기 회귀 검증
+> 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회·설정 재개 연결 완료, 실제 Windows 감시 수용 미실행. M08·M09 Windows 부분 검증·Linux 연결 부재. M12–M16 Windows 부분 검증. 제거의 실제 OS 수용 대기. M17·M18 Windows 설정 연결/중단 검증, M19·M20 Luna 순차 평가 승인 수신, M21 첫 CI의 설정/복구·문서 수정, Rust1.99 검사 통과. 수정 소스 CI 대기
 > 다음 공개 시험: `0.14.0-test.1`
 
 ## 목표와 결정

@@ -271,6 +271,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 ## 0.14.0 대화형 CLI
 
+- [미게시 변경 안내 초안](releases/0.14.0.md): 확인한 범위와 남은 수용 조건
+
 - [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
 - [전역 CLI의 로컬 검증](research/cli-local-validation-0.14.0.md): 설정 이전·실패 뒤 재개·증명 범위와 이전 근거
 - [갱신 연결의 Windows 검증](research/cli-update-validation-0.14.0.md): 공개0.13.1 원본의 첫 질문·적용, 콘솔 입력 수정, 새 명령의 무입력 결과
