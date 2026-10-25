@@ -40,7 +40,9 @@ pub(crate) fn run_project_setup(arguments: &[String]) -> ExitCode {
     setup_engine::run_project(arguments)
 }
 
-pub(crate) fn execute_project_file(arguments: &crate::SetupArguments) -> Result<hive_render::SetupOutcome, hive_render::RenderError> {
+pub(crate) fn execute_project_file(
+    arguments: &crate::SetupArguments,
+) -> Result<hive_render::SetupOutcome, hive_render::RenderError> {
     setup_engine::execute_project_file(arguments)
 }
 
@@ -48,12 +50,21 @@ pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Dura
     setup_engine::command_timeout(requested)
 }
 
-pub(crate) fn resume_pending_update(root: &Path, interactive: bool, confirmed_only: bool) -> Result<Option<ActionResult>, String> {
-    setup_engine::resume_pending_update(root, interactive, confirmed_only).map_err(|error| error.message().to_owned())
+pub(crate) fn resume_pending_update(
+    root: &Path,
+    interactive: bool,
+    confirmed_only: bool,
+) -> Result<Option<ActionResult>, String> {
+    setup_engine::resume_pending_update(root, interactive, confirmed_only)
+        .map_err(|error| error.message().to_owned())
 }
 
 #[cfg(any(windows, target_os = "linux"))]
-pub(crate) fn update_without_terminal(root: &Path, hosts: &[String], budget: &crate::update_bridge::LegacyBudget) -> ActionResult {
+pub(crate) fn update_without_terminal(
+    root: &Path,
+    hosts: &[String],
+    budget: &crate::update_bridge::LegacyBudget,
+) -> ActionResult {
     setup_engine::update_without_terminal(root, hosts, budget)
 }
 
@@ -583,7 +594,12 @@ pub(crate) fn print_help() {
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let (filtered, summary) = match setup_engine::summary_arguments(arguments) {
         Ok(value) => value,
-        Err(error) => return emit_action_result(&setup_engine::messages::failure(&error, setup_engine::messages::language(arguments))),
+        Err(error) => {
+            return emit_action_result(&setup_engine::messages::failure(
+                &error,
+                setup_engine::messages::language(arguments),
+            ))
+        }
     };
     let arguments = filtered.as_slice();
     if arguments.iter().any(|argument| argument == "--describe") {
@@ -599,13 +615,18 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         return setup_engine::run(arguments, summary);
     }
     let result = setup_engine::file_options(arguments)
-        .and_then(|(arguments, options)| parse(&arguments)
-            .and_then(|arguments| setup_engine::execute_file(&arguments, &options)))
-        .unwrap_or_else(|error| setup_engine::messages::failure(&error, setup_engine::messages::language(arguments)));
+        .and_then(|(arguments, options)| {
+            parse(&arguments).and_then(|arguments| setup_engine::execute_file(&arguments, &options))
+        })
+        .unwrap_or_else(|error| {
+            setup_engine::messages::failure(&error, setup_engine::messages::language(arguments))
+        });
     emit_action_result(&setup_engine::compact_result(result, summary))
 }
 
-pub(crate) use setup_engine::{summary_arguments as setup_output_arguments, compact_result as setup_summary};
+pub(crate) use setup_engine::{
+    compact_result as setup_summary, summary_arguments as setup_output_arguments,
+};
 
 #[derive(Clone, Copy, Debug)]
 enum FeatureAction {
@@ -769,12 +790,16 @@ fn save_feature_answers(
         desired.push('\n');
     }
     if let Some(decision) = &answers.decision {
-        desired.push_str(&serde_yaml::to_string(&serde_json::json!({"decision":decision}))
-            .map_err(|error| SetupError::Internal(error.to_string()))?);
+        desired.push_str(
+            &serde_yaml::to_string(&serde_json::json!({"decision":decision}))
+                .map_err(|error| SetupError::Internal(error.to_string()))?,
+        );
     }
     if let Some(operation) = &answers.setup_operation {
-        desired.push_str(&serde_yaml::to_string(&serde_json::json!({"setup_operation":operation}))
-            .map_err(|error| SetupError::Internal(error.to_string()))?);
+        desired.push_str(
+            &serde_yaml::to_string(&serde_json::json!({"setup_operation":operation}))
+                .map_err(|error| SetupError::Internal(error.to_string()))?,
+        );
     }
     super::user_install::replace_user_setup_file(
         root,
@@ -962,7 +987,10 @@ fn vector_setup_prompt(
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
-    if arguments.iter().any(|value| matches!(value.as_str(), "--section" | "--question")) {
+    if arguments
+        .iter()
+        .any(|value| matches!(value.as_str(), "--section" | "--question"))
+    {
         return emit_action_result(
             &setup_engine::describe_section(arguments).unwrap_or_else(|error| failure(&error)),
         );
@@ -991,9 +1019,15 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         SetupError::Internal(format!("invalid embedded user setup catalog: {error}"))
     })?;
     let questions = setup_engine::catalog()?.questions;
-    let user_questions: Vec<_> = questions.iter().filter(|question| question.scope == hive_core::preferences::PreferenceScope::User).collect();
+    let user_questions: Vec<_> = questions
+        .iter()
+        .filter(|question| question.scope == hive_core::preferences::PreferenceScope::User)
+        .collect();
     let question_order: Vec<_> = user_questions.iter().map(|question| &question.id).collect();
-    let sections: BTreeSet<_> = user_questions.iter().map(|question| &question.section).collect();
+    let sections: BTreeSet<_> = user_questions
+        .iter()
+        .map(|question| &question.section)
+        .collect();
     let expedited_defaults = setup_engine::default_answers(Some(InterfaceLanguage::En));
     let mut example = expedited_defaults.clone();
     example["usage_guard"]["stop_remaining_percent"] = json!("<user-chosen-integer-0-to-99>");
@@ -1403,7 +1437,10 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
 enum SetupBase<'a> {
     Current,
     Expected(Option<&'a [u8]>),
-    Bound { expected: Option<&'a [u8]>, progress: &'a progress_store::SetupProgress },
+    Bound {
+        expected: Option<&'a [u8]>,
+        progress: &'a progress_store::SetupProgress,
+    },
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1442,22 +1479,29 @@ fn execute_answers(
     if let SetupBase::Bound { progress, .. } = expected_config {
         let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
         if store.load()?.progress.as_ref() != Some(progress) || !store.questions_match(progress) {
-            return Err(SetupError::Conflict("setup operation changed before activation".into()));
+            return Err(SetupError::Conflict(
+                "setup operation changed before activation".into(),
+            ));
         }
         projection_journal::preflight(&arguments.root_cap, &store, progress)?;
     }
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
     let removed = host_deselections(existing.as_deref(), &config)?;
-    if arguments.mode == SetupMode::Apply && !removed.is_empty()
-        && !matches!(expected_config, SetupBase::Bound { .. }) {
-        return Err(SetupError::Conflict("host deselection requires the common confirmed setup journal".into()));
+    if arguments.mode == SetupMode::Apply
+        && !removed.is_empty()
+        && !matches!(expected_config, SetupBase::Bound { .. })
+    {
+        return Err(SetupError::Conflict(
+            "host deselection requires the common confirmed setup journal".into(),
+        ));
     }
 
     match arguments.mode {
         SetupMode::DryRun => {
-            let deactivations = super::user_install::deactivation::preview(&arguments.user_root, &removed)
-                .map_err(SetupError::Verification)?;
+            let deactivations =
+                super::user_install::deactivation::preview(&arguments.user_root, &removed)
+                    .map_err(SetupError::Verification)?;
             let projection =
                 plan_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
             let mut changed_paths = projection.changed_paths;
@@ -1493,7 +1537,9 @@ fn execute_answers(
                 &desired,
                 &projection.reports,
             );
-            if let Some(data) = result.data.as_mut() { data["host_deactivations"] = json!(deactivations); }
+            if let Some(data) = result.data.as_mut() {
+                data["host_deactivations"] = json!(deactivations);
+            }
             Ok(result)
         }
         SetupMode::Validate => {
@@ -1546,7 +1592,14 @@ fn execute_answers(
             let mut activated_hosts = Vec::new();
             for host in &config.selected_hosts {
                 if matches!(expected_config, SetupBase::Bound { .. })
-                    && super::user_install::validate_configured_host(&arguments.user_root, *host, &config, &resolved_skills).is_ok() {
+                    && super::user_install::validate_configured_host(
+                        &arguments.user_root,
+                        *host,
+                        &config,
+                        &resolved_skills,
+                    )
+                    .is_ok()
+                {
                     continue;
                 }
                 match super::user_install::apply_configured_host(
@@ -1581,17 +1634,22 @@ fn execute_answers(
                     }
                 }
             }
-            let projection =
-                apply_setup_projection(arguments, expected_config, &config, &resolved_skills, &desired)
-                    .map_err(|primary| {
-                        match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
-                            Ok(()) => primary,
-                            Err(error) => SetupError::Conflict(format!(
-                                "{}; host rollback failed: {error}",
-                                primary.message()
-                            )),
-                        }
-                    })?;
+            let projection = apply_setup_projection(
+                arguments,
+                expected_config,
+                &config,
+                &resolved_skills,
+                &desired,
+            )
+            .map_err(|primary| {
+                match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
+                    Ok(()) => primary,
+                    Err(error) => SetupError::Conflict(format!(
+                        "{}; host rollback failed: {error}",
+                        primary.message()
+                    )),
+                }
+            })?;
             if changed {
                 if let Err(primary) = super::user_install::replace_user_setup_file(
                     &arguments.root_cap,
@@ -1666,7 +1724,13 @@ fn execute_answers(
     }
 }
 
-fn apply_setup_projection(arguments: &Arguments, base: SetupBase<'_>, config: &UserSetupConfig, skills: &[String], desired: &[u8]) -> Result<AppliedProjection, SetupError> {
+fn apply_setup_projection(
+    arguments: &Arguments,
+    base: SetupBase<'_>,
+    config: &UserSetupConfig,
+    skills: &[String],
+    desired: &[u8],
+) -> Result<AppliedProjection, SetupError> {
     if let SetupBase::Bound { progress, .. } = base {
         let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
         projection_journal::apply(&arguments.root_cap, &store, progress, || {
@@ -2172,11 +2236,12 @@ fn validate_registered_project_overrides(
     if config.usage_guard.project_overrides.is_empty() {
         return Ok(());
     }
-    let registry = hive_wiki::shared::load_project_registry_metadata(user_root).map_err(|error| {
-        SetupError::Input(format!(
-            "usage guard project overrides require a valid registered-project list: {error}"
-        ))
-    })?;
+    let registry =
+        hive_wiki::shared::load_project_registry_metadata(user_root).map_err(|error| {
+            SetupError::Input(format!(
+                "usage guard project overrides require a valid registered-project list: {error}"
+            ))
+        })?;
     for project_identity in config.usage_guard.project_overrides.keys() {
         if !registry
             .projects
@@ -2303,9 +2368,16 @@ fn host_deselections(
         .copied()
         .filter(|host| !desired_hosts.contains(host))
         .collect::<Vec<_>>();
-    if removed.contains(&SelectedHost::Codex) && desired.usage_guard.policy.as_ref()
-        .is_some_and(|policy| policy.enforcement_enabled && policy.midway.enabled) {
-        return Err(SetupError::Input("turn off Codex background monitoring before deselecting Codex".into()));
+    if removed.contains(&SelectedHost::Codex)
+        && desired
+            .usage_guard
+            .policy
+            .as_ref()
+            .is_some_and(|policy| policy.enforcement_enabled && policy.midway.enabled)
+    {
+        return Err(SetupError::Input(
+            "turn off Codex background monitoring before deselecting Codex".into(),
+        ));
     }
     Ok(removed)
 }
@@ -3263,12 +3335,20 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
 }
 
 pub(crate) fn valid_user_projection_path(path: &Path) -> bool {
-    matches!(path.to_str(), Some(
-        ".agents/directives/00-hive-user.md" | ".hive/config/user-active-skills.yml"
-        | ".agents/skills/user-setup/references/workflow.md" | ".agents/skills/user-setup/references/questions.md"
-        | ".agents/skills/user-setup/references/reconfiguration.md" | ".agents/skills/user-setup/references/recovery.md"
-        | ".agents/skills/user-setup/references/language.md" | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
-    )) || (path.starts_with(".agents/skills/") && hive_core::validate_hive_skill_projection_relative(path).is_ok())
+    matches!(
+        path.to_str(),
+        Some(
+            ".agents/directives/00-hive-user.md"
+                | ".hive/config/user-active-skills.yml"
+                | ".agents/skills/user-setup/references/workflow.md"
+                | ".agents/skills/user-setup/references/questions.md"
+                | ".agents/skills/user-setup/references/reconfiguration.md"
+                | ".agents/skills/user-setup/references/recovery.md"
+                | ".agents/skills/user-setup/references/language.md"
+                | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+        )
+    ) || (path.starts_with(".agents/skills/")
+        && hive_core::validate_hive_skill_projection_relative(path).is_ok())
 }
 
 pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
@@ -3309,15 +3389,25 @@ pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, Set
 pub(crate) fn verified_uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
     let path = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
     let Some(bytes) = super::user_install::read_user_setup_file(root, path, MAX_USER_SETUP_BYTES)
-        .map_err(SetupError::Conflict)? else { return Ok(Vec::new()); };
+        .map_err(SetupError::Conflict)?
+    else {
+        return Ok(Vec::new());
+    };
     let manifest = parse_projection_manifest(&bytes)?;
     let mut paths = Vec::new();
     for entry in manifest.entries {
         let relative = PathBuf::from(entry.path);
-        let current = super::user_install::read_user_setup_file(root, &relative, MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-        if current.as_deref().is_some_and(|bytes| sha256_digest(bytes) != entry.digest) {
-            return Err(SetupError::Conflict(format!("user projection changed; preserved: {}", relative.display())));
+        let current =
+            super::user_install::read_user_setup_file(root, &relative, MAX_USER_SETUP_BYTES)
+                .map_err(SetupError::Conflict)?;
+        if current
+            .as_deref()
+            .is_some_and(|bytes| sha256_digest(bytes) != entry.digest)
+        {
+            return Err(SetupError::Conflict(format!(
+                "user projection changed; preserved: {}",
+                relative.display()
+            )));
         }
         paths.push(relative);
     }
@@ -4152,11 +4242,18 @@ usage_guard:
             .collect::<Vec<_>>();
 
         assert_eq!(&question_order[..2], &["user-language", "user-mode"]);
-        assert!(question_order.iter().position(|id| *id == "user-judge") < question_order.iter().position(|id| *id == "user-skills"));
-        assert_eq!(question_order.iter().collect::<BTreeSet<_>>().len(), question_order.len());
+        assert!(
+            question_order.iter().position(|id| *id == "user-judge")
+                < question_order.iter().position(|id| *id == "user-skills")
+        );
+        assert_eq!(
+            question_order.iter().collect::<BTreeSet<_>>().len(),
+            question_order.len()
+        );
         let catalog = setup_engine::catalog().unwrap();
         for id in question_order {
-            assert!(catalog.questions.iter().any(|question| question.id == id && question.scope == hive_core::preferences::PreferenceScope::User));
+            assert!(catalog.questions.iter().any(|question| question.id == id
+                && question.scope == hive_core::preferences::PreferenceScope::User));
         }
         assert_eq!(data["answer_template"]["judge_invocation"], "explicit");
         assert_eq!(
@@ -4169,7 +4266,10 @@ usage_guard:
     fn described_quick_defaults_match_terminal_defaults_and_never_enable_usage_enforcement() {
         let data = describe_result().unwrap().data.unwrap();
         let defaults = &data["expedited_defaults"];
-        assert_eq!(*defaults, setup_engine::default_answers(Some(InterfaceLanguage::En)));
+        assert_eq!(
+            *defaults,
+            setup_engine::default_answers(Some(InterfaceLanguage::En))
+        );
         let config = parse_and_validate_config(&serde_json::to_vec(defaults).unwrap()).unwrap();
         assert_eq!(config.schema_version, 2);
         let policy = config.usage_guard.policy.as_ref().unwrap();
@@ -4179,18 +4279,30 @@ usage_guard:
             for flag in ["threshold_enabled", "reset_enabled", "zero_quota_enabled"] {
                 assert_eq!(defaults["usage_guard"][layer][flag], false);
             }
-            assert_eq!(defaults["usage_guard"][layer]["observation_failure"], "warn");
+            assert_eq!(
+                defaults["usage_guard"][layer]["observation_failure"],
+                "warn"
+            );
         }
         assert_eq!(defaults["usage_guard"]["midway"]["enabled"], false);
-        assert_eq!(data["answer_template"]["usage_guard"]["enforcement_enabled"], false);
-        assert!(!data["answer_template_notice"].as_str().unwrap().contains("protection is recommended"));
+        assert_eq!(
+            data["answer_template"]["usage_guard"]["enforcement_enabled"],
+            false
+        );
+        assert!(!data["answer_template_notice"]
+            .as_str()
+            .unwrap()
+            .contains("protection is recommended"));
         for language in [InterfaceLanguage::En, InterfaceLanguage::Ko] {
             let defaults = setup_engine::default_answers(Some(language));
-            let config = parse_and_validate_config(&serde_json::to_vec(&defaults).unwrap()).unwrap();
+            let config =
+                parse_and_validate_config(&serde_json::to_vec(&defaults).unwrap()).unwrap();
             assert_eq!(config.interface_language, language);
             assert_eq!(defaults["wiki"]["language"], defaults["interface_language"]);
         }
-        assert!(setup_engine::default_answers(None).get("interface_language").is_none());
+        assert!(setup_engine::default_answers(None)
+            .get("interface_language")
+            .is_none());
     }
 
     #[test]
@@ -5083,7 +5195,9 @@ usage_guard: {}
         let error = validate_registered_project_overrides(&config, temporary.path())
             .expect_err("unregistered project override");
 
-        assert!(error.message().contains("not a registered project identity"));
+        assert!(error
+            .message()
+            .contains("not a registered project identity"));
     }
 
     #[test]
@@ -5228,7 +5342,10 @@ usage_guard:
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex];
 
-        assert_eq!(host_deselections(Some(&installed_bytes), &desired).unwrap(), vec![SelectedHost::Claude]);
+        assert_eq!(
+            host_deselections(Some(&installed_bytes), &desired).unwrap(),
+            vec![SelectedHost::Claude]
+        );
     }
 
     #[test]
@@ -5239,7 +5356,9 @@ usage_guard:
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex, SelectedHost::Claude];
 
-        assert!(host_deselections(Some(&installed_bytes), &desired).unwrap().is_empty());
+        assert!(host_deselections(Some(&installed_bytes), &desired)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

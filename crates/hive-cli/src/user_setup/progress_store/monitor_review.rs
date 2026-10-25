@@ -88,27 +88,44 @@ fn unchanged_choices(old: &SetupProgress, new: &SetupProgress) -> Result<(), Set
 
 impl ProgressStore {
     pub(in crate::user_setup) fn monitor_handoff_pending(&self) -> Result<bool, SetupError> {
-        Ok(self.read_state(Path::new(PATH), MAX_USER_SETUP_BYTES)?.is_some())
+        Ok(self
+            .read_state(Path::new(PATH), MAX_USER_SETUP_BYTES)?
+            .is_some())
     }
-    pub(in crate::user_setup) fn monitor_intent_digest(progress: &SetupProgress) -> Result<String, SetupError> {
+    pub(in crate::user_setup) fn monitor_intent_digest(
+        progress: &SetupProgress,
+    ) -> Result<String, SetupError> {
         history::intent_digest(progress)
     }
 
     /// Called only with the user setup lease and a stopped same-root controller lease.
     pub(in crate::user_setup) fn handoff_monitor(
-        &self, old: &SetupProgress, answers: Value, stopped: &crate::usage_monitor::StoppedReader,
+        &self,
+        old: &SetupProgress,
+        answers: Value,
+        stopped: &crate::usage_monitor::StoppedReader,
     ) -> Result<SetupProgress, SetupError> {
-        stopped.verify_root(&self.root_path).map_err(|e| SetupError::Conflict(e.message().into()))?;
+        stopped
+            .verify_root(&self.root_path)
+            .map_err(|e| SetupError::Conflict(e.message().into()))?;
         let mut replacement = self.new_progress("user-monitor-withdrawal".into(), answers)?;
         replacement.phase = ProgressPhase::Applying;
         let choice = crate::usage_monitor::inspect_saved_choice(&self.root_path)
             .map_err(|e| SetupError::Conflict(e.message().into()))?;
-        if choice.enabled { return Err(SetupError::Conflict("monitor has not stopped".into())); }
+        if choice.enabled {
+            return Err(SetupError::Conflict("monitor has not stopped".into()));
+        }
         replacement.monitor_stop = choice.configured.then_some(choice);
         unchanged_choices(old, &replacement)?;
-        let handoff = MonitorHandoff { schema_version: 1, binding: self.binding.clone(),
-            old_operation_id: old.operation_id.clone(), old_intent_digest: history::intent_digest(old)?, replacement };
-        let bytes = serde_json::to_vec(&handoff).map_err(|e| SetupError::Internal(e.to_string()))?;
+        let handoff = MonitorHandoff {
+            schema_version: 1,
+            binding: self.binding.clone(),
+            old_operation_id: old.operation_id.clone(),
+            old_intent_digest: history::intent_digest(old)?,
+            replacement,
+        };
+        let bytes =
+            serde_json::to_vec(&handoff).map_err(|e| SetupError::Internal(e.to_string()))?;
         validate_scope(self, &bytes)?;
         self.write_state(Path::new(PATH), None, Some(&bytes))?;
         self.recover_monitor_handoff_locked()?;

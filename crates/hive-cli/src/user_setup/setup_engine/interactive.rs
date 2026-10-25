@@ -124,7 +124,8 @@ pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCod
         .windows(2)
         .any(|pair| pair == ["--output", "json"]);
     let mut terminal = Terminal {
-        reader: io::stdin().lock(), writer: io::stderr().lock(),
+        reader: io::stdin().lock(),
+        writer: io::stderr().lock(),
         language: super::messages::language(arguments),
     };
     let result = parse(arguments)
@@ -168,8 +169,16 @@ pub(in crate::user_setup) fn resume_pending_update(
         // An unconfirmed personal reconfiguration must not block a software update.
         return Ok(None);
     }
-    if confirmed_only && !matches!(progress.phase, ProgressPhase::Applying | ProgressPhase::RecoverableFailure) {
-        let mut result = pending(super::messages::language_at(root, None), "hive.update-input-pending");
+    if confirmed_only
+        && !matches!(
+            progress.phase,
+            ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+        )
+    {
+        let mut result = pending(
+            super::messages::language_at(root, None),
+            "hive.update-input-pending",
+        );
         result.action = "UpdateHiveUser";
         result.next_action = Some(crate::update_bridge::resume_command(root));
         return Ok(Some(result));
@@ -191,7 +200,9 @@ pub(in crate::user_setup) fn resume_pending_update(
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }
     let data = result.data.get_or_insert_with(|| json!({}));
-    if !data["steps"].is_object() { data["steps"] = json!({}); }
+    if !data["steps"].is_object() {
+        data["steps"] = json!({});
+    }
     data["steps"]["core"] = json!("not-run");
     data["from_version"] = Value::Null;
     data["to_version"] = json!(env!("CARGO_PKG_VERSION"));
@@ -244,19 +255,23 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         writer,
         language: InterfaceLanguage::En,
     };
-    let saved = crate::user_install::open_user_root_for_setup(root).ok()
+    let saved = crate::user_install::open_user_root_for_setup(root)
+        .ok()
         .and_then(|cap| user_setup::load_operational_config(&cap).ok().flatten());
     let before = super::update_summary::baseline(root, saved.as_ref());
     let mut result = execute(&options, InteractionMode::Terminal, &mut terminal)
         .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
     if result.exit_code == 0 {
         let summary = (|| {
-            let cap = crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
+            let cap = crate::user_install::open_user_root_for_setup(root)
+                .map_err(SetupError::Conflict)?;
             let saved = user_setup::load_operational_config(&cap)?
                 .ok_or_else(|| SetupError::Verification("updated settings are missing".into()))?;
             super::update_summary::complete(root, before.as_ref(), &saved, &mut result)
         })();
-        if let Err(error) = summary { result = super::messages::failure(&error, terminal.language); }
+        if let Err(error) = summary {
+            result = super::messages::failure(&error, terminal.language);
+        }
     }
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
@@ -280,9 +295,16 @@ fn execute<R: BufRead, W: Write>(
 ) -> Result<crate::ActionResult, SetupError> {
     let execution = if options.review {
         terminal.language = super::messages::language_at(&options.root, None);
-        super::monitor_review::run(&options.root, mode, options.dry_run,
-            options.review_answers.as_deref(), terminal)
-    } else { execute_inner(options, mode, terminal) };
+        super::monitor_review::run(
+            &options.root,
+            mode,
+            options.dry_run,
+            options.review_answers.as_deref(),
+            terminal,
+        )
+    } else {
+        execute_inner(options, mode, terminal)
+    };
     let mut result = match execution {
         Err(error) if options.review => {
             let mut result = super::messages::failure(&error, terminal.language);
@@ -328,7 +350,7 @@ fn execute_inner<R: BufRead, W: Write>(
         terminal.language = config.interface_language;
     }
     let store = ProgressStore::open(&root_path, None)?;
-    if !options.show && !options.dry_run && mode!=InteractionMode::NeedsInput {
+    if !options.show && !options.dry_run && mode != InteractionMode::NeedsInput {
         store.recover_monitor_handoff()?;
     }
     if !options.show && mode != InteractionMode::NeedsInput {
@@ -340,7 +362,11 @@ fn execute_inner<R: BufRead, W: Write>(
         ));
     }
     let mut snapshot = store.load()?;
-    if let Some(progress) = snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete) {
+    if let Some(progress) = snapshot
+        .progress
+        .as_ref()
+        .filter(|p| p.phase != ProgressPhase::Complete)
+    {
         terminal.language = match progress.answers["interface_language"].as_str() {
             Some("ko") => InterfaceLanguage::Ko,
             Some("en") => InterfaceLanguage::En,
@@ -382,23 +408,7 @@ fn execute_inner<R: BufRead, W: Write>(
         snapshot,
         fresh: config.is_none(),
     };
-    super::host_scope::bind(&mut progress.record, &options.update_hosts, config.is_none(),
-        progress.snapshot.progress.as_ref().is_none_or(|p| p.phase == ProgressPhase::Complete))?;
-    if progress.selected_section.is_none() {
-        progress.selected_section.clone_from(&options.section);
-    }
-    let questions = catalog()?;
-    let collected = if progress.legacy_migration.is_some() {
-        super::legacy::collect(&root_path, &store, &mut progress, terminal)?
-    } else {
-        collect(
-            &store,
-            &mut progress,
-            &questions.questions,
-            options,
-            terminal,
-        )?
-    };
+    let collected = collect_conversation(options, &root_path, &store, &mut progress, terminal)?;
     if !collected {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
     }
@@ -411,6 +421,34 @@ fn execute_inner<R: BufRead, W: Write>(
         &mut progress,
         terminal,
     )
+}
+
+fn collect_conversation<R: BufRead, W: Write>(
+    options: &Options,
+    root: &Path,
+    store: &ProgressStore,
+    progress: &mut Conversation,
+    terminal: &mut Terminal<R, W>,
+) -> Result<bool, SetupError> {
+    super::host_scope::bind(
+        &mut progress.record,
+        &options.update_hosts,
+        progress.fresh,
+        progress
+            .snapshot
+            .progress
+            .as_ref()
+            .is_none_or(|p| p.phase == ProgressPhase::Complete),
+    )?;
+    if progress.selected_section.is_none() {
+        progress.selected_section.clone_from(&options.section);
+    }
+    let questions = catalog()?;
+    if progress.legacy_migration.is_some() {
+        super::legacy::collect(root, store, progress, terminal)
+    } else {
+        collect(store, progress, &questions.questions, options, terminal)
+    }
 }
 
 fn refresh_questions<R: BufRead, W: Write>(
@@ -497,7 +535,10 @@ fn preliminary_result<R: BufRead, W: Write>(
     }
     let confirmed_resume = options.resume
         && snapshot.progress.as_ref().is_some_and(|p| {
-            matches!(p.phase, ProgressPhase::Applying | ProgressPhase::RecoverableFailure)
+            matches!(
+                p.phase,
+                ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+            )
         });
     if mode != InteractionMode::Terminal && !confirmed_resume {
         return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
@@ -522,7 +563,9 @@ fn collect<R: BufRead, W: Write>(
             .find(|q| q.id == id)
             .ok_or_else(|| SetupError::Internal("missing setup question".to_owned()))
     };
-    if !choose_section(store, progress, selected("user-section")?, terminal)? { return Ok(false); }
+    if !choose_section(store, progress, selected("user-section")?, terminal)? {
+        return Ok(false);
+    }
     let needs_language = progress.answers.get("interface_language").is_none()
         || (progress.selected_section.as_deref() == Some("language")
             && !answered(progress, selected("user-language")?));
@@ -580,7 +623,15 @@ fn collect<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
-        if matches!(question.id.as_str(), "user-language" | "user-mode" | "user-section" | "user-index-rebuild" | "user-monitor-activation" | "user-vector-search") {
+        if matches!(
+            question.id.as_str(),
+            "user-language"
+                | "user-mode"
+                | "user-section"
+                | "user-index-rebuild"
+                | "user-monitor-activation"
+                | "user-vector-search"
+        ) {
             continue;
         }
         if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
@@ -613,12 +664,20 @@ fn choose_section<R: BufRead, W: Write>(
     }
     progress.step.clone_from(&question.id);
     persist(store, progress)?;
-    let AnswerInput::Answered { value, .. } = terminal.ask(question, None)? else { return Ok(false) };
-    let section = value.as_str().ok_or_else(|| SetupError::Input("invalid setting group".into()))?;
+    let AnswerInput::Answered { value, .. } = terminal.ask(question, None)? else {
+        return Ok(false);
+    };
+    let section = value
+        .as_str()
+        .ok_or_else(|| SetupError::Input("invalid setting group".into()))?;
     progress.selected_section = (section != "all").then(|| section.to_owned());
     progress.setup_mode = Some("custom".into());
-    progress.answered_questions.insert(question.id.clone(), question.revision);
-    progress.question_bindings.insert(question.id.clone(), question.into());
+    progress
+        .answered_questions
+        .insert(question.id.clone(), question.revision);
+    progress
+        .question_bindings
+        .insert(question.id.clone(), question.into());
     persist(store, progress)?;
     Ok(true)
 }
@@ -636,17 +695,26 @@ fn ask<R: BufRead, W: Write>(
         let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
             return Ok(false);
         };
-        if question.id == "user-context-description" && value == json!(":clear")
-            && (origin == DecisionOrigin::Explicit || current.is_none()) {
-            if progress.answers["profile"]["contexts"].as_array().is_some_and(|items| !items.is_empty()) {
+        if question.id == "user-context-description"
+            && value == json!(":clear")
+            && (origin == DecisionOrigin::Explicit || current.is_none())
+        {
+            if progress.answers["profile"]["contexts"]
+                .as_array()
+                .is_some_and(|items| !items.is_empty())
+            {
                 break (Value::Null, origin);
             }
-            terminal.say("배경 종류를 고르지 않았으므로 설명을 입력해 주세요.",
-                "Enter a description because no background is selected.")?;
+            terminal.say(
+                "배경 종류를 고르지 않았으므로 설명을 입력해 주세요.",
+                "Enter a description because no background is selected.",
+            )?;
             continue;
         }
         if config_answer_valid(question, &progress.answers, &value)? {
-            if question.id == "usage-project-overrides" && !registered_overrides(store, &progress.answers, &value)? {
+            if question.id == "usage-project-overrides"
+                && !registered_overrides(store, &progress.answers, &value)?
+            {
                 terminal.say("등록된 프로젝트 식별자와 전역 기준 이상의 값을 입력해 주세요. 프로젝트 파일은 조사하지 않습니다.",
                     "Use registered identities and values at or above the global threshold. Project files are not inspected.")?;
                 continue;
@@ -659,15 +727,22 @@ fn ask<R: BufRead, W: Write>(
         )?;
     };
     if question.id == "user-context-description" && value.is_null() {
-        progress.answers["profile"].as_object_mut().expect("profile").remove("description");
+        progress.answers["profile"]
+            .as_object_mut()
+            .expect("profile")
+            .remove("description");
     } else {
         set_value(&mut progress.answers, &question.key, value.clone())?;
     }
     if question.id == "discord-enabled" && value == json!(false) {
-        progress.answers["usage_guard"]["discord"].as_object_mut()
-            .expect("notification preferences").remove("webhook_url_env");
-        progress.answers["preference_decisions"].as_object_mut()
-            .expect("choice records").remove("/usage_guard/discord/webhook_url_env");
+        progress.answers["usage_guard"]["discord"]
+            .as_object_mut()
+            .expect("notification preferences")
+            .remove("webhook_url_env");
+        progress.answers["preference_decisions"]
+            .as_object_mut()
+            .expect("choice records")
+            .remove("/usage_guard/discord/webhook_url_env");
         progress.answered_questions.remove("discord-environment");
     }
     if question.id == "user-wiki" && value == json!(false) {
@@ -688,7 +763,9 @@ fn ask<R: BufRead, W: Write>(
     progress
         .answered_questions
         .insert(question.id.clone(), question.revision);
-    progress.question_bindings.insert(question.id.clone(), question.into());
+    progress
+        .question_bindings
+        .insert(question.id.clone(), question.into());
     persist(store, progress)?;
     Ok(true)
 }
@@ -722,42 +799,89 @@ pub(super) fn config_answer_valid(
     Ok(!invalid)
 }
 
-fn registered_overrides(store: &ProgressStore, answers: &Value, value: &Value) -> Result<bool, SetupError> {
+fn registered_overrides(
+    store: &ProgressStore,
+    answers: &Value,
+    value: &Value,
+) -> Result<bool, SetupError> {
     let values = value.as_object().expect("validated threshold map");
-    if values.is_empty() { return Ok(true); }
-    let threshold = answers["usage_guard"]["stop_remaining_percent"].as_u64()
+    if values.is_empty() {
+        return Ok(true);
+    }
+    let threshold = answers["usage_guard"]["stop_remaining_percent"]
+        .as_u64()
         .ok_or_else(|| SetupError::Input("global threshold must be selected first".into()))?;
-    if values.values().any(|value| value.as_u64().is_none_or(|value| value < threshold)) {
+    if values
+        .values()
+        .any(|value| value.as_u64().is_none_or(|value| value < threshold))
+    {
         return Ok(false);
     }
     let registry = hive_wiki::shared::load_project_registry_metadata(store.user_root_path())
-        .map_err(|error| SetupError::Input(format!("cannot read registered project identities: {error}")))?;
-    Ok(values.keys().all(|id| registry.projects.iter().any(|project| &project.id == id)))
+        .map_err(|error| {
+            SetupError::Input(format!(
+                "cannot read registered project identities: {error}"
+            ))
+        })?;
+    Ok(values
+        .keys()
+        .all(|id| registry.projects.iter().any(|project| &project.id == id)))
 }
 
 pub(super) fn answered(progress: &SetupProgress, question: &Question) -> bool {
     progress.answered_questions.get(&question.id) == Some(&question.revision)
-        && progress.question_bindings.get(&question.id).is_some_and(|binding|
-            binding.revision == question.revision && binding.key == question.key && binding.input == question.input)
-        && (progress.answers.pointer(&question.key).is_some_and(|value|
-            question.validate_value(value).is_ok() && config_answer_valid(question, &progress.answers, value).unwrap_or(false))
+        && progress
+            .question_bindings
+            .get(&question.id)
+            .is_some_and(|binding| {
+                binding.revision == question.revision
+                    && binding.key == question.key
+                    && binding.input == question.input
+            })
+        && (progress
+            .answers
+            .pointer(&question.key)
+            .is_some_and(|value| {
+                question.validate_value(value).is_ok()
+                    && config_answer_valid(question, &progress.answers, value).unwrap_or(false)
+            })
             || cleared_description(&progress.answers, question))
 }
 
 fn cleared_description(answers: &Value, question: &Question) -> bool {
-    question.id == "user-context-description" && answers.pointer(&question.key).is_none()
-        && answers["profile"]["contexts"].as_array().is_some_and(|items| !items.is_empty())
+    question.id == "user-context-description"
+        && answers.pointer(&question.key).is_none()
+        && answers["profile"]["contexts"]
+            .as_array()
+            .is_some_and(|items| !items.is_empty())
         && answers["preference_decisions"][&question.key]["value_digest"]
-            == json!(hive_core::preferences::declaration_digest(&Value::Null).expect("null fingerprint"))
+            == json!(
+                hive_core::preferences::declaration_digest(&Value::Null).expect("null fingerprint")
+            )
 }
 
-fn selected_question(progress: &SetupProgress, question: &Question, options: &Options, quick: bool) -> bool {
-    if options.resume && progress.answered_questions.contains_key(&question.id) && !answered(progress, question) {
+fn selected_question(
+    progress: &SetupProgress,
+    question: &Question,
+    options: &Options,
+    quick: bool,
+) -> bool {
+    if options.resume
+        && progress.answered_questions.contains_key(&question.id)
+        && !answered(progress, question)
+    {
         return true;
     }
-    progress.selected_section.as_ref().is_none_or(|section| &question.section == section)
-        && (!quick || matches!(question.id.as_str(), "user-contexts" | "user-hosts")
-            || (question.id == "user-context-description" && progress.answers["profile"]["contexts"].as_array().is_some_and(Vec::is_empty)))
+    progress
+        .selected_section
+        .as_ref()
+        .is_none_or(|section| &question.section == section)
+        && (!quick
+            || matches!(question.id.as_str(), "user-contexts" | "user-hosts")
+            || (question.id == "user-context-description"
+                && progress.answers["profile"]["contexts"]
+                    .as_array()
+                    .is_some_and(Vec::is_empty)))
 }
 
 pub(super) fn set_value(
@@ -815,7 +939,8 @@ fn preview_apply<R: BufRead, W: Write>(
             .try_clone()
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
-    let preview = user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
+    let preview =
+        user_setup::execute_answers(&args, &bytes, user_setup::SetupBase::Expected(existing))?;
     super::host_scope::bind_deactivations(&preview, &mut progress.record)?;
     super::host_scope::display_deactivations(&progress.record, terminal)?;
     if !super::vector_choice::collect(root_cap, store, progress, terminal)? {
@@ -927,8 +1052,10 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(answers))
     {
-        if let Some(value) = answers.pointer(&question.key)
-            .or_else(|| cleared_description(answers, question).then_some(&Value::Null)) {
+        if let Some(value) = answers
+            .pointer(&question.key)
+            .or_else(|| cleared_description(answers, question).then_some(&Value::Null))
+        {
             writeln!(
                 terminal.writer,
                 "{} {}",
@@ -954,8 +1081,14 @@ fn inspect_settings<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
     json_output: bool,
 ) -> Result<crate::ActionResult, SetupError> {
-    let manual_commands = config.map(|config| config.selected_hosts.iter()
-        .map(|host| crate::usage_control::manual_usage_command(root, host.as_str())).collect::<Vec<_>>())
+    let manual_commands = config
+        .map(|config| {
+            config
+                .selected_hosts
+                .iter()
+                .map(|host| crate::usage_control::manual_usage_command(root, host.as_str()))
+                .collect::<Vec<_>>()
+        })
         .unwrap_or_default();
     let migration = config
         .map(|config| user_setup::migration::inspect(root, config))
@@ -969,7 +1102,8 @@ fn inspect_settings<R: BufRead, W: Write>(
                 .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
         });
     let monitor = crate::usage_monitor::setup_status(root);
-    let root_cap = crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
+    let root_cap =
+        crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
     let (_, feature_preferences) = user_setup::load_feature_answers(&root_cap)?;
     if !json_output {
         if let Some(config) = migration
@@ -990,7 +1124,9 @@ fn inspect_settings<R: BufRead, W: Write>(
         if !crate::display_options::quiet() && !manual_commands.is_empty() {
             terminal.say("경고는 이미 확인한 사용량을 이용하며 추가로 조회하지 않습니다. 보호를 바꾸지 않고 사용량을 직접 확인하려면 다음 명령을 실행하세요.",
                 "Warnings reuse existing measurements without extra queries. To read usage without changing protection, run one of these commands:")?;
-            for command in &manual_commands { terminal.say(command, command)?; }
+            for command in &manual_commands {
+                terminal.say(command, command)?;
+            }
         }
     }
     Ok(result(
@@ -1011,21 +1147,43 @@ fn inspect_settings<R: BufRead, W: Write>(
     ))
 }
 
-pub(super) fn display_monitor<R: BufRead, W: Write>(monitor: &Value, terminal: &mut Terminal<R, W>) -> Result<(), SetupError> {
+pub(super) fn display_monitor<R: BufRead, W: Write>(
+    monitor: &Value,
+    terminal: &mut Terminal<R, W>,
+) -> Result<(), SetupError> {
     let (saved_ko, saved_en) = match monitor["saved_enabled"].as_bool() {
-        Some(true) => ("켜짐", "on"), Some(false) => ("꺼짐", "off"),
+        Some(true) => ("켜짐", "on"),
+        Some(false) => ("꺼짐", "off"),
         None if monitor["configuration"] == "absent" => ("설정 없음", "not configured"),
         None => ("확인 못함", "unverified"),
     };
     let (state_ko, state_en) = match monitor["controller_state"].as_str() {
-        Some("running") => ("실행 중", "running"), Some("stopped") => ("종료 확인", "stop confirmed"),
-        Some("not-configured") => ("설정 없음", "not configured"), _ => ("확인 못함", "unverified"),
+        Some("running") => ("실행 중", "running"),
+        Some("stopped") => ("종료 확인", "stop confirmed"),
+        Some("not-configured") => ("설정 없음", "not configured"),
+        _ => ("확인 못함", "unverified"),
     };
-    terminal.say(&format!("감시 저장 선택: {saved_ko}"), &format!("Saved monitoring selection: {saved_en}"))?;
-    terminal.say(&format!("확인한 감시 실행 상태: {state_ko}"), &format!("Observed monitor state: {state_en}"))?;
+    terminal.say(
+        &format!("감시 저장 선택: {saved_ko}"),
+        &format!("Saved monitoring selection: {saved_en}"),
+    )?;
+    terminal.say(
+        &format!("확인한 감시 실행 상태: {state_ko}"),
+        &format!("Observed monitor state: {state_en}"),
+    )?;
     if monitor["controller_state"] == "running" {
-        terminal.say(if monitor["monitoring_verified"] == true {"감시 관측·제어: 정상 확인"} else {"감시 관측·제어: 확인 못함"},
-            if monitor["monitoring_verified"] == true {"Observation and control: verified"} else {"Observation and control: unverified"})?;
+        terminal.say(
+            if monitor["monitoring_verified"] == true {
+                "감시 관측·제어: 정상 확인"
+            } else {
+                "감시 관측·제어: 확인 못함"
+            },
+            if monitor["monitoring_verified"] == true {
+                "Observation and control: verified"
+            } else {
+                "Observation and control: unverified"
+            },
+        )?;
     }
     Ok(())
 }
@@ -1080,18 +1238,29 @@ mod tests {
 
     #[test]
     fn pending_language_change_controls_input_and_resume_notices_before_config_apply() {
-        for (stored, pending) in [(InterfaceLanguage::Ko, InterfaceLanguage::En),
-            (InterfaceLanguage::En, InterfaceLanguage::Ko)] {
+        for (stored, pending) in [
+            (InterfaceLanguage::Ko, InterfaceLanguage::En),
+            (InterfaceLanguage::En, InterfaceLanguage::Ko),
+        ] {
             let root = tempfile::tempdir().unwrap();
             let file = root.path().join(user_setup::USER_SETUP_RELATIVE);
             std::fs::create_dir_all(file.parent().unwrap()).unwrap();
             let before = serde_json::to_vec(&super::super::default_answers(Some(stored))).unwrap();
             std::fs::write(&file, &before).unwrap();
             let store = ProgressStore::open(root.path(), None).unwrap();
-            let progress = store.new_progress("user-language".into(), super::super::default_answers(Some(pending))).unwrap();
+            let progress = store
+                .new_progress(
+                    "user-language".into(),
+                    super::super::default_answers(Some(pending)),
+                )
+                .unwrap();
             store.save(&store.load().unwrap(), &progress).unwrap();
             for mode in [InteractionMode::NonInteractive, InteractionMode::Terminal] {
-                let mut terminal = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: stored };
+                let mut terminal = Terminal {
+                    reader: Cursor::new(b""),
+                    writer: Vec::new(),
+                    language: stored,
+                };
                 let result = execute(&options(root.path()), mode, &mut terminal).unwrap();
                 assert_eq!(result.status, "needs-input");
                 assert_eq!(terminal.language, pending);
@@ -1107,7 +1276,9 @@ mod tests {
         let missing = root.path().join("unavailable-project");
         let registry = json!({"schema_version":1,"projects":[{"id":"known-project","root":missing,
             "enabled":true,"language":"en","visibility":"shared"}]});
-        let path = root.path().join(hive_wiki::shared::PROJECT_REGISTRY_RELATIVE);
+        let path = root
+            .path()
+            .join(hive_wiki::shared::PROJECT_REGISTRY_RELATIVE);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         let bytes = serde_json::to_vec(&registry).unwrap();
         std::fs::write(&path, &bytes).unwrap();
@@ -1115,22 +1286,36 @@ mod tests {
         let mut progress = conversation(&store);
         progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
         let catalog = catalog().unwrap();
-        let question = catalog.questions.iter().find(|q| q.id=="usage-project-overrides").unwrap();
+        let question = catalog
+            .questions
+            .iter()
+            .find(|q| q.id == "usage-project-overrides")
+            .unwrap();
         let mut terminal = Terminal {
             reader: Cursor::new(b"{\"missing\":30}\n{\"known-project\":101}\n{\"known-project\":19}\n{\"known-project\":40}\n"),
             writer: Vec::new(), language: InterfaceLanguage::En,
         };
         assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
-        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        let config =
+            user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+                .unwrap();
         user_setup::validate_registered_project_overrides(&config, root.path()).unwrap();
         assert_eq!(config.usage_guard.project_overrides["known-project"], 40);
-        assert_eq!(String::from_utf8(terminal.writer).unwrap().matches(&question.prompt.en).count(), 4);
+        assert_eq!(
+            String::from_utf8(terminal.writer)
+                .unwrap()
+                .matches(&question.prompt.en)
+                .count(),
+            4
+        );
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert!(!missing.exists());
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
         let empty = tempfile::tempdir().unwrap();
         let empty_store = ProgressStore::open(empty.path(), None).unwrap();
-        assert!(!registered_overrides(&empty_store, &progress.answers, &json!({"unknown":30})).unwrap());
+        assert!(
+            !registered_overrides(&empty_store, &progress.answers, &json!({"unknown":30})).unwrap()
+        );
         assert!(registered_overrides(&empty_store, &progress.answers, &json!({})).unwrap());
         assert!(!empty.path().join(".hive").exists());
     }
@@ -1140,23 +1325,45 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut snapshot = store.load().unwrap();
-        let mut record = store.new_progress("file-apply".into(), fresh_answers()).unwrap();
+        let mut record = store
+            .new_progress("file-apply".into(), fresh_answers())
+            .unwrap();
         let mut options = options(root.path());
         options.resume = true;
         let mut terminal = Terminal {
-            reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En,
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
         };
         for (phase, needs_input) in [
-            (ProgressPhase::AwaitingAnswers, true), (ProgressPhase::Previewed, true),
-            (ProgressPhase::Applying, false), (ProgressPhase::RecoverableFailure, false),
+            (ProgressPhase::AwaitingAnswers, true),
+            (ProgressPhase::Previewed, true),
+            (ProgressPhase::Applying, false),
+            (ProgressPhase::RecoverableFailure, false),
         ] {
             record.phase = phase;
             snapshot.progress = Some(record.clone());
-            assert_eq!(preliminary_result(
-                &options, InteractionMode::NonInteractive, &store, &snapshot, None, &mut terminal,
-            ).unwrap().is_some(), needs_input);
+            assert_eq!(
+                preliminary_result(
+                    &options,
+                    InteractionMode::NonInteractive,
+                    &store,
+                    &snapshot,
+                    None,
+                    &mut terminal,
+                )
+                .unwrap()
+                .is_some(),
+                needs_input
+            );
         }
-        assert!(parse(&["--scope".into(), "user".into(), "--resume".into(), "--dry-run".into()]).is_err());
+        assert!(parse(&[
+            "--scope".into(),
+            "user".into(),
+            "--resume".into(),
+            "--dry-run".into()
+        ])
+        .is_err());
         assert!(terminal.writer.is_empty());
         assert!(!root.path().join(".hive").exists());
     }
@@ -1164,7 +1371,9 @@ mod tests {
     #[test]
     fn update_resume_does_not_create_progress_or_consume_noninteractive_answers() {
         let root = tempfile::tempdir().unwrap();
-        assert!(resume_pending_update(root.path(), false, true).unwrap().is_none());
+        assert!(resume_pending_update(root.path(), false, true)
+            .unwrap()
+            .is_none());
         assert!(!root.path().join(".hive").exists());
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = store
@@ -1172,7 +1381,9 @@ mod tests {
             .unwrap();
         store.save(&store.load().unwrap(), &progress).unwrap();
         let before = std::fs::read(root.path().join(&store.relative)).unwrap();
-        let result = resume_pending_update(root.path(), false, false).unwrap().unwrap();
+        let result = resume_pending_update(root.path(), false, false)
+            .unwrap()
+            .unwrap();
         assert_eq!(result.action, "UpdateHiveUser");
         assert_eq!(result.code, "hive.update-input-pending");
         assert!(result
@@ -1184,9 +1395,14 @@ mod tests {
             before
         );
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
-        let unconfirmed = resume_pending_update(root.path(), false, true).unwrap().unwrap();
+        let unconfirmed = resume_pending_update(root.path(), false, true)
+            .unwrap()
+            .unwrap();
         assert_eq!(unconfirmed.code, "hive.update-input-pending");
-        assert_eq!(std::fs::read(root.path().join(&store.relative)).unwrap(), before);
+        assert_eq!(
+            std::fs::read(root.path().join(&store.relative)).unwrap(),
+            before
+        );
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
 
@@ -1201,7 +1417,9 @@ mod tests {
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = store.new_progress("user-persona".into(), settings).unwrap();
         store.save(&store.load().unwrap(), &progress).unwrap();
-        assert!(resume_pending_update(root.path(), false, true).unwrap().is_none());
+        assert!(resume_pending_update(root.path(), false, true)
+            .unwrap()
+            .is_none());
         assert_eq!(store.load().unwrap().progress.unwrap(), progress);
     }
 
@@ -1240,25 +1458,61 @@ mod tests {
         progress.selected_section = Some("notifications".into());
         let mut terminal = Terminal {
             reader: Cursor::new(b"no\nyes\nHIVE_TEST_WEBHOOK\n2\n1,5\n"),
-            writer: Vec::new(), language: InterfaceLanguage::En,
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
         };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
-        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
+        let config =
+            user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+                .unwrap();
         assert_eq!(config.usage_guard.popup_enabled, Some(false));
         assert!(config.usage_guard.discord.enabled);
-        assert_eq!(config.usage_guard.discord.request_privacy, user_setup::DiscordRequestPrivacy::RawPrompt);
-        assert_eq!(progress.answers["usage_guard"]["discord"]["message_fields"], json!(["remaining-usage", "host"]));
-        assert_eq!(progress.answers["preference_decisions"]["/usage_guard/discord/request_privacy"]["origin"], "explicit");
+        assert_eq!(
+            config.usage_guard.discord.request_privacy,
+            user_setup::DiscordRequestPrivacy::RawPrompt
+        );
+        assert_eq!(
+            progress.answers["usage_guard"]["discord"]["message_fields"],
+            json!(["remaining-usage", "host"])
+        );
+        assert_eq!(
+            progress.answers["preference_decisions"]["/usage_guard/discord/request_privacy"]
+                ["origin"],
+            "explicit"
+        );
         assert!(!config.usage_guard.policy.unwrap().enforcement_enabled);
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
         let mut disable = Terminal {
-            reader: Cursor::new(b"no\nno\n"), writer: Vec::new(), language: InterfaceLanguage::En,
+            reader: Cursor::new(b"no\nno\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
         };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut disable).unwrap());
-        assert!(progress.answers["usage_guard"]["discord"].get("webhook_url_env").is_none());
-        assert!(progress.answers["preference_decisions"].get("/usage_guard/discord/webhook_url_env").is_none());
-        assert!(!String::from_utf8(disable.writer).unwrap().contains("How much request content"));
-        user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut disable
+        )
+        .unwrap());
+        assert!(progress.answers["usage_guard"]["discord"]
+            .get("webhook_url_env")
+            .is_none());
+        assert!(progress.answers["preference_decisions"]
+            .get("/usage_guard/discord/webhook_url_env")
+            .is_none());
+        assert!(!String::from_utf8(disable.writer)
+            .unwrap()
+            .contains("How much request content"));
+        user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+            .unwrap();
     }
 
     #[test]
@@ -1269,22 +1523,64 @@ mod tests {
         progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
         progress.setup_mode = Some("custom".into());
         progress.selected_section = Some("profile".into());
-        let mut terminal = Terminal { reader: Cursor::new(b"1\nLocal tools\n"), writer: Vec::new(), language: InterfaceLanguage::En };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"1\nLocal tools\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
         assert_eq!(progress.answers["profile"]["description"], "Local tools");
-        let mut clear = Terminal { reader: Cursor::new(b"\n:clear\n"), writer: Vec::new(), language: InterfaceLanguage::En };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut clear).unwrap());
-        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        let mut clear = Terminal {
+            reader: Cursor::new(b"\n:clear\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut clear
+        )
+        .unwrap());
+        let config =
+            user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+                .unwrap();
         assert!(config.profile.description.is_none());
         let decision = &config.preference_decisions["/profile/description"];
         assert_eq!(decision.origin, DecisionOrigin::Explicit);
         assert!(decision.matches_declaration(&Value::Null).unwrap());
-        let mut preview = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En };
+        let mut preview = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
         display_preview(&progress.answers, &mut preview).unwrap();
-        assert!(String::from_utf8(preview.writer).unwrap().contains("Describe any additional background. None"));
-        let mut resume_options = options(root.path()); resume_options.resume = true;
-        let mut resumed = Terminal { reader: Cursor::new(b""), writer: Vec::new(), language: InterfaceLanguage::En };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &resume_options, &mut resumed).unwrap());
+        assert!(String::from_utf8(preview.writer)
+            .unwrap()
+            .contains("Describe any additional background. None"));
+        let mut resume_options = options(root.path());
+        resume_options.resume = true;
+        let mut resumed = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &resume_options,
+            &mut resumed
+        )
+        .unwrap());
         assert!(resumed.writer.is_empty());
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
@@ -1296,14 +1592,43 @@ mod tests {
         let mut progress = conversation(&store);
         progress.answers = super::super::default_answers(Some(InterfaceLanguage::En));
         progress.setup_mode = Some("expedited".into());
-        let mut first = Terminal { reader: Cursor::new(b"[]\n:clear\n"), writer: Vec::new(), language: InterfaceLanguage::En };
-        assert!(!collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut first).unwrap());
-        assert!(!progress.answered_questions.contains_key("user-context-description"));
-        assert!(String::from_utf8(first.writer).unwrap().contains("no background is selected"));
-        let mut resume_options = options(root.path()); resume_options.resume = true;
-        let mut resumed = Terminal { reader: Cursor::new(b"Local work\n1\n"), writer: Vec::new(), language: InterfaceLanguage::En };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &resume_options, &mut resumed).unwrap());
-        let config = user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap()).unwrap();
+        let mut first = Terminal {
+            reader: Cursor::new(b"[]\n:clear\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(!collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut first
+        )
+        .unwrap());
+        assert!(!progress
+            .answered_questions
+            .contains_key("user-context-description"));
+        assert!(String::from_utf8(first.writer)
+            .unwrap()
+            .contains("no background is selected"));
+        let mut resume_options = options(root.path());
+        resume_options.resume = true;
+        let mut resumed = Terminal {
+            reader: Cursor::new(b"Local work\n1\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &resume_options,
+            &mut resumed
+        )
+        .unwrap());
+        let config =
+            user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
+                .unwrap();
         assert!(config.profile.contexts.is_empty());
         assert_eq!(config.profile.description.as_deref(), Some("Local work"));
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
@@ -1341,7 +1666,10 @@ mod tests {
             true
         );
         assert_eq!(data["migration_preview"]["candidate"]["schema_version"], 2);
-        assert_eq!(data["actual_monitor_state"]["controller_state"], "not-configured");
+        assert_eq!(
+            data["actual_monitor_state"]["controller_state"],
+            "not-configured"
+        );
         assert_eq!(data["actual_monitor_state"]["sensor_queries"], 0);
         assert_eq!(terminal.reader.position(), 0);
         assert!(terminal.writer.is_empty());
@@ -1352,15 +1680,27 @@ mod tests {
 
     #[test]
     fn monitor_status_text_uses_the_selected_language_without_claiming_readiness() {
-        for (language, off, stopped, unknown) in [(InterfaceLanguage::Ko, "꺼짐", "종료 확인", "확인 못함"),
-            (InterfaceLanguage::En, "off", "stop confirmed", "unverified")] {
-            let mut terminal = Terminal { reader: Cursor::new(b"unused\n"), writer: Vec::new(), language };
-            display_monitor(&json!({"saved_enabled":false,"controller_state":"stopped"}), &mut terminal).unwrap();
+        for (language, off, stopped, unknown) in [
+            (InterfaceLanguage::Ko, "꺼짐", "종료 확인", "확인 못함"),
+            (InterfaceLanguage::En, "off", "stop confirmed", "unverified"),
+        ] {
+            let mut terminal = Terminal {
+                reader: Cursor::new(b"unused\n"),
+                writer: Vec::new(),
+                language,
+            };
+            display_monitor(
+                &json!({"saved_enabled":false,"controller_state":"stopped"}),
+                &mut terminal,
+            )
+            .unwrap();
             let output = String::from_utf8(terminal.writer).unwrap();
             assert!(output.contains(off) && output.contains(stopped));
             terminal.writer = Vec::new();
             display_monitor(&json!({"saved_enabled":true,"controller_state":"running","monitoring_verified":false}), &mut terminal).unwrap();
-            assert!(String::from_utf8(terminal.writer).unwrap().contains(unknown));
+            assert!(String::from_utf8(terminal.writer)
+                .unwrap()
+                .contains(unknown));
             assert_eq!(terminal.reader.position(), 0);
         }
     }
@@ -1469,12 +1809,21 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut progress = conversation(&store);
-        super::super::host_scope::bind(&mut progress.record, &["antigravity".into()], true, true).unwrap();
+        super::super::host_scope::bind(&mut progress.record, &["antigravity".into()], true, true)
+            .unwrap();
         let mut terminal = Terminal {
-            reader: Cursor::new(b"1\n\n\n"), writer: Vec::new(), language: InterfaceLanguage::En,
+            reader: Cursor::new(b"1\n\n\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
         };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions,
-            &options(root.path()), &mut terminal).unwrap());
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
         let shown = String::from_utf8(terminal.writer).unwrap();
         assert!(shown.contains("앞서 선택한 앱에 갱신을 적용합니다: antigravity"));
         assert!(!shown.contains("Hive를 사용할 앱"));
@@ -1488,26 +1837,57 @@ mod tests {
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut progress = conversation(&store);
         let questions = catalog().unwrap().questions;
-        let mut initial = Terminal { reader: Cursor::new(b"1\n\n1\n1\n"), writer:Vec::new(), language:InterfaceLanguage::En };
-        assert!(collect(&store, &mut progress, &questions, &options(root.path()), &mut initial).unwrap());
+        let mut initial = Terminal {
+            reader: Cursor::new(b"1\n\n1\n1\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &questions,
+            &options(root.path()),
+            &mut initial
+        )
+        .unwrap());
         let original_hosts = progress.answers["selected_hosts"].clone();
         progress.catalog_digest = hive_core::sha256_digest(b"older catalog");
-        progress.answered_questions.insert("user-contexts".into(), 2);
-        progress.question_bindings.get_mut("user-contexts").unwrap().revision = 2;
-        std::fs::write(root.path().join(&store.relative), serde_yaml::to_string(&progress.record).unwrap()).unwrap();
-        let refreshed = store.refresh_draft_questions(&store.load().unwrap()).unwrap().unwrap();
+        progress
+            .answered_questions
+            .insert("user-contexts".into(), 2);
+        progress
+            .question_bindings
+            .get_mut("user-contexts")
+            .unwrap()
+            .revision = 2;
+        std::fs::write(
+            root.path().join(&store.relative),
+            serde_yaml::to_string(&progress.record).unwrap(),
+        )
+        .unwrap();
+        let refreshed = store
+            .refresh_draft_questions(&store.load().unwrap())
+            .unwrap()
+            .unwrap();
         progress.record = refreshed.progress.clone().unwrap();
         progress.snapshot = refreshed;
         let mut options = options(root.path());
         options.resume = true;
-        let mut resumed = Terminal { reader:Cursor::new(b"3\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
+        let mut resumed = Terminal {
+            reader: Cursor::new(b"3\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
         assert!(collect(&store, &mut progress, &questions, &options, &mut resumed).unwrap());
         let shown = String::from_utf8(resumed.writer).unwrap();
         assert_eq!(shown.matches("관련된 배경이나 관심사").count(), 1);
         assert!(!shown.contains("사용할 언어"));
         assert!(!shown.contains("Hive를 사용할 앱"));
         assert_eq!(progress.answers["selected_hosts"], original_hosts);
-        assert_eq!(progress.answers["profile"]["contexts"], json!(["non-developer"]));
+        assert_eq!(
+            progress.answers["profile"]["contexts"],
+            json!(["non-developer"])
+        );
         assert_eq!(progress.answered_questions["user-contexts"], 1);
     }
 
@@ -1516,8 +1896,15 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut progress = conversation(&store);
-        let mut question = catalog().unwrap().questions.into_iter().find(|q| q.id == "user-hosts").unwrap();
-        progress.answered_questions.insert(question.id.clone(), question.revision);
+        let mut question = catalog()
+            .unwrap()
+            .questions
+            .into_iter()
+            .find(|q| q.id == "user-hosts")
+            .unwrap();
+        progress
+            .answered_questions
+            .insert(question.id.clone(), question.revision);
         progress.answers["selected_hosts"] = json!(["codex"]);
         assert!(answered(&progress, &question));
         question.prompt.ko = "다듬은 질문".into();
@@ -1525,7 +1912,8 @@ mod tests {
         assert!(answered(&progress, &question));
         question.options.retain(|choice| choice.value != "codex");
         assert!(!answered(&progress, &question));
-        let mut options = options(root.path()); options.resume = true;
+        let mut options = options(root.path());
+        options.resume = true;
         progress.selected_section = Some("persona".into());
         assert!(selected_question(&progress, &question, &options, true));
     }
@@ -1538,8 +1926,19 @@ mod tests {
         progress.fresh = false;
         progress.answers["interface_language"] = json!("ko");
         progress.answers["wiki"]["language"] = json!("ko");
-        let mut terminal = Terminal { reader:Cursor::new(b"language\n2\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut terminal).unwrap());
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"language\n2\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut terminal
+        )
+        .unwrap());
         let shown = String::from_utf8(terminal.writer).unwrap();
         assert!(shown.contains("변경할 설정을 골라 주세요"));
         assert!(!shown.contains("설정 방식을 골라 주세요"));
@@ -1555,23 +1954,59 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
         let mut progress = conversation(&store);
-        progress.fresh = false; progress.answers["interface_language"] = json!("ko");
+        progress.fresh = false;
+        progress.answers["interface_language"] = json!("ko");
         let original = progress.answers.clone();
-        let mut cancelled = Terminal { reader:Cursor::new(b":cancel\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
-        assert!(!collect(&store, &mut progress, &catalog().unwrap().questions, &options(root.path()), &mut cancelled).unwrap());
+        let mut cancelled = Terminal {
+            reader: Cursor::new(b":cancel\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        assert!(!collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options(root.path()),
+            &mut cancelled
+        )
+        .unwrap());
         assert_eq!(progress.answers, original);
         assert!(!progress.answered_questions.contains_key("user-section"));
-        let mut resumed = Terminal { reader:Cursor::new(b"persona\nfriendly\n"), writer:Vec::new(), language:InterfaceLanguage::Ko };
-        let mut options = options(root.path()); options.resume=true;
-        assert!(collect(&store, &mut progress, &catalog().unwrap().questions, &options, &mut resumed).unwrap());
+        let mut resumed = Terminal {
+            reader: Cursor::new(b"persona\nfriendly\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        let mut options = options(root.path());
+        options.resume = true;
+        assert!(collect(
+            &store,
+            &mut progress,
+            &catalog().unwrap().questions,
+            &options,
+            &mut resumed
+        )
+        .unwrap());
         assert_eq!(progress.answers["persona"]["id"], "friendly");
         assert_eq!(progress.selected_section.as_deref(), Some("persona"));
-        assert_eq!(progress.answers["selected_hosts"], original["selected_hosts"]);
+        assert_eq!(
+            progress.answers["selected_hosts"],
+            original["selected_hosts"]
+        );
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
         let catalog = catalog().unwrap();
-        let menu = catalog.questions.iter().find(|q| q.id=="user-section").unwrap();
+        let menu = catalog
+            .questions
+            .iter()
+            .find(|q| q.id == "user-section")
+            .unwrap();
         for option in &menu.options {
-            assert!(option.value=="all" || !catalog.section(PreferenceScope::User, &option.value).is_empty());
+            assert!(
+                option.value == "all"
+                    || !catalog
+                        .section(PreferenceScope::User, &option.value)
+                        .is_empty()
+            );
         }
     }
 

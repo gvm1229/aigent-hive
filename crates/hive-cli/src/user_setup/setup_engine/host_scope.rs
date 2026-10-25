@@ -71,33 +71,68 @@ pub(super) fn check_request(
     Ok(())
 }
 
-pub(super) fn bind_deactivations(preview: &crate::ActionResult, progress: &mut SetupProgress) -> Result<(), SetupError> {
-    let plans = serde_json::from_value(preview.data.as_ref().and_then(|data| data.get("host_deactivations"))
-        .cloned().unwrap_or_else(|| json!([]))).map_err(|e| SetupError::Internal(e.to_string()))?;
-    if progress.host_deactivations.is_empty() { progress.host_deactivations = plans; }
-    else if progress.host_deactivations != plans { return Err(SetupError::Conflict("host deactivation preview changed; review again".into())); }
+pub(super) fn bind_deactivations(
+    preview: &crate::ActionResult,
+    progress: &mut SetupProgress,
+) -> Result<(), SetupError> {
+    let plans = serde_json::from_value(
+        preview
+            .data
+            .as_ref()
+            .and_then(|data| data.get("host_deactivations"))
+            .cloned()
+            .unwrap_or_else(|| json!([])),
+    )
+    .map_err(|e| SetupError::Internal(e.to_string()))?;
+    if progress.host_deactivations.is_empty() {
+        progress.host_deactivations = plans;
+    } else if progress.host_deactivations != plans {
+        return Err(SetupError::Conflict(
+            "host deactivation preview changed; review again".into(),
+        ));
+    }
     Ok(())
 }
 
-pub(super) fn display_deactivations<R, W: std::io::Write>(progress: &SetupProgress,
-    terminal: &mut super::terminal::Terminal<R, W>) -> Result<(), SetupError> {
+pub(super) fn display_deactivations<R, W: std::io::Write>(
+    progress: &SetupProgress,
+    terminal: &mut super::terminal::Terminal<R, W>,
+) -> Result<(), SetupError> {
     for plan in &progress.host_deactivations {
-        writeln!(terminal.writer, "{}: {}", if terminal.language == crate::user_setup::InterfaceLanguage::Ko {
-            "Hive 연결과 안내만 해제, 설치 원문·사용자 자료 보존" } else {
-            "Remove Hive registration and guidance; preserve installed sources and user data" }, plan.host.as_str())
-            .map_err(|e| SetupError::Input(e.to_string()))?;
+        writeln!(
+            terminal.writer,
+            "{}: {}",
+            if terminal.language == crate::user_setup::InterfaceLanguage::Ko {
+                "Hive 연결과 안내만 해제, 설치 원문·사용자 자료 보존"
+            } else {
+                "Remove Hive registration and guidance; preserve installed sources and user data"
+            },
+            plan.host.as_str()
+        )
+        .map_err(|e| SetupError::Input(e.to_string()))?;
     }
     Ok(())
 }
 
 pub(in crate::user_setup) fn validate(progress: &SetupProgress) -> Result<(), SetupError> {
-    let removed = progress.host_deactivations.iter().map(|plan| plan.host.as_str()).collect::<BTreeSet<_>>();
-    if removed.len() != progress.host_deactivations.len() || (!removed.is_empty()
-        && (progress.binding.scope != PreferenceScope::User
-            || (progress.phase != ProgressPhase::Complete
-                && progress.answers["selected_hosts"].as_array().is_none_or(|hosts|
-                    removed.iter().any(|host| hosts.contains(&json!(host))))))) {
-        return Err(SetupError::Conflict("host deactivation differs from the saved selection".into()));
+    let removed = progress
+        .host_deactivations
+        .iter()
+        .map(|plan| plan.host.as_str())
+        .collect::<BTreeSet<_>>();
+    if removed.len() != progress.host_deactivations.len()
+        || (!removed.is_empty()
+            && (progress.binding.scope != PreferenceScope::User
+                || (progress.phase != ProgressPhase::Complete
+                    && progress.answers["selected_hosts"]
+                        .as_array()
+                        .is_none_or(|hosts| {
+                            removed.iter().any(|host| hosts.contains(&json!(host)))
+                        }))))
+    {
+        return Err(SetupError::Conflict(
+            "host deactivation differs from the saved selection".into(),
+        ));
     }
     if !valid(&progress.update_hosts)
         || (!progress.update_hosts.is_empty()
@@ -152,20 +187,29 @@ mod tests {
     #[test]
     fn deactivation_scope_remains_valid_after_completed_answers_are_redacted() {
         let root = tempfile::tempdir().unwrap();
-        let store = crate::user_setup::progress_store::ProgressStore::open(root.path(), None).unwrap();
-        let mut progress = store.new_progress("user-hosts".into(), json!({"selected_hosts":["antigravity"]})).unwrap();
+        let store =
+            crate::user_setup::progress_store::ProgressStore::open(root.path(), None).unwrap();
+        let mut progress = store
+            .new_progress(
+                "user-hosts".into(),
+                json!({"selected_hosts":["antigravity"]}),
+            )
+            .unwrap();
         progress.host_deactivations = serde_json::from_value(json!([{
             "host":"codex","manifest_digest":format!("sha256:{}","a".repeat(64)),
             "before":{"host":"codex","state":{"marketplace":null,"plugin":null}},
             "guidance":".codex/AGENTS.md","guidance_before":"absent","guidance_after":"absent"
-        }])).unwrap();
+        }]))
+        .unwrap();
         validate(&progress).unwrap();
         progress.answers = json!({});
         progress.phase = ProgressPhase::Applying;
         assert!(validate(&progress).is_err());
         progress.phase = ProgressPhase::Complete;
         validate(&progress).unwrap();
-        progress.host_deactivations.push(progress.host_deactivations[0].clone());
+        progress
+            .host_deactivations
+            .push(progress.host_deactivations[0].clone());
         assert!(validate(&progress).is_err());
     }
     use crate::user_setup::progress_store::ProgressStore;

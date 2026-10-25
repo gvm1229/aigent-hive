@@ -4,17 +4,17 @@ use super::{parse_progress_file, SetupError, MAX_USER_SETUP_BYTES, USER_SETUP_RE
 use crate::user_install::{
     open_canonical_user_root_for_setup, read_user_setup_file, replace_user_setup_file,
 };
-use cap_std::fs::Dir;
 use cap_fs_ext::MetadataExt as CapMetadataExt;
+use cap_std::fs::Dir;
 use hive_core::{preferences::PreferenceScope, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 mod history;
-mod state_io;
-mod questions;
 mod monitor_review;
+mod questions;
+mod state_io;
 pub(super) use questions::QuestionBinding;
 
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";
@@ -175,7 +175,9 @@ impl ProgressStore {
         // Canonical path bytes avoid lossy display strings and contain no persisted private path.
         let path_digest = sha256_digest(path.as_os_str().as_encoded_bytes());
         let identity = directory_identity(&config_root)?;
-        let target_id = sha256_digest(format!("{scope:?}:{path_digest}:{}:{}", identity.0, identity.1).as_bytes());
+        let target_id = sha256_digest(
+            format!("{scope:?}:{path_digest}:{}:{}", identity.0, identity.1).as_bytes(),
+        );
         let relative = match scope {
             PreferenceScope::User => PathBuf::from(USER_PROGRESS),
             PreferenceScope::Project => Path::new(".hive/config/setup-progress/projects")
@@ -298,7 +300,11 @@ impl ProgressStore {
                 "setup progress exceeds the size limit".to_owned(),
             ));
         }
-        self.write_state(&self.relative, snapshot.expected.as_deref(), Some(desired.as_bytes()))?;
+        self.write_state(
+            &self.relative,
+            snapshot.expected.as_deref(),
+            Some(desired.as_bytes()),
+        )?;
         Ok(ProgressSnapshot {
             progress: Some(progress.clone()),
             expected: Some(desired.into_bytes()),
@@ -363,7 +369,8 @@ impl ProgressStore {
         )?;
         #[cfg(debug_assertions)]
         if self.binding.scope == PreferenceScope::Project
-            && std::env::var("HIVE_PROJECT_SETUP_INTERRUPT_AFTER").as_deref() == Ok("cleanup") {
+            && std::env::var("HIVE_PROJECT_SETUP_INTERRUPT_AFTER").as_deref() == Ok("cleanup")
+        {
             std::process::exit(87);
         }
         let backup = recovery_path(prior)?;
@@ -448,7 +455,8 @@ impl ProgressStore {
         if path == self.relative || path == Path::new(LEGACY_PROGRESS) {
             self.read_state(path, MAX_USER_SETUP_BYTES)
         } else {
-            read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES).map_err(SetupError::Conflict)
+            read_user_setup_file(&self.root, path, MAX_USER_SETUP_BYTES)
+                .map_err(SetupError::Conflict)
         }
     }
 
@@ -465,10 +473,16 @@ impl ProgressStore {
     }
 
     fn verify_directory_binding(&self) -> Result<(), SetupError> {
-        for (path, pinned) in [(&self.root_path, &self.root), (&self.config_path, &self.config_root)] {
-            let (_, current) = open_canonical_user_root_for_setup(path).map_err(SetupError::Conflict)?;
+        for (path, pinned) in [
+            (&self.root_path, &self.root),
+            (&self.config_path, &self.config_root),
+        ] {
+            let (_, current) =
+                open_canonical_user_root_for_setup(path).map_err(SetupError::Conflict)?;
             if directory_identity(&current)? != directory_identity(pinned)? {
-                return Err(SetupError::Conflict("setup target directory changed; saved answers were preserved".into()));
+                return Err(SetupError::Conflict(
+                    "setup target directory changed; saved answers were preserved".into(),
+                ));
             }
         }
         if self.binding.scope == PreferenceScope::Project {
@@ -478,43 +492,91 @@ impl ProgressStore {
         Ok(())
     }
 
+    fn validate_operation_bindings(&self, progress: &SetupProgress) -> Result<(), SetupError> {
+        if progress.monitor_stop.as_ref().is_some_and(|choice| {
+            self.binding.scope != PreferenceScope::User
+                || !choice.configured
+                || !valid_hash(&choice.config_digest)
+                || progress.legacy_migration.is_some()
+        }) {
+            return Err(SetupError::Verification(
+                "invalid setup monitor stop binding".into(),
+            ));
+        }
+        if progress.index_rebuild_scope.as_ref().is_some_and(|digest| {
+            self.binding.scope != PreferenceScope::User
+                || !valid_hash(digest)
+                || progress.answers["wiki"]["enabled"] != true
+        }) {
+            return Err(SetupError::Verification(
+                "index rebuild approval has an invalid scope".into(),
+            ));
+        }
+        if progress.extras_draft.as_ref().is_some_and(|draft| {
+            self.binding.scope != PreferenceScope::Project || super::progress_contains_secret(draft)
+        }) {
+            return Err(SetupError::Verification(
+                "optional feature draft has an invalid scope or secret".into(),
+            ));
+        }
+        if progress
+            .extras_approval_digest
+            .as_ref()
+            .is_some_and(|digest| {
+                self.binding.scope != PreferenceScope::Project || !valid_hash(digest)
+            })
+        {
+            return Err(SetupError::Verification(
+                "optional feature approval fingerprint is invalid".into(),
+            ));
+        }
+        if progress.reconfigure_roles.is_empty() != progress.role_approval_digest.is_none()
+            || progress
+                .role_approval_digest
+                .as_ref()
+                .is_some_and(|digest| !valid_hash(digest))
+        {
+            return Err(SetupError::Verification(
+                "role approval fingerprint is missing or invalid".into(),
+            ));
+        }
+        if !progress.reconfigure_roles.is_empty()
+            && (self.binding.scope != PreferenceScope::Project
+                || progress.reconfigure_roles.iter().any(|id| {
+                    !progress.answers["persistent_roles"]
+                        .as_array()
+                        .is_some_and(|roles| {
+                            roles.iter().any(|role| role["role_id"] == id.as_str())
+                        })
+                }))
+        {
+            return Err(SetupError::Verification(
+                "role approval does not match project answers".into(),
+            ));
+        }
+        if let Some(context) = &progress.project_context {
+            if self.binding.scope != PreferenceScope::Project
+                || !valid_hash(&context.global_digest)
+                || !valid_hash(&context.plan_digest)
+            {
+                return Err(SetupError::Verification(
+                    "invalid project setup context scope".into(),
+                ));
+            }
+            hive_core::run::CapabilityResolution::parse_json(
+                &serde_json::to_vec(&context.capabilities)
+                    .map_err(|error| SetupError::Internal(error.to_string()))?,
+            )
+            .map_err(|error| SetupError::Verification(error.to_string()))?;
+        }
+        Ok(())
+    }
+
     fn validate(&self, progress: &SetupProgress) -> Result<(), SetupError> {
         super::setup_engine::validate_update_hosts(progress)?;
         super::setup_engine::monitor_start::validate(self.binding.scope, progress)?;
         questions::validate_bindings(&progress.question_bindings)?;
-        if progress.monitor_stop.as_ref().is_some_and(|choice|
-            self.binding.scope != PreferenceScope::User || !choice.configured
-                || !valid_hash(&choice.config_digest) || progress.legacy_migration.is_some()) {
-            return Err(SetupError::Verification("invalid setup monitor stop binding".into()));
-        }
-        if progress.index_rebuild_scope.as_ref().is_some_and(|digest|
-            self.binding.scope != PreferenceScope::User || !valid_hash(digest)
-                || progress.answers["wiki"]["enabled"] != true) {
-            return Err(SetupError::Verification("index rebuild approval has an invalid scope".into()));
-        }
-        if progress.extras_draft.as_ref().is_some_and(|draft| self.binding.scope != PreferenceScope::Project || super::progress_contains_secret(draft)) {
-            return Err(SetupError::Verification("optional feature draft has an invalid scope or secret".into()));
-        }
-        if progress.extras_approval_digest.as_ref().is_some_and(|digest| self.binding.scope != PreferenceScope::Project || !valid_hash(digest)) {
-            return Err(SetupError::Verification("optional feature approval fingerprint is invalid".into()));
-        }
-        if progress.reconfigure_roles.is_empty() != progress.role_approval_digest.is_none()
-            || progress.role_approval_digest.as_ref().is_some_and(|digest| !valid_hash(digest)) {
-            return Err(SetupError::Verification("role approval fingerprint is missing or invalid".into()));
-        }
-        if !progress.reconfigure_roles.is_empty() && (self.binding.scope != PreferenceScope::Project
-            || progress.reconfigure_roles.iter().any(|id| !progress.answers["persistent_roles"].as_array().is_some_and(|roles|roles.iter().any(|role|role["role_id"]==id.as_str())))) {
-            return Err(SetupError::Verification("role approval does not match project answers".into()));
-        }
-        if let Some(context) = &progress.project_context {
-            if self.binding.scope != PreferenceScope::Project || !valid_hash(&context.global_digest)
-                || !valid_hash(&context.plan_digest) {
-                return Err(SetupError::Verification("invalid project setup context scope".into()));
-            }
-            hive_core::run::CapabilityResolution::parse_json(
-                &serde_json::to_vec(&context.capabilities).map_err(|error| SetupError::Internal(error.to_string()))?
-            ).map_err(|error| SetupError::Verification(error.to_string()))?;
-        }
+        self.validate_operation_bindings(progress)?;
         if progress.legacy_migration.as_ref().is_some_and(|migration| {
             self.binding.scope != PreferenceScope::User
                 || !matches!(migration.from_schema, 1 | 2)
@@ -569,8 +631,13 @@ impl ProgressStore {
 }
 
 fn directory_identity(directory: &Dir) -> Result<(u64, u64), SetupError> {
-    let metadata = directory.dir_metadata().map_err(|error| SetupError::Conflict(error.to_string()))?;
-    Ok((CapMetadataExt::dev(&metadata), CapMetadataExt::ino(&metadata)))
+    let metadata = directory
+        .dir_metadata()
+        .map_err(|error| SetupError::Conflict(error.to_string()))?;
+    Ok((
+        CapMetadataExt::dev(&metadata),
+        CapMetadataExt::ino(&metadata),
+    ))
 }
 
 pub(super) fn recovery_path(progress: &SetupProgress) -> Result<PathBuf, SetupError> {
@@ -956,7 +1023,12 @@ mod tests {
         #[cfg(windows)]
         {
             // Windows pins this directory against rename while the capability is open.
-            assert_eq!(fs::rename(&path, projects.path().join("moved")).unwrap_err().raw_os_error(), Some(32));
+            assert_eq!(
+                fs::rename(&path, projects.path().join("moved"))
+                    .unwrap_err()
+                    .raw_os_error(),
+                Some(32)
+            );
             assert_eq!(store.load().unwrap().progress, snapshot.progress);
             assert_eq!(snapshot.progress.as_ref(), Some(&progress));
             drop(store);
@@ -987,7 +1059,12 @@ mod tests {
         let original = fs::read(path.join(USER_PROGRESS)).unwrap();
         #[cfg(windows)]
         {
-            assert_eq!(fs::rename(&path, parent.path().join("prior-user")).unwrap_err().raw_os_error(), Some(32));
+            assert_eq!(
+                fs::rename(&path, parent.path().join("prior-user"))
+                    .unwrap_err()
+                    .raw_os_error(),
+                Some(32)
+            );
             drop(store);
         }
         fs::rename(&path, parent.path().join("prior-user")).unwrap();

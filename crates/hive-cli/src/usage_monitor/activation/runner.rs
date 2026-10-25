@@ -425,9 +425,17 @@ pub(super) mod tests {
         }
     }
 
-    pub(in crate::usage_monitor::activation) fn activate_fixture(root: &PinnedTarget, approval: &str) -> Result<Value, AdapterError> {
+    pub(in crate::usage_monitor::activation) fn activate_fixture(
+        root: &PinnedTarget,
+        approval: &str,
+    ) -> Result<Value, AdapterError> {
         let scheduler = Scheduler::default();
-        let result = run_with(root, approval, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b))?;
+        let result = run_with(
+            root,
+            approval,
+            |a, b| scheduler.call(a, b),
+            |a, b| scheduler.ready(a, b),
+        )?;
         assert_eq!(*scheduler.effects.borrow(), ["register", "start"]);
         Ok(result)
     }
@@ -547,22 +555,51 @@ pub(super) mod tests {
         let (_temp, root, approval) = fixture();
         let scheduler = Scheduler::default();
         STOP_AT.with(|point| point.set(Some(Phase::Prepared)));
-        assert!(run_with(&root, &approval, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b)).is_err());
+        assert!(run_with(
+            &root,
+            &approval,
+            |a, b| scheduler.call(a, b),
+            |a, b| scheduler.ready(a, b)
+        )
+        .is_err());
         let original = Store::open(&root).unwrap().1.unwrap();
-        assert!(run_with(&root, &hive_core::sha256_digest(b"unapproved preview"),
-            |_,_| panic!("unapproved schedule"), |_,_| panic!("unapproved observe")).is_err());
-        let result = super::super::super::transition::disable(&root,
-            |_,_| panic!("no configured task"), Duration::ZERO).unwrap();
+        assert!(run_with(
+            &root,
+            &hive_core::sha256_digest(b"unapproved preview"),
+            |_, _| panic!("unapproved schedule"),
+            |_, _| panic!("unapproved observe")
+        )
+        .is_err());
+        let result = super::super::super::transition::disable(
+            &root,
+            |_, _| panic!("no configured task"),
+            Duration::ZERO,
+        )
+        .unwrap();
         assert_eq!(result["activation_retirement"], "cancelled");
         let retired = Store::open(&root).unwrap().1.unwrap();
         assert_eq!(retired.operation_id, original.operation_id);
         assert_eq!(retired.phase, Phase::Cancelled);
         assert!(retired.completed_at.is_some());
-        assert!(run_with(&root, &approval, |_,_| panic!("old consent scheduled"),
-            |_,_| panic!("old consent observed")).is_err());
-        let fresh = preview(root.requested_path()).unwrap()["preview_digest"].as_str().unwrap().to_owned();
+        assert!(run_with(
+            &root,
+            &approval,
+            |_, _| panic!("old consent scheduled"),
+            |_, _| panic!("old consent observed")
+        )
+        .is_err());
+        let fresh = preview(root.requested_path()).unwrap()["preview_digest"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         assert_ne!(approval, fresh);
-        let result = run_with(&root, &fresh, |a,b| scheduler.call(a,b), |a,b| scheduler.ready(a,b)).unwrap();
+        let result = run_with(
+            &root,
+            &fresh,
+            |a, b| scheduler.call(a, b),
+            |a, b| scheduler.ready(a, b),
+        )
+        .unwrap();
         assert_eq!(result["activation"], "verified");
         let latest = Store::open(&root).unwrap().1.unwrap();
         assert_ne!(latest.operation_id, original.operation_id);

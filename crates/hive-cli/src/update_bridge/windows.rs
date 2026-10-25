@@ -51,10 +51,7 @@ struct Parent {
     arguments: Vec<String>,
 }
 
-pub(super) fn connect(
-    root: &Path,
-    budget: LegacyBudget,
-) -> Result<Option<Connection>, String> {
+pub(super) fn connect(root: &Path, budget: LegacyBudget) -> Result<Option<Connection>, String> {
     let mut session = Session::spawn(budget)?;
     let reply = session.exchange(
         &json!({"operation":"inspect","caller_pid":std::process::id(),"registry":REGISTRY}),
@@ -77,7 +74,9 @@ pub(super) fn connect(
         if opened["event"] != "watching" {
             return Err("legacy updater lifetime could not be bound; settings preserved".into());
         }
-        return Ok(Some(Connection::Preserve(ParentWatch { _session: session })));
+        return Ok(Some(Connection::Preserve(ParentWatch {
+            _session: session,
+        })));
     }
     if opened["event"] != "opened" {
         return Err("legacy updater console is unavailable; settings preserved".into());

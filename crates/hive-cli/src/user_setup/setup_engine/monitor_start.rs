@@ -100,8 +100,13 @@ fn approval(
 }
 
 #[cfg(test)]
-pub(in crate::user_setup) fn fixture_approval(answers:&Value)->Approval {
-    approval(&json!({"preview_digest":format!("sha256:{}","a".repeat(64))}),answers,PreferenceInput::Terminal).unwrap()
+pub(in crate::user_setup) fn fixture_approval(answers: &Value) -> Approval {
+    approval(
+        &json!({"preview_digest":format!("sha256:{}","a".repeat(64))}),
+        answers,
+        PreferenceInput::Terminal,
+    )
+    .unwrap()
 }
 
 fn enabled(preview: &Value) -> bool {

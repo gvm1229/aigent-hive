@@ -16,7 +16,8 @@ use std::{
 
 pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     let mut terminal = Terminal {
-        reader: io::stdin().lock(), writer: io::stderr().lock(),
+        reader: io::stdin().lock(),
+        writer: io::stderr().lock(),
         language: super::messages::language(arguments),
     };
     let mut result = parse(arguments)
@@ -134,11 +135,17 @@ pub(in crate::user_setup) fn legacy_noninteractive(
     budget: &crate::update_bridge::LegacyBudget,
 ) -> ActionResult {
     let mut terminal = Terminal {
-        reader: io::empty(), writer: io::sink(), language: super::messages::language_at(root, None),
+        reader: io::empty(),
+        writer: io::sink(),
+        language: super::messages::language_at(root, None),
     };
-    let mut result = complete_bound(root, InteractionMode::NonInteractive, &mut terminal,
-        Some(&LegacyCompletion { budget, hosts }))
-        .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
+    let mut result = complete_bound(
+        root,
+        InteractionMode::NonInteractive,
+        &mut terminal,
+        Some(&LegacyCompletion { budget, hosts }),
+    )
+    .unwrap_or_else(|failure| super::messages::failure(&failure, terminal.language));
     if result.exit_code != 0 {
         result.next_action = Some(crate::update_bridge::resume_command(root));
     }
@@ -151,8 +158,13 @@ fn complete_bound<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
     legacy_parent: Option<&LegacyCompletion<'_>>,
 ) -> Result<ActionResult, SetupError> {
-    if legacy_parent.is_some_and(|context| !context.budget.is_connected() || context.budget.apply_deadline().is_none()) {
-        return Ok(interactive::pending(terminal.language, "hive.update-input-pending"));
+    if legacy_parent.is_some_and(|context| {
+        !context.budget.is_connected() || context.budget.apply_deadline().is_none()
+    }) {
+        return Ok(interactive::pending(
+            terminal.language,
+            "hive.update-input-pending",
+        ));
     }
     let (root, cap) = crate::user_install::open_canonical_user_root_for_setup(root)
         .map_err(SetupError::Conflict)?;
@@ -170,9 +182,17 @@ fn complete_bound<R: BufRead, W: Write>(
         terminal.language = config.interface_language;
     }
     let store = ProgressStore::open(&root, None)?;
-    if mode != InteractionMode::NeedsInput { store.recover_pending_state()?; }
+    if mode != InteractionMode::NeedsInput {
+        store.recover_pending_state()?;
+    }
     let snapshot = store.load()?;
-    if let (Some(context), Some(progress)) = (legacy_parent, snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete)) {
+    if let (Some(context), Some(progress)) = (
+        legacy_parent,
+        snapshot
+            .progress
+            .as_ref()
+            .filter(|p| p.phase != ProgressPhase::Complete),
+    ) {
         super::host_scope::check_request(progress, context.hosts)?;
     }
     let selected = route(
@@ -186,7 +206,10 @@ fn complete_bound<R: BufRead, W: Write>(
     );
     let before = super::update_summary::baseline(&root, config.as_ref());
     let application = match selected {
-        Route::NeedsInput => Ok(interactive::pending(terminal.language, "hive.update-input-pending")),
+        Route::NeedsInput => Ok(interactive::pending(
+            terminal.language,
+            "hive.update-input-pending",
+        )),
         Route::Questions => interactive::execute_update(&root, mode, terminal),
         Route::Recover => recovery::resume(
             &root,
@@ -194,8 +217,10 @@ fn complete_bound<R: BufRead, W: Write>(
             terminal.language,
             legacy_parent.is_some(),
         ),
-        Route::PreserveDraft if legacy_parent.is_some() =>
-            Ok(interactive::pending(terminal.language, "hive.update-input-pending")),
+        Route::PreserveDraft if legacy_parent.is_some() => Ok(interactive::pending(
+            terminal.language,
+            "hive.update-input-pending",
+        )),
         Route::PreserveDraft => preserve_draft(
             &root,
             cap,
@@ -211,29 +236,49 @@ fn complete_bound<R: BufRead, W: Write>(
             legacy_parent,
         ),
     };
-    let mut result = application.unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
+    finish_result(
+        &root,
+        selected,
+        mode,
+        terminal,
+        before.as_ref(),
+        application,
+    )
+}
+
+fn finish_result<R: BufRead, W: Write>(
+    root: &Path,
+    selected: Route,
+    mode: InteractionMode,
+    terminal: &mut Terminal<R, W>,
+    before: Option<&serde_json::Value>,
+    application: Result<ActionResult, SetupError>,
+) -> Result<ActionResult, SetupError> {
+    let mut result =
+        application.unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "UpdateHiveUser";
     if result.exit_code != 0 {
-        result.next_action = Some(crate::update_bridge::resume_command(&root));
-        super::update_summary::incomplete(&root, &mut result);
+        result.next_action = Some(crate::update_bridge::resume_command(root));
+        super::update_summary::incomplete(root, &mut result);
     }
     if result.exit_code == 0 {
         let cap =
-            crate::user_install::open_user_root_for_setup(&root).map_err(SetupError::Conflict)?;
+            crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
         let saved = user_setup::load_operational_config(&cap)?
             .ok_or_else(|| SetupError::Verification("updated settings are missing".into()))?;
         terminal.language = saved.interface_language;
         let pending = user_setup::migration::pending_questions(&saved);
         if selected == Route::Recover && mode == InteractionMode::Terminal && !pending.is_empty() {
-            return complete(&root, mode, terminal);
+            return complete(root, mode, terminal);
         }
         result.code = if pending.is_empty() {
             "hive.user-update-complete"
         } else {
             "hive.user-update-complete-pending-input"
         };
-        result.data.get_or_insert_with(|| json!({}))["settings_draft_preserved"] = json!(selected==Route::PreserveDraft);
-        super::update_summary::complete(&root, before.as_ref(), &saved, &mut result)?;
+        result.data.get_or_insert_with(|| json!({}))["settings_draft_preserved"] =
+            json!(selected == Route::PreserveDraft);
+        super::update_summary::complete(root, before, &saved, &mut result)?;
         result.message = match terminal.language {
             InterfaceLanguage::Ko => if pending.is_empty() {"사용자 설정과 지침 갱신·검증 완료"} else {"사용자 지침 갱신·검증 완료. 기존 보호 선택을 보존했으며 선택 질문은 보류했습니다."},
             InterfaceLanguage::En => if pending.is_empty() {"User settings and guidance updated and verified"} else {"User guidance updated and verified. Existing protection was preserved; optional questions remain."},
@@ -253,11 +298,16 @@ fn apply_saved(
 ) -> Result<ActionResult, SetupError> {
     let _lease = if legacy_parent.is_none() {
         Some(crate::user_install::lock_user_setup(&cap).map_err(SetupError::Conflict)?)
-    } else { None };
+    } else {
+        None
+    };
     let mut progress = legacy::transition_progress(root, store, config)?;
     if let Some(context) = legacy_parent {
         if !context.budget.is_connected() || context.budget.apply_deadline().is_none() {
-            return Ok(interactive::pending(config.interface_language, "hive.update-input-pending"));
+            return Ok(interactive::pending(
+                config.interface_language,
+                "hive.update-input-pending",
+            ));
         }
         super::host_scope::bind(&mut progress, context.hosts, false, true)?;
     }
@@ -271,8 +321,16 @@ fn apply_saved(
         root_cap: cap,
     };
     let applied = if let Some(context) = legacy_parent {
-        super::worker::apply(&arguments, &bytes, existing, &progress.operation_id, context.budget)
-    } else { legacy::apply(&arguments, &bytes, existing, &progress) };
+        super::worker::apply(
+            &arguments,
+            &bytes,
+            existing,
+            &progress.operation_id,
+            context.budget,
+        )
+    } else {
+        legacy::apply(&arguments, &bytes, existing, &progress)
+    };
     super::application::finish(store, &progress, applied)
 }
 
@@ -421,9 +479,22 @@ mod tests {
         let draft_path = root.path().join(&store.relative);
         let draft = std::fs::read(&draft_path).unwrap();
         let budget = crate::update_bridge::LegacyBudget::testing();
-        let context = LegacyCompletion { budget: &budget, hosts: &["codex".into()] };
-        let mut terminal = Terminal { reader: Cursor::new(b"yes\n"), writer: Vec::new(), language: InterfaceLanguage::En };
-        let result = complete_bound(root.path(), InteractionMode::NonInteractive, &mut terminal, Some(&context)).unwrap();
+        let context = LegacyCompletion {
+            budget: &budget,
+            hosts: &["codex".into()],
+        };
+        let mut terminal = Terminal {
+            reader: Cursor::new(b"yes\n"),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let result = complete_bound(
+            root.path(),
+            InteractionMode::NonInteractive,
+            &mut terminal,
+            Some(&context),
+        )
+        .unwrap();
         assert_eq!(result.status, "needs-input");
         assert_eq!(terminal.reader.position(), 0);
         assert!(terminal.writer.is_empty());
@@ -439,7 +510,9 @@ mod tests {
         let budget = crate::update_bridge::LegacyBudget::testing();
         let hosts = ["codex".into()];
         for disconnected in [false, true] {
-            if disconnected { budget.disconnect(); }
+            if disconnected {
+                budget.disconnect();
+            }
             let result = legacy_noninteractive(root.path(), &hosts, &budget);
             assert_eq!(result.status, "needs-input");
             assert!(result.next_action.is_some());

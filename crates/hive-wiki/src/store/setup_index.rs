@@ -250,14 +250,18 @@ mod tests {
         let journal = root.path().join(RAG_DIRTY_RELATIVE);
         let original = std::fs::read(&journal).unwrap();
         assert!(store.preview_setup_index_rebuild().is_err());
-        store.validate_setup_index_scope(&preview.scope_digest).unwrap();
+        store
+            .validate_setup_index_scope(&preview.scope_digest)
+            .unwrap();
         assert_eq!(std::fs::read(&journal).unwrap(), original);
         let mut wrong: super::super::PersistentDirtyState =
             serde_json::from_slice(&original).unwrap();
         wrong.base_manifest_digest = sha256_digest(b"different lineage");
         let changed = serde_json::to_vec(&wrong).unwrap();
         std::fs::write(&journal, &changed).unwrap();
-        assert!(store.validate_setup_index_scope(&preview.scope_digest).is_err());
+        assert!(store
+            .validate_setup_index_scope(&preview.scope_digest)
+            .is_err());
         assert!(store.rebuild_setup_index(&preview.scope_digest).is_err());
         assert_eq!(std::fs::read(&journal).unwrap(), changed);
         std::fs::write(&journal, &original).unwrap();

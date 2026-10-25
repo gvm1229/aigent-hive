@@ -13,7 +13,12 @@ pub(super) struct CoreUpdate {
 
 impl Default for CoreUpdate {
     fn default() -> Self {
-        Self { from_version: None, to_version: None, requested_version: None, status: "not-started" }
+        Self {
+            from_version: None,
+            to_version: None,
+            requested_version: None,
+            status: "not-started",
+        }
     }
 }
 
@@ -42,7 +47,9 @@ pub(super) fn emit(json_output: bool, result: &ActionResult) -> ExitCode {
         return crate::emit_action_result(result);
     }
     eprintln!("{}", result.message);
-    for line in guidance(result) { eprintln!("{line}"); }
+    for line in guidance(result) {
+        eprintln!("{line}");
+    }
     if let Some(next) = &result.next_action {
         eprintln!("{next}");
     }
@@ -152,14 +159,17 @@ pub(super) fn finished(
             }
         }
     }
-    let mut data = completion.and_then(|report| report.data.clone()).filter(serde_json::Value::is_object)
+    let mut data = completion
+        .and_then(|report| report.data.clone())
+        .filter(serde_json::Value::is_object)
         .unwrap_or_else(|| json!({}));
-    data["interface_language"] = json!(if language == Language::Ko {"ko"} else {"en"});
+    data["interface_language"] = json!(if language == Language::Ko { "ko" } else { "en" });
     data["from_version"] = json!(core.from_version);
     data["to_version"] = json!(core.to_version);
     data["requested_version"] = json!(core.requested_version);
     if !data["steps"].is_object() {
-        data["steps"] = json!({"settings":"unverified","harness":"unverified","monitor":"unverified"});
+        data["steps"] =
+            json!({"settings":"unverified","harness":"unverified","monitor":"unverified"});
     }
     data["steps"]["core"] = json!(core.status);
     data["outcome"] = json!(outcome_name);
@@ -170,24 +180,47 @@ pub(super) fn finished(
 }
 
 pub(super) fn guidance(result: &ActionResult) -> Vec<String> {
-    let Some(data) = &result.data else { return Vec::new(); };
+    let Some(data) = &result.data else {
+        return Vec::new();
+    };
     let ko = data["interface_language"] == "ko";
     let mut lines = Vec::new();
     if let Some(core) = data["steps"]["core"].as_str() {
-        let state = match (ko,core) {
-            (true,"verified")=>"교체 검증 완료", (true,"unchanged")=>"기존 버전 유지",
-            (true,"not-run"|"not-started")=>"교체 실행 없음", (true,_)=>"교체 결과 확인 못함",
-            (false,"verified")=>"activation verified", (false,"unchanged")=>"current version retained",
-            (false,"not-run"|"not-started")=>"replacement not run", (false,_)=>"replacement unverified",
+        let state = match (ko, core) {
+            (true, "verified") => "교체 검증 완료",
+            (true, "unchanged") => "기존 버전 유지",
+            (true, "not-run" | "not-started") => "교체 실행 없음",
+            (true, _) => "교체 결과 확인 못함",
+            (false, "verified") => "activation verified",
+            (false, "unchanged") => "current version retained",
+            (false, "not-run" | "not-started") => "replacement not run",
+            (false, _) => "replacement unverified",
         };
-        lines.push(if ko {format!("프로그램 본체: {state}")} else {format!("Program: {state}")});
+        lines.push(if ko {
+            format!("프로그램 본체: {state}")
+        } else {
+            format!("Program: {state}")
+        });
     }
     if let Some(keys) = data["settings_changes"]["changed_keys"].as_array() {
         lines.push(if keys.is_empty() {
-            if ko { "저장된 설정 유지. 사용자 자료와 프로젝트 파일 보존." }
-            else { "Saved settings retained. User content and project files preserved." }.into()
-        } else if ko { format!("변경한 설정 항목: {}. 사용자 자료와 프로젝트 파일 보존.", keys.len()) }
-        else { format!("Changed settings: {}. User content and project files preserved.", keys.len()) });
+            if ko {
+                "저장된 설정 유지. 사용자 자료와 프로젝트 파일 보존."
+            } else {
+                "Saved settings retained. User content and project files preserved."
+            }
+            .into()
+        } else if ko {
+            format!(
+                "변경한 설정 항목: {}. 사용자 자료와 프로젝트 파일 보존.",
+                keys.len()
+            )
+        } else {
+            format!(
+                "Changed settings: {}. User content and project files preserved.",
+                keys.len()
+            )
+        });
         if !keys.is_empty() && !crate::display_options::quiet() {
             lines.push(if ko { "원하면 AI에게 설정 검토를 요청할 수 있습니다. 직접 설정에는 AI가 필요하지 않습니다." }
                 else { "You can ask your AI host to review these settings. Direct setup needs no AI." }.into());
@@ -196,7 +229,19 @@ pub(super) fn guidance(result: &ActionResult) -> Vec<String> {
     if let Some(policy) = data["effective_usage_policy"].as_object() {
         let preflight = &policy["preflight"];
         let midway = &policy["midway"];
-        let flag = |value: &serde_json::Value| if value == true { if ko {"켜짐"} else {"on"} } else if ko {"꺼짐"} else {"off"};
+        let flag = |value: &serde_json::Value| {
+            if value == true {
+                if ko {
+                    "켜짐"
+                } else {
+                    "on"
+                }
+            } else if ko {
+                "꺼짐"
+            } else {
+                "off"
+            }
+        };
         lines.push(if ko {
             format!("전역 기본 보호: 작업 전 기준 {} · 재설정 {} · 0% {} · 작업 중 감시 {}. 세션·프로젝트별 예외는 별도입니다.",
                 flag(&preflight["threshold_enabled"]),flag(&preflight["reset_enabled"]),flag(&preflight["zero_quota_enabled"]),flag(&midway["enabled"]))
@@ -204,8 +249,21 @@ pub(super) fn guidance(result: &ActionResult) -> Vec<String> {
             flag(&preflight["threshold_enabled"]),flag(&preflight["reset_enabled"]),flag(&preflight["zero_quota_enabled"]),flag(&midway["enabled"])) });
     }
     if let Some(state) = data["monitor_state"]["controller_state"].as_str() {
-        let state = if ko { match state {"running"=>"실행 중", "stopped"=>"종료 확인", "not-configured"=>"설정 없음", _=>"확인 못함"} } else {state};
-        lines.push(if ko { format!("확인한 감시 실행 상태: {state}") } else { format!("Observed monitor state: {state}") });
+        let state = if ko {
+            match state {
+                "running" => "실행 중",
+                "stopped" => "종료 확인",
+                "not-configured" => "설정 없음",
+                _ => "확인 못함",
+            }
+        } else {
+            state
+        };
+        lines.push(if ko {
+            format!("확인한 감시 실행 상태: {state}")
+        } else {
+            format!("Observed monitor state: {state}")
+        });
     }
     lines
 }
@@ -248,7 +306,12 @@ mod tests {
             "next_action":"hive update","data":{"pending_questions":["usage-warnings"]}
         }))
         .unwrap();
-        let result = finished(Ok(FlowOutcome::Reconciled), Some(&completion), Language::En, &CoreUpdate::default());
+        let result = finished(
+            Ok(FlowOutcome::Reconciled),
+            Some(&completion),
+            Language::En,
+            &CoreUpdate::default(),
+        );
         assert_eq!(result.exit_code, 0);
         assert_eq!(result.code, "hive.update-complete-pending-input");
         assert_eq!(
@@ -265,26 +328,37 @@ mod tests {
             "next_action":"hive update","data":{"steps":{"settings":"incomplete","harness":"unverified"},
                 "monitor_state":{"controller_state":"stopped"},"effective_usage_policy":null}
         })).unwrap();
-        let core=CoreUpdate {from_version:Some("0.13.1".into()),to_version:Some("0.14.0-test.1".into()),
-            requested_version:Some("0.14.0-test.1".into()),status:"verified"};
-        let result=finished(Err(report.message.clone()),Some(&report),Language::En,&core);
-        assert_eq!(result.exit_code,5);
-        assert_eq!(result.status,"verification-failed");
-        let data=result.data.unwrap();
-        assert_eq!(data["steps"]["core"],"verified");
-        assert_eq!(data["steps"]["harness"],"unverified");
-        assert_eq!(data["to_version"],"0.14.0-test.1");
-        assert_eq!(data["monitor_state"]["controller_state"],"stopped");
+        let core = CoreUpdate {
+            from_version: Some("0.13.1".into()),
+            to_version: Some("0.14.0-test.1".into()),
+            requested_version: Some("0.14.0-test.1".into()),
+            status: "verified",
+        };
+        let result = finished(
+            Err(report.message.clone()),
+            Some(&report),
+            Language::En,
+            &core,
+        );
+        assert_eq!(result.exit_code, 5);
+        assert_eq!(result.status, "verification-failed");
+        let data = result.data.unwrap();
+        assert_eq!(data["steps"]["core"], "verified");
+        assert_eq!(data["steps"]["harness"], "unverified");
+        assert_eq!(data["to_version"], "0.14.0-test.1");
+        assert_eq!(data["monitor_state"]["controller_state"], "stopped");
         assert!(data["effective_usage_policy"].is_null());
     }
 
     #[test]
     fn unchanged_settings_do_not_repeat_optional_ai_help_or_claim_a_disable() {
-        for (language,marker) in [("ko","설정 유지"),("en","settings retained")] {
-            let mut result=result("success","test",0,"done".into());
-            result.data=Some(json!({"interface_language":language,"settings_changes":{"changed_keys":[]},
-                "monitor_state":{"controller_state":"unverified"}}));
-            let lines=guidance(&result).join("\n");
+        for (language, marker) in [("ko", "설정 유지"), ("en", "settings retained")] {
+            let mut result = result("success", "test", 0, "done".into());
+            result.data = Some(
+                json!({"interface_language":language,"settings_changes":{"changed_keys":[]},
+                "monitor_state":{"controller_state":"unverified"}}),
+            );
+            let lines = guidance(&result).join("\n");
             assert!(lines.contains(marker));
             assert!(!lines.contains("AI"));
             assert!(!lines.contains("disabled"));

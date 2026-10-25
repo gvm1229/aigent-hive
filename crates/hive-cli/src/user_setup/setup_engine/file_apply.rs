@@ -27,9 +27,15 @@ pub(super) fn apply(
     {
         require_same_intent(pending, config, legacy_input)?;
         super::monitor_start::check_file_replay(pending, options.monitor_confirm.as_deref())?;
-        if index_rebuild_scope.is_some_and(|digest| pending.index_rebuild_scope.as_deref()
-            .is_some_and(|saved| saved != digest)) {
-            return Err(SetupError::Conflict("index rebuild approval differs from the pending setup".into()));
+        if index_rebuild_scope.is_some_and(|digest| {
+            pending
+                .index_rebuild_scope
+                .as_deref()
+                .is_some_and(|saved| saved != digest)
+        }) {
+            return Err(SetupError::Conflict(
+                "index rebuild approval differs from the pending setup".into(),
+            ));
         }
         if matches!(
             pending.phase,
@@ -59,7 +65,8 @@ pub(super) fn apply(
             .try_clone()
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
-    let preview = user_setup::execute_answers(&preview, bytes, user_setup::SetupBase::Expected(expected))?;
+    let preview =
+        user_setup::execute_answers(&preview, bytes, user_setup::SetupBase::Expected(expected))?;
     let answers: serde_json::Value =
         serde_json::from_slice(bytes).map_err(|error| SetupError::Internal(error.to_string()))?;
     let mut progress = match snapshot
@@ -74,13 +81,21 @@ pub(super) fn apply(
     super::host_scope::bind_deactivations(&preview, &mut progress)?;
     progress.legacy_migration = migration;
     super::monitor_stop::bind(&arguments.user_root, &mut progress)?;
-    super::monitor_start::bind_file(&arguments.user_root, expected, &mut progress,
-        options.monitor_confirm.as_deref(), options.channel)?;
+    super::monitor_start::bind_file(
+        &arguments.user_root,
+        expected,
+        &mut progress,
+        options.monitor_confirm.as_deref(),
+        options.channel,
+    )?;
     super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
     super::monitor_start::preflight(&arguments.user_root, &progress)?;
     super::application::begin(&store, &snapshot, &mut progress)?;
-    super::application::finish(&store, &progress,
-        super::legacy::apply(arguments, bytes, expected, &progress))
+    super::application::finish(
+        &store,
+        &progress,
+        super::legacy::apply(arguments, bytes, expected, &progress),
+    )
 }
 
 fn require_same_intent(

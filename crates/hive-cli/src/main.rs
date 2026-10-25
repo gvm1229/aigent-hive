@@ -258,7 +258,9 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
         Some("uninstall") => user_install::run_uninstall(&arguments[1..]),
-        Some("__complete-user-uninstall") => user_install::run_uninstall_completion(&arguments[1..]),
+        Some("__complete-user-uninstall") => {
+            user_install::run_uninstall_completion(&arguments[1..])
+        }
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("discord") => discord::run(&arguments[1..]),
@@ -287,8 +289,14 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
                 || arguments.get(1).is_some_and(|argument| {
                     matches!(
                         argument.as_str(),
-                        "--channel" | "--user-root" | "--confirm" | "--direct-handoff" | "--help"
-                            | "--interactive" | "--non-interactive" | "--output"
+                        "--channel"
+                            | "--user-root"
+                            | "--confirm"
+                            | "--direct-handoff"
+                            | "--help"
+                            | "--interactive"
+                            | "--non-interactive"
+                            | "--output"
                     )
                 }) =>
         {
@@ -342,7 +350,15 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     }
     if matches!(
         arguments.first().map(String::as_str),
-        Some("show" | "enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")
+        Some(
+            "show"
+                | "enforce"
+                | "status"
+                | "threshold"
+                | "session"
+                | "capture"
+                | "summarize-tokens"
+        )
     ) {
         return usage_control::run_usage_control(arguments);
     }
@@ -655,7 +671,11 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     }
     let (filtered, summary) = match user_setup::setup_output_arguments(arguments) {
         Ok(value) => value,
-        Err(error) => return emit_action_result(&failure_result(&RenderError::Input(error.message().to_owned()))),
+        Err(error) => {
+            return emit_action_result(&failure_result(&RenderError::Input(
+                error.message().to_owned(),
+            )))
+        }
     };
     let parsed = parse_setup(&filtered);
     let result = match parsed {
@@ -904,9 +924,15 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
                 let channel = match next_value(arguments, &mut index, "--input-channel")?.as_str() {
                     "answers-file" => hive_core::preferences::PreferenceInput::AnswersFile,
                     "agent" => hive_core::preferences::PreferenceInput::Agent,
-                    _ => return Err(RenderError::Input("project input channel must be answers-file or agent".into())),
+                    _ => {
+                        return Err(RenderError::Input(
+                            "project input channel must be answers-file or agent".into(),
+                        ))
+                    }
                 };
-                if input_channel.replace(channel).is_some() { return Err(RenderError::Input("duplicate project input channel".into())); }
+                if input_channel.replace(channel).is_some() {
+                    return Err(RenderError::Input("duplicate project input channel".into()));
+                }
             }
             "--reconfigure-role" => {
                 reconfigure_roles.insert(next_value(arguments, &mut index, "--reconfigure-role")?);
@@ -937,7 +963,8 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
         })?,
         reconfigure_roles,
-        input_channel: input_channel.unwrap_or(hive_core::preferences::PreferenceInput::AnswersFile),
+        input_channel: input_channel
+            .unwrap_or(hive_core::preferences::PreferenceInput::AnswersFile),
     })
 }
 

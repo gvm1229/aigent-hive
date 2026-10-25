@@ -9,14 +9,27 @@ pub(super) struct Normalized {
     pub migration: Option<user_setup::progress_store::LegacyMigration>,
 }
 
-pub(super) fn prepare_baseline(root: &Path, current: Option<&UserSetupConfig>) -> Result<Normalized, SetupError> {
-    let preview = current.map(|c| user_setup::migration::inspect(root, c)).transpose()?.flatten();
-    let migration = preview.as_ref().map(|p| user_setup::progress_store::LegacyMigration {
-        migration_id: p.migration_id.clone(), monitor_choice: p.monitor_choice.clone(), from_schema: 1,
-        questions: p.pending_questions.iter().map(|id| (*id).into()).collect(),
-    });
+pub(super) fn prepare_baseline(
+    root: &Path,
+    current: Option<&UserSetupConfig>,
+) -> Result<Normalized, SetupError> {
+    let preview = current
+        .map(|c| user_setup::migration::inspect(root, c))
+        .transpose()?
+        .flatten();
+    let migration = preview
+        .as_ref()
+        .map(|p| user_setup::progress_store::LegacyMigration {
+            migration_id: p.migration_id.clone(),
+            monitor_choice: p.monitor_choice.clone(),
+            from_schema: 1,
+            questions: p.pending_questions.iter().map(|id| (*id).into()).collect(),
+        });
     let baseline = preview.map(|p| p.candidate).or_else(|| current.cloned());
-    Ok(Normalized {baseline, migration})
+    Ok(Normalized {
+        baseline,
+        migration,
+    })
 }
 
 pub(super) fn normalize(
@@ -34,7 +47,10 @@ pub(super) fn normalize(
             migration: None,
         });
     }
-    let Normalized {baseline, migration} = prepare_baseline(root, current)?;
+    let Normalized {
+        baseline,
+        migration,
+    } = prepare_baseline(root, current)?;
     if config.schema_version == 2 {
         return Ok(Normalized {
             baseline,

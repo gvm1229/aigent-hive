@@ -84,7 +84,10 @@ pub(super) fn disable(
     quiesce(root, call, timeout, None).map(|stopped| {
         let mut result = stopped.result.clone();
         match super::activation::retire_disabled(root) {
-            Ok(retired) => result["activation_retirement"] = json!(if retired { "cancelled" } else { "not-needed" }),
+            Ok(retired) => {
+                result["activation_retirement"] =
+                    json!(if retired { "cancelled" } else { "not-needed" });
+            }
             Err(error) => {
                 result["activation_retirement"] = json!("pending");
                 result["activation_retirement_error"] = json!(error.message());
@@ -100,14 +103,22 @@ pub(super) fn verify_stopped(root: &PinnedTarget) -> Result<(), AdapterError> {
     }
     let _control = super::existing_lock(root, "control.lock")?;
     let _controller = super::existing_lock(root, "controller.lock")?;
-    let config = authenticated_config(root)?.ok_or_else(|| error("monitor stop configuration is missing"))?;
-    let journal: Value = load(root, JOURNAL)?.ok_or_else(|| error("monitor stop receipt is missing"))?;
+    let config = authenticated_config(root)?
+        .ok_or_else(|| error("monitor stop configuration is missing"))?;
+    let journal: Value =
+        load(root, JOURNAL)?.ok_or_else(|| error("monitor stop receipt is missing"))?;
     let bytes = root.read_required(std::path::Path::new(CONFIG), 65536)?;
-    if config.enabled || journal["schema_version"] != 1 || journal["operation"] != "disable"
-        || journal["phase"] != "complete" || journal["completed_at"].as_u64().is_none()
+    if config.enabled
+        || journal["schema_version"] != 1
+        || journal["operation"] != "disable"
+        || journal["phase"] != "complete"
+        || journal["completed_at"].as_u64().is_none()
         || journal["after_digest"] != sha256_digest(&bytes)
-        || super::serialize(&config)? != bytes {
-        return Err(error("monitor stop is incomplete or its saved configuration changed"));
+        || super::serialize(&config)? != bytes
+    {
+        return Err(error(
+            "monitor stop is incomplete or its saved configuration changed",
+        ));
     }
     root.verify_current()
 }
@@ -121,7 +132,8 @@ pub(crate) struct StoppedReader {
 
 impl StoppedReader {
     pub(crate) fn verify_root(&self, path: &std::path::Path) -> Result<(), AdapterError> {
-        if self.root_identity != super::activation::root_identity(&PinnedTarget::open_usage(path)?)? {
+        if self.root_identity != super::activation::root_identity(&PinnedTarget::open_usage(path)?)?
+        {
             return Err(error("stopped monitor lease belongs to another user root"));
         }
         Ok(())
@@ -153,7 +165,14 @@ pub(super) fn quiesce_review(
     timeout: Duration,
     consent: &super::review::Withdrawal,
 ) -> Result<StoppedReader, AdapterError> {
-    quiesce_inner(root, call, timeout, None, Some(&consent.operation_id), Some(consent))
+    quiesce_inner(
+        root,
+        call,
+        timeout,
+        None,
+        Some(&consent.operation_id),
+        Some(consent),
+    )
 }
 
 fn quiesce_inner(
@@ -165,7 +184,9 @@ fn quiesce_inner(
     review: Option<&super::review::Withdrawal>,
 ) -> Result<StoppedReader, AdapterError> {
     let control = lock(root, "control.lock")?;
-    if let Some(consent) = review { super::review::check(root, consent)?; }
+    if let Some(consent) = review {
+        super::review::check(root, consent)?;
+    }
     let root_identity = super::activation::root_identity(root)?;
     let before = root.read_optional(std::path::Path::new(CONFIG), 65536)?;
     let digest = before
@@ -181,10 +202,18 @@ fn quiesce_inner(
             return Err(error("monitor choice changed since setup preview"));
         }
     }
-    let candidate = if before.is_none() && expected_digest.is_none() && (operation_id.is_none() || review.is_some()) {
+    let candidate = if before.is_none()
+        && expected_digest.is_none()
+        && (operation_id.is_none() || review.is_some())
+    {
         super::activation::pending_disabled_configuration(root)?
-    } else { None };
-    let config = match candidate { Some(config) => Some(config), None => authenticated_config(root)? };
+    } else {
+        None
+    };
+    let config = match candidate {
+        Some(config) => Some(config),
+        None => authenticated_config(root)?,
+    };
     let Some(mut config) = config else {
         let controller = lock(root, "controller.lock")?;
         // A later explicit disable must cancel a pending activation even if no configuration
@@ -193,7 +222,9 @@ fn quiesce_inner(
             "selection_id":selection_id()?,"operation_id":operation_id,
             "before_digest":"absent","after_digest":"absent","configured":false,
             "phase":"complete","started_at":now(),"completed_at":now(),"error":null});
-        if let Some(consent) = review { journal["setup_review"] = json!(consent); }
+        if let Some(consent) = review {
+            journal["setup_review"] = json!(consent);
+        }
         write(root, JOURNAL, &journal)?;
         return Ok(StoppedReader {
             root_identity,
@@ -209,7 +240,9 @@ fn quiesce_inner(
         "operation_id":operation_id,"before_digest":expected_digest.unwrap_or(&digest),
         "after_digest":sha256_digest(&super::serialize(&config)?),"phase":"stopping",
         "completed_at":null,"error":null});
-    if let Some(consent) = review { journal["setup_review"] = json!(consent); }
+    if let Some(consent) = review {
+        journal["setup_review"] = json!(consent);
+    }
     write(root, JOURNAL, &journal)?;
     write(root, CONFIG, &config)?;
     let result = (|| {
@@ -280,20 +313,34 @@ mod tests {
         for root in [&empty, &configured] {
             let expected_configured = selection(root).unwrap().is_some();
             let call = |_: &Value, _: Duration| {
-                assert!(expected_configured, "no scheduler access without an owned configuration");
+                assert!(
+                    expected_configured,
+                    "no scheduler access without an owned configuration"
+                );
                 Ok(json!({"removed":true}))
             };
             disable(root, call, Duration::ZERO).unwrap();
             let first: Value = load(root, JOURNAL).unwrap().unwrap();
-            let configuration = root.read_optional(std::path::Path::new(CONFIG), 65536).unwrap();
+            let configuration = root
+                .read_optional(std::path::Path::new(CONFIG), 65536)
+                .unwrap();
             disable(root, call, Duration::ZERO).unwrap();
             let second: Value = load(root, JOURNAL).unwrap().unwrap();
             assert_ne!(first["selection_id"], second["selection_id"]);
-            assert!(crate::is_sha256_digest(second["selection_id"].as_str().unwrap()));
+            assert!(crate::is_sha256_digest(
+                second["selection_id"].as_str().unwrap()
+            ));
             assert_eq!(first["after_digest"], second["after_digest"]);
             assert_eq!(second["phase"], "complete");
-            assert_eq!(root.read_optional(std::path::Path::new(CONFIG), 65536).unwrap(), configuration);
-            assert_eq!(selection(root).unwrap(), expected_configured.then_some(false));
+            assert_eq!(
+                root.read_optional(std::path::Path::new(CONFIG), 65536)
+                    .unwrap(),
+                configuration
+            );
+            assert_eq!(
+                selection(root).unwrap(),
+                expected_configured.then_some(false)
+            );
         }
     }
 

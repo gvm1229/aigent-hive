@@ -4,8 +4,8 @@ mod removal;
 pub(crate) use removal::remove_owned_core;
 
 use crate::usage::{CommandRunner, SystemCommandRunner};
-use hive_core::sha256_digest;
 use hive_core::setup::{InteractionMode, InteractionRequest};
+use hive_core::sha256_digest;
 use hive_update::SemVersion;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -121,8 +121,12 @@ struct UpdateFlowContext<'a> {
 }
 
 trait ProjectionRefresher {
-    fn requires_host_selection(&self) -> bool { true }
-    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) { (language, hosts.to_vec()) }
+    fn requires_host_selection(&self) -> bool {
+        true
+    }
+    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) {
+        (language, hosts.to_vec())
+    }
 
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String>;
 
@@ -147,29 +151,53 @@ struct LiveProjectionRefresher {
 }
 
 impl LiveProjectionRefresher {
-    fn new(interactive: bool) -> Self { Self { interactive, report:std::cell::RefCell::new(None) } }
+    fn new(interactive: bool) -> Self {
+        Self {
+            interactive,
+            report: std::cell::RefCell::new(None),
+        }
+    }
     fn complete(&self, executable: &Path, root: &Path) -> Result<(), String> {
         let report = completion::run(executable, root, self.interactive)?;
         let success = report.succeeded();
-        let message = format!("{} [{}]",report.message,report.code);
-        *self.report.borrow_mut()=Some(report);
-        if success { Ok(()) } else { Err(message) }
+        let message = format!("{} [{}]", report.message, report.code);
+        *self.report.borrow_mut() = Some(report);
+        if success {
+            Ok(())
+        } else {
+            Err(message)
+        }
     }
 }
 
 impl ProjectionRefresher for LiveProjectionRefresher {
-    fn requires_host_selection(&self) -> bool { false }
+    fn requires_host_selection(&self) -> bool {
+        false
+    }
     fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) {
-        self.report.borrow().as_ref().map_or_else(||(language,hosts.to_vec()),|report| report.summary(language,hosts))
+        self.report.borrow().as_ref().map_or_else(
+            || (language, hosts.to_vec()),
+            |report| report.summary(language, hosts),
+        )
     }
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String> {
         crate::user_install::authenticated_saved_projection_hosts(user_root)
     }
-    fn refresh_and_validate(&self, executable: &Path, user_root: &Path, _hosts: &[String]) -> Result<(), String> {
-        self.complete(executable,user_root)
+    fn refresh_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        _hosts: &[String],
+    ) -> Result<(), String> {
+        self.complete(executable, user_root)
     }
-    fn bootstrap_and_validate(&self, executable: &Path, user_root: &Path, _hosts: &[String]) -> Result<(), String> {
-        self.complete(executable,user_root)
+    fn bootstrap_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        _hosts: &[String],
+    ) -> Result<(), String> {
+        self.complete(executable, user_root)
     }
 }
 
@@ -303,14 +331,18 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         print!("{UPDATE_USAGE}");
         return ExitCode::SUCCESS;
     }
-    let json_output = arguments.windows(2).any(|pair| pair == ["--output", "json"]);
+    let json_output = arguments
+        .windows(2)
+        .any(|pair| pair == ["--output", "json"]);
     let arguments = match parse_arguments(arguments) {
         Ok(arguments) => arguments,
         Err(message) => {
             return output::error(json_output, message);
         }
     };
-    let mode = arguments.interaction.resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
+    let mode = arguments
+        .interaction
+        .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
         .expect("parsed interaction contract");
     if mode == InteractionMode::NeedsInput {
         return output::needs_input(json_output, "--interactive requires a usable terminal");
@@ -329,7 +361,11 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     };
     // Finish an approved interrupted setup before registry lookup or another binary install.
     // Software --confirm never supplies answers to the setup engine.
-    match crate::user_setup::resume_pending_update(&user_root, interactive, !interactive && !arguments.confirm) {
+    match crate::user_setup::resume_pending_update(
+        &user_root,
+        interactive,
+        !interactive && !arguments.confirm,
+    ) {
         Ok(Some(result)) => {
             return output::emit(json_output, &result);
         }
@@ -351,7 +387,10 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let current_executable = match env::current_exe() {
         Ok(path) => path,
         Err(error) => {
-            return output::error(json_output, format!("cannot resolve the running Hive executable: {error}"));
+            return output::error(
+                json_output,
+                format!("cannot resolve the running Hive executable: {error}"),
+            );
         }
     };
     let executable = arguments
@@ -361,7 +400,10 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
         return match spawn_windows_direct_handoff(&current_executable, &user_root, &arguments) {
             Ok(record) => output::handoff(json_output, language, record.as_deref()),
-            Err(error) => output::error(json_output, format!("cannot start Windows direct update handoff: {error}")),
+            Err(error) => output::error(
+                json_output,
+                format!("cannot start Windows direct update handoff: {error}"),
+            ),
         };
     }
     if arguments.handoff_executable.is_some() {
@@ -411,10 +453,16 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             &mut core_update,
         )
     };
-    let mut result = output::finished(outcome, refresher.report.borrow().as_ref(), language, &core_update);
+    let mut result = output::finished(
+        outcome,
+        refresher.report.borrow().as_ref(),
+        language,
+        &core_update,
+    );
     if result.exit_code != 0 && core_update.status == "verified" && result.next_action.is_none() {
         result.next_action = Some(crate::update_bridge::resume_command(&user_root));
-        result.data.as_mut().expect("update result data")["resume_command"] = serde_json::json!(result.next_action);
+        result.data.as_mut().expect("update result data")["resume_command"] =
+            serde_json::json!(result.next_action);
     }
     output::emit(json_output, &result)
 }
@@ -424,18 +472,24 @@ pub(crate) fn result_guidance(result: &crate::ActionResult) -> Vec<String> {
 }
 
 pub(crate) fn uninstall_owner_preview(executable: &Path) -> Result<serde_json::Value, String> {
-    let version = env!("CARGO_PKG_VERSION").parse().map_err(|_| "invalid compiled version")?;
+    let version = env!("CARGO_PKG_VERSION")
+        .parse()
+        .map_err(|_| "invalid compiled version")?;
     let owner = discover_owner(executable, version)?;
-    let binary=fs::read(executable).map_err(|_|"cannot fingerprint the installed program")?;
+    let binary = fs::read(executable).map_err(|_| "cannot fingerprint the installed program")?;
     let receipt = match &owner {
-        InstallOwner::Direct {prefix,..} => Some(sha256_digest(&fs::read(prefix.join("share/aigent-hive/install-receipt.json"))
-            .map_err(|_|"cannot fingerprint the direct receipt")?)),
-        InstallOwner::Npm {..} => None,
+        InstallOwner::Direct { prefix, .. } => Some(sha256_digest(
+            &fs::read(prefix.join("share/aigent-hive/install-receipt.json"))
+                .map_err(|_| "cannot fingerprint the direct receipt")?,
+        )),
+        InstallOwner::Npm { .. } => None,
     };
-    Ok(serde_json::json!({"owner":owner.label(),"package_version":owner.package_version().exact,
+    Ok(
+        serde_json::json!({"owner":owner.label(),"package_version":owner.package_version().exact,
         "executable":executable.canonicalize().map_err(|_|"cannot resolve installed program")?,
         "executable_digest":sha256_digest(&binary),"receipt_digest":receipt,
-        "prefix":match &owner { InstallOwner::Direct {prefix,..}=>Some(prefix), InstallOwner::Npm {..}=>None }}))
+        "prefix":match &owner { InstallOwner::Direct {prefix,..}=>Some(prefix), InstallOwner::Npm {..}=>None }}),
+    )
 }
 
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
@@ -576,14 +630,20 @@ fn spawn_windows_direct_handoff(
     let record = if arguments.interaction.json {
         command.args(["--output", "json"]);
         let mut nonce = [0_u8; 32];
-        getrandom::fill(&mut nonce).map_err(|error| format!("cannot identify update handoff: {error}"))?;
+        getrandom::fill(&mut nonce)
+            .map_err(|error| format!("cannot identify update handoff: {error}"))?;
         let record = parent.join(format!("{}.json", &sha256_digest(&nonce)[7..]));
-        let file = fs::OpenOptions::new().write(true).create_new(true).open(&record)
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&record)
             .map_err(|error| format!("cannot create update result file: {error}"))?;
         command.stdout(file);
         command.stdin(std::process::Stdio::null());
         Some(record)
-    } else { None };
+    } else {
+        None
+    };
     command
         .spawn()
         .map_err(|error| format!("cannot launch direct update helper: {error}"))?;
@@ -712,7 +772,9 @@ fn update_flow_with_projection_channel(
             write_reconciled(output, language, &hosts)?;
             return Ok(FlowOutcome::Reconciled);
         }
-        if refresher.requires_host_selection() { hosts = select_bootstrap_hosts(context.language, input, output)?; }
+        if refresher.requires_host_selection() {
+            hosts = select_bootstrap_hosts(context.language, input, output)?;
+        }
         refresher
             .bootstrap_and_validate(context.executable, context.user_root, &hosts)
             .map_err(|error| format!("initial user projection bootstrap failed: {error}"))?;
@@ -1620,20 +1682,52 @@ mod tests {
                 for guidance in [false, true] {
                     let parse = |flags: &[&str]| {
                         let mut args: Vec<_> = flags.iter().map(ToString::to_string).collect();
-                        if confirmed { args.push("--confirm".into()); }
-                        parse_arguments(&args).unwrap().interaction.resolve(stdin, guidance).unwrap()
+                        if confirmed {
+                            args.push("--confirm".into());
+                        }
+                        parse_arguments(&args)
+                            .unwrap()
+                            .interaction
+                            .resolve(stdin, guidance)
+                            .unwrap()
                     };
-                    assert_eq!(parse(&[]), if stdin && guidance { InteractionMode::Terminal } else { InteractionMode::NonInteractive });
-                    assert_eq!(parse(&["--interactive"]), if stdin && guidance { InteractionMode::Terminal } else { InteractionMode::NeedsInput });
-                    assert_eq!(parse(&["--non-interactive"]), InteractionMode::NonInteractive);
-                    assert_eq!(parse(&["--output", "json"]), InteractionMode::NonInteractive);
+                    assert_eq!(
+                        parse(&[]),
+                        if stdin && guidance {
+                            InteractionMode::Terminal
+                        } else {
+                            InteractionMode::NonInteractive
+                        }
+                    );
+                    assert_eq!(
+                        parse(&["--interactive"]),
+                        if stdin && guidance {
+                            InteractionMode::Terminal
+                        } else {
+                            InteractionMode::NeedsInput
+                        }
+                    );
+                    assert_eq!(
+                        parse(&["--non-interactive"]),
+                        InteractionMode::NonInteractive
+                    );
+                    assert_eq!(
+                        parse(&["--output", "json"]),
+                        InteractionMode::NonInteractive
+                    );
                 }
             }
         }
-        for flags in [vec!["--interactive", "--non-interactive"], vec!["--interactive", "--output", "json"],
-            vec!["--output", "text"], vec!["--non-interactive", "--non-interactive"],
-            vec!["--output", "json", "--output", "json"]] {
-            assert!(parse_arguments(&flags.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err());
+        for flags in [
+            vec!["--interactive", "--non-interactive"],
+            vec!["--interactive", "--output", "json"],
+            vec!["--output", "text"],
+            vec!["--non-interactive", "--non-interactive"],
+            vec!["--output", "json", "--output", "json"],
+        ] {
+            assert!(
+                parse_arguments(&flags.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err()
+            );
         }
     }
 
@@ -1845,7 +1939,10 @@ mod tests {
             &metadata(&target),
             &installer,
             &refresher,
-            UpdateSelection { channel: UpdateChannel::Stable, confirmed: false },
+            UpdateSelection {
+                channel: UpdateChannel::Stable,
+                confirmed: false,
+            },
             &mut input,
             &mut output,
             &mut core,

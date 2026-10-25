@@ -11,9 +11,15 @@ use std::path::Path;
 mod journal;
 mod runner;
 
-pub(super) fn pending_disabled_configuration(root: &PinnedTarget) -> Result<Option<super::Configuration>, AdapterError> {
+pub(super) fn pending_disabled_configuration(
+    root: &PinnedTarget,
+) -> Result<Option<super::Configuration>, AdapterError> {
     let (store, record) = journal::Store::open_retiring(root)?;
-    record.as_ref().map(|record| store.disabled_candidate(record)).transpose().map(Option::flatten)
+    record
+        .as_ref()
+        .map(|record| store.disabled_candidate(record))
+        .transpose()
+        .map(Option::flatten)
 }
 
 /// The caller holds the verified disable's control and stopped-controller leases.
@@ -21,16 +27,26 @@ pub(super) fn retire_disabled(root: &PinnedTarget) -> Result<bool, AdapterError>
     let binding = Binding::capture(root)?;
     let stopped: serde_json::Value = super::load(root, transition::JOURNAL)?
         .ok_or_else(|| error("monitor disable receipt is missing"))?;
-    if binding.previous.enabled || stopped["phase"] != "complete"
+    if binding.previous.enabled
+        || stopped["phase"] != "complete"
         || stopped["after_digest"] != binding.previous.config_digest
-        || stopped["completed_at"].as_u64().is_none() {
+        || stopped["completed_at"].as_u64().is_none()
+    {
         return Err(error("monitor disable has not completed"));
     }
     let (mut store, record) = journal::Store::open_retiring(root)?;
-    let Some(mut record) = record else { return Ok(false) };
-    if matches!(record.phase, journal::Phase::Complete | journal::Phase::Cancelled) { return Ok(false); }
+    let Some(mut record) = record else {
+        return Ok(false);
+    };
+    if matches!(
+        record.phase,
+        journal::Phase::Complete | journal::Phase::Cancelled
+    ) {
+        return Ok(false);
+    }
     if record.binding.root_identity_digest != binding.root_identity_digest
-        || record.binding.disable_digest == binding.disable_digest {
+        || record.binding.disable_digest == binding.disable_digest
+    {
         return Err(error("monitor activation has no newer disable selection"));
     }
     store.retire_write(&record, &binding)?;

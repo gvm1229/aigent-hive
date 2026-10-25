@@ -346,7 +346,14 @@ pub(super) fn stage_and_validate(
     resolution: &CapabilityResolution,
     corrupt_after_render: bool,
 ) -> Result<(), RenderError> {
-    stage_and_validate_against(target, files, files, answers, resolution, corrupt_after_render)
+    stage_and_validate_against(
+        target,
+        files,
+        files,
+        answers,
+        resolution,
+        corrupt_after_render,
+    )
 }
 
 pub(super) fn stage_and_validate_against(

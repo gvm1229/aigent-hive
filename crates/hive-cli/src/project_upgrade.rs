@@ -40,8 +40,8 @@ const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
     ".hive/index/.stale",
 ];
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
-mod skill_merge;
 mod reconfiguration;
+mod skill_merge;
 pub(crate) use reconfiguration::prepare as prepare_reconfiguration;
 use skill_merge::SkillMergeRequest;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
@@ -425,7 +425,8 @@ fn prepare_candidate(
     }
     let candidate = match incoming {
         Some(candidate) => candidate,
-        None => hive_render::project_upgrade_candidate_with_plugin_in(target, plugin).map_err(render_error)?,
+        None => hive_render::project_upgrade_candidate_with_plugin_in(target, plugin)
+            .map_err(render_error)?,
     };
     let reviewed_files = review
         .map(|request| request.validate(target, base.as_ref(), &candidate.files))
@@ -503,7 +504,9 @@ fn prepare_candidate(
         } else {
             three_way_merge(Path::new(&path), effective_base, merge_local, incoming)?
         };
-        if reconfiguration && (merged.omitted_incoming_hunks > 0 || (incoming.is_none() && merged.bytes.is_some())) {
+        if reconfiguration
+            && (merged.omitted_incoming_hunks > 0 || (incoming.is_none() && merged.bytes.is_some()))
+        {
             return Err(UpdateError::Conflict(format!("requested settings conflict with preserved local changes: {path}; original files were not changed")));
         }
         let final_full = materialize_final(target, &path, merged.bytes.as_deref())?;
@@ -543,10 +546,12 @@ fn prepare_candidate(
     for path in candidate.deleted_support_files {
         validate_mutation_path(&path)?;
         if !hive_render::update_path_is_owned(&path).map_err(render_error)? {
-            return Err(UpdateError::Conflict("retired setup support path is not owned".into()));
+            return Err(UpdateError::Conflict(
+                "retired setup support path is not owned".into(),
+            ));
         }
-        if read_full_optional(target,&path)?.is_some() {
-            final_files.insert(path.to_string_lossy().into_owned(),None);
+        if read_full_optional(target, &path)?.is_some() {
+            final_files.insert(path.to_string_lossy().into_owned(), None);
         }
     }
     insert_exact_if_changed(

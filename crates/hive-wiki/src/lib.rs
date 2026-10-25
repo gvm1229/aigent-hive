@@ -3480,11 +3480,14 @@ fn capability_parent(
                 }
                 Err(error) if error.kind() == io::ErrorKind::NotFound && create_missing => {
                     match current.create_dir(component) {
-                        Ok(()) => {},
-                        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {},
-                        Err(error) => return Err(WikiError::Io(format!(
-                            "cannot create managed knowledge directory {}: {error}", relative.display()
-                        ))),
+                        Ok(()) => {}
+                        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+                        Err(error) => {
+                            return Err(WikiError::Io(format!(
+                                "cannot create managed knowledge directory {}: {error}",
+                                relative.display()
+                            )))
+                        }
                     }
                 }
                 Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -4592,12 +4595,18 @@ struct KnowledgeLock {
 impl KnowledgeLock {
     fn acquire(target: &Path) -> Result<Self, WikiError> {
         let path = target.join(LOCK_RELATIVE);
-        let parent = path.parent().ok_or_else(|| WikiError::Io("lock path has no parent directory".into()))?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| WikiError::Io("lock path has no parent directory".into()))?;
         let remove_parent_on_drop = !parent.exists();
         let root = Dir::open_ambient_dir(target, ambient_authority())
             .map_err(|error| WikiError::Io(format!("cannot open knowledge lock root: {error}")))?;
         let guard = CapabilityKnowledgeLock::acquire(&root)?;
-        Ok(Self {guard: Some(guard), path, remove_parent_on_drop})
+        Ok(Self {
+            guard: Some(guard),
+            path,
+            remove_parent_on_drop,
+        })
     }
 }
 

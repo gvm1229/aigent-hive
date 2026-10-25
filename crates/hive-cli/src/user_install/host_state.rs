@@ -856,9 +856,7 @@ pub(super) fn resolve_pending_host_transition(
         persist_backup(arguments, backup_relative, backup)?;
         return Ok(());
     }
-    if explicit_recovery
-        && is_recoverable_dangling_codex_marketplace(arguments, backup)?
-    {
+    if explicit_recovery && is_recoverable_dangling_codex_marketplace(arguments, backup)? {
         let probe_error = probe_host_snapshot(arguments.host, executable, runner)
             .err()
             .ok_or_else(|| {

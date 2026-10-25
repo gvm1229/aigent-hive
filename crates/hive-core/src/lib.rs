@@ -354,7 +354,10 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
         return matches!(
             (parts[2], parts[4]),
             ("usage-guard", "control.md" | "sensors.md")
-                | ("project-setup", "advanced-setup.md" | "directive-recovery.md" | "structured-choices.md")
+                | (
+                    "project-setup",
+                    "advanced-setup.md" | "directive-recovery.md" | "structured-choices.md"
+                )
                 | ("knowledge-recall", "confidential.md")
                 | ("knowledge-capture", "ingest.md")
                 | ("run-checkpoint", "policy-review.md")

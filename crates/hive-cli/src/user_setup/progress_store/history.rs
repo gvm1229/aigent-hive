@@ -69,9 +69,10 @@ fn valid_migration(receipt: &Receipt) -> bool {
 }
 
 fn migration_matches(receipt: &Receipt, progress: &SetupProgress) -> bool {
-    valid_migration(receipt) && receipt.migration.as_ref().is_none_or(|migration| {
-        MigrationSummary::from_progress(progress).as_ref() == Some(migration)
-    })
+    valid_migration(receipt)
+        && receipt.migration.as_ref().is_none_or(|migration| {
+            MigrationSummary::from_progress(progress).as_ref() == Some(migration)
+        })
 }
 
 fn path(id: &str) -> Result<PathBuf, SetupError> {
@@ -87,28 +88,54 @@ fn path(id: &str) -> Result<PathBuf, SetupError> {
     Ok(Path::new(DIRECTORY).join(format!("{id}.json")))
 }
 
-fn valid_cancel_marker(receipt:&Receipt)->bool {
-    match (&receipt.cancelled_by_operation,&receipt.cancelled_replacement_digest) {
-        (None,None)=>true,
-        (Some(operation),Some(digest))=>path(operation).is_ok() && operation!=&receipt.operation_id
-            && super::valid_hash(digest) && receipt.phase==ProgressPhase::RecoverableFailure
-            && receipt.completed_at_unix_nanos.is_some() && receipt.after_digest.as_ref().is_some_and(|v|super::valid_hash(v)),
-        _=>false,
+fn valid_cancel_marker(receipt: &Receipt) -> bool {
+    match (
+        &receipt.cancelled_by_operation,
+        &receipt.cancelled_replacement_digest,
+    ) {
+        (None, None) => true,
+        (Some(operation), Some(digest)) => {
+            path(operation).is_ok()
+                && operation != &receipt.operation_id
+                && super::valid_hash(digest)
+                && receipt.phase == ProgressPhase::RecoverableFailure
+                && receipt.completed_at_unix_nanos.is_some()
+                && receipt
+                    .after_digest
+                    .as_ref()
+                    .is_some_and(|v| super::valid_hash(v))
+        }
+        _ => false,
     }
 }
 
 pub(super) fn is_record_path(relative: &Path) -> bool {
-    relative.file_name().and_then(|name| name.to_str()).and_then(|name| name.strip_suffix(".json"))
-        .and_then(|id| path(id).ok()).as_deref() == Some(relative)
+    relative
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_suffix(".json"))
+        .and_then(|id| path(id).ok())
+        .as_deref()
+        == Some(relative)
 }
 
-pub(super) fn validate_scope(store: &ProgressStore, relative: &Path, bytes: &[u8]) -> Result<(), SetupError> {
+pub(super) fn validate_scope(
+    store: &ProgressStore,
+    relative: &Path,
+    bytes: &[u8],
+) -> Result<(), SetupError> {
     let receipt: Receipt = serde_json::from_slice(bytes)
         .map_err(|_| SetupError::Verification("invalid retained lifecycle record".into()))?;
-    if receipt.schema_version != 1 || receipt.operation != "setup" || receipt.binding != store.binding
-        || path(&receipt.operation_id)?.as_path() != relative || !valid_cancel_marker(&receipt)
-        || !valid_migration(&receipt) {
-        return Err(SetupError::Conflict("retained lifecycle record scope changed".into()));
+    if receipt.schema_version != 1
+        || receipt.operation != "setup"
+        || receipt.binding != store.binding
+        || path(&receipt.operation_id)?.as_path() != relative
+        || !valid_cancel_marker(&receipt)
+        || !valid_migration(&receipt)
+    {
+        return Err(SetupError::Conflict(
+            "retained lifecycle record scope changed".into(),
+        ));
     }
     Ok(())
 }
@@ -130,7 +157,8 @@ pub(super) fn confirm_completion(
     progress: &SetupProgress,
 ) -> Result<(), SetupError> {
     store.verify_directory_binding()?;
-    let bytes = store.read_state(&path(&progress.operation_id)?, LIMIT)?
+    let bytes = store
+        .read_state(&path(&progress.operation_id)?, LIMIT)?
         .ok_or_else(|| SetupError::Verification("setup completion record is missing".into()))?;
     let receipt: Receipt = serde_json::from_slice(&bytes)
         .map_err(|_| SetupError::Verification("invalid setup completion record".into()))?;
@@ -237,43 +265,79 @@ pub(super) fn record(
     store.write_state(&relative, before.as_deref(), Some(&bytes))
 }
 
-pub(super) fn cancel_for_monitor_review(store: &ProgressStore, old: &SetupProgress,
-    replacement: &SetupProgress) -> Result<(), SetupError> {
+pub(super) fn cancel_for_monitor_review(
+    store: &ProgressStore,
+    old: &SetupProgress,
+    replacement: &SetupProgress,
+) -> Result<(), SetupError> {
     let relative = path(&old.operation_id)?;
-    let current = store.read_state(&relative,LIMIT)?.ok_or_else(|| SetupError::Verification("cancelled setup intent is missing".into()))?;
-    let mut receipt: Receipt=serde_json::from_slice(&current).map_err(|_| SetupError::Verification("invalid cancelled setup intent".into()))?;
+    let current = store
+        .read_state(&relative, LIMIT)?
+        .ok_or_else(|| SetupError::Verification("cancelled setup intent is missing".into()))?;
+    let mut receipt: Receipt = serde_json::from_slice(&current)
+        .map_err(|_| SetupError::Verification("invalid cancelled setup intent".into()))?;
     if receipt.cancelled_by_operation.is_some() {
-        return verify_monitor_replacement(store,&old.operation_id,&intent_digest(old)?,replacement);
+        return verify_monitor_replacement(
+            store,
+            &old.operation_id,
+            &intent_digest(old)?,
+            replacement,
+        );
     }
     if receipt.phase == ProgressPhase::Complete {
-        return Err(SetupError::Conflict("completed setup cannot be cancelled as pending monitoring".into()));
+        return Err(SetupError::Conflict(
+            "completed setup cannot be cancelled as pending monitoring".into(),
+        ));
     }
-    record(store,old,ProgressPhase::RecoverableFailure)?;
-    receipt.phase=ProgressPhase::RecoverableFailure;
-    let expected=serde_json::to_vec_pretty(&receipt).map_err(|e|SetupError::Internal(e.to_string()))?;
-    let before=store.read_state(&relative,LIMIT)?.ok_or_else(|| SetupError::Verification("setup cancellation record disappeared".into()))?;
-    if before!=expected { return Err(SetupError::Conflict("setup cancellation record changed; preserved".into())); }
-    let mut receipt:Receipt=serde_json::from_slice(&before).map_err(|_| SetupError::Verification("invalid setup cancellation record".into()))?;
-    receipt.cancelled_by_operation=Some(replacement.operation_id.clone());
-    receipt.cancelled_replacement_digest=Some(intent_digest(replacement)?);
-    receipt.after_digest=Some(store.base_config_digest.clone());
-    receipt.completed_at_unix_nanos=Some(recorded_now()?);
-    let bytes=serde_json::to_vec_pretty(&receipt).map_err(|e|SetupError::Internal(e.to_string()))?;
-    store.write_state(&relative,Some(&before),Some(&bytes))
+    record(store, old, ProgressPhase::RecoverableFailure)?;
+    receipt.phase = ProgressPhase::RecoverableFailure;
+    let expected =
+        serde_json::to_vec_pretty(&receipt).map_err(|e| SetupError::Internal(e.to_string()))?;
+    let before = store
+        .read_state(&relative, LIMIT)?
+        .ok_or_else(|| SetupError::Verification("setup cancellation record disappeared".into()))?;
+    if before != expected {
+        return Err(SetupError::Conflict(
+            "setup cancellation record changed; preserved".into(),
+        ));
+    }
+    let mut receipt: Receipt = serde_json::from_slice(&before)
+        .map_err(|_| SetupError::Verification("invalid setup cancellation record".into()))?;
+    receipt.cancelled_by_operation = Some(replacement.operation_id.clone());
+    receipt.cancelled_replacement_digest = Some(intent_digest(replacement)?);
+    receipt.after_digest = Some(store.base_config_digest.clone());
+    receipt.completed_at_unix_nanos = Some(recorded_now()?);
+    let bytes =
+        serde_json::to_vec_pretty(&receipt).map_err(|e| SetupError::Internal(e.to_string()))?;
+    store.write_state(&relative, Some(&before), Some(&bytes))
 }
 
-pub(super) fn verify_monitor_replacement(store:&ProgressStore, old_id:&str, old_intent:&str,
-    replacement:&SetupProgress)->Result<(),SetupError> {
-    let relative=path(old_id)?;
-    let bytes=store.read_state(&relative,LIMIT)?.ok_or_else(||SetupError::Verification("cancelled setup record is missing".into()))?;
-    let receipt:Receipt=serde_json::from_slice(&bytes).map_err(|_|SetupError::Verification("invalid cancelled setup record".into()))?;
-    if receipt.schema_version!=1 || receipt.operation!="setup" || receipt.binding!=store.binding
-        || receipt.product_version!=env!("CARGO_PKG_VERSION") || receipt.operation_id!=old_id
-        || receipt.intent_digest.as_deref()!=Some(old_intent)
-        || receipt.cancelled_by_operation.as_deref()!=Some(&replacement.operation_id)
-        || receipt.cancelled_replacement_digest.as_ref()!=Some(&intent_digest(replacement)?)
-        || receipt.phase!=ProgressPhase::RecoverableFailure || receipt.completed_at_unix_nanos.is_none() {
-        return Err(SetupError::Conflict("cancelled setup replacement changed; preserved".into()));
+pub(super) fn verify_monitor_replacement(
+    store: &ProgressStore,
+    old_id: &str,
+    old_intent: &str,
+    replacement: &SetupProgress,
+) -> Result<(), SetupError> {
+    let relative = path(old_id)?;
+    let bytes = store
+        .read_state(&relative, LIMIT)?
+        .ok_or_else(|| SetupError::Verification("cancelled setup record is missing".into()))?;
+    let receipt: Receipt = serde_json::from_slice(&bytes)
+        .map_err(|_| SetupError::Verification("invalid cancelled setup record".into()))?;
+    if receipt.schema_version != 1
+        || receipt.operation != "setup"
+        || receipt.binding != store.binding
+        || receipt.product_version != env!("CARGO_PKG_VERSION")
+        || receipt.operation_id != old_id
+        || receipt.intent_digest.as_deref() != Some(old_intent)
+        || receipt.cancelled_by_operation.as_deref() != Some(&replacement.operation_id)
+        || receipt.cancelled_replacement_digest.as_ref() != Some(&intent_digest(replacement)?)
+        || receipt.phase != ProgressPhase::RecoverableFailure
+        || receipt.completed_at_unix_nanos.is_none()
+    {
+        return Err(SetupError::Conflict(
+            "cancelled setup replacement changed; preserved".into(),
+        ));
     }
     Ok(())
 }
@@ -285,12 +349,15 @@ pub(super) fn projection_binding(
 ) -> Result<Option<String>, SetupError> {
     store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
-    let before = store.read_state(&relative, LIMIT)?
+    let before = store
+        .read_state(&relative, LIMIT)?
         .ok_or_else(|| SetupError::Verification("setup intent record is missing".into()))?;
     let mut receipt: Receipt = serde_json::from_slice(&before)
         .map_err(|_| SetupError::Verification("invalid setup intent record".into()))?;
     if receipt.cancelled_by_operation.is_some() || !valid_cancel_marker(&receipt) {
-        return Err(SetupError::Conflict("cancelled setup cannot resume its old projection".into()));
+        return Err(SetupError::Conflict(
+            "cancelled setup cannot resume its old projection".into(),
+        ));
     }
     if receipt.schema_version != 1
         || receipt.operation != "setup"
@@ -362,7 +429,8 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
         };
         let Ok(relative) = path(id) else { continue };
         // Inspect scope before considering recovery; another project's write is not ours.
-        let Some(bytes) = read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?
+        let Some(bytes) =
+            read_user_setup_file(&store.root, &relative, LIMIT).map_err(SetupError::Conflict)?
         else {
             continue;
         };
@@ -375,7 +443,8 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
             && receipt.binding == store.binding
             && valid_cancel_marker(&receipt)
             && valid_migration(&receipt)
-            && (receipt.phase == ProgressPhase::Complete || receipt.cancelled_by_operation.is_some())
+            && (receipt.phase == ProgressPhase::Complete
+                || receipt.cancelled_by_operation.is_some())
         {
             if let Some(time) = receipt.completed_at_unix_nanos {
                 completed.push((id == current, time, relative, bytes));
@@ -405,11 +474,15 @@ mod tests {
     use std::fs;
 
     fn migration_progress(store: &ProgressStore) -> SetupProgress {
-        let mut progress = store.new_progress("usage-enforcement".into(), json!({})).unwrap();
+        let mut progress = store
+            .new_progress("usage-enforcement".into(), json!({}))
+            .unwrap();
         progress.legacy_migration = Some(super::super::LegacyMigration {
             migration_id: hive_core::sha256_digest(b"legacy selection"),
             monitor_choice: crate::usage_monitor::SavedMonitorChoice {
-                configured: false, enabled: false, config_digest: "absent".into(),
+                configured: false,
+                enabled: false,
+                config_digest: "absent".into(),
             },
             from_schema: 1,
             questions: vec!["usage-enforcement".into(), "usage-warnings".into()],
@@ -428,12 +501,21 @@ mod tests {
         let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
         let original = fs::read(&receipt_path).unwrap();
         let record: serde_json::Value = serde_json::from_slice(&original).unwrap();
-        assert_eq!(record["migration"], json!({"migration_id":progress.legacy_migration.as_ref().unwrap().migration_id,
-            "from_schema":1,"to_schema":2,"policy_version":env!("CARGO_PKG_VERSION")}));
-        for (key, value) in [("migration_id",json!(hive_core::sha256_digest(b"other"))),
-            ("from_schema",json!(2)),("to_schema",json!(1)),("policy_version",json!("0.13.1"))] {
-            let mut altered = record.clone(); altered["migration"][key] = value;
-            let bytes = serde_json::to_vec(&altered).unwrap(); fs::write(&receipt_path, &bytes).unwrap();
+        assert_eq!(
+            record["migration"],
+            json!({"migration_id":progress.legacy_migration.as_ref().unwrap().migration_id,
+            "from_schema":1,"to_schema":2,"policy_version":env!("CARGO_PKG_VERSION")})
+        );
+        for (key, value) in [
+            ("migration_id", json!(hive_core::sha256_digest(b"other"))),
+            ("from_schema", json!(2)),
+            ("to_schema", json!(1)),
+            ("policy_version", json!("0.13.1")),
+        ] {
+            let mut altered = record.clone();
+            altered["migration"][key] = value;
+            let bytes = serde_json::to_vec(&altered).unwrap();
+            fs::write(&receipt_path, &bytes).unwrap();
             assert!(store.record_failure(&progress).is_err());
             assert!(store.projection_binding(&progress, None).is_err());
             assert!(store.record_completion(&progress).is_err());
@@ -441,13 +523,17 @@ mod tests {
         }
         fs::write(&receipt_path, &original).unwrap();
         store.record_completion(&progress).unwrap();
-        let finished: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        let finished: serde_json::Value =
+            serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
         assert_eq!(finished["migration"], record["migration"]);
         assert!(finished["after_digest"].as_str().is_some());
         assert_eq!(finished["phase"], "complete");
         let later = applying(&store, "later user choice");
         store.record_completion(&later).unwrap();
-        assert_eq!(serde_json::from_slice::<serde_json::Value>(&fs::read(&receipt_path).unwrap()).unwrap(), finished);
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&fs::read(&receipt_path).unwrap()).unwrap(),
+            finished
+        );
     }
 
     #[test]
@@ -456,14 +542,18 @@ mod tests {
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = migration_progress(&store);
         let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
-        let mut old: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        let mut old: serde_json::Value =
+            serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
         old.as_object_mut().unwrap().remove("migration");
         fs::write(&receipt_path, serde_json::to_vec(&old).unwrap()).unwrap();
-        store.require_applying(&progress.operation_id, &progress.answers).unwrap();
+        store
+            .require_applying(&progress.operation_id, &progress.answers)
+            .unwrap();
         store.record_failure(&progress).unwrap();
         store.record_completion(&progress).unwrap();
         store.record_completion(&progress).unwrap();
-        let finished: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        let finished: serde_json::Value =
+            serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
         assert!(finished.get("migration").is_none());
         assert_eq!(finished["phase"], "complete");
     }

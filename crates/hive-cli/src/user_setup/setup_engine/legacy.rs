@@ -157,7 +157,9 @@ fn ask_choice<R: BufRead, W: Write>(
     progress
         .answered_questions
         .insert(question.id.clone(), question.revision);
-    progress.question_bindings.insert(question.id.clone(), question.into());
+    progress
+        .question_bindings
+        .insert(question.id.clone(), question.into());
     persist(store, progress)?;
     Ok(true)
 }
@@ -245,7 +247,9 @@ fn checkpoint_inner(
     stopped: Option<&crate::usage_monitor::StoppedReader>,
 ) -> Result<Option<Vec<u8>>, SetupError> {
     if let Some(stopped) = stopped {
-        stopped.verify_root(&arguments.user_root).map_err(|e| SetupError::Conflict(e.message().into()))?;
+        stopped
+            .verify_root(&arguments.user_root)
+            .map_err(|e| SetupError::Conflict(e.message().into()))?;
     }
     user_setup::progress_store::prepare_config_backup(&arguments.root_cap, progress, expected)?;
     super::vector_choice::apply(&arguments.root_cap, progress)?;
@@ -253,15 +257,27 @@ fn checkpoint_inner(
     super::monitor_stop::validate_intent(progress)?;
     let baseline = if stopped.is_some() && progress.monitor_start.is_none() {
         checkpoint_using(arguments, answers, expected, progress, || Ok(()))?
-    } else if let Some(choice) = progress.legacy_migration.as_ref()
-        .map(|binding| &binding.monitor_choice).or(progress.monitor_stop.as_ref()) {
+    } else if let Some(choice) = progress
+        .legacy_migration
+        .as_ref()
+        .map(|binding| &binding.monitor_choice)
+        .or(progress.monitor_stop.as_ref())
+    {
         checkpoint_using(arguments, answers, expected, progress, || {
-            if stopped.is_some() { return Ok(None); }
-            crate::usage_monitor::quiesce_for_setup(&arguments.user_root, choice, &progress.operation_id)
-                .map(Some)
-                .map_err(|failure| SetupError::Verification(failure.message().into()))
+            if stopped.is_some() {
+                return Ok(None);
+            }
+            crate::usage_monitor::quiesce_for_setup(
+                &arguments.user_root,
+                choice,
+                &progress.operation_id,
+            )
+            .map(Some)
+            .map_err(|failure| SetupError::Verification(failure.message().into()))
         })?
-    } else { expected.map(<[u8]>::to_vec) };
+    } else {
+        expected.map(<[u8]>::to_vec)
+    };
     crate::user_install::deactivation::apply(&arguments.user_root, &progress.host_deactivations)
         .map_err(SetupError::Verification)?;
     super::index_rebuild::apply(arguments, progress)?;
@@ -385,7 +401,9 @@ pub(super) fn apply_settings(
 ) -> Result<crate::ActionResult, SetupError> {
     let baseline = if stopped.is_some() {
         checkpoint_inner(arguments, answers, expected, progress, stopped)?
-    } else { checkpoint(arguments, answers, expected, progress)? };
+    } else {
+        checkpoint(arguments, answers, expected, progress)?
+    };
     let applied = user_setup::execute_answers(
         arguments,
         answers,
@@ -408,8 +426,11 @@ pub(super) fn apply_settings(
 }
 
 pub(super) fn checkpoint_stopped(
-    arguments: &user_setup::Arguments, answers: &[u8], expected: Option<&[u8]>,
-    progress: &SetupProgress, stopped: &crate::usage_monitor::StoppedReader,
+    arguments: &user_setup::Arguments,
+    answers: &[u8],
+    expected: Option<&[u8]>,
+    progress: &SetupProgress,
+    stopped: &crate::usage_monitor::StoppedReader,
 ) -> Result<(), SetupError> {
     checkpoint_inner(arguments, answers, expected, progress, Some(stopped)).map(|_| ())
 }
@@ -659,46 +680,92 @@ mod tests {
     }
 
     #[test]
-    fn regular_v2_monitor_stop_keeps_opt_out_after_harness_failure_and_never_changes_on_stop_failure() {
+    fn regular_v2_monitor_stop_keeps_opt_out_after_harness_failure_and_never_changes_on_stop_failure(
+    ) {
         struct Stopped(std::path::PathBuf);
         impl Drop for Stopped {
             fn drop(&mut self) {
-                let config = user_setup::parse_and_validate_config(&std::fs::read(&self.0).unwrap()).unwrap();
-                assert!(!config.usage_guard.policy.unwrap().effective_midway().enabled);
+                let config =
+                    user_setup::parse_and_validate_config(&std::fs::read(&self.0).unwrap())
+                        .unwrap();
+                assert!(
+                    !config
+                        .usage_guard
+                        .policy
+                        .unwrap()
+                        .effective_midway()
+                        .enabled
+                );
             }
         }
         for master_enabled in [false, true] {
             let root = tempfile::tempdir().unwrap();
-            let (user_root, root_cap) = crate::user_install::open_canonical_user_root_for_setup(root.path()).unwrap();
-            let mut original = super::super::default_answers(Some(user_setup::InterfaceLanguage::Ko));
+            let (user_root, root_cap) =
+                crate::user_install::open_canonical_user_root_for_setup(root.path()).unwrap();
+            let mut original =
+                super::super::default_answers(Some(user_setup::InterfaceLanguage::Ko));
             original["usage_guard"]["enforcement_enabled"] = json!(true);
             original["usage_guard"]["midway"]["enabled"] = json!(true);
-            let raw = user_setup::canonical_config(&user_setup::parse_and_validate_config(
-                &serde_json::to_vec(&original).unwrap()).unwrap()).unwrap();
-            crate::user_install::replace_user_setup_file(&root_cap, Path::new(user_setup::USER_SETUP_RELATIVE), None, Some(&raw)).unwrap();
+            let raw = user_setup::canonical_config(
+                &user_setup::parse_and_validate_config(&serde_json::to_vec(&original).unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            crate::user_install::replace_user_setup_file(
+                &root_cap,
+                Path::new(user_setup::USER_SETUP_RELATIVE),
+                None,
+                Some(&raw),
+            )
+            .unwrap();
             let mut desired = original;
             desired["usage_guard"]["enforcement_enabled"] = json!(master_enabled);
             desired["usage_guard"]["midway"]["enabled"] = json!(!master_enabled);
             let store = ProgressStore::open(root.path(), None).unwrap();
             let mut progress = store.new_progress("usage-review".into(), desired).unwrap();
             progress.monitor_stop = Some(crate::usage_monitor::SavedMonitorChoice {
-                configured: true, enabled: true, config_digest: hive_core::sha256_digest(b"owned monitor")
+                configured: true,
+                enabled: true,
+                config_digest: hive_core::sha256_digest(b"owned monitor"),
             });
             progress.phase = ProgressPhase::Applying;
             store.save(&store.load().unwrap(), &progress).unwrap();
             store.record_applying(&progress).unwrap();
-            let arguments = user_setup::Arguments { answers: "fixture:v2".into(), mode: user_setup::SetupMode::Apply, user_root, root_cap };
+            let arguments = user_setup::Arguments {
+                answers: "fixture:v2".into(),
+                mode: user_setup::SetupMode::Apply,
+                user_root,
+                root_cap,
+            };
             let bytes = serde_json::to_vec(&progress.answers).unwrap();
-            assert!(checkpoint_using::<()>(&arguments, &bytes, Some(&raw), &progress,
-                || Err(SetupError::Verification("fixture: stop failed".into()))).is_err());
+            assert!(
+                checkpoint_using::<()>(&arguments, &bytes, Some(&raw), &progress, || Err(
+                    SetupError::Verification("fixture: stop failed".into())
+                ))
+                .is_err()
+            );
             let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
             assert_eq!(std::fs::read(&path).unwrap(), raw);
-            let baseline = checkpoint_using(&arguments, &bytes, Some(&raw), &progress,
-                || Ok(Stopped(path.clone()))).unwrap();
+            let baseline = checkpoint_using(&arguments, &bytes, Some(&raw), &progress, || {
+                Ok(Stopped(path.clone()))
+            })
+            .unwrap();
             assert_eq!(std::fs::read(&path).unwrap(), baseline.clone().unwrap());
-            assert_eq!(checkpoint_using::<()>(&arguments, &bytes, Some(&raw), &progress,
-                || panic!("retry must not reactivate or repeat a completed stop")).unwrap(), baseline);
-            assert_eq!(std::fs::read(root.path().join(user_setup::progress_store::recovery_path(&progress).unwrap())).unwrap(), raw);
+            assert_eq!(
+                checkpoint_using::<()>(&arguments, &bytes, Some(&raw), &progress, || panic!(
+                    "retry must not reactivate or repeat a completed stop"
+                ))
+                .unwrap(),
+                baseline
+            );
+            assert_eq!(
+                std::fs::read(
+                    root.path()
+                        .join(user_setup::progress_store::recovery_path(&progress).unwrap())
+                )
+                .unwrap(),
+                raw
+            );
         }
     }
 }

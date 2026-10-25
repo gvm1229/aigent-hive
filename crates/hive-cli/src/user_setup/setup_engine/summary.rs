@@ -115,24 +115,30 @@ fn add_status(data: &Value, summary: &mut Value) {
 
 fn add_completion(result: &ActionResult, data: &Value, summary: &mut Value) {
     for key in [
-            "operation_id",
-            "recovered",
-            "resumed",
-            "remaining_applied",
-            "setup_state",
-            "interface_language",
-            "selected_hosts",
-            "settings_draft_preserved",
-        ] {
-            if let Some(value) = data.get(key) {
-                summary[key] = value.clone();
-            }
+        "operation_id",
+        "recovered",
+        "resumed",
+        "remaining_applied",
+        "setup_state",
+        "interface_language",
+        "selected_hosts",
+        "settings_draft_preserved",
+    ] {
+        if let Some(value) = data.get(key) {
+            summary[key] = value.clone();
         }
-        summary["completion_verified"] = json!(result.status == "success" && result.exit_code == 0
-            && matches!(result.code, "hive.setup-complete" | "hive.user-setup-complete" | "hive.project-setup-complete"));
-        summary["steps"] = data["steps"].clone();
-        summary["effective_usage_policy"] = data["effective_usage_policy"].clone();
-        summary["monitor_review"] = data["monitor_review"].clone();
+    }
+    summary["completion_verified"] = json!(
+        result.status == "success"
+            && result.exit_code == 0
+            && matches!(
+                result.code,
+                "hive.setup-complete" | "hive.user-setup-complete" | "hive.project-setup-complete"
+            )
+    );
+    summary["steps"] = data["steps"].clone();
+    summary["effective_usage_policy"] = data["effective_usage_policy"].clone();
+    summary["monitor_review"] = data["monitor_review"].clone();
     summary["host"] = data["host"].clone();
     summary["runtime_qualification"] = json!("not-evaluated-by-setup");
 }

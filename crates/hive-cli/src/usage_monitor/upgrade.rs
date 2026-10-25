@@ -116,12 +116,22 @@ pub(crate) fn resume_after_setup(
         let current: Configuration =
             serde_json::from_slice(&bytes).map_err(|_| error("invalid monitor configuration"))?;
         if prior["setup_operation"] == operation_id
-            && matches!(prior["phase"].as_str(), Some("complete" | "checking" | "incomplete"))
+            && matches!(
+                prior["phase"].as_str(),
+                Some("complete" | "checking" | "incomplete")
+            )
             && prior["to"]
                 == serde_json::to_value(&current)
                     .map_err(|_| error("invalid monitor configuration"))?
         {
-            return finish_saved_setup_upgrade(&root, operation_id, &stopped, &current, &prior, await_ready);
+            return finish_saved_setup_upgrade(
+                &root,
+                operation_id,
+                &stopped,
+                &current,
+                &prior,
+                await_ready,
+            );
         }
         return Err(error(
             "monitor changed after setup; no automatic reactivation",
@@ -132,37 +142,69 @@ pub(crate) fn resume_after_setup(
 }
 
 fn finish_saved_setup_upgrade(
-    root: &PinnedTarget, operation_id: &str, stopped: &Value, current: &Configuration, prior: &Value,
+    root: &PinnedTarget,
+    operation_id: &str,
+    stopped: &Value,
+    current: &Configuration,
+    prior: &Value,
     ready: impl FnOnce(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
 ) -> Result<Value, AdapterError> {
-    if prior["setup_operation"] != operation_id || stopped["operation_id"] != operation_id
+    if prior["setup_operation"] != operation_id
+        || stopped["operation_id"] != operation_id
         || stopped["phase"] != "complete"
-        || !matches!(prior["phase"].as_str(), Some("complete" | "checking" | "incomplete"))
-        || prior["to"] != serde_json::to_value(current).map_err(|_| error("invalid saved monitor configuration"))? {
-        return Err(error("saved monitor readiness does not match the setup operation"));
+        || !matches!(
+            prior["phase"].as_str(),
+            Some("complete" | "checking" | "incomplete")
+        )
+        || prior["to"]
+            != serde_json::to_value(current)
+                .map_err(|_| error("invalid saved monitor configuration"))?
+    {
+        return Err(error(
+            "saved monitor readiness does not match the setup operation",
+        ));
     }
-    authenticate_ownership(root, current, &monitor_task_name(&monitor_root_path(root.requested_path())?))?;
+    authenticate_ownership(
+        root,
+        current,
+        &monitor_task_name(&monitor_root_path(root.requested_path())?),
+    )?;
     if !current.enabled || current.version != env!("HIVE_PACKAGE_VERSION") {
         return Err(error("saved monitor does not match this update"));
     }
     let health = ready(root, current)?;
     let _control = lock(root, "control.lock")?;
-    let latest: Configuration = load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing after readiness check"))?;
-    let stop: Value = load(root, super::transition::JOURNAL)?.ok_or_else(|| error("monitor stop record missing after readiness check"))?;
+    let latest: Configuration = load(root, CONFIG)?
+        .ok_or_else(|| error("monitor configuration missing after readiness check"))?;
+    let stop: Value = load(root, super::transition::JOURNAL)?
+        .ok_or_else(|| error("monitor stop record missing after readiness check"))?;
     let upgrade_snapshot = root.snapshot(Path::new(JOURNAL))?;
-    let upgrade: Value = serde_json::from_slice(upgrade_snapshot.bytes()
-        .ok_or_else(|| error("monitor update record missing after readiness check"))?)
-        .map_err(|_| error("invalid monitor update record after readiness check"))?;
-    if policy_disables_monitor(root)? || super::serialize(&latest)? != super::serialize(current)?
-        || stop != *stopped || upgrade != *prior || prior["setup_operation"] != operation_id {
-        return Err(error("monitor selection changed during readiness check; changes preserved"));
+    let upgrade: Value = serde_json::from_slice(
+        upgrade_snapshot
+            .bytes()
+            .ok_or_else(|| error("monitor update record missing after readiness check"))?,
+    )
+    .map_err(|_| error("invalid monitor update record after readiness check"))?;
+    if policy_disables_monitor(root)?
+        || super::serialize(&latest)? != super::serialize(current)?
+        || stop != *stopped
+        || upgrade != *prior
+        || prior["setup_operation"] != operation_id
+    {
+        return Err(error(
+            "monitor selection changed during readiness check; changes preserved",
+        ));
     }
     if prior["phase"] != "complete" {
         let mut complete = prior.clone();
         complete["phase"] = json!("complete");
         complete["completed_at"] = json!(now());
         complete["error"] = Value::Null;
-        root.publish_runtime(Path::new(JOURNAL), &upgrade_snapshot, &super::serialize(&complete)?)?;
+        root.publish_runtime(
+            Path::new(JOURNAL),
+            &upgrade_snapshot,
+            &super::serialize(&complete)?,
+        )?;
     }
     Ok(health)
 }
@@ -369,7 +411,10 @@ fn pause_previous(
     }
 }
 
-pub(super) fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, AdapterError> {
+pub(super) fn await_ready(
+    root: &PinnedTarget,
+    expected: &Configuration,
+) -> Result<Value, AdapterError> {
     let began = Instant::now();
     let budget = crate::user_setup::command_timeout(Duration::from_secs(70));
     while began.elapsed() < budget {
@@ -454,23 +499,54 @@ mod tests {
             write(&root, JOURNAL, &prior).unwrap();
             let before_state = root.read_required(Path::new(STATE), 65536).unwrap();
             let before_config = root.read_required(Path::new(CONFIG), 65536).unwrap();
-            assert!(finish_saved_setup_upgrade(&root, "setup-a", &stopped, &current, &prior,
-                |_, _| Err(error("still not ready"))).is_err());
+            assert!(finish_saved_setup_upgrade(
+                &root,
+                "setup-a",
+                &stopped,
+                &current,
+                &prior,
+                |_, _| Err(error("still not ready"))
+            )
+            .is_err());
             assert_eq!(load::<Value>(&root, JOURNAL).unwrap().unwrap(), prior);
-            let health = finish_saved_setup_upgrade(&root, "setup-a", &stopped, &current, &prior,
-                |_, _| Ok(json!({"controller_verified":true,"state":"idle-awaiting-Codex"}))).unwrap();
+            let health =
+                finish_saved_setup_upgrade(&root, "setup-a", &stopped, &current, &prior, |_, _| {
+                    Ok(json!({"controller_verified":true,"state":"idle-awaiting-Codex"}))
+                })
+                .unwrap();
             assert_eq!(health["controller_verified"], true);
-            assert_eq!(load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"], "complete");
-            assert_eq!(root.read_required(Path::new(STATE), 65536).unwrap(), before_state);
-            assert_eq!(root.read_required(Path::new(CONFIG), 65536).unwrap(), before_config);
+            assert_eq!(
+                load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
+                "complete"
+            );
+            assert_eq!(
+                root.read_required(Path::new(STATE), 65536).unwrap(),
+                before_state
+            );
+            assert_eq!(
+                root.read_required(Path::new(CONFIG), 65536).unwrap(),
+                before_config
+            );
             write(&root, JOURNAL, &prior).unwrap();
-            assert!(finish_saved_setup_upgrade(&root, "setup-a", &stopped, &current, &prior, |root, _| {
-                let mut later = stopped.clone(); later["operation_id"] = Value::Null;
-                write(root, super::super::transition::JOURNAL, &later)?;
-                Ok(json!({"controller_verified":true}))
-            }).is_err());
+            assert!(finish_saved_setup_upgrade(
+                &root,
+                "setup-a",
+                &stopped,
+                &current,
+                &prior,
+                |root, _| {
+                    let mut later = stopped.clone();
+                    later["operation_id"] = Value::Null;
+                    write(root, super::super::transition::JOURNAL, &later)?;
+                    Ok(json!({"controller_verified":true}))
+                }
+            )
+            .is_err());
             assert_eq!(load::<Value>(&root, JOURNAL).unwrap().unwrap(), prior);
-            assert!(load::<Value>(&root, super::super::transition::JOURNAL).unwrap().unwrap()["operation_id"].is_null());
+            assert!(load::<Value>(&root, super::super::transition::JOURNAL)
+                .unwrap()
+                .unwrap()["operation_id"]
+                .is_null());
         }
     }
 

@@ -5,10 +5,14 @@ mod consent_setup;
 pub use consent_setup::{materialize_setup_extras, setup_extras_request, supported_setup_hooks};
 mod local_overrides;
 mod reconfiguration;
-pub use reconfiguration::{project_reconfiguration_candidate, project_role_changes, reconfiguration_tree_digest, validate_reconfiguration_tree, ProjectReconfigurationCandidate};
+pub use reconfiguration::{
+    project_reconfiguration_candidate, project_role_changes, reconfiguration_tree_digest,
+    validate_reconfiguration_tree, ProjectReconfigurationCandidate,
+};
 mod setup_preparation;
 pub use setup_preparation::{
-    prepare_setup, setup_recovery_change_is_owned, setup_role_update_is_preserving, PreparedSetup, PreparedSetupChange,
+    prepare_setup, setup_recovery_change_is_owned, setup_role_update_is_preserving, PreparedSetup,
+    PreparedSetupChange,
 };
 pub mod skill_delivery;
 use activation::{
@@ -3041,7 +3045,13 @@ fn parse_answers(bytes: &[u8]) -> Result<(SetupAnswers, JsonValue), RenderError>
 pub fn inspect_project_preferences(
     bytes: &[u8],
     global: &GlobalProjectPreferences,
-) -> Result<(hive_core::preferences::PreferenceDecisions, ResolvedProjectPreferences), RenderError> {
+) -> Result<
+    (
+        hive_core::preferences::PreferenceDecisions,
+        ResolvedProjectPreferences,
+    ),
+    RenderError,
+> {
     let (answers, value) = parse_answers(bytes)?;
     validate_schema_instance(SETUP_SCHEMA, &value, "setup answers")?;
     validate_answers(&answers)?;
@@ -3060,7 +3070,7 @@ pub fn normalized_project_answers(bytes: &[u8]) -> Result<JsonValue, RenderError
     let (answers, value) = parse_answers(bytes)?;
     validate_schema_instance(SETUP_SCHEMA, &value, "setup answers")?;
     validate_answers(&answers)?;
-    serde_json::to_value(answers).map_err(|error|RenderError::Internal(error.to_string()))
+    serde_json::to_value(answers).map_err(|error| RenderError::Internal(error.to_string()))
 }
 
 fn load_resolution(path: &Path) -> Result<CapabilityResolution, RenderError> {
@@ -5398,7 +5408,10 @@ fn reproduce_projection_ownership<T: TargetRead + ?Sized>(
     )?;
     if authenticate_directives {
         authenticate_projected_directive_files(
-            target, source_version, &mut read_projected, &mut files,
+            target,
+            source_version,
+            &mut read_projected,
+            &mut files,
         )?;
     }
     Ok(ValidatedProjectionOwnership { files })
@@ -5467,9 +5480,19 @@ fn authenticate_projected_directive_files<T: TargetRead + ?Sized>(
         )))
         }
     };
-    let expected = directives.iter().map(|(path, bytes)| (path.to_path_buf(), bytes.to_vec())).collect();
+    let expected = directives
+        .iter()
+        .map(|(path, bytes)| (path.to_path_buf(), bytes.to_vec()))
+        .collect();
     let preserved = target
-        .map(|target| local_overrides::paths(target, source_version, &expected, local_overrides::Scope::Directives))
+        .map(|target| {
+            local_overrides::paths(
+                target,
+                source_version,
+                &expected,
+                local_overrides::Scope::Directives,
+            )
+        })
         .transpose()?
         .unwrap_or_default();
     for (relative, expected) in directives {
@@ -5646,7 +5669,10 @@ fn local_preserved_skill_paths<T: TargetRead + ?Sized>(
     expected_files: &BTreeMap<PathBuf, Vec<u8>>,
 ) -> Result<BTreeSet<PathBuf>, RenderError> {
     local_overrides::paths(
-        target, source_version, expected_files, local_overrides::Scope::Skills,
+        target,
+        source_version,
+        expected_files,
+        local_overrides::Scope::Skills,
     )
 }
 
@@ -6233,10 +6259,16 @@ fn validate_installed_marker(
         (PathBuf::from("AGENTS.md"), desired.as_bytes().to_vec()),
         (PathBuf::from("CLAUDE.md"), redirect.as_bytes().to_vec()),
         (PathBuf::from("GEMINI.md"), redirect.into_bytes()),
-        (PathBuf::from(".prettierignore"), FORMATTER_IGNORE.as_bytes().to_vec()),
+        (
+            PathBuf::from(".prettierignore"),
+            FORMATTER_IGNORE.as_bytes().to_vec(),
+        ),
     ]);
     let preserved = local_overrides::paths(
-        target, &harness.harness_version, &expected, local_overrides::Scope::Shared,
+        target,
+        &harness.harness_version,
+        &expected,
+        local_overrides::Scope::Shared,
     )?;
     if current != merged && !preserved.contains(relative) {
         return Err(RenderError::Verification(
@@ -6306,7 +6338,10 @@ fn validate_installed_against(
         .map(|(path, bytes)| (path.clone(), bytes.clone()))
         .collect::<BTreeMap<_, _>>();
     let local_preserved = local_overrides::paths(
-        target, env!("CARGO_PKG_VERSION"), &expected_projection_files, local_overrides::Scope::All,
+        target,
+        env!("CARGO_PKG_VERSION"),
+        &expected_projection_files,
+        local_overrides::Scope::All,
     )?;
     for (relative, expected) in planned {
         let current =
@@ -8513,25 +8548,36 @@ mod tests {
 
     #[test]
     fn disabled_global_guard_allows_inactive_project_threshold_below_its_stored_value() {
-        let (_,mut value)=load_answers(&fixture("answers-base.yml")).unwrap();
-        value["setup_mode"]=serde_json::json!("custom");
-        value["interface_language"]=serde_json::json!("ko");
-        value["wiki"]=serde_json::json!({"enabled":true,"language":"both"});
-        value["persona"]=serde_json::json!({"id":"friendly"});
-        value["skills"]=serde_json::json!({"mode":"individual","selected":[]});
-        value["usage_stop_remaining_percent"]=serde_json::json!(0);
-        let mut answers:SetupAnswers=serde_json::from_value(value).unwrap();
+        let (_, mut value) = load_answers(&fixture("answers-base.yml")).unwrap();
+        value["setup_mode"] = serde_json::json!("custom");
+        value["interface_language"] = serde_json::json!("ko");
+        value["wiki"] = serde_json::json!({"enabled":true,"language":"both"});
+        value["persona"] = serde_json::json!({"id":"friendly"});
+        value["skills"] = serde_json::json!({"mode":"individual","selected":[]});
+        value["usage_stop_remaining_percent"] = serde_json::json!(0);
+        let mut answers: SetupAnswers = serde_json::from_value(value).unwrap();
         super::validate_answers(&answers).unwrap();
-        let mut global=test_global_preferences();
-        global.selected_project_skills=hive_projection::project_default_skills().unwrap();
-        global.usage_guard_enabled=false;
-        let effective=resolve_effective_project_preferences(&answers,Some(&global)).unwrap().unwrap();
+        let mut global = test_global_preferences();
+        global.selected_project_skills = hive_projection::project_default_skills().unwrap();
+        global.usage_guard_enabled = false;
+        let effective = resolve_effective_project_preferences(&answers, Some(&global))
+            .unwrap()
+            .unwrap();
         assert!(!effective.usage_guard_enabled);
-        assert_eq!(effective.usage_stop_remaining_percent,0);
-        global.usage_guard_enabled=true;
-        assert!(matches!(resolve_effective_project_preferences(&answers,Some(&global)),Err(RenderError::Safety(_))));
-        answers.usage_stop_remaining_percent=99;
-        assert_eq!(resolve_effective_project_preferences(&answers,Some(&global)).unwrap().unwrap().usage_stop_remaining_percent,99);
+        assert_eq!(effective.usage_stop_remaining_percent, 0);
+        global.usage_guard_enabled = true;
+        assert!(matches!(
+            resolve_effective_project_preferences(&answers, Some(&global)),
+            Err(RenderError::Safety(_))
+        ));
+        answers.usage_stop_remaining_percent = 99;
+        assert_eq!(
+            resolve_effective_project_preferences(&answers, Some(&global))
+                .unwrap()
+                .unwrap()
+                .usage_stop_remaining_percent,
+            99
+        );
     }
 
     fn apply_optional_skill_fixture(

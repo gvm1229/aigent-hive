@@ -19,10 +19,10 @@ mod activation;
 mod capabilities;
 mod existing;
 mod extras;
+mod file_input;
 mod input;
 mod preferences;
 mod questions;
-mod file_input;
 pub(in crate::user_setup) use file_input::execute as execute_file;
 #[cfg(test)]
 mod tests;
@@ -72,7 +72,8 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
             "--show" => options.show = true,
             "--dry-run" => options.dry_run = true,
             "--describe" => options.describe = true,
-            "--target" | "--user-root" | "--output" | "--section" | "--question" | "--capabilities" => {
+            "--target" | "--user-root" | "--output" | "--section" | "--question"
+            | "--capabilities" => {
                 let value = arguments
                     .get(index + 1)
                     .filter(|value| !value.starts_with("--"))
@@ -433,13 +434,21 @@ fn execute_core(
         .map_err(|e| SetupError::Verification(e.to_string()))
 }
 
-fn prepare_settings(options:&Options, answers:&Path, caps:&Path, global:&hive_render::GlobalProjectPreferences)
-    -> Result<hive_render::PreparedSetup, SetupError> {
-    prepare_settings_raw(options,answers,caps,global).map_err(|error| match error {
+fn prepare_settings(
+    options: &Options,
+    answers: &Path,
+    caps: &Path,
+    global: &hive_render::GlobalProjectPreferences,
+) -> Result<hive_render::PreparedSetup, SetupError> {
+    prepare_settings_raw(options, answers, caps, global).map_err(|error| match error {
         hive_render::RenderError::Input(message) => SetupError::Input(message),
-        hive_render::RenderError::Conflict(message) | hive_render::RenderError::Safety(message) => SetupError::Conflict(message),
-        hive_render::RenderError::Verification(message) | hive_render::RenderError::Unsupported(message) => SetupError::Verification(message),
-        hive_render::RenderError::Internal(message) | hive_render::RenderError::Rollback(message) => SetupError::Internal(message),
+        hive_render::RenderError::Conflict(message) | hive_render::RenderError::Safety(message) => {
+            SetupError::Conflict(message)
+        }
+        hive_render::RenderError::Verification(message)
+        | hive_render::RenderError::Unsupported(message) => SetupError::Verification(message),
+        hive_render::RenderError::Internal(message)
+        | hive_render::RenderError::Rollback(message) => SetupError::Internal(message),
     })
 }
 fn prepare_settings_raw(
@@ -537,7 +546,15 @@ fn apply<R: BufRead, W: Write>(
         user_setup::read_bounded_regular(caps.path(), user_setup::MAX_USER_SETUP_BYTES)?;
     let prepared = prepare_settings(options, answers.path(), caps.path(), global)?;
     activation::verify_preview(&preview, &prepared.outcome)?;
-    let outcome = commit_prepared(options,store,snapshot,progress,global,&capability_bytes,prepared)?;
+    let outcome = commit_prepared(
+        options,
+        store,
+        snapshot,
+        progress,
+        global,
+        &capability_bytes,
+        prepared,
+    )?;
     Ok(report(
         "success",
         0,
@@ -552,9 +569,15 @@ fn apply<R: BufRead, W: Write>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn commit_prepared(options:&Options,store:&ProgressStore,snapshot:&mut user_setup::progress_store::ProgressSnapshot,
-    progress:&mut user_setup::progress_store::SetupProgress,global:&hive_render::GlobalProjectPreferences,
-    capability_bytes:&[u8],prepared:hive_render::PreparedSetup) -> Result<Vec<String>,SetupError> {
+fn commit_prepared(
+    options: &Options,
+    store: &ProgressStore,
+    snapshot: &mut user_setup::progress_store::ProgressSnapshot,
+    progress: &mut user_setup::progress_store::SetupProgress,
+    global: &hive_render::GlobalProjectPreferences,
+    capability_bytes: &[u8],
+    prepared: hive_render::PreparedSetup,
+) -> Result<Vec<String>, SetupError> {
     activation::bind_context(progress, global, capability_bytes, &prepared.outcome)?;
     progress.phase = ProgressPhase::Applying;
     *snapshot = store.save(snapshot, progress)?;

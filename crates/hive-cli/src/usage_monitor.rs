@@ -5,12 +5,12 @@ mod platform;
 mod preferences;
 #[cfg(debug_assertions)]
 mod qualification;
+pub(crate) mod review;
 mod sensor;
 mod state;
 mod status;
 mod threshold;
 mod transition;
-pub(crate) mod review;
 pub(crate) use transition::StoppedReader;
 mod upgrade;
 
@@ -19,9 +19,9 @@ pub(crate) use qualification::run_qualification;
 #[cfg(debug_assertions)]
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
-pub(crate) use upgrade::upgrade_existing;
-pub(crate) use upgrade::resume_after_setup;
 pub(crate) use status::setup_status;
+pub(crate) use upgrade::resume_after_setup;
+pub(crate) use upgrade::upgrade_existing;
 
 use crate::run::{AdapterError, PinnedTarget};
 use crate::{emit_action_result, ActionResult};
@@ -150,18 +150,29 @@ fn lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
 }
 
 fn existing_lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
-    let mut parent = root.target_dir().try_clone().map_err(|_| error("cannot pin lock parent"))?;
+    let mut parent = root
+        .target_dir()
+        .try_clone()
+        .map_err(|_| error("cannot pin lock parent"))?;
     for component in Path::new(BASE).components() {
-        parent = parent.open_dir_nofollow(component.as_os_str())
+        parent = parent
+            .open_dir_nofollow(component.as_os_str())
             .map_err(|_| error("monitor lock parent is absent or unsafe"))?;
     }
-    if !parent.symlink_metadata(name).is_ok_and(|metadata| metadata.is_file()) {
+    if !parent
+        .symlink_metadata(name)
+        .is_ok_and(|metadata| metadata.is_file())
+    {
         return Err(error("monitor lock is absent or unsafe"));
     }
     let mut options = OpenOptions::new();
     options.read(true).write(true).follow(FollowSymlinks::No);
-    let file = parent.open_with(name, &options).map_err(|_| error("cannot pin monitor lock"))?.into_std();
-    file.try_lock().map_err(|_| AdapterError::Conflict("monitor operation already running".into()))?;
+    let file = parent
+        .open_with(name, &options)
+        .map_err(|_| error("cannot pin monitor lock"))?
+        .into_std();
+    file.try_lock()
+        .map_err(|_| AdapterError::Conflict("monitor operation already running".into()))?;
     Ok(file)
 }
 
@@ -245,19 +256,32 @@ pub(crate) fn quiesce_for_setup(
     operation_id: &str,
 ) -> Result<transition::StoppedReader, AdapterError> {
     let root = PinnedTarget::open_usage(user_root)?;
-    transition::quiesce_operation(&root, platform::call, Duration::from_secs(15),
-        Some(&choice.config_digest), Some(operation_id))
+    transition::quiesce_operation(
+        &root,
+        platform::call,
+        Duration::from_secs(15),
+        Some(&choice.config_digest),
+        Some(operation_id),
+    )
 }
 
 pub(crate) fn verify_stopped_for_setup(user_root: &Path) -> Result<(), AdapterError> {
     transition::verify_stopped(&PinnedTarget::open_usage(user_root)?)
 }
 
-pub(crate) fn quiesce_for_uninstall(user_root: &Path, choice: &SavedMonitorChoice, operation_id: &str)
-    -> Result<transition::StoppedReader, AdapterError> {
+pub(crate) fn quiesce_for_uninstall(
+    user_root: &Path,
+    choice: &SavedMonitorChoice,
+    operation_id: &str,
+) -> Result<transition::StoppedReader, AdapterError> {
     let root = PinnedTarget::open_usage(user_root)?;
-    let stopped = transition::quiesce_operation(&root, platform::call, Duration::from_secs(15),
-        Some(&choice.config_digest), Some(operation_id))?;
+    let stopped = transition::quiesce_operation(
+        &root,
+        platform::call,
+        Duration::from_secs(15),
+        Some(&choice.config_digest),
+        Some(operation_id),
+    )?;
     activation::retire_disabled(&root)?;
     Ok(stopped)
 }
@@ -589,7 +613,10 @@ pub(crate) fn setup_activation_preview(root: &Path) -> Result<Value, AdapterErro
 pub(crate) fn activate_after_setup(root: &Path, approval: &str) -> Result<Value, AdapterError> {
     enable(&PinnedTarget::open_usage(root)?, approval)
 }
-fn preview_bound(pinned: &PinnedTarget, binding: &activation::Binding) -> Result<Value, AdapterError> {
+fn preview_bound(
+    pinned: &PinnedTarget,
+    binding: &activation::Binding,
+) -> Result<Value, AdapterError> {
     let mut config = configuration(pinned.requested_path())?;
     let available = cfg!(windows);
     config.enabled = available;

@@ -6,41 +6,41 @@ use hive_core::preferences::{DecisionOrigin, PreferenceScope};
 use hive_core::setup::QuestionCatalog;
 use serde_json::{json, Value};
 
-mod interactive;
-mod file_input;
 mod answer_patch;
+mod file_input;
+mod interactive;
 mod summary;
 pub(crate) use summary::{arguments as summary_arguments, compact as compact_result};
-mod file_apply;
 mod application;
-mod monitor_review;
+mod file_apply;
 mod file_policy;
 mod index_rebuild;
-mod monitor_stop;
-pub(in crate::user_setup) mod vector_choice;
+mod monitor_review;
 pub(in crate::user_setup) mod monitor_start;
+mod monitor_stop;
 mod project;
-pub(in crate::user_setup) use project::run as run_project;
-pub(in crate::user_setup) use project::execute_file as execute_project_file;
-pub(in crate::user_setup) use file_input::{file_options, execute as execute_file};
+pub(in crate::user_setup) mod vector_choice;
 #[cfg(test)]
 pub(in crate::user_setup) use file_input::FileOptions;
+pub(in crate::user_setup) use file_input::{execute as execute_file, file_options};
+pub(in crate::user_setup) use project::execute_file as execute_project_file;
+pub(in crate::user_setup) use project::run as run_project;
 mod host_scope;
 pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
 mod legacy;
+pub(in crate::user_setup) mod messages;
 mod recovery;
 mod terminal;
-pub(in crate::user_setup) mod messages;
-mod worker;
 mod update;
 mod update_summary;
-pub(in crate::user_setup) use update::run as run_update_completion;
-#[cfg(any(windows, target_os = "linux"))]
-pub(in crate::user_setup) use update::legacy_noninteractive as update_without_terminal;
+mod worker;
 pub(super) use interactive::resume_pending_update;
 #[cfg(any(windows, target_os = "linux"))]
 pub(super) use interactive::update_with_terminal;
 pub(super) use interactive::{handles, run};
+#[cfg(any(windows, target_os = "linux"))]
+pub(in crate::user_setup) use update::legacy_noninteractive as update_without_terminal;
+pub(in crate::user_setup) use update::run as run_update_completion;
 pub(in crate::user_setup) use worker::command_timeout;
 pub(in crate::user_setup) use worker::run as run_apply_worker;
 
@@ -54,17 +54,25 @@ pub(super) fn catalog() -> Result<QuestionCatalog, SetupError> {
 }
 
 pub(in crate::user_setup) fn default_answers(language: Option<InterfaceLanguage>) -> Value {
-    let mut guard = serde_json::to_value(hive_core::preferences::UsageProtection::default()).expect("typed usage policy");
+    let mut guard = serde_json::to_value(hive_core::preferences::UsageProtection::default())
+        .expect("typed usage policy");
     guard["stop_remaining_percent"] = json!(super::EXPEDITED_DEFAULT_USAGE_THRESHOLD);
     guard["codexbar_fallback_enabled"] = json!(false);
     guard["popup_enabled"] = json!(false);
-    guard["discord"] = serde_json::to_value(super::DiscordGuardPreferences::default()).expect("typed notices");
+    guard["discord"] =
+        serde_json::to_value(super::DiscordGuardPreferences::default()).expect("typed notices");
     guard["project_overrides"] = json!({});
-    let wiki_language = if language == Some(InterfaceLanguage::Ko) { "ko" } else { "en" };
+    let wiki_language = if language == Some(InterfaceLanguage::Ko) {
+        "ko"
+    } else {
+        "en"
+    };
     let mut answers = json!({"schema_version":2,"wiki":{"enabled":true,"language":wiki_language,"backend":"markdown"},
         "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},"selected_hosts":["codex"],
         "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","usage_guard":guard,"preference_decisions":{}});
-    if let Some(language) = language { answers["interface_language"] = json!(language); }
+    if let Some(language) = language {
+        answers["interface_language"] = json!(language);
+    }
     answers
 }
 
@@ -128,7 +136,10 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
     if question.is_some() && scope == PreferenceScope::User {
         if let Some(config) = &config {
             if let Some(migration) = super::migration::inspect(&user_root, config)? {
-                current = Some(serde_json::to_value(migration.candidate).map_err(|e| SetupError::Internal(e.to_string()))?);
+                current = Some(
+                    serde_json::to_value(migration.candidate)
+                        .map_err(|e| SetupError::Internal(e.to_string()))?,
+                );
             }
         }
     }
@@ -136,7 +147,8 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         let (_, feature) = super::load_feature_answers(&root_cap)?;
         if let Some(answer) = feature.vector_search {
             let values = current.get_or_insert_with(|| json!({}));
-            values["operation"] = json!({"vector_search":answer == super::VectorFeatureAnswer::Yes});
+            values["operation"] =
+                json!({"vector_search":answer == super::VectorFeatureAnswer::Yes});
             values["preference_decisions"]["/operation/vector_search"] = json!(feature.decision);
         }
     }
@@ -147,12 +159,36 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
     if let Some(id) = &question {
         questions = summary::one_question(questions, id, korean)?;
     }
-    Ok(ActionResult {
+    Ok(description_result(
+        scope,
+        &section,
+        &questions,
+        question.is_some(),
+        korean,
+    ))
+}
+
+fn description_result(
+    scope: PreferenceScope,
+    section: &str,
+    questions: &Value,
+    single_question: bool,
+    korean: bool,
+) -> ActionResult {
+    ActionResult {
         schema_version: 1,
-        action: if question.is_some() {"DescribeHiveSetupQuestion"} else {"DescribeHiveSetupSection"},
+        action: if single_question {
+            "DescribeHiveSetupQuestion"
+        } else {
+            "DescribeHiveSetupSection"
+        },
         status: "success",
         exit_code: 0,
-        code: if question.is_some() {"hive.setup-question-described"} else {"hive.setup-section-described"},
+        code: if single_question {
+            "hive.setup-question-described"
+        } else {
+            "hive.setup-section-described"
+        },
         message: if korean {
             "요청한 설정 질문 목록"
         } else {
@@ -167,15 +203,25 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         }],
         next_action: None,
         data: Some(json!({"section":section,"scope":scope,"questions":questions})),
-    })
+    }
 }
 
-fn question_section(scope: PreferenceScope, section: Option<String>, question: Option<&str>) -> Result<String, SetupError> {
-    match (section,question) {
-        (Some(section),None)=>Ok(section),
-        (None,Some(id))=>catalog()?.questions.into_iter().find(|q|q.scope==scope && q.id==id)
-            .map(|q|q.section).ok_or_else(||SetupError::Input("unknown setup question".into())),
-        _=>Err(SetupError::Input("choose one question or one section".into())),
+fn question_section(
+    scope: PreferenceScope,
+    section: Option<String>,
+    question: Option<&str>,
+) -> Result<String, SetupError> {
+    match (section, question) {
+        (Some(section), None) => Ok(section),
+        (None, Some(id)) => catalog()?
+            .questions
+            .into_iter()
+            .find(|q| q.scope == scope && q.id == id)
+            .map(|q| q.section)
+            .ok_or_else(|| SetupError::Input("unknown setup question".into())),
+        _ => Err(SetupError::Input(
+            "choose one question or one section".into(),
+        )),
     }
 }
 

@@ -26,6 +26,22 @@ impl Default for FileOptions {
     }
 }
 
+impl FileOptions {
+    fn validate_mode(&self, mode: SetupMode) -> Result<(), SetupError> {
+        if self.index_rebuild_scope.is_some() && mode != SetupMode::Apply {
+            return Err(SetupError::Input(
+                "index rebuild approval requires --apply".into(),
+            ));
+        }
+        if self.monitor_confirm.is_some() && mode != SetupMode::Apply {
+            return Err(SetupError::Input(
+                "monitor confirmation requires --apply".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 pub(in crate::user_setup) fn file_options(
     arguments: &[String],
 ) -> Result<(Vec<String>, FileOptions), SetupError> {
@@ -52,18 +68,36 @@ pub(in crate::user_setup) fn file_options(
             };
             seen = true;
             index += 2;
-        } else if matches!(arguments[index].as_str(), "--index-rebuild-scope" | "--monitor-confirm") {
+        } else if matches!(
+            arguments[index].as_str(),
+            "--index-rebuild-scope" | "--monitor-confirm"
+        ) {
             let monitor = arguments[index] == "--monitor-confirm";
-            let digest = arguments.get(index + 1).filter(|value|
-                value.len() == 71 && value.starts_with("sha256:")
-                    && value[7..].bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
-                .ok_or_else(|| SetupError::Input(if monitor {
-                    "monitor confirmation requires a SHA-256 digest".into()
-                } else { "index rebuild scope requires a SHA-256 digest".into() }))?;
-            let previous = if monitor { options.monitor_confirm.replace(digest.clone()) }
-                else { options.index_rebuild_scope.replace(digest.clone()) };
+            let digest = arguments
+                .get(index + 1)
+                .filter(|value| {
+                    value.len() == 71
+                        && value.starts_with("sha256:")
+                        && value[7..]
+                            .bytes()
+                            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                })
+                .ok_or_else(|| {
+                    SetupError::Input(if monitor {
+                        "monitor confirmation requires a SHA-256 digest".into()
+                    } else {
+                        "index rebuild scope requires a SHA-256 digest".into()
+                    })
+                })?;
+            let previous = if monitor {
+                options.monitor_confirm.replace(digest.clone())
+            } else {
+                options.index_rebuild_scope.replace(digest.clone())
+            };
             if previous.is_some() {
-                return Err(SetupError::Input("duplicate operation scope approval".into()));
+                return Err(SetupError::Input(
+                    "duplicate operation scope approval".into(),
+                ));
             }
             index += 2;
         } else {
@@ -78,12 +112,7 @@ pub(in crate::user_setup) fn execute(
     arguments: &Arguments,
     options: &FileOptions,
 ) -> Result<ActionResult, SetupError> {
-    if options.index_rebuild_scope.is_some() && arguments.mode != SetupMode::Apply {
-        return Err(SetupError::Input("index rebuild approval requires --apply".into()));
-    }
-    if options.monitor_confirm.is_some() && arguments.mode != SetupMode::Apply {
-        return Err(SetupError::Input("monitor confirmation requires --apply".into()));
-    }
+    options.validate_mode(arguments.mode)?;
     let input =
         user_setup::read_bounded_regular(&arguments.answers, user_setup::MAX_ANSWERS_BYTES)?;
     let existing = crate::user_install::read_user_setup_file(
@@ -96,22 +125,25 @@ pub(in crate::user_setup) fn execute(
         .as_deref()
         .map(user_setup::parse_and_validate_installed_config)
         .transpose()
-        .map_err(|error| SetupError::Conflict(format!("installed user setup is invalid: {}", error.message())))?;
+        .map_err(|error| {
+            SetupError::Conflict(format!(
+                "installed user setup is invalid: {}",
+                error.message()
+            ))
+        })?;
     let patch = super::answer_patch::read(&input)?;
-    let prepared = patch.as_ref().map(|_|super::file_policy::prepare_baseline(&arguments.user_root,current.as_ref())).transpose()?;
+    let prepared = patch
+        .as_ref()
+        .map(|_| super::file_policy::prepare_baseline(&arguments.user_root, current.as_ref()))
+        .transpose()?;
     let input = if let Some(supplied) = &patch {
-        let mut base = if let Some(current) = prepared.as_ref().and_then(|prepared|prepared.baseline.as_ref()) {
-            serde_json::to_value(current)
-                .map_err(|error| SetupError::Internal(error.to_string()))?
-        } else {
-            super::answer_patch::require_initial(supplied, &["interface_language", "selected_hosts"])?;
-            let language = serde_json::from_value(supplied["interface_language"].clone())
-                .map_err(|_| SetupError::Input("invalid initial interface language".into()))?;
-            super::default_answers(Some(language))
-        };
-        super::answer_patch::merge(&mut base, supplied)?;
-        serde_json::to_vec(&base).map_err(|error| SetupError::Internal(error.to_string()))?
-    } else { input };
+        merge_answers_patch(
+            supplied,
+            prepared.as_ref().and_then(|value| value.baseline.as_ref()),
+        )?
+    } else {
+        input
+    };
     let allow_legacy = existing.as_deref() == Some(input.as_slice())
         && user_setup::has_legacy_recommended_skill_selection(&input)?;
     let mut config = if allow_legacy {
@@ -119,15 +151,25 @@ pub(in crate::user_setup) fn execute(
     } else {
         user_setup::parse_and_validate_config(&input)?
     };
-    let mut supplied: Value = if let Some(patch) = patch { patch } else {
-        serde_yaml::from_slice(&input).map_err(|_| SetupError::Input("invalid answer document".into()))?
+    let mut supplied: Value = if let Some(patch) = patch {
+        patch
+    } else {
+        serde_yaml::from_slice(&input)
+            .map_err(|_| SetupError::Input("invalid answer document".into()))?
     };
     user_setup::migrate_legacy_skill_names(&mut supplied)?;
     user_setup::migrate_legacy_single_profile(&mut supplied);
     let legacy_input = (config.schema_version == 1).then(|| config.clone());
     let normalized = match prepared {
         Some(prepared) => prepared,
-        None => super::file_policy::normalize(&arguments.user_root, &mut config, &mut supplied, current.as_ref(), options.quick, arguments.mode)?,
+        None => super::file_policy::normalize(
+            &arguments.user_root,
+            &mut config,
+            &mut supplied,
+            current.as_ref(),
+            options.quick,
+            arguments.mode,
+        )?,
     };
     if arguments.mode == SetupMode::Validate {
         // Validation is not a new answer and must not invent provenance for an old file.
@@ -151,15 +193,40 @@ pub(in crate::user_setup) fn execute(
     let bytes =
         serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     if arguments.mode == SetupMode::Apply {
-        return super::file_apply::apply(arguments, &config, &bytes, existing.as_deref(), legacy_input.as_ref(), normalized.migration, options);
+        return super::file_apply::apply(
+            arguments,
+            &config,
+            &bytes,
+            existing.as_deref(),
+            legacy_input.as_ref(),
+            normalized.migration,
+            options,
+        );
     }
-    let mut result = user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
+    let mut result =
+        user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
     if arguments.mode == SetupMode::DryRun {
         super::index_rebuild::describe(arguments, &config, &mut result)?;
         super::monitor_stop::describe(arguments, &config, &mut result)?;
         super::monitor_start::describe(arguments, &config, &mut result)?;
     }
     Ok(result)
+}
+
+fn merge_answers_patch(
+    supplied: &Value,
+    baseline: Option<&UserSetupConfig>,
+) -> Result<Vec<u8>, SetupError> {
+    let mut base = if let Some(current) = baseline {
+        serde_json::to_value(current).map_err(|error| SetupError::Internal(error.to_string()))?
+    } else {
+        super::answer_patch::require_initial(supplied, &["interface_language", "selected_hosts"])?;
+        let language = serde_json::from_value(supplied["interface_language"].clone())
+            .map_err(|_| SetupError::Input("invalid initial interface language".into()))?;
+        super::default_answers(Some(language))
+    };
+    super::answer_patch::merge(&mut base, supplied)?;
+    serde_json::to_vec(&base).map_err(|error| SetupError::Internal(error.to_string()))
 }
 
 fn declarations(config: &UserSetupConfig) -> Result<BTreeMap<String, Value>, SetupError> {
@@ -207,16 +274,28 @@ fn annotate(
 ) -> Result<(), SetupError> {
     let defaults = super::default_answers(Some(config.interface_language));
     let values = declarations(config)?;
-    let mut choices: BTreeMap<_, _> = current.into_iter().flat_map(|c| c.preference_decisions.iter())
-        .filter(|(key, decision)| !values.contains_key(*key) && decision.matches_declaration(&Value::Null).unwrap_or(false))
-        .map(|(key, decision)| (key.clone(), decision.clone())).collect();
+    let mut choices: BTreeMap<_, _> = current
+        .into_iter()
+        .flat_map(|c| c.preference_decisions.iter())
+        .filter(|(key, decision)| {
+            !values.contains_key(*key)
+                && decision.matches_declaration(&Value::Null).unwrap_or(false)
+        })
+        .map(|(key, decision)| (key.clone(), decision.clone()))
+        .collect();
     for (key, value) in values {
         let provided = supplied.pointer(&key).is_some();
         if let Some(prior) = current
             .and_then(|c| c.preference_decisions.get(&key))
             .filter(|d| d.matches_declaration(&value).unwrap_or(false))
-            .filter(|d| !(provided && d.input_channel == PreferenceInput::Migration
-                && matches!(d.origin, DecisionOrigin::LegacyUnknown | DecisionOrigin::Default)))
+            .filter(|d| {
+                !(provided
+                    && d.input_channel == PreferenceInput::Migration
+                    && matches!(
+                        d.origin,
+                        DecisionOrigin::LegacyUnknown | DecisionOrigin::Default
+                    ))
+            })
         {
             choices.insert(key, prior.clone());
             continue;
@@ -268,10 +347,17 @@ mod tests {
         assert!(file_options(&args).unwrap().1.index_rebuild_scope.is_none());
         assert!(file_options(&["--index-rebuild-scope".into(), "yes".into()]).is_err());
         let digest = format!("sha256:{}", "a".repeat(64));
-        let args = ["--apply".into(), "--index-rebuild-scope".into(), digest.clone()];
+        let args = [
+            "--apply".into(),
+            "--index-rebuild-scope".into(),
+            digest.clone(),
+        ];
         let (filtered, options) = file_options(&args).unwrap();
         assert_eq!(filtered, ["--apply"]);
-        assert_eq!(options.index_rebuild_scope.as_deref(), Some(digest.as_str()));
+        assert_eq!(
+            options.index_rebuild_scope.as_deref(),
+            Some(digest.as_str())
+        );
         let doubled = [args.as_slice(), &args[1..]].concat();
         assert!(file_options(&doubled).is_err());
     }
@@ -282,15 +368,19 @@ mod tests {
 
     #[test]
     fn monitor_confirmation_is_not_implied_by_apply_and_rejects_duplicate_or_invalid_tokens() {
-        let digest=format!("sha256:{}","a".repeat(64));
-        assert!(file_options(&["--apply".into()]).unwrap().1.monitor_confirm.is_none());
-        let args=["--apply".into(),"--monitor-confirm".into(),digest.clone()];
-        let (filtered,options)=file_options(&args).unwrap();
-        assert_eq!(filtered,["--apply"]);
-        assert_eq!(options.monitor_confirm.as_deref(),Some(digest.as_str()));
+        let digest = format!("sha256:{}", "a".repeat(64));
+        assert!(file_options(&["--apply".into()])
+            .unwrap()
+            .1
+            .monitor_confirm
+            .is_none());
+        let args = ["--apply".into(), "--monitor-confirm".into(), digest.clone()];
+        let (filtered, options) = file_options(&args).unwrap();
+        assert_eq!(filtered, ["--apply"]);
+        assert_eq!(options.monitor_confirm.as_deref(), Some(digest.as_str()));
         assert!(options.index_rebuild_scope.is_none());
-        assert!(file_options(&[args.as_slice(),&args[1..]].concat()).is_err());
-        assert!(file_options(&["--monitor-confirm".into(),"yes".into()]).is_err());
+        assert!(file_options(&[args.as_slice(), &args[1..]].concat()).is_err());
+        assert!(file_options(&["--monitor-confirm".into(), "yes".into()]).is_err());
     }
     fn parse(value: &Value) -> UserSetupConfig {
         user_setup::parse_and_validate_config(&serde_json::to_vec(value).unwrap()).unwrap()
@@ -303,10 +393,20 @@ mod tests {
         old["schema_version"] = json!(1);
         old["usage_guard"] = json!({"enabled":false,"stop_remaining_percent":5});
         let current = parse(&old);
-        let baseline = user_setup::migration::inspect(root.path(), &current).unwrap().unwrap().candidate;
+        let baseline = user_setup::migration::inspect(root.path(), &current)
+            .unwrap()
+            .unwrap()
+            .candidate;
         let supplied = serde_json::to_value(&baseline).unwrap();
         let mut config = baseline.clone();
-        annotate(&mut config, &supplied, Some(&baseline), &FileOptions::default(), Some(42)).unwrap();
+        annotate(
+            &mut config,
+            &supplied,
+            Some(&baseline),
+            &FileOptions::default(),
+            Some(42),
+        )
+        .unwrap();
         let record = &config.preference_decisions["/usage_guard/enforcement_enabled"];
         assert_eq!(record.origin, DecisionOrigin::Explicit);
         assert_eq!(record.input_channel, PreferenceInput::AnswersFile);
@@ -318,17 +418,46 @@ mod tests {
     fn explicit_optional_removal_keeps_its_record_when_the_file_omits_that_value() {
         let mut supplied = input();
         let mut current = parse(&supplied);
-        let removal = PreferenceDecision::new(&Value::Null, DecisionOrigin::Explicit,
-            PreferenceInput::Terminal, PreferenceScope::User, "0.14.0", Some(42)).unwrap();
-        current.preference_decisions.insert("/profile/description".into(), removal.clone());
+        let removal = PreferenceDecision::new(
+            &Value::Null,
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(42),
+        )
+        .unwrap();
+        current
+            .preference_decisions
+            .insert("/profile/description".into(), removal.clone());
         let mut config = parse(&supplied);
-        annotate(&mut config, &supplied, Some(&current), &FileOptions::default(), Some(99)).unwrap();
+        annotate(
+            &mut config,
+            &supplied,
+            Some(&current),
+            &FileOptions::default(),
+            Some(99),
+        )
+        .unwrap();
         assert_eq!(config.preference_decisions["/profile/description"], removal);
         supplied["profile"]["description"] = json!("New details");
         let mut changed = parse(&supplied);
-        annotate(&mut changed, &supplied, Some(&current), &FileOptions::default(), Some(99)).unwrap();
-        assert_eq!(changed.preference_decisions["/profile/description"].input_channel, PreferenceInput::AnswersFile);
-        assert_eq!(changed.preference_decisions["/profile/description"].decided_at, Some(99));
+        annotate(
+            &mut changed,
+            &supplied,
+            Some(&current),
+            &FileOptions::default(),
+            Some(99),
+        )
+        .unwrap();
+        assert_eq!(
+            changed.preference_decisions["/profile/description"].input_channel,
+            PreferenceInput::AnswersFile
+        );
+        assert_eq!(
+            changed.preference_decisions["/profile/description"].decided_at,
+            Some(99)
+        );
     }
 
     #[test]
@@ -378,23 +507,70 @@ mod tests {
     fn agent_quick_patch_preserves_unmentioned_unknown_choices_without_claiming_human_acceptance() {
         let value = input();
         let mut previous = parse(&value);
-        annotate(&mut previous, &value, None, &FileOptions::default(), Some(42)).unwrap();
+        annotate(
+            &mut previous,
+            &value,
+            None,
+            &FileOptions::default(),
+            Some(42),
+        )
+        .unwrap();
         let key = "/usage_guard/enforcement_enabled";
-        previous.preference_decisions.insert(key.into(), PreferenceDecision::new(
-            &value["usage_guard"]["enforcement_enabled"], DecisionOrigin::LegacyUnknown,
-            PreferenceInput::Migration, PreferenceScope::User, env!("CARGO_PKG_VERSION"), None).unwrap());
+        previous.preference_decisions.insert(
+            key.into(),
+            PreferenceDecision::new(
+                &value["usage_guard"]["enforcement_enabled"],
+                DecisionOrigin::LegacyUnknown,
+                PreferenceInput::Migration,
+                PreferenceScope::User,
+                env!("CARGO_PKG_VERSION"),
+                None,
+            )
+            .unwrap(),
+        );
         let supplied = json!({"persona":{"id":"friendly"}});
         let mut merged = serde_json::to_value(&previous).unwrap();
         super::super::answer_patch::merge(&mut merged, &supplied).unwrap();
         let mut config = parse(&merged);
-        annotate(&mut config, &supplied, Some(&previous), &FileOptions {channel:PreferenceInput::Agent,quick:true,..FileOptions::default()}, Some(99)).unwrap();
-        assert_eq!(config.preference_decisions[key],previous.preference_decisions[key]);
-        assert_eq!(config.preference_decisions["/persona/id"].origin,DecisionOrigin::ExternalChange);
-        assert_eq!(config.preference_decisions["/persona/id"].decided_at,None);
+        annotate(
+            &mut config,
+            &supplied,
+            Some(&previous),
+            &FileOptions {
+                channel: PreferenceInput::Agent,
+                quick: true,
+                ..FileOptions::default()
+            },
+            Some(99),
+        )
+        .unwrap();
+        assert_eq!(
+            config.preference_decisions[key],
+            previous.preference_decisions[key]
+        );
+        assert_eq!(
+            config.preference_decisions["/persona/id"].origin,
+            DecisionOrigin::ExternalChange
+        );
+        assert_eq!(config.preference_decisions["/persona/id"].decided_at, None);
         let mut defaults = parse(&value);
-        annotate(&mut defaults,&value,None,&FileOptions {channel:PreferenceInput::Agent,quick:true,..FileOptions::default()},Some(99)).unwrap();
-        assert_eq!(defaults.preference_decisions[key].origin,DecisionOrigin::ExternalChange);
-        assert_eq!(defaults.preference_decisions[key].decided_at,None);
+        annotate(
+            &mut defaults,
+            &value,
+            None,
+            &FileOptions {
+                channel: PreferenceInput::Agent,
+                quick: true,
+                ..FileOptions::default()
+            },
+            Some(99),
+        )
+        .unwrap();
+        assert_eq!(
+            defaults.preference_decisions[key].origin,
+            DecisionOrigin::ExternalChange
+        );
+        assert_eq!(defaults.preference_decisions[key].decided_at, None);
     }
 
     #[test]

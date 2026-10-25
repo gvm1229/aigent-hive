@@ -178,9 +178,13 @@ pub(super) fn preflight(arguments: &Arguments, progress: &SetupProgress) -> Resu
 
 pub(super) fn apply(arguments: &Arguments, progress: &SetupProgress) -> Result<(), SetupError> {
     preflight(arguments, progress)?;
-    if let Some(digest) = progress.index_rebuild_scope.as_ref()
-        .filter(|_| progress.answers["wiki"]["enabled"] == true) {
-        open(&arguments.user_root, &arguments.root_cap)?.rebuild_setup_index(digest)
+    if let Some(digest) = progress
+        .index_rebuild_scope
+        .as_ref()
+        .filter(|_| progress.answers["wiki"]["enabled"] == true)
+    {
+        open(&arguments.user_root, &arguments.root_cap)?
+            .rebuild_setup_index(digest)
             .map_err(|error| SetupError::Conflict(error.to_string()))?;
     }
     Ok(())

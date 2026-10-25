@@ -69,7 +69,7 @@ impl ProgressStore {
         {
             super::parse_progress_file(bytes).map(|_| ())
         } else if relative == Path::new(super::monitor_review::PATH) {
-            super::monitor_review::validate_scope(self,bytes).map(|_|())
+            super::monitor_review::validate_scope(self, bytes).map(|_| ())
         } else {
             history::validate_scope(self, relative, bytes)
         }
