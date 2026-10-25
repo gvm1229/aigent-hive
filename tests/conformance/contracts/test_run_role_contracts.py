@@ -2192,6 +2192,51 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(payload["data"]["dispatch_briefs"],[])
         self.assertEqual(config.read_bytes(),before)
 
+    def test_v2_master_off_dispatch_requires_one_authorization_without_sensing_or_replay(self) -> None:
+        target = self.fresh_target("v2-master-off")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(target, self.checkpoint_request(state="executing"),
+                                          CAPABILITIES["codex-omx"], "v2-master-off")
+        self.assert_success(process, payload)
+        path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = yaml.safe_load(path.read_text(encoding="utf-8"))
+        config["schema_version"] = 2
+        config["usage_guard"].pop("enabled", None)
+        config["usage_guard"].pop("quota_reset_guard_enabled", None)
+        config["usage_guard"].update({
+            "enforcement_enabled": False, "warnings_enabled": True,
+            "preflight": {"threshold_enabled": True, "reset_enabled": True,
+                          "zero_quota_enabled": True, "observation_failure": "block"},
+            "midway": {"enabled": True, "threshold_enabled": True, "reset_enabled": True,
+                       "zero_quota_enabled": True, "observation_failure": "stop"},
+        })
+        path.write_text(yaml.safe_dump(config), encoding="utf-8")
+        before = path.read_bytes()
+        log = self.work / "disabled-sensor.jsonl"
+        environment = self.fake_codexbar_environment("zero", log=log)
+        arguments = {"dispatch_intent": "automatic", "user_root": self.setup_user_root,
+                     "extra_environment": environment}
+        process, payload = self.resume(target, CAPABILITIES["codex-omx"], **arguments)
+        self.assert_success(process, payload)
+        data = payload["data"]
+        self.assertEqual(len(data["dispatch_briefs"]), 1)
+        self.assertFalse(data["spawned"])
+        guard = data["usage_guard"]
+        self.assertTrue(guard["policy_evaluated"])
+        self.assertFalse(guard["enforcement_enabled"])
+        self.assertFalse(guard["enforced"])
+        self.assertFalse(guard["observation_required"])
+        self.assertEqual(guard["outcome"], "disabled")
+        self.assertRegex(guard["authorization_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertFalse(log.exists())
+        self.assertEqual(path.read_bytes(), before)
+        process, replay = self.resume(target, CAPABILITIES["codex-omx"], **arguments)
+        self.assertEqual(process.returncode, 3)
+        self.assertEqual(replay["status"], "blocked")
+        self.assertEqual(replay["data"]["dispatch_briefs"], [])
+        self.assertEqual(replay["data"]["usage_guard"]["outcome"], "already_issued")
+        self.assertFalse(log.exists())
+
     def test_v2_reset_only_dispatch_does_not_reapply_the_legacy_threshold(self) -> None:
         # This is predecessor capability data only; Hive prepares one brief and launches no runtime.
         target = self.fresh_target("v2-reset-only")

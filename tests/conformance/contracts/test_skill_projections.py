@@ -170,6 +170,11 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     "hive run resume --dispatch-intent automatic",
                     "enforced=true",
                     "outcome=authorized",
+                    "policy_evaluated=true",
+                    "enforcement_enabled=false",
+                    "outcome=disabled",
+                    "observation_required=false",
+                    "outcome=observation-unavailable",
                     "exactly one dispatch brief",
                     "never authorizes dispatch",
                     "ordinary",
@@ -181,6 +186,10 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 ):
                     self.assertIn(required, skill.lower())
                 self.assertNotIn("At every turn boundary", agents)
+                resume = (self.discovery_root(target, host) / "run-resume/SKILL.md").read_text(encoding="utf-8")
+                for required in ("policy_evaluated=true", "outcome=disabled", "authorization ID",
+                                 "exactly", "observation-unavailable", "v2 master opt-out"):
+                    self.assertIn(required, resume)
                 self.assertNotIn("start a watcher", agents)
                 self.assertIn(
                     "illustrative rather than a finite phrase",

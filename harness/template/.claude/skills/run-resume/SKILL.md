@@ -40,17 +40,24 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
 6. Handle the result without hidden transitions:
    - For manual `executing` or `verifying`, return prepare-only briefs as unenforced manual recovery data. Do not describe them as usage-authorized.
    - For automatic `executing` or `verifying`, return briefs only when
-     `data.usage_guard.enforced=true` and `outcome=authorized`. Require the sanitized
-     evidence digest, selected session/weekly window, exact role, and authorization ID.
-     Exactly one brief may accompany one authorization.
+     `data.usage_guard.policy_evaluated=true` and a current authorization ID accompany exactly
+     one brief for the exact role. Require the sanitized evidence or policy-binding digest.
+     `enforced=true` and `outcome=authorized` mean an observation was used; require its selected
+     window. `outcome=disabled`, `enforced=false`, `observation_required=false` mean the CLI
+     evaluated disabled checks. `enforcement_enabled=false` identifies the v2 master opt-out.
+     A successful v2 warning policy may return `outcome=observation-unavailable` without an
+     observation. Do not enable protection or invent a window to make these valid results fit.
    - Treat `history=absent` as a truthful first sample with no monotonic comparison. A later
      sample must use the Hive-owned history. Missing, malformed, symlinked, or integrity-invalid
-     config/history is fail-closed.
+     config/history required by the selected policy is fail-closed. A v2 master opt-out does not
+     read obsolete halt/control/observation records, but configuration and dispatch integrity
+     checks remain required.
    - Treat `outcome=already_issued` as a replay/retry refusal with zero briefs. Do not dispatch
      from it or from a previously captured result.
-   - If the account digest or trustworthy fresh sensor evidence is absent, or the result is
-     `hive.usage-unknown`, `hive.usage-limited`, or `hive.usage-reset`, return recovery data with zero briefs and
-     do not dispatch.
+   - When the selected policy requires a valid observation, absent account identity or fresh
+     evidence prevents dispatch. Any `hive.usage-unknown`, `hive.usage-limited`,
+     `hive.usage-quota-exhausted`, or `hive.usage-reset` failure returns zero briefs. Disabled
+     checks and the explicit v2 warning policy do not claim sensor evidence.
    - For `unsupported` or `unverified`, stop on exit code `4`; no dispatch brief is authorized.
    - For `blocked` or `usage-limited`, return recovery data and the resume condition without dispatch.
    - For `resume-ready`, return recovery data only. A later explicit host-owned action may transition the run.
@@ -63,9 +70,10 @@ Preserve existing owner pins, including legacy 0.8.x external owners, without mi
 - Never write STATUS.md, PLAN.md, role files, handoffs, evidence, configuration, or foreign
   runtime bytes. Automatic mode may atomically write only bounded, sanitized
   `.hive/runtime/usage-guard/` halt state, `.hive/runtime/usage-history/*.json`, and
-  `.hive/runtime/dispatch-authorizations/*.json`;
+  `.hive/runtime/dispatch-authorizations/*.json`, plus selected warning deduplication records
+  under `.hive/runtime/usage-notices/`;
   manual mode writes nothing.
 - Never create a plan, Ralph loop, team workflow, retry loop, subagent, model call, provider API request, or runtime process.
-- Never perform automatic continuation from manual output or from automatic output lacking an authorized usage guard.
+- Never perform automatic continuation from manual output or automatic output lacking a verified policy evaluation and current dispatch authorization.
 - Never select, replace, install, configure, or invoke OMX/OMC.
 - Never fall back to another owner when current capability evidence is missing, incompatible, unknown, or changed.
