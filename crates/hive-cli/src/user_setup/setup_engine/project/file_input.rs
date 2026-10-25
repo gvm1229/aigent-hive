@@ -403,6 +403,12 @@ fn apply_file(
         progress
             .reconfigure_roles
             .clone_from(&arguments.reconfigure_roles);
+        if !progress.reconfigure_roles.is_empty() {
+            progress.role_approval_digest = Some(
+                existing::role_approval_digest(&progress.answers, &progress.reconfigure_roles)
+                    .map_err(as_render)?,
+            );
+        }
     }
     let mut outcome = prepared.outcome.clone();
     outcome.changed_paths = commit_prepared(

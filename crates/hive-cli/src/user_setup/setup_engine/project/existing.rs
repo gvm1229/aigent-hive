@@ -72,6 +72,24 @@ pub(super) fn bind_knowledge<R: std::io::BufRead, W: std::io::Write>(
     Ok(true)
 }
 
+pub(super) fn role_approval_digest(
+    answers: &Value,
+    roles: &std::collections::BTreeSet<String>,
+) -> Result<String, SetupError> {
+    let definitions = answers["persistent_roles"]
+        .as_array()
+        .expect("validated roles")
+        .iter()
+        .filter(|role| {
+            role["role_id"]
+                .as_str()
+                .is_some_and(|id| roles.contains(id))
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    hive_core::preferences::declaration_digest(&json!(definitions)).map_err(SetupError::Internal)
+}
+
 pub(super) fn confirm_roles<R: std::io::BufRead, W: std::io::Write>(
     options: &super::Options,
     store: &super::ProgressStore,
@@ -97,19 +115,7 @@ pub(super) fn confirm_roles<R: std::io::BufRead, W: std::io::Write>(
         .iter()
         .find(|question| question.id == "project-role-update")
         .expect("role confirmation question");
-    let definitions = progress.answers["persistent_roles"]
-        .as_array()
-        .expect("validated roles")
-        .iter()
-        .filter(|role| {
-            role["role_id"]
-                .as_str()
-                .is_some_and(|id| changed.contains(id))
-        })
-        .cloned()
-        .collect::<Vec<_>>();
-    let digest = hive_core::preferences::declaration_digest(&json!(definitions))
-        .map_err(SetupError::Internal)?;
+    let digest = role_approval_digest(&progress.answers, &changed)?;
     if changed == progress.reconfigure_roles
         && progress.role_approval_digest.as_deref() == Some(&digest)
         && progress.answered_questions.get(&question.id) == Some(&question.revision)
