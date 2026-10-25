@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 459
+> Revision: 460
 > 기준일: 2026-10-25
 > Product version: `0.14.0`
 > 공개 Stable: `0.13.1`
-> 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회·설정 재개 연결 완료, 실제 Windows 감시 수용 미실행. M08·M09 Windows 부분 검증·Linux 연결 부재. M12 재개·M13 결과 Windows 검증, 다음 M14 제거 미리보기
+> 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회·설정 재개 연결 완료, 실제 Windows 감시 수용 미실행. M08·M09 Windows 부분 검증·Linux 연결 부재. M12–M16 Windows 부분 검증. 제거의 실제 OS 수용 대기, 다음 M17 설정 안내 연결
 > 다음 공개 시험: `0.14.0-test.1`
 
 ## 목표와 결정

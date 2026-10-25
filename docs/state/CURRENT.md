@@ -1,11 +1,10 @@
 # 현재 상태
 
-- 제품 버전: `0.14.0`
-- 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회/재개 `2386b52c` 완료. M02 실제 Windows 감시 미검증, M10·M11 Linux 부분 통과. M08·M09 Windows 부분 검증, M12 재개·M13 결과 Windows 검증. 다음 M14, 공식 1/15(6.7%) 유지
+- 현재 단계: M00·M01·M03–M07 완료, M02-C2 철회/재개 `2386b52c` 완료. M02 실제 Windows 감시 미검증, M10·M11 Linux 부분 통과. M08·M09·M12–M16 Windows 부분 검증. 다음 M17, 공식 1/15(6.7%) 유지
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 승인된 소스 목표0.14.0, 공개 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
-- M12 `b6c51708`·M13 `d66eb91a`: [Windows 임시 폴더·가짜 앱의 재개/결과 검증](../research/cli-update-validation-0.14.0.md). 실제 본체 교체는 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
+- [M12·M13 재개/결과](../research/cli-update-validation-0.14.0.md)·[M14–M16 제거](../plans/active/cli-uninstall-0.14.0.md): `6298aa43`, 임시 폴더·가짜 앱의 보존/재개 확인. 실제 본체 교체·제거 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
 
 ## 생성된 구현·수용 항목
 
@@ -55,8 +54,8 @@
 - M06 `54c4d6dc` [언어/입력](../plans/details/setup-language-input-0.14.0.md): Windows 설정208·최종 관련20·clippy, Linux 전체211·실제 무입력/언어 변경/거부/Ctrl-C 재개 통과. 이전 Linux207 중 잠금1실패는 현재 미재현, 원인 미확인/Q140-002 조사 유지
 
 - [위키 재활성화](../research/cli-index-reactivation-0.14.0.md)의 범위 동의·일반 파일/AI 입력·같은 버전 재개 구현. Windows 전역 설정 185개·게시 여섯 종료 지점·Linux 관련 4개 통과. 개별 파일 교체 동작 내부 중단·그때 남은 임시 보관 파일의 일반 복구·정리는 별도 미검증
-- [일반 감시 해제·경고·상태 조회](../research/cli-usage-settings-0.14.0.md)의 부분 수용: Windows 최종 설정189·사용량178·분리 예약 제거/대역 종료·무쓰기 조회, 앞선 Linux 설정190 통과. 실제 센서4회 시험1개는 기존 별도 조건으로 미실행. 새 활성화 동의·갱신 결과의 상태 표시·수동 사용량 안내는 계속 구현
-- M03 `892035fa`: [프로젝트 답안 파일의 공통 적용·복구 근거와 한계](../plans/details/project-file-input-0.14.0.md). 다음 M02 철회/재검토와 설정 이전 통합
+- [일반 감시 해제·경고·상태 조회](../research/cli-usage-settings-0.14.0.md)의 부분 수용: Windows 최종 설정189·사용량178·분리 예약 제거/대역 종료·무쓰기 조회, 앞선 Linux 설정190 통과. 실제 센서4회 시험1개는 기존 별도 조건으로 미실행. 활성화 동의·결과 표시·수동 조회는 M02·M09·M13 근거 참조, 실제 감시 수용 별도
+- M03 `892035fa`: [프로젝트 답안 파일의 공통 적용·복구 근거와 한계](../plans/details/project-file-input-0.14.0.md). 파일 입력 흐름 유지
 - 전역 0.14.0+미갱신 프로젝트 0.13.1, POSIX 첫 갱신, 실제 시간 제한/부모 종료 복구, Windows 직접 설치의 동기 완료·옛 실행 파일 정리
 - 보존형 본체 제거, 얇은 AI 연결, 실제 작은 모델의 정확성·입력량 비교, 전체 Rust/Python·CI·세 운영체제·공개 0.14.0-test.1 수용
 - 다른 작업의 학습·평가·사실·별도 계획 문서 보존. 정식 0.14.0 main 통합·게시·현재 사용자 설치·공지 전송은 해당 승인 전 제외
