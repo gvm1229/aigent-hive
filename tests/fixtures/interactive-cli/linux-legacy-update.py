@@ -13,7 +13,7 @@ import time
 if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
     raise SystemExit("requires the isolated Linux qualification container")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
 root = Path("/tmp/hive-first-update")
 root.mkdir()
 user = root / "user"
@@ -169,6 +169,8 @@ def terminal_run(command, stop=None):
                             reply, kind = "antigravity", "select-antigravity"
                         elif mode == "vector-choice" and "뜻이 비슷한 지식도 찾는 의미 검색" in text:
                             reply, kind = (":cancel", "vector-cancel") if stop == "vector-cancel" else ("yes", "vector-yes") if not terminal_runs else ("no", "vector-no")
+                        elif mode == "migration-review" and "사용량에 따라 작업을 막거나 중단하는 기능" in text:
+                            reply, kind = "no", "migration-opt-out"
                         elif mode == "monitor-decline" and "설정 방식을" in text and "맞춤 설정" in text:
                             reply, kind = "2", "custom"
                         elif mode == "monitor-decline" and "사용량에 따라 작업을 막거나 중단하는 기능" in text and "이 변경을 적용할까요?" not in text:
@@ -209,7 +211,7 @@ def terminal_run(command, stop=None):
     terminal_runs.append({"stop": stop, "elapsed_seconds": round(time.monotonic() - began, 3), "status": status})
     return answers
 
-if mode == "confirm":
+if mode in {"confirm", "migration-review"}:
     def invoke(arguments):
         result = subprocess.run([str(binary), *arguments], env=environment, capture_output=True, text=True, timeout=120)
         assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
@@ -268,7 +270,7 @@ if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit", "paren
 else:
     saved = config.read_text()
     assert "schema_version: 2" in saved and "interface_language: ko" in saved and "phase: complete" in progress
-    if mode == "confirm":
+    if mode in {"confirm", "migration-review"}:
         assert "enforcement_enabled: true" in saved and "warnings_enabled: false" in saved
         shown = subprocess.run([str(binary), "setup", "--scope", "user", "--show",
             "--user-root", str(user), "--output", "json"], env=environment,
@@ -457,6 +459,33 @@ if mode in {"project-file", "project-file-interrupt"}:
     assert stored["preference_decisions"]["/interface_language"]["origin"]=="inherited"
     assert (project/"AGENTS.md").read_text().startswith("User-owned preface.\n")
     assert config.read_bytes()==global_before
+if mode == "migration-review":
+    lifecycle = user / ".hive/history/lifecycle"
+    migrated = [(path, json.loads(path.read_text())) for path in lifecycle.glob("*.json")]
+    migrated = [(path, record) for path, record in migrated if record.get("migration", {}).get("from_schema") == 1]
+    assert len(migrated) == 1, migrated
+    migration_path, record = migrated[0]
+    assert record["migration"]["to_schema"] == 2 and record["migration"]["policy_version"] == "0.14.0"
+    assert record["phase"] == "complete" and record["before_digest"] != record["after_digest"]
+    migration_receipt = migration_path.read_bytes()
+    answers += terminal_run([str(binary), "setup", "--scope", "user", "--user-root", str(user)])
+    after_choice = config.read_bytes()
+    assert b"enforcement_enabled: false" in after_choice and "migration-opt-out" in answers
+    shown = subprocess.run([str(binary), "setup", "--scope", "user", "--show", "--user-root", str(user), "--output", "json"],
+                           env=environment, capture_output=True, text=True, check=True)
+    settings = json.loads(shown.stdout)["data"]
+    decision = settings["stored"]["preference_decisions"]["/usage_guard/enforcement_enabled"]
+    assert decision["origin"] == "explicit" and decision["input_channel"] == "terminal"
+    assert settings["pending_questions"] == []
+    # The frozen 0.13.1 handshake used the public 0.13.2-test.2 label. The following
+    # command is owned by development 0.14.0, so authenticate its private fixture as 0.14.0.
+    (package / "package.json").write_text(json.dumps({"name": "@aigent-hive/linux-x64",
+        "version": "0.14.0", "aigentHive": {"productVersion": "0.14.0"}}))
+    later = subprocess.run([str(binary), "update", "--channel", "test", "--confirm", "--non-interactive", "--user-root", str(user), "--output", "json"],
+                           env=environment, input="", capture_output=True, text=True, timeout=30)
+    assert later.returncode == 0, (later.stdout, later.stderr)
+    assert config.read_bytes() == after_choice and migration_path.read_bytes() == migration_receipt
+    assert (root / "install-count").read_text() == "1"
 if mode == "monitor-review":
     import runpy
     runpy.run_path("/source/tests/fixtures/interactive-cli/linux-monitor-review.py", init_globals={
@@ -469,5 +498,9 @@ evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source
     "registry_target": "0.13.2-test.2", "private_user_mount": False, "terminal_runs": terminal_runs,
     "installer_invocations": int((root / "install-count").read_text()),
     "scope": "Linux Docker PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
+if mode == "migration-review":
+    evidence["followup"] = {"private_package_version": "0.14.0", "registry_candidate": "0.13.2-test.2",
+        "settings_preserved": True, "original_migration_receipt_preserved": True,
+        "no_reinstall": True, "scope": "current development package reconciliation; not public 0.14 acceptance"}
 Path("/results", mode + ".json").write_text(json.dumps(evidence, indent=2) + "\n")
 print(json.dumps(evidence))

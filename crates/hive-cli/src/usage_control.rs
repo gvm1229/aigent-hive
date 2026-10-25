@@ -3532,6 +3532,45 @@ mod tests {
         write_version_two_policy(root, host, policy);
     }
 
+    #[test]
+    fn legacy_migration_preserves_same_session_opt_out_and_independent_zero_protection() {
+        let project = temporary_target();
+        let user = temporary_target();
+        write_global_config(user.path(), 20);
+        let global_path = user.path().join(".hive/config/user-setup.yml");
+        let mut global: Value = serde_yaml::from_slice(&fs::read(&global_path).unwrap()).unwrap();
+        global["selected_hosts"] = json!(["claude"]);
+        fs::write(&global_path, serde_yaml::to_string(&global).unwrap()).unwrap();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(config_dir.join("harness.toml"), installed_config("claude", true, false)).unwrap();
+        let parsed = ParsedBinding { session_id: "migration-session".into(), process_id: 7 };
+        let bound = bind_session(&parsed, "claude");
+        control_session(&SessionArguments {
+            target: project.path().into(), binding: parsed.clone(), user_root: Some(user.path().into()),
+            host: Some("claude".into()), action: SessionAction::Disable, confirm_disable: true,
+            confirm_reset_guard_disable: false, confirm_zero_quota_guard_disable: false,
+        }).unwrap();
+        let control_file = project.path().join(control_path(&bound));
+        let before = fs::read(&control_file).unwrap();
+        write_version_two_policy(user.path(), "claude",
+            hive_core::preferences::UsageProtection::from_legacy(true, true, false));
+        let shown = status(&StatusArguments { target: project.path().into(), binding: parsed.clone(),
+            user_root: Some(user.path().into()), host: Some("claude".into()) }).unwrap();
+        let data = shown.data.unwrap();
+        assert_eq!(data["guard_enabled"], false);
+        assert_eq!(data["zero_quota_guard_enabled"], true);
+        assert_eq!(fs::read(&control_file).unwrap(), before);
+        let args = EnforceArguments { target: project.path().into(), binding: parsed, account_digest: None,
+            user_root: Some(user.path().into()), host: Some("claude".into()), run_id: None };
+        let reset = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 3600;
+        write_current_capture(project.path(), &bound, 1, reset);
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-allowed");
+        write_current_capture(project.path(), &bound, 0, reset);
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-quota-exhausted");
+        assert_eq!(fs::read(&control_file).unwrap(), before);
+    }
+
     fn write_version_two_policy(
         root: &std::path::Path,
         host: &str,

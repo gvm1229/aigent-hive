@@ -261,9 +261,7 @@ fn apply_saved(
         }
         super::host_scope::bind(&mut progress, context.hosts, false, true)?;
     }
-    progress.phase = ProgressPhase::Applying;
-    store.save(snapshot, &progress)?;
-    store.record_applying(&progress)?;
+    super::application::begin(store, snapshot, &mut progress)?;
     let bytes = serde_json::to_vec(&progress.answers)
         .map_err(|error| SetupError::Internal(error.to_string()))?;
     let arguments = user_setup::Arguments {
@@ -275,16 +273,7 @@ fn apply_saved(
     let applied = if let Some(context) = legacy_parent {
         super::worker::apply(&arguments, &bytes, existing, &progress.operation_id, context.budget)
     } else { legacy::apply(&arguments, &bytes, existing, &progress) };
-    match applied {
-        Ok(applied) => {
-            ProgressStore::open(root, None)?.record_completion(&progress)?;
-            Ok(applied)
-        }
-        Err(error) => {
-            store.record_failure(&progress)?;
-            Err(error)
-        }
-    }
+    super::application::finish(store, &progress, applied)
 }
 
 fn preserve_draft(

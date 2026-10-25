@@ -35,6 +35,43 @@ struct Receipt {
     cancelled_by_operation: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     cancelled_replacement_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    migration: Option<MigrationSummary>,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct MigrationSummary {
+    migration_id: String,
+    from_schema: u32,
+    to_schema: u32,
+    policy_version: String,
+}
+
+impl MigrationSummary {
+    fn from_progress(progress: &SetupProgress) -> Option<Self> {
+        progress.legacy_migration.as_ref().map(|migration| Self {
+            migration_id: migration.migration_id.clone(),
+            from_schema: migration.from_schema,
+            to_schema: progress.answer_schema_version,
+            policy_version: env!("CARGO_PKG_VERSION").into(),
+        })
+    }
+}
+
+fn valid_migration(receipt: &Receipt) -> bool {
+    receipt.migration.as_ref().is_none_or(|migration| {
+        super::valid_hash(&migration.migration_id)
+            && matches!(migration.from_schema, 1 | 2)
+            && migration.to_schema == 2
+            && migration.policy_version == receipt.product_version
+    })
+}
+
+fn migration_matches(receipt: &Receipt, progress: &SetupProgress) -> bool {
+    valid_migration(receipt) && receipt.migration.as_ref().is_none_or(|migration| {
+        MigrationSummary::from_progress(progress).as_ref() == Some(migration)
+    })
 }
 
 fn path(id: &str) -> Result<PathBuf, SetupError> {
@@ -69,7 +106,8 @@ pub(super) fn validate_scope(store: &ProgressStore, relative: &Path, bytes: &[u8
     let receipt: Receipt = serde_json::from_slice(bytes)
         .map_err(|_| SetupError::Verification("invalid retained lifecycle record".into()))?;
     if receipt.schema_version != 1 || receipt.operation != "setup" || receipt.binding != store.binding
-        || path(&receipt.operation_id)?.as_path() != relative || !valid_cancel_marker(&receipt) {
+        || path(&receipt.operation_id)?.as_path() != relative || !valid_cancel_marker(&receipt)
+        || !valid_migration(&receipt) {
         return Err(SetupError::Conflict("retained lifecycle record scope changed".into()));
     }
     Ok(())
@@ -107,6 +145,7 @@ pub(super) fn confirm_completion(
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
+        || !migration_matches(&receipt, progress)
         || receipt.question_revision != progress.question_revision
         || !valid_cancel_marker(&receipt)
         || receipt.phase != ProgressPhase::Complete
@@ -157,6 +196,7 @@ pub(super) fn record(
             projection_digest: None,
             cancelled_by_operation: None,
             cancelled_replacement_digest: None,
+            migration: MigrationSummary::from_progress(progress),
         }
     };
     if receipt.schema_version != 1
@@ -170,6 +210,7 @@ pub(super) fn record(
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
+        || !migration_matches(&receipt, progress)
         || receipt.question_revision != progress.question_revision
         || receipt.cancelled_by_operation.is_some()
         || !valid_cancel_marker(&receipt)
@@ -262,6 +303,7 @@ pub(super) fn projection_binding(
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
+        || !migration_matches(&receipt, progress)
         || receipt.question_revision != progress.question_revision
     {
         return Err(SetupError::Conflict(
@@ -332,6 +374,7 @@ pub(super) fn retain_completed(store: &ProgressStore, current: &str) -> Result<(
             && receipt.operation_id == id
             && receipt.binding == store.binding
             && valid_cancel_marker(&receipt)
+            && valid_migration(&receipt)
             && (receipt.phase == ProgressPhase::Complete || receipt.cancelled_by_operation.is_some())
         {
             if let Some(time) = receipt.completed_at_unix_nanos {
@@ -360,6 +403,70 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs;
+
+    fn migration_progress(store: &ProgressStore) -> SetupProgress {
+        let mut progress = store.new_progress("usage-enforcement".into(), json!({})).unwrap();
+        progress.legacy_migration = Some(super::super::LegacyMigration {
+            migration_id: hive_core::sha256_digest(b"legacy selection"),
+            monitor_choice: crate::usage_monitor::SavedMonitorChoice {
+                configured: false, enabled: false, config_digest: "absent".into(),
+            },
+            from_schema: 1,
+            questions: vec!["usage-enforcement".into(), "usage-warnings".into()],
+        });
+        progress.phase = ProgressPhase::Applying;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        progress
+    }
+
+    #[test]
+    fn migration_summary_survives_completion_and_later_choices_but_rejects_changed_metadata() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = migration_progress(&store);
+        let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
+        let original = fs::read(&receipt_path).unwrap();
+        let record: serde_json::Value = serde_json::from_slice(&original).unwrap();
+        assert_eq!(record["migration"], json!({"migration_id":progress.legacy_migration.as_ref().unwrap().migration_id,
+            "from_schema":1,"to_schema":2,"policy_version":env!("CARGO_PKG_VERSION")}));
+        for (key, value) in [("migration_id",json!(hive_core::sha256_digest(b"other"))),
+            ("from_schema",json!(2)),("to_schema",json!(1)),("policy_version",json!("0.13.1"))] {
+            let mut altered = record.clone(); altered["migration"][key] = value;
+            let bytes = serde_json::to_vec(&altered).unwrap(); fs::write(&receipt_path, &bytes).unwrap();
+            assert!(store.record_failure(&progress).is_err());
+            assert!(store.projection_binding(&progress, None).is_err());
+            assert!(store.record_completion(&progress).is_err());
+            assert_eq!(fs::read(&receipt_path).unwrap(), bytes);
+        }
+        fs::write(&receipt_path, &original).unwrap();
+        store.record_completion(&progress).unwrap();
+        let finished: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        assert_eq!(finished["migration"], record["migration"]);
+        assert!(finished["after_digest"].as_str().is_some());
+        assert_eq!(finished["phase"], "complete");
+        let later = applying(&store, "later user choice");
+        store.record_completion(&later).unwrap();
+        assert_eq!(serde_json::from_slice::<serde_json::Value>(&fs::read(&receipt_path).unwrap()).unwrap(), finished);
+    }
+
+    #[test]
+    fn older_migration_receipts_without_summary_keep_their_existing_recovery_contract() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let progress = migration_progress(&store);
+        let receipt_path = root.path().join(path(&progress.operation_id).unwrap());
+        let mut old: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        old.as_object_mut().unwrap().remove("migration");
+        fs::write(&receipt_path, serde_json::to_vec(&old).unwrap()).unwrap();
+        store.require_applying(&progress.operation_id, &progress.answers).unwrap();
+        store.record_failure(&progress).unwrap();
+        store.record_completion(&progress).unwrap();
+        store.record_completion(&progress).unwrap();
+        let finished: serde_json::Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+        assert!(finished.get("migration").is_none());
+        assert_eq!(finished["phase"], "complete");
+    }
 
     fn applying(store: &ProgressStore, text: &str) -> SetupProgress {
         let snapshot = store.load().unwrap();
