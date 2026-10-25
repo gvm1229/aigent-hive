@@ -271,6 +271,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 ## 0.14.0 대화형 CLI
 
+- [장기 정체 감사와 상세 인계](research/0.14.0-handoff-2026-10-26.md): 원래 완료 조건·확인한 구현·현재 결함·다음 수용
+
 - [미게시 변경 안내 초안](releases/0.14.0.md): 확인한 범위와 남은 수용 조건
 
 - [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
