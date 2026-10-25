@@ -48,8 +48,8 @@ pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Dura
     setup_engine::command_timeout(requested)
 }
 
-pub(crate) fn resume_pending_update(root: &Path, interactive: bool) -> Result<Option<ActionResult>, String> {
-    setup_engine::resume_pending_update(root, interactive).map_err(|error| error.message().to_owned())
+pub(crate) fn resume_pending_update(root: &Path, interactive: bool, confirmed_only: bool) -> Result<Option<ActionResult>, String> {
+    setup_engine::resume_pending_update(root, interactive, confirmed_only).map_err(|error| error.message().to_owned())
 }
 
 #[cfg(any(windows, target_os = "linux"))]

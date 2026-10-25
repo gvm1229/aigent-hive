@@ -149,6 +149,7 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
 pub(in crate::user_setup) fn resume_pending_update(
     root: &Path,
     interactive: bool,
+    confirmed_only: bool,
 ) -> Result<Option<crate::ActionResult>, SetupError> {
     let store = ProgressStore::open(root, None)?;
     let Some(progress) = store
@@ -166,6 +167,12 @@ pub(in crate::user_setup) fn resume_pending_update(
     {
         // An unconfirmed personal reconfiguration must not block a software update.
         return Ok(None);
+    }
+    if confirmed_only && !matches!(progress.phase, ProgressPhase::Applying | ProgressPhase::RecoverableFailure) {
+        let mut result = pending(super::messages::language_at(root, None), "hive.update-input-pending");
+        result.action = "UpdateHiveUser";
+        result.next_action = Some(crate::update_bridge::resume_command(root));
+        return Ok(Some(result));
     }
     let mode = if interactive {
         InteractionMode::Terminal
@@ -1135,7 +1142,7 @@ mod tests {
     #[test]
     fn update_resume_does_not_create_progress_or_consume_noninteractive_answers() {
         let root = tempfile::tempdir().unwrap();
-        assert!(resume_pending_update(root.path(), false).unwrap().is_none());
+        assert!(resume_pending_update(root.path(), false, true).unwrap().is_none());
         assert!(!root.path().join(".hive").exists());
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = store
@@ -1143,7 +1150,7 @@ mod tests {
             .unwrap();
         store.save(&store.load().unwrap(), &progress).unwrap();
         let before = std::fs::read(root.path().join(&store.relative)).unwrap();
-        let result = resume_pending_update(root.path(), false).unwrap().unwrap();
+        let result = resume_pending_update(root.path(), false, false).unwrap().unwrap();
         assert_eq!(result.action, "UpdateHiveUser");
         assert_eq!(result.code, "hive.update-input-pending");
         assert!(result
@@ -1154,6 +1161,10 @@ mod tests {
             std::fs::read(root.path().join(&store.relative)).unwrap(),
             before
         );
+        assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        let unconfirmed = resume_pending_update(root.path(), false, true).unwrap().unwrap();
+        assert_eq!(unconfirmed.code, "hive.update-input-pending");
+        assert_eq!(std::fs::read(root.path().join(&store.relative)).unwrap(), before);
         assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
     }
 
@@ -1168,7 +1179,7 @@ mod tests {
         let store = ProgressStore::open(root.path(), None).unwrap();
         let progress = store.new_progress("user-persona".into(), settings).unwrap();
         store.save(&store.load().unwrap(), &progress).unwrap();
-        assert!(resume_pending_update(root.path(), false).unwrap().is_none());
+        assert!(resume_pending_update(root.path(), false, true).unwrap().is_none());
         assert_eq!(store.load().unwrap().progress.unwrap(), progress);
     }
 

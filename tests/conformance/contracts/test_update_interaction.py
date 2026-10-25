@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import subprocess
 
 from jsonschema import Draft202012Validator
-from tests.conformance.support.harness import ACTION_RESULT_SCHEMA, Phase1CliTestCase
+from tests.conformance.support.harness import ACTION_RESULT_SCHEMA, Phase1CliTestCase, REPOSITORY_ROOT, read_yaml, snapshot_tree
 
 
 class UpdateInteractionConformance(Phase1CliTestCase):
@@ -57,3 +58,82 @@ class UpdateInteractionConformance(Phase1CliTestCase):
         process, _ = self.invoke(machine=False)
         self.assertEqual(process.returncode, 2)
         self.assertIn("approval is required", process.stderr)
+
+
+class ApprovedUpdateResumeConformance(Phase1CliTestCase):
+    def test_confirmed_setup_resumes_before_fresh_software_approval_or_package_discovery(self):
+        config = self.setup_user_root / ".hive/config/user-setup.yml"
+        self.assertTrue(config.resolve().is_relative_to(self.work_root))
+        config.unlink()  # Discard only the synthetic baseline created by setUp.
+        commands = self.work_root / "commands"
+        commands.mkdir()
+        fixture = REPOSITORY_ROOT / "tests/fixtures/native-orchestration/agy-stub.py"
+        wrapper = '''import json,os,runpy,sys
+from pathlib import Path
+scope=Path(os.environ['HIVE_TEST_SANDBOX_ROOT']).resolve()
+def within(path):
+    resolved=path.resolve()
+    return any(parent.exists() and parent.samefile(scope) for parent in (resolved,*resolved.parents))
+state=Path(os.environ['HIVE_TEST_HOST_LOG']+'.antigravity.state')
+assert within(state)
+if sys.argv[1:3]==['plugin','install']:
+    source=Path(sys.argv[3]).resolve()
+    assert within(source)
+    hive=next(p for p in source.parents if p.name=='.hive')
+    stage=hive.parent/'.gemini/config/plugins/aigent-hive'
+    assert within(stage) and not stage.is_symlink()
+if sys.argv[1:]==['plugin','uninstall','aigent-hive'] and state.exists():
+    saved=json.loads(state.read_text()).get('stage')
+    if saved:
+        stage=Path(saved)
+        assert within(stage) and not stage.is_symlink()
+'''+f"runpy.run_path({str(fixture)!r},run_name='__main__')\n"
+        if os.name == "nt":
+            (commands / "agy.py").write_text(wrapper, encoding="utf-8")
+            python = subprocess.list2cmdline([os.sys.executable])
+            (commands / "agy.cmd").write_text(f'@{python} "%~dp0\\agy.py" %*\r\n', encoding="utf-8")
+        else:
+            program = commands / "agy"
+            program.write_text(f"#!{os.sys.executable}\n"+wrapper, encoding="utf-8")
+            program.chmod(0o700)
+        environment = {**os.environ, "PATH": str(commands),
+            "HIVE_TEST_HOST_LOG": str(self.work_root / "host-actions"),
+            "HIVE_TEST_SANDBOX_ROOT": str(self.work_root)}
+        document = self.work_root / "answers.json"
+        document.write_text(json.dumps({"schema_version":2,"interface_language":"en",
+            "wiki":{"enabled":False,"language":"en","backend":"markdown"},
+            "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+            "selected_hosts":["antigravity"],"skills":{"mode":"all"},"update_check":{"enabled":False},
+            "judge_invocation":"explicit","preference_decisions":{},
+            "usage_guard":{"enforcement_enabled":False,"warnings_enabled":False,"stop_remaining_percent":20,
+                "preflight":{"threshold_enabled":False,"reset_enabled":False,"zero_quota_enabled":False,"observation_failure":"warn"},
+                "midway":{"enabled":False,"threshold_enabled":False,"reset_enabled":False,"zero_quota_enabled":False,"observation_failure":"warn"}}}),encoding="utf-8")
+        foreign = self.setup_user_root / ".gemini/GEMINI.md"
+        foreign.parent.mkdir()
+        foreign.write_text("User-owned preface.\n", encoding="utf-8")
+        interrupted = subprocess.run([str(self.hive_binary),"setup","--scope","user","--user-root",str(self.setup_user_root),
+            "--answers",str(document),"--apply","--output","json"],
+            env={**environment,"HIVE_USER_SETUP_INTERRUPT_AFTER":"0"},capture_output=True,text=True,timeout=30)
+        self.assertEqual(interrupted.returncode,87,(interrupted.stdout,interrupted.stderr))
+        progress_path = self.setup_user_root / ".hive/config/setup-progress/user.yml"
+        progress = read_yaml(progress_path)
+        self.assertEqual(progress["phase"], "applying")
+        document.unlink()
+        command = [str(self.hive_binary),"update","--user-root",str(self.setup_user_root),"--output","json"]
+        resumed = subprocess.run(command,env=environment,input="",capture_output=True,text=True,timeout=30)
+        self.assertEqual(resumed.returncode,0,(resumed.stdout,resumed.stderr))
+        result=json.loads(resumed.stdout)
+        Draft202012Validator(ACTION_RESULT_SCHEMA).validate(result)
+        self.assertEqual(result["action"],"UpdateHiveUser")
+        self.assertEqual(result["code"],"hive.user-update-complete")
+        completed = read_yaml(progress_path)
+        self.assertEqual(completed["phase"], "complete")
+        self.assertEqual(completed["operation_id"], progress["operation_id"])
+        self.assertTrue(foreign.read_text().startswith("User-owned preface.\n"))
+        # The source debug binary has no install-owner receipt. Success therefore came from
+        # pending setup recovery before package discovery, not from installation/reconciliation.
+        before=snapshot_tree(self.setup_user_root)
+        repeated=subprocess.run(command,env=environment,input="",capture_output=True,text=True,timeout=10)
+        self.assertEqual(repeated.returncode,2,(repeated.stdout,repeated.stderr))
+        self.assertEqual(json.loads(repeated.stdout)["code"],"hive.update-needs-input")
+        self.assertEqual(snapshot_tree(self.setup_user_root),before)

@@ -316,10 +316,6 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         return output::needs_input(json_output, "--interactive requires a usable terminal");
     }
     let interactive = mode == InteractionMode::Terminal;
-    if !interactive && !arguments.confirm {
-        return output::needs_input(json_output,
-            "Software update approval is required. Run in a terminal or pass --confirm; no update was installed.");
-    }
     let user_root = match arguments
         .user_root
         .as_deref()
@@ -333,7 +329,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     };
     // Finish an approved interrupted setup before registry lookup or another binary install.
     // Software --confirm never supplies answers to the setup engine.
-    match crate::user_setup::resume_pending_update(&user_root, interactive) {
+    match crate::user_setup::resume_pending_update(&user_root, interactive, !interactive && !arguments.confirm) {
         Ok(Some(result)) => {
             return output::emit(json_output, &result);
         }
@@ -341,6 +337,10 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         Err(message) => {
             return output::error(json_output, message);
         }
+    }
+    if !interactive && !arguments.confirm {
+        return output::needs_input(json_output,
+            "Software update approval is required. Run in a terminal or pass --confirm; no update was installed.");
     }
     let language = match selected_language(&user_root) {
         Ok(language) => language,
