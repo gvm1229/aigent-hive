@@ -198,7 +198,7 @@ fn file_scope(
     arguments: &crate::SetupArguments,
 ) -> Result<(Options, hive_render::GlobalProjectPreferences), RenderError> {
     hive_core::ensure_consumer_target(&arguments.target)
-        .map_err(|e| RenderError::Safety(e.to_string()))?;
+        .map_err(|e| RenderError::Input(e.to_string()))?;
     let target = crate::user_install::open_canonical_user_root_for_setup(&arguments.target)
         .map_err(RenderError::Conflict)?
         .0;
