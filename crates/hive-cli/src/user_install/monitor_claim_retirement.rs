@@ -1,8 +1,9 @@
 //! Preserve a cancelled monitor write without publishing its staged active configuration.
 use super::{
     capability_parent, claim_name, inspect_setup_write_claim, read_optional_regular,
-    recover_user_setup_file, replace_user_setup_file, setup_file_permissions,
-    validate_retained_object, FilePermissions, InstallError, MAX_USER_FILE_BYTES,
+    recover_user_setup_file, recover_user_setup_record, replace_user_setup_file,
+    setup_file_permissions, validate_retained_object, FilePermissions, InstallError,
+    MAX_USER_FILE_BYTES,
 };
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
@@ -10,8 +11,39 @@ use hive_core::sha256_digest;
 use std::{ffi::OsStr, io, path::Path};
 
 const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
+const STATE: &str = ".hive/runtime/usage-monitor/state.json";
 
-fn validate(claim: &Dir, before: &str, after: &str, mode: Option<u32>) -> Result<(), InstallError> {
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum Target {
+    Config,
+    State,
+}
+impl Target {
+    fn path(self) -> &'static Path {
+        Path::new(match self {
+            Self::Config => CONFIG,
+            Self::State => STATE,
+        })
+    }
+    fn archive(self) -> &'static str {
+        match self {
+            Self::Config => "config-claim",
+            Self::State => "state-claim",
+        }
+    }
+}
+
+fn fingerprint(bytes: Option<&[u8]>) -> String {
+    bytes.map_or_else(|| "absent".into(), sha256_digest)
+}
+
+fn validate(
+    claim: &Dir,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+    target: Target,
+) -> Result<(), InstallError> {
     for entry in claim
         .entries()
         .map_err(|e| InstallError::Conflict(e.to_string()))?
@@ -29,7 +61,7 @@ fn validate(claim: &Dir, before: &str, after: &str, mode: Option<u32>) -> Result
         } else if name == OsStr::new("replacement.bin") {
             (
                 (after != "absent").then_some(after),
-                (after != "absent").then(|| setup_file_permissions(Path::new(CONFIG))),
+                (after != "absent").then(|| setup_file_permissions(target.path())),
             )
         } else {
             return Err(InstallError::Conflict(
@@ -41,7 +73,7 @@ fn validate(claim: &Dir, before: &str, after: &str, mode: Option<u32>) -> Result
             Path::new(&name),
             digest,
             permissions,
-            Path::new(CONFIG),
+            target.path(),
             "cancelled monitor",
         )?;
     }
@@ -78,8 +110,40 @@ pub(crate) fn retire_monitor_config_claim(
     current_digest: &str,
     intent: &[u8],
 ) -> Result<(), String> {
-    retire(root, operation, before, after, mode, current_digest, intent)
-        .map_err(|e| e.message().into())
+    retire(
+        root,
+        operation,
+        before,
+        after,
+        mode,
+        current_digest,
+        intent,
+        Target::Config,
+    )
+    .map_err(|e| e.message().into())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn retire_monitor_state_claim(
+    root: &Dir,
+    operation: &str,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+    current_digest: &str,
+    intent: &[u8],
+) -> Result<(), String> {
+    retire(
+        root,
+        operation,
+        before,
+        after,
+        mode,
+        current_digest,
+        intent,
+        Target::State,
+    )
+    .map_err(|e| e.message().into())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -91,6 +155,7 @@ fn retire(
     mode: Option<u32>,
     current_digest: &str,
     intent: &[u8],
+    target: Target,
 ) -> Result<(), InstallError> {
     if operation.len() != 64
         || !operation
@@ -101,11 +166,14 @@ fn retire(
             "invalid cancelled monitor operation".into(),
         ));
     }
-    let path = Path::new(CONFIG);
-    let current = read_optional_regular(root, path, 65536)?.ok_or_else(|| {
-        InstallError::Conflict("cancelled monitor configuration is absent".into())
-    })?;
-    if sha256_digest(&current) != current_digest {
+    let path = target.path();
+    let mut current = read_optional_regular(root, path, 65536)?;
+    if target == Target::Config && current.is_none() {
+        return Err(InstallError::Conflict(
+            "cancelled monitor configuration is absent".into(),
+        ));
+    }
+    if fingerprint(current.as_deref()) != current_digest {
         return Err(InstallError::Conflict(
             "monitor configuration changed before claim retirement".into(),
         ));
@@ -113,9 +181,9 @@ fn retire(
     let (parent, _) = capability_parent(root, path, false)?
         .ok_or_else(|| InstallError::Conflict("monitor parent disappeared".into()))?;
     let name = claim_name(path);
-    let original = match parent.open_dir_nofollow(&name) {
+    let mut original = match parent.open_dir_nofollow(&name) {
         Ok(claim) => {
-            validate(&claim, before, after, mode)?;
+            validate(&claim, before, after, mode, target)?;
             Some(claim)
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => None,
@@ -123,12 +191,41 @@ fn retire(
     };
     let base = Path::new(".hive/config/setup-progress/cancelled-monitor").join(operation);
     preserve_intent(root, &base.join("write.json"), intent)?;
-    let archive = base.join("config-claim");
-    let (destination, target) = capability_parent(root, &archive, true)?
+    if target == Target::State && current.is_none() {
+        if let Some(claim) = original.take() {
+            for (name, archived) in [
+                ("claimed.bin", "state-before.bin"),
+                ("replacement.bin", "state-after.bin"),
+            ] {
+                if let Some(bytes) = read_optional_regular(&claim, Path::new(name), 65536)? {
+                    preserve_intent(root, &base.join(archived), &bytes)?;
+                }
+            }
+            drop(claim);
+            recover_user_setup_record(root, path, before, after, mode)
+                .map_err(InstallError::Conflict)?;
+            current = read_optional_regular(root, path, 65536)?;
+            if fingerprint(current.as_deref()) != before {
+                return Err(InstallError::Conflict(
+                    "cancelled monitor history restore changed; preserved".into(),
+                ));
+            }
+            original = match parent.open_dir_nofollow(&name) {
+                Ok(claim) => {
+                    validate(&claim, before, after, mode, target)?;
+                    Some(claim)
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+                Err(error) => return Err(InstallError::Conflict(error.to_string())),
+            };
+        }
+    }
+    let archive = base.join(target.archive());
+    let (destination, archive_name) = capability_parent(root, &archive, true)?
         .ok_or_else(|| InstallError::Conflict("monitor archive parent unavailable".into()))?;
-    let retained = match destination.open_dir_nofollow(&target) {
+    let retained = match destination.open_dir_nofollow(&archive_name) {
         Ok(claim) => {
-            validate(&claim, before, after, mode)?;
+            validate(&claim, before, after, mode, target)?;
             true
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => false,
@@ -140,17 +237,17 @@ fn retire(
         ));
     }
     if let Some(claim) = original {
-        validate(&claim, before, after, mode)?;
+        validate(&claim, before, after, mode, target)?;
         drop(claim);
         parent
-            .rename(&name, &destination, &target)
+            .rename(&name, &destination, &archive_name)
             .map_err(|e| InstallError::Conflict(e.to_string()))?;
         let claim = destination
-            .open_dir_nofollow(&target)
+            .open_dir_nofollow(&archive_name)
             .map_err(|e| InstallError::Conflict(e.to_string()))?;
-        validate(&claim, before, after, mode)?;
+        validate(&claim, before, after, mode, target)?;
     }
-    if read_optional_regular(root, path, 65536)?.as_deref() != Some(current.as_slice()) {
+    if read_optional_regular(root, path, 65536)? != current {
         return Err(InstallError::Conflict(
             "monitor configuration changed during claim retirement; preserved".into(),
         ));

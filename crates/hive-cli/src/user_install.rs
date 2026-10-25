@@ -2,7 +2,7 @@ mod host_state;
 mod index_removal;
 pub(crate) mod deactivation;
 mod monitor_claim_retirement;
-pub(crate) use monitor_claim_retirement::retire_monitor_config_claim;
+pub(crate) use monitor_claim_retirement::{retire_monitor_config_claim, retire_monitor_state_claim};
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};

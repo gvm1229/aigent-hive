@@ -33,7 +33,7 @@ pub(super) fn retire_disabled(root: &PinnedTarget) -> Result<bool, AdapterError>
         || record.binding.disable_digest == binding.disable_digest {
         return Err(error("monitor activation has no newer disable selection"));
     }
-    store.retire_config_write(&record, &binding)?;
+    store.retire_write(&record, &binding)?;
     record.phase = journal::Phase::Cancelled;
     record.completed_at = Some(super::now());
     store.save(&record)?;
