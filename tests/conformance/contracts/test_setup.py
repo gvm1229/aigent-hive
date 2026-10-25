@@ -6,6 +6,8 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
+import time
 import shutil
 import subprocess
 import tempfile
@@ -14,7 +16,7 @@ from pathlib import Path
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
-from tests.conformance.support.harness import write_operational_user_setup
+from tests.conformance.support.harness import write_operational_user_setup, assert_initial_file_provenance
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -483,12 +485,22 @@ class Phase1SetupConformance(unittest.TestCase):
         first_target.mkdir()
         second_target.mkdir()
 
+        started_at = int(time.time())
         first_process, _ = self.invoke_setup(first_target)
         second_process, _ = self.invoke_setup(second_target)
 
-        self.assertEqual(first_process.returncode, 0)
-        self.assertEqual(second_process.returncode, 0)
-        self.assertEqual(snapshot_tree(first_target), snapshot_tree(second_target))
+        self.assertEqual(first_process.returncode, 0, first_process.stderr)
+        self.assertEqual(second_process.returncode, 0, second_process.stderr)
+        trees = []
+        for target in (first_target, second_target):
+            tree = snapshot_tree(target)
+            kind, content = tree[".hive/setup-answers.yml"]
+            assert_initial_file_provenance(self, yaml.safe_load(content),
+                                          yaml.safe_load((FIXTURE_ROOT / "answers-base.yml").read_text()), started_at)
+            # Actual answer times differ; all provenance fields and other bytes remain compared.
+            tree[".hive/setup-answers.yml"] = (kind, re.sub(rb"(?m)^    decided_at: [0-9]+$", b"    decided_at: <verified-answer-time>", content))
+            trees.append(tree)
+        self.assertEqual(trees[0], trees[1])
 
     def test_source_workspace_guard_prevents_every_write(self) -> None:
         target = self.work_root / "source"
