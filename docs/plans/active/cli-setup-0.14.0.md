@@ -41,6 +41,9 @@
 
 ## S140-003 — 프로젝트 설정
 
+- `fdcf5176`: [최소 답안 적용·검증·재개](../../../tests/results/runs/20261026T054430-ffbbc9678d96.md) Windows CLI7 통과. 임시 파일·합성 기능 범위, 실제 앱/모델/다른 OS 제외. 전체 조건 집계 유지
+
+
 - M03 실행: [파일 입력의 공통 적용·복구](../details/project-file-input-0.14.0.md). 기존 명령·오류 분류 유지와 공통 확정 처리 재사용
 
 - 진입: S140-001 완료. `hive setup --target <dir>`에서 기존 `--answers/--capabilities` 자동 구성, 명시한 target만 읽기. source marker·타사 지침·비밀 경계 유지

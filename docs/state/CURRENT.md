@@ -1,8 +1,9 @@
 # 현재 상태
 
-- 현재: 사용자 요청으로 구현 중단. [상세 인계](../research/0.14.0-handoff-2026-10-26.md), 공식1/15(6.7%) 유지
+- 현재: 승인으로 `feature/interactive-cli-0.14.0`에서 재개. 최소 답안 수정 `fdcf5176`, [실제 Windows CLI7](../../tests/results/runs/20261026T054430-ffbbc9678d96.md) 통과. 다음: M19 기록기·Luna, 1/15(6.7%) 유지
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
-- 제품 버전: `0.14.0` — 개발 중·미게시. 공개 안정판·사용자 설치0.13.1
+- 제품 버전: `0.14.0`
+- 개발 중·미게시. 공개 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
 - [M12·M13 재개/결과](../research/cli-update-validation-0.14.0.md)·[M14–M16 제거](../plans/active/cli-uninstall-0.14.0.md): `6298aa43`, 임시 폴더·가짜 앱의 보존/재개 확인. 실제 본체 교체·제거 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
 
