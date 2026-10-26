@@ -130,6 +130,8 @@ jobs:
         run: cargo build --bin hive --all-features --locked
       - name: Select Linux CLI path
         run: echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
+      - if: matrix.lane == 'integration'
+        run: python tests/fixtures/interactive-cli/native-core-removal.py
       - name: Run complete named conformance inventory
         run: python scripts/test-artifacts.py run --purpose "CI conformance ${{ matrix.lane }} lane" --path target/debug --command python scripts/test-lanes.py --lane ${{ matrix.lane }}
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -229,8 +231,14 @@ jobs:
       - if: runner.os == 'macOS'
         run: cargo clippy -p hive-cli --all-targets --all-features --locked -- -D warnings
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
-      - if: runner.os == 'macOS'
-        run: python scripts/test-artifacts.py run --purpose 'macOS 첫 갱신 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '격리 OS 실제 명령 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
+      - run: python tests/fixtures/interactive-cli/native-core-removal.py
+      - if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: native-core-removal-${{ runner.os }}
+          path: tests/results/runs/*.md
+          retention-days: 7
       - if: runner.os == 'macOS'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py
       - if: always() && runner.os == 'macOS'
