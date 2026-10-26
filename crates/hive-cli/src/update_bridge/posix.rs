@@ -96,13 +96,14 @@ pub(super) fn connect(
     }
     let watch = Arc::new(Watch { parent, budget });
     let weak = Arc::downgrade(&watch);
-    thread::spawn(move || loop {
-        let Some(watch) = weak.upgrade() else { break };
-        if watch.check().is_err() {
-            break;
+    thread::spawn(move || {
+        while let Some(watch) = weak.upgrade() {
+            if watch.check().is_err() {
+                break;
+            }
+            drop(watch);
+            thread::sleep(Duration::from_millis(100));
         }
-        drop(watch);
-        thread::sleep(Duration::from_millis(100));
     });
     if !needs_terminal {
         return Ok(Connection::Preserve(watch));
