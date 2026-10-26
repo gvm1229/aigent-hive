@@ -92,6 +92,16 @@ run = Run("격리 OS의 실제 본체 제거와 자료 보존: " + owner,
     [sys.executable, str(Path(__file__).resolve()), owner], paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 code = 1
 
+def npm_failure_details():
+    if owner != "npm":
+        return []
+    # These logs belong only to this offline synthetic package/user environment.
+    directory = Path(environment["NPM_CONFIG_CACHE"]) / "_logs"
+    logs = sorted(directory.glob("*.log"), key=lambda path: path.stat().st_mtime, reverse=True)[:2]
+    return [{"sha256": sha(path.read_bytes()),
+             "errors": [line[:500] for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if "error " in line.lower()][-12:]} for path in logs]
+
 def invoke(*flags):
     command = [*entry, "uninstall", "--user-root", str(user), *flags, "--output", "json"]
     result = subprocess.run(command, env=environment, input=b"", capture_output=True, timeout=60)
@@ -181,6 +191,7 @@ finally:
     run.finish(code, details={"events": events, "original_candidate_sha256": sha(candidate.read_bytes()),
         "installed_image_sha256": binary_hash, "debug_symbols_removed": sys.platform == "linux",
         "owner": owner, "package_inputs": package_inputs,
+        "npm_failure_details": npm_failure_details() if code else [],
         "preserved_sha256": {p.relative_to(work).as_posix(): sha(data) for p, data in preserved.items()},
         "scope": "hosted isolated OS, actual candidate with direct receipt or offline local npm package and real npm, no registered app or monitor; preview/refusal/confirmed native removal/Windows delayed helper; not actual app/monitor removal or public14 artifact acceptance"})
 raise SystemExit(code)
