@@ -119,8 +119,9 @@ fn remove_npm(
     executable: &Path,
     runner: &impl CommandRunner,
 ) -> Result<bool, String> {
+    let program_name = if cfg!(windows) { "npm.cmd" } else { "npm" };
     let npm = runner
-        .qualify("npm")
+        .qualify(program_name)
         .map_err(|_| "npm is unavailable; program preserved")?;
     let root = npm_path(runner, &npm, "root")?;
     let prefix = npm_path(runner, &npm, "prefix")?;
@@ -185,8 +186,8 @@ mod tests {
 
     impl CommandRunner for NpmFixture {
         fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
-            assert_eq!(program, "npm");
-            Ok(QualifiedExecutable::synthetic("npm"))
+            assert_eq!(program, if cfg!(windows) { "npm.cmd" } else { "npm" });
+            Ok(QualifiedExecutable::synthetic(program))
         }
         fn run(
             &self,
