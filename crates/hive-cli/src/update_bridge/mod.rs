@@ -13,6 +13,10 @@ mod macos;
 mod posix;
 #[cfg(windows)]
 mod windows;
+#[cfg(target_os = "linux")]
+use linux as platform;
+#[cfg(target_os = "macos")]
+use macos as platform;
 
 static STARTED: OnceLock<Instant> = OnceLock::new();
 
@@ -103,10 +107,6 @@ pub(crate) fn maybe_setup(
         return Ok(None);
     }
     let budget = LegacyBudget::current();
-    #[cfg(target_os = "linux")]
-    use linux as platform;
-    #[cfg(target_os = "macos")]
-    use macos as platform;
     let Some(connection) = platform::connect(user_root, budget.clone())? else {
         return Ok(None);
     };

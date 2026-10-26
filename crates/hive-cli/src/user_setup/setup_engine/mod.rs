@@ -35,10 +35,10 @@ mod update;
 mod update_summary;
 mod worker;
 pub(super) use interactive::resume_pending_update;
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(super) use interactive::update_with_terminal;
 pub(super) use interactive::{handles, run};
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(in crate::user_setup) use update::legacy_noninteractive as update_without_terminal;
 pub(in crate::user_setup) use update::run as run_update_completion;
 pub(in crate::user_setup) use worker::command_timeout;

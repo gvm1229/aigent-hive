@@ -16,7 +16,7 @@ const INPUT_LIMIT: u64 = 4 * 1024 * 1024;
 const OUTPUT_LIMIT: u64 = 4 * 1024 * 1024;
 static WORKER_DEADLINE: OnceLock<Instant> = OnceLock::new();
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 mod lifetime;
 
 pub(in crate::user_setup) fn command_timeout(requested: Duration) -> Duration {
@@ -97,7 +97,7 @@ fn receive_and_apply() -> Result<ActionResult, SetupError> {
         .saturating_sub(unix_millis()?)
         .min(90_000);
     WORKER_DEADLINE.get_or_init(|| Instant::now() + Duration::from_millis(remaining));
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     let _lifetime = lifetime::OwnedGroup::start(request.parent_process_id)?;
     apply_request(&request)
 }

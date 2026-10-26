@@ -230,7 +230,7 @@ pub(super) fn execute_update<R: BufRead, W: Write>(
     execute(&options, mode, terminal)
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
     root: &Path,
     reader: R,

@@ -128,7 +128,7 @@ struct LegacyCompletion<'a> {
     hosts: &'a [String],
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(in crate::user_setup) fn legacy_noninteractive(
     root: &Path,
     hosts: &[String],

@@ -59,7 +59,7 @@ pub(crate) fn resume_pending_update(
         .map_err(|error| error.message().to_owned())
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(crate) fn update_without_terminal(
     root: &Path,
     hosts: &[String],
@@ -68,7 +68,7 @@ pub(crate) fn update_without_terminal(
     setup_engine::update_without_terminal(root, hosts, budget)
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
     root: &Path,
     reader: R,

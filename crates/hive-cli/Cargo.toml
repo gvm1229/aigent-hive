@@ -34,7 +34,7 @@ toml.workspace = true
 ureq.workspace = true
 tempfile.workspace = true
 
-[target.'cfg(target_os = "linux")'.dependencies]
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 nix = { version = "=0.31.3", default-features = false, features = ["process", "signal"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
