@@ -33,7 +33,7 @@ code = 1
 completed = []
 modes = sys.argv[1:] or ["npm", "direct", "confirm", "cancel-resume"]
 assert modes and len(modes) == len(set(modes))
-assert set(modes) <= {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}
+assert set(modes) <= {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 try:
     if not image.is_file():
         url = f"https://registry.npmjs.org/@aigent-hive/{platform}/-/{platform}-0.13.1.tgz"

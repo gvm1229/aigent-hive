@@ -17,9 +17,9 @@ hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
 if not hosted and (sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1"):
     raise SystemExit("requires the isolated qualification container or hosted POSIX VM")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
+assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
 if hosted:
-    assert mode in {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}
+    assert mode in {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
@@ -131,7 +131,7 @@ if hosted:
 environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "LANG": "C.UTF-8",
                "LC_ALL": "C.UTF-8", "CODEX_HOME": str(root / "codex"),
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
-if mode in {"slow", "parent-exit-apply"}:
+if mode in {"slow", "late-slow", "parent-exit-apply"}:
     environment["HIVE_TEST_SLOW_ONCE"] = "1"
 if mode == "worker-unowned":
     request = {"schema_version": 1, "package_version": "0.14.0", "catalog_digest": "sha256:" + "0" * 64,
@@ -184,8 +184,10 @@ def terminal_run(command, stop=None):
     output, pending = b"", b""
     status = None
     killed = False
+    first_question = None
+    deferred_final = False
     try:
-        while time.monotonic() - began < (560 if stop == "hold" else 15 if stop == "ctrl-c" else 180):
+        while time.monotonic() - began < (560 if stop in {"hold", "late-slow"} else 15 if stop == "ctrl-c" else 180):
             readable, _, _ = select.select([descriptor], [], [], 0.2)
             if readable:
                 try:
@@ -202,6 +204,8 @@ def terminal_run(command, stop=None):
                     elif "comma-separated): " in text:
                         reply, kind = "antigravity", "old-host"
                     elif text.endswith("> "):
+                        if first_question is None:
+                            first_question = time.monotonic()
                         if stop == "ctrl-c":
                             if not killed:os.write(descriptor,b"\x03");killed=True
                             reply, kind = None, "ctrl-c"
@@ -214,7 +218,11 @@ def terminal_run(command, stop=None):
                         elif stop == "hold" and ("Korean" in text or "한국어" in text) and "English" in text:
                             reply, kind = None, "held"
                         elif "Apply these changes?" in text or "이 변경을 적용할까요?" in text:
-                            reply, kind = ("no", "decline-final") if stop == "decline-final" else ("yes", "final")
+                            if stop == "late-slow":
+                                deferred_final = True
+                                reply, kind = None, "deferred-final"
+                            else:
+                                reply, kind = ("no", "decline-final") if stop == "decline-final" else ("yes", "final")
                         elif mode == "host-deselect" and "사용할 앱" in text:
                             reply, kind = "antigravity", "select-antigravity"
                         elif mode == "vector-choice" and "뜻이 비슷한 지식도 찾는 의미 검색" in text:
@@ -241,6 +249,11 @@ def terminal_run(command, stop=None):
                         os.write(descriptor, (reply + "\n").encode())
                         answers.append(kind)
                         pending = b""
+            if deferred_final and first_question is not None and time.monotonic() - first_question >= 417:
+                os.write(descriptor, b"yes\n")
+                answers.append("late-final")
+                pending = b""
+                deferred_final = False
             if stop == "parent-exit-apply" and not killed and (user / "slow-pid").exists():
                 capture_owned_children(pid)
                 if sys.platform == "darwin":
@@ -251,7 +264,7 @@ def terminal_run(command, stop=None):
             if exited:
                 status = os.waitstatus_to_exitcode(value)
                 break
-        assert status == (-2 if stop == "ctrl-c" else -15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "vector-cancel", "decline-final"} else 0), (status, output[-6000:].decode(errors="replace"))
+        assert status == (-2 if stop == "ctrl-c" else -15 if stop in {"parent-exit", "parent-exit-apply"} else 2 if stop in {"cancel", "hold", "slow", "late-slow", "vector-cancel", "decline-final"} else 0), (status, output[-6000:].decode(errors="replace"))
     finally:
         if status is None:
             try:
@@ -277,20 +290,23 @@ if mode in {"confirm", "migration-review"}:
     result = subprocess.run([*command, "--confirm"], env=environment, input="no\nyes\n", capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, (result.returncode, result.stdout[-4000:], result.stderr[-4000:])
 else:
-    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else mode if mode in {"slow", "parent-exit", "parent-exit-apply"} else None)
+    answers = terminal_run(command, "cancel" if mode in {"cancel", "cancel-resume"} else "hold" if mode == "deadline" else mode if mode in {"slow", "late-slow", "parent-exit", "parent-exit-apply"} else None)
 
 config = user / ".hive/config/user-setup.yml"
 progress = (user / ".hive/config/setup-progress/user.yml").read_text()
-if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}:
+if mode in {"cancel", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}:
     assert "phase: complete" not in progress
-    if mode not in {"slow", "parent-exit-apply"}:
+    if mode not in {"slow", "late-slow", "parent-exit-apply"}:
         assert not config.exists() and "phase: awaiting-answers" in progress
     if mode in {"cancel", "cancel-resume"}:
         assert "interface_language: ko" in progress
     elif mode == "deadline":
         assert 418 <= terminal_runs[0]["elapsed_seconds"] < 550, terminal_runs
-    elif mode == "slow":
-        assert 88 <= terminal_runs[0]["elapsed_seconds"] < 135, terminal_runs
+    elif mode in {"slow", "late-slow"}:
+        lower, upper = (505, 540) if mode == "late-slow" else (88, 135)
+        assert lower <= terminal_runs[0]["elapsed_seconds"] < upper, terminal_runs
+        if mode == "late-slow":
+            assert "late-final" in answers
         slow_pid = int((user / "slow-pid").read_text())
         if sys.platform == "darwin":
             assert not mac_process_alive(slow_pid), "owned host subprocess survived worker timeout"
@@ -318,7 +334,7 @@ if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit", "paren
         while live_children() and time.monotonic() < until:
             time.sleep(0.1)
         assert not live_children(), ("orphaned setup remained after parent exit", live_children())
-    if mode in {"cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}:
+    if mode in {"cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}:
         answers += terminal_run([str(binary), "update", "--user-root", str(user)])
         saved = config.read_text()
         progress = (user / ".hive/config/setup-progress/user.yml").read_text()
