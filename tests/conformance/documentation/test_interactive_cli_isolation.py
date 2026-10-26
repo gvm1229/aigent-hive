@@ -160,6 +160,29 @@ class ModelProjectReceipt(unittest.TestCase):
         self.assertEqual(json.loads((self.trial / "answers.json").read_text()), payload)
         self.assertEqual(len((self.trial / "events.jsonl").read_text().splitlines()), 2)
 
+    def test_skill_entry_is_fixed_and_rejected_paths_get_their_own_guidance(self):
+        import hashlib
+        tool = self.trial / "tool.py"
+        tool.write_bytes((ROOT / "tests/fixtures/interactive-cli/model-trial-tool.py").read_bytes())
+        skill = self.trial / "skill/SKILL.md"
+        skill.parent.mkdir()
+        content = b"Fixed synthetic setup Skill.\n"
+        skill.write_bytes(content)
+        (self.trial / "config.json").write_text(json.dumps({
+            "input_sha256": {"skill/SKILL.md": hashlib.sha256(content).hexdigest()}}))
+        accepted = subprocess.run([sys.executable, str(tool), "read-skill"], capture_output=True, timeout=10)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(accepted.stdout, content)
+        refused = subprocess.run([sys.executable, str(tool), "read-skill", "../config.json"],
+                                 capture_output=True, timeout=10)
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn(b"relative to the fixture skill folder", refused.stderr)
+        self.assertNotIn(b"write-answers", refused.stderr)
+        events = [json.loads(line) for line in (self.trial / "events.jsonl").read_text().splitlines()]
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[0]["path"], "SKILL.md")
+        self.assertEqual(events[1]["hive_input_bytes"], len(refused.stderr))
+
 
 if __name__ == "__main__":
     unittest.main()

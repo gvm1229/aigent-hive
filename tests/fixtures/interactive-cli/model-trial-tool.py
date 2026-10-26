@@ -26,7 +26,8 @@ def emit(event, output=b"", error=b""):
 operation = sys.argv[1] if len(sys.argv) > 1 else "missing"
 try:
     if operation == "read-skill":
-        path = (ROOT / "skill" / sys.argv[2]).resolve()
+        assert len(sys.argv) in (2, 3)
+        path = (ROOT / "skill" / (sys.argv[2] if len(sys.argv) == 3 else "SKILL.md")).resolve()
         assert path.is_relative_to(ROOT / "skill") and path.is_file()
         content = path.read_bytes()
         assert digest(content) == CONFIG["input_sha256"][path.relative_to(ROOT).as_posix()]
@@ -78,6 +79,11 @@ try:
     else:
         raise ValueError("unsupported fixed-trial operation")
 except Exception as failure:
-    message = ("Trial input rejected: " + type(failure).__name__ + ". For write-answers, pass JSON as one argument or on stdin.\n").encode("utf-8")
+    hint = {
+        "read-skill": "Use read-skill alone for SKILL.md, or read-skill references/<file>.md relative to the fixture skill folder.",
+        "write-answers": "Pass the complete JSON document as one argument or on stdin; this helper does not add an answer envelope.",
+        "hive": "Use setup with the exact fixture --user-root and --target (or --scope user) paths.",
+    }.get(operation, "Supported operations: read-skill, write-answers, hive.")
+    message = ("Trial input rejected: " + type(failure).__name__ + ". " + hint + "\n").encode("utf-8")
     emit({"operation": operation, "exit_code": 2, "failure_kind": "fixture-input"}, error=message)
     raise SystemExit(2)
