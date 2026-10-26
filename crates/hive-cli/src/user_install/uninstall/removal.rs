@@ -298,7 +298,7 @@ fn finish(
         "helper":helper_exists.then_some(helper),"interface_language":receipt.language,
         "steps":{"monitor":if receipt.phase>=Phase::MonitorStopped {"stopped"}else{"unverified"},
             "host_activation":if receipt.phase>=Phase::HostsRemoved {"removed"}else{"unverified"},
-            "files":if complete {"removed"}else{"incomplete"},"core":if complete {"removed"}else{"unverified"}},
+            "files":if receipt.phase>=Phase::FilesRemoved {"removed"}else{"incomplete"},"core":if complete {"removed"}else{"unverified"}},
         "preserved_stop_receipts":[".hive/runtime/usage-monitor/config.json",".hive/runtime/usage-monitor/disable.json"],
         "retained_helper_purpose":helper_exists.then_some("verified result inspection and recovery; outside removal scope"),
         "diagnostic":receipt.last_error}),
@@ -737,6 +737,9 @@ mod tests {
             b"registered projects"
         );
         let data = result.data.unwrap();
+        assert_eq!(data["steps"]["files"], "removed");
+        assert_eq!(data["steps"]["core"], "unverified");
+        assert_eq!(data["completion_verified"], false);
         let id = data["operation_id"].as_str().unwrap();
         let resumed = resume(&target, id).unwrap();
         assert_eq!(resumed.exit_code, 2);

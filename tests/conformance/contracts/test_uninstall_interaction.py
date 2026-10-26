@@ -56,6 +56,8 @@ class UninstallInteractionConformance(Phase1CliTestCase):
                 self.assertEqual(result["code"], "hive.user-uninstall-pending")
                 self.assertFalse(result["data"]["completion_verified"])
                 self.assertEqual(result["data"]["core"]["owner"], "unverified")
+                self.assertEqual(result["data"]["steps"]["files"], "removed")
+                self.assertEqual(result["data"]["steps"]["core"], "unverified")
                 self.assertEqual(result["data"]["operation_id"], receipt["operation_id"])
                 self.assertFalse(derived.exists())
                 self.assertEqual(knowledge.read_bytes(), b"user knowledge")
