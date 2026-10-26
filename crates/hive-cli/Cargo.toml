@@ -41,7 +41,7 @@ nix = { version = "=0.31.3", default-features = false, features = ["process", "s
 core-foundation = "=0.10.1"
 libproc = "=0.14.11"
 security-framework = "=3.7.0"
-sysctl = "=0.7.1"
+sysinfo = { version = "=0.39.6", default-features = false, features = ["system"] }
 
 [dev-dependencies]
 ed25519-dalek.workspace = true

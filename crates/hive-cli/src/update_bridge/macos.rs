@@ -11,7 +11,7 @@ use security_framework::os::macos::code_signing::{
 };
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use sysctl::Sysctl;
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 const IMAGES: &str = include_str!("../../../../harness/setup/legacy-update-posix-images.json");
 
@@ -38,55 +38,38 @@ impl Parent {
     }
 }
 
-// KERN_PROCARGS2 includes the environment after argv; never interpret or report that tail.
-fn parse_arguments(bytes: &[u8]) -> Result<Vec<String>, String> {
-    if bytes.len() < 5 || bytes.len() > 1024 * 1024 {
-        return Err("invalid parent argument length".into());
-    }
-    let count = i32::from_ne_bytes(bytes[..4].try_into().map_err(|_| "invalid argc")?);
-    if !(2..=16).contains(&count) {
+// Refresh only this parent's command. No environment, task or other process details are requested.
+fn bounded_arguments(values: &[std::ffi::OsString]) -> Result<Vec<String>, String> {
+    if !(2..=16).contains(&values.len()) {
         return Err("unexpected legacy argument count".into());
     }
-    let mut offset = 4 + bytes[4..]
+    values
         .iter()
-        .position(|b| *b == 0)
-        .ok_or("missing parent executable terminator")?;
-    while bytes.get(offset) == Some(&0) {
-        offset += 1;
-    }
-    let mut arguments = Vec::new();
-    for _ in 0..count {
-        let tail = bytes.get(offset..).ok_or("incomplete parent argv")?;
-        let length = tail
-            .iter()
-            .position(|b| *b == 0)
-            .ok_or("unterminated parent argv")?;
-        if length == 0 || length > 4096 {
-            return Err("invalid parent argument".into());
-        }
-        arguments.push(
-            std::str::from_utf8(&tail[..length])
-                .map_err(|_| "parent argv is not UTF-8")?
-                .to_owned(),
-        );
-        offset += length + 1;
-    }
-    Ok(arguments)
+        .map(|value| {
+            let value = value.to_str().ok_or("parent argv is not UTF-8")?;
+            if value.is_empty() || value.len() > 4096 {
+                return Err("invalid parent argument".into());
+            }
+            Ok(value.to_owned())
+        })
+        .collect()
 }
 
 fn arguments(pid: u32) -> Result<Vec<String>, String> {
-    let ctl = sysctl::Ctl::Oid(vec![
-        1,
-        49,
-        i32::try_from(pid).map_err(|_| "invalid parent pid")?,
-    ]);
-    let mut bytes = match ctl.value().map_err(|_| "parent argv unavailable")? {
-        sysctl::CtlValue::Struct(bytes) | sysctl::CtlValue::Node(bytes) => bytes,
-        _ => return Err("unexpected parent argv representation".into()),
-    };
-    let result = parse_arguments(&bytes);
-    bytes.fill(0);
-    result
+    let pid = Pid::from_u32(pid);
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[pid]),
+        true,
+        ProcessRefreshKind::nothing()
+            .without_tasks()
+            .with_cmd(UpdateKind::Always),
+    );
+    let process = system.process(pid).ok_or("parent argv unavailable")?;
+    if system.processes().len() != 1 || !process.environ().is_empty() {
+        return Err("parent inspection scope differs".into());
+    }
+    bounded_arguments(process.cmd())
 }
 
 fn known_running_image(pid: u32) -> Result<bool, String> {
@@ -235,17 +218,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn argv_is_exact_and_environment_is_not_an_argument() {
-        let mut bytes = 4_i32.to_ne_bytes().to_vec();
-        bytes.extend_from_slice(
-            b"/old/hive\0\0hive\0update\0--user-root\0/tmp/user name\0SECRET=value\0",
-        );
+    fn argv_preserves_spaces_and_rejects_unbounded_or_empty_arguments() {
+        let args =
+            ["hive", "update", "--user-root", "/tmp/user name"].map(std::ffi::OsString::from);
         assert_eq!(
-            parse_arguments(&bytes).unwrap(),
+            bounded_arguments(&args).unwrap(),
             ["hive", "update", "--user-root", "/tmp/user name"]
         );
-        bytes[..4].copy_from_slice(&17_i32.to_ne_bytes());
-        assert!(parse_arguments(&bytes).is_err());
+        assert!(bounded_arguments(&vec![std::ffi::OsString::from("x"); 17]).is_err());
+        assert!(bounded_arguments(&["hive".into(), "".into()]).is_err());
+        assert!(bounded_arguments(&["hive".into(), "x".repeat(4097).into()]).is_err());
     }
 
     #[test]
