@@ -22,6 +22,7 @@ if not (sys.platform in {"linux", "darwin"} and os.environ.get("GITHUB_ACTIONS")
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 registry = json.loads((ROOT / "harness/setup/legacy-update-posix-images.json").read_text())
 original = next(row for row in registry["images"] if row["platform"] == platform and row["version"] == "0.13.1")
+(ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix="posix-legacy-ci-", dir=ROOT / "tests/work")).resolve()
 image = ROOT / "tests/work/public131-posix-0140" / platform / "hive"
 candidate = ROOT / "target/debug/hive"

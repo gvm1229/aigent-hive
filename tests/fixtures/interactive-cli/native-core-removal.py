@@ -20,6 +20,7 @@ if not (os.environ.get("GITHUB_ACTIONS") == "true"
 windows = os.name == "nt"
 name = "hive.exe" if windows else "hive"
 candidate = ROOT / "target/debug" / name
+(ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix="native-core-removal-", dir=ROOT / "tests/work")).resolve()
 user = work / "user"
 prefix = work / "prefix"
