@@ -369,7 +369,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "--input-channel agent",
             "--resume --review",
             "A hidden tool PTY is not a user terminal",
-            "Never generate the full YAML after each answer",
+            "Never regenerate the full YAML after each answer",
             "Optional downloads, external delivery, hooks and monitor interruption retain separate exact consent",
             "inspect status, not to apply again",
         ):
