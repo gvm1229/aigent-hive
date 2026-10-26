@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn local_feature_and_supported_hook_records_bind_content_and_keep_unchanged_consent() {
-        let root = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir_in(std::env::temp_dir().canonicalize().unwrap()).unwrap();
         fs::create_dir(root.path().join("vendor")).unwrap();
         let source=b"---\nname: local-check\ndescription: Read local fixture data.\n---\n\n# Local check\n";
         fs::write(root.path().join("vendor/SKILL.md"), source).unwrap();
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn unsupported_hooks_excess_grants_and_escaping_sources_never_become_approvals() {
-        let root = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir_in(std::env::temp_dir().canonicalize().unwrap()).unwrap();
         let previous = fs::read(fixture("answers-base.yml")).unwrap();
         let caps = fs::read(fixture("capabilities-codex-host-native.json")).unwrap();
         assert_eq!(supported_setup_hooks(&caps).unwrap(), json!([]));
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn unchanged_legacy_inert_approval_is_preserved_without_fetching_or_expanding_it() {
-        let root = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir_in(std::env::temp_dir().canonicalize().unwrap()).unwrap();
         let previous = fs::read(fixture("answers-approved-skill.yml")).unwrap();
         let caps = fs::read(fixture("capabilities-codex-host-native.json")).unwrap();
         let mut request = setup_extras_request(&previous).unwrap();

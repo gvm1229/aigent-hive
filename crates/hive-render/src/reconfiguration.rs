@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn reconfiguration_refuses_source_before_reading_any_setup_inputs() {
-        let root = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir_in(std::env::temp_dir().canonicalize().unwrap()).unwrap();
         fs::write(root.path().join("hive-source.json"), b"{}").unwrap();
         let missing = root.path().join("missing-input");
         let request = SetupRequest {
