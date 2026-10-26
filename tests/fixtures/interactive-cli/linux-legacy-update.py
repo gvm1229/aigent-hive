@@ -19,7 +19,7 @@ if not hosted and (sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION
 mode = sys.argv[1]
 assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
 if hosted:
-    assert mode in {"npm", "direct", "confirm", "cancel-resume"}
+    assert mode in {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}
 source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
@@ -151,6 +151,29 @@ if mode == "worker-unowned":
 command = [str(binary), "update", "--channel", "test", "--user-root", str(user)]
 answers = []
 terminal_runs = []
+owned_children = set()
+
+
+def capture_owned_children(parent):
+    if sys.platform != "darwin":
+        return
+    rows = subprocess.check_output(["/bin/ps", "-axo", "pid=,ppid="], text=True, timeout=5)
+    tree = [tuple(map(int, line.split())) for line in rows.splitlines() if line.strip()]
+    family = {parent}
+    for _ in range(8):
+        added = {pid for pid, ppid in tree if ppid in family} - family
+        if not added:
+            break
+        family.update(added)
+        assert len(family) < 64
+    owned_children.update(family - {parent})
+    assert owned_children, "updater child was not observed before terminating its parent"
+
+
+def mac_process_alive(pid):
+    result = subprocess.run(["/bin/ps", "-p", str(pid), "-o", "stat="],
+                            capture_output=True, text=True, timeout=5)
+    return bool(result.stdout.strip()) and not result.stdout.strip().startswith("Z")
 
 def terminal_run(command, stop=None):
     answers = []
@@ -184,6 +207,7 @@ def terminal_run(command, stop=None):
                             reply, kind = None, "ctrl-c"
                         elif stop == "parent-exit":
                             if not killed:
+                                capture_owned_children(pid)
                                 os.kill(pid, 15)
                                 killed = True
                             reply, kind = None, "parent-exit"
@@ -218,6 +242,9 @@ def terminal_run(command, stop=None):
                         answers.append(kind)
                         pending = b""
             if stop == "parent-exit-apply" and not killed and (user / "slow-pid").exists():
+                capture_owned_children(pid)
+                if sys.platform == "darwin":
+                    owned_children.add(int((user / "slow-pid").read_text()))
                 os.kill(pid, 15)
                 killed = True
             exited, value = os.waitpid(pid, os.WNOHANG)
@@ -265,10 +292,15 @@ if mode in {"cancel", "cancel-resume", "deadline", "slow", "parent-exit", "paren
     elif mode == "slow":
         assert 88 <= terminal_runs[0]["elapsed_seconds"] < 135, terminal_runs
         slow_pid = int((user / "slow-pid").read_text())
-        proc = Path(f"/proc/{slow_pid}/stat")
-        assert not proc.exists() or proc.read_text().rsplit(") ", 1)[1].split()[0] == "Z", "owned host subprocess survived worker timeout"
+        if sys.platform == "darwin":
+            assert not mac_process_alive(slow_pid), "owned host subprocess survived worker timeout"
+        else:
+            proc = Path(f"/proc/{slow_pid}/stat")
+            assert not proc.exists() or proc.read_text().rsplit(") ", 1)[1].split()[0] == "Z", "owned host subprocess survived worker timeout"
     elif mode in {"parent-exit", "parent-exit-apply"}:
         def live_children():
+            if sys.platform == "darwin":
+                return [pid for pid in owned_children if mac_process_alive(pid)]
             result = []
             for entry in Path("/proc").glob("[0-9]*/comm"):
                 try:

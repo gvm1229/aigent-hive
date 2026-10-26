@@ -31,6 +31,9 @@ run = Run("격리 POSIX VM의 공개0.13.1 첫 갱신 연결", command,
           paths=[work.relative_to(ROOT).as_posix(), image.parent.relative_to(ROOT).as_posix()], binary=candidate)
 code = 1
 completed = []
+modes = sys.argv[1:] or ["npm", "direct", "confirm", "cancel-resume"]
+assert modes and len(modes) == len(set(modes))
+assert set(modes) <= {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply"}
 try:
     if not image.is_file():
         url = f"https://registry.npmjs.org/@aigent-hive/{platform}/-/{platform}-0.13.1.tgz"
@@ -47,7 +50,7 @@ try:
         image.write_bytes(data)
         image.chmod(0o755)
     assert hashlib.sha256(image.read_bytes()).hexdigest() == original["binary_sha256"]
-    for mode in ["npm", "direct", "confirm", "cancel-resume"]:
+    for mode in modes:
         environment = dict(os.environ, HIVE_QUALIFICATION_VM="1", HIVE_LEGACY_FIXTURE_ROOT=str(work / mode))
         code = run.execute([sys.executable, str(ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py"), mode], env=environment)
         if code:
