@@ -1,12 +1,12 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 6/15(40.0%). 전역/프로젝트 설정·전체 보호 정책 수용. macOS 연결 구현 뒤 실제 수용 진행
+- 현재: `feature/interactive-cli-0.14.0`, 6/15(40.0%). macOS 첫 갱신·중단 복구와 세 OS 직접 본체 제거 부분 수용. 실제 npm 제거 검증 진행
 - 모델 시험: 과거16회 보존, 역할 추가 호출 중단. 같은 임무 누적9회 이하·예정 비교8회, 일반 속도 경로 미확보.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`
 - 개발 중·미게시. 공개 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
-- [M12·M13 재개/결과](../research/cli-update-validation-0.14.0.md)·[M14–M16 제거](../plans/active/cli-uninstall-0.14.0.md): `6298aa43`, 임시 폴더·가짜 앱의 보존/재개 확인. 실제 본체 교체·제거 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 과거 Linux 동시 읽기 실패는 보존, 현재 CI에서는 재현 없음
+- [갱신 근거](../research/cli-update-validation-0.14.0.md)·[직접 제거 근거](../research/cli-uninstall-validation-0.14.0.md): 원본0.13.1 부모·개발0.14.0·격리 VM의 실제 명령. 등록 앱/감시·공개 파일 수용은 별도
 
 ## 생성된 구현·수용 항목
 
