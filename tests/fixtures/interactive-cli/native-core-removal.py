@@ -27,6 +27,9 @@ prefix = work / "prefix"
 binary = prefix / "bin" / name
 binary.parent.mkdir(parents=True)
 shutil.copyfile(candidate, binary)
+if sys.platform == "linux":
+    # Match the size of a packaged image without changing the shared build or its code.
+    subprocess.run(["/usr/bin/strip", "--strip-debug", str(binary)], check=True)
 binary.chmod(0o755)
 sha = lambda data: hashlib.sha256(data).hexdigest()
 binary_hash = sha(binary.read_bytes())
@@ -116,7 +119,8 @@ try:
     assert repeat.returncode == 0 and repeated["data"]["completion_verified"], repeated
     code = 0
 finally:
-    run.finish(code, details={"events": events, "original_candidate_sha256": binary_hash,
+    run.finish(code, details={"events": events, "original_candidate_sha256": sha(candidate.read_bytes()),
+        "installed_image_sha256": binary_hash, "debug_symbols_removed": sys.platform == "linux",
         "preserved_sha256": {p.relative_to(work).as_posix(): sha(data) for p, data in preserved.items()},
         "scope": "hosted isolated OS, actual copied candidate and direct-owner receipt, no registered app or monitor; preview/refusal/confirmed native removal/Windows delayed helper; not npm, actual app/monitor removal or public14 artifact acceptance"})
 raise SystemExit(code)

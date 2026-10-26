@@ -73,7 +73,8 @@ if direct:
 for name in ("npm", "sh"):
     (shim / name).write_text(installer)
     (shim / name).chmod(0o755)
-(shim / "env").symlink_to("/usr/bin/env")
+shutil.copyfile("/usr/bin/env", shim / "env")
+(shim / "env").chmod(0o755)
 (shim / "agy").write_text('''#!/usr/bin/python3
 import json,os,shutil,sys,time
 from pathlib import Path
@@ -117,7 +118,7 @@ path.write_text(json.dumps(state));print('{}')
     (shim/"codex").chmod(0o755)
 if hosted:
     for script in shim.iterdir():
-        if script.is_symlink():
+        if script.is_symlink() or script.name == "env":
             continue
         content = script.read_text().replace("/usr/bin/python3", sys.executable)
         content = content.replace("/tmp/hive-first-update", str(root)).replace("/build/debug/hive", str(candidate))
