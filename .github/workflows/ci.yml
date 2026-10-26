@@ -224,9 +224,11 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
+      - if: runner.os == 'macOS'
+        run: python scripts/test-artifacts.py run --purpose 'macOS 첫 갱신 연결의 운영체제 조회 검사' --path target/debug --command cargo test -p hive-cli update_bridge --locked
       - if: runner.os == 'macOS'
         run: cargo clippy -p hive-cli --all-targets --all-features --locked -- -D warnings
+      - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
       - if: runner.os == 'macOS'
         run: python scripts/test-artifacts.py run --purpose 'macOS 첫 갱신 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
       - if: runner.os == 'macOS'
