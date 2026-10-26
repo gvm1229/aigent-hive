@@ -7,6 +7,10 @@ use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod posix;
 #[cfg(windows)]
 mod windows;
 
@@ -23,7 +27,7 @@ pub(crate) struct LegacyBudget {
 }
 
 impl LegacyBudget {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     pub(crate) fn current() -> Self {
         Self {
             started: *STARTED.get_or_init(Instant::now),
@@ -31,7 +35,7 @@ impl LegacyBudget {
         }
     }
 
-    #[cfg(any(windows, target_os = "linux", test))]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
     pub(crate) fn question_deadline(&self) -> Instant {
         self.started + Duration::from_mins(7)
     }
@@ -50,7 +54,7 @@ impl LegacyBudget {
         self.connected.load(Ordering::Acquire)
     }
 
-    #[cfg(any(windows, target_os = "linux", test))]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
     pub(crate) fn disconnect(&self) {
         self.connected.store(false, Ordering::Release);
     }
@@ -90,7 +94,7 @@ pub(crate) fn maybe_setup(
     Ok(Some(result))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(crate) fn maybe_setup(
     user_root: &std::path::Path,
     hosts: &[String],
@@ -99,14 +103,18 @@ pub(crate) fn maybe_setup(
         return Ok(None);
     }
     let budget = LegacyBudget::current();
-    let Some(connection) = linux::connect(user_root, budget.clone())? else {
+    #[cfg(target_os = "linux")]
+    use linux as platform;
+    #[cfg(target_os = "macos")]
+    use macos as platform;
+    let Some(connection) = platform::connect(user_root, budget.clone())? else {
         return Ok(None);
     };
     let result = match connection {
-        linux::Connection::Terminal(reader, writer) => {
+        posix::Connection::Terminal(reader, writer) => {
             crate::user_setup::update_with_terminal(user_root, reader, writer, budget, hosts)
         }
-        linux::Connection::Preserve(watch) => {
+        posix::Connection::Preserve(watch) => {
             let result = crate::user_setup::update_without_terminal(user_root, hosts, &budget);
             drop(watch);
             result
@@ -115,7 +123,7 @@ pub(crate) fn maybe_setup(
     Ok(Some(result))
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn maybe_setup(
     _user_root: &std::path::Path,
