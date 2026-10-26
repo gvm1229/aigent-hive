@@ -143,6 +143,8 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertEqual(status["data"]["settings"]["interface_language"], "ko")
         self.assertIn("language", status["data"]["available_sections"])
         self.assertIn("wiki", status["data"]["available_sections"])
+        self.assertEqual(status["data"]["answer_patch_template"],
+            {"schema_version": 1, "kind": "hive.setup-answer-patch", "answers": {}})
         self.assertFalse(status["data"]["authorizes_dispatch"])
         self.assertGreater(status["data"]["source_counts"]["legacy-unknown"], 0)
         question = self.setup_result("--scope", "user", "--describe", "--question", "usage-enforcement")
@@ -170,6 +172,7 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertEqual(status["data"]["settings"]["project_name"], original["project_name"])
         self.assertEqual(status["data"]["settings"]["project_identity"], original["project_identity"])
         self.assertIn("identity", status["data"]["available_sections"])
+        self.assertEqual(status["data"]["answer_patch_template"]["kind"], "hive.setup-answer-patch")
         question = self.setup_result("--target", target, "--describe", "--question", "project-name")
         self.assertEqual(question["data"]["questions"][0]["current"], original["project_name"])
         self.assertEqual(snapshot_tree(target), before)
@@ -226,6 +229,13 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertEqual(process.returncode, 2, process.stdout)
         self.assertEqual(snapshot_tree(target), {})
         self.assertEqual(snapshot_tree(self.setup_user_root), before)
+
+        patch.write_text(json.dumps({"schema_version": 1, "kind": "hive.setup-answers",
+            "answers": {"project_name": "Incomplete"}}), encoding="utf-8")
+        process, result = self.invoke_setup(target, answers=patch, extra_arguments=("--summary",))
+        self.assertEqual(process.returncode, 2, process.stdout)
+        self.assertIn("answer_patch_template", result["message"])
+        self.assertEqual(snapshot_tree(target), {})
 
     def test_summary_rejects_condensed_approval_preview(self):
         before = snapshot_tree(self.setup_user_root)

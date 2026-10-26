@@ -6,6 +6,9 @@ The CLI owns the question text and preview. Do not ask an already answered choic
 
 When the user already supplied choices, a small local JSON/YAML transport can contain:
 
+Copy `answer_patch_template` from the initial status response. Keep its `schema_version` and
+`kind` unchanged and fill only `answers`. Do not invent a format name or use a different wrapper.
+
 ```json
 {"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"interface_language":"ko"}}
 ```

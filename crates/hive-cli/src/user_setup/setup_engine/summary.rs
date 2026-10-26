@@ -162,6 +162,7 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
     });
     if status {
         add_status(&data, &mut summary);
+        summary["answer_patch_template"] = super::answer_patch::template();
         let scope = if result.code == "hive.project-setup-shown" {
             hive_core::preferences::PreferenceScope::Project
         } else {
@@ -331,6 +332,10 @@ mod tests {
         assert_eq!(data["settings"]["persona"]["id"], "custom");
         assert_eq!(data["changed_path_count"], 1);
         assert_eq!(data["authorizes_dispatch"], false);
+        assert_eq!(
+            data["answer_patch_template"],
+            super::super::answer_patch::template()
+        );
         assert!(data["available_sections"]
             .as_array()
             .unwrap()

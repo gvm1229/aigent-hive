@@ -18,7 +18,9 @@ that flow and explains its result. Global setup never authorizes project inspect
    PTY is not a user terminal. Without a user terminal, give this one command and the reason;
    do not wait for hidden input or replace the CLI with repeated AI questions.
 3. For a named setting or already supplied choices, read only
-   [reconfiguration](references/reconfiguration.md). Save the supplied choices in a local patch
+   [reconfiguration](references/reconfiguration.md). Copy `answer_patch_template` from the status
+   result without changing its `kind` or `schema_version`; fill only `answers` with supplied choices.
+   Save it in a local patch
    file first, then pass its path with `--answers <patch-file> --input-channel agent`.
    The CLI does not read answer documents from stdin. Get any unknown field key from the CLI's
    relevant question section; never translate labels into guessed keys. Never regenerate the

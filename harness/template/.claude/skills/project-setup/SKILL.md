@@ -22,7 +22,9 @@ setup belongs to user-setup. Never put a consumer harness in a `hive-source.json
 3. Resume incomplete work with the CLI's exact `next_action`. Do not restart answered questions.
    For choices already supplied by the user, use the existing file input with
    `--input-channel agent`, or the small answer-patch format described in
-   [structured choices](references/structured-choices.md). Use only trusted supplied or saved
+   [structured choices](references/structured-choices.md). Copy `answer_patch_template` from the
+   status result, keep `kind` and `schema_version` unchanged, and fill only `answers`.
+   Use only trusted supplied or saved
    capability material; never fabricate a capability file to make apply succeed.
 4. Read an apply/validate result with `--summary --output json`. Check its status, exit code,
    actual capability limits and pending action. The normal completion response is at most 8KiB;

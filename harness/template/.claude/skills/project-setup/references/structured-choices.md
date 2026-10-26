@@ -7,6 +7,9 @@ material, use the visible CLI terminal, or provide that one command to the user.
 
 A small local transport contains only known user choices:
 
+Copy `answer_patch_template` from the initial status response. Keep its `schema_version` and
+`kind` unchanged and fill only `answers`. Do not invent a format name or use a different wrapper.
+
 ```json
 {"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"project_name":"user-provided-name"}}
 ```
