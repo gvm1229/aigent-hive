@@ -14,10 +14,10 @@ sources:
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:harness/directives/03-session-coordination.md#sha256:bdef62f4f837e3c0c84a794a9f4c7bca1b8947a92b5b3ea66ff8314bb2c7dfec"
-  - "repo:harness/skills/project-setup/SKILL.md#sha256:fc6baab602cfbbf88acfc7a59a516d7f97b2f6c4f7067f63b31ad4bec432be89"
-  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:616c9ccf6f3d99bbcec57c338ff27003b2ea731f15a1832da5c580bbb84cd65b"
+  - "repo:harness/skills/project-setup/SKILL.md#sha256:001144a32ee242ccdd49eafa30dc9c2fbdf4c35414bbaf2c7d20eaf962265197"
+  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:8945220345e4e105a399c8567effdfb6227119f4250e016c941f2152047da941"
 links: [knowledge-preservation, project-onboarding]
-reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
+reviewed_revision: "git:8c396a991cefeff19dc4a745d91caf7f2ef7c723"
 status: active
 ---
 
