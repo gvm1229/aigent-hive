@@ -7,8 +7,8 @@
 
 - [x] [S140-001] 공통 질문 엔진·터미널/기계 입력 분리
   - state: complete; evidence: repo:docs/research/cli-project-validation-0.14.0.md#sha256:08b1fb1500f31f7e75d15cfa1a6378ddf3b96b24375cff3a0632712032fccf80
-- [ ] [S140-002] 한국어/영어 전역 초기 설정·재설정
-  - state: agent-owned; depends: S140-001
+- [x] [S140-002] 한국어/영어 전역 초기 설정·재설정
+  - state: complete; evidence: repo:docs/research/cli-user-settings-0.14.0.md#sha256:029f15d8f36dbc94ad6e63444e3ba8ad22ae8ef1566a0f2a6080d77bb110f636
 - [ ] [S140-003] AI 없는 프로젝트 설정·기능 확인·보존
   - state: agent-owned; depends: S140-001
 - [ ] [S140-004] 얇은 AI 연결과 제한된 결과 반환
@@ -16,7 +16,7 @@
 
 ## S140-001 — 공통 엔진
 
-- M06: [언어·입력 계약](../details/setup-language-input-0.14.0.md) `54c4d6dc`, 언어 오류·미완료 언어 우선순위·실제 무입력/Ctrl-C 재개 검증
+- M06 `54c4d6dc`: [언어·입력 계약과 근거](../details/setup-language-input-0.14.0.md)
 
 - 소유: `user_setup.rs`, `main.rs::run_setup`, 기존 설정 스키마·질문 목록. 질문 순서·조건·기본값·검증·미리보기·적용을 새 setup_engine 모듈로 추출, 기존 renderer·소유권 검증 재사용
 - Question 자료: id, revision, type(bool/enum/list/text/integer), en/ko 설명, options, current/default, source, 조건, 검증 규칙. 코드와 Skill의 독립 질문 목록 제거, 정본 catalog에서 CLI/describe/문서 생성
@@ -28,8 +28,8 @@
 
 ## S140-002 — 전역 설정
 
-- M04: [벡터 검색 희망 선택](../details/vector-choice-0.14.0.md) `06d35f5a`, 다운로드·활성화 별도 동의와 선택 보존·취소/재개 검증
-- M05: [앱 선택 해제](../details/host-deselection-0.14.0.md) `3623df57`, 소유 연결·안내만 해제와 원문 보존·재선택·중단 뒤 재개 검증
+- M04 `06d35f5a`: [벡터 선택·별도 동의·재개 근거](../details/vector-choice-0.14.0.md)
+- M05 `3623df57`: [앱 선택 해제·보존·재개 근거](../details/host-deselection-0.14.0.md)
 
 - 진입: S140-001 완료. 기존 user-setup의 언어·모드·위키·사용자 맥락·성격·호스트·Judge·Skill·사용량·알림·vector 선택을 같은 엔진으로 연결
 - 언어 미선택 시에만 `한국어 / English` 첫 질문. 저장된 언어 존재 시 재사용, 사용자가 언어 변경을 요청한 경우만 재질문. 질문·오류·진행·복구·완료 요약 모두 같은 언어
@@ -41,7 +41,7 @@
 
 ## S140-003 — 프로젝트 설정
 
-- `fdcf5176`: [최소 답안 적용·검증·재개](../../../tests/results/runs/20261026T054430-ffbbc9678d96.md) Windows CLI7 통과. 임시 파일·합성 기능 범위, 실제 앱/모델/다른 OS 제외. 전체 조건 집계 유지
+- `fdcf5176`: [최소 답안의 Windows 파일/Agent 적용·검증·재개](../../../tests/results/runs/20261026T054430-ffbbc9678d96.md), 전체 범위와 한계는 해당 근거
 
 
 - M03 실행: [파일 입력의 공통 적용·복구](../details/project-file-input-0.14.0.md). 기존 명령·오류 분류 유지와 공통 확정 처리 재사용
