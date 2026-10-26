@@ -1,4 +1,4 @@
-"""Record the fixed M19 project trial, including observations from failed setup."""
+"""Record fixed M19 setup cases, including observations from failed setup."""
 from pathlib import Path
 import json
 import hashlib
@@ -10,6 +10,13 @@ import yaml
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
+
+
+def pointer(value, path):
+    for key in path.removeprefix("/").split("/"):
+        key = key.replace("~1", "/").replace("~0", "~")
+        value = value[int(key)] if isinstance(value, list) else value[key]
+    return value
 
 
 def collect(trial, config, host):
@@ -32,27 +39,41 @@ def collect(trial, config, host):
     checks = {
         "event_log_complete": complete,
         "host_completed": host.get("status") == "completed",
-        "one_apply": sum(e.get("operation") == "hive" and "--apply" in e.get("arguments", []) for e in events) == 1,
+        "expected_apply_count": sum(e.get("operation") == "hive" and "--apply" in e.get("arguments", []) for e in events) == config.get("expected_apply_count", 1),
         "no_failed_cli_retry": all(e.get("exit_code", 0) == 0 for e in events),
+        "bounded_responses": all(e["hive_input_bytes"] <= (4096 if "--show" in e.get("arguments", []) else 8192)
+            for e in events if e.get("operation") == "hive" and "--dry-run" not in e.get("arguments", [])),
     }
-    settings = trial / "project/.hive/setup-answers.yml"
+    scope = config.get("setup_scope", "project")
+    settings = trial / ("user/.hive/config/user-setup.yml" if scope == "user" else "project/.hive/setup-answers.yml")
     checks["final_settings_present"] = settings.is_file()
     try:
         if settings.is_file():
             answers = yaml.safe_load(settings.read_text(encoding="utf-8"))
-            checks["requested_values"] = all(answers[k] == v for k, v in {
-                "project_name": "luna-quick", "project_kind": "general",
-                "setup_mode": "expedited", "primary_host": "codex",
-            }.items())
-            checks["unrequested_roles_and_hooks_absent"] = all(answers[k] == [] for k in (
-                "persistent_roles", "approved_optional_skills", "approved_fallback_hooks"))
+            expected = config.get("expected_values", {
+                "/project_name": "luna-quick", "/project_kind": "general",
+                "/setup_mode": "expedited", "/primary_host": "codex",
+                "/persistent_roles": [], "/approved_optional_skills": [], "/approved_fallback_hooks": [],
+            })
+            checks["requested_values"] = all(pointer(answers, path) == value for path, value in expected.items())
             choices = answers["preference_decisions"]
-            checks["agent_not_human"] = all(choices["/" + k]["input_channel"] == "agent"
-                and choices["/" + k]["decided_at"] is None for k in ("project_name", "project_kind", "primary_host"))
-        checks["foreign_bytes_preserved"] = (trial / "project/README.txt").read_bytes() == b"Synthetic user note. Preserve exactly.\n"
+            checks["agent_not_human"] = all(choices[k]["input_channel"] == "agent"
+                and choices[k]["decided_at"] is None for k in config.get("agent_fields", ["/project_name", "/project_kind", "/primary_host"]))
+        checks["foreign_bytes_preserved"] = (trial / scope / "README.txt").read_bytes() == b"Synthetic user note. Preserve exactly.\n"
         checks["global_config_preserved"] = all(hashlib.sha256((trial / "user" / path).read_bytes()).hexdigest() == digest
             for path, digest in config["user_before"].items())
-    except (OSError, KeyError, TypeError, yaml.YAMLError) as error:
+        for relative, digest in config.get("preserved_files", {}).items():
+            path = (trial / relative).resolve()
+            if not path.is_relative_to(trial.resolve()):
+                raise ValueError("preservation path leaves the trial")
+            checks["preserved:" + relative] = hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        if config.get("progress_relative"):
+            path = (trial / config["progress_relative"]).resolve()
+            if not path.is_relative_to(trial.resolve()):
+                raise ValueError("progress path leaves the trial")
+            progress = yaml.safe_load(path.read_text(encoding="utf-8"))
+            checks["same_operation_complete"] = progress["operation_id"] == config["operation_id"] and progress["phase"] == "complete"
+    except (OSError, KeyError, IndexError, ValueError, TypeError, yaml.YAMLError) as error:
         errors.append(f"final state: {error}")
         checks["final_state_readable"] = False
     return {
@@ -67,8 +88,8 @@ def main():
     if not trial.is_relative_to((ROOT / "tests/work").resolve()):
         raise ValueError("trial must remain inside tests/work")
     config = json.loads((trial / "config.json").read_text(encoding="utf-8"))
-    run = Run("Luna low 실제 최소 프로젝트 설정 재평가",
-        ["host:collaboration.spawn_agent", config["model"], config["reasoning_effort"], "project-quick"],
+    run = Run("실제 작은 모델의 고정 설정 사례 평가",
+        ["host:collaboration.spawn_agent", config["model"], config["reasoning_effort"], config["scenario"]],
         paths=[trial.relative_to(ROOT).as_posix()], binary=Path(config["binary"]))
     (trial / "ready.json").write_text(json.dumps({"report": run.relative}), encoding="utf-8")
     print("ready " + run.relative, flush=True)
@@ -88,7 +109,8 @@ def main():
     run.finish(code, details={**config, **result, "host_receipt": host,
         "elapsed_seconds": time.monotonic() - started,
         "scope": "Actual host trial with synthetic inputs and closed CLI environment; no real app/service/install control. Missing host tokens or speed remain unknown. No M19/M20 aggregate acceptance implied."})
-    print(json.dumps({"report": run.relative, "exit_code": code, **result}), flush=True)
+    print(json.dumps({"report": run.relative, "exit_code": code, "checks": result["checks"],
+        "hive_input_bytes": result["hive_input_bytes"], "errors": result["errors"]}), flush=True)
     return code
 
 

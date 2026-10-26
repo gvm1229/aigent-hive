@@ -118,6 +118,29 @@ class ModelProjectReceipt(unittest.TestCase):
         self.assertEqual(len(result["events"]), 1)
         self.assertTrue(result["errors"])
 
+    def test_user_case_checks_fixed_choices_preservation_and_same_recovery(self):
+        import hashlib
+        user = self.trial / "user"
+        (user / ".hive/config").mkdir(parents=True)
+        note = b"Synthetic user note. Preserve exactly.\n"
+        (user / "README.txt").write_bytes(note)
+        (user / ".hive/config/user-setup.yml").write_text(json.dumps({
+            "interface_language": "ko", "usage_guard": {"enforcement_enabled": False},
+            "preference_decisions": {"/interface_language": {"input_channel": "agent", "decided_at": None}},
+        }), encoding="utf-8")
+        (user / "progress.yml").write_text(json.dumps({"operation_id": "fixed", "phase": "complete"}), encoding="utf-8")
+        (self.trial / "events.jsonl").write_text(json.dumps({"operation": "hive", "arguments": ["--resume"],
+            "exit_code": 0, "hive_input_bytes": 42}), encoding="utf-8")
+        config = {"setup_scope": "user", "user_before": {}, "expected_apply_count": 0,
+            "expected_values": {"/interface_language": "ko", "/usage_guard/enforcement_enabled": False},
+            "agent_fields": ["/interface_language"], "progress_relative": "user/progress.yml",
+            "operation_id": "fixed", "preserved_files": {"user/README.txt": hashlib.sha256(note).hexdigest()}}
+        result = self.recorder.collect(self.trial, config, {"status": "completed"})
+        self.assertTrue(all(result["checks"].values()), result)
+        config["operation_id"] = "another"
+        result = self.recorder.collect(self.trial, config, {"status": "completed"})
+        self.assertFalse(result["checks"]["same_operation_complete"])
+
 
 if __name__ == "__main__":
     unittest.main()
