@@ -1,11 +1,11 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`. S140-001·P140-002 수용, 3/15(20.0%). 최소 답안fdcf5176·요약c848e043 검증, 다음 M19 나머지 모델 사례. CI24e51fa7 진행
+- 현재: `feature/interactive-cli-0.14.0`. S140-001·P140-002 수용, 3/15(20.0%). 최소 답안fdcf5176·요약c848e043 검증, 다음 M19 나머지 모델 사례. CI24e51fa7 통과·후속 변경 별도
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`
 - 개발 중·미게시. 공개 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
-- [M12·M13 재개/결과](../research/cli-update-validation-0.14.0.md)·[M14–M16 제거](../plans/active/cli-uninstall-0.14.0.md): `6298aa43`, 임시 폴더·가짜 앱의 보존/재개 확인. 실제 본체 교체·제거 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 이전 Linux 동시 실행의 파일 읽기 실패는 Q140-002 조사 유지
+- [M12·M13 재개/결과](../research/cli-update-validation-0.14.0.md)·[M14–M16 제거](../plans/active/cli-uninstall-0.14.0.md): `6298aa43`, 임시 폴더·가짜 앱의 보존/재개 확인. 실제 본체 교체·제거 미검증. [M08 근거](../plans/active/usage-defaults-0.14.0.md)에 Windows 통과·Docker 부재의 Linux 미실행 기록. 과거 Linux 동시 읽기 실패는 보존, 현재 CI에서는 재현 없음
 
 ## 생성된 구현·수용 항목
 
@@ -58,5 +58,5 @@
 - [일반 감시 해제·경고·상태 조회](../research/cli-usage-settings-0.14.0.md)의 부분 수용: Windows 최종 설정189·사용량178·분리 예약 제거/대역 종료·무쓰기 조회, 앞선 Linux 설정190 통과. 실제 센서4회 시험1개는 기존 별도 조건으로 미실행. 활성화 동의·결과 표시·수동 조회는 M02·M09·M13 근거 참조, 실제 감시 수용 별도
 - M03 `892035fa`: [프로젝트 답안 파일의 공통 적용·복구 근거와 한계](../plans/details/project-file-input-0.14.0.md). 파일 입력 흐름 유지
 - 전역 0.14.0+미갱신 프로젝트 0.13.1, POSIX 첫 갱신, 실제 시간 제한/부모 종료 복구, Windows 직접 설치의 동기 완료·옛 실행 파일 정리
-- M21 `f63ce583` CI 종료·실패, Windows 검사는 통과. 실제 Luna low 첫 설정 실패·최소 입력 결함 확인. 남은 수정/수용과 근거는 위 상세 인계 참조
+- M21 과거 실패는 [재개 인계](../research/0.14.0-handoff-2026-10-26.md)에 보존. CI24e51fa7 성공, 후속 요약/입력 지침5c343fec는 별도 검증. M19 medium 나머지 사례 진행
 - 다른 작업의 학습·평가·사실·별도 계획 문서 보존. 정식 0.14.0 main 통합·게시·현재 사용자 설치·공지 전송은 해당 승인 전 제외
