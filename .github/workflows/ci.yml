@@ -132,6 +132,8 @@ jobs:
         run: echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
       - if: matrix.lane == 'integration'
         run: python tests/fixtures/interactive-cli/native-core-removal.py
+      - if: matrix.lane == 'integration'
+        run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - name: Run complete named conformance inventory
         run: python scripts/test-artifacts.py run --purpose "CI conformance ${{ matrix.lane }} lane" --path target/debug --command python scripts/test-lanes.py --lane ${{ matrix.lane }}
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -234,6 +236,7 @@ jobs:
       - if: runner.os == 'macOS'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py direct deadline slow parent-exit parent-exit-apply
       - run: python tests/fixtures/interactive-cli/native-core-removal.py
+      - run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
       - if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
