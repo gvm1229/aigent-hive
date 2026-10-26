@@ -5,8 +5,8 @@
 
 ## 항목
 
-- [ ] [S140-001] 공통 질문 엔진·터미널/기계 입력 분리
-  - state: agent-owned; depends: P140-001
+- [x] [S140-001] 공통 질문 엔진·터미널/기계 입력 분리
+  - state: complete; evidence: repo:docs/research/cli-project-validation-0.14.0.md#sha256:08b1fb1500f31f7e75d15cfa1a6378ddf3b96b24375cff3a0632712032fccf80
 - [ ] [S140-002] 한국어/영어 전역 초기 설정·재설정
   - state: agent-owned; depends: S140-001
 - [ ] [S140-003] AI 없는 프로젝트 설정·기능 확인·보존
