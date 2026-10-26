@@ -18,7 +18,7 @@ sources:
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:b33ed5b0aa3819b3607100012f444faa6af82f7f1363c2ca492cb7eaf81bb1df"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:14b97538abd3ac185627d5dc0a573b540122f780e5549edf80373c6c98866e69"
   - "repo:harness/user-setup/catalog.yml#sha256:fed2aefc7efa52c28bb05c5b069ad4c4fbeec30b805fff7b84d00285fca18ea4"
   - "repo:schemas/user-setup.schema.json#sha256:4f9c5f59802bc964cfdc41636c32e7e71929c52d64a0291babba948906567a1f"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
@@ -32,3 +32,5 @@ status: active
 - New 0.14.0 setups disable automatic stops. Existing choices and unknown origins receive CLI review; unattended updates preserve choices.
 - CodexBar stays hidden until a confirmed native failure and separate consent.
 - Setup, update and uninstall keep the current Skill closure, prune authenticated retired empty shells, and preserve knowledge, preferences and foreign bytes.
+
+- Supplied choices fill only answers in the CLI-provided `answer_patch_template`, preserving its kind and schema version; pass the saved file with `--answers`. Never infer choices or invent field keys from labels.
