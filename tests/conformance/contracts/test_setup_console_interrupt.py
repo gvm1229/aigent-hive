@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Text.RegularExpressions;
 using Microsoft.Win32.SafeHandles;
 public static class SetupConsoleFixture {
     [StructLayout(LayoutKind.Explicit, Size=20)]
@@ -77,10 +78,34 @@ public static class SetupConsoleFixture {
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
         return child.ExitCode;
     }
+    static int ReviewAll(Process child, SafeFileHandle input, string[] args) {
+        string path=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
+        string last=""; bool confirmed=false; int answered=0;
+        var deadline=Stopwatch.StartNew();
+        while(!child.HasExited && deadline.ElapsedMilliseconds<30000) {
+            try {
+                string state=File.ReadAllText(path);
+                if(state.Contains("phase: previewed") && !confirmed) { Send(input,"yes\r"); confirmed=true; }
+                else if(state.Contains("phase: awaiting-answers")) {
+                    var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
+                    if(step.Success && step.Groups[1].Value!=last) {
+                        last=step.Groups[1].Value;
+                        Send(input,last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
+                        answered++;
+                    }
+                }
+            } catch(IOException) { }
+            Thread.Sleep(25);
+        }
+        if(!child.HasExited) throw new InvalidOperationException("review timeout at "+last);
+        File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+",\"questions\":"+answered+",\"confirmed\":"+(confirmed?"true":"false")+"}");
+        return child.ExitCode;
+    }
     public static int Main(string[] args) {
         Process child=null;
         try {
             bool project=args.Length==7 && args[3]=="connection-loss";
+            bool review=args.Length==4 && args[3]=="review-all";
             if(args.Length!=4 && !project) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
@@ -89,13 +114,14 @@ public static class SetupConsoleFixture {
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
                 string command=project
                     ? "setup --target \""+args[4]+"\" --capabilities \""+args[5]+"\" --interactive --user-root \""+args[1]+"\""
-                    : "setup --scope user --section usage --interactive --user-root \""+args[1]+"\"";
+                    : "setup --scope user "+(review ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
                 var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
-                start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
+                if(!review) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
                 if(project) return ProjectFlow(child,input,args);
+                if(review) return ReviewAll(child,input,args);
                 string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
                 WaitStep(child,progress,"user-language"); Send(input,"1\r");
                 WaitStep(child,progress,"usage-enforcement"); Thread.Sleep(100);
@@ -134,6 +160,53 @@ def compile_console_fixture(work_root):
 
 @unittest.skipUnless(os.name == "nt", "native Ctrl-C regression requires a private Windows console")
 class SetupConsoleInterruptConformance(Phase1CliTestCase):
+    def test_full_review_in_both_languages_keeps_choices_and_validates_file_results(self):
+        from tests.conformance.integration.test_project_lifecycle import ProjectLifecycleConformance
+        helper = compile_console_fixture(self.work_root)
+        for language in ("ko", "en"):
+            with self.subTest(language=language):
+                area = self.work_root / language
+                area.mkdir()
+                root = area / "user"
+                root.mkdir()
+                (root / "README.txt").write_bytes(b"Keep the user note.\r\n")
+                fake = ProjectLifecycleConformance()
+                fake.work_root = area
+                fake.fake_bin = area / "fake-bin"
+                fake.fake_bin.mkdir()
+                fake.host_log = area / "host-calls.jsonl"
+                fake._write_fake_host("codex")
+                environment = {**os.environ, "PATH":str(fake.fake_bin), "HIVE_TEST_HOST_LOG":str(fake.host_log), "HIVE_TEST_USER_ROOT":str(root)}
+                answers = area / "answers.json"
+                answers.write_text(json.dumps({"schema_version":1,"kind":"hive.setup-answer-patch",
+                    "answers":{"interface_language":language,"selected_hosts":["codex"]}}), encoding="utf-8")
+                command = [str(self.hive_binary), "setup", "--scope", "user", "--user-root", str(root),
+                    "--answers", str(answers), "--input-channel", "agent", "--apply", "--output", "json"]
+                seeded = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=40)
+                self.assertEqual(seeded.returncode, 0, seeded.stdout)
+                config = root / ".hive/config/user-setup.yml"
+                before = read_yaml(config)
+                result_path = area / "review.json"
+                startup = subprocess.STARTUPINFO()
+                startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startup.wShowWindow = subprocess.SW_HIDE
+                reviewed = subprocess.run([str(helper),str(self.hive_binary),str(root),str(result_path),"review-all"],
+                    env=environment, capture_output=True, text=True, timeout=45,
+                    creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
+                self.assertEqual(reviewed.returncode, 0, reviewed.stderr)
+                receipt = json.loads(result_path.read_text())
+                self.assertTrue(receipt["confirmed"])
+                self.assertGreater(receipt["questions"], 6)
+                after = read_yaml(config)
+                self.assertEqual({k:v for k,v in after.items() if k!="preference_decisions"},
+                    {k:v for k,v in before.items() if k!="preference_decisions"})
+                self.assertEqual((root / "README.txt").read_bytes(), b"Keep the user note.\r\n")
+                saved = config.read_bytes()
+                command[command.index("--apply")] = "--validate"
+                validated = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=40)
+                self.assertEqual(validated.returncode, 0, validated.stdout)
+                self.assertEqual(config.read_bytes(), saved)
+
     def test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume(self):
         self.check_interruption("ctrl-c")
 
