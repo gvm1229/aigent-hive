@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -140,6 +141,24 @@ class ModelProjectReceipt(unittest.TestCase):
         config["operation_id"] = "another"
         result = self.recorder.collect(self.trial, config, {"status": "completed"})
         self.assertFalse(result["checks"]["same_operation_complete"])
+
+    def test_transport_logs_empty_input_and_accepts_explicit_json_without_running_hive(self):
+        tool = self.trial / "tool.py"
+        tool.write_bytes((ROOT / "tests/fixtures/interactive-cli/model-trial-tool.py").read_bytes())
+        (self.trial / "config.json").write_text("{}", encoding="utf-8")
+        rejected = subprocess.run([sys.executable, str(tool), "write-answers"],
+            input=b"", capture_output=True, timeout=10)
+        self.assertEqual(rejected.returncode, 2)
+        self.assertFalse((self.trial / "answers.json").exists())
+        first = json.loads((self.trial / "events.jsonl").read_text().splitlines()[0])
+        self.assertEqual(first["exit_code"], 2)
+        self.assertEqual(first["hive_input_bytes"], len(rejected.stdout) + len(rejected.stderr))
+        payload = {"schema_version": 1, "kind": "hive.setup-answer-patch", "answers": {"interface_language": "ko"}}
+        accepted = subprocess.run([sys.executable, str(tool), "write-answers", json.dumps(payload)],
+            input=b"", capture_output=True, timeout=10)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(json.loads((self.trial / "answers.json").read_text()), payload)
+        self.assertEqual(len((self.trial / "events.jsonl").read_text().splitlines()), 2)
 
 
 if __name__ == "__main__":
