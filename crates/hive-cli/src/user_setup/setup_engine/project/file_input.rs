@@ -40,6 +40,7 @@ fn normalize(
     stored: Option<&[u8]>,
     channel: PreferenceInput,
     answered_at: Option<u64>,
+    defaults: &Value,
 ) -> Result<Value, RenderError> {
     let patch = super::super::answer_patch::read(input).map_err(as_render)?;
     let full = if patch.is_none() {
@@ -64,10 +65,11 @@ fn normalize(
             )
             .map_err(as_render)?;
         }
-        let mut base = previous
-            .clone()
-            .unwrap_or_else(|| json!({"schema_version":2}));
+        let mut base = previous.clone().unwrap_or_else(|| defaults.clone());
         super::super::answer_patch::merge(&mut base, &patch).map_err(as_render)?;
+        if base["project_identity"].as_str() == Some("") {
+            base["project_identity"] = base["project_name"].clone();
+        }
         let bytes = serde_json::to_vec(&base).map_err(|e| RenderError::Internal(e.to_string()))?;
         (patch, hive_render::normalized_project_answers(&bytes)?)
     } else {
@@ -288,6 +290,7 @@ pub(in crate::user_setup) fn execute(
             .then(user_setup::feature_now_unix)
             .transpose()
             .map_err(as_render)?,
+        &questions::defaults(&options.target, &global, "codex"),
     )?;
     let mut caps =
         tempfile::NamedTempFile::new().map_err(|e| RenderError::Internal(e.to_string()))?;
@@ -444,7 +447,14 @@ mod tests {
 
     #[test]
     fn file_values_inheritance_and_automatic_defaults_have_distinct_sources() {
-        let values = normalize(&input(), None, PreferenceInput::Agent, Some(123)).unwrap();
+        let values = normalize(
+            &input(),
+            None,
+            PreferenceInput::Agent,
+            Some(123),
+            &json!({}),
+        )
+        .unwrap();
         assert_eq!(values["schema_version"], 2);
         let records = &values["preference_decisions"];
         assert_eq!(records["/project_name"]["origin"], "external-change");
@@ -458,9 +468,23 @@ mod tests {
 
     #[test]
     fn reapplying_the_same_file_keeps_recorded_times_and_existing_identity() {
-        let first = normalize(&input(), None, PreferenceInput::AnswersFile, Some(123)).unwrap();
+        let first = normalize(
+            &input(),
+            None,
+            PreferenceInput::AnswersFile,
+            Some(123),
+            &json!({}),
+        )
+        .unwrap();
         let stored = serde_json::to_vec(&first).unwrap();
-        let second = normalize(&input(), Some(&stored), PreferenceInput::Agent, Some(456)).unwrap();
+        let second = normalize(
+            &input(),
+            Some(&stored),
+            PreferenceInput::Agent,
+            Some(456),
+            &json!({}),
+        )
+        .unwrap();
         assert_eq!(first, second);
         let mut changed: Value = serde_yaml::from_slice(&input()).unwrap();
         changed["project_name"] = json!("renamed project");
@@ -469,6 +493,7 @@ mod tests {
             Some(&stored),
             PreferenceInput::Agent,
             Some(456),
+            &json!({}),
         )
         .unwrap();
         assert_eq!(changed["project_identity"], first["project_identity"]);
@@ -481,7 +506,8 @@ mod tests {
 
     #[test]
     fn project_patch_preserves_unmentioned_values_and_unknown_provenance() {
-        let mut previous = normalize(&input(), None, PreferenceInput::Agent, None).unwrap();
+        let mut previous =
+            normalize(&input(), None, PreferenceInput::Agent, None, &json!({})).unwrap();
         previous["preference_decisions"]["/primary_host"] = json!(PreferenceDecision::new(
             &previous["primary_host"],
             DecisionOrigin::LegacyUnknown,
@@ -493,7 +519,14 @@ mod tests {
         .unwrap());
         let stored = serde_json::to_vec(&previous).unwrap();
         let patch = br#"{"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"project_name":"chosen name"}}"#;
-        let changed = normalize(patch, Some(&stored), PreferenceInput::Agent, Some(99)).unwrap();
+        let changed = normalize(
+            patch,
+            Some(&stored),
+            PreferenceInput::Agent,
+            Some(99),
+            &json!({}),
+        )
+        .unwrap();
         assert_eq!(changed["primary_host"], previous["primary_host"]);
         assert_eq!(changed["persistent_roles"], previous["persistent_roles"]);
         assert_eq!(
@@ -514,6 +547,7 @@ mod tests {
             Some(&serde_json::to_vec(&changed).unwrap()),
             PreferenceInput::Agent,
             Some(100),
+            &json!({}),
         )
         .unwrap();
         assert_eq!(repeated, changed);
@@ -532,6 +566,7 @@ mod tests {
             None,
             PreferenceInput::AnswersFile,
             Some(42),
+            &json!({}),
         )
         .unwrap();
         previous["preference_decisions"]
@@ -554,6 +589,7 @@ mod tests {
             Some(&serde_json::to_vec(&previous).unwrap()),
             PreferenceInput::Agent,
             Some(99),
+            &json!({}),
         )
         .unwrap();
         assert_eq!(changed["wiki"], json!({"enabled":true,"language":"ko"}));
@@ -586,6 +622,7 @@ mod tests {
             None,
             PreferenceInput::Agent,
             Some(123),
+            &json!({}),
         )
         .unwrap();
         assert_eq!(

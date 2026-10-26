@@ -10,6 +10,92 @@ from tests.conformance.support.harness import (
 
 
 class SetupSummaryConformance(Phase1CliTestCase):
+    def test_minimal_new_project_patch_applies_shared_defaults_without_invented_choices(self):
+        config = self.setup_user_root / ".hive/config/user-setup.yml"
+        global_settings = read_yaml(config)
+        global_settings["usage_guard"]["stop_remaining_percent"] = 37
+        write_yaml(config, global_settings)
+        global_before = config.read_bytes()
+        for channel in ("agent", "answers-file"):
+            with self.subTest(channel=channel):
+                target = self.work_root / channel
+                target.mkdir()
+                (target / "AGENTS.md").write_bytes(b"User instructions.\r\n")
+                (target / ".env").write_bytes(b"SYNTHETIC_VALUE=fixture\n")
+                before = snapshot_tree(target)
+                patch = self.work_root / (channel + ".json")
+                patch.write_text(json.dumps({"schema_version": 1, "kind": "hive.setup-answer-patch",
+                    "answers": {"setup_mode": "expedited", "project_name": "luna-quick",
+                        "project_kind": "general", "primary_host": "codex"}}), encoding="utf-8")
+                flags = ("--input-channel", channel)
+                preview, _ = self.invoke_setup(target, answers=patch, mode="--dry-run", extra_arguments=flags)
+                self.assertEqual(preview.returncode, 0, preview.stdout)
+                self.assertEqual(snapshot_tree(target), before)
+                applied, result = self.invoke_setup(target, answers=patch, extra_arguments=(*flags, "--summary"))
+                self.assertEqual(applied.returncode, 0, applied.stdout)
+                self.assertTrue(result["data"]["completion_verified"])
+                settings = target / ".hive/setup-answers.yml"
+                values = read_yaml(settings)
+                self.assertEqual(values["usage_stop_remaining_percent"], 37)
+                self.assertEqual(values["elevated_judge_quorum"], "2/3")
+                self.assertEqual(values["critical_judge_quorum"], "3/3+human")
+                for key in ("persistent_roles", "knowledge_include_paths", "approved_fallback_hooks",
+                            "root_knowledge_promotion_categories", "approved_optional_skills"):
+                    self.assertEqual(values[key], [], key)
+                self.assertIn("**/.env.*", values["knowledge_exclude_paths"])
+                self.assertIn("**/secrets/**", values["knowledge_exclude_paths"])
+                records = values["preference_decisions"]
+                self.assertEqual(records["/usage_stop_remaining_percent"]["origin"], "inherited")
+                self.assertEqual(records["/elevated_judge_quorum"]["origin"], "default")
+                self.assertEqual(records["/project_name"]["origin"],
+                    "external-change" if channel == "agent" else "explicit")
+                self.assertEqual(records["/project_name"]["input_channel"], channel)
+                if channel == "agent":
+                    self.assertIsNone(records["/project_name"]["decided_at"])
+                else:
+                    self.assertIsInstance(records["/project_name"]["decided_at"], int)
+                self.assertIn(b"User instructions.\r\n", (target / "AGENTS.md").read_bytes())
+                self.assertEqual((target / ".env").read_bytes(), b"SYNTHETIC_VALUE=fixture\n")
+                saved = settings.read_bytes()
+                for mode in ("--validate", "--apply"):
+                    process, _ = self.invoke_setup(target, answers=patch, mode=mode, extra_arguments=flags)
+                    self.assertEqual(process.returncode, 0, process.stdout)
+                    self.assertEqual(settings.read_bytes(), saved)
+                self.assertEqual(config.read_bytes(), global_before)
+
+    def test_minimal_new_project_patch_resumes_without_answer_file_after_interruption(self):
+        target = self.work_root / "interrupted"
+        target.mkdir()
+        note = target / "README.txt"
+        note.write_bytes(b"Preserve this user file.\n")
+        patch = self.work_root / "minimal.json"
+        patch.write_text(json.dumps({"schema_version": 1, "kind": "hive.setup-answer-patch",
+            "answers": {"setup_mode": "expedited", "project_name": "luna-quick",
+                "project_kind": "general", "primary_host": "codex"}}), encoding="utf-8")
+        interrupted = subprocess.run(
+            [str(self.hive_binary), "setup", "--target", str(target), "--user-root",
+             str(self.setup_user_root), "--answers", str(patch), "--capabilities",
+             str(FIXTURE_ROOT / "capabilities-codex-host-native.json"), "--input-channel", "agent",
+             "--apply", "--output", "json"], capture_output=True, text=True, timeout=30,
+            env={**os.environ, "HIVE_PROJECT_SETUP_INTERRUPT_AFTER": "2"},
+        )
+        self.assertEqual(interrupted.returncode, 87, interrupted.stderr)
+        progress_files = list((self.setup_user_root / ".hive/config/setup-progress/projects").glob("*.yml"))
+        self.assertEqual(len(progress_files), 1)
+        pending = read_yaml(progress_files[0])
+        patch.unlink()
+        resumed = self.setup_result("--target", target, "--resume", "--non-interactive", "--summary")
+        self.assertTrue(resumed["data"]["completion_verified"])
+        final = read_yaml(progress_files[0])
+        self.assertEqual(final["operation_id"], pending["operation_id"])
+        self.assertEqual(final["phase"], "complete")
+        values = read_yaml(target / ".hive/setup-answers.yml")
+        self.assertEqual(values["project_name"], "luna-quick")
+        self.assertEqual(values["persistent_roles"], [])
+        self.assertEqual(values["approved_fallback_hooks"], [])
+        self.assertIsNone(values["preference_decisions"]["/project_name"]["decided_at"])
+        self.assertEqual(note.read_bytes(), b"Preserve this user file.\n")
+
     def test_explicit_project_setup_skill_delivers_only_its_owned_companions(self):
         target = self.work_root / "selected-setup"
         target.mkdir()
