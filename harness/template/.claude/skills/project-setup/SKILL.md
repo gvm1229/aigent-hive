@@ -27,8 +27,9 @@ setup belongs to user-setup. Never put a consumer harness in a `hive-source.json
 4. Read an apply/validate result with `--summary --output json`. Check its status, exit code,
    actual capability limits and pending action. The normal completion response is at most 8KiB;
    state is at most 4KiB. An optional pending question is not a failed installation. A pending,
-   unsupported or failed operation is not complete. Inspect with `--show`, never repeat apply
-   merely because an AI reply was interrupted.
+   unsupported or failed operation is not complete. Verify state with
+   `--show --summary --output json`, never with the full `--show` response during normal setup.
+   Never repeat apply merely because an AI reply was interrupted.
 
 The CLI owns the canonical question catalog. For an explicit question explanation, request only
 `hive setup --target <project-root> --user-root <user-root> --describe --question <question-id>
