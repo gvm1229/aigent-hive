@@ -249,10 +249,9 @@ mod tests {
     fn native_self_arguments_and_unqualified_image_are_observable() {
         let pid = std::process::id();
         assert_eq!(info(pid).unwrap().pbi_pid, pid);
-        assert_eq!(
-            arguments(pid).unwrap(),
-            std::env::args().collect::<Vec<_>>()
-        );
+        // The unfiltered test runner has only argv[0], which is correctly not a legacy update.
+        let expected = std::env::args_os().collect::<Vec<_>>();
+        assert_eq!(arguments(pid), bounded_arguments(&expected));
         assert!(!known_running_image(pid).unwrap());
     }
 }
