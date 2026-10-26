@@ -9,8 +9,8 @@
   - state: complete; evidence: repo:docs/research/cli-project-validation-0.14.0.md#sha256:08b1fb1500f31f7e75d15cfa1a6378ddf3b96b24375cff3a0632712032fccf80
 - [x] [S140-002] 한국어/영어 전역 초기 설정·재설정
   - state: complete; evidence: repo:docs/research/cli-user-settings-0.14.0.md#sha256:029f15d8f36dbc94ad6e63444e3ba8ad22ae8ef1566a0f2a6080d77bb110f636
-- [ ] [S140-003] AI 없는 프로젝트 설정·기능 확인·보존
-  - state: agent-owned; depends: S140-001
+- [x] [S140-003] AI 없는 프로젝트 설정·기능 확인·보존
+  - state: complete; evidence: repo:docs/research/cli-project-reconfiguration-0.14.0.md#sha256:caa6cfad253427edbf24f6203cdb4f41ff714aa3f1d3a4a107065ed43315ee1d
 - [ ] [S140-004] 얇은 AI 연결과 제한된 결과 반환
   - state: agent-owned; depends: S140-002,S140-003
 
