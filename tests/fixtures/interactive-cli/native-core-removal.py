@@ -41,6 +41,7 @@ if sys.platform == "linux":
 binary.chmod(0o755)
 sha = lambda data: hashlib.sha256(data).hexdigest()
 binary_hash = sha(binary.read_bytes())
+entry = [str(binary)]
 receipt = prefix / "share/aigent-hive/install-receipt.json"
 if owner == "direct":
     receipt.parent.mkdir(parents=True)
@@ -92,7 +93,7 @@ run = Run("격리 OS의 실제 본체 제거와 자료 보존: " + owner,
 code = 1
 
 def invoke(*flags):
-    command = [str(binary), "uninstall", "--user-root", str(user), *flags, "--output", "json"]
+    command = [*entry, "uninstall", "--user-root", str(user), *flags, "--output", "json"]
     result = subprocess.run(command, env=environment, input=b"", capture_output=True, timeout=60)
     response = json.loads(result.stdout)
     events.append({"arguments": ["uninstall", *flags, "--output", "json"], "exit_code": result.returncode,
@@ -109,7 +110,7 @@ try:
         npm = Path(shutil.which("npm.cmd" if windows else "npm")).absolute()
         npm_js = (npm.parent / "node_modules/npm/bin/npm-cli.js" if windows else npm.resolve())
         assert node.is_file() and npm_js.is_file()
-        environment.update(PATH=os.pathsep.join(dict.fromkeys([str(node.parent), str(npm.parent)])),
+        environment.update(PATH=os.pathsep.join(dict.fromkeys([str(npm.parent), str(node.parent)])),
             NPM_CONFIG_PREFIX=str(prefix), NPM_CONFIG_USERCONFIG=str(work / "user.npmrc"),
             NPM_CONFIG_GLOBALCONFIG=str(work / "global.npmrc"), NPM_CONFIG_OFFLINE="true",
             NPM_CONFIG_AUDIT="false", NPM_CONFIG_FUND="false", NPM_CONFIG_IGNORE_SCRIPTS="true")
@@ -137,6 +138,10 @@ try:
         binary = npm_root / "aigent-hive/node_modules" / native_package / "bin" / name
         receipt = npm_root / "aigent-hive/package.json"
         assert binary.is_file() and sha(binary.read_bytes()) == binary_hash
+        entry = [str(node), str(npm_root / "aigent-hive/bin/hive.cjs")]
+        version = subprocess.run([*entry, "--version"], env=environment,
+                                 capture_output=True, text=True, timeout=15)
+        assert version.returncode == 0 and "0.14.0" in version.stdout, (version.stdout, version.stderr)
         for relative in ["hive-test-foreign/package.json", "hive-test-foreign/README.md"]:
             path = npm_root / relative
             preserved[path] = path.read_bytes()
