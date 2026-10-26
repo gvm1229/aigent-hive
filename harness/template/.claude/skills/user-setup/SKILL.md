@@ -18,9 +18,11 @@ that flow and explains its result. Global setup never authorizes project inspect
    PTY is not a user terminal. Without a user terminal, give this one command and the reason;
    do not wait for hidden input or replace the CLI with repeated AI questions.
 3. For a named setting or already supplied choices, read only
-   [reconfiguration](references/reconfiguration.md). Pass only the user's choices through the
-   shared file/patch input with `--input-channel agent`. Never generate the full YAML after each
-   answer, infer consent, or mark an Agent value as a direct human answer.
+   [reconfiguration](references/reconfiguration.md). Save the supplied choices in a local patch
+   file first, then pass its path with `--answers <patch-file> --input-channel agent`.
+   The CLI does not read answer documents from stdin. Get any unknown field key from the CLI's
+   relevant question section; never translate labels into guessed keys. Never regenerate the
+   full YAML after each answer, infer consent, or mark an Agent value as a direct human answer.
 4. For incomplete work, use the CLI's exact `next_action` or the same-root `--resume` flow.
    Preserve its operation ID. An interrupted AI response is a reason to inspect status, not to
    apply again or restart the questionnaire. Monitor consent review uses the separate `--resume

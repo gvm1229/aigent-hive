@@ -13,9 +13,18 @@ When the user already supplied choices, a small local JSON/YAML transport can co
 This is an example, not a default or authority to change language. Include only actual user choices.
 The CLI merges them with stored settings and preserves other values and provenance. Never put
 schema, provenance, root binding or operation metadata inside `answers`. For a fresh user root,
-interface language and selected hosts must be supplied; do not invent them. Factory defaults are
+`interface_language` and `selected_hosts` must be supplied; do not invent them. Factory defaults are
 appropriate only for a requested quick setup, not as inferred custom preferences.
 
+If a requested setting's field name or shape is unknown, read the matching
+`--describe --section <section> --output json` using the same user root. Select the section's
+exact ID from `available_sections` in the initial status summary; never invent a section name.
+Copy `question.key`
+exactly into a nested patch object: a key `/a/b` means `{"a":{"b":value}}`. Use only the
+requested sections, batch independent lookups, and never fetch the full schema or ask the user
+to repeat supplied choices. Keep labels separate from stored field names.
+
+Save that JSON to a regular local file. Do not pipe it into Hive or omit `--answers`.
 Apply an already authorized ordinary change through the same engine:
 
 ```text

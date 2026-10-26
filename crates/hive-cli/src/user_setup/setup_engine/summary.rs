@@ -162,6 +162,19 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
     });
     if status {
         add_status(&data, &mut summary);
+        let scope = if result.code == "hive.project-setup-shown" {
+            hive_core::preferences::PreferenceScope::Project
+        } else {
+            hive_core::preferences::PreferenceScope::User
+        };
+        if let Ok(catalog) = super::catalog() {
+            summary["available_sections"] = json!(catalog
+                .questions
+                .iter()
+                .filter(|question| question.scope == scope)
+                .map(|question| question.section.as_str())
+                .collect::<std::collections::BTreeSet<_>>());
+        }
     } else {
         add_completion(&result, &data, &mut summary);
     }
@@ -318,6 +331,14 @@ mod tests {
         assert_eq!(data["settings"]["persona"]["id"], "custom");
         assert_eq!(data["changed_path_count"], 1);
         assert_eq!(data["authorizes_dispatch"], false);
+        assert!(data["available_sections"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("language")));
+        assert!(!data["available_sections"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("interface")));
         assert!(data["pending"].get("answers").is_none());
     }
 
