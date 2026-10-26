@@ -223,7 +223,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
         with:
           toolchain: stable
+          components: clippy
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
+      - if: runner.os == 'macOS'
+        run: cargo clippy -p hive-cli --all-targets --all-features --locked -- -D warnings
+      - if: runner.os == 'macOS'
+        run: python scripts/test-artifacts.py run --purpose 'macOS 첫 갱신 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
+      - if: runner.os == 'macOS'
+        run: python tests/fixtures/interactive-cli/posix-legacy-ci.py
+      - if: always() && runner.os == 'macOS'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: macos-legacy-update-evidence
+          path: |
+            tests/results/runs/*.md
+            tests/work/posix-legacy-ci-*/**/results/*.json
+          retention-days: 7
 
   transfer-produce:
     name: Transfer producer (${{ matrix.os }})

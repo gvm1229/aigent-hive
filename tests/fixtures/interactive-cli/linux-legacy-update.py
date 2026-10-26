@@ -1,4 +1,4 @@
-"""Frozen-updater component acceptance, executed only inside the qualification container."""
+"""Frozen-updater component acceptance in an isolated container or hosted POSIX VM."""
 import hashlib
 import json
 import os
@@ -10,11 +10,22 @@ import subprocess
 import sys
 import time
 
-if sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1":
-    raise SystemExit("requires the isolated Linux qualification container")
+hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
+          and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"
+          and os.environ.get("HIVE_QUALIFICATION_VM") == "1"
+          and sys.platform in {"linux", "darwin"})
+if not hosted and (sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1"):
+    raise SystemExit("requires the isolated qualification container or hosted POSIX VM")
 mode = sys.argv[1]
 assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
-root = Path("/tmp/hive-first-update")
+if hosted:
+    assert mode in {"npm", "direct", "confirm", "cancel-resume"}
+source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
+platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
+candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
+root = Path(os.environ["HIVE_LEGACY_FIXTURE_ROOT"]) if hosted else Path("/tmp/hive-first-update")
+if hosted:
+    assert root.resolve().is_relative_to((source / "tests/work").resolve())
 root.mkdir()
 user = root / "user"
 user.mkdir()
@@ -23,13 +34,15 @@ package = root / "package"
 shim = root / "shim"
 shim.mkdir()
 binary = package / "bin/hive"
-predecessor = Path("/source/tests/work/public131-posix-0140/linux-x64/hive")
+predecessor = source / "tests/work/public131-posix-0140" / platform / "hive"
 old_digest = hashlib.sha256(predecessor.read_bytes()).hexdigest()
-assert old_digest == "c0ed023cd25463e9c2aa43a521d5717e5471e3748c3c3d65803e76b47de71c6d"
+registry = json.loads((source / "harness/setup/legacy-update-posix-images.json").read_text())
+original = next(item for item in registry["images"] if item["platform"] == platform and item["version"] == "0.13.1")
+assert old_digest == original["binary_sha256"]
 shutil.copyfile(predecessor, binary)
 binary.chmod(0o755)
-source_digest = hashlib.sha256(Path("/build/debug/hive").read_bytes()).hexdigest()
-metadata = {"name": "@aigent-hive/linux-x64", "version": "0.13.1", "aigentHive": {"productVersion": "0.13.1"}}
+source_digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+metadata = {"name": "@aigent-hive/" + platform, "version": "0.13.1", "aigentHive": {"productVersion": "0.13.1"}}
 (package / "package.json").write_text(json.dumps(metadata))
 receipt = package / "share/aigent-hive/install-receipt.json"
 if mode == "direct":
@@ -102,6 +115,18 @@ else:raise SystemExit('unsupported fake Codex command '+repr(args))
 path.write_text(json.dumps(state));print('{}')
 ''')
     (shim/"codex").chmod(0o755)
+if hosted:
+    for script in shim.iterdir():
+        if script.is_symlink():
+            continue
+        content = script.read_text().replace("/usr/bin/python3", sys.executable)
+        content = content.replace("/tmp/hive-first-update", str(root)).replace("/build/debug/hive", str(candidate))
+        content = content.replace("@aigent-hive/linux-x64", "@aigent-hive/" + platform)
+        if sys.platform == "darwin":
+            content = content.replace("subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)",
+                                      "# Keep the incoming Mach-O code signature intact.")
+        script.write_text(content)
+
 environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "LANG": "C.UTF-8",
                "LC_ALL": "C.UTF-8", "CODEX_HOME": str(root / "codex"),
                "NPM_CONFIG_PREFIX": str(root / "npm-prefix"), "NPM_CONFIG_CACHE": str(root / "npm-cache")}
@@ -494,13 +519,15 @@ incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,
     "incoming_stripped_sha256": incoming["sha256"], "installer_stub": incoming["installer"], "answers": answers,
-    "original_parent": "public 0.13.1 Linux x64", "incoming": "development 0.14.0",
+    "original_parent": "public 0.13.1 " + platform, "incoming": "development 0.14.0",
     "registry_target": "0.13.2-test.2", "private_user_mount": False, "terminal_runs": terminal_runs,
     "installer_invocations": int((root / "install-count").read_text()),
-    "scope": "Linux Docker PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
+    "scope": ("Hosted isolated POSIX VM" if hosted else "Linux Docker") + " PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
 if mode == "migration-review":
     evidence["followup"] = {"private_package_version": "0.14.0", "registry_candidate": "0.13.2-test.2",
         "settings_preserved": True, "original_migration_receipt_preserved": True,
         "no_reinstall": True, "scope": "current development package reconciliation; not public 0.14 acceptance"}
-Path("/results", mode + ".json").write_text(json.dumps(evidence, indent=2) + "\n")
+results = root / "results" if hosted else Path("/results")
+results.mkdir(exist_ok=True)
+(results / (mode + ".json")).write_text(json.dumps(evidence, indent=2) + "\n")
 print(json.dumps(evidence))
