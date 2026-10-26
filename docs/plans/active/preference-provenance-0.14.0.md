@@ -8,7 +8,7 @@
 - [x] [P140-001] 설정 자료 형식과 선택 출처의 원자적 저장
   - state: complete; evidence: repo:docs/research/cli-foundations-0.14.0.md#sha256:aaa49c66c9c3a5a4b41076404e1121a3ddb9f24fee2c523bcce0901ad5042164
 - [x] [P140-002] 이전 설정의 질문 기반 이전·중단 복구
-  - state: complete; evidence: repo:docs/research/cli-state-recovery-0.14.0.md#sha256:db34331eebe9e485027ba5b2c448de9008bff9f2e231e7e91ce319fce047c0cd
+  - state: complete; evidence: repo:docs/research/cli-state-recovery-0.14.0.md#sha256:05c6955f1239b38d706fcae7859669b4f0e028934049f047061d57508bcb769c
 
 ## P140-001 — 자료 형식
 
@@ -35,6 +35,8 @@
 - 완료: v1/v2 읽기, 저장 왕복, 값·지문 일치, 한 파일의 값/출처 동시 교체, 직접 편집·동시 변경·손상 기록 회귀 통과
 
 ## P140-002 — 이전과 동의
+
+- 교차 입력 결손63377679 수정: [실제 취소/파일 재개와 출처 보존](../../research/cli-state-recovery-0.14.0.md#교차-입력-경로의-반대-증거와-수정). 원래 조건 완료 복원, 실제 감시/본체 수용 별도
 
 - 진입: P140-001·S140-001 완료. 사용자 설정·실제 감시 상태·등록된 프로젝트 예외의 읽기 전용 비교
 - v1의true/false에서 의도 추정 금지. 검증 가능한 옛 동의가 없는 값은legacy-unknown, 그 값 자체는 보존. 새 bool 누락만으로 기존 보호 전체 해제 금지
