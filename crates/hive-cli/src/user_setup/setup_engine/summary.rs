@@ -83,6 +83,8 @@ fn add_status(data: &Value, summary: &mut Value) {
             "interface_language",
             "selected_hosts",
             "setup_mode",
+            "project_name",
+            "project_identity",
             "project_kind",
             "primary_host",
         ],
@@ -156,7 +158,7 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
         "summary":true,"summary_kind":if status {"status"} else {"completion"},
         "model_calls":0,"model_work_started":false,"verification_scope":"configuration-and-owned-projections","authorizes_dispatch":false,"changed_path_count":changed,
         "changed_paths_omitted":changed>0,"evidence_count":evidence_count,
-        "details":"Use the same explicit user root and project target with --show --output json, without --summary. Do not repeat apply to inspect its result."
+        "details":"Verify with --show --summary --output json using the same explicit roots. Omit --summary only for an explicit detailed inspection. Do not repeat apply to inspect its result."
     });
     if status {
         add_status(&data, &mut summary);
@@ -224,7 +226,7 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
             json!({"summary":true,"summary_kind":if status {"status"}else{"completion"},
             "details_omitted":true,"changed_path_count":changed,"evidence_count":evidence_count,
             "model_calls":0,"authorizes_dispatch":false,
-            "details":"Inspect --show --output json using the same targets without --summary; do not repeat apply."}),
+            "details":"Verify with --show --summary --output json using the same targets. Omit --summary only for an explicit detailed inspection; do not repeat apply."}),
         );
     }
     result

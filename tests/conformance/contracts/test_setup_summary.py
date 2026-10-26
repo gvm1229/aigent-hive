@@ -165,6 +165,8 @@ class SetupSummaryConformance(Phase1CliTestCase):
         user_before = user_settings.read_bytes()
         status = self.setup_result("--target", target, "--show", "--summary", limit=4096)
         self.assertEqual(status["data"]["settings"]["primary_host"], "codex")
+        self.assertEqual(status["data"]["settings"]["project_name"], original["project_name"])
+        self.assertEqual(status["data"]["settings"]["project_identity"], original["project_identity"])
         question = self.setup_result("--target", target, "--describe", "--question", "project-name")
         self.assertEqual(question["data"]["questions"][0]["current"], original["project_name"])
         self.assertEqual(snapshot_tree(target), before)
