@@ -67,6 +67,12 @@ public static class SetupConsoleFixture {
     static int ProjectFlow(Process child, SafeFileHandle input, string[] args) {
         WaitProjectStep(child,args[1],"project-mode"); Send(input,"\r");
         string progress=WaitProjectStep(child,args[1],"project-name");
+        if(args[3]=="project-quick") {
+            Send(input,args[6]+"\r\r\ryes\r");
+            if(!child.WaitForExit(30000)) return 28;
+            File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
+            return child.ExitCode;
+        }
         File.WriteAllText(Path.Combine(args[6],"question.ready"),progress);
         var deadline=Stopwatch.StartNew();
         while(!File.Exists(Path.Combine(args[6],"continue-user"))) {
@@ -104,7 +110,7 @@ public static class SetupConsoleFixture {
     public static int Main(string[] args) {
         Process child=null;
         try {
-            bool project=args.Length==7 && args[3]=="connection-loss";
+            bool project=args.Length==7 && (args[3]=="connection-loss" || args[3]=="project-quick");
             bool review=args.Length==4 && args[3]=="review-all";
             if(args.Length!=4 && !project) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
@@ -113,7 +119,7 @@ public static class SetupConsoleFixture {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
                 string command=project
-                    ? "setup --target \""+args[4]+"\" --capabilities \""+args[5]+"\" --interactive --user-root \""+args[1]+"\""
+                    ? "setup --target \""+args[4]+"\""+(args[5]=="-" ? "" : " --capabilities \""+args[5]+"\"")+" --interactive --user-root \""+args[1]+"\""
                     : "setup --scope user "+(review ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
                 var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
@@ -160,6 +166,40 @@ def compile_console_fixture(work_root):
 
 @unittest.skipUnless(os.name == "nt", "native Ctrl-C regression requires a private Windows console")
 class SetupConsoleInterruptConformance(Phase1CliTestCase):
+    def test_multiple_manifests_and_absent_host_complete_without_claiming_runtime_support(self):
+        helper = compile_console_fixture(self.work_root)
+        target = self.work_root / "mixed-project"
+        target.mkdir()
+        originals = {"package.json": b'{"name":"synthetic-js"}\n',
+            "Cargo.toml": b'[package]\nname="synthetic-rust"\nversion="1.0.0"\n',
+            "README.txt": b'Preserve the original note.\r\n'}
+        for name, content in originals.items():
+            (target / name).write_bytes(content)
+        result_path = self.work_root / "project-console.json"
+        startup = subprocess.STARTUPINFO()
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = subprocess.SW_HIDE
+        result = subprocess.run([str(helper), str(self.hive_binary), str(self.setup_user_root), str(result_path),
+            "project-quick", str(target), "-", "multi-manifest"], capture_output=True, text=True, timeout=45,
+            creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result_path.read_text())["exit_code"], 0)
+        answers = read_yaml(target / ".hive/setup-answers.yml")
+        self.assertEqual(answers["project_name"], "multi-manifest")
+        self.assertEqual(answers["project_kind"], "general")
+        self.assertEqual(answers["persistent_roles"], [])
+        self.assertEqual(answers["approved_fallback_hooks"], [])
+        capabilities = read_yaml(target / ".hive/config/capability-resolution.yml")
+        self.assertEqual(capabilities["host_version"], "unverified")
+        self.assertTrue(all(value=="unverified" for value in capabilities["capabilities"].values()))
+        for name, content in originals.items():
+            self.assertEqual((target / name).read_bytes(), content)
+        capability_input = self.work_root / "stored-capabilities.json"
+        capability_input.write_text(json.dumps(capabilities), encoding="utf-8")
+        checked, outcome = self.invoke_setup(target, answers=target / ".hive/setup-answers.yml",
+            capabilities=capability_input, mode="--validate")
+        self.assertEqual(checked.returncode, 0, outcome)
+
     def test_full_review_in_both_languages_keeps_choices_and_validates_file_results(self):
         from tests.conformance.integration.test_project_lifecycle import ProjectLifecycleConformance
         helper = compile_console_fixture(self.work_root)
