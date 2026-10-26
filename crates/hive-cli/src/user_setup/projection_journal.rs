@@ -437,7 +437,7 @@ mod tests {
             panic!("must reuse the journal")
         })
         .unwrap();
-        assert!(repeated.changed_paths.is_empty());
+        assert_eq!(repeated.changed_paths, Vec::<String>::new());
         std::fs::set_permissions(
             temp.path().join(&first),
             std::fs::Permissions::from_mode(0o660),
