@@ -10,12 +10,12 @@ use crate::ActionResult;
 pub(super) fn apply(
     arguments: &Arguments,
     config: &UserSetupConfig,
-    bytes: &[u8],
     expected: Option<&[u8]>,
     legacy_input: Option<&UserSetupConfig>,
     migration: Option<user_setup::progress_store::LegacyMigration>,
     options: &super::file_input::FileOptions,
 ) -> Result<ActionResult, SetupError> {
+    let mut config = config.clone();
     let index_rebuild_scope = options.index_rebuild_scope.as_deref();
     let store = ProgressStore::open(&arguments.user_root, None)?;
     store.recover_pending_state()?;
@@ -25,7 +25,7 @@ pub(super) fn apply(
         .as_ref()
         .filter(|p| p.phase != ProgressPhase::Complete)
     {
-        require_same_intent(pending, config, legacy_input)?;
+        require_same_intent(pending, &config, legacy_input)?;
         super::monitor_start::check_file_replay(pending, options.monitor_confirm.as_deref())?;
         if index_rebuild_scope.is_some_and(|digest| {
             pending
@@ -48,7 +48,10 @@ pub(super) fn apply(
                 false,
             );
         }
+        preserve_terminal_answers(pending, &mut config)?;
     }
+    let bytes =
+        serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     let _lease =
         crate::user_install::lock_user_setup(&arguments.root_cap).map_err(SetupError::Conflict)?;
     if !store.matches_config(expected) {
@@ -66,9 +69,9 @@ pub(super) fn apply(
             .map_err(|error| SetupError::Internal(error.to_string()))?,
     };
     let preview =
-        user_setup::execute_answers(&preview, bytes, user_setup::SetupBase::Expected(expected))?;
+        user_setup::execute_answers(&preview, &bytes, user_setup::SetupBase::Expected(expected))?;
     let answers: serde_json::Value =
-        serde_json::from_slice(bytes).map_err(|error| SetupError::Internal(error.to_string()))?;
+        serde_json::from_slice(&bytes).map_err(|error| SetupError::Internal(error.to_string()))?;
     let mut progress = match snapshot
         .progress
         .as_ref()
@@ -94,8 +97,41 @@ pub(super) fn apply(
     super::application::finish(
         &store,
         &progress,
-        super::legacy::apply(arguments, bytes, expected, &progress),
+        super::legacy::apply(arguments, &bytes, expected, &progress),
     )
+}
+
+fn preserve_terminal_answers(
+    progress: &SetupProgress,
+    config: &mut UserSetupConfig,
+) -> Result<(), SetupError> {
+    use hive_core::preferences::{DecisionOrigin, PreferenceDecisions, PreferenceInput};
+    let Some(saved) = progress.answers.get("preference_decisions") else {
+        return Ok(());
+    };
+    let records: PreferenceDecisions = serde_json::from_value(saved.clone())
+        .map_err(|error| SetupError::Verification(error.to_string()))?;
+    let catalog = super::catalog()?;
+    for (path, record) in records {
+        if record.input_channel == PreferenceInput::Terminal
+            && matches!(
+                record.origin,
+                DecisionOrigin::Explicit | DecisionOrigin::AcceptedDefault
+            )
+            && catalog.questions.iter().any(|question| {
+                question.key == path
+                    && record.question_id.as_deref() == Some(question.id.as_str())
+                    && record.question_revision == Some(question.revision)
+            })
+            && config
+                .preference_decisions
+                .get(&path)
+                .is_some_and(|current| current.value_digest == record.value_digest)
+        {
+            config.preference_decisions.insert(path, record);
+        }
+    }
+    Ok(())
 }
 
 fn require_same_intent(
@@ -131,6 +167,59 @@ mod tests {
         DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
     };
     use serde_json::json;
+
+    #[test]
+    fn same_draft_keeps_current_terminal_choices_but_not_stale_question_evidence() {
+        let root = crate::test_tempdir();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut answers = super::super::default_answers(Some(user_setup::InterfaceLanguage::En));
+        let mut original = PreferenceDecision::new(
+            &json!("en"),
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            env!("CARGO_PKG_VERSION"),
+            Some(42),
+        )
+        .unwrap();
+        original.question_id = Some("user-language".into());
+        original.question_revision = Some(1);
+        answers["preference_decisions"]["/interface_language"] = json!(original);
+        let mut progress = store
+            .new_progress("usage-enforcement".into(), answers)
+            .unwrap();
+        let mut candidate = user_setup::parse_and_validate_config(
+            &serde_json::to_vec(&super::super::default_answers(Some(
+                user_setup::InterfaceLanguage::En,
+            )))
+            .unwrap(),
+        )
+        .unwrap();
+        let agent = PreferenceDecision::new(
+            &json!("en"),
+            DecisionOrigin::ExternalChange,
+            PreferenceInput::Agent,
+            PreferenceScope::User,
+            env!("CARGO_PKG_VERSION"),
+            None,
+        )
+        .unwrap();
+        candidate
+            .preference_decisions
+            .insert("/interface_language".into(), agent.clone());
+        preserve_terminal_answers(&progress, &mut candidate).unwrap();
+        assert_eq!(
+            candidate.preference_decisions["/interface_language"],
+            original
+        );
+        candidate
+            .preference_decisions
+            .insert("/interface_language".into(), agent.clone());
+        progress.answers["preference_decisions"]["/interface_language"]["question_revision"] =
+            json!(2);
+        preserve_terminal_answers(&progress, &mut candidate).unwrap();
+        assert_eq!(candidate.preference_decisions["/interface_language"], agent);
+    }
 
     #[test]
     fn file_apply_accepts_the_same_saved_draft_and_rejects_different_choices() {

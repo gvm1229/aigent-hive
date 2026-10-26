@@ -190,19 +190,18 @@ pub(in crate::user_setup) fn execute(
             },
         )?;
     }
-    let bytes =
-        serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     if arguments.mode == SetupMode::Apply {
         return super::file_apply::apply(
             arguments,
             &config,
-            &bytes,
             existing.as_deref(),
             legacy_input.as_ref(),
             normalized.migration,
             options,
         );
     }
+    let bytes =
+        serde_json::to_vec(&config).map_err(|error| SetupError::Internal(error.to_string()))?;
     let mut result =
         user_setup::execute_answers(arguments, &bytes, SetupBase::Expected(existing.as_deref()))?;
     if arguments.mode == SetupMode::DryRun {

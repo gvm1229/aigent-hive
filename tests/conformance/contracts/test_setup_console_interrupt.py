@@ -140,6 +140,30 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
     def test_eof_is_not_a_negative_answer_and_saved_choices_resume(self):
         self.check_interruption("eof")
 
+    def test_same_file_after_ctrl_c_keeps_the_recorded_terminal_language(self):
+        from tests.conformance.integration.test_project_lifecycle import ProjectLifecycleConformance
+        root, progress_path = self.check_interruption("ctrl-c")
+        progress = read_yaml(progress_path)
+        original = progress["answers"]["preference_decisions"]["/interface_language"]
+        self.assertEqual(original["input_channel"], "terminal")
+        answers = self.work_root / "same-draft.json"
+        answers.write_text(json.dumps(progress["answers"]), encoding="utf-8")
+        fake = ProjectLifecycleConformance()
+        fake.work_root = self.work_root
+        fake.fake_bin = self.work_root / "fake-codex"
+        fake.fake_bin.mkdir()
+        fake.host_log = self.work_root / "fake-codex-calls.jsonl"
+        fake._write_fake_host("codex")
+        result = subprocess.run([str(self.hive_binary), "setup", "--scope", "user", "--user-root", str(root),
+            "--answers", str(answers), "--input-channel", "agent", "--apply", "--summary", "--output", "json"],
+            input="", capture_output=True, text=True, encoding="utf-8", timeout=40,
+            env={**os.environ, "PATH": str(fake.fake_bin), "HIVE_TEST_HOST_LOG": str(fake.host_log), "HIVE_TEST_USER_ROOT": str(root)})
+        self.assertEqual(result.returncode, 0, (result.stdout, result.stderr))
+        self.assertTrue(json.loads(result.stdout)["data"]["completion_verified"])
+        saved = read_yaml(root / ".hive/config/user-setup.yml")
+        self.assertEqual(saved["preference_decisions"]["/interface_language"], original)
+        self.assertEqual(read_yaml(progress_path)["operation_id"], progress["operation_id"])
+
     def check_interruption(self, kind):
         helper = compile_console_fixture(self.work_root)
         root = self.work_root / "signal-user"
@@ -172,6 +196,7 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
         self.assertEqual(json.loads(resumed.stdout)["status"], "needs-input")
         self.assertEqual(read_yaml(progress_path)["answers"]["interface_language"], "ko")
         self.assertNotIn("usage-enforcement", read_yaml(progress_path)["answered_questions"])
+        return root, progress_path
 
 
 if __name__ == "__main__":
