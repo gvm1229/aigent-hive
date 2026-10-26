@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -77,6 +78,45 @@ class InteractiveCliIsolation(unittest.TestCase):
             self.assertEqual(result.returncode, 0, (error, result.stderr))
         with self.assertRaises(MODULE.IsolationError):
             MODULE.Inspection(self.fixture, self.binary, source=self.source)
+
+
+class ModelProjectReceipt(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("model_project_receipt",
+            ROOT / "tests/fixtures/interactive-cli/model-project-receipt.py")
+        self.recorder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.recorder)
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.trial = Path(temporary.name)
+        (self.trial / "project").mkdir()
+        (self.trial / "project/README.txt").write_bytes(b"Synthetic user note. Preserve exactly.\n")
+
+    def test_absent_final_settings_preserves_failed_events_and_measured_bytes(self):
+        events = [{"operation": "hive", "arguments": ["setup", "--apply"],
+                   "exit_code": 2, "hive_input_bytes": 13560}]
+        (self.trial / "events.jsonl").write_text(json.dumps(events[0]) + "\n", encoding="utf-8")
+        result = self.recorder.collect(self.trial, {"user_before": {}}, {"status": "completed"})
+        self.assertEqual(result["events"], events)
+        self.assertEqual(result["hive_input_bytes"], 13560)
+        self.assertFalse(result["checks"]["final_settings_present"])
+        self.assertFalse(result["checks"]["no_failed_cli_retry"])
+
+    def test_missing_log_is_unknown_but_empty_observed_log_is_zero(self):
+        absent = self.recorder.collect(self.trial, {"user_before": {}}, {})
+        self.assertIsNone(absent["hive_input_bytes"])
+        (self.trial / "events.jsonl").write_text("", encoding="utf-8")
+        empty = self.recorder.collect(self.trial, {"user_before": {}}, {})
+        self.assertEqual(empty["hive_input_bytes"], 0)
+        self.assertFalse(empty["checks"]["host_completed"])
+
+    def test_truncated_log_preserves_observed_prefix_without_claiming_a_total(self):
+        (self.trial / "events.jsonl").write_text('{"hive_input_bytes":42}\n{', encoding="utf-8")
+        result = self.recorder.collect(self.trial, {"user_before": {}}, {})
+        self.assertEqual(result["observed_event_bytes"], 42)
+        self.assertIsNone(result["hive_input_bytes"])
+        self.assertEqual(len(result["events"]), 1)
+        self.assertTrue(result["errors"])
 
 
 if __name__ == "__main__":
