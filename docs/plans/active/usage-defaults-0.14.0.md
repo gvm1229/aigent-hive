@@ -5,8 +5,8 @@
 
 ## 항목
 
-- [ ] [G140-001] 기본값·전체 스위치·모든 실행 경로의 일치
-  - state: agent-owned; depends: P140-001
+- [x] [G140-001] 기본값·전체 스위치·모든 실행 경로의 일치
+  - state: complete; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:901c3b7ee2cb3fed9abdefb0a196bc371608f35215d9ab07ccd0eafc0355f09d
 - [ ] [G140-002] 기존 사용자 선택·감시 전환·실제 상태 확인
   - state: agent-owned; depends: G140-001,P140-002
 
@@ -62,9 +62,6 @@
 
 ## M08 비활성 정책의 실행 지침
 
-- Windows 부분 검증 `d2719dec`: `usage-guard`·`run-resume`·진입 문구/투영에 v2 정책 평가와 별도 승인 구분 반영. v1 독립0% 유지, 역사 원문·실사용 설치 불변
-- [자동 재개·세 호스트 투영](../../../tests/results/runs/20261025T053150-1ac42364b1d1.md)·[최종 투영](../../../tests/results/runs/20261025T053631-8adadd918a2c.md) 통과. 비활성에서도 승인1개·지시1개 필요, 센서0회·승인 재사용은 차단3. 옛 프로젝트/손상 기록 보존·잘못된 정책 거부·초기화 전용·경고 흐름도 Windows 검사에서 확인
-- 정본/투영·지문 검사 통과. Windows 임시 사용자 폴더·닫힌 PATH·가짜 명령의 파일/CLI 범위, 실제 모델·예약·앱 제어 미검증. 문구·재실행 예상 오류 수정, 실행기 준비 실패 보존
-- [Linux 빌드 시도](../../../tests/results/runs/20261025T052629-1ca98e48e808.md)는 Docker Linux 엔진 연결 부재로 컴파일 전 실패. Linux·macOS·격리 Windows 실제 수용 미실행, Windows 결과로 대체 금지
-- 소스07 `084ea468`: 설치판이 확인한 v2 비활성/경고 해석, 기존 중단·정확한 결합·승인 경계 보존. 지침 검사 통과, 설치0.13.1 변경 없음
-- 다음 독립 작업 M09. M08 Linux 검증과 G140-001 전체 완료는 계속 미완료
+- `d2719dec`·`084ea468`: 실행 Skill/투영과 소스07의 v2 정책 평가·별도 승인 구분, v1 보호·역사 원문·실제 설치 보존
+- [자동 재개·세 호스트 투영](../../../tests/results/runs/20261025T053150-1ac42364b1d1.md)·[최종 투영](../../../tests/results/runs/20261025T053631-8adadd918a2c.md) 통과. Windows 임시 사용자·가짜 명령 범위, 실제 모델/감시 제어 제외
+- [당시 Linux 엔진 연결 실패](../../../tests/results/runs/20261025T052629-1ca98e48e808.md) 보존. 후속24e51fa7 세 OS CI와 반복 실행 검사의 [G140-001 수용](../../research/cli-usage-settings-0.14.0.md), 실제 감시 G140-002는 미완료
