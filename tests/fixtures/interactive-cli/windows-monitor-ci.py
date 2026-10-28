@@ -103,6 +103,35 @@ def write_answers(name, settings):
     return str(path)
 
 
+def task_description(expected, replacement=None):
+    config = json.loads(monitor_path.read_text())
+    assert config["task_name"] == "AigentHive-UsageMonitor-" + sha(str(user).lower().encode())[:16]
+    source = r"""
+$ErrorActionPreference='Stop'
+Import-Module -Name @(($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'),($PSHOME+'\Modules\CimCmdlets\CimCmdlets.psd1'),($PSHOME+'\Modules\ScheduledTasks\ScheduledTasks.psd1'))
+$s=[Console]::In.ReadToEnd() | ConvertFrom-Json
+$task=Get-ScheduledTask -TaskName $s.task_name -ErrorAction Stop
+if($task.TaskPath -ne '\' -or $task.Description -ne $s.expected -or @($task.Actions).Count -ne 1 -or
+    $task.Actions[0].Execute -ne $s.launcher.executable -or $task.Actions[0].Arguments -ne $s.launcher.arguments){throw 'Fixture task identity changed'}
+$owner=[string]$task.Principal.UserId
+$sid=if($owner -match '^S-1-'){([Security.Principal.SecurityIdentifier]::new($owner)).Value}else{([Security.Principal.NTAccount]::new($owner)).Translate([Security.Principal.SecurityIdentifier]).Value}
+if($sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $task.Principal.LogonType -notin @('Interactive',3) -or $task.Principal.RunLevel -notin @('Limited',0)){throw 'Fixture task principal changed'}
+if($null -ne $s.replacement){
+    $task.Description=$s.replacement
+    $null=Set-ScheduledTask -InputObject $task
+    $task=Get-ScheduledTask -TaskName $s.task_name -ErrorAction Stop
+    if($task.Description -ne $s.replacement){throw 'Fixture description change was not applied'}
+}
+[Console]::WriteLine('fixture-task-verified')
+"""
+    ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    result = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", source],
+        env=environment, input=json.dumps({"task_name": config["task_name"], "launcher": config["launcher"],
+            "expected": expected, "replacement": replacement}).encode(), capture_output=True, timeout=20)
+    events.append({"fixture_task_description": "changed" if replacement else "checked", "exit_code": result.returncode})
+    assert result.returncode == 0, result.stderr.decode(errors="replace")[-1500:]
+
+
 def recovery_cases(base, on_file, off_file, consent):
     lifecycle = user / ".hive/history/lifecycle"
     invoke(*base, "--answers", on_file, "--monitor-confirm", consent,
@@ -123,7 +152,16 @@ def recovery_cases(base, on_file, off_file, consent):
         assert config_path.read_bytes() == saved_policy
         assert activation_path.read_bytes() == activation_before
         assert_idle()
-    invoke(*base, "--answers", off_file, "--apply")
+    owned_description = "Aigent Hive version-bound Codex usage protection"
+    conflict_description = owned_description + " / " + work.name
+    task_description(owned_description, conflict_description)
+    invoke(*base, "--answers", off_file, "--apply", expected=5)
+    assert config_path.read_bytes() == saved_policy
+    assert json.loads((runtime / "disable.json").read_text())["phase"] == "incomplete"
+    assert not invoke(*base, "--show")["data"]["actual_monitor_state"]["stop_verified"]
+    task_description(conflict_description)
+    task_description(conflict_description, owned_description)
+    invoke(*base, "--resume", "--non-interactive")
     assert not status()["controller_alive"]
 
     # This time stop only after the actual native controller has been verified.
