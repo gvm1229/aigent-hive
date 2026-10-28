@@ -1,5 +1,6 @@
 """Qualify real idle monitoring only in a disposable Windows hosted runner."""
 import copy
+from contextlib import contextmanager, nullcontext
 import hashlib
 import json
 import os
@@ -16,12 +17,13 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"], ["uninstall"], ["real-codex"])
+assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"], ["uninstall"], ["real-codex"], ["helper-recovery"])
 prepare_only = sys.argv[1:] == ["prepare"]
 recovery_mode = sys.argv[1:] == ["recovery"]
 direct_mode = sys.argv[1:] == ["current-direct"]
 real_codex = sys.argv[1:] == ["real-codex"]
-uninstall_mode = sys.argv[1:] in (["uninstall"], ["real-codex"])
+helper_recovery = sys.argv[1:] == ["helper-recovery"]
+uninstall_mode = sys.argv[1:] in (["uninstall"], ["real-codex"], ["helper-recovery"])
 if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
@@ -70,7 +72,7 @@ if not real_codex:
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("격리 Windows 공개 Codex CLI의 실제 연결·보존 제거" if real_codex else "격리 Windows 활성 감시의 보존 제거·실패 재개·재설치" if uninstall_mode else "Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
+run = Run("격리 Windows 제거 보조 처리의 실제 잠금 실패와 재개" if helper_recovery else "격리 Windows 공개 Codex CLI의 실제 연결·보존 제거" if real_codex else "격리 Windows 활성 감시의 보존 제거·실패 재개·재설치" if uninstall_mode else "Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
     [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
@@ -288,6 +290,39 @@ def recovery_cases(base, on_file, off_file, consent):
         assert not status()["controller_alive"]
 
 
+@contextmanager
+def hold_fixture_image():
+    import ctypes
+    from ctypes import wintypes
+    assert binary.resolve().is_relative_to(work) and not binary.is_symlink()
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.CreateFileW(str(binary), 0x80000000, 1, None, 3, 128, None)
+    assert handle not in (None, ctypes.c_void_p(-1).value), ctypes.get_last_error()
+    try:
+        yield
+    finally:
+        assert kernel.CloseHandle(handle), ctypes.get_last_error()
+
+
+def wait_for_removal_helper(path, operation):
+    expected = user / ".hive/maintenance/uninstall" / operation / "hive.exe"
+    assert path.resolve() == expected.resolve()
+    ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    result = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+        "$ErrorActionPreference='Stop';$path=[IO.Path]::GetFullPath([Console]::In.ReadToEnd());"
+        "$name=[IO.Path]::GetFileNameWithoutExtension($path);"
+        "foreach($p in [Diagnostics.Process]::GetProcessesByName($name)){"
+        "if([IO.Path]::GetFullPath($p.MainModule.FileName) -ne $path){continue};"
+        "if(-not $p.WaitForExit(5000)){throw 'Owned helper has not exited'}}"],
+        env=environment, input=str(path).encode(), capture_output=True, timeout=15)
+    assert result.returncode == 0, result.stderr
+
+
 def uninstall_case(base, on_file, consent):
     version = subprocess.run([str(binary), "--version"], env=environment, capture_output=True, timeout=15)
     assert version.returncode == 0
@@ -331,7 +366,23 @@ def uninstall_case(base, on_file, consent):
     assert sha(binary.read_bytes()) == original_image
     assert all(path.read_bytes() == data for path, data in preserved.items())
     task_description(conflict, owned)
-    removed = invoke("uninstall", "--user-root", str(user), "--resume", refused["data"]["operation_id"], expected=2)
+    with hold_fixture_image() if helper_recovery else nullcontext():
+        removed = invoke("uninstall", "--user-root", str(user), "--resume", refused["data"]["operation_id"], expected=2)
+        if helper_recovery:
+            history = user / removed["data"]["receipt"]
+            assert history.resolve().is_relative_to((user / ".hive/history/lifecycle").resolve())
+            deadline = time.monotonic() + 40
+            while time.monotonic() < deadline:
+                failed = json.loads(history.read_text())
+                if failed["last_error"]:
+                    break
+                time.sleep(.1)
+            assert failed["phase"] == "files-removed" and "remained locked" in (failed["last_error"] or ""), failed
+            assert sha(binary.read_bytes()) == original_image
+            wait_for_removal_helper(user / removed["data"]["helper"], removed["data"]["operation_id"])
+            events.append({"helper_failure_observed": True, "receipt": failed})
+    if helper_recovery:
+        removed = invoke("uninstall", "--user-root", str(user), "--resume", refused["data"]["operation_id"], expected=2)
     assert removed["data"]["operation_id"] == refused["data"]["operation_id"]
     history = user / removed["data"]["receipt"]
     assert history.resolve().is_relative_to((user / ".hive/history/lifecycle").resolve())

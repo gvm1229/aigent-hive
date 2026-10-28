@@ -242,6 +242,8 @@ jobs:
       - run: python tests/fixtures/interactive-cli/native-core-removal.py
       - run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - if: runner.os == 'Windows'
+        run: python tests/fixtures/interactive-cli/windows-monitor-ci.py helper-recovery
+      - if: runner.os == 'Windows'
         run: python tests/fixtures/interactive-cli/windows-monitor-ci.py real-codex
       - if: failure() && runner.os == 'Windows'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
