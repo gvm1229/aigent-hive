@@ -8,14 +8,17 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.request
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-assert sys.argv[1:] in ([], ["prepare"], ["recovery"])
+assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"])
 prepare_only = sys.argv[1:] == ["prepare"]
 recovery_mode = sys.argv[1:] == ["recovery"]
+direct_mode = sys.argv[1:] == ["current-direct"]
 if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
@@ -27,7 +30,8 @@ user.mkdir()
 fake_bin = work / "fake-bin"
 fake_bin.mkdir()
 candidate = ROOT / "target/debug/hive.exe"
-binary = work / "hive.exe"
+binary = work / "prefix/bin/hive.exe" if direct_mode else work / "hive.exe"
+binary.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(candidate, binary)
 environment = {"PATH": str(fake_bin), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
 for key in ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR",
@@ -62,7 +66,7 @@ program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성"),
+run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
     [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
@@ -101,6 +105,41 @@ def write_answers(name, settings):
     path = work / name
     path.write_text(json.dumps(settings), encoding="utf-8")
     return str(path)
+
+
+def current_direct_update():
+    receipt = work / "prefix/share/aigent-hive/install-receipt.json"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
+        "version": "0.14.0", "package_version": "0.14.0", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
+    with urllib.request.urlopen("https://registry.npmjs.org/aigent-hive", timeout=15) as response:
+        metadata = response.read(1024 * 1024 + 1)
+    assert len(metadata) <= 1024 * 1024
+    latest = json.loads(metadata)["dist-tags"]["latest"]
+    assert tuple(map(int, latest.split('.'))) <= (0, 14, 0), "newer external release changes this fixture"
+    events.append({"registry_before_sha256": sha(metadata), "latest": latest})
+    before = {path: path.read_bytes() for path in [binary, receipt, config_path]}
+    command = [str(binary), "update", "--confirm", "--user-root", str(user), "--output", "json"]
+    result = subprocess.run(command, env=environment, input=b"", capture_output=True, timeout=180)
+    parent = json.loads(result.stdout)
+    events.append({"arguments": command[1:], "update_parent_exit": result.returncode, "update_parent": parent})
+    if parent["code"] == "hive.update-handoff-pending":
+        record = Path(parent["data"]["completion_record"])
+        assert record.parent.samefile(user / ".hive/runtime/update")
+        assert record.suffix == ".json" and len(record.stem) == 64 and all(c in "0123456789abcdef" for c in record.stem)
+        until = time.monotonic() + 120
+        while time.monotonic() < until:
+            try:
+                completed = json.loads(record.read_bytes())
+                events.append({"old_handoff_result": completed})
+                break
+            except json.JSONDecodeError:
+                time.sleep(.1)
+        else:
+            raise AssertionError("owned handoff completion did not arrive")
+    assert result.returncode == 0, parent
+    assert parent["code"] == "hive.update-complete" and parent["data"]["steps"]["core"] == "unchanged", parent
+    assert all(path.read_bytes() == data for path, data in before.items())
 
 
 def task_description(expected, replacement=None):
@@ -204,7 +243,7 @@ def recovery_cases(base, on_file, off_file, consent):
 
 
 try:
-    if not prepare_only:
+    if not prepare_only and not direct_mode:
         # One environment availability check, before creating any native registration.
         ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
         probe = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
@@ -229,47 +268,50 @@ try:
     off_file = write_answers("off.json", defaults)
     invoke("install", "--scope", "user", "--host", "codex", "--user-root", str(user), "--apply")
     invoke(*base, "--answers", off_file, "--apply")
-    initial_config = config_path.read_bytes()
-    on = copy.deepcopy(defaults)
-    on["usage_guard"]["enforcement_enabled"] = True
-    on["usage_guard"]["midway"]["enabled"] = True
-    on["usage_guard"]["midway"]["reset_enabled"] = True
-    on_file = write_answers("on.json", on)
-    preview = invoke(*base, "--answers", on_file, "--dry-run")
-    consent = preview["data"]["monitor_activation"]
-    assert consent["platform_eligible"] and consent["requires_separate_confirmation"], preview
-    assert consent["runtime_verification"] == "not-performed", preview
-    invoke(*base, "--answers", on_file, "--apply", expected=2)
-    assert config_path.read_bytes() == initial_config and not monitor_path.exists()
-    if recovery_mode:
-        recovery_cases(base, on_file, off_file, consent["confirmation_digest"])
-    elif not prepare_only:
-        invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
-        assert_idle()
-        first_activation = json.loads(activation_path.read_text())
-        assert first_activation["phase"] == "complete", first_activation
-        history = runtime / "retained-history.txt"
-        history.write_bytes(b"Owned synthetic history; preserve across disable and activation.\n")
-        preserved = history.read_bytes()
-        invoke(*base, "--answers", off_file, "--apply")
-        stopped = status()
-        assert not stopped["controller_alive"] and not stopped["verified_saved_selection"], stopped
-        assert json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
-        assert history.read_bytes() == preserved
-        # A new preview/consent is necessary after this later disable selection.
+    if direct_mode:
+        current_direct_update()
+    else:
+        initial_config = config_path.read_bytes()
+        on = copy.deepcopy(defaults)
+        on["usage_guard"]["enforcement_enabled"] = True
+        on["usage_guard"]["midway"]["enabled"] = True
+        on["usage_guard"]["midway"]["reset_enabled"] = True
+        on_file = write_answers("on.json", on)
         preview = invoke(*base, "--answers", on_file, "--dry-run")
-        next_consent = preview["data"]["monitor_activation"]["confirmation_digest"]
-        assert next_consent != consent["confirmation_digest"]
-        invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"],
-               "--apply", expected=2)
-        assert not json.loads(monitor_path.read_text())["enabled"]
-        invoke(*base, "--answers", on_file, "--monitor-confirm", next_consent, "--apply")
-        assert_idle()
-        second = json.loads(activation_path.read_text())
-        assert second["phase"] == "complete" and second["operation_id"] != first_activation["operation_id"]
-        assert history.read_bytes() == preserved
-        invoke(*base, "--answers", off_file, "--apply")
-        assert not status()["controller_alive"]
+        consent = preview["data"]["monitor_activation"]
+        assert consent["platform_eligible"] and consent["requires_separate_confirmation"], preview
+        assert consent["runtime_verification"] == "not-performed", preview
+        invoke(*base, "--answers", on_file, "--apply", expected=2)
+        assert config_path.read_bytes() == initial_config and not monitor_path.exists()
+        if recovery_mode:
+            recovery_cases(base, on_file, off_file, consent["confirmation_digest"])
+        elif not prepare_only:
+            invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
+            assert_idle()
+            first_activation = json.loads(activation_path.read_text())
+            assert first_activation["phase"] == "complete", first_activation
+            history = runtime / "retained-history.txt"
+            history.write_bytes(b"Owned synthetic history; preserve across disable and activation.\n")
+            preserved = history.read_bytes()
+            invoke(*base, "--answers", off_file, "--apply")
+            stopped = status()
+            assert not stopped["controller_alive"] and not stopped["verified_saved_selection"], stopped
+            assert json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
+            assert history.read_bytes() == preserved
+            # A new preview/consent is necessary after this later disable selection.
+            preview = invoke(*base, "--answers", on_file, "--dry-run")
+            next_consent = preview["data"]["monitor_activation"]["confirmation_digest"]
+            assert next_consent != consent["confirmation_digest"]
+            invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"],
+                   "--apply", expected=2)
+            assert not json.loads(monitor_path.read_text())["enabled"]
+            invoke(*base, "--answers", on_file, "--monitor-confirm", next_consent, "--apply")
+            assert_idle()
+            second = json.loads(activation_path.read_text())
+            assert second["phase"] == "complete" and second["operation_id"] != first_activation["operation_id"]
+            assert history.read_bytes() == preserved
+            invoke(*base, "--answers", off_file, "--apply")
+            assert not status()["controller_alive"]
     code = 0
 except BaseException as failure:
     events.append({"failure": str(failure)[:2500]})
@@ -295,5 +337,5 @@ finally:
     run.finish(code, details={"events": events, "diagnostics": diagnostics,
         "candidate_sha256": sha(candidate.read_bytes()),
         "input_sha256": {p.name: sha(p.read_bytes()) for p in work.glob("*.json")},
-        "scope": "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
+        "scope": "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
 raise SystemExit(code)
