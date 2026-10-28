@@ -45,6 +45,11 @@ class WindowsUsageMonitor(unittest.TestCase):
 
     def adapter_functions(self) -> str:
         source = SCRIPT.read_text(encoding="utf-8")
+        # Scheduler behavior tests supply their own cmdlets; never replace those
+        # stubs with real OS effects. Native imports are checked by the hosted flow.
+        scheduler_import = "Import-Module -Name ($PSHOME + '\\Modules\\ScheduledTasks\\ScheduledTasks.psd1')"
+        self.assertEqual(source.count(scheduler_import), 1)
+        source = source.replace(scheduler_import, "# scheduler supplied by the fixture")
         # Exercise production functions and switch without accepting arbitrary product targets.
         return source.replace("$request = [Console]::In.ReadToEnd() | ConvertFrom-Json", "# request supplied by the fixture")
 

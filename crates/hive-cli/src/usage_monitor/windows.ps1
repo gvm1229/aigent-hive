@@ -1,9 +1,20 @@
 # Embedded, fixed Windows adapter. Requests are JSON on stdin, never shell fragments.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# Avoid cold module-catalog discovery inside the bounded native request.
+Import-Module -Name @(
+    ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'),
+    ($PSHOME + '\Modules\CimCmdlets\CimCmdlets.psd1')
+)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+if ($request.operation -eq 'inspect') {
+    Import-Module -Name ($PSHOME + '\Modules\Appx\Appx.psd1')
+}
+if ($request.operation -in @('register', 'start', 'inspect-task', 'unregister')) {
+    Import-Module -Name ($PSHOME + '\Modules\ScheduledTasks\ScheduledTasks.psd1')
+}
 function Emit($value) { ConvertTo-Json -InputObject $value -Depth 12 -Compress }
 function Owned-Task($task,$expected) {
     if(-not $task -or $task.Description -ne 'Aigent Hive version-bound Codex usage protection' -or @($task.Actions).Count -ne 1 -or
