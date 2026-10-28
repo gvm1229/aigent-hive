@@ -6,7 +6,7 @@
 ## 항목
 
 - [x] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
-  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:0dc290eab5c29f796bf64400035030766f1284be91af93a9f822ecab6c888397
+  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:f87df7533f41112b6e320150379bf94ac7b871205de3e2568a8abb774fe24df9
 - [ ] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
   - state: agent-owned; depends: U140-001,P140-002,G140-002
 - [ ] [U140-003] 상세 결과·설정 안내·호환 출력

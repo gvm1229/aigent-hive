@@ -9,11 +9,11 @@ summary: "검증한 갱신 완료와 정확한 옛 사본의 제한된 정리"
 tags: [installation, update, windows]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/update_activation/direct_replacement.rs#sha256:843c1e751496a72c49ad2c80e54e306d1429b17a05c0405516ebb5e36450762e"
+  - "repo:crates/hive-cli/src/update_activation/direct_replacement.rs#sha256:79e8da18d7b1bc52635ebc7ac6f8a49258efced50104baefb1002a592f35ee6c"
   - "repo:tests/results/runs/20261028T145420-9c52bbfb7ef7.md#sha256:7b3faecc2237ab66cb606251706dbb748dd8b76e4be09d677587827623463e1d"
   - "repo:tests/results/runs/20261028T150434-59ea1195546c.md#sha256:57e83b84a6f8abb170de3c9fdc4cb1bdc8946b1640cc65ab023aac810824dc0b"
 links: [interactive-binary-update]
-reviewed_revision: "git:9ec3019a07dcfb20506b1c15f64d20504fe96284"
+reviewed_revision: "git:3ee8193d37b842ec45c87c1dcde70c18843c0694"
 status: active
 ---
 
