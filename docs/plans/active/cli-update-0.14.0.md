@@ -6,11 +6,11 @@
 ## 항목
 
 - [x] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
-  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:1a05447e1c1fa6f647deccc13af1174acd9e9fc095e730af03f5afe364a8dd33
-- [ ] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
-  - state: agent-owned; depends: U140-001,P140-002,G140-002
-- [ ] [U140-003] 상세 결과·설정 안내·호환 출력
-  - state: agent-owned; depends: U140-002
+  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
+- [x] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
+  - state: complete; depends: U140-001,P140-002,G140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
+- [x] [U140-003] 상세 결과·설정 안내·호환 출력
+  - state: complete; depends: U140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
 
 ## 현재 확인 사실과 선택
 
@@ -37,7 +37,7 @@ M10 Linux 구현 결정: `/proc`의 직접 부모 argv·시작 시각·동일 �
 
 ## U140-002 — 정식 조정기
 
-M11 느린 적용의 복구 보완: `user_install/host_state.rs`에서 명시적 복구의 Forward 시작값과 목표값이 다르고 실제 조회가 시작값과 정확히 같을 때만 대기 해제. 이전 원 명령의 성공 주장 없음. 조회 실패·외부 변경·동일 상태의 갱신·목표값 관측·자동 실패 처리는 기존 보존·거부 유지.
+- [느린 적용의 복구 조건과 수용 대응](../../research/cli-update-validation-0.14.0.md#u140-002-수용-대응)
 
 - 소유: update_activation, user_install, user_setup의 호출 경계와 기존 install/update journal. 본체 교체/질문/설정 이전/하네스 갱신/검증을 서로 구분된 단계로 분리
 - 흐름: 읽기 전용 설치 확인→갱신 승인→core 획득/검증/활성→새 버전 완료기 실행→언어/선택→변경 미리보기→설정/감시/하네스 적용→검증→요약
