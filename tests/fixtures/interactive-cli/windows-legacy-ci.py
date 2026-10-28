@@ -29,9 +29,9 @@ for path in [user, prefix / "bin", prefix / "share/aigent-hive", shim, work / "i
 candidate = ROOT / "target/debug/hive.exe"
 diagnostic = sys.argv[1:] == ["--diagnostic"]
 assert not sys.argv[1:] or diagnostic
-diagnostic_source = ROOT / "crates/hive-cli/src/main.rs"
-original_source = patched_source = None
+diagnostic_sources = []
 if diagnostic:
+    diagnostic_source = ROOT / "crates/hive-cli/src/main.rs"
     original_source = diagnostic_source.read_bytes()
     needle = b"fn emit_action_result(result: &ActionResult) -> ExitCode {"
     assert original_source.count(needle) == 1
@@ -44,7 +44,20 @@ if diagnostic:
     }
 '''
     patched_source = original_source.replace(needle, replacement)
-    diagnostic_source.write_bytes(patched_source)
+    diagnostic_sources.append((diagnostic_source, original_source, patched_source))
+    for relative, before, after in [
+        ("crates/hive-cli/src/update_bridge/windows.rs",
+         b'"legacy updater parent could not be verified; settings preserved".into()',
+         b'format!("legacy diagnostic reply: {reply}")'),
+        ("crates/hive-cli/src/update_bridge/windows.ps1",
+         b"reason='parent-or-console-unavailable'", b"reason=$_.Exception.Message"),
+    ]:
+        path = ROOT / relative
+        original_bytes = path.read_bytes()
+        assert original_bytes.count(before) == 1
+        diagnostic_sources.append((path, original_bytes, original_bytes.replace(before, after)))
+    for path, _, patched_bytes in diagnostic_sources:
+        path.write_bytes(patched_bytes)
     build_command = [shutil.which("cargo"), "build", "-p", "hive-cli", "--locked"]
     build = Run("격리 CI 전용 반환 오류 진단 빌드", build_command, paths=["target/debug"])
     build_code = 1
@@ -53,8 +66,9 @@ if diagnostic:
     finally:
         build.finish(build_code, details={"scope": "diagnostic incoming variant only; copied result message, unchanged authorization/return; not product acceptance"})
         if build_code:
-            assert diagnostic_source.read_bytes() == patched_source
-            diagnostic_source.write_bytes(original_source)
+            for path, original_bytes, patched_bytes in diagnostic_sources:
+                assert path.read_bytes() == patched_bytes
+                path.write_bytes(original_bytes)
     if build_code:
         raise SystemExit(build_code)
 original = prefix / "bin/hive.exe"
@@ -212,6 +226,7 @@ finally:
             "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; diagnostic variants never acceptance; not public14 installer, real app/monitor control or personal installation"})
     finally:
         if diagnostic:
-            assert diagnostic_source.read_bytes() == patched_source
-            diagnostic_source.write_bytes(original_source)
+            for path, original_bytes, patched_bytes in diagnostic_sources:
+                assert path.read_bytes() == patched_bytes
+                path.write_bytes(original_bytes)
 raise SystemExit(code)
