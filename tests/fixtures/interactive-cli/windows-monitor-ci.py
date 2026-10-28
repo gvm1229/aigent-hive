@@ -16,11 +16,12 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"], ["uninstall"])
+assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"], ["uninstall"], ["real-codex"])
 prepare_only = sys.argv[1:] == ["prepare"]
 recovery_mode = sys.argv[1:] == ["recovery"]
 direct_mode = sys.argv[1:] == ["current-direct"]
-uninstall_mode = sys.argv[1:] == ["uninstall"]
+real_codex = sys.argv[1:] == ["real-codex"]
+uninstall_mode = sys.argv[1:] in (["uninstall"], ["real-codex"])
 if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
@@ -62,13 +63,14 @@ program = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant)
                and isinstance(n.value, str) and n.value.startswith("import json"))
 program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
     "__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.0"))
-(fake_bin / "codex.py").write_text(program, encoding="utf-8")
-(fake_bin / "codex.cmd").write_text(
-    f'@"{sys.executable}" "%~dp0codex.py" %*\r\n', encoding="utf-8")
+if not real_codex:
+    (fake_bin / "codex.py").write_text(program, encoding="utf-8")
+    (fake_bin / "codex.cmd").write_text(
+        f'@"{sys.executable}" "%~dp0codex.py" %*\r\n', encoding="utf-8")
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("격리 Windows 활성 감시의 보존 제거·실패 재개·재설치" if uninstall_mode else "Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
+run = Run("격리 Windows 공개 Codex CLI의 실제 연결·보존 제거" if real_codex else "격리 Windows 활성 감시의 보존 제거·실패 재개·재설치" if uninstall_mode else "Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
     [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
@@ -80,7 +82,7 @@ code = 1
 
 def invoke(*args, expected=0, extra=None):
     result = subprocess.run([str(binary), *args, "--output", "json"], env={**environment, **(extra or {})},
-        stdin=subprocess.DEVNULL, capture_output=True, timeout=150)
+        cwd=user if real_codex else None, stdin=subprocess.DEVNULL, capture_output=True, timeout=150)
     response = json.loads(result.stdout) if result.stdout.strip() else {}
     events.append({"arguments": list(args), "exit_code": result.returncode,
                    "code": response.get("code"), "message": response.get("message"), "faults": extra or {},
@@ -107,6 +109,48 @@ def write_answers(name, settings):
     path = work / name
     path.write_text(json.dumps(settings), encoding="utf-8")
     return str(path)
+
+
+def install_real_codex():
+    version = "0.165.0"
+    integrity = "sha512-aiwtQVp2KBhJld966CuU5bVfQ46VNB4mNTl6giX3WGZdt4euI3tv2RUqJpnupPNA8DXHg2z+RoQ0Zfw87dy8Lw=="
+    with urllib.request.urlopen("https://registry.npmjs.org/@openai%2fcodex/" + version, timeout=20) as response:
+        metadata_bytes = response.read(512 * 1024 + 1)
+    assert len(metadata_bytes) <= 512 * 1024
+    metadata = json.loads(metadata_bytes)
+    assert metadata["name"] == "@openai/codex" and metadata["version"] == version
+    assert metadata["dist"]["integrity"] == integrity
+    node = Path(shutil.which("node")).resolve()
+    npm_cmd = Path(shutil.which("npm.cmd")).absolute()
+    npm_js = npm_cmd.parent / "node_modules/npm/bin/npm-cli.js"
+    assert node.is_file() and npm_js.is_file()
+    tools_prefix = work / "host-tools"
+    tools_prefix.mkdir()
+    environment.update(HOME=str(user), USERPROFILE=str(user), CODEX_HOME=str(user / ".codex"),
+        NPM_CONFIG_PREFIX=str(tools_prefix), NPM_CONFIG_USERCONFIG=str(work / "host-user.npmrc"),
+        NPM_CONFIG_GLOBALCONFIG=str(work / "host-global.npmrc"), NPM_CONFIG_REGISTRY="https://registry.npmjs.org",
+        NPM_CONFIG_AUDIT="false", NPM_CONFIG_FUND="false", NPM_CONFIG_IGNORE_SCRIPTS="true",
+        PATH=os.pathsep.join([str(tools_prefix), str(node.parent)]))
+    install = subprocess.run([str(node), str(npm_js), "install", "--global", "--prefix", str(tools_prefix),
+        "@openai/codex@" + version], env=environment, cwd=user, capture_output=True, timeout=180)
+    events.append({"real_codex_install_exit": install.returncode, "package": version,
+        "integrity": integrity, "metadata_sha256": sha(metadata_bytes), "node_sha256": sha(node.read_bytes()),
+        "npm_entry_sha256": sha(npm_js.read_bytes()), "stderr": install.stderr.decode(errors="replace")[-1500:]})
+    assert install.returncode == 0, events[-1]
+    images = list((tools_prefix / "node_modules/@openai").rglob("codex.exe"))
+    assert len(images) == 1 and images[0].resolve().is_relative_to(tools_prefix)
+    environment["HIVE_TEST_REAL_CODEX_BINARY"] = str(images[0])
+    events.append({"real_codex_binary_sha256": sha(images[0].read_bytes())})
+    for args in [("--version",), ("plugin", "list", "--help"), ("plugin", "add", "--help"),
+                 ("plugin", "remove", "--help"), ("plugin", "marketplace", "list", "--help")]:
+        probe = subprocess.run([str(images[0]), *args], env=environment, cwd=user,
+            capture_output=True, timeout=20)
+        text = (probe.stdout + probe.stderr).decode(errors="replace")
+        events.append({"real_codex_probe": list(args), "exit_code": probe.returncode,
+                       "output_sha256": sha(probe.stdout + probe.stderr), "output": text[:2000]})
+        assert probe.returncode == 0, "public Codex command unavailable: " + text[:1000]
+        if "--help" in args:
+            assert "--json" in text, "public Codex command lacks required structured output"
 
 
 def current_direct_update():
@@ -299,7 +343,14 @@ def uninstall_case(base, on_file, consent):
         time.sleep(.1)
     assert completed["phase"] == "complete", completed.get("last_error")
     assert not binary.exists() and not receipt.exists()
-    assert not json.loads((work / "host-state.json").read_text())["plugin"]
+    if real_codex:
+        listed = subprocess.run([environment["HIVE_TEST_REAL_CODEX_BINARY"], "plugin", "list", "--json"],
+            env=environment, cwd=user, capture_output=True, timeout=20)
+        assert listed.returncode == 0, listed.stderr
+        assert not json.loads(listed.stdout)["installed"]
+        events.append({"real_codex_removed": True, "list_sha256": sha(listed.stdout)})
+    else:
+        assert not json.loads((work / "host-state.json").read_text())["plugin"]
     assert all(path.read_bytes() == data for path, data in preserved.items())
     monitor = json.loads(monitor_path.read_text())
     assert not monitor["enabled"] and json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
@@ -307,8 +358,9 @@ def uninstall_case(base, on_file, consent):
     assert task_name == "AigentHive-UsageMonitor-" + sha(str(user).lower().encode())[:16]
     ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     absent = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
-        "Import-Module ($PSHOME+'\\Modules\\ScheduledTasks\\ScheduledTasks.psd1');"
-        "$name=[Console]::In.ReadToEnd();if(Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue){exit 1}"],
+        "$ErrorActionPreference='Stop';Import-Module ($PSHOME+'\\Modules\\ScheduledTasks\\ScheduledTasks.psd1');"
+        "$name=[Console]::In.ReadToEnd();foreach($task in @(Get-ScheduledTask -TaskPath '\\' -ErrorAction Stop))"
+        "{if($task.TaskName -eq $name){exit 1}}"],
         env=environment, input=task_name.encode(), capture_output=True, timeout=20)
     assert absent.returncode == 0, absent.stderr
     events.append({"removal_complete": True, "task_absent": True, "receipt": completed,
@@ -324,6 +376,8 @@ def uninstall_case(base, on_file, consent):
 
 
 try:
+    if real_codex:
+        install_real_codex()
     if not prepare_only and not direct_mode:
         # One environment availability check, before creating any native registration.
         ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
@@ -420,5 +474,5 @@ finally:
     run.finish(code, details={"events": events, "diagnostics": diagnostics,
         "candidate_sha256": sha(candidate.read_bytes()),
         "input_sha256": {p.name: sha(p.read_bytes()) for p in work.glob("*.json")},
-        "scope": "GitHub-hosted Windows; actual owned task/idle monitor and private direct image, stop failure/refusal/same-operation removal/resume/reinstall. Fixed Codex plugin CLI only, no actual app/subscription/model/public14 artifact acceptance." if uninstall_mode else "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
+        "scope": "GitHub-hosted Windows; pinned public Codex CLI with fresh private home/cache and no credentials, local plugin commands only. Real idle monitor/task and private direct Hive image. No model, desktop session control, subscription observation or public14 artifact acceptance." if real_codex else "GitHub-hosted Windows; actual owned task/idle monitor and private direct image, stop failure/refusal/same-operation removal/resume/reinstall. Fixed Codex plugin CLI only, no actual app/subscription/model/public14 artifact acceptance." if uninstall_mode else "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
 raise SystemExit(code)
