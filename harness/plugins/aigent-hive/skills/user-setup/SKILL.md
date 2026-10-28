@@ -20,8 +20,9 @@ that flow and explains its result. Global setup never authorizes project inspect
 3. For a named setting or already supplied choices, read only
    [reconfiguration](references/reconfiguration.md). Copy `answer_patch_template` from the status
    result without changing its `kind` or `schema_version`; fill only `answers` with supplied choices.
-   Save it in a local patch
-   file first, then pass its path with `--answers <patch-file> --input-channel agent`.
+   Save the complete document as `<patch-file>`. For an authorized change, use the complete command:
+   `hive setup --scope user --user-root <user-root> --answers <patch-file> --input-channel agent --apply --summary --output json`.
+   Keep the explicit `--apply` mode; use the full preview if separate consent is needed.
    The CLI does not read answer documents from stdin. Get any unknown field key from the CLI's
    relevant question section; never translate labels into guessed keys. Never regenerate the
    full YAML after each answer, infer consent, or mark an Agent value as a direct human answer.

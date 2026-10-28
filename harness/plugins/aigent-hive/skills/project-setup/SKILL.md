@@ -20,12 +20,14 @@ setup belongs to user-setup. Never put a consumer harness in a `hive-source.json
    A hidden tool PTY is not a user terminal. If none exists, give this one command and the reason;
    do not start an input wait or switch to repeated AI questions.
 3. Resume incomplete work with the CLI's exact `next_action`. Do not restart answered questions.
-   For choices already supplied by the user, use the existing file input with
-   `--input-channel agent`, or the small answer-patch format described in
+   For choices already supplied by the user, use the existing file input or the small format in
    [structured choices](references/structured-choices.md). Copy `answer_patch_template` from the
-   status result, keep `kind` and `schema_version` unchanged, and fill only `answers`.
-   Use only trusted supplied or saved
-   capability material; never fabricate a capability file to make apply succeed.
+   status result, keep `kind` and `schema_version` unchanged, fill only `answers`, and save the
+   complete document as `<patch-file>`. For an authorized change, use the complete command:
+   `hive setup --target <project-root> --user-root <user-root> --answers <patch-file> --capabilities <trusted-capabilities-file> --input-channel agent --apply --summary --output json`.
+   Keep the explicit `--apply` mode. Use only trusted supplied or saved capability material;
+   never fabricate a capability file to make apply succeed. See structured choices when that
+   material is unavailable or separate consent is needed.
 4. Read an apply/validate result with `--summary --output json`. Check its status, exit code,
    actual capability limits and pending action. The normal completion response is at most 8KiB;
    state is at most 4KiB. An optional pending question is not a failed installation. A pending,
