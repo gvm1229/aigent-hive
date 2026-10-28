@@ -1,5 +1,6 @@
 """Frozen Windows direct updater, private console and fixed synthetic installer/host."""
 import ast
+import base64
 import hashlib
 import io
 import json
@@ -49,7 +50,7 @@ try:
     (user / "README.txt").write_bytes(b"Preserve this synthetic user note.\r\n")
 
     installer = r'''
-using System; using System.IO; using System.Reflection; using System.Security.Cryptography;
+using System; using System.IO; using System.Reflection; using System.Security.Cryptography; using System.Diagnostics;
 public static class FixtureInstaller {
     static string Plain(string value) { return Path.GetFullPath(value.StartsWith(@"\\?\") ? value.Substring(4) : value); }
     public static int Main(string[] args) {
@@ -68,6 +69,29 @@ public static class FixtureInstaller {
     }
 }
 '''
+    (work / "installer.cs").write_text(installer)
+    registry = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode("utf-8")
+    bridge = (ROOT / "crates/hive-cli/src/update_bridge/windows.ps1").read_text()
+    bridge = bridge.replace("{{REGISTRY_DIGEST}}", "sha256:" + sha(registry.encode()))
+    for placeholder, filename in [("{{PARENT_SOURCE}}", "windows-parent.cs"), ("{{CONSOLE_SOURCE}}", "windows-console.cs")]:
+        bridge = bridge.replace(placeholder, base64.b64encode((ROOT / "crates/hive-cli/src/update_bridge" / filename).read_bytes()).decode())
+    # Only this test copy returns a bounded exception message for the synthetic parent.
+    bridge = bridge.replace("reason='parent-or-console-unavailable'", "reason=$_.Exception.Message")
+    (work / "probe.ps1").write_text(bridge, encoding="utf-8")
+    (work / "probe-request.json").write_text(json.dumps({"operation": "inspect", "caller_pid": "__CALLER__", "registry": registry}))
+    installer = installer.replace('File.WriteAllText(Path.Combine(root,"install-count"),"1"); return 0;', r'''
+        File.WriteAllText(Path.Combine(root,"install-count"),"1");
+        var probe=new ProcessStartInfo(Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"),"System32/WindowsPowerShell/v1.0/powershell.exe"),"-NoProfile -NonInteractive -WindowStyle Hidden -File \""+Path.Combine(root,"probe.ps1")+"\"");
+        probe.UseShellExecute=false; probe.CreateNoWindow=true; probe.RedirectStandardInput=true; probe.RedirectStandardOutput=true; probe.RedirectStandardError=true;
+        using(var child=Process.Start(probe)) {
+            child.StandardInput.WriteLine(File.ReadAllText(Path.Combine(root,"probe-request.json")).Replace("\"__CALLER__\"",Process.GetCurrentProcess().Id.ToString()));
+            child.StandardInput.WriteLine("{\"operation\":\"open\"}");
+            child.StandardInput.WriteLine("{\"operation\":\"close\"}"); child.StandardInput.Close();
+            var output=child.StandardOutput.ReadToEndAsync(); var error=child.StandardError.ReadToEndAsync();
+            if(!child.WaitForExit(25000)) { child.Kill(); return 23; }
+            File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),output.Result+error.Result);
+        }
+        return 0;''')
     (work / "installer.cs").write_text(installer)
     tree = ast.parse((ROOT / "tests/conformance/contracts/test_setup_console_interrupt.py").read_text())
     console_source = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
@@ -109,7 +133,8 @@ else:print('{}')
     error = Path(str(result) + ".error.txt")
     assert process.returncode == 0, (process.returncode,
         result.read_text(encoding="utf-8", errors="replace") if result.exists() else process.stderr.decode(errors="replace"),
-        error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception")
+        error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception",
+        (work / "bridge-probe.txt").read_text(encoding="utf-8", errors="replace")[-8000:] if (work / "bridge-probe.txt").exists() else "no parent probe")
     report = json.loads(result.read_text())
     assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
     shown = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
