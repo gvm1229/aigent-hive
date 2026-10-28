@@ -1,4 +1,5 @@
-"""Prepare exactly eight fresh, pinned M20 inputs; never launch a model."""
+"""Prepare fresh, pinned M20 inputs; never launch a model."""
+import argparse
 import ast
 import hashlib
 import json
@@ -16,7 +17,11 @@ from scripts.test_artifacts import Run
 from tests.conformance.support.harness import write_operational_user_setup
 
 assert os.name == "nt", "This qualified transport uses private Windows profiles."
-BASE = ROOT / "tests/work/m20-comparison-1d01e7d0"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--project-guard-off", action="store_true")
+options = parser.parse_args()
+BASE = ROOT / ("tests/work/m20-project-guard-off-1d01e7d0" if options.project_guard_off
+               else "tests/work/m20-comparison-1d01e7d0")
 assert not BASE.exists(), "Never replace an earlier trial."
 BASELINE = ROOT / "tests/work/legacy-file-normalize-0140/public-package/bin/hive.exe"
 CANDIDATE = ROOT / "tests/work/m19-candidate-1d01e7d0/hive.exe"
@@ -39,13 +44,13 @@ common_user = {"interface_language": "ko", "selected_hosts": ["codex"],
     "wiki": {"enabled": True, "language": "ko", "backend": "markdown"},
     "profile": {"contexts": ["non-developer"]}, "persona": {"id": "balanced"},
     "skills": {"mode": "all"}, "judge_invocation": "explicit", "update_check": {"enabled": False}}
-record = Run("M20 원본/후보의 여덟 독립 고정 입력 준비", [sys.executable, str(Path(__file__).resolve())],
+record = Run("M20 원본/후보의 독립 고정 입력 준비", [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
              paths=[BASE.relative_to(ROOT).as_posix()])
 trials = []
 code = 1
 try:
     BASE.mkdir()
-    for scope in ["user", "project"]:
+    for scope in (["project"] if options.project_guard_off else ["user", "project"]):
         for version, (binary, binary_hash) in PINS.items():
             for sample in [1, 2]:
                 trial = BASE / f"{scope}-{version}-{sample}"
@@ -72,10 +77,16 @@ try:
                 user_before, fragments = {}, {}
                 if scope == "project":
                     write_operational_user_setup(trial / "user")
+                    if options.project_guard_off:
+                        settings_path = trial / "user/.hive/config/user-setup.yml"
+                        settings = yaml.safe_load(settings_path.read_text(encoding="utf-8"))
+                        settings["usage_guard"]["enabled"] = False
+                        settings["usage_guard"]["codexbar_fallback_enabled"] = False
+                        settings_path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
                     user_before[".hive/config/user-setup.yml"] = sha(trial / "user/.hive/config/user-setup.yml")
                     for name, content in {"AGENTS.md": "Synthetic user instruction. Preserve exactly.\n", ".gitignore": "user-cache/\n"}.items():
                         (trial / "project" / name).write_text(content, encoding="utf-8")
-                        fragments["project/" + name] = content
+                        fragments["project/" + name] = (trial / "project" / name).read_bytes().decode("utf-8")
                     env = {"PATH": str(trial / "closed-bin"), "HOME": str(trial / "profile"), "USERPROFILE": str(trial / "profile"),
                            "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": str(trial / "empty-git-config"),
                            "SystemRoot": os.environ["SystemRoot"]}
@@ -109,6 +120,7 @@ try:
                     "speed": "measured throughput unavailable; tool priority metadata is not interpreted as UI Fast",
                     "token_measurements_available": False, "cache_conditions": "new conversation and private filesystem per trial; provider prompt cache unknown",
                     "optional_features": "explicitly deferred; no activation or inferred answer",
+                    "project_guard": "disabled with fallback disabled" if options.project_guard_off else "original fixture defaults",
                     "input_sha256": {p.relative_to(trial).as_posix(): sha(p) for p in trial.rglob("*") if p.is_file() and ".git" not in p.relative_to(trial).parts},
                     "python": sys.executable}
                 (trial / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
@@ -117,5 +129,5 @@ try:
     (BASE / "manifest.json").write_text(json.dumps({"trials": trials, "requested_mode": "host-default-non-fast", "model_runs": 0}, indent=2), encoding="utf-8")
     code = 0
 finally:
-    record.finish(code, details={"trials": trials, "scope": "Preparation only. Public immutable13.1 Skill/Git bytes and original image; fixed14 image/current Skill; eight fresh private fixtures. No model, real app/service or cost-result claim."})
+    record.finish(code, details={"trials": trials, "scope": "Preparation only. Public immutable13.1 Skill/Git bytes and original image; fixed14 image/current Skill; fresh private fixtures. No model, real app/service or cost-result claim."})
 print(json.dumps({"root": str(BASE), "trial_count": len(trials), "model_runs": 0}))
