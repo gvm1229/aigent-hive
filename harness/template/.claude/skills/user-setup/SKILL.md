@@ -47,7 +47,10 @@ Do not use a summary in place of a complete approval preview.
 Never call provider APIs, obtain credentials, read foreign runtime/session state or plugin caches,
 edit host-global configuration, install CodexBar without consent, or change host model/fast settings.
 Direct CLI setup makes zero provider-model calls. Optional AI explanations can use a light model
-at normal speed, but specific host/model recommendations require actual qualification evidence.
+at normal speed. For model-choice advice in Codex, suggest available Luna medium for quick or
+custom global setup. Evidence covers setup accuracy, not measured speed or cost savings. Do not
+extend that recommendation to custom project roles. On other hosts, discuss only their available
+light models; do not present Codex model names. Never change the user's model or speed settings.
 
 When both scopes were requested, finish user setup and continue the named project through
 project-setup. Otherwise do not inspect or create a project harness, compaction hook, Git commit

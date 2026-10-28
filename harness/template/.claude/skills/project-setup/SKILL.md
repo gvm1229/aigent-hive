@@ -53,3 +53,9 @@ A full section/schema is an explicit diagnostic, not a normal setup prerequisite
   or pushes under setup alone. A direct CLI setup makes zero provider-model calls.
 - Return to any remaining authorized outer task after verified setup. A finished Skill is not a
   claim that the outer task is complete.
+
+For optional model-choice advice in Codex, suggest available Luna low for quick project setup and
+prefer normal speed. Evidence covers quick-setup accuracy, not custom-role reliability, measured
+speed or cost savings. Do not recommend a model for unqualified routes. On other hosts, discuss
+only their available light models; do not present Codex model names. Keep model and speed changes
+under the user's control. The direct CLI needs no model.
