@@ -183,6 +183,64 @@ class ModelProjectReceipt(unittest.TestCase):
         self.assertEqual(events[0]["path"], "SKILL.md")
         self.assertEqual(events[1]["hive_input_bytes"], len(refused.stderr))
 
+    def test_comparison_keeps_legacy_limits_separate_and_rejects_repeated_failures(self):
+        user = self.trial / "user"
+        (user / ".hive/config").mkdir(parents=True)
+        (user / "README.txt").write_bytes(b"Synthetic user note. Preserve exactly.\n")
+        (user / ".hive/config/user-setup.yml").write_text('{"interface_language":"ko"}', encoding="utf-8")
+        events = [{"operation": "hive", "arguments": ["setup", "--apply"], "exit_code": 0, "hive_input_bytes": 9000}]
+        log = self.trial / "events.jsonl"
+        log.write_text(json.dumps(events[0]) + "\n", encoding="utf-8")
+        config = {"comparison": True, "comparison_version": "0.13.1", "setup_scope": "user",
+                  "user_before": {}, "expected_values": {"/interface_language": "ko"}}
+        result = self.recorder.collect(self.trial, config, {"status": "completed"})
+        self.assertTrue(all(result["checks"].values()), result)
+        self.assertNotIn("bounded_responses", result["checks"])
+        config["comparison_version"] = "0.14.0"
+        result = self.recorder.collect(self.trial, config, {"status": "completed"})
+        self.assertFalse(result["checks"]["bounded_responses"])
+        self.assertTrue(result["errors"])
+        failure = {"operation": "hive", "arguments": ["setup", "--dry-run"], "exit_code": 2,
+                   "hive_input_bytes": 80, "result": {"code": "invalid", "message": "unknown flag"}}
+        log.write_text("\n".join(json.dumps(e) for e in [failure, failure, *events]), encoding="utf-8")
+        config["comparison_version"] = "0.13.1"
+        result = self.recorder.collect(self.trial, config, {"status": "completed"})
+        self.assertFalse(result["checks"]["no_repeated_failed_input"])
+        self.assertEqual(result["hive_input_bytes"], 9160)
+
+    def test_comparison_transport_refuses_foreign_roots_and_optional_activation(self):
+        tool = self.trial / "tool.py"
+        tool.write_bytes((ROOT / "tests/fixtures/interactive-cli/model-trial-tool.py").read_bytes())
+        (self.trial / "config.json").write_text(json.dumps({"comparison": True, "setup_scope": "user",
+            "readable_paths": ["user/.hive/config/user-setup.yml"]}), encoding="utf-8")
+        commands = [
+            ["hive", "setup", "--scope", "user", "--user-root", str(self.trial.parent / "foreign"), "--show"],
+            ["hive", "setup", "feature", "answer", "--id", "vector-search", "--answer", "yes", "--user-root", str(self.trial / "user")],
+            ["read-input", "../config.json"],
+        ]
+        for args in commands:
+            result = subprocess.run([sys.executable, str(tool), *args], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 2, result.stdout)
+        events = [json.loads(line) for line in (self.trial / "events.jsonl").read_text().splitlines()]
+        self.assertEqual(len(events), 3)
+        self.assertTrue(all(e["failure_kind"] == "fixture-input" for e in events))
+
+    def test_comparison_argument_contract_keeps_readonly_help_and_exact_user_scope(self):
+        import ast
+        source = ROOT / "tests/fixtures/interactive-cli/model-trial-tool.py"
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        function = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "comparison_arguments")
+        values = {"CONFIG": {"comparison": True, "setup_scope": "user"}, "ROOT": self.trial, "Path": Path}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), "exec"), values)
+        validate = values["comparison_arguments"]
+        for args in [["--version"], ["setup", "--help"], ["setup", "--scope", "user", "--describe", "--output", "json"],
+                     ["setup", "--progress", "status", "--scope", "user", "--user-root", str(self.trial / "user"), "--output", "json"]]:
+            validate(args)
+        for args in [["setup", "--help", "--apply"], ["setup", "--scope", "user", "--user-root", str(self.trial / "user"), "--apply", "--confirm-session-disable"],
+                     ["setup", "--scope", "user", "--user-root", str(self.trial.parent), "--show"]]:
+            with self.assertRaises(AssertionError):
+                validate(args)
+
 
 if __name__ == "__main__":
     unittest.main()

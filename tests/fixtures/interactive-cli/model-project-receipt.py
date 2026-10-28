@@ -44,6 +44,20 @@ def collect(trial, config, host):
         "bounded_responses": all(e["hive_input_bytes"] <= (4096 if "--show" in e.get("arguments", []) else 8192)
             for e in events if e.get("operation") == "hive" and "--dry-run" not in e.get("arguments", [])),
     }
+    comparison = config.get("comparison") is True
+    if comparison:
+        failures = [e for e in events if e.get("exit_code", 0) != 0]
+        fingerprints = [json.dumps([e.get("operation"), e.get("failure_kind"),
+            e.get("result")], sort_keys=True) for e in failures]
+        del checks["no_failed_cli_retry"]
+        checks["no_repeated_failed_input"] = len(fingerprints) == len(set(fingerprints))
+        checks["bounded_failure_corrections"] = len(failures) <= 2
+        descriptions = [e for e in events if e.get("operation") == "hive"
+            and e.get("exit_code", 0) == 0 and "--describe" in e.get("arguments", [])
+            and not {"--section", "--question"}.intersection(e.get("arguments", []))]
+        checks["no_repeated_full_schema"] = len(descriptions) <= 1
+        if config["comparison_version"] == "0.13.1":
+            del checks["bounded_responses"]
     scope = config.get("setup_scope", "project")
     settings = trial / ("user/.hive/config/user-setup.yml" if scope == "user" else "project/.hive/setup-answers.yml")
     checks["final_settings_present"] = settings.is_file()
@@ -56,9 +70,10 @@ def collect(trial, config, host):
                 "/persistent_roles": [], "/approved_optional_skills": [], "/approved_fallback_hooks": [],
             })
             checks["requested_values"] = all(pointer(answers, path) == value for path, value in expected.items())
-            choices = answers["preference_decisions"]
-            checks["agent_not_human"] = all(choices[k]["input_channel"] == "agent"
-                and choices[k]["decided_at"] is None for k in config.get("agent_fields", ["/project_name", "/project_kind", "/primary_host"]))
+            if not comparison or config["comparison_version"] != "0.13.1":
+                choices = answers["preference_decisions"]
+                checks["agent_not_human"] = all(choices[k]["input_channel"] == "agent"
+                    and choices[k]["decided_at"] is None for k in config.get("agent_fields", ["/project_name", "/project_kind", "/primary_host"]))
         checks["foreign_bytes_preserved"] = (trial / scope / "README.txt").read_bytes() == b"Synthetic user note. Preserve exactly.\n"
         checks["global_config_preserved"] = all(hashlib.sha256((trial / "user" / path).read_bytes()).hexdigest() == digest
             for path, digest in config["user_before"].items())
@@ -67,6 +82,11 @@ def collect(trial, config, host):
             if not path.is_relative_to(trial.resolve()):
                 raise ValueError("preservation path leaves the trial")
             checks["preserved:" + relative] = hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        for relative, content in config.get("preserved_fragments", {}).items():
+            path = (trial / relative).resolve()
+            if not path.is_relative_to(trial.resolve()):
+                raise ValueError("preservation fragment leaves the trial")
+            checks["preserved_fragment:" + relative] = content.encode("utf-8") in path.read_bytes()
         if config.get("progress_relative"):
             path = (trial / config["progress_relative"]).resolve()
             if not path.is_relative_to(trial.resolve()):
@@ -88,7 +108,7 @@ def main():
     if not trial.is_relative_to((ROOT / "tests/work").resolve()):
         raise ValueError("trial must remain inside tests/work")
     config = json.loads((trial / "config.json").read_text(encoding="utf-8"))
-    run = Run("실제 작은 모델의 고정 설정 사례 평가",
+    run = Run("M20 실제 작은 모델의 버전별 고정 설정 비교" if config.get("comparison") else "실제 작은 모델의 고정 설정 사례 평가",
         ["host:collaboration.spawn_agent", config["model"], config["reasoning_effort"], config["scenario"]],
         paths=[trial.relative_to(ROOT).as_posix()], binary=Path(config["binary"]))
     (trial / "ready.json").write_text(json.dumps({"report": run.relative}), encoding="utf-8")
