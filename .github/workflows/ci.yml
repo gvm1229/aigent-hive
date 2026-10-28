@@ -234,7 +234,7 @@ jobs:
         run: cargo clippy -p hive-cli --all-targets --all-features --locked -- -D warnings
       - run: python scripts/test-artifacts.py run --purpose '격리 OS 실제 명령 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
       - if: runner.os == 'macOS'
-        run: python tests/fixtures/interactive-cli/posix-legacy-ci.py late-slow
+        run: python tests/fixtures/interactive-cli/posix-legacy-ci.py direct
       - run: python tests/fixtures/interactive-cli/native-core-removal.py
       - run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
