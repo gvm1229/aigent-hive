@@ -15,6 +15,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text.RegularExpressions;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 public static class SetupConsoleFixture {
     [StructLayout(LayoutKind.Explicit, Size=20)]
@@ -42,6 +43,21 @@ public static class SetupConsoleFixture {
         uint written;
         if(!WriteConsoleInput(input,records,(uint)records.Length,out written) || written!=records.Length)
             throw new InvalidOperationException("private input failed");
+    }
+    [StructLayout(LayoutKind.Sequential)] struct Point { public short X,Y; }
+    [StructLayout(LayoutKind.Sequential)] struct Rectangle { public short Left,Top,Right,Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct ScreenInfo { public Point Size,Cursor; public short Attributes; public Rectangle Window; public Point Maximum; }
+    [DllImport("kernel32.dll")] static extern bool GetConsoleScreenBufferInfo(SafeFileHandle output,out ScreenInfo info);
+    [DllImport("kernel32.dll",EntryPoint="ReadConsoleOutputCharacterW",CharSet=CharSet.Unicode)]
+    static extern bool ReadConsoleOutputCharacter(SafeFileHandle output,StringBuilder text,uint length,Point start,out uint read);
+    static string OwnConsoleTail() {
+        using(var output=CreateFile("CONOUT$",0x80000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
+            ScreenInfo info; if(!GetConsoleScreenBufferInfo(output,out info)) return "console unavailable";
+            int end=info.Cursor.Y*info.Size.X+info.Cursor.X, count=Math.Min(end,12000), offset=end-count;
+            var start=new Point {X=(short)(offset%info.Size.X),Y=(short)(offset/info.Size.X)};
+            var text=new StringBuilder(count); uint read;
+            return ReadConsoleOutputCharacter(output,text,(uint)count,start,out read) ? text.ToString() : "console unreadable";
+        }
     }
     static void WaitStep(Process child, string path, string step) {
         var deadline=Stopwatch.StartNew();
@@ -140,10 +156,14 @@ public static class SetupConsoleFixture {
                         return 0;
                     }
                 } catch(IOException) { }
+                if(helper!=null && helper.HasExited) throw new InvalidOperationException("legacy helper ended before setup completion: "+helper.ExitCode);
                 Thread.Sleep(50);
             }
             throw new InvalidOperationException("legacy direct flow timeout at "+last);
-        } finally { if(helper!=null) { if(!helper.HasExited) helper.Kill(); helper.Dispose(); } }
+        } finally {
+            if(!File.Exists(args[2])) File.WriteAllText(args[2],"step="+last+"; confirmed="+confirmed+"; helper="+(helper==null?"absent":helper.HasExited?helper.ExitCode.ToString():"running")+"\n"+OwnConsoleTail());
+            if(helper!=null) { if(!helper.HasExited) helper.Kill(); helper.Dispose(); }
+        }
     }
     public static int Main(string[] args) {
         Process child=null;
