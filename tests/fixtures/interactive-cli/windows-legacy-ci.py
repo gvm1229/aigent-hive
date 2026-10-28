@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -26,15 +27,17 @@ user, prefix, shim = work / "user", work / "prefix", work / "shim"
 for path in [user, prefix / "bin", prefix / "share/aigent-hive", shim, work / "incoming"]:
     path.mkdir(parents=True, exist_ok=True)
 candidate = ROOT / "target/debug/hive.exe"
-if sys.argv[1:]:
+mode = sys.argv[1] if len(sys.argv) == 2 else "direct"
+if len(sys.argv) > 2 or mode not in {"direct", "cancel-resume", "deadline-resume"}:
     raise SystemExit("unexpected qualification arguments")
 original = prefix / "bin/hive.exe"
 original_hash = "e34e5b7486feb6adc52f5b0ca59c01da303a14af2ecd397b1c8e60c9ecab7824"
 sha = lambda data: hashlib.sha256(data).hexdigest()
-run = Run("격리 Windows의 공개0.13.1 직접 갱신·질문·완료",
+run = Run("격리 Windows의 공개0.13.1 직접 갱신: " + mode,
           [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
           paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 code = 1
+results = {}
 try:
     with urllib.request.urlopen("https://registry.npmjs.org/@aigent-hive/win32-x64/-/win32-x64-0.13.1.tgz", timeout=30) as response:
         archive = response.read(128 * 1024 * 1024 + 1)
@@ -57,6 +60,8 @@ public static class FixtureInstaller {
     public static int Main(string[] args) {
         string root=Directory.GetParent(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)).FullName;
         if(!Path.GetFileName(root).StartsWith("windows-legacy-ci-") || File.ReadAllText(Path.Combine(root,"fixture-only"))!="0.14.0-direct-fixture") return 20;
+        string count=Path.Combine(root,"install-count");
+        File.WriteAllText(count,(File.Exists(count)?Int32.Parse(File.ReadAllText(count))+1:1).ToString());
         int p=Array.IndexOf(args,"-Prefix"), v=Array.IndexOf(args,"-Version"), n=Array.IndexOf(args,"-PackageVersion");
         if(p<0 || v<0 || n<0 || p+1>=args.Length || v+1>=args.Length || n+1>=args.Length) return 21;
         string prefix=Path.Combine(root,"prefix");
@@ -66,7 +71,7 @@ public static class FixtureInstaller {
         File.Copy(Path.Combine(root,"incoming/hive.exe"),target,true);
         string hash; using(var file=File.OpenRead(target)) using(var digest=SHA256.Create()) hash=BitConverter.ToString(digest.ComputeHash(file)).Replace("-","").ToLowerInvariant();
         File.WriteAllText(Path.Combine(prefix,"share/aigent-hive/install-receipt.json"),"{\"schema_version\":1,\"owner\":\"direct\",\"product\":\"aigent-hive\",\"version\":\"0.13.2\",\"package_version\":\"0.13.2-test.2\",\"artifact_sha256\":\"sha256:"+hash+"\"}");
-        File.WriteAllText(Path.Combine(root,"install-count"),"1"); return 0;
+        return 0;
     }
 }
 '''
@@ -108,20 +113,49 @@ else:print('{}')
     startup = subprocess.STARTUPINFO()
     startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startup.wShowWindow = subprocess.SW_HIDE
-    process = subprocess.run([str(work / "console.exe"), str(original), str(user), str(result), "legacy-direct"],
-        env=environment, capture_output=True, timeout=150, creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
+    console_mode = {"direct":"legacy-direct", "cancel-resume":"legacy-cancel", "deadline-resume":"legacy-deadline"}[mode]
+    process = subprocess.run([str(work / "console.exe"), str(original), str(user), str(result), console_mode],
+        env=environment, capture_output=True, timeout=500 if mode == "deadline-resume" else 150,
+        creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
     error = Path(str(result) + ".error.txt")
     assert process.returncode == 0, (process.returncode,
         result.read_text(encoding="utf-8", errors="replace") if result.exists() else process.stderr.decode(errors="replace"),
         error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception")
     report = json.loads(result.read_text())
-    assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
+    results["initial"] = report
+    prior = None
+    if mode == "direct":
+        assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
+    else:
+        assert report["helper_exit_code"] == 2 and not report["confirmed"] and report["questions"] == 1
+        if mode == "deadline-resume":
+            assert 400_000 <= report["question_wait_ms"] < 440_000, report
+        assert not (user / ".hive/config/user-setup.yml").exists()
+        pending = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
+                                 env=environment, capture_output=True, timeout=30)
+        assert pending.returncode == 0, pending.stderr
+        prior = json.loads(pending.stdout)["data"]["pending"]
+        assert prior["phase"] == "awaiting-answers" and prior["answers"]["interface_language"] == "ko"
+        assert prior["step"] not in prior["answered_questions"]
+        resume_result = work / "resume-result.json"
+        resumed = subprocess.run([str(work / "console.exe"), str(original), str(user), str(resume_result), "update-resume"],
+            env=environment, capture_output=True, timeout=45, creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
+        assert resumed.returncode == 0, (resumed.returncode, resumed.stderr.decode(errors="replace"),
+            Path(str(resume_result) + ".error.txt").read_text(encoding="utf-8", errors="replace") if Path(str(resume_result) + ".error.txt").exists() else "no fixture exception")
+        results["resumed"] = json.loads(resume_result.read_text())
+        assert results["resumed"]["exit_code"] == 0 and results["resumed"]["confirmed"]
     shown = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
                            env=environment, capture_output=True, timeout=30)
     assert shown.returncode == 0, shown.stderr
     saved = json.loads(shown.stdout)["data"]["stored"]
     assert saved["schema_version"] == 2 and saved["interface_language"] == "ko"
     assert saved["selected_hosts"] == ["antigravity"] and not saved["usage_guard"]["enforcement_enabled"]
+    if prior is not None:
+        assert saved["preference_decisions"]["/interface_language"] == prior["answers"]["preference_decisions"]["/interface_language"]
+        state = (user / ".hive/config/setup-progress/user.yml").read_text(encoding="utf-8")
+        assert "phase: complete" in state
+        assert re.search(r'''(?m)^operation_id: ['"]?([a-f0-9]{64})''', state).group(1) == prior["operation_id"]
+        results["operation_preserved"] = results["language_decision_preserved"] = True
     assert sha(original.read_bytes()) == sha(candidate.read_bytes())
     assert sha((work / "original-preserved.exe").read_bytes()) == original_hash
     assert (work / "install-count").read_text() == "1"
@@ -129,5 +163,6 @@ else:print('{}')
     code = 0
 finally:
     run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
+        "scenario": mode, "results": results,
         "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; unmodified product source; not public14 installer, real app/monitor control or personal installation"})
 raise SystemExit(code)

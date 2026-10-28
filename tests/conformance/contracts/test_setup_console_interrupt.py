@@ -100,7 +100,7 @@ public static class SetupConsoleFixture {
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
         return child.ExitCode;
     }
-    static int ReviewAll(Process child, SafeFileHandle input, string[] args) {
+    static int ReviewAll(Process child, SafeFileHandle input, string[] args, bool resumeUpdate=false) {
         string path=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string last=""; bool confirmed=false; int answered=0;
         var deadline=Stopwatch.StartNew();
@@ -112,7 +112,8 @@ public static class SetupConsoleFixture {
                     var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
                     if(step.Success && step.Groups[1].Value!=last) {
                         last=step.Groups[1].Value;
-                        Send(input,last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
+                        if(resumeUpdate && last=="user-language") throw new InvalidOperationException("saved language asked twice");
+                        Send(input,resumeUpdate ? "\r" : last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
                         answered++;
                     }
                 }
@@ -127,11 +128,13 @@ public static class SetupConsoleFixture {
         string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string expected=Path.GetFullPath(Path.Combine(args[1],".hive/runtime/update/hive-direct-update-helper.exe"));
         Process helper=null; string last=""; bool confirmed=false; int answered=0;
+        bool stop=args[3]!="legacy-direct", hold=args[3]=="legacy-deadline", stopped=false;
+        long firstQuestion=-1;
         var deadline=Stopwatch.StartNew();
         // The two frozen 0.13.1 bootstrap questions precede the new question engine.
         Send(input,"yes\rantigravity\r");
         try {
-            while(deadline.ElapsedMilliseconds<120000) {
+            while(deadline.ElapsedMilliseconds<(hold?470000:120000)) {
                 if(helper==null) foreach(var candidate in Process.GetProcessesByName("hive-direct-update-helper")) {
                     try {
                         if(candidate.Handle==IntPtr.Zero) { candidate.Dispose(); continue; }
@@ -143,15 +146,24 @@ public static class SetupConsoleFixture {
                 }
                 try {
                     string state=File.ReadAllText(progress);
-                    if(state.Contains("phase: previewed") && !confirmed) { Send(input,"yes\r"); confirmed=true; }
+                    if(state.Contains("phase: previewed") && !confirmed && !stop) { Send(input,"yes\r"); confirmed=true; }
                     else if(state.Contains("phase: awaiting-answers")) {
                         var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
-                        if(step.Success && step.Groups[1].Value!=last) {
+                        if(step.Success && step.Groups[1].Value!=last && !stopped) {
                             last=step.Groups[1].Value;
-                            Send(input,last=="user-language" ? "1\r" : "\r"); answered++;
+                            if(firstQuestion<0) firstQuestion=deadline.ElapsedMilliseconds;
+                            if(stop && last!="user-language") {
+                                if(!hold) Send(input,new string((char)26,1)+"\r");
+                                stopped=true;
+                            } else { Send(input,last=="user-language" ? "1\r" : "\r"); answered++; }
                         }
                     }
                     if(helper!=null && helper.HasExited) {
+                        if(stop) {
+                            if(!stopped || helper.ExitCode!=2 || state.Contains("phase: complete") || confirmed) return 32;
+                            File.WriteAllText(args[2],"{\"helper_exit_code\":2,\"questions\":"+answered+",\"confirmed\":false,\"question_wait_ms\":"+(deadline.ElapsedMilliseconds-firstQuestion)+"}");
+                            return 0;
+                        }
                         if(helper.ExitCode!=0 || !state.Contains("phase: complete") || !confirmed) return 31;
                         File.WriteAllText(args[2],"{\"helper_exit_code\":0,\"questions\":"+answered+",\"confirmed\":true}");
                         return 0;
@@ -171,22 +183,25 @@ public static class SetupConsoleFixture {
         try {
             bool project=args.Length==7 && (args[3]=="connection-loss" || args[3]=="project-quick");
             bool review=args.Length==4 && args[3]=="review-all";
-            bool legacy=args.Length==4 && args[3]=="legacy-direct";
+            bool legacy=args.Length==4 && (args[3]=="legacy-direct" || args[3]=="legacy-cancel" || args[3]=="legacy-deadline");
+            bool resumeUpdate=args.Length==4 && args[3]=="update-resume";
             if(args.Length!=4 && !project) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
-                string command=legacy ? "update --channel test --user-root \""+args[1]+"\"" : project
+                string command=legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
+                    ? "update --interactive --user-root \""+args[1]+"\"" : project
                     ? "setup --target \""+args[4]+"\""+(args[5]=="-" ? "" : " --capabilities \""+args[5]+"\"")+" --interactive --user-root \""+args[1]+"\""
                     : "setup --scope user "+(review ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
                 var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
-                if(!review && !legacy) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
+                if(!review && !legacy && !resumeUpdate) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
                 if(legacy) return LegacyDirect(child,input,args);
+                if(resumeUpdate) return ReviewAll(child,input,args,true);
                 if(project) return ProjectFlow(child,input,args);
                 if(review) return ReviewAll(child,input,args);
                 string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
