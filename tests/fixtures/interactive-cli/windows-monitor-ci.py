@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-if not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
+assert sys.argv[1:] in ([], ["prepare"])
+prepare_only = sys.argv[1:] == ["prepare"]
+if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
 
@@ -59,8 +61,8 @@ program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성",
-    [sys.executable, str(Path(__file__).resolve())],
+run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성",
+    [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
 config_path = user / ".hive/config/user-setup.yml"
@@ -101,25 +103,26 @@ def write_answers(name, settings):
 
 
 try:
-    # One environment availability check, before creating any native registration.
-    ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
-    probe = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
-        "$ErrorActionPreference='Stop';"
-        "[void][Reflection.Assembly]::Load('System.ServiceProcess, Version=4.0.0.0, "
-        "Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a');"
-        "[Console]::WriteLine('service-type-loaded');"
-        "$s=[System.ServiceProcess.ServiceController]::new('Schedule');"
-        "if($s.Status -ne 'Running'){throw 'Task Scheduler unavailable'};"
-        "[Console]::WriteLine('scheduler-running');"
-        "if([Diagnostics.Process]::GetProcessesByName('ChatGPT').Count -ne 0)"
-        "{throw 'Desktop app present; idle fixture refused'};[Console]::WriteLine('isolated-idle-ready')"],
-        env=environment, capture_output=True, timeout=20)
-    events.append({"availability_exit": probe.returncode,
-                   "availability_output": probe.stdout.decode(errors="replace").strip(),
-                   "availability_error": probe.stderr.decode(errors="replace")[-1000:]})
-    assert probe.returncode == 0, events[-1]
+    if not prepare_only:
+        # One environment availability check, before creating any native registration.
+        ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        probe = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+            "$ErrorActionPreference='Stop';"
+            "[void][Reflection.Assembly]::Load('System.ServiceProcess, Version=4.0.0.0, "
+            "Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a');"
+            "[Console]::WriteLine('service-type-loaded');"
+            "$s=[System.ServiceProcess.ServiceController]::new('Schedule');"
+            "if($s.Status -ne 'Running'){throw 'Task Scheduler unavailable'};"
+            "[Console]::WriteLine('scheduler-running');"
+            "if([Diagnostics.Process]::GetProcessesByName('ChatGPT').Count -ne 0)"
+            "{throw 'Desktop app present; idle fixture refused'};[Console]::WriteLine('isolated-idle-ready')"],
+            env=environment, capture_output=True, timeout=20)
+        events.append({"availability_exit": probe.returncode,
+                       "availability_output": probe.stdout.decode(errors="replace").strip(),
+                       "availability_error": probe.stderr.decode(errors="replace")[-1000:]})
+        assert probe.returncode == 0, events[-1]
     base = ["setup", "--scope", "user", "--user-root", str(user)]
-    defaults = invoke(*base, "--describe")["data"]["expedited_defaults"]
+    defaults = invoke("setup", "--scope", "user", "--describe")["data"]["expedited_defaults"]
     defaults.update(interface_language="ko", selected_hosts=["codex"])
     defaults["wiki"]["enabled"] = False
     off_file = write_answers("off.json", defaults)
@@ -137,32 +140,33 @@ try:
     assert consent["runtime_verification"] == "not-performed", preview
     invoke(*base, "--answers", on_file, "--apply", expected=2)
     assert config_path.read_bytes() == initial_config and not monitor_path.exists()
-    invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
-    assert_idle()
-    first_activation = json.loads(activation_path.read_text())
-    assert first_activation["phase"] == "complete", first_activation
-    history = runtime / "retained-history.txt"
-    history.write_bytes(b"Owned synthetic history; preserve across disable and activation.\n")
-    preserved = history.read_bytes()
-    invoke(*base, "--answers", off_file, "--apply")
-    stopped = status()
-    assert not stopped["controller_alive"] and not stopped["verified_saved_selection"], stopped
-    assert json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
-    assert history.read_bytes() == preserved
-    # A new preview/consent is necessary after this later disable selection.
-    preview = invoke(*base, "--answers", on_file, "--dry-run")
-    next_consent = preview["data"]["monitor_activation"]["confirmation_digest"]
-    assert next_consent != consent["confirmation_digest"]
-    invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"],
-           "--apply", expected=2)
-    assert not json.loads(monitor_path.read_text())["enabled"]
-    invoke(*base, "--answers", on_file, "--monitor-confirm", next_consent, "--apply")
-    assert_idle()
-    second = json.loads(activation_path.read_text())
-    assert second["phase"] == "complete" and second["operation_id"] != first_activation["operation_id"]
-    assert history.read_bytes() == preserved
-    invoke(*base, "--answers", off_file, "--apply")
-    assert not status()["controller_alive"]
+    if not prepare_only:
+        invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
+        assert_idle()
+        first_activation = json.loads(activation_path.read_text())
+        assert first_activation["phase"] == "complete", first_activation
+        history = runtime / "retained-history.txt"
+        history.write_bytes(b"Owned synthetic history; preserve across disable and activation.\n")
+        preserved = history.read_bytes()
+        invoke(*base, "--answers", off_file, "--apply")
+        stopped = status()
+        assert not stopped["controller_alive"] and not stopped["verified_saved_selection"], stopped
+        assert json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
+        assert history.read_bytes() == preserved
+        # A new preview/consent is necessary after this later disable selection.
+        preview = invoke(*base, "--answers", on_file, "--dry-run")
+        next_consent = preview["data"]["monitor_activation"]["confirmation_digest"]
+        assert next_consent != consent["confirmation_digest"]
+        invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"],
+               "--apply", expected=2)
+        assert not json.loads(monitor_path.read_text())["enabled"]
+        invoke(*base, "--answers", on_file, "--monitor-confirm", next_consent, "--apply")
+        assert_idle()
+        second = json.loads(activation_path.read_text())
+        assert second["phase"] == "complete" and second["operation_id"] != first_activation["operation_id"]
+        assert history.read_bytes() == preserved
+        invoke(*base, "--answers", off_file, "--apply")
+        assert not status()["controller_alive"]
     code = 0
 except BaseException as failure:
     events.append({"failure": str(failure)[:2500]})
@@ -172,7 +176,7 @@ except BaseException as failure:
     raise
 finally:
     # Product ownership checks govern cleanup; no task-name glob or process-name kill.
-    if monitor_path.exists() and json.loads(monitor_path.read_text()).get("enabled"):
+    if not prepare_only and monitor_path.exists() and json.loads(monitor_path.read_text()).get("enabled"):
         try:
             invoke("usage", "monitor", "disable", "--user-root", str(user))
         except Exception as failure:
@@ -188,5 +192,5 @@ finally:
     run.finish(code, details={"events": events, "diagnostics": diagnostics,
         "candidate_sha256": sha(candidate.read_bytes()),
         "input_sha256": {p.name: sha(p.read_bytes()) for p in work.glob("*.json")},
-        "scope": "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
+        "scope": "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
 raise SystemExit(code)
