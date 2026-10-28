@@ -41,7 +41,7 @@ def build_variant(package, name):
 
 baseline = build_variant("0.14.0-test", "baseline.exe")
 incoming = build_variant("0.14.0-test.1", "incoming.exe")
-fixture_tree = ast.parse((ROOT / "tests/conformance/integration/test_connected_setup_lifecycle.py").read_text())
+fixture_tree = ast.parse((ROOT / "tests/conformance/integration/test_connected_setup_lifecycle.py").read_text(encoding="utf-8"))
 fixture_class = next(n for n in fixture_tree.body if isinstance(n, ast.ClassDef) and n.name == "ConnectedSetupLifecycleConformance")
 method = next(n for n in fixture_class.body if isinstance(n, ast.FunctionDef) and n.name == "_write_fake_host")
 fake_host = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant)
