@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 대화형 CLI 모델 수용과 지속 회귀 | [en](en/interactive-cli-model-qualification.md) | [ko](ko/interactive-cli-model-qualification.md) |
 | Windows 구버전 연결의 환경 전달 | [en](en/windows-legacy-bridge-environment.md) | [ko](ko/windows-legacy-bridge-environment.md) |
 | Windows 감시의 모듈 시작 기한 | [en](en/windows-monitor-module-deadline.md) | [ko](ko/windows-monitor-module-deadline.md) |
 | Windows 직접 교체와 옛 사본 정리 | [en](en/windows-direct-replacement.md) | [ko](ko/windows-direct-replacement.md) |
