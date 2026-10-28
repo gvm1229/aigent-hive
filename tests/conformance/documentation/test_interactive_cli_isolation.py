@@ -93,6 +93,31 @@ class ModelProjectReceipt(unittest.TestCase):
         (self.trial / "project").mkdir()
         (self.trial / "project/README.txt").write_bytes(b"Synthetic user note. Preserve exactly.\n")
 
+    def test_same_case_limit_counts_failures_and_ignores_temporary_root_names(self):
+        config = {"scenario": "project-quick", "model": "gpt-6-luna", "reasoning_effort": "medium",
+                  "binary_sha256": "binary", "input_sha256": {"fixed-choices.json": "choices"}}
+        renamed = {**config, "root": "another temporary root", "sample": 9, "source_commit": "docs-only"}
+        self.assertEqual(self.recorder.case_identity(config), self.recorder.case_identity(renamed))
+        reports = self.trial / "reports"
+        reports.mkdir()
+        for index in range(5):
+            identity, previous = self.recorder.prior_case_runs(config, reports)
+            self.assertEqual(len(previous), index)
+            record = {"command": ["host:collaboration.spawn_agent"],
+                      "status": "failed" if index < 4 else "running", "details": renamed}
+            (reports / f"{index}.md").write_text("```json\n" + json.dumps(record) + "\n```\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "five runs"):
+            self.recorder.prior_case_runs(config, reports)
+        changed = {**config, "reasoning_effort": "low"}
+        self.assertNotEqual(identity, self.recorder.case_identity(changed))
+        self.assertEqual(self.recorder.prior_case_runs(changed, reports)[1], [])
+        changed = {**config, "input_sha256": {"fixed-choices.json": "changed-choice"}}
+        self.assertEqual(self.recorder.prior_case_runs(changed, reports)[1], [])
+
+    def test_unpinned_new_model_input_cannot_reach_dispatch(self):
+        with self.assertRaisesRegex(ValueError, "pinned"):
+            self.recorder.prior_case_runs({"model": "gpt-6-luna"}, self.trial)
+
     def test_absent_final_settings_preserves_failed_events_and_measured_bytes(self):
         events = [{"operation": "hive", "arguments": ["setup", "--apply"],
                    "exit_code": 2, "hive_input_bytes": 13560}]

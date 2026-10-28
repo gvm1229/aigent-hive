@@ -12,6 +12,36 @@ sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
 
+def case_identity(config):
+    """Transient trial paths and documentation commits do not create a new test."""
+    inputs = config.get("input_sha256")
+    if not isinstance(inputs, dict) or not inputs or not config.get("binary_sha256"):
+        return None
+    parameters = {key: config.get(key) for key in (
+        "scenario", "setup_scope", "comparison_version", "model", "reasoning_effort",
+        "requested_speed_mode", "binary_sha256", "expected_values", "user_before",
+    )}
+    parameters["input_sha256"] = inputs
+    return hashlib.sha256(json.dumps(parameters, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def prior_case_runs(config, reports):
+    identity = case_identity(config)
+    if identity is None:
+        raise ValueError("model trial needs pinned binary and input hashes before dispatch")
+    matches = []
+    for path in sorted(reports.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        if '"host:collaboration.spawn_agent"' not in text:
+            continue
+        record = json.loads(text.split("```json\n", 1)[1].split("\n```", 1)[0])
+        if record.get("command", [])[:1] == ["host:collaboration.spawn_agent"] and case_identity(record.get("details", {})) == identity:
+            matches.append(path.name)
+    if len(matches) >= 5:
+        raise ValueError("same-parameter model trial already has five runs; use existing evidence or obtain an explicit exception")
+    return identity, matches
+
+
 def pointer(value, path):
     for key in path.removeprefix("/").split("/"):
         key = key.replace("~1", "/").replace("~0", "~")
@@ -110,9 +140,14 @@ def main():
     if not trial.is_relative_to((ROOT / "tests/work").resolve()):
         raise ValueError("trial must remain inside tests/work")
     config = json.loads((trial / "config.json").read_text(encoding="utf-8"))
+    identity, earlier = prior_case_runs(config, ROOT / "tests/results/runs")
     run = Run("M20 실제 작은 모델의 버전별 고정 설정 비교" if config.get("comparison") else "실제 작은 모델의 고정 설정 사례 평가",
         ["host:collaboration.spawn_agent", config["model"], config["reasoning_effort"], config["scenario"]],
         paths=[trial.relative_to(ROOT).as_posix()], binary=Path(config["binary"]))
+    run.data["details"] = {**config, "case_identity": identity,
+        "same_parameter_iteration": len(earlier) + 1, "prior_case_reports": earlier,
+        "maximum_same_parameter_iterations": 5, "host_state": "reserved-before-dispatch"}
+    run.write()
     (trial / "ready.json").write_text(json.dumps({"report": run.relative}), encoding="utf-8")
     print("ready " + run.relative, flush=True)
     started = time.monotonic()
@@ -129,6 +164,8 @@ def main():
         result["errors"].append(error)
     code = int(bool(result["errors"]) or not all(result["checks"].values()))
     run.finish(code, details={**config, **result, "host_receipt": host,
+        "case_identity": identity, "same_parameter_iteration": len(earlier) + 1,
+        "prior_case_reports": earlier, "maximum_same_parameter_iterations": 5,
         "elapsed_seconds": time.monotonic() - started,
         "scope": "Actual host trial with synthetic inputs and closed CLI environment; no real app/service/install control. Missing host tokens or speed remain unknown. No M19/M20 aggregate acceptance implied."})
     print(json.dumps({"report": run.relative, "exit_code": code, "checks": result["checks"],
