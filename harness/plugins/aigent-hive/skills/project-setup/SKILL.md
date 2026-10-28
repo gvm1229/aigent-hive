@@ -20,20 +20,26 @@ setup belongs to user-setup. Never put a consumer harness in a `hive-source.json
    A hidden tool PTY is not a user terminal. If none exists, give this one command and the reason;
    do not start an input wait or switch to repeated AI questions.
 3. Resume incomplete work with the CLI's exact `next_action`. Do not restart answered questions.
-   For choices already supplied by the user, use the existing file input or the small format in
-   [structured choices](references/structured-choices.md). Copy `answer_patch_template` from the
-   status result, keep `kind` and `schema_version` unchanged, fill only `answers`, and save the
-   complete document as `<patch-file>`. For an authorized change, use the complete command:
+   For supplied choices, copy `answer_patch_template` from the status result, keep `kind` and
+   `schema_version` unchanged, fill only `answers`, and save the complete document as `<patch-file>`.
+   A fresh project needs supplied `setup_mode`, `project_name`, `project_kind` and `primary_host`;
+   the CLI supplies other defaults. Never invent choices or patch metadata. Existing complete
+   answer files remain supported. For an authorized change, use the complete command:
    `hive setup --target <project-root> --user-root <user-root> --answers <patch-file> --capabilities <trusted-capabilities-file> --input-channel agent --apply --summary --output json`.
    Keep the explicit `--apply` mode. Use only trusted supplied or saved capability material;
-   never fabricate a capability file to make apply succeed. See structured choices when that
-   material is unavailable or separate consent is needed.
-4. Read an apply/validate result with `--summary --output json`. Check its status, exit code,
-   actual capability limits and pending action. The normal completion response is at most 8KiB;
-   state is at most 4KiB. An optional pending question is not a failed installation. A pending,
-   unsupported or failed operation is not complete. Verify state with
-   `--show --summary --output json`, never with the full `--show` response during normal setup.
-   Never repeat apply merely because an AI reply was interrupted.
+   never fabricate a capability file to make apply succeed. Read
+   [structured choices](references/structured-choices.md) only for unavailable capability material,
+   custom overrides or separate consent. Separate consent requires the full `--dry-run` preview
+   without `--summary` before apply; a summary never replaces approval scope.
+4. The apply command validates project files and the registry before reporting completion.
+   Check its status, exit code, `completion_verified`, capability limits and pending action,
+   then verify stored state once with `--show --summary --output json`. These are the normal
+   completion checks. Standalone file validation uses `--validate` with the same `--answers`,
+   `--capabilities` and `--summary --output json`; use it for an explicit validation request or
+   the CLI's failure-recovery action. Load generated files only for requested details or a failed
+   verification. Keep completion within 8KiB and status within 4KiB. Optional pending questions
+   do not mean failed installation, but pending, unsupported or failed operations stay incomplete.
+   An interrupted AI reply calls for state inspection, never repeated apply.
 
 The CLI owns the canonical question catalog. For an explicit question explanation, request only
 `hive setup --target <project-root> --user-root <user-root> --describe --question <question-id>
