@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-assert sys.argv[1:] in ([], ["prepare"])
+assert sys.argv[1:] in ([], ["prepare"], ["recovery"])
 prepare_only = sys.argv[1:] == ["prepare"]
+recovery_mode = sys.argv[1:] == ["recovery"]
 if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
@@ -61,7 +62,7 @@ program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성",
+run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성"),
     [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
@@ -71,12 +72,12 @@ activation_path = user / ".hive/config/setup-progress/monitor-activation.json"
 code = 1
 
 
-def invoke(*args, expected=0):
-    result = subprocess.run([str(binary), *args, "--output", "json"], env=environment,
+def invoke(*args, expected=0, extra=None):
+    result = subprocess.run([str(binary), *args, "--output", "json"], env={**environment, **(extra or {})},
         stdin=subprocess.DEVNULL, capture_output=True, timeout=150)
     response = json.loads(result.stdout) if result.stdout.strip() else {}
     events.append({"arguments": list(args), "exit_code": result.returncode,
-                   "code": response.get("code"), "message": response.get("message"),
+                   "code": response.get("code"), "message": response.get("message"), "faults": extra or {},
                    "stdout_sha256": sha(result.stdout), "stderr_sha256": sha(result.stderr)})
     assert result.returncode == expected, (args, result.returncode, response, result.stderr[-1000:])
     return response
@@ -100,6 +101,68 @@ def write_answers(name, settings):
     path = work / name
     path.write_text(json.dumps(settings), encoding="utf-8")
     return str(path)
+
+
+def recovery_cases(base, on_file, off_file, consent):
+    lifecycle = user / ".hive/history/lifecycle"
+    invoke(*base, "--answers", on_file, "--monitor-confirm", consent,
+           "--apply", expected=90, extra={"HIVE_MONITOR_ACTIVATION_INTERRUPT_AFTER": "Registered"})
+    pending = invoke(*base, "--show")["data"]["pending"]
+    operation = pending["operation_id"]
+    activation = json.loads(activation_path.read_text())
+    assert activation["phase"] == "registered"
+    resumed = invoke(*base, "--resume", "--non-interactive")
+    assert resumed["data"]["operation_id"] == operation
+    assert json.loads(activation_path.read_text())["operation_id"] == activation["operation_id"]
+    assert_idle()
+    saved_policy = config_path.read_bytes()
+    activation_before = activation_path.read_bytes()
+    for _ in range(2):
+        update = invoke("update", "--scope", "user", "--host", "codex", "--user-root", str(user), "--apply")
+        assert update["data"]["monitor_upgrade"]["health"]["state"] == "idle-awaiting-Codex", update
+        assert config_path.read_bytes() == saved_policy
+        assert activation_path.read_bytes() == activation_before
+        assert_idle()
+    invoke(*base, "--answers", off_file, "--apply")
+    assert not status()["controller_alive"]
+
+    # This time stop only after the actual native controller has been verified.
+    next_consent = invoke(*base, "--answers", on_file, "--dry-run")["data"]["monitor_activation"]["confirmation_digest"]
+    invoke(*base, "--answers", on_file, "--monitor-confirm", next_consent,
+           "--apply", expected=90, extra={"HIVE_MONITOR_ACTIVATION_INTERRUPT_AFTER": "Complete"})
+    pending = invoke(*base, "--show")["data"]["pending"]
+    assert_idle()
+    review = invoke(*base, "--resume", "--review", "--dry-run")["data"]
+    assert review["operation_id"] == pending["operation_id"]
+    answer = write_answers("withdrawal.json", {
+        "question_id": "user-monitor-withdrawal", "question_revision": 1,
+        "answer": True, "confirmed": True, "preview_digest": review["preview_digest"],
+        "input_channel": "answers-file"})
+    invoke(*base, "--resume", "--review", "--review-answers", answer, expected=89,
+           extra={"HIVE_TEST_SETUP_REVIEW_EXIT_AFTER": "stopped"})
+    assert not status()["controller_alive"]
+    resumed = invoke(*base, "--resume", "--non-interactive")
+    assert resumed["data"]["monitor_review"]["withdrawn"], resumed
+    old = json.loads((lifecycle / (pending["operation_id"] + ".json")).read_text())
+    assert old["phase"] == "recoverable-failure"
+    replacement = old["cancelled_by_operation"]
+    assert replacement != pending["operation_id"]
+    assert json.loads((lifecycle / (replacement + ".json")).read_text())["phase"] == "complete"
+    actual = invoke(*base, "--show")["data"]["stored"]
+    desired = copy.deepcopy(pending["answers"])
+    desired["usage_guard"]["midway"]["enabled"] = False
+    for value in [desired, actual]:
+        value.pop("preference_decisions", None)
+    assert desired == actual
+    assert not (user / ".hive/config/setup-progress/monitor-handoff.json").exists()
+    saved_policy = config_path.read_bytes()
+    retained = {path: path.read_bytes() for path in [lifecycle / (pending["operation_id"] + ".json"),
+                                                    lifecycle / (replacement + ".json")]}
+    for _ in range(2):
+        invoke("update", "--scope", "user", "--host", "codex", "--user-root", str(user), "--apply")
+        assert config_path.read_bytes() == saved_policy
+        assert all(path.read_bytes() == data for path, data in retained.items())
+        assert not status()["controller_alive"]
 
 
 try:
@@ -140,7 +203,9 @@ try:
     assert consent["runtime_verification"] == "not-performed", preview
     invoke(*base, "--answers", on_file, "--apply", expected=2)
     assert config_path.read_bytes() == initial_config and not monitor_path.exists()
-    if not prepare_only:
+    if recovery_mode:
+        recovery_cases(base, on_file, off_file, consent["confirmation_digest"])
+    elif not prepare_only:
         invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
         assert_idle()
         first_activation = json.loads(activation_path.read_text())
