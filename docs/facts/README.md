@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| npm 경로의 소유 범위와 명령 표기 | [en](en/npm-path-identity.md) | [ko](ko/npm-path-identity.md) |
 | 과거 재개 차단 재현 | [en](en/codex-resume-lock-reference.md) | [ko](ko/codex-resume-lock-reference.md) |
 | 알림 전용 중단 안내 | [en](en/usage-stop-notice.md) | [ko](ko/usage-stop-notice.md) |
 | 추가 지시 보존의 후속 범위 | [en](en/steering-preservation.md) | [ko](ko/steering-preservation.md) |
