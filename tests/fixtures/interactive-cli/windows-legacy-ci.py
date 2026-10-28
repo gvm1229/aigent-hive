@@ -1,6 +1,5 @@
 """Frozen Windows direct updater, private console and fixed synthetic installer/host."""
 import ast
-import base64
 import hashlib
 import io
 import json
@@ -27,50 +26,8 @@ user, prefix, shim = work / "user", work / "prefix", work / "shim"
 for path in [user, prefix / "bin", prefix / "share/aigent-hive", shim, work / "incoming"]:
     path.mkdir(parents=True, exist_ok=True)
 candidate = ROOT / "target/debug/hive.exe"
-diagnostic = sys.argv[1:] == ["--diagnostic"]
-assert not sys.argv[1:] or diagnostic
-diagnostic_sources = []
-if diagnostic:
-    diagnostic_source = ROOT / "crates/hive-cli/src/main.rs"
-    original_source = diagnostic_source.read_bytes()
-    needle = b"fn emit_action_result(result: &ActionResult) -> ExitCode {"
-    assert original_source.count(needle) == 1
-    replacement = needle + b'''
-    if let Some(root) = std::env::args().collect::<Vec<_>>().windows(2)
-        .find(|pair| pair[0] == "--user-root")
-        .map(|pair| std::path::PathBuf::from(&pair[1])) {
-        let _ = std::fs::write(root.join(".hive/runtime/update/bridge-diagnostic.txt"),
-            format!("{}: {}", result.code, result.message));
-    }
-'''
-    patched_source = original_source.replace(needle, replacement)
-    diagnostic_sources.append((diagnostic_source, original_source, patched_source))
-    for relative, before, after in [
-        ("crates/hive-cli/src/update_bridge/windows.rs",
-         b'"legacy updater parent could not be verified; settings preserved".into()',
-         b'format!("legacy diagnostic reply: {reply}")'),
-        ("crates/hive-cli/src/update_bridge/windows.ps1",
-         b"reason='parent-or-console-unavailable'", b"reason=$_.Exception.Message"),
-    ]:
-        path = ROOT / relative
-        original_bytes = path.read_bytes()
-        assert original_bytes.count(before) == 1
-        diagnostic_sources.append((path, original_bytes, original_bytes.replace(before, after)))
-    for path, _, patched_bytes in diagnostic_sources:
-        path.write_bytes(patched_bytes)
-    build_command = [shutil.which("cargo"), "build", "-p", "hive-cli", "--locked"]
-    build = Run("격리 CI 전용 반환 오류 진단 빌드", build_command, paths=["target/debug"])
-    build_code = 1
-    try:
-        build_code = build.execute(build_command, env=dict(os.environ, CARGO_INCREMENTAL="0"))
-    finally:
-        build.finish(build_code, details={"scope": "diagnostic incoming variant only; copied result message, unchanged authorization/return; not product acceptance"})
-        if build_code:
-            for path, original_bytes, patched_bytes in diagnostic_sources:
-                assert path.read_bytes() == patched_bytes
-                path.write_bytes(original_bytes)
-    if build_code:
-        raise SystemExit(build_code)
+if sys.argv[1:]:
+    raise SystemExit("unexpected qualification arguments")
 original = prefix / "bin/hive.exe"
 original_hash = "e34e5b7486feb6adc52f5b0ca59c01da303a14af2ecd397b1c8e60c9ecab7824"
 sha = lambda data: hashlib.sha256(data).hexdigest()
@@ -94,7 +51,7 @@ try:
     (user / "README.txt").write_bytes(b"Preserve this synthetic user note.\r\n")
 
     installer = r'''
-using System; using System.IO; using System.Reflection; using System.Security.Cryptography; using System.Diagnostics;
+using System; using System.IO; using System.Reflection; using System.Security.Cryptography;
 public static class FixtureInstaller {
     static string Plain(string value) { return Path.GetFullPath(value.StartsWith(@"\\?\") ? value.Substring(4) : value); }
     public static int Main(string[] args) {
@@ -113,51 +70,6 @@ public static class FixtureInstaller {
     }
 }
 '''
-    (work / "installer.cs").write_text(installer)
-    registry = json.dumps(json.loads((ROOT / "harness/setup/legacy-update-images.json").read_bytes()),
-                          separators=(",", ":"), sort_keys=True)
-    bridge = (ROOT / "crates/hive-cli/src/update_bridge/windows.ps1").read_text()
-    bridge = bridge.replace("{{REGISTRY_SOURCE}}", registry.replace("'", "''"))
-    bridge = bridge.replace("{{REGISTRY_DIGEST}}", "sha256:" + sha(registry.encode()))
-    for placeholder, filename in [("{{PARENT_SOURCE}}", "windows-parent.cs"), ("{{CONSOLE_SOURCE}}", "windows-console.cs")]:
-        bridge = bridge.replace(placeholder, base64.b64encode((ROOT / "crates/hive-cli/src/update_bridge" / filename).read_bytes()).decode())
-    # Only this test copy returns a bounded exception message for the synthetic parent.
-    bridge = bridge.replace("reason='parent-or-console-unavailable'", "reason=$_.Exception.Message")
-    bridge = "$probeStarted=[DateTime]::UtcNow\n" + bridge.replace(
-        "function Reply($value) {", "function Reply($value) { $jsonStarted=[DateTime]::UtcNow; [void]($value | ConvertTo-Json -Compress -Depth 12); $value.json_prepare_ms=([DateTime]::UtcNow-$jsonStarted).TotalMilliseconds; $value.elapsed_ms=([DateTime]::UtcNow-$probeStarted).TotalMilliseconds;")
-    for statement, stage in [
-        ("    $request = Request", "request-read"),
-        ('    $self = Get-CimInstance Win32_Process -Filter "ProcessId = $PID"', "self-found"),
-        ('    $parent = Get-CimInstance Win32_Process -Filter ("ProcessId = " + [int]$caller.ParentProcessId)', "parent-found"),
-        ("    $image = [HiveParentImage]::new([int]$parent.ProcessId)", "image-opened"),
-        ("    $owner = Invoke-CimMethod -InputObject $parent -MethodName GetOwnerSid", "owner-read"),
-        ("    $verified = @()", "image-check-started"),
-        ("    if ($verified.Count -ne 1)", "image-check-ended"),
-    ]:
-        trace = "Reply @{event='probe-stage'; stage='" + stage + "'}"
-        if stage == "image-check-ended":
-            bridge = bridge.replace(statement, "    " + trace + "\n" + statement, 1)
-        else:
-            bridge = bridge.replace(statement, statement + "; " + trace, 1)
-    bridge = bridge.replace("try {\n    $request = Request", "try {\n    Reply @{event='probe-stage'; stage='script-started'}\n    $request = Request", 1)
-    (work / "probe.ps1").write_text(bridge, encoding="utf-8")
-    (work / "probe-request.json").write_text(json.dumps({"operation": "inspect", "caller_pid": "__CALLER__"}))
-    installer = installer.replace('File.WriteAllText(Path.Combine(root,"install-count"),"1"); return 0;', r'''
-        File.WriteAllText(Path.Combine(root,"install-count"),"1");
-        var probe=new ProcessStartInfo(Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"),"System32/WindowsPowerShell/v1.0/powershell.exe"),"-NoProfile -NonInteractive -WindowStyle Hidden -File \""+Path.Combine(root,"probe.ps1")+"\"");
-        probe.UseShellExecute=false; probe.CreateNoWindow=true; probe.RedirectStandardInput=true; probe.RedirectStandardOutput=true; probe.RedirectStandardError=true;
-        try { using(var child=Process.Start(probe)) {
-            var output=child.StandardOutput.ReadToEndAsync(); var error=child.StandardError.ReadToEndAsync(); string inputError="";
-            try {
-                child.StandardInput.WriteLine(File.ReadAllText(Path.Combine(root,"probe-request.json")).Replace("\"__CALLER__\"",Process.GetCurrentProcess().Id.ToString()));
-                child.StandardInput.WriteLine("{\"operation\":\"open\"}");
-                child.StandardInput.WriteLine("{\"operation\":\"close\"}");
-            } catch(Exception e) { inputError=e.GetType().Name+":"+e.Message; }
-            try { child.StandardInput.Close(); } catch(IOException) { }
-            if(!child.WaitForExit(25000)) { child.Kill(); child.WaitForExit(); inputError+="; probe timeout"; }
-            File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),output.Result+error.Result+inputError);
-        } } catch(Exception e) { File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),e.ToString()); }
-        return 0;''')
     (work / "installer.cs").write_text(installer)
     tree = ast.parse((ROOT / "tests/conformance/contracts/test_setup_console_interrupt.py").read_text())
     console_source = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
@@ -200,9 +112,7 @@ else:print('{}')
     error = Path(str(result) + ".error.txt")
     assert process.returncode == 0, (process.returncode,
         result.read_text(encoding="utf-8", errors="replace") if result.exists() else process.stderr.decode(errors="replace"),
-        error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception",
-        (user / ".hive/runtime/update/bridge-diagnostic.txt").read_text(encoding="utf-8", errors="replace") if (user / ".hive/runtime/update/bridge-diagnostic.txt").exists() else "no incoming diagnostic",
-        (work / "bridge-probe.txt").read_text(encoding="utf-8", errors="replace")[-8000:] if (work / "bridge-probe.txt").exists() else "no parent probe")
+        error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception")
     report = json.loads(result.read_text())
     assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
     shown = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
@@ -215,18 +125,8 @@ else:print('{}')
     assert sha((work / "original-preserved.exe").read_bytes()) == original_hash
     assert (work / "install-count").read_text() == "1"
     assert (user / "README.txt").read_bytes() == b"Preserve this synthetic user note.\r\n"
-    code = 1 if diagnostic else 0
+    code = 0
 finally:
-    try:
-        run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
-            "diagnostic_incoming_variant": diagnostic,
-            "incoming_diagnostic": (user / ".hive/runtime/update/bridge-diagnostic.txt").read_text(encoding="utf-8", errors="replace") if (user / ".hive/runtime/update/bridge-diagnostic.txt").exists() else None,
-            "untracked_paths": subprocess.run(["git", "ls-files", "--others", "--exclude-standard"],
-                                              cwd=ROOT, capture_output=True, text=True, check=True).stdout.splitlines(),
-            "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; diagnostic variants never acceptance; not public14 installer, real app/monitor control or personal installation"})
-    finally:
-        if diagnostic:
-            for path, original_bytes, patched_bytes in diagnostic_sources:
-                assert path.read_bytes() == patched_bytes
-                path.write_bytes(original_bytes)
+    run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
+        "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; unmodified product source; not public14 installer, real app/monitor control or personal installation"})
 raise SystemExit(code)
