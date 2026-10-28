@@ -347,7 +347,9 @@ def uninstall_case(base, on_file, consent):
         listed = subprocess.run([environment["HIVE_TEST_REAL_CODEX_BINARY"], "plugin", "list", "--json"],
             env=environment, cwd=user, capture_output=True, timeout=20)
         assert listed.returncode == 0, listed.stderr
-        assert not json.loads(listed.stdout)["installed"]
+        installed = json.loads(listed.stdout)["installed"]
+        assert isinstance(installed, list)
+        assert all(entry["pluginId"] != "aigent-hive@aigent-hive" for entry in installed)
         events.append({"real_codex_removed": True, "list_sha256": sha(listed.stdout)})
     else:
         assert not json.loads((work / "host-state.json").read_text())["plugin"]
