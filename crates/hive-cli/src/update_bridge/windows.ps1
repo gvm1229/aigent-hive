@@ -1,7 +1,10 @@
 # This fixed helper exchanges JSON over saved pipes and uses only a verified parent's console.
 $ErrorActionPreference = 'Stop'
-# Resolve the fixed JSON cmdlets without scanning the host's module catalog on first input.
-Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1')
+# Resolve the fixed JSON/process cmdlets without scanning the host's module catalog on first input.
+Import-Module -Name @(
+    ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'),
+    ($PSHOME + '\Modules\CimCmdlets\CimCmdlets.psd1')
+)
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false,$true)
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $pipeIn = [IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.UTF8Encoding]::new($false,$true))
