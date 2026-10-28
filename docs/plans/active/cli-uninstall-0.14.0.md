@@ -57,4 +57,4 @@
 
 ## 후속 실제 운영체제 검증
 
-- [실제 제거·자료 보존과 한계](../../research/cli-uninstall-validation-0.14.0.md). 직접 본체의 세 OS·Windows npm 제거, 활성 감시 종료 거부/재개·재설치 수용. 실제 호스트·보조 처리 실패 복구·공개 파일은 미완료
+- [실제 제거·자료 보존과 한계](../../research/cli-uninstall-validation-0.14.0.md). 직접 본체의 세 OS·Windows npm 제거, 활성 감시 종료 거부/재개·보조 처리 잠금 실패 복구·재설치 수용. 실제 호스트·공개 파일은 미완료
