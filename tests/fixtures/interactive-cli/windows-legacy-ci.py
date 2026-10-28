@@ -85,7 +85,8 @@ user=Path(os.environ['HIVE_TEST_USER_ROOT']).resolve();stage=user/'.gemini/confi
 assert stage.resolve().is_relative_to(user)
 if args==['--version']:print('1.1.7');raise SystemExit(0)
 if args[:2]==['plugin','install']:
- source=Path(args[2]).resolve();assert source.is_relative_to(user)
+ source=Path(args[2]).resolve();expected=user/'.hive/marketplaces/antigravity/plugins/aigent-hive'
+ assert expected.resolve().is_relative_to(user) and source.samefile(expected)
  if stage.exists():shutil.rmtree(stage)
  shutil.copytree(source,stage)
 if args==['plugin','list']:
