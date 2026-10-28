@@ -227,8 +227,24 @@ def main():
         code = 0
     except Exception as error:
         details["error"] = str(error)[:4000]
-        details["console_errors"] = {p.name: p.read_text(encoding="utf-8", errors="replace")[:4000]
+        details["console_errors"] = {p.name: p.read_text(encoding="utf-8", errors="replace")[-4000:]
             for p in work.glob("*.error.txt") if p.is_file() and not p.is_symlink()}
+        pending = journal(user, args.scenario == "project")
+        details["pending"] = {key: pending.get(key) for key in ("phase", "step", "operation_id")}
+        if "environment" in locals():
+            try:
+                scope = ["--target", str(project)] if args.scenario == "project" else ["--scope", "user"]
+                inspected = subprocess.run([str(binary), "setup", *scope, "--user-root", str(user), "--show", "--output", "json"],
+                    env=environment, input=b"", capture_output=True, timeout=15)
+                state = json.loads(inspected.stdout)
+                data = state.get("data") or {}
+                details["failure_inspection"] = {"exit_code": inspected.returncode,
+                    "code": state.get("code"), "message": state.get("message"),
+                    "stored_language": (data.get("stored") or {}).get("interface_language"),
+                    "details": data.get("diagnostic", data.get("details")),
+                    "stderr": inspected.stderr.decode("utf-8", errors="replace")[:2000]}
+            except (OSError, ValueError, subprocess.TimeoutExpired) as inspection_error:
+                details["failure_inspection_error"] = str(inspection_error)[:1000]
         raise
     finally:
         details["events"] = events

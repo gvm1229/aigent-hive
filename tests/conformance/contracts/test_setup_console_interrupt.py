@@ -124,6 +124,7 @@ public static class SetupConsoleFixture {
         }
         if(!child.HasExited) throw new InvalidOperationException("review timeout at "+last);
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+",\"questions\":"+answered+",\"confirmed\":"+(confirmed?"true":"false")+"}");
+        if(child.ExitCode!=0) File.WriteAllText(args[2]+".error.txt",OwnConsoleTail(),new UTF8Encoding(false,false));
         return child.ExitCode;
     }
     static int LegacyDirect(Process child, SafeFileHandle input, string[] args) {
