@@ -6,9 +6,9 @@
 ## 항목
 
 - [x] [G140-001] 기본값·전체 스위치·모든 실행 경로의 일치
-  - state: complete; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:5252d4ad330030b7ca44c7fbb7cc482d3df23acdd6a6ad4172a9854994da5615
-- [ ] [G140-002] 기존 사용자 선택·감시 전환·실제 상태 확인
-  - state: agent-owned; depends: G140-001,P140-002
+  - state: complete; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:135a213351bf10e7d4ac861da0a2ead5af4e881fd375cf81a8a9fe1c1401d07e
+- [x] [G140-002] 기존 사용자 선택·감시 전환·실제 상태 확인
+  - state: complete; depends: G140-001,P140-002; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:135a213351bf10e7d4ac861da0a2ead5af4e881fd375cf81a8a9fe1c1401d07e
 
 ## G140-001 — 정책
 
@@ -33,7 +33,7 @@
 
 ## G140-002 — 기존 설치 전환
 
-- [일반 v2 감시 해제·경고·설정 조회의 부분 수용](../../research/cli-usage-settings-0.14.0.md): Windows 분리 예약·대역 종료·해제 보존·재개·무쓰기 조회, 앞선 Linux 설정 회귀 확인. Windows 실제 별도 동의·대기 실행·해제·재활성 확인. 중단/철회/해제 실패 복구·연속 갱신·공개 후보 수용은 미완료
+- [일반 v2 감시 해제·경고·설정 조회의 부분 수용](../../research/cli-usage-settings-0.14.0.md): Windows 분리 예약·대역 종료·해제 보존·재개·무쓰기 조회, 앞선 Linux 설정 회귀 확인. Windows 실제 별도 동의·대기 실행·해제·재활성 확인. 중단/철회/해제 실패 복구·연속 갱신 수용. 실제 앱/관측·공개 후보는 Q140-002/003 범위
 - 다음 구현: [활성화의 결합·처리 기록·동의 입력·재개 순서](../details/usage-monitor-activation-0.14.0.md)
 
 - 진입: G140-001·P140-002. 현재 저장 선택과 실제 감시 상태를 구분해 CLI 표시, 이전 동의의 출처가 불명확하면 그대로 명시
@@ -64,4 +64,4 @@
 
 - `d2719dec`·`084ea468`: 실행 Skill/투영과 소스07의 v2 정책 평가·별도 승인 구분, v1 보호·역사 원문·실제 설치 보존
 - [자동 재개·세 호스트 투영](../../../tests/results/runs/20261025T053150-1ac42364b1d1.md)·[최종 투영](../../../tests/results/runs/20261025T053631-8adadd918a2c.md) 통과. Windows 임시 사용자·가짜 명령 범위, 실제 모델/감시 제어 제외
-- [당시 Linux 엔진 연결 실패](../../../tests/results/runs/20261025T052629-1ca98e48e808.md) 보존. 후속24e51fa7 세 OS CI와 반복 실행 검사의 [G140-001 수용](../../research/cli-usage-settings-0.14.0.md), 실제 감시 G140-002는 미완료
+- [당시 Linux 엔진 연결 실패](../../../tests/results/runs/20261025T052629-1ca98e48e808.md) 보존. 후속24e51fa7 세 OS CI와 반복 실행 검사의 [G140-001 수용](../../research/cli-usage-settings-0.14.0.md), G140-002의 Windows 실제 예약·감시 전환/복구는 위 후속 근거로 수용

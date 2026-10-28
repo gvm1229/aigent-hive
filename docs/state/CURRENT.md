@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 7/15(46.7%). U140-001 세 OS 첫 갱신 연결·기한·부모 종료 복구 수용.0aa329e4 제품 CI와f350d386 Windows 수명/시간 예산 검사 통과. 다음은 실제 감시 전환 G140-002와 연계된 갱신 수용
+- 현재: `feature/interactive-cli-0.14.0`, 8/15(53.3%). G140-002 실제 감시 동의·실행·해제 실패/철회 복구·연속 갱신 수용. be10dd8b Windows 실제 명령·전체 Rust 통과. 다음은 U140-002 Windows 직접 갱신의 부모 완료 처리
 - 모델 시험: 과거16회 보존, 역할 추가 호출 중단. 같은 임무 누적9회 이하·예정 비교8회, 일반 속도 경로 미확보.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`
@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.14.0`
-- 현재 등록 항목: 7/15 완료
+- 현재 등록 항목: 8/15 완료
 
-- `agent-owned`: `S140-004`, `U140-002`, `U140-003`, `G140-002`, `D140-001`, `Q140-001`, `Q140-002`, `Q140-003`
+- `agent-owned`: `S140-004`, `U140-002`, `U140-003`, `D140-001`, `Q140-001`, `Q140-002`, `Q140-003`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -50,7 +50,7 @@
 
 ## 다음 구현과 수용
 
-- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역 회귀와 Windows 실제 감시 동의/대기 실행/해제/재활성 통과. 중단·철회·해제 실패 복구/연속 갱신 진행
+- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역 회귀와 Windows 실제 감시 동의/대기 실행/해제/재활성 통과. 중단·철회·해제 실패 복구/연속 갱신 수용. 실제 앱/관측·공개 파일은 별도
 
 - M04 `06d35f5a` [벡터 선택](../plans/details/vector-choice-0.14.0.md)·M05 `3623df57` [앱 해제/보존/재개](../plans/details/host-deselection-0.14.0.md) 완료, 실행 범위·한계는 각 근거
 - M06 `54c4d6dc` [언어/입력](../plans/details/setup-language-input-0.14.0.md): Windows 설정208·최종 관련20·clippy, Linux 전체211·실제 무입력/언어 변경/거부/Ctrl-C 재개 통과. 이전 Linux207 중 잠금1실패는 현재 미재현, 원인 미확인/Q140-002 조사 유지
