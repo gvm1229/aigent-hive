@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -15,10 +16,11 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.test_artifacts import Run
 
-assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"])
+assert sys.argv[1:] in ([], ["prepare"], ["recovery"], ["current-direct"], ["uninstall"])
 prepare_only = sys.argv[1:] == ["prepare"]
 recovery_mode = sys.argv[1:] == ["recovery"]
 direct_mode = sys.argv[1:] == ["current-direct"]
+uninstall_mode = sys.argv[1:] == ["uninstall"]
 if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
@@ -30,7 +32,7 @@ user.mkdir()
 fake_bin = work / "fake-bin"
 fake_bin.mkdir()
 candidate = ROOT / "target/debug/hive.exe"
-binary = work / "prefix/bin/hive.exe" if direct_mode else work / "hive.exe"
+binary = work / "prefix/bin/hive.exe" if direct_mode or uninstall_mode else work / "hive.exe"
 binary.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(candidate, binary)
 environment = {"PATH": str(fake_bin), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
@@ -66,7 +68,7 @@ program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
 
 sha = lambda data: hashlib.sha256(data).hexdigest()
 events = []
-run = Run("Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
+run = Run("격리 Windows 활성 감시의 보존 제거·실패 재개·재설치" if uninstall_mode else "Windows 감시 설정의 입력·별도 동의 준비" if prepare_only else ("격리 Windows 현재 직접 설치의 부모 완료" if direct_mode else ("격리 Windows 실제 감시의 중단·철회·연속 갱신 복구" if recovery_mode else "격리 Windows 실제 감시의 별도 동의·대기 실행·해제·재활성")),
     [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
     paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 runtime = user / ".hive/runtime/usage-monitor"
@@ -242,6 +244,85 @@ def recovery_cases(base, on_file, off_file, consent):
         assert not status()["controller_alive"]
 
 
+def uninstall_case(base, on_file, consent):
+    version = subprocess.run([str(binary), "--version"], env=environment, capture_output=True, timeout=15)
+    assert version.returncode == 0
+    match = re.match(r"AIgent Hive v(0\.14\.0(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
+    assert match, version.stdout
+    package = match[1] + ("." + match[2] if match[2] else "")
+    receipt = work / "prefix/share/aigent-hive/install-receipt.json"
+    receipt.parent.mkdir(parents=True)
+    receipt_bytes = json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
+        "version": "0.14.0", "package_version": package, "artifact_sha256": "sha256:" + sha(binary.read_bytes())}).encode()
+    receipt.write_bytes(receipt_bytes)
+    invoke(*base, "--answers", on_file, "--monitor-confirm", consent, "--apply")
+    assert_idle()
+    preserved = {config_path: config_path.read_bytes()}
+    for path, data in {
+        user / ".hive/knowledge/preserved.md": b"Canonical synthetic knowledge.\n",
+        user / ".hive/config/projects.yml": b"projects: []\n",
+        user / "project/README.md": b"Independent project bytes.\r\n",
+        work / "prefix/foreign.txt": b"Unowned prefix bytes.\n",
+    }.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        preserved[path] = data
+    for name in ["user-preferences.json", "user-feature-answers.yml"]:
+        path = user / ".hive/config" / name
+        if path.is_file():
+            preserved[path] = path.read_bytes()
+    original_image = sha(binary.read_bytes())
+    preview = invoke("uninstall", "--user-root", str(user), "--dry-run")
+    assert preview["data"]["preview"]["core"]["owner"] == "direct", preview
+    assert preview["data"]["preview"]["monitor"]["configured"], preview
+    invoke("uninstall", "--user-root", str(user), expected=2)
+    assert_idle()
+    assert sha(binary.read_bytes()) == original_image
+    assert all(path.read_bytes() == data for path, data in preserved.items())
+    owned = "Aigent Hive version-bound Codex usage protection"
+    conflict = owned + " / " + work.name
+    task_description(owned, conflict)
+    refused = invoke("uninstall", "--user-root", str(user), "--confirm", expected=5)
+    assert not refused["data"]["completion_verified"] and refused["data"]["steps"]["monitor"] == "unverified", refused
+    assert sha(binary.read_bytes()) == original_image
+    assert all(path.read_bytes() == data for path, data in preserved.items())
+    task_description(conflict, owned)
+    removed = invoke("uninstall", "--user-root", str(user), "--resume", refused["data"]["operation_id"], expected=2)
+    assert removed["data"]["operation_id"] == refused["data"]["operation_id"]
+    history = user / removed["data"]["receipt"]
+    assert history.resolve().is_relative_to((user / ".hive/history/lifecycle").resolve())
+    deadline = time.monotonic() + 45
+    while time.monotonic() < deadline:
+        completed = json.loads(history.read_text())
+        if completed["phase"] == "complete":
+            break
+        time.sleep(.1)
+    assert completed["phase"] == "complete", completed.get("last_error")
+    assert not binary.exists() and not receipt.exists()
+    assert not json.loads((work / "host-state.json").read_text())["plugin"]
+    assert all(path.read_bytes() == data for path, data in preserved.items())
+    monitor = json.loads(monitor_path.read_text())
+    assert not monitor["enabled"] and json.loads((runtime / "disable.json").read_text())["phase"] == "complete"
+    task_name = monitor["task_name"]
+    assert task_name == "AigentHive-UsageMonitor-" + sha(str(user).lower().encode())[:16]
+    ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    absent = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+        "Import-Module ($PSHOME+'\\Modules\\ScheduledTasks\\ScheduledTasks.psd1');"
+        "$name=[Console]::In.ReadToEnd();if(Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue){exit 1}"],
+        env=environment, input=task_name.encode(), capture_output=True, timeout=20)
+    assert absent.returncode == 0, absent.stderr
+    events.append({"removal_complete": True, "task_absent": True, "receipt": completed,
+        "preserved_sha256": {str(path.relative_to(work)): sha(data) for path, data in preserved.items()}})
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(candidate, binary)
+    receipt.write_bytes(receipt_bytes)
+    invoke("install", "--scope", "user", "--host", "codex", "--user-root", str(user), "--apply")
+    assert all(path.read_bytes() == data for path, data in preserved.items())
+    assert not status()["controller_alive"]
+    assert not json.loads(monitor_path.read_text())["enabled"]
+
+
 try:
     if not prepare_only and not direct_mode:
         # One environment availability check, before creating any native registration.
@@ -283,7 +364,9 @@ try:
         assert consent["runtime_verification"] == "not-performed", preview
         invoke(*base, "--answers", on_file, "--apply", expected=2)
         assert config_path.read_bytes() == initial_config and not monitor_path.exists()
-        if recovery_mode:
+        if uninstall_mode:
+            uninstall_case(base, on_file, consent["confirmation_digest"])
+        elif recovery_mode:
             recovery_cases(base, on_file, off_file, consent["confirmation_digest"])
         elif not prepare_only:
             invoke(*base, "--answers", on_file, "--monitor-confirm", consent["confirmation_digest"], "--apply")
@@ -337,5 +420,5 @@ finally:
     run.finish(code, details={"events": events, "diagnostics": diagnostics,
         "candidate_sha256": sha(candidate.read_bytes()),
         "input_sha256": {p.name: sha(p.read_bytes()) for p in work.glob("*.json")},
-        "scope": "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
+        "scope": "GitHub-hosted Windows; actual owned task/idle monitor and private direct image, stop failure/refusal/same-operation removal/resume/reinstall. Fixed Codex plugin CLI only, no actual app/subscription/model/public14 artifact acceptance." if uninstall_mode else "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
 raise SystemExit(code)
