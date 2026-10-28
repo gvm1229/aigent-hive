@@ -83,14 +83,17 @@ public static class FixtureInstaller {
         File.WriteAllText(Path.Combine(root,"install-count"),"1");
         var probe=new ProcessStartInfo(Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"),"System32/WindowsPowerShell/v1.0/powershell.exe"),"-NoProfile -NonInteractive -WindowStyle Hidden -File \""+Path.Combine(root,"probe.ps1")+"\"");
         probe.UseShellExecute=false; probe.CreateNoWindow=true; probe.RedirectStandardInput=true; probe.RedirectStandardOutput=true; probe.RedirectStandardError=true;
-        using(var child=Process.Start(probe)) {
-            child.StandardInput.WriteLine(File.ReadAllText(Path.Combine(root,"probe-request.json")).Replace("\"__CALLER__\"",Process.GetCurrentProcess().Id.ToString()));
-            child.StandardInput.WriteLine("{\"operation\":\"open\"}");
-            child.StandardInput.WriteLine("{\"operation\":\"close\"}"); child.StandardInput.Close();
-            var output=child.StandardOutput.ReadToEndAsync(); var error=child.StandardError.ReadToEndAsync();
-            if(!child.WaitForExit(25000)) { child.Kill(); return 23; }
-            File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),output.Result+error.Result);
-        }
+        try { using(var child=Process.Start(probe)) {
+            var output=child.StandardOutput.ReadToEndAsync(); var error=child.StandardError.ReadToEndAsync(); string inputError="";
+            try {
+                child.StandardInput.WriteLine(File.ReadAllText(Path.Combine(root,"probe-request.json")).Replace("\"__CALLER__\"",Process.GetCurrentProcess().Id.ToString()));
+                child.StandardInput.WriteLine("{\"operation\":\"open\"}");
+                child.StandardInput.WriteLine("{\"operation\":\"close\"}");
+            } catch(Exception e) { inputError=e.GetType().Name+":"+e.Message; }
+            try { child.StandardInput.Close(); } catch(IOException) { }
+            if(!child.WaitForExit(25000)) { child.Kill(); child.WaitForExit(); inputError+="; probe timeout"; }
+            File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),output.Result+error.Result+inputError);
+        } } catch(Exception e) { File.WriteAllText(Path.Combine(root,"bridge-probe.txt"),e.ToString()); }
         return 0;''')
     (work / "installer.cs").write_text(installer)
     tree = ast.parse((ROOT / "tests/conformance/contracts/test_setup_console_interrupt.py").read_text())
