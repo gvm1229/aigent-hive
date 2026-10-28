@@ -256,11 +256,14 @@ trait RegistrySource {
     fn fetch(&self) -> Result<Vec<u8>, String>;
 }
 
-struct LiveRegistry;
+#[derive(Default)]
+struct LiveRegistry(std::cell::OnceCell<Result<Vec<u8>, String>>);
 
 impl RegistrySource for LiveRegistry {
     fn fetch(&self) -> Result<Vec<u8>, String> {
-        crate::update_discovery::fetch_registry_metadata()
+        self.0
+            .get_or_init(crate::update_discovery::fetch_registry_metadata)
+            .clone()
     }
 }
 
@@ -397,14 +400,25 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         .handoff_executable
         .as_deref()
         .unwrap_or(&current_executable);
-    if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
-        return match spawn_windows_direct_handoff(&current_executable, &user_root, &arguments) {
-            Ok(record) => output::handoff(json_output, language, record.as_deref()),
-            Err(error) => output::error(
-                json_output,
-                format!("cannot start Windows direct update handoff: {error}"),
-            ),
-        };
+    let registry = LiveRegistry::default();
+    if cfg!(windows) && arguments.handoff_executable.is_none() {
+        match direct_handoff_required(executable, arguments.channel, &registry) {
+            Ok(true) => {
+                return match spawn_windows_direct_handoff(
+                    &current_executable,
+                    &user_root,
+                    &arguments,
+                ) {
+                    Ok(record) => output::handoff(json_output, language, record.as_deref()),
+                    Err(error) => output::error(
+                        json_output,
+                        format!("cannot start Windows direct update handoff: {error}"),
+                    ),
+                };
+            }
+            Ok(false) => {}
+            Err(error) => return output::error(json_output, error),
+        }
     }
     if arguments.handoff_executable.is_some() {
         if let Err(error) = wait_for_windows_direct_unlock(executable) {
@@ -422,7 +436,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 user_root: &user_root,
                 language,
             },
-            &LiveRegistry,
+            &registry,
             &LiveInstaller,
             &refresher,
             UpdateSelection {
@@ -441,7 +455,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 user_root: &user_root,
                 language,
             },
-            &LiveRegistry,
+            &registry,
             &LiveInstaller,
             &refresher,
             UpdateSelection {
@@ -568,14 +582,21 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     })
 }
 
-fn is_direct_owner(executable: &Path) -> bool {
-    let Ok(expected) = env!("CARGO_PKG_VERSION").parse() else {
-        return false;
+fn direct_handoff_required(
+    executable: &Path,
+    channel: UpdateChannel,
+    registry: &impl RegistrySource,
+) -> Result<bool, String> {
+    let expected: SemVersion = env!("CARGO_PKG_VERSION")
+        .parse()
+        .map_err(|_| "invalid compiled version")?;
+    let Ok(owner @ InstallOwner::Direct { .. }) = discover_owner(executable, expected) else {
+        return Ok(false);
     };
-    matches!(
-        discover_owner(executable, expected),
-        Ok(InstallOwner::Direct { .. })
-    )
+    let target = target_package(&registry.fetch()?, channel)?;
+    // Keep unchanged reconciliation and major-version refusal in the original caller.
+    // The same cached metadata is used by the normal flow after this decision.
+    Ok(target.product.major == expected.major && target > *owner.package_version())
 }
 
 fn spawn_windows_direct_handoff(
@@ -1987,5 +2008,31 @@ mod tests {
             owner.package_version().exact,
             format!("{}-test.1", env!("CARGO_PKG_VERSION"))
         );
+        let current = format!("{}-test.1", env!("CARGO_PKG_VERSION"));
+        let newer = format!("{}-test.2", env!("CARGO_PKG_VERSION"));
+        for (stable, test, channel, required) in [
+            (
+                "0.1.0",
+                Some(current.as_str()),
+                UpdateChannel::Stable,
+                false,
+            ),
+            ("0.1.0", Some(current.as_str()), UpdateChannel::Test, false),
+            ("0.1.0", Some(newer.as_str()), UpdateChannel::Test, true),
+            (env!("CARGO_PKG_VERSION"), None, UpdateChannel::Stable, true),
+            ("1.0.0", None, UpdateChannel::Stable, false),
+        ] {
+            assert_eq!(
+                direct_handoff_required(&binary, channel, &metadata_with_channels(stable, test))
+                    .unwrap(),
+                required,
+            );
+        }
+        assert!(direct_handoff_required(
+            &binary,
+            UpdateChannel::Stable,
+            &FakeRegistry(b"invalid".to_vec())
+        )
+        .is_err());
     }
 }
