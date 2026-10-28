@@ -128,6 +128,7 @@ def install_real_codex():
     assert node.is_file() and npm_js.is_file()
     tools_prefix = work / "host-tools"
     tools_prefix.mkdir()
+    (user / ".codex").mkdir()
     environment.update(HOME=str(user), USERPROFILE=str(user), CODEX_HOME=str(user / ".codex"),
         NPM_CONFIG_PREFIX=str(tools_prefix), NPM_CONFIG_USERCONFIG=str(work / "host-user.npmrc"),
         NPM_CONFIG_GLOBALCONFIG=str(work / "host-global.npmrc"), NPM_CONFIG_REGISTRY="https://registry.npmjs.org",
@@ -153,6 +154,13 @@ def install_real_codex():
         assert probe.returncode == 0, "public Codex command unavailable: " + text[:1000]
         if "--help" in args:
             assert "--json" in text, "public Codex command lacks required structured output"
+    state = subprocess.run([str(images[0]), "plugin", "marketplace", "list", "--json"],
+        env=environment, cwd=user, capture_output=True, timeout=20)
+    events.append({"real_codex_state_exit": state.returncode,
+        "stdout": state.stdout.decode(errors="replace")[:2000],
+        "stderr": state.stderr.decode(errors="replace")[:2000]})
+    assert state.returncode == 0, events[-1]
+    assert isinstance(json.loads(state.stdout)["marketplaces"], list)
 
 
 def current_direct_update():
