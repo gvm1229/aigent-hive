@@ -23,6 +23,9 @@ assert sys.argv[1:] in ([], ["npm"])
 work = Path(tempfile.mkdtemp(prefix="windows-direct-replace-", dir=ROOT / "tests/work")).resolve()
 sha = lambda data: hashlib.sha256(data).hexdigest()
 build_inputs = []
+REGISTRY = {"dist-tags": {"latest": "0.13.1", "test": "0.14.0-test.1"},
+            "versions": {"0.13.1": {"aigentHive": {"productVersion": "0.13.1"}},
+                         "0.14.0-test.1": {"aigentHive": {"productVersion": "0.14.0"}}}}
 
 
 def build_variant(package, name):
@@ -128,9 +131,7 @@ if(-not (Test-HiveVersionOutput -Output (& $candidate --version) -ExpectedVersio
 Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -PackageVersion $PackageVersion -DeferLockedBackup:$DeferLockedBackup
 '''.replace("__INCOMING_SHA__", sha(target.read_bytes()))
     (case / "installer.ps1").write_text(installer, encoding="utf-8")
-    (case / "registry.json").write_text(json.dumps({"dist-tags": {"latest": "0.13.1", "test": "0.14.0-test.1"},
-        "versions": {"0.13.1": {"aigentHive": {"productVersion": "0.13.1"}},
-                     "0.14.0-test.1": {"aigentHive": {"productVersion": "0.14.0"}}}}))
+    (case / "registry.json").write_text(json.dumps(REGISTRY))
     events = []
     record = Run("격리 Windows 실제 직접 교체와 종료 후 정리: " + name,
         [sys.executable, str(Path(__file__).resolve()), name], paths=[case.relative_to(ROOT).as_posix()], binary=binary)
@@ -229,7 +230,7 @@ def run_npm_case():
     (shim / "codex.py").write_text(fake_host, encoding="utf-8")
     (shim / "codex.cmd").write_text(f'@"{sys.executable}" "%~dp0codex.py" %*\r\n')
     (case / "fixture-only").write_text("0.14.0-direct-fixture")
-    (case / "registry.json").write_bytes((work / "normal/registry.json").read_bytes())
+    (case / "registry.json").write_text(json.dumps(REGISTRY))
     events, packages = [], []
     record = Run("격리 Windows 실제 npm 갱신과 같은 버전 보존", [sys.executable, str(Path(__file__).resolve()), "npm"],
         paths=[case.relative_to(ROOT).as_posix()], binary=baseline)
