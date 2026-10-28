@@ -80,19 +80,29 @@ fn known_running_image(pid: u32) -> Result<bool, String> {
     } else {
         "unqualified"
     };
-    let Some(image) = registry["images"]
+    let images = registry["images"]
         .as_array()
         .ok_or("missing parent registry")?
         .iter()
-        .find(|entry| entry["platform"] == platform && entry["version"] == "0.13.1")
-    else {
+        .filter(|entry| {
+            entry["platform"] == platform
+                && matches!(
+                    entry["version"].as_str(),
+                    Some("0.13.1" | "0.13.2-test.1" | "0.13.2-test.2")
+                )
+        });
+    let mut hashes = Vec::new();
+    for image in images {
+        let hash = image["code_directory_hash"]
+            .as_str()
+            .ok_or("missing parent code hash")?;
+        if hash.len() != 40 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err("invalid parent code hash".into());
+        }
+        hashes.push(hash);
+    }
+    if hashes.is_empty() {
         return Ok(false);
-    };
-    let hash = image["code_directory_hash"]
-        .as_str()
-        .ok_or("missing parent code hash")?;
-    if hash.len() != 40 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Err("invalid parent code hash".into());
     }
     let mut attributes = GuestAttributes::new();
     attributes.set_pid(i32::try_from(pid).map_err(|_| "invalid parent pid")?);
@@ -104,10 +114,15 @@ fn known_running_image(pid: u32) -> Result<bool, String> {
     // dynamicCode makes Security use the kernel's retained CodeDirectory, not the new file.
     let code = SecCode::copy_guest_with_attribues(None, &attributes, Flags::NONE)
         .map_err(|_| "running parent signature unavailable")?;
-    let requirement: SecRequirement = format!("cdhash H\"{hash}\"")
-        .parse()
-        .map_err(|_| "invalid parent signature requirement")?;
-    Ok(code.check_validity(Flags::NONE, &requirement).is_ok())
+    for hash in hashes {
+        let requirement: SecRequirement = format!("cdhash H\"{hash}\"")
+            .parse()
+            .map_err(|_| "invalid parent signature requirement")?;
+        if code.check_validity(Flags::NONE, &requirement).is_ok() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn terminal_descriptors(bytes: &[u8], device: u32) -> bool {

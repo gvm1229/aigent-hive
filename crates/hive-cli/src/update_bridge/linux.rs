@@ -126,7 +126,10 @@ pub(super) fn connect(root: &Path, budget: LegacyBudget) -> Result<Option<Connec
         .iter()
         .any(|entry| {
             entry["platform"] == platform
-                && entry["version"] == "0.13.1"
+                && matches!(
+                    entry["version"].as_str(),
+                    Some("0.13.1" | "0.13.2-test.1" | "0.13.2-test.2")
+                )
                 && entry["binary_sha256"].as_str() == digest.strip_prefix("sha256:")
         });
     if !known {
