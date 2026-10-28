@@ -17,6 +17,7 @@ use std::{
 const RECORD: &str = "share/aigent-hive/replacement-pending.json";
 const RECEIPT: &str = "share/aigent-hive/install-receipt.json";
 const INSTALL_PENDING: &str = "share/aigent-hive/install-receipt.pending.json";
+#[cfg(windows)]
 const LEASE: &str = "share/aigent-hive/replacement-operation.lock";
 const LIMIT: u64 = 32 * 1024;
 
@@ -58,7 +59,8 @@ pub(crate) fn run_scope(arguments: &[String]) -> ExitCode {
 }
 
 struct Pending {
-    _lease: Option<cap_std::fs::File>,
+    #[cfg(windows)]
+    _lease: cap_std::fs::File,
     root: Dir,
     prefix: PathBuf,
     executable: PathBuf,
@@ -66,28 +68,20 @@ struct Pending {
     bytes: Vec<u8>,
 }
 
-fn lease(root: &Dir) -> Result<Option<cap_std::fs::File>, String> {
-    #[cfg(windows)]
-    {
-        use cap_std::fs::OpenOptionsExt;
-        let mut options = OpenOptions::new();
-        // The kernel removes only this newly created leaf on close or process exit.
-        // Never reopen or remove an existing lease: it may belong to a live worker.
-        options
-            .write(true)
-            .create_new(true)
-            .follow(FollowSymlinks::No)
-            .share_mode(0)
-            .custom_flags(0x0400_0000); // FILE_FLAG_DELETE_ON_CLOSE
-        root.open_with(LEASE, &options)
-            .map(Some)
-            .map_err(|_| "replacement cleanup is busy or its lease conflicts; preserved".into())
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = (root, LEASE);
-        Ok(None)
-    }
+#[cfg(windows)]
+fn lease(root: &Dir) -> Result<cap_std::fs::File, String> {
+    use cap_std::fs::OpenOptionsExt;
+    let mut options = OpenOptions::new();
+    // The kernel removes only this newly created leaf on close or process exit.
+    // Never reopen or remove an existing lease: it may belong to a live worker.
+    options
+        .write(true)
+        .create_new(true)
+        .follow(FollowSymlinks::No)
+        .share_mode(0)
+        .custom_flags(0x0400_0000); // FILE_FLAG_DELETE_ON_CLOSE
+    root.open_with(LEASE, &options)
+        .map_err(|_| "replacement cleanup is busy or its lease conflicts; preserved".into())
 }
 
 fn read(root: &Dir, path: &Path, limit: u64) -> Result<Option<Vec<u8>>, String> {
@@ -299,6 +293,7 @@ fn load(executable: &Path, confirmation: Option<&str>) -> Result<Option<Pending>
     if peek(&root, Path::new(RECORD), LIMIT)?.is_none() {
         return Ok(None);
     }
+    #[cfg(windows)]
     let lease = lease(&root)?;
     let Some(candidate) = peek(&root, Path::new(RECORD), LIMIT)? else {
         return Ok(None);
@@ -357,6 +352,7 @@ fn load(executable: &Path, confirmation: Option<&str>) -> Result<Option<Pending>
         },
     )?;
     finish_publication(Pending {
+        #[cfg(windows)]
         _lease: lease,
         root,
         prefix,
