@@ -105,7 +105,9 @@ try:
     ps = Path(environment["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     probe = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
         "$ErrorActionPreference='Stop';"
-        "$s=[ServiceProcess.ServiceController]::new('Schedule');"
+        "[void][Reflection.Assembly]::Load('System.ServiceProcess, Version=4.0.0.0, "
+        "Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a');"
+        "$s=[System.ServiceProcess.ServiceController]::new('Schedule');"
         "if($s.Status -ne 'Running'){throw 'Task Scheduler unavailable'};"
         "if([Diagnostics.Process]::GetProcessesByName('ChatGPT').Count -ne 0)"
         "{throw 'Desktop app present; idle fixture refused'};Write-Output 'isolated-idle-ready'"],
