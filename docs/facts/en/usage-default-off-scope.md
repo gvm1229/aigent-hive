@@ -10,7 +10,7 @@ tags: [guard, planning, usage]
 aliases: []
 sources:
   - "repo:crates/hive-core/src/preferences.rs#sha256:838005e60b3255422c2ee143d76e66ef3ef877d7f3a8ff196eb446c0dfdc888d"
-  - "repo:docs/decisions/interactive-cli-0.14.0.md#sha256:db25524e2ae9fede4fb70c9a7662a2f6c05ef87fbe7a2eaaff356377951731d2"
+  - "repo:docs/decisions/interactive-cli-0.14.0.md#sha256:40e381b151d7da2535c5c2c0a956202e26edb23567a081f4782b6c420939baf7"
   - "repo:docs/plans/0.14.0-implementation.md#sha256:685d7db95252c69c24f49f393b2e53350cc3506bd5543e21346bb3a26c8bed5b"
   - "repo:docs/research/cli-usage-settings-0.14.0.md#sha256:135a213351bf10e7d4ac861da0a2ead5af4e881fd375cf81a8a9fe1c1401d07e"
   - "repo:docs/research/cli-user-settings-0.14.0.md#sha256:029f15d8f36dbc94ad6e63444e3ba8ad22ae8ef1566a0f2a6080d77bb110f636"

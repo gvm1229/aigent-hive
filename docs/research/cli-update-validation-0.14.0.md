@@ -150,3 +150,14 @@ Windows ReadConsole의 반환값은 실제로 읽은 글자 수. 기존 StringBu
 | 재현 가능한 증거 | 소스/실행 파일/입력/OS/명령을 결합한 위 기록과 격리 OS 실행기. 개인 호스트용 qualify-interactive-cli는 읽기 전용 유지 |
 
 위 범위로 U140-001 수용. 공개 파일·실제 앱/감시·전체 갱신 조정기·결과 수용은 U140-002/003·G140-002·Q140-002/003에서 계속 검증. 원본/실패/역사 근거와 개인0.13.1 설치 보존.
+
+## U140-002 Windows 부모 완료와 실제 교체 연결 — 2026-10-28
+
+- [실제 부모 실패](../../tests/results/runs/20261028T110044-14e2b2c83c38.md): 현재0.14.0·공개 latest0.13.1에서 자식은 완료0, 부모는 pending2. `08042abc`에서 같은 메타데이터1회 재사용과 교체 필요 분기 수정
+- [현재 버전 실제 명령](../../tests/results/runs/20261028T111307-a42d3f2ea678.md): 부모 exit0·hive.update-complete, core=unchanged·settings/harness=verified, 기존 실행 파일/영수증/설정 불변. [Windows Rust](../../tests/results/runs/20261028T111320-ce179cc29b75.md)와 [3b32b284 전체 CI](https://github.com/gvm1229/aigent-hive/actions/runs/40677739480) 통과. 두 기록의 source_changed_during_run=false, merge74c49348과 head3b32b284의 tree f1dfbcb28a55aa29b394517d9973bda7061d8f40 동일
+- [일반 삭제](../../tests/results/runs/20261028T111759-d09b67f27646.md)·[Win32 POSIX](../../tests/results/runs/20261028T112554-f1d25dd8c204.md)·[Nt 사용자 모드](../../tests/results/runs/20261028T112826-383c6794167a.md): Windows11 실행 중 일회용 사본의 삭제 거부. 조사 완료와 삭제 성공의 구분, 이 API를 이용한 제품 우회 추가 없음
+- `e623cdc9`: 실제 본체/설정 완료 후 정확한 옛 사본만 종료 뒤 정리, 대기 상태 별도 표시. 실제 폴더 식별자·전후 지문·한정된 파일명 결합, 기존 no-follow 읽기/CAS/보관 복구 재사용. 다른 파일·다른 설치 범위·바뀐 기록은 보존
+- [실제 게시/정리 명령](../../tests/results/runs/20261028T135315-7accfe5280a4.md): 일회용 가짜 옛 실행 이미지와 현재 개발 CLI, 공백/Windows 내부 경로 표기. 실행 중 사본 보존→새 본체와 영수증 게시→옛 사본 종료 후 정리 명령0·사본/기록 부재·주변 원문 보존
+- [설치 계약](../../tests/results/runs/20261028T142214-a5996489ea46.md)·[동일 사본 거부](../../tests/results/runs/20261028T142622-0c058e6181c4.md)·갱신 Rust30/코드 검사 통과. 내부 수집/게시 분리 과정의 컴파일 실패와 영수증 잠금 실패 보존, 조건 완화 없음
+- [시험 입력 범위](../../tests/results/runs/20261028T142026-03f662689613.md): 전용 source-debug 실행 파일/명시 사용자 루트/표시가 일치할 때만 고정 자료 사용. 잘못된 표시·다른 임시 사용자 루트 거부. release 빌드에는 제외, 실제 모델 평가나 공개 서명 검증의 대체 없음
+- 전체 새 본체 교체 명령의 격리 Windows 수용은 다음 CI의 정상/정리 중단 사례로 확인. 현재 U140-002 완료 제외, 원래8/15 유지. 개인0.13.1·실제 앱/감시·공개0.14.0 배포물 미사용

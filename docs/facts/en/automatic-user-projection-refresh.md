@@ -9,7 +9,7 @@ summary: "The 0.9.5 direct update validates the mode-specific user-install actio
 tags: [installation, migration, projection, update]
 aliases: ["Post-update projection refresh"]
 sources:
-  - "repo:crates/hive-cli/src/update_activation.rs#sha256:7e78332ac45bf1fa5cd110eadefbed35cd613c95326e9cd0d07a39b3060d4d70"
+  - "repo:crates/hive-cli/src/update_activation.rs#sha256:6904ac8f28c89053291d1ece8d585e245920387bb0050cea3ff5e6f9bb6ccb12"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
