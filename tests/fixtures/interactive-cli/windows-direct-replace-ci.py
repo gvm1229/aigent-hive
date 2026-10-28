@@ -167,11 +167,13 @@ Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -Pack
         assert result["data"]["from_version"] == "0.14.0-test" and result["data"]["to_version"] == "0.14.0-test.1"
         backup = prefix / cleanup["backup"]
         pending = prefix / cleanup["record"]
+        lease = pending.parent / "replacement-operation.lock"
         assert backup.parent.samefile(prefix / "bin") and pending.parent.samefile(prefix / "share/aigent-hive")
         until = time.monotonic() + 40
-        while backup.exists() and time.monotonic() < until:
+        while (backup.exists() or lease.exists()) and time.monotonic() < until:
             time.sleep(.1)
         assert not backup.exists(), "old image cleanup did not finish"
+        assert not lease.exists(), "cleanup worker still holds its operation lease"
         if interrupt:
             assert pending.exists(), "interrupted cleanup lost its recovery record"
             resumed = invoke("update", "--user-root", str(user))
@@ -180,6 +182,7 @@ Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -Pack
             while pending.exists() and time.monotonic() < until:
                 time.sleep(.1)
         assert not pending.exists()
+        assert not lease.exists()
         assert (case / "install-count").read_text() == "1"
         assert sha(binary.read_bytes()) == sha(target.read_bytes())
         assert config.read_bytes() == before_config and neighbor.read_bytes() == b"Preserve unrelated prefix content.\n"
