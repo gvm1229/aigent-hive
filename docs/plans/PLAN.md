@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 470
+> Revision: 471
 > 기준일: 2026-10-28
 > Product version: `0.14.0`
 > 공개 Stable: `0.13.1`
-> 현재 단계: 원래 조건6/15 수용. Windows npm 제거 통과·직접 첫 갱신 진단, POSIX 공개0.13.2 호환 추가의 실제 검증 대기. 모델 추가 반복 중단
+> 현재 단계: 원래 조건6/15 수용. Windows 직접 첫 갱신·npm 제거와 POSIX 공개test.1 연결 통과, Windows EOF/기한 재개 검증. 모델 추가 반복 중단
 > 다음 공개 시험: `0.14.0-test.1`
 
 ## 목표와 결정
