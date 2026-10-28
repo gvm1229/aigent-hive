@@ -107,10 +107,12 @@ try:
         "$ErrorActionPreference='Stop';"
         "[void][Reflection.Assembly]::Load('System.ServiceProcess, Version=4.0.0.0, "
         "Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a');"
+        "[Console]::WriteLine('service-type-loaded');"
         "$s=[System.ServiceProcess.ServiceController]::new('Schedule');"
         "if($s.Status -ne 'Running'){throw 'Task Scheduler unavailable'};"
+        "[Console]::WriteLine('scheduler-running');"
         "if([Diagnostics.Process]::GetProcessesByName('ChatGPT').Count -ne 0)"
-        "{throw 'Desktop app present; idle fixture refused'};Write-Output 'isolated-idle-ready'"],
+        "{throw 'Desktop app present; idle fixture refused'};[Console]::WriteLine('isolated-idle-ready')"],
         env=environment, capture_output=True, timeout=20)
     events.append({"availability_exit": probe.returncode,
                    "availability_output": probe.stdout.decode(errors="replace").strip(),
@@ -162,6 +164,12 @@ try:
     invoke(*base, "--answers", off_file, "--apply")
     assert not status()["controller_alive"]
     code = 0
+except BaseException as failure:
+    events.append({"failure": str(failure)[:2500]})
+    if isinstance(failure, subprocess.TimeoutExpired):
+        events.append({"timed_out_stdout": (failure.stdout or b"").decode(errors="replace")[-1500:],
+                       "timed_out_stderr": (failure.stderr or b"").decode(errors="replace")[-1500:]})
+    raise
 finally:
     # Product ownership checks govern cleanup; no task-name glob or process-name kill.
     if monitor_path.exists() and json.loads(monitor_path.read_text()).get("enabled"):
