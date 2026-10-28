@@ -432,7 +432,7 @@ fn finish_loaded(pending: Option<Pending>, wait: bool) -> Result<Option<Value>, 
                     drop(file);
                     break;
                 }
-                Err(error) if error.kind() == io::ErrorKind::PermissionDenied => {
+                Err(error) if image_in_use(&error) => {
                     if !wait {
                         return Ok(Some(pending.view("after-process-exit")));
                     }
@@ -453,6 +453,11 @@ fn finish_loaded(pending: Option<Pending>, wait: bool) -> Result<Option<Value>, 
     pending.verify()?;
     remove(&pending.root, Path::new(RECORD), &pending.bytes)?;
     Ok(Some(pending.view("complete")))
+}
+
+fn image_in_use(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::PermissionDenied
+        || (cfg!(windows) && matches!(error.raw_os_error(), Some(32 | 33)))
 }
 
 fn interruption(point: &str) {
@@ -508,6 +513,26 @@ pub(crate) fn run_worker(arguments: &[String]) -> ExitCode {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn only_permission_and_native_sharing_locks_are_pending() {
+        assert!(image_in_use(&io::Error::from(
+            io::ErrorKind::PermissionDenied
+        )));
+        for code in [32, 33] {
+            assert_eq!(
+                image_in_use(&io::Error::from_raw_os_error(code)),
+                cfg!(windows)
+            );
+        }
+        for kind in [
+            io::ErrorKind::NotFound,
+            io::ErrorKind::InvalidInput,
+            io::ErrorKind::UnexpectedEof,
+        ] {
+            assert!(!image_in_use(&io::Error::from(kind)));
+        }
+    }
 
     fn receipt(package: &str, digest: &str) -> Vec<u8> {
         serde_json::to_vec(
