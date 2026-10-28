@@ -17,7 +17,7 @@ def run_fixed_script(script, packet=None):
     env = os.environ.copy()
     for index, chunk in enumerate(chunks):
         env[f"HIVE_BRIDGE_TEST_SOURCE_{index}"] = chunk
-    bootstrap = "$s=[Text.StringBuilder]::new();for($i=0;$i -lt " + str(len(chunks)) + ";$i++){[void]$s.Append([Environment]::GetEnvironmentVariable('HIVE_BRIDGE_TEST_SOURCE_'+$i))};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s.ToString()))))"
+    bootstrap = "$s=[Text.StringBuilder]::new();for($i=0;$i -lt " + str(len(chunks)) + ";$i++){[void]$s.Append([Environment]::GetEnvironmentVariable('HIVE_BRIDGE_TEST_SOURCE_'+$i));[Environment]::SetEnvironmentVariable('HIVE_BRIDGE_TEST_SOURCE_'+$i,$null)};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s.ToString()))))"
     executable = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     return subprocess.run([str(executable), "-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", bootstrap],
                           env=env, input=None if packet is None else json.dumps(packet) + "\n",
@@ -69,6 +69,7 @@ foreach($line in @('','hive.exe',('hive.exe update '+('x '*40)))){try{[void][Hiv
 if($negative -ne 3){throw 'argument bounds accepted'}
 @{arguments=$parsed.Count;invalid_rejected=$negative}|ConvertTo-Json -Compress
 '''
+        script += "\n#" + self.registry
         result = run_fixed_script(script)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"arguments":5,"invalid_rejected":3})

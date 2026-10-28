@@ -196,7 +196,8 @@ impl Session {
         let system = std::env::var_os("SystemRoot").ok_or("Windows system root unavailable")?;
         let mut command =
             Command::new(Path::new(&system).join("System32/WindowsPowerShell/v1.0/powershell.exe"));
-        let bootstrap = format!("$s=[Text.StringBuilder]::new();for($i=0;$i -lt {};$i++){{[void]$s.Append([Environment]::GetEnvironmentVariable('HIVE_UPDATE_BRIDGE_'+$i))}};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s.ToString()))))", chunks.len());
+        // CodeDOM's compiler must not inherit the large, owned script transport environment.
+        let bootstrap = format!("$s=[Text.StringBuilder]::new();for($i=0;$i -lt {};$i++){{[void]$s.Append([Environment]::GetEnvironmentVariable('HIVE_UPDATE_BRIDGE_'+$i));[Environment]::SetEnvironmentVariable('HIVE_UPDATE_BRIDGE_'+$i,$null)}};& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s.ToString()))))", chunks.len());
         for (index, chunk) in chunks.iter().enumerate() {
             command.env(
                 format!("HIVE_UPDATE_BRIDGE_{index}"),
