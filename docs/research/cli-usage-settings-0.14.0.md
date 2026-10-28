@@ -88,3 +88,11 @@ Windows 명령줄 시험의 예약은 자동 실행 비활성·트리거 0개이
 
 - 보호를 끈 경로는 관측 전에 반환하므로 낮은 값·초기화·0%·다른 구간0%·센서 없음·관측 만료에 의존하지 않는 구조. 켠 경로의 원인별 검사와 보안 검증은 유지
 - 현재 추가 반복 실행·코드 검사에서 실행 중 소스 변경false. Windows11/Codex의 임시 파일·합성 승인과 GitHub Linux/macOS CI 범위이며, 실제 AI 하위 작업 중단·OS 감시 제어·새 공개 파일 수용의 대체 근거는 아님
+
+## G140-002 Windows 실제 실행의 부분 수용 — 2026-10-28
+
+- `746ecc5b`: 초기 모듈 자동 검색 지연 수정. [격리 Server2025 진단](../../tests/results/runs/20261028T094859-a3ae3ce2a902.md)의 원본28.703초·고정 경로 사본0.875초, [소유·중복 실행·기한 검사4개](../../tests/results/runs/20261028T095333-28c178240686.md) 통과. 기존5초 조회·15초 예약과 동의/소유 조건 유지
+- [정상 실제 명령](../../tests/results/runs/20261028T100050-2e67c87c9638.md): 별도 감시 동의 없는 적용 거부→정확한 동의 적용→실제 예약/감시 실행→전체 보호 해제/종료→옛 동의 거부→새 동의 재활성→해제 확인. 보관 자료·설정 선택 보존
+- 실행 상태2회 `controller_alive=true`, `sensor_health=idle`, `monitoring_verified=false`, 관측0회. 종료2회 `controller_alive=false`, `sensor_health=stopped`. 실제 대기 실행과 관측/제어 성공의 구분
+- [Windows Rust](../../tests/results/runs/20261028T100237-7709a4b8f75c.md) 통과. 두 기록 모두 source_changed_during_run=false. CI40668032935의 merge e09d92c8과 head5e4c5501의 tree `62b1455e002c65f398ee865b63ff47f14c4d88d8` 동일, 실제 후보 SHA256 `a8d16f2dae1df91ce01cdb024ecd032cbf28f2c4db7a1b380b5339b10d1e9737`
+- GitHub-hosted Windows Server2025·실제 Task Scheduler/감시 프로그램·별도 사용자 폴더·고정 Codex 플러그인 명령 대역 범위. 실제 Codex 앱·구독 관측·대화 중단·공개0.14.0 파일 수용 제외. 중단/철회/해제 실패 복구와 연속 갱신은 후속 실행 대상, G140-002 전체 완료 보류

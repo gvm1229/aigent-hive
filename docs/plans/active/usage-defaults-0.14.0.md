@@ -6,7 +6,7 @@
 ## 항목
 
 - [x] [G140-001] 기본값·전체 스위치·모든 실행 경로의 일치
-  - state: complete; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:901c3b7ee2cb3fed9abdefb0a196bc371608f35215d9ab07ccd0eafc0355f09d
+  - state: complete; evidence: repo:docs/research/cli-usage-settings-0.14.0.md#sha256:5252d4ad330030b7ca44c7fbb7cc482d3df23acdd6a6ad4172a9854994da5615
 - [ ] [G140-002] 기존 사용자 선택·감시 전환·실제 상태 확인
   - state: agent-owned; depends: G140-001,P140-002
 
@@ -33,7 +33,7 @@
 
 ## G140-002 — 기존 설치 전환
 
-- [일반 v2 감시 해제·경고·설정 조회의 부분 수용](../../research/cli-usage-settings-0.14.0.md): Windows 분리 예약·대역 종료·해제 보존·재개·무쓰기 조회, 앞선 Linux 설정 회귀 확인. 새 활성화 동의·갱신 결과의 상태 표시·공개 후보 수용은 계속 미완료
+- [일반 v2 감시 해제·경고·설정 조회의 부분 수용](../../research/cli-usage-settings-0.14.0.md): Windows 분리 예약·대역 종료·해제 보존·재개·무쓰기 조회, 앞선 Linux 설정 회귀 확인. Windows 실제 별도 동의·대기 실행·해제·재활성 확인. 중단/철회/해제 실패 복구·연속 갱신·공개 후보 수용은 미완료
 - 다음 구현: [활성화의 결합·처리 기록·동의 입력·재개 순서](../details/usage-monitor-activation-0.14.0.md)
 
 - 진입: G140-001·P140-002. 현재 저장 선택과 실제 감시 상태를 구분해 CLI 표시, 이전 동의의 출처가 불명확하면 그대로 명시

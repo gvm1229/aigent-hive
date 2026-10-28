@@ -50,7 +50,7 @@
 
 ## 다음 구현과 수용
 
-- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역/제한 동시 실행 회귀 통과, 격리 Windows 긍정 수용 미완료
+- M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역 회귀와 Windows 실제 감시 동의/대기 실행/해제/재활성 통과. 중단·철회·해제 실패 복구/연속 갱신 진행
 
 - M04 `06d35f5a` [벡터 선택](../plans/details/vector-choice-0.14.0.md)·M05 `3623df57` [앱 해제/보존/재개](../plans/details/host-deselection-0.14.0.md) 완료, 실행 범위·한계는 각 근거
 - M06 `54c4d6dc` [언어/입력](../plans/details/setup-language-input-0.14.0.md): Windows 설정208·최종 관련20·clippy, Linux 전체211·실제 무입력/언어 변경/거부/Ctrl-C 재개 통과. 이전 Linux207 중 잠금1실패는 현재 미재현, 원인 미확인/Q140-002 조사 유지
