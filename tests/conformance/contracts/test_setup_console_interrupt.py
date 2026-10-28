@@ -134,6 +134,7 @@ public static class SetupConsoleFixture {
             while(deadline.ElapsedMilliseconds<120000) {
                 if(helper==null) foreach(var candidate in Process.GetProcessesByName("hive-direct-update-helper")) {
                     try {
+                        if(candidate.Handle==IntPtr.Zero) { candidate.Dispose(); continue; }
                         if(String.Equals(Path.GetFullPath(candidate.MainModule.FileName),expected,StringComparison.OrdinalIgnoreCase)) {
                             if(helper!=null) throw new InvalidOperationException("multiple owned helpers");
                             helper=candidate;
