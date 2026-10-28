@@ -19,8 +19,12 @@ from tests.conformance.support.harness import write_operational_user_setup
 assert os.name == "nt", "This qualified transport uses private Windows profiles."
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--project-guard-off", action="store_true")
+parser.add_argument("--project-medium", action="store_true")
 options = parser.parse_args()
-BASE = ROOT / ("tests/work/m20-project-guard-off-1d01e7d0" if options.project_guard_off
+if options.project_medium and not options.project_guard_off:
+    parser.error("--project-medium requires the explicit --project-guard-off comparison")
+BASE = ROOT / ("tests/work/m20-project-medium" if options.project_medium
+               else "tests/work/m20-project-guard-off-1d01e7d0" if options.project_guard_off
                else "tests/work/m20-comparison-1d01e7d0")
 assert not BASE.exists(), "Never replace an earlier trial."
 BASELINE = ROOT / "tests/work/legacy-file-normalize-0140/public-package/bin/hive.exe"
@@ -112,7 +116,7 @@ try:
                 config = {"root": str(trial), "comparison": True, "comparison_version": version, "sample": sample,
                     "binary": str(binary), "binary_sha256": binary_hash, "product_commit": OLD_COMMIT if version == "0.13.1" else "1d01e7d0",
                     "source_commit": subprocess.check_output([str(git), "rev-parse", "HEAD"], text=True).strip(),
-                    "model": "gpt-6-luna", "reasoning_effort": "medium" if scope == "user" else "low",
+                    "model": "gpt-6-luna", "reasoning_effort": "medium" if scope == "user" or options.project_medium else "low",
                     "scenario": scope + "-quick", "setup_scope": scope, "expected_values": expected_values,
                     "user_before": user_before, "preserved_fragments": fragments, "agent_fields": fields,
                     "readable_paths": readable, "git_binary": str(git), "git_sha256": sha(git),
