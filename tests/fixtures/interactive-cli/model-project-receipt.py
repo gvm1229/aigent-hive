@@ -42,13 +42,15 @@ def collect(trial, config, host):
         "expected_apply_count": sum(e.get("operation") == "hive" and "--apply" in e.get("arguments", []) for e in events) == config.get("expected_apply_count", 1),
         "no_failed_cli_retry": all(e.get("exit_code", 0) == 0 for e in events),
         "bounded_responses": all(e["hive_input_bytes"] <= (4096 if "--show" in e.get("arguments", []) else 8192)
-            for e in events if e.get("operation") == "hive" and "--dry-run" not in e.get("arguments", [])),
+            for e in events if e.get("operation") == "hive"
+            and "--dry-run" not in e.get("arguments", [])
+            and not {"--describe", "--section"}.issubset(e.get("arguments", []))),
     }
     comparison = config.get("comparison") is True
     if comparison:
         failures = [e for e in events if e.get("exit_code", 0) != 0]
-        fingerprints = [json.dumps([e.get("operation"), e.get("failure_kind"),
-            e.get("result")], sort_keys=True) for e in failures]
+        fingerprints = [e.get("input_sha256") or json.dumps([e.get("operation"),
+            e.get("arguments"), e.get("failure_kind"), e.get("result")], sort_keys=True) for e in failures]
         del checks["no_failed_cli_retry"]
         checks["no_repeated_failed_input"] = len(fingerprints) == len(set(fingerprints))
         checks["bounded_failure_corrections"] = len(failures) <= 2

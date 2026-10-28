@@ -152,6 +152,7 @@ class ModelProjectReceipt(unittest.TestCase):
         self.assertFalse((self.trial / "answers.json").exists())
         first = json.loads((self.trial / "events.jsonl").read_text().splitlines()[0])
         self.assertEqual(first["exit_code"], 2)
+        self.assertEqual(len(first["input_sha256"]), 64)
         self.assertEqual(first["hive_input_bytes"], len(rejected.stdout) + len(rejected.stderr))
         payload = {"schema_version": 1, "kind": "hive.setup-answer-patch", "answers": {"interface_language": "ko"}}
         accepted = subprocess.run([sys.executable, str(tool), "write-answers", json.dumps(payload)],
@@ -207,6 +208,28 @@ class ModelProjectReceipt(unittest.TestCase):
         result = self.recorder.collect(self.trial, config, {"status": "completed"})
         self.assertFalse(result["checks"]["no_repeated_failed_input"])
         self.assertEqual(result["hive_input_bytes"], 9160)
+
+    def test_explicit_section_detail_is_separate_from_bounded_question_and_summary(self):
+        log = self.trial / "events.jsonl"
+        for flags, bounded in [(["--describe", "--section", "usage"], True),
+                               (["--describe", "--question", "usage-enforcement"], False),
+                               (["--show", "--summary"], False), (["--apply", "--summary"], False)]:
+            log.write_text(json.dumps({"operation": "hive", "arguments": flags,
+                "exit_code": 0, "hive_input_bytes": 10063}), encoding="utf-8")
+            result = self.recorder.collect(self.trial, {"user_before": {}}, {})
+            self.assertEqual(result["checks"]["bounded_responses"], bounded, flags)
+            self.assertEqual(result["hive_input_bytes"], 10063)
+
+    def test_failure_correction_uses_input_identity_not_only_error_kind(self):
+        log = self.trial / "events.jsonl"
+        failure = {"operation": "write-answers", "exit_code": 2,
+                   "failure_kind": "fixture-input", "hive_input_bytes": 20, "input_sha256": "first"}
+        config = {"comparison": True, "comparison_version": "0.14.0", "user_before": {}}
+        for second, valid in [("changed", True), ("first", False)]:
+            log.write_text("\n".join(json.dumps(e) for e in [failure, {**failure, "input_sha256": second}]), encoding="utf-8")
+            result = self.recorder.collect(self.trial, config, {})
+            self.assertEqual(result["checks"]["no_repeated_failed_input"], valid)
+            self.assertEqual(result["hive_input_bytes"], 40)
 
     def test_comparison_transport_refuses_foreign_roots_and_optional_activation(self):
         tool = self.trial / "tool.py"

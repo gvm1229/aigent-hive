@@ -185,6 +185,10 @@ except Exception as failure:
     detail = str(failure) if CONFIG.get("comparison") and isinstance(failure, ValueError) else ""
     message = ("Trial input rejected: " + type(failure).__name__ + ". " + detail + " " + hint + "\n").encode("utf-8")
     event = {"operation": operation, "exit_code": 2, "failure_kind": "fixture-input"}
+    input_bytes = json.dumps(sys.argv[1:], ensure_ascii=False).encode("utf-8")
+    if operation == "write-answers" and len(sys.argv) != 3:
+        input_bytes += globals().get("content", b"")
+    event["input_sha256"] = digest(input_bytes)
     if operation == "hive":
         event["arguments"] = [arg[:2048] for arg in sys.argv[2:]][:32]
     emit(event, error=message)
