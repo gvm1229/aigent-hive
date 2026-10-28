@@ -265,6 +265,11 @@ jobs:
               subprocess.run([sys.executable, "scripts/qualify-interactive-cli.py", "--fixture", str(fixture),
                   "--binary", str(binary.resolve()), "--scenario", scenario, "--language", language,
                   "--user-root", str(fixture / "user"), "--result", str(fixture / "results.json")], check=True)
+          if os.name == "nt":
+              fixture = Path("tests/work/terminal-windows-terminal").resolve()
+              subprocess.run([sys.executable, "scripts/qualify-interactive-cli.py", "--fixture", str(fixture),
+                  "--binary", str(binary.resolve()), "--scenario", "windows-terminal", "--language", "ko",
+                  "--user-root", str(fixture / "user"), "--result", str(fixture / "results.json")], check=True)
       - if: runner.os == 'macOS'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py direct
       - if: runner.os == 'macOS'

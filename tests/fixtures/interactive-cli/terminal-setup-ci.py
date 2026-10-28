@@ -106,7 +106,7 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
             "output_bytes": len(output), "output_sha256": hashlib.sha256(output).hexdigest()}
 
 
-def windows_terminal(binary, user, project, work, environment, mode, label):
+def windows_terminal(binary, user, project, work, environment, mode, label, app_path=None):
     from tests.conformance.contracts.test_setup_console_interrupt import compile_console_fixture
     helper = work / "console.exe"
     if not helper.exists():
@@ -123,6 +123,36 @@ def windows_terminal(binary, user, project, work, environment, mode, label):
     startup = subprocess.STARTUPINFO()
     startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startup.wShowWindow = subprocess.SW_HIDE
+    if app_path:
+        shell_result = work / "terminal-context.json"
+        shell_temporary = work / "terminal-context.tmp"
+        private_environment = "\n".join("$env:" + key + "=" + quote(value) for key, value in environment.items())
+        script.write_text("$ErrorActionPreference='Stop'\n" + private_environment + "\n& "
+            + quote(str(helper)) + " " + " ".join(quote(a) for a in args)
+            + "\n$hiveFixtureExit=$LASTEXITCODE\n"
+            + "$hiveTerminalPackage=Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue | Select-Object -First 1\n"
+            + "$hiveTerminalVersion=if($hiveTerminalPackage){$hiveTerminalPackage.Version.ToString()}else{'unknown'}\n"
+            + "$hiveTerminalContext=@{exit_code=$hiveFixtureExit;wt_session_present=[bool]$env:WT_SESSION;package_version=$hiveTerminalVersion}|ConvertTo-Json -Compress\n"
+            + "[IO.File]::WriteAllText(" + quote(str(shell_temporary)) + ",$hiveTerminalContext)\n"
+            + "[IO.File]::Move(" + quote(str(shell_temporary)) + "," + quote(str(shell_result)) + ")\nexit $hiveFixtureExit\n",
+            encoding="utf-8")
+        command = [app_path, "--window", "new", "new-tab", "--startingDirectory", str(work),
+            "--title", "Hive qualification", str(powershell), "-NoProfile", "-NonInteractive",
+            "-ExecutionPolicy", "Bypass", "-File", str(script)]
+        # A fresh window and a custom command are documented at Microsoft's command-line-arguments page.
+        with (work / "terminal-launcher.log").open("wb") as output:
+            launcher = subprocess.Popen(command, env=environment, stdout=output, stderr=subprocess.STDOUT, startupinfo=startup)
+            began = time.monotonic()
+            while not shell_result.exists() and time.monotonic() - began < 150:
+                if launcher.poll() not in (None, 0):
+                    break
+                time.sleep(0.1)
+            assert shell_result.exists(), ("Windows Terminal child did not finish", launcher.poll())
+        context = json.loads(shell_result.read_text(encoding="utf-8-sig"))
+        assert context["wt_session_present"] and context["exit_code"] == 0, context
+        child = json.loads(result.read_text(encoding="utf-8"))
+        assert child["exit_code"] == 0, child
+        return {"terminal": "Windows Terminal", "launcher_command": command, **context, **child}
     process = subprocess.run([str(powershell), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(script)],
         env=environment, capture_output=True, timeout=150,
         creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
@@ -136,11 +166,13 @@ def main():
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--user-root", type=Path, required=True)
     parser.add_argument("--result", type=Path, required=True)
-    parser.add_argument("--scenario", choices=["setup", "project", "cancel-resume", "unattended"], required=True)
+    parser.add_argument("--scenario", choices=["setup", "project", "cancel-resume", "unattended", "windows-terminal"], required=True)
     parser.add_argument("--language", choices=["ko", "en"], default="ko")
     args = parser.parse_args()
     if not hosted():
         parser.error("mutating qualification requires an isolated GitHub-hosted OS")
+    if args.scenario == "windows-terminal" and os.name != "nt":
+        parser.error("Windows Terminal qualification requires Windows")
     contract = runpy.run_path(str(ROOT / "scripts/qualify-interactive-cli.py"))
     inspection = contract["Inspection"](args.fixture, args.binary)
     work, binary = inspection.fixture, inspection.binary
@@ -153,11 +185,15 @@ def main():
     code, events = 1, []
     details = {"scenario": args.scenario, "user_root": str(user), "language": args.language,
         "scope": "Actual terminal/CLI in isolated OS; fixed answers and fake Codex, no model or personal installation. Windows Terminal app qualification is separate."}
-    if os.name == "nt" and args.scenario == "project":
+    terminal_path = None
+    if args.scenario == "windows-terminal":
         terminal_path = shutil.which("wt.exe")
         details["windows_terminal"] = {"executable": terminal_path, "available": terminal_path is not None,
-                                       "execution": "not-run", "scope": "availability only; no Windows Terminal acceptance"}
+                                       "execution": "not-run"}
+        details["scope"] = "Actual Windows Terminal child context and private CLI project; fake/unavailable AI host, no model or personal installation. No live sensor qualification."
     try:
+        if args.scenario == "windows-terminal" and not terminal_path:
+            raise AssertionError("Windows Terminal executable is unavailable in this isolated VM")
         environment = inspection.environment()
         environment.update({"PYTHONUTF8": "1", "PYTHONNOUSERSITE": "1", "CARGO_INCREMENTAL": "0",
                             "HIVE_TEST_USER_ROOT": str(user), "PATHEXT": ".COM;.EXE;.BAT;.CMD"})
@@ -178,11 +214,11 @@ def main():
         base = ["setup", "--scope", "user", "--user-root", str(user)]
 
         def terminal(command, label, mode, *, is_project=False, cancel=False):
-            event = (windows_terminal(binary, user, project, work, environment, mode, label) if os.name == "nt"
+            event = (windows_terminal(binary, user, project, work, environment, mode, label, terminal_path) if os.name == "nt"
                      else posix_terminal(binary, command, environment, user, is_project, cancel, args.language))
             events.append({"command": [str(binary), *command], **event})
 
-        if args.scenario == "project":
+        if args.scenario in {"project", "windows-terminal"}:
             write_operational_user_setup(user)
             settings_path = user / ".hive/config/user-setup.yml"
             values = yaml.safe_load(settings_path.read_text(encoding="utf-8"))
@@ -199,6 +235,8 @@ def main():
             assert settings_path.read_bytes() == before
             for name, data in originals.items():
                 assert data in (project / name).read_bytes(), name
+            if terminal_path:
+                details["windows_terminal"]["execution"] = "verified"
         elif args.scenario == "unattended":
             for command in [base + ["--non-interactive", "--output", "json"],
                             ["update", "--user-root", str(user), "--non-interactive", "--output", "json"]]:
@@ -229,11 +267,11 @@ def main():
         details["error"] = str(error)[:4000]
         details["console_errors"] = {p.name: p.read_text(encoding="utf-8", errors="replace")[-4000:]
             for p in work.glob("*.error.txt") if p.is_file() and not p.is_symlink()}
-        pending = journal(user, args.scenario == "project")
+        pending = journal(user, args.scenario in {"project", "windows-terminal"})
         details["pending"] = {key: pending.get(key) for key in ("phase", "step", "operation_id")}
         if "environment" in locals():
             try:
-                scope = ["--target", str(project)] if args.scenario == "project" else ["--scope", "user"]
+                scope = ["--target", str(project)] if args.scenario in {"project", "windows-terminal"} else ["--scope", "user"]
                 inspected = subprocess.run([str(binary), "setup", *scope, "--user-root", str(user), "--show", "--output", "json"],
                     env=environment, input=b"", capture_output=True, timeout=15)
                 state = json.loads(inspected.stdout)

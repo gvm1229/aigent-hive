@@ -102,6 +102,51 @@ class InteractiveCliIsolation(unittest.TestCase):
             MODULE.Inspection(self.fixture, self.binary, source=self.source)
 
 
+class TerminalAppTransport(unittest.TestCase):
+    def test_a_plain_console_result_cannot_count_as_windows_terminal(self):
+        self.check_terminal_context(False)
+
+    def test_terminal_command_preserves_private_environment_and_only_session_presence(self):
+        self.check_terminal_context(True)
+
+    def check_terminal_context(self, present):
+        from types import SimpleNamespace
+        spec = importlib.util.spec_from_file_location("terminal_setup_ci", ROOT / "tests/fixtures/interactive-cli/terminal-setup-ci.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            (work / "console.exe").write_bytes(b"never executed")
+            environment = {"PATH": str(work / "closed-bin"), "CODEX_HOME": "C:/fixture/hive's-home"}
+
+            def launched(command, **kwargs):
+                self.assertEqual(command[1:4], ["--window", "new", "new-tab"])
+                self.assertEqual(kwargs["env"], environment)
+                (work / "terminal-context.json").write_text(json.dumps({"exit_code": 0,
+                    "wt_session_present": present, "package_version": "fixture"}), encoding="utf-8")
+                (work / "project.json").write_text('{"exit_code":0}', encoding="utf-8")
+                return SimpleNamespace(poll=lambda: 0)
+
+            with mock.patch.dict(os.environ, {"SystemRoot": str(work / "system")}), \
+                 mock.patch.object(module.subprocess, "STARTUPINFO", create=True,
+                     return_value=SimpleNamespace(dwFlags=0, wShowWindow=0)), \
+                 mock.patch.object(module.subprocess, "STARTF_USESHOWWINDOW", 1, create=True), \
+                 mock.patch.object(module.subprocess, "SW_HIDE", 0, create=True), \
+                 mock.patch.object(module.subprocess, "Popen", side_effect=launched):
+                args = (work / "hive.exe", work / "user", work / "project", work, environment, "project-quick", "project")
+                if present:
+                    result = module.windows_terminal(*args, app_path="wt.exe")
+                    self.assertEqual(result["terminal"], "Windows Terminal")
+                    self.assertIn("launcher_command", result)
+                else:
+                    with self.assertRaises(AssertionError):
+                        module.windows_terminal(*args, app_path="wt.exe")
+            script = (work / "project.ps1").read_text(encoding="utf-8")
+            self.assertIn("hive''s-home", script)
+            self.assertIn("[bool]$env:WT_SESSION", script)
+            self.assertIn("[IO.File]::Move", script)
+
+
 class ModelProjectReceipt(unittest.TestCase):
     def setUp(self):
         spec = importlib.util.spec_from_file_location("model_project_receipt",

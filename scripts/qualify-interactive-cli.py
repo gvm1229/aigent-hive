@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-LIFECYCLE_SCENARIOS = ("setup", "project", "cancel-resume", "unattended")
+LIFECYCLE_SCENARIOS = ("setup", "project", "cancel-resume", "unattended", "windows-terminal")
 
 
 class IsolationError(ValueError):
