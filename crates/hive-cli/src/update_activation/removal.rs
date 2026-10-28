@@ -91,7 +91,7 @@ fn npm_path(
     runner: &impl CommandRunner,
     npm: &crate::usage::QualifiedExecutable,
     operation: &str,
-) -> Result<PathBuf, String> {
+) -> Result<(PathBuf, String), String> {
     let result = runner
         .run(
             npm,
@@ -110,8 +110,11 @@ fn npm_path(
     if !path.is_absolute() {
         return Err("npm install scope is not absolute".into());
     }
-    path.canonicalize()
-        .map_err(|_| "cannot resolve npm install scope".into())
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| "cannot resolve npm install scope")?;
+    // Compare canonical identities, but give npm its own compatible path spelling.
+    Ok((canonical, text.to_owned()))
 }
 
 fn remove_npm(
@@ -123,8 +126,8 @@ fn remove_npm(
     let npm = runner
         .qualify(program_name)
         .map_err(|_| "npm is unavailable; program preserved")?;
-    let root = npm_path(runner, &npm, "root")?;
-    let prefix = npm_path(runner, &npm, "prefix")?;
+    let (root, _) = npm_path(runner, &npm, "root")?;
+    let (prefix, prefix_argument) = npm_path(runner, &npm, "prefix")?;
     let platform = platform_package_name()?
         .strip_prefix('@')
         .ok_or("invalid platform package")?;
@@ -145,7 +148,6 @@ fn remove_npm(
         if package["name"] != "aigent-hive" || package["version"] != expected["package_version"] {
             return Err("npm main package ownership differs; preserved".into());
         }
-        let prefix = prefix.to_str().ok_or("npm prefix is not UTF-8")?;
         let result = runner
             .run(
                 &npm,
@@ -153,7 +155,7 @@ fn remove_npm(
                     "uninstall",
                     "--global",
                     "--prefix",
-                    prefix,
+                    &prefix_argument,
                     "--ignore-scripts",
                     "aigent-hive",
                 ],
@@ -179,6 +181,7 @@ mod tests {
 
     struct NpmFixture {
         prefix: PathBuf,
+        reported_prefix: String,
         root: PathBuf,
         executable: PathBuf,
         calls: RefCell<Vec<Vec<String>>>,
@@ -201,9 +204,10 @@ mod tests {
                 .push(args.iter().map(|s| (*s).into()).collect());
             let stdout = match args {
                 ["root", "--global"] => self.root.to_string_lossy().as_bytes().to_vec(),
-                ["prefix", "--global"] => self.prefix.to_string_lossy().as_bytes().to_vec(),
+                ["prefix", "--global"] => self.reported_prefix.as_bytes().to_vec(),
                 ["uninstall", "--global", "--prefix", prefix, "--ignore-scripts", "aigent-hive"] => {
-                    assert_eq!(Path::new(prefix), self.prefix);
+                    assert_eq!(*prefix, self.reported_prefix);
+                    assert_eq!(Path::new(prefix).canonicalize().unwrap(), self.prefix);
                     assert!(self.executable.starts_with(&self.root));
                     fs::remove_file(&self.executable).unwrap();
                     fs::remove_file(self.root.join("aigent-hive/package.json")).unwrap();
@@ -242,6 +246,7 @@ mod tests {
         fs::write(&foreign, b"keep").unwrap();
         let fixture = NpmFixture {
             prefix,
+            reported_prefix: temp.path().to_str().unwrap().to_owned(),
             root,
             executable: executable.clone(),
             calls: RefCell::new(Vec::new()),
