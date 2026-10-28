@@ -17,6 +17,7 @@ from scripts.test_artifacts import Run
 if not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS") == "true"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows")
+assert sys.argv[1:] in ([], ["npm"])
 
 (ROOT / "tests/work").mkdir(exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix="windows-direct-replace-", dir=ROOT / "tests/work")).resolve()
@@ -197,5 +198,130 @@ Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -Pack
             "scope": "GitHub-hosted Windows, actual public update command, actual frozen source-debug images and publisher/cleanup, fixed metadata and transport plus Codex plugin stand-in. Private14-test baseline and planned14-test.1 target, no publication. Not public signing/registry, desktop control or model acceptance."})
 
 
-run_case("normal", False)
-run_case("interrupted", True)
+if not sys.argv[1:]:
+    run_case("normal", False)
+    run_case("interrupted", True)
+
+
+def run_npm_case():
+    case = work / "npm"
+    user, prefix, shim = case / "user", case / "prefix with spaces", case / "fake-bin"
+    for path in [user, prefix, shim]:
+        path.mkdir(parents=True)
+    node = Path(shutil.which("node")).resolve()
+    npm_cmd = Path(shutil.which("npm.cmd")).absolute()
+    npm_js = npm_cmd.parent / "node_modules/npm/bin/npm-cli.js"
+    assert node.is_file() and npm_js.is_file()
+    environment = {"PATH": str(shim), "HIVE_TEST_USER_ROOT": str(user),
+                   "HIVE_TEST_HOST_STATE": str(case / "host-state.json")}
+    for key in ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR",
+                "GEMINI_CLI_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "TEMP", "TMP",
+                "NPM_CONFIG_CACHE"]:
+        path = case / key
+        path.mkdir()
+        environment[key] = str(path)
+    for key in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"]:
+        if key in os.environ:
+            environment[key] = os.environ[key]
+    environment.update(NPM_CONFIG_PREFIX=str(prefix), NPM_CONFIG_USERCONFIG=str(case / "user.npmrc"),
+        NPM_CONFIG_GLOBALCONFIG=str(case / "global.npmrc"), NPM_CONFIG_OFFLINE="true",
+        NPM_CONFIG_AUDIT="false", NPM_CONFIG_FUND="false", NPM_CONFIG_IGNORE_SCRIPTS="true")
+    (shim / "codex.py").write_text(fake_host, encoding="utf-8")
+    (shim / "codex.cmd").write_text(f'@"{sys.executable}" "%~dp0codex.py" %*\r\n')
+    (case / "fixture-only").write_text("0.14.0-direct-fixture")
+    (case / "registry.json").write_bytes((work / "normal/registry.json").read_bytes())
+    events, packages = [], []
+    record = Run("격리 Windows 실제 npm 갱신과 같은 버전 보존", [sys.executable, str(Path(__file__).resolve()), "npm"],
+        paths=[case.relative_to(ROOT).as_posix()], binary=baseline)
+    code = 1
+
+    def npm_call(*args, cwd=case):
+        result = subprocess.run([str(node), str(npm_js), *args], env=environment, cwd=cwd,
+            capture_output=True, text=True, encoding="utf-8", timeout=90)
+        assert result.returncode == 0, (args, result.stdout[-1500:], result.stderr[-1500:])
+        return result.stdout.strip()
+
+    def pack(image, version):
+        staging = case / version
+        native = staging / "node_modules/@aigent-hive/win32-x64"
+        (native / "bin").mkdir(parents=True)
+        (staging / "bin").mkdir()
+        shutil.copyfile(image, native / "bin/hive.exe")
+        (native / "package.json").write_text(json.dumps({"name": "@aigent-hive/win32-x64", "version": version,
+            "aigentHive": {"productVersion": "0.14.0"}}))
+        shutil.copyfile(ROOT / "packaging/npm/bin/hive.cjs", staging / "bin/hive.cjs")
+        (staging / "package.json").write_text(json.dumps({"name": "aigent-hive", "version": version,
+            "aigentHive": {"productVersion": "0.14.0"}, "bin": {"hive": "bin/hive.cjs"},
+            "dependencies": {"@aigent-hive/win32-x64": version}, "bundleDependencies": ["@aigent-hive/win32-x64"]}))
+        archive = case / json.loads(npm_call("pack", "--json", "--pack-destination", str(case), cwd=staging))[0]["filename"]
+        packages.append({"version": version, "archive_sha256": sha(archive.read_bytes()), "image_sha256": sha(image.read_bytes())})
+        return archive
+
+    def invoke(*args):
+        result = subprocess.run([str(node), str(prefix / "node_modules/aigent-hive/bin/hive.cjs"), *args, "--output", "json"],
+            env=environment, input=b"", capture_output=True, timeout=180)
+        response = json.loads(result.stdout) if result.stdout else {}
+        events.append({"arguments": list(args), "exit_code": result.returncode, "result": response,
+                       "stderr_sha256": sha(result.stderr)})
+        assert result.returncode == 0, (args, response, result.stderr[-1500:])
+        return response
+
+    try:
+        packages.append({"npm_version": npm_call("--version"), "node_sha256": sha(node.read_bytes()),
+                         "npm_entry_sha256": sha(npm_js.read_bytes())})
+        first, target = pack(baseline, "0.14.0-test"), pack(incoming, "0.14.0-test.1")
+        npm_call("install", "--global", "--prefix", str(prefix), str(first))
+        assert Path(npm_call("prefix", "--global")).samefile(prefix)
+        assert Path(npm_call("root", "--global")).samefile(prefix / "node_modules")
+        native = prefix / "node_modules/aigent-hive/node_modules/@aigent-hive/win32-x64/bin/hive.exe"
+        assert sha(native.read_bytes()) == sha(baseline.read_bytes())
+        foreign = prefix / "node_modules/hive-test-foreign"
+        foreign.mkdir()
+        (foreign / "package.json").write_text('{"name":"hive-test-foreign","version":"1.0.0"}')
+        (foreign / "README.md").write_bytes(b"Preserve unrelated npm bytes.\n")
+        preserved = {path: path.read_bytes() for path in foreign.iterdir()}
+        settings = invoke("setup", "--scope", "user", "--describe")["data"]["expedited_defaults"]
+        settings.update(interface_language="ko", selected_hosts=["codex"])
+        settings["wiki"]["enabled"] = False
+        answers = case / "answers.json"
+        answers.write_text(json.dumps(settings))
+        invoke("install", "--scope", "user", "--host", "codex", "--user-root", str(user), "--apply")
+        invoke("setup", "--scope", "user", "--user-root", str(user), "--answers", str(answers), "--apply")
+        config = user / ".hive/config/user-setup.yml"
+        preserved[config] = config.read_bytes()
+        relay = '''import hashlib,os,subprocess,sys
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+assert sys.argv[1:]==['install','-g','aigent-hive@0.14.0-test.1']
+assert Path(os.environ['NPM_CONFIG_PREFIX']).samefile(root/'prefix with spaces')
+archive=root/'aigent-hive-0.14.0-test.1.tgz'
+assert hashlib.sha256(archive.read_bytes()).hexdigest()==__HASH__
+count=root/'install-count'
+count.write_text(str(int(count.read_text())+1 if count.exists() else 1))
+raise SystemExit(subprocess.run([__NODE__,__NPM__,'install','-g',str(archive)],env=os.environ).returncode)
+'''.replace("__HASH__", repr(sha(target.read_bytes()))).replace("__NODE__", repr(str(node))).replace("__NPM__", repr(str(npm_js)))
+        ast.parse(relay)
+        (shim / "npm.py").write_text(relay, encoding="utf-8")
+        (shim / "npm.cmd").write_text(f'@"{sys.executable}" "%~dp0npm.py" %*\r\n')
+        environment["HIVE_TEST_UPDATE_FIXTURE"] = str(case)
+        result = invoke("update", "--channel", "test", "--confirm", "--user-root", str(user))
+        assert result["code"] == "hive.update-complete", result
+        assert result["data"]["steps"]["core"] == "verified" and result["data"]["steps"]["harness"] == "verified", result
+        assert result["data"]["from_version"] == "0.14.0-test" and result["data"]["to_version"] == "0.14.0-test.1"
+        assert sha(native.read_bytes()) == sha(incoming.read_bytes())
+        assert json.loads((prefix / "node_modules/aigent-hive/package.json").read_text())["version"] == "0.14.0-test.1"
+        repeat = invoke("update", "--channel", "test", "--confirm", "--user-root", str(user))
+        assert repeat["code"] == "hive.update-complete" and repeat["data"]["steps"]["core"] == "unchanged", repeat
+        assert (case / "install-count").read_text() == "1"
+        assert all(path.read_bytes() == value for path, value in preserved.items())
+        code = 0
+    except BaseException as error:
+        events.append({"failure": str(error)[:2500]})
+        raise
+    finally:
+        record.finish(code, details={"events": events, "packages": packages, "build_inputs": build_inputs,
+            "scope": "GitHub-hosted Windows, actual Node/npm local package installation and public hive.cjs/update entry; private cache/prefix and exact local archive transport, Codex stand-in. No public registry/signing or actual app/model acceptance."})
+
+
+if sys.argv[1:] == ["npm"]:
+    run_npm_case()
