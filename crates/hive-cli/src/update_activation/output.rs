@@ -1,8 +1,8 @@
 //! One machine result; user guidance uses stderr.
 use super::{completion::Report, FlowOutcome, Language};
 use crate::ActionResult;
-use serde_json::json;
-use std::{path::Path, process::ExitCode};
+use serde_json::{json, Value};
+use std::process::ExitCode;
 
 pub(super) struct CoreUpdate {
     pub from_version: Option<String>,
@@ -70,19 +70,49 @@ pub(super) fn needs_input(json_output: bool, message: &str) -> ExitCode {
     )
 }
 
-pub(super) fn handoff(json_output: bool, language: Language, record: Option<&Path>) -> ExitCode {
+pub(super) fn cleanup_pending(language: Language, view: &Value, resume: String) -> ActionResult {
     let mut result = result(
         "pending",
-        "hive.update-handoff-pending",
+        "hive.update-cleanup-pending",
         2,
         match language {
-            Language::Ko => "별도 프로세스에서 갱신이 계속됩니다. 아직 완료되지 않았습니다.",
-            Language::En => "The update continues in a child process. Completion is pending.",
+            Language::Ko => "이전 갱신의 옛 실행 파일이 아직 사용 중입니다. 사용이 끝난 뒤 같은 명령으로 재개할 수 있습니다.",
+            Language::En => "The previous program image is still in use. Run the same command after it exits.",
         }
         .into(),
     );
-    result.data = Some(json!({"completion_record": record, "completion_verified": false}));
-    emit(json_output, &result)
+    result.data = Some(
+        json!({"cleanup":view,"resume_command":resume,"completion_verified":false,"model_calls":0}),
+    );
+    result.next_action = Some(resume);
+    result
+}
+
+pub(super) fn cleanup(
+    result: &mut ActionResult,
+    language: Language,
+    mut view: Value,
+    error: Option<String>,
+) {
+    let data = result.data.as_mut().expect("update result data");
+    data["steps"]["cleanup"] = json!(if view["state"] == "complete" {
+        "verified"
+    } else {
+        "pending"
+    });
+    if let Some(error) = error {
+        view["error"] = json!(error);
+        if result.exit_code == 0 {
+            result.status = "pending";
+            result.exit_code = 2;
+            result.code = "hive.update-cleanup-pending";
+            result.message = match language {
+                Language::Ko => "프로그램과 설정 검증은 끝났지만 옛 실행 파일 정리가 남았습니다. 같은 명령으로 재개할 수 있습니다.",
+                Language::En => "Program and setup validation finished, but old-image cleanup is pending. Resume with the same command.",
+            }.into();
+        }
+    }
+    data["cleanup"] = view;
 }
 
 pub(super) fn finished(
@@ -179,12 +209,32 @@ pub(super) fn finished(
     result
 }
 
+fn cleanup_guidance(data: &Value, ko: bool) -> Option<String> {
+    let state = data["cleanup"]["state"].as_str()?;
+    Some(
+        match (ko, state) {
+            (true, "complete") => "옛 실행 파일 정리: 완료",
+            (true, "after-process-exit") => "옛 실행 파일 정리: 이 명령이 종료된 뒤 자동 정리 대기",
+            (true, _) => "옛 실행 파일 정리: 미완료, 같은 갱신 명령으로 재개",
+            (false, "complete") => "Old program image: cleanup verified",
+            (false, "after-process-exit") => {
+                "Old program image: cleanup is queued for this command's exit"
+            }
+            (false, _) => "Old program image: cleanup is incomplete; resume the same update",
+        }
+        .into(),
+    )
+}
+
 pub(super) fn guidance(result: &ActionResult) -> Vec<String> {
     let Some(data) = &result.data else {
         return Vec::new();
     };
     let ko = data["interface_language"] == "ko";
     let mut lines = Vec::new();
+    if let Some(line) = cleanup_guidance(data, ko) {
+        lines.push(line);
+    }
     if let Some(core) = data["steps"]["core"].as_str() {
         let state = match (ko, core) {
             (true, "verified") => "교체 검증 완료",
@@ -271,6 +321,46 @@ pub(super) fn guidance(result: &ActionResult) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn queued_cleanup_is_not_verified_and_cleanup_errors_preserve_prior_failures() {
+        let core = CoreUpdate {
+            status: "verified",
+            ..CoreUpdate::default()
+        };
+        let mut result = finished(Ok(FlowOutcome::Installed), None, Language::Ko, &core);
+        cleanup(
+            &mut result,
+            Language::Ko,
+            json!({"state":"after-process-exit"}),
+            None,
+        );
+        assert_eq!(result.exit_code, 0);
+        assert_eq!(result.data.as_ref().unwrap()["steps"]["cleanup"], "pending");
+        assert!(guidance(&result)
+            .iter()
+            .any(|line| line.contains("자동 정리 대기")));
+        cleanup(
+            &mut result,
+            Language::Ko,
+            json!({"state":"unverified"}),
+            Some("spawn failed".into()),
+        );
+        assert_eq!(result.exit_code, 2);
+        assert_eq!(result.status, "pending");
+        assert_eq!(result.data.as_ref().unwrap()["steps"]["core"], "verified");
+        result.status = "verification-failed";
+        result.exit_code = 5;
+        result.message = "earlier setup failure".into();
+        cleanup(
+            &mut result,
+            Language::Ko,
+            json!({"state":"unverified"}),
+            Some("cleanup failed".into()),
+        );
+        assert_eq!(result.exit_code, 5);
+        assert_eq!(result.message, "earlier setup failure");
+    }
 
     #[test]
     fn pending_setup_is_not_reported_as_a_complete_update() {

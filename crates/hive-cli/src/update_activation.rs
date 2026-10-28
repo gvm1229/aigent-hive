@@ -1,8 +1,11 @@
 mod completion;
+mod direct_replacement;
 mod output;
 #[cfg(debug_assertions)]
 pub(crate) mod qualification;
 mod removal;
+pub(crate) use direct_replacement::run_scope as run_replacement_scope;
+pub(crate) use direct_replacement::run_worker as run_replacement_cleanup;
 pub(crate) use removal::remove_owned_core;
 
 use crate::usage::{CommandRunner, SystemCommandRunner};
@@ -15,7 +18,7 @@ use std::env;
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::ExitCode;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -24,7 +27,6 @@ const MAX_BINARY_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_INSTALLER_BYTES: usize = 1024 * 1024;
 const INSTALL_TIMEOUT: Duration = Duration::from_mins(10);
 const INSTALL_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
-const DIRECT_HANDOFF_HELPER: &str = ".hive/runtime/update/hive-direct-update-helper.exe";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum PackageChannel {
@@ -273,15 +275,20 @@ trait Installer {
     fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String>;
 }
 
-struct LiveInstaller;
+struct LiveInstaller {
+    defer_loaded_image: bool,
+}
 
 impl Installer for LiveInstaller {
     fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String> {
         match owner {
             InstallOwner::Npm { .. } => install_with_npm(target, &SystemCommandRunner),
-            InstallOwner::Direct { prefix, .. } => {
-                install_direct(prefix, target, &SystemCommandRunner)
-            }
+            InstallOwner::Direct { prefix, .. } => install_direct(
+                prefix,
+                target,
+                &SystemCommandRunner,
+                self.defer_loaded_image,
+            ),
         }
     }
 }
@@ -364,6 +371,22 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             return output::error(json_output, message);
         }
     };
+    let current_executable = match env::current_exe() {
+        Ok(path) => path,
+        Err(error) => {
+            return output::error(
+                json_output,
+                format!("cannot resolve the running Hive executable: {error}"),
+            )
+        }
+    };
+    if arguments.handoff_executable.is_none() {
+        match resume_direct_replacement(&current_executable, &user_root, interactive) {
+            Ok(Some(result)) => return output::emit(json_output, &result),
+            Ok(None) => {}
+            Err(message) => return output::error(json_output, message),
+        }
+    }
     // Finish an approved interrupted setup before registry lookup or another binary install.
     // Software --confirm never supplies answers to the setup engine.
     match crate::user_setup::resume_pending_update(
@@ -389,39 +412,20 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             return output::error(json_output, message);
         }
     };
-    let current_executable = match env::current_exe() {
-        Ok(path) => path,
-        Err(error) => {
-            return output::error(
-                json_output,
-                format!("cannot resolve the running Hive executable: {error}"),
-            );
-        }
-    };
     let executable = arguments
         .handoff_executable
         .as_deref()
         .unwrap_or(&current_executable);
     let registry = LiveRegistry::default();
-    if cfg!(windows) && arguments.handoff_executable.is_none() {
-        match direct_handoff_required(executable, arguments.channel, &registry) {
-            Ok(true) => {
-                return match spawn_windows_direct_handoff(
-                    &current_executable,
-                    &user_root,
-                    &arguments,
-                ) {
-                    Ok(record) => output::handoff(json_output, language, record.as_deref()),
-                    Err(error) => output::error(
-                        json_output,
-                        format!("cannot start Windows direct update handoff: {error}"),
-                    ),
-                };
-            }
-            Ok(false) => {}
+    let defer_loaded_image = if cfg!(windows) && arguments.handoff_executable.is_none() {
+        match direct_replacement_required(executable, arguments.channel, &registry) {
+            Ok(required) => required,
             Err(error) => return output::error(json_output, error),
         }
-    }
+    } else {
+        false
+    };
+    let installer = LiveInstaller { defer_loaded_image };
     if arguments.handoff_executable.is_some() {
         if let Err(error) = wait_for_windows_direct_unlock(executable) {
             return output::error(json_output, error);
@@ -439,7 +443,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 language,
             },
             &registry,
-            &LiveInstaller,
+            &installer,
             &refresher,
             UpdateSelection {
                 channel: arguments.channel,
@@ -458,7 +462,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 language,
             },
             &registry,
-            &LiveInstaller,
+            &installer,
             &refresher,
             UpdateSelection {
                 channel: arguments.channel,
@@ -475,12 +479,72 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         language,
         &core_update,
     );
+    if core_update.status == "verified" {
+        match direct_replacement::finish(executable, None, false) {
+            Ok(Some(view)) => {
+                let failure = if view["state"] == "after-process-exit" {
+                    direct_replacement::spawn(executable, &view).err()
+                } else {
+                    None
+                };
+                output::cleanup(&mut result, language, view, failure);
+            }
+            Ok(None) => {}
+            Err(error) => output::cleanup(
+                &mut result,
+                language,
+                serde_json::json!({"state":"unverified","scope":"direct-install-prefix"}),
+                Some(error),
+            ),
+        }
+    }
+    supply_resume(&mut result, &user_root, &core_update);
+    output::emit(json_output, &result)
+}
+
+fn supply_resume(
+    result: &mut crate::ActionResult,
+    user_root: &Path,
+    core_update: &output::CoreUpdate,
+) {
     if result.exit_code != 0 && core_update.status == "verified" && result.next_action.is_none() {
-        result.next_action = Some(crate::update_bridge::resume_command(&user_root));
+        result.next_action = Some(crate::update_bridge::resume_command(user_root));
         result.data.as_mut().expect("update result data")["resume_command"] =
             serde_json::json!(result.next_action);
     }
-    output::emit(json_output, &result)
+}
+
+fn resume_direct_replacement(
+    executable: &Path,
+    user_root: &Path,
+    interactive: bool,
+) -> Result<Option<crate::ActionResult>, String> {
+    let Some(view) = direct_replacement::finish(executable, None, false)? else {
+        return Ok(None);
+    };
+    let language = selected_language(user_root)?;
+    if view["state"] != "complete" {
+        return Ok(Some(output::cleanup_pending(
+            language,
+            &view,
+            crate::update_bridge::resume_command(user_root),
+        )));
+    }
+    let core = output::CoreUpdate {
+        status: "verified",
+        from_version: view["from_version"].as_str().map(str::to_owned),
+        to_version: view["to_version"].as_str().map(str::to_owned),
+        requested_version: view["to_version"].as_str().map(str::to_owned),
+    };
+    let refresher = LiveProjectionRefresher::new(interactive);
+    let outcome = refresher
+        .complete(executable, user_root)
+        .map(|()| FlowOutcome::Reconciled);
+    let mut result = output::finished(outcome, refresher.report.borrow().as_ref(), language, &core);
+    output::cleanup(&mut result, language, view, None);
+    result.data.as_mut().expect("completion data")["recovered"] = serde_json::json!(true);
+    supply_resume(&mut result, user_root, &core);
+    Ok(Some(result))
 }
 
 pub(crate) fn result_guidance(result: &crate::ActionResult) -> Vec<String> {
@@ -584,7 +648,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     })
 }
 
-fn direct_handoff_required(
+fn direct_replacement_required(
     executable: &Path,
     channel: UpdateChannel,
     registry: &impl RegistrySource,
@@ -596,81 +660,9 @@ fn direct_handoff_required(
         return Ok(false);
     };
     let target = target_package(&registry.fetch()?, channel)?;
-    // Keep unchanged reconciliation and major-version refusal in the original caller.
+    // Only an actual compatible replacement needs the installer's locked-image protocol.
     // The same cached metadata is used by the normal flow after this decision.
     Ok(target.product.major == expected.major && target > *owner.package_version())
-}
-
-fn spawn_windows_direct_handoff(
-    executable: &Path,
-    user_root: &Path,
-    arguments: &UpdateArguments,
-) -> Result<Option<PathBuf>, String> {
-    if !cfg!(windows) {
-        return Err("Windows direct update handoff is unavailable on this platform".to_owned());
-    }
-    let helper = user_root.join(DIRECT_HANDOFF_HELPER);
-    let parent = helper
-        .parent()
-        .ok_or_else(|| "direct update helper has no parent directory".to_owned())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("cannot create direct update helper directory: {error}"))?;
-    if helper.exists() {
-        fs::remove_file(&helper)
-            .map_err(|error| format!("cannot replace prior direct update helper: {error}"))?;
-    }
-    fs::copy(executable, &helper)
-        .map_err(|error| format!("cannot copy direct update helper: {error}"))?;
-    let channel = match arguments.channel {
-        UpdateChannel::Stable => "stable",
-        UpdateChannel::Test => "test",
-    };
-    let user_root = user_root
-        .to_str()
-        .ok_or_else(|| "Hive user root is not UTF-8".to_owned())?;
-    let executable = executable
-        .to_str()
-        .ok_or_else(|| "Hive executable path is not UTF-8".to_owned())?;
-    let mut command = Command::new(&helper);
-    command.args([
-        "update",
-        "--direct-handoff",
-        executable,
-        "--channel",
-        channel,
-        "--user-root",
-        user_root,
-    ]);
-    if arguments.confirm {
-        command.arg("--confirm");
-    }
-    if arguments.interaction.non_interactive {
-        command.arg("--non-interactive");
-    }
-    if arguments.interaction.interactive {
-        command.arg("--interactive");
-    }
-    let record = if arguments.interaction.json {
-        command.args(["--output", "json"]);
-        let mut nonce = [0_u8; 32];
-        getrandom::fill(&mut nonce)
-            .map_err(|error| format!("cannot identify update handoff: {error}"))?;
-        let record = parent.join(format!("{}.json", &sha256_digest(&nonce)[7..]));
-        let file = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&record)
-            .map_err(|error| format!("cannot create update result file: {error}"))?;
-        command.stdout(file);
-        command.stdin(std::process::Stdio::null());
-        Some(record)
-    } else {
-        None
-    };
-    command
-        .spawn()
-        .map_err(|error| format!("cannot launch direct update helper: {error}"))?;
-    Ok(record)
 }
 
 pub(crate) fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
@@ -1067,6 +1059,7 @@ fn install_direct(
     prefix: &Path,
     target: &PackageVersion,
     runner: &impl CommandRunner,
+    defer_loaded_image: bool,
 ) -> Result<(), String> {
     let extension = if cfg!(windows) { ".ps1" } else { ".sh" };
     let url = format!(
@@ -1102,26 +1095,26 @@ fn install_direct(
         let program = runner
             .qualify("powershell.exe")
             .map_err(|error| format!("cannot qualify Windows PowerShell 5.1: {error}"))?;
-        runner.run(
-            &program,
-            &[
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                installer_path,
-                "-Version",
-                &target.product.to_string(),
-                "-PackageVersion",
-                &target.exact,
-                "-Prefix",
-                prefix,
-            ],
-            INSTALL_TIMEOUT,
-            INSTALL_OUTPUT_LIMIT,
-        )
+        let product = target.product.to_string();
+        let mut arguments = vec![
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            installer_path,
+            "-Version",
+            &product,
+            "-PackageVersion",
+            &target.exact,
+            "-Prefix",
+            prefix,
+        ];
+        if defer_loaded_image {
+            arguments.push("-DeferLockedBackup");
+        }
+        runner.run(&program, &arguments, INSTALL_TIMEOUT, INSTALL_OUTPUT_LIMIT)
     } else {
         let program = runner
             .qualify("env")
@@ -2025,12 +2018,16 @@ mod tests {
             ("1.0.0", None, UpdateChannel::Stable, false),
         ] {
             assert_eq!(
-                direct_handoff_required(&binary, channel, &metadata_with_channels(stable, test))
-                    .unwrap(),
+                direct_replacement_required(
+                    &binary,
+                    channel,
+                    &metadata_with_channels(stable, test)
+                )
+                .unwrap(),
                 required,
             );
         }
-        assert!(direct_handoff_required(
+        assert!(direct_replacement_required(
             &binary,
             UpdateChannel::Stable,
             &FakeRegistry(b"invalid".to_vec())

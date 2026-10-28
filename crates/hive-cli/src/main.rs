@@ -233,6 +233,12 @@ fn main() -> ExitCode {
     if arguments.first().map(String::as_str) == Some("__complete-user-update") {
         return user_setup::run_update_completion(&arguments[1..]);
     }
+    if arguments.first().map(String::as_str) == Some("__cleanup-direct-replacement") {
+        return update_activation::run_replacement_cleanup(&arguments[1..]);
+    }
+    if arguments.first().map(String::as_str) == Some("__direct-install-scope") {
+        return update_activation::run_replacement_scope(&arguments[1..]);
+    }
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }
