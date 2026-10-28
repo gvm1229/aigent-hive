@@ -14,6 +14,25 @@ SCRIPT = ROOT / "crates/hive-cli/src/usage_monitor/windows.ps1"
 
 @unittest.skipUnless(os.name == "nt", "Windows process handles and Task Scheduler adapter")
 class WindowsUsageMonitor(unittest.TestCase):
+    def test_cold_adapter_rejects_unknown_operation_within_native_deadline(self):
+        executable = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        with tempfile.TemporaryDirectory(prefix="hive-monitor-cold-") as directory:
+            root = Path(directory)
+            environment = {key: os.environ[key] for key in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"]
+                           if key in os.environ}
+            for key in ["PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"]:
+                path = root / key
+                path.mkdir()
+                environment[key] = str(path)
+            environment["PSModuleAnalysisCachePath"] = str(root / "module-cache")
+            environment["HIVE_TEST_MONITOR_SCRIPT"] = SCRIPT.read_text(encoding="utf-8")
+            result = subprocess.run([str(executable), "-NoLogo", "-NoProfile", "-NonInteractive",
+                "-Command", "& ([scriptblock]::Create([Environment]::GetEnvironmentVariable('HIVE_TEST_MONITOR_SCRIPT')))"],
+                env=environment, input=b'{"operation":"fixture-unknown"}', capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, b"")
+        self.assertIn(b"Unsupported monitor operation", result.stderr)
+
     def powershell(self, source: str) -> dict:
         executable = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
         with tempfile.TemporaryDirectory(prefix="hive-monitor-test-") as directory:

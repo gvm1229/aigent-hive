@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -102,6 +103,39 @@ def write_answers(name, settings):
     return str(path)
 
 
+def diagnose_startup():
+    """Read-only variants after a real timeout; never activation acceptance."""
+    original = (ROOT / "crates/hive-cli/src/usage_monitor/windows.ps1").read_text(encoding="utf-8")
+    trace = "$watch=[Diagnostics.Stopwatch]::StartNew();function Trace($s){[Console]::Error.WriteLine(('{0}:{1}' -f $watch.ElapsedMilliseconds,$s))};Trace 'begin'\n"
+    marked = original.replace("$request = [Console]::In.ReadToEnd() | ConvertFrom-Json",
+        "Trace 'json-start'\n$request = [Console]::In.ReadToEnd() | ConvertFrom-Json\nTrace 'json-done'")
+    marked = marked.replace("    $packages = @(Get-AppxPackage", "    Trace 'appx-start'\n    $packages = @(Get-AppxPackage")
+    marked = marked.replace("    $rows = @(Get-CimInstance Win32_Process)",
+        "    Trace 'appx-done'\n    $rows = @(Get-CimInstance Win32_Process)\n    Trace 'cim-done'")
+    fixed = "Import-Module -Name @(( $PSHOME+'\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psd1'),($PSHOME+'\\Modules\\CimCmdlets\\CimCmdlets.psd1'),($PSHOME+'\\Modules\\Appx\\Appx.psd1'))\nTrace 'fixed-imports'\n"
+    for name, script in [("original", trace + marked), ("fixed-modules", trace + fixed + marked)]:
+        diagnostic = dict(environment)
+        for key in ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"]:
+            directory = work / ("diagnostic-" + name) / key
+            directory.mkdir(parents=True)
+            diagnostic[key] = str(directory)
+        diagnostic["PSModuleAnalysisCachePath"] = str(work / ("diagnostic-" + name) / "module-cache")
+        diagnostic["HIVE_TEST_MONITOR_SCRIPT"] = script
+        began = time.monotonic()
+        data = {"diagnostic_variant": name, "script_sha256": sha(script.encode()), "operation": "inspect"}
+        try:
+            result = subprocess.run([str(ps), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+                "& ([scriptblock]::Create([Environment]::GetEnvironmentVariable('HIVE_TEST_MONITOR_SCRIPT')))"],
+                env=diagnostic, input=b'{"operation":"inspect"}', capture_output=True, timeout=30)
+            data.update(exit_code=result.returncode, stdout=result.stdout.decode(errors="replace")[-2000:],
+                        stderr=result.stderr.decode(errors="replace")[-2000:])
+        except subprocess.TimeoutExpired as failure:
+            data.update(timed_out=True, stdout=(failure.stdout or b"").decode(errors="replace")[-2000:],
+                        stderr=(failure.stderr or b"").decode(errors="replace")[-2000:])
+        data["elapsed_ms"] = round((time.monotonic() - began) * 1000)
+        events.append(data)
+
+
 try:
     if not prepare_only:
         # One environment availability check, before creating any native registration.
@@ -173,6 +207,8 @@ except BaseException as failure:
     if isinstance(failure, subprocess.TimeoutExpired):
         events.append({"timed_out_stdout": (failure.stdout or b"").decode(errors="replace")[-1500:],
                        "timed_out_stderr": (failure.stderr or b"").decode(errors="replace")[-1500:]})
+    if not prepare_only and "Windows monitor adapter timed out" in str(failure):
+        diagnose_startup()
     raise
 finally:
     # Product ownership checks govern cleanup; no task-name glob or process-name kill.
