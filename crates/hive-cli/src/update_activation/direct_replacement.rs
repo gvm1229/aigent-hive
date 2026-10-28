@@ -17,6 +17,7 @@ use std::{
 const RECORD: &str = "share/aigent-hive/replacement-pending.json";
 const RECEIPT: &str = "share/aigent-hive/install-receipt.json";
 const INSTALL_PENDING: &str = "share/aigent-hive/install-receipt.pending.json";
+const LEASE: &str = "share/aigent-hive/replacement-operation.lock";
 const LIMIT: u64 = 32 * 1024;
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -57,11 +58,36 @@ pub(crate) fn run_scope(arguments: &[String]) -> ExitCode {
 }
 
 struct Pending {
+    _lease: Option<cap_std::fs::File>,
     root: Dir,
     prefix: PathBuf,
     executable: PathBuf,
     record: Record,
     bytes: Vec<u8>,
+}
+
+fn lease(root: &Dir) -> Result<Option<cap_std::fs::File>, String> {
+    #[cfg(windows)]
+    {
+        use cap_std::fs::OpenOptionsExt;
+        let mut options = OpenOptions::new();
+        // The kernel removes only this newly created leaf on close or process exit.
+        // Never reopen or remove an existing lease: it may belong to a live worker.
+        options
+            .write(true)
+            .create_new(true)
+            .follow(FollowSymlinks::No)
+            .share_mode(0)
+            .custom_flags(0x0400_0000); // FILE_FLAG_DELETE_ON_CLOSE
+        root.open_with(LEASE, &options)
+            .map(Some)
+            .map_err(|_| "replacement cleanup is busy or its lease conflicts; preserved".into())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (root, LEASE);
+        Ok(None)
+    }
 }
 
 fn read(root: &Dir, path: &Path, limit: u64) -> Result<Option<Vec<u8>>, String> {
@@ -270,6 +296,10 @@ fn load(executable: &Path, confirmation: Option<&str>) -> Result<Option<Pending>
         .ok_or("replacement prefix missing")?
         .to_path_buf();
     let root = crate::user_install::open_user_root_for_setup(&prefix)?;
+    if peek(&root, Path::new(RECORD), LIMIT)?.is_none() {
+        return Ok(None);
+    }
+    let lease = lease(&root)?;
     let Some(candidate) = peek(&root, Path::new(RECORD), LIMIT)? else {
         return Ok(None);
     };
@@ -327,6 +357,7 @@ fn load(executable: &Path, confirmation: Option<&str>) -> Result<Option<Pending>
         },
     )?;
     finish_publication(Pending {
+        _lease: lease,
         root,
         prefix,
         executable,
@@ -704,5 +735,42 @@ mod tests {
                     .is_none()
             );
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_live_cleanup_claim_is_not_recovered_by_a_second_command() {
+        let (temp, executable, record) = fixture();
+        let pending = load(&executable, None).unwrap().unwrap();
+        let backup = pending.backup();
+        crate::user_install::interrupt_setup_remove(&pending.root, &backup, b"old image");
+        assert!(load(&executable, None).is_err());
+        assert!(crate::user_install::inspect_setup_write_claim(
+            &pending.root,
+            &backup,
+            MAX_BINARY_BYTES
+        )
+        .unwrap()
+        .is_some());
+        drop(pending);
+        assert!(!temp.path().join(LEASE).exists());
+        finish_loaded(load(&executable, None).unwrap(), false).unwrap();
+        assert!(!temp.path().join("bin").join(record.backup_name).exists());
+        assert!(!temp.path().join(RECORD).exists());
+        assert!(!temp.path().join(LEASE).exists());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn an_existing_lease_leaf_is_preserved_without_recovery() {
+        let (temp, executable, _) = fixture();
+        fs::write(temp.path().join(LEASE), b"foreign content").unwrap();
+        let before = fs::read(temp.path().join(RECORD)).unwrap();
+        assert!(load(&executable, None).is_err());
+        assert_eq!(
+            fs::read(temp.path().join(LEASE)).unwrap(),
+            b"foreign content"
+        );
+        assert_eq!(fs::read(temp.path().join(RECORD)).unwrap(), before);
     }
 }
