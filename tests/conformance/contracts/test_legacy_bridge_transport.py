@@ -28,7 +28,8 @@ def run_fixed_script(script, packet=None):
 class LegacyBridgeTransportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.registry = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode()
+        raw = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode()
+        cls.registry = json.dumps(json.loads(raw), separators=(",", ":"), sort_keys=True)
         cls.script = (SOURCE / "windows.ps1").read_text(encoding="utf-8")
         cls.script = cls.script.replace("{{REGISTRY_SOURCE}}", cls.registry.replace("'", "''"))
         cls.script = cls.script.replace("{{REGISTRY_DIGEST}}", "sha256:" + hashlib.sha256(cls.registry.encode()).hexdigest())
@@ -53,8 +54,8 @@ class LegacyBridgeTransportTests(unittest.TestCase):
         result = run_fixed_script(script, {})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"versions":["0.13.1","0.13.2-test.1","0.13.2-test.2"]})
-        self.assertIn('"schema_version": 1', script)
-        changed = run_fixed_script(script.replace('"schema_version": 1', '"schema_version": 9', 1), {})
+        self.assertIn('"schema_version":1', script)
+        changed = run_fixed_script(script.replace('"schema_version":1', '"schema_version":9', 1), {})
         self.assertNotEqual(changed.returncode, 0)
         self.assertIn("public registry differs", changed.stderr)
 

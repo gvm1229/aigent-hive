@@ -70,7 +70,8 @@ public static class FixtureInstaller {
 }
 '''
     (work / "installer.cs").write_text(installer)
-    registry = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode("utf-8")
+    registry = json.dumps(json.loads((ROOT / "harness/setup/legacy-update-images.json").read_bytes()),
+                          separators=(",", ":"), sort_keys=True)
     bridge = (ROOT / "crates/hive-cli/src/update_bridge/windows.ps1").read_text()
     bridge = bridge.replace("{{REGISTRY_SOURCE}}", registry.replace("'", "''"))
     bridge = bridge.replace("{{REGISTRY_DIGEST}}", "sha256:" + sha(registry.encode()))
@@ -79,7 +80,7 @@ public static class FixtureInstaller {
     # Only this test copy returns a bounded exception message for the synthetic parent.
     bridge = bridge.replace("reason='parent-or-console-unavailable'", "reason=$_.Exception.Message")
     bridge = "$probeStarted=[DateTime]::UtcNow\n" + bridge.replace(
-        "function Reply($value) {", "function Reply($value) { $value.elapsed_ms=([DateTime]::UtcNow-$probeStarted).TotalMilliseconds;")
+        "function Reply($value) {", "function Reply($value) { $jsonStarted=[DateTime]::UtcNow; [void]($value | ConvertTo-Json -Compress -Depth 12); $value.json_prepare_ms=([DateTime]::UtcNow-$jsonStarted).TotalMilliseconds; $value.elapsed_ms=([DateTime]::UtcNow-$probeStarted).TotalMilliseconds;")
     for statement, stage in [
         ("    $request = Request", "request-read"),
         ('    $self = Get-CimInstance Win32_Process -Filter "ProcessId = $PID"', "self-found"),

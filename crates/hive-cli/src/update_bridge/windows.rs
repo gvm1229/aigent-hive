@@ -173,12 +173,13 @@ impl Session {
     fn spawn(budget: LegacyBudget) -> Result<Self, String> {
         use std::os::windows::process::CommandExt;
         let encode = |text: &str| base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
+        let registry = serde_json::from_str::<Value>(REGISTRY)
+            .map_err(|_| "invalid public parent registry")?
+            .to_string();
+        let registry_digest = hive_core::sha256_digest(registry.as_bytes());
         let script = include_str!("windows.ps1")
-            .replace("{{REGISTRY_SOURCE}}", &REGISTRY.replace('\'', "''"))
-            .replace(
-                "{{REGISTRY_DIGEST}}",
-                &hive_core::sha256_digest(REGISTRY.as_bytes()),
-            )
+            .replace("{{REGISTRY_SOURCE}}", &registry.replace('\'', "''"))
+            .replace("{{REGISTRY_DIGEST}}", &registry_digest)
             .replace(
                 "{{PARENT_SOURCE}}",
                 &encode(include_str!("windows-parent.cs")),
