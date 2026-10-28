@@ -77,6 +77,21 @@ public static class FixtureInstaller {
         bridge = bridge.replace(placeholder, base64.b64encode((ROOT / "crates/hive-cli/src/update_bridge" / filename).read_bytes()).decode())
     # Only this test copy returns a bounded exception message for the synthetic parent.
     bridge = bridge.replace("reason='parent-or-console-unavailable'", "reason=$_.Exception.Message")
+    for statement, stage in [
+        ("    $request = Request", "request-read"),
+        ('    $self = Get-CimInstance Win32_Process -Filter "ProcessId = $PID"', "self-found"),
+        ('    $parent = Get-CimInstance Win32_Process -Filter ("ProcessId = " + [int]$caller.ParentProcessId)', "parent-found"),
+        ("    $image = [HiveParentImage]::new([int]$parent.ProcessId)", "image-opened"),
+        ("    $owner = Invoke-CimMethod -InputObject $parent -MethodName GetOwnerSid", "owner-read"),
+        ("    $verified = @()", "image-check-started"),
+        ("    if ($verified.Count -ne 1)", "image-check-ended"),
+    ]:
+        trace = "Reply @{event='probe-stage'; stage='" + stage + "'}"
+        if stage == "image-check-ended":
+            bridge = bridge.replace(statement, "    " + trace + "\n" + statement, 1)
+        else:
+            bridge = bridge.replace(statement, statement + "; " + trace, 1)
+    bridge = bridge.replace("try {\n    $request = Request", "try {\n    Reply @{event='probe-stage'; stage='script-started'}\n    $request = Request", 1)
     (work / "probe.ps1").write_text(bridge, encoding="utf-8")
     (work / "probe-request.json").write_text(json.dumps({"operation": "inspect", "caller_pid": "__CALLER__", "registry": registry}))
     installer = installer.replace('File.WriteAllText(Path.Combine(root,"install-count"),"1"); return 0;', r'''
@@ -153,5 +168,7 @@ else:print('{}')
     code = 0
 finally:
     run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
+        "untracked_paths": subprocess.run(["git", "ls-files", "--others", "--exclude-standard"],
+                                          cwd=ROOT, capture_output=True, text=True, check=True).stdout.splitlines(),
         "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; not public14 installer, real app/monitor control or personal installation"})
 raise SystemExit(code)
