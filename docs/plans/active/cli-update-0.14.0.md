@@ -5,8 +5,8 @@
 
 ## 항목
 
-- [ ] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
-  - state: agent-owned; depends: S140-001
+- [x] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
+  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:e6c4c945fbeab1c29dbd5b3bf3402e6306b7913e858aa36d222887199793440c
 - [ ] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
   - state: agent-owned; depends: U140-001,P140-002,G140-002
 - [ ] [U140-003] 상세 결과·설정 안내·호환 출력
@@ -14,14 +14,14 @@
 
 ## 현재 확인 사실과 선택
 
-- 공개0.13.1의 `update_activation.rs::update_flow_with_projection_channel`은 프로그램 갱신 뒤 새 실행 파일의 사용자 apply/validate 호출. 새 코드 진입은 첫 갱신에도 존재
+- 공개0.13.1의 `update_activation.rs::update_flow_with_projection_channel`은 본체 갱신 뒤 새 실행 파일의 사용자 apply/validate 호출. 첫 갱신도 새 코드 진입
 - `usage.rs::SystemCommandRunner`는 하위 입력 null·출력 pipe, Windows CREATE_NO_WINDOW 사용. 부모의 시간 제한10분, ChildActionResult는 action/status/exit_code만 해석
-- 선택: 이 기존 새 실행 파일 진입점에 한정한 구버전 연결층 추가. 새 부모에서는 터미널 상속을 정식으로 지원. 설치 순서 재배치만으로 해결했다는 주장 금지
-- package postinstall의 대화·셸 설정 삽입·사용자에게 다른 버전 선행 설치 요구·첫 질문을 다음 버전으로 연기하는 대안 제외
+- 선택: 기존 새 실행 파일 진입점에만 구버전 연결층 추가. 새 부모는 터미널 상속 지원. 설치 순서 변경만으로 해결 주장 금지
+- package postinstall 대화/셸 설정 삽입·다른 버전 선행 설치 요구·첫 질문의 후속 버전 연기 제외
 
 ## U140-001 — 첫 연결
 
-M10 Linux 구현 결정: `/proc`의 직접 부모 argv·시작 시각·동일 사용자·원본 실행 이미지 지문 확인. npm 교체 뒤의 삭제된 옛 실행 파일도 `/proc/<pid>/exe`로 확인, 디스크의 새 실행 파일을 옛 부모 증거로 대체 금지. 현재 설치 경로·사용자 범위 일치와 앞선 터미널 조건 확인 뒤 `/dev/tty` 사용. 입력/출력 전용 스레드·기한 있는 통신·부모 수명 확인으로 JSON 파이프 보존. `unsafe`·모델 호출·새 프로세스 조사 서비스 추가 없음. macOS의 교체 전 부모 이미지 인증은 별도 미확정 관문, Linux 근거의 전용 금지.
+M10 Linux 구현 결정: `/proc`의 직접 부모 argv·시작 시각·동일 사용자·원본 실행 이미지 지문 확인. npm 교체 뒤의 삭제된 옛 실행 파일도 `/proc/<pid>/exe`로 확인, 디스크의 새 실행 파일을 옛 부모 증거로 대체 금지. 현재 설치 경로·사용자 범위 일치와 앞선 터미널 조건 확인 뒤 `/dev/tty` 사용. 입력/출력 전용 스레드·기한 있는 통신·부모 수명 확인으로 JSON 파이프 보존. `unsafe`·모델 호출·새 프로세스 조사 서비스 추가 없음. macOS는 동적 서명·정확한 부모 인수/수명 검사, POSIX 입출력만 공유.
 
 1. 실제 공개0.13.1 npm/직접 설치 실행 파일을 합성 사용자 루트에 준비. 버전·원본 지문 고정, 시험을 위한 구버전 재컴파일 금지. incoming 코드만 새 후보 사용
 2. `user_install.rs::execute_command`의 apply 경계에서 현재 부모가 소유·버전·실행 인자가 확인된 옛 Hive update인지 검사. 공개 0.13.1과 공개 0.13.2-test.1/2만 첫 호환 목록. 임의 JSON 호출·일반 setup 호출의 진입 금지
@@ -31,9 +31,9 @@ M10 Linux 구현 결정: `/proc`의 직접 부모 argv·시작 시각·동일 �
 6. 구버전 부모600초보다 짧은 내부 기한540초. 질문 수집은420초까지, 이후 미응답 저장·적용 시작 금지. 적용 진입은 답변·preview·입력 지문 확정과 잔여120초 이상일 때만 허용. 적용 최대90초, 정리·기록 최대30초. 외부 명령은 남은 기한 이하로 제한, 모든 쓰기 전 복구 기록 저장
 7. 기한 부족·중단은 정확한 pending과 재개 명령 반환. 같은0.14.0 update에서 남은 단계만 재개, 새 버전 대기 없음. 새 부모에서는 답변 대기와 작업 실행 기한 분리. 기한 직전 답변·느린 적용·부모 종료에서 자료 보존을 검증하기 전 출시 금지
 
-- 실패 복구: 연결 불가·취소·시간 초과 시 선호/감시 선택 변경 없음, 이미 갱신한 core와 미완료 설정 단계를 구분. 강제 재설치·사용자 자료 삭제 대신 진행 재개
+- 연결 불가·취소·시간 초과 시 선호/감시 선택 보존. 갱신한 core·미완료 설정 구분. 강제 재설치·사용자 자료 삭제 없이 진행 재개
 - 첫 검증: 실제 터미널의 질문·답변과 기계 JSON 분리, 한글 입력, 취소/EOF,420초 질문 기한·적용 예산 부족, 재개, npm/직접 설치. 지원 OS에서 실패 시 U140-001 미완료와 출시 차단, 후속 버전으로 조용한 우회 금지
-- 산출물: 새 `scripts/qualify-interactive-cli.py`의 legacy-upgrade 시나리오, 구버전/후보 지문·OS·질문 ID·답변 분류·결과 코드. 원문 세션·비밀 수집 없음
+- 산출물: `tests/fixtures/interactive-cli/{windows-legacy-ci,posix-legacy-ci,linux-legacy-update}.py`의 격리 실행·구버전/후보 지문·OS·질문/답변·결과 기록. `scripts/qualify-interactive-cli.py`의 개인 호스트 읽기 전용 경계 유지. 원문 세션·비밀 수집 없음
 
 ## U140-002 — 정식 조정기
 
