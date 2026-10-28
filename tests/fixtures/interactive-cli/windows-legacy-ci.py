@@ -28,7 +28,7 @@ for path in [user, prefix / "bin", prefix / "share/aigent-hive", shim, work / "i
     path.mkdir(parents=True, exist_ok=True)
 candidate = ROOT / "target/debug/hive.exe"
 mode = sys.argv[1] if len(sys.argv) == 2 else "direct"
-if len(sys.argv) > 2 or mode not in {"direct", "cancel-resume", "deadline-resume"}:
+if len(sys.argv) > 2 or mode not in {"direct", "cancel-resume", "deadline-resume", "slow-resume", "parent-exit-resume", "parent-apply-resume", "late-slow-resume"}:
     raise SystemExit("unexpected qualification arguments")
 original = prefix / "bin/hive.exe"
 original_hash = "e34e5b7486feb6adc52f5b0ca59c01da303a14af2ecd397b1c8e60c9ecab7824"
@@ -84,7 +84,7 @@ public static class FixtureInstaller {
     for source, executable in [(work / "installer.cs", shim / "powershell.exe"), (work / "console.cs", work / "console.exe")]:
         subprocess.run([str(compiler), "/nologo", "/target:exe", "/out:" + str(executable), str(source)], check=True, capture_output=True)
 
-    (work / "agy.py").write_text('''import json,os,shutil,sys
+    (work / "agy.py").write_text('''import json,os,shutil,sys,time
 from pathlib import Path
 user=Path(os.environ['HIVE_TEST_USER_ROOT']).resolve();stage=user/'.gemini/config/plugins/aigent-hive';args=sys.argv[1:]
 assert stage.resolve().is_relative_to(user)
@@ -92,6 +92,8 @@ if args==['--version']:print('1.1.7');raise SystemExit(0)
 if args[:2]==['plugin','install']:
  source=Path(args[2]).resolve();expected=user/'.hive/marketplaces/antigravity/plugins/aigent-hive'
  assert expected.resolve().is_relative_to(user) and source.samefile(expected)
+ if os.environ.get('HIVE_TEST_SLOW_ONCE')=='1' and not (user/'slow-once').exists():
+  (user/'slow-once').write_text('used');(user/'slow-pid').write_text(str(os.getpid()));time.sleep(105)
  if stage.exists():shutil.rmtree(stage)
  shutil.copytree(source,stage)
 if args==['plugin','list']:
@@ -100,7 +102,11 @@ else:print('{}')
 ''')
     (shim / "agy.cmd").write_text('@echo off\r\n"' + sys.executable + '" "' + str(work / "agy.py") + '" %*\r\n')
     environment = {"PATH": str(shim), "HIVE_TEST_USER_ROOT": str(user), "PYTHONUTF8": "1",
+                   "HIVE_TEST_PYTHON": sys.executable,
                    "PSModuleAnalysisCachePath": str(work / "powershell-module-cache")}
+    slow = mode in {"slow-resume", "parent-apply-resume", "late-slow-resume"}
+    if slow:
+        environment["HIVE_TEST_SLOW_ONCE"] = "1"
     for key in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"]:
         if key in os.environ:
             environment[key] = os.environ[key]
@@ -113,9 +119,11 @@ else:print('{}')
     startup = subprocess.STARTUPINFO()
     startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startup.wShowWindow = subprocess.SW_HIDE
-    console_mode = {"direct":"legacy-direct", "cancel-resume":"legacy-cancel", "deadline-resume":"legacy-deadline"}[mode]
+    console_mode = {"direct":"legacy-direct", "cancel-resume":"legacy-cancel", "deadline-resume":"legacy-deadline",
+                    "slow-resume":"legacy-slow", "parent-exit-resume":"legacy-parent-exit",
+                    "parent-apply-resume":"legacy-parent-apply", "late-slow-resume":"legacy-late-slow"}[mode]
     process = subprocess.run([str(work / "console.exe"), str(original), str(user), str(result), console_mode],
-        env=environment, capture_output=True, timeout=500 if mode == "deadline-resume" else 150,
+        env=environment, capture_output=True, timeout=610 if mode == "late-slow-resume" else 500 if mode == "deadline-resume" else 180,
         creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
     error = Path(str(result) + ".error.txt")
     assert process.returncode == 0, (process.returncode,
@@ -127,23 +135,38 @@ else:print('{}')
     if mode == "direct":
         assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
     else:
-        assert report["helper_exit_code"] == 2 and not report["confirmed"] and report["questions"] == 1
+        assert report["helper_exit_code"] != 0 and report["confirmed"] == slow and report["owned_processes_ended"]
+        if slow:
+            assert report["host_observed"] and (user / "slow-once").is_file()
+        else:
+            assert report["questions"] == 1
         if mode == "deadline-resume":
             assert 400_000 <= report["question_wait_ms"] < 440_000, report
-        assert not (user / ".hive/config/user-setup.yml").exists()
+        if mode == "slow-resume":
+            assert 88_000 <= report["question_wait_ms"] < 135_000, report
+        if mode == "late-slow-resume":
+            assert 505_000 <= report["updater_elapsed_ms"] < 540_000, report
+        if not slow:
+            assert not (user / ".hive/config/user-setup.yml").exists()
         pending = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
                                  env=environment, capture_output=True, timeout=30)
         assert pending.returncode == 0, pending.stderr
         prior = json.loads(pending.stdout)["data"]["pending"]
-        assert prior["phase"] == "awaiting-answers" and prior["answers"]["interface_language"] == "ko"
-        assert prior["step"] not in prior["answered_questions"]
+        assert prior["answers"]["interface_language"] == "ko"
+        if slow:
+            assert prior["phase"] in {"applying", "recoverable-failure"}
+        else:
+            assert prior["phase"] == "awaiting-answers" and prior["step"] not in prior["answered_questions"]
         resume_result = work / "resume-result.json"
         resumed = subprocess.run([str(work / "console.exe"), str(original), str(user), str(resume_result), "update-resume"],
             env=environment, capture_output=True, timeout=45, creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
         assert resumed.returncode == 0, (resumed.returncode, resumed.stderr.decode(errors="replace"),
             Path(str(resume_result) + ".error.txt").read_text(encoding="utf-8", errors="replace") if Path(str(resume_result) + ".error.txt").exists() else "no fixture exception")
         results["resumed"] = json.loads(resume_result.read_text())
-        assert results["resumed"]["exit_code"] == 0 and results["resumed"]["confirmed"]
+        assert results["resumed"]["exit_code"] == 0
+        assert results["resumed"]["confirmed"] != slow
+        if slow:
+            assert results["resumed"]["questions"] == 0
     shown = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],
                            env=environment, capture_output=True, timeout=30)
     assert shown.returncode == 0, shown.stderr

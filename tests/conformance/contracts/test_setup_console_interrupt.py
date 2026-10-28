@@ -33,6 +33,8 @@ public static class SetupConsoleFixture {
     [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool SetStdHandle(int kind, SafeFileHandle handle);
     [DllImport("kernel32.dll", SetLastError=true)]
+    static extern uint GetConsoleProcessList([Out] uint[] processes, uint count);
+    [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool GenerateConsoleCtrlEvent(uint kind, uint group);
     [DllImport("kernel32.dll", EntryPoint="WriteConsoleInputW", SetLastError=true)]
     static extern bool WriteConsoleInput(SafeFileHandle handle, [In] Record[] records, uint count, out uint written);
@@ -129,12 +131,15 @@ public static class SetupConsoleFixture {
         string expected=Path.GetFullPath(Path.Combine(args[1],".hive/runtime/update/hive-direct-update-helper.exe"));
         Process helper=null; string last=""; bool confirmed=false; int answered=0;
         bool stop=args[3]!="legacy-direct", hold=args[3]=="legacy-deadline", stopped=false;
+        bool parentExit=args[3]=="legacy-parent-exit", parentApply=args[3]=="legacy-parent-apply";
+        bool late=args[3]=="legacy-late-slow", slow=args[3]=="legacy-slow" || late || parentApply;
+        Process host=null; long currentStart=-1;
         long firstQuestion=-1;
         var deadline=Stopwatch.StartNew();
         // The two frozen 0.13.1 bootstrap questions precede the new question engine.
         Send(input,"yes\rantigravity\r");
         try {
-            while(deadline.ElapsedMilliseconds<(hold?470000:120000)) {
+            while(deadline.ElapsedMilliseconds<(late?580000:hold?470000:150000)) {
                 if(helper==null) foreach(var candidate in Process.GetProcessesByName("hive-direct-update-helper")) {
                     try {
                         if(candidate.Handle==IntPtr.Zero) { candidate.Dispose(); continue; }
@@ -146,22 +151,44 @@ public static class SetupConsoleFixture {
                 }
                 try {
                     string state=File.ReadAllText(progress);
-                    if(state.Contains("phase: previewed") && !confirmed && !stop) { Send(input,"yes\r"); confirmed=true; }
+                    if(currentStart<0 && late && state.Contains("phase: awaiting-answers")) {
+                        foreach(var candidate in Process.GetProcessesByName("hive")) {
+                            try {
+                                if(!candidate.HasExited && String.Equals(PlainPath(candidate.MainModule.FileName),PlainPath(args[0]),StringComparison.OrdinalIgnoreCase))
+                                    currentStart=deadline.ElapsedMilliseconds-(long)(DateTime.UtcNow-candidate.StartTime.ToUniversalTime()).TotalMilliseconds;
+                            } finally { candidate.Dispose(); }
+                        }
+                        if(currentStart<0) throw new InvalidOperationException("owned new updater start unavailable");
+                    }
+                    if(slow && host==null && File.Exists(Path.Combine(args[1],"slow-pid"))) {
+                        int hostId;
+                        if(Int32.TryParse(File.ReadAllText(Path.Combine(args[1],"slow-pid")),out hostId)) {
+                            host=Process.GetProcessById(hostId);
+                            if(host.Handle==IntPtr.Zero || !String.Equals(PlainPath(host.MainModule.FileName),PlainPath(Environment.GetEnvironmentVariable("HIVE_TEST_PYTHON")),StringComparison.OrdinalIgnoreCase))
+                                throw new InvalidOperationException("test host identity differs");
+                        }
+                    }
+                    if(parentApply && host!=null && !stopped) { helper.Kill(); stopped=true; }
+                    if(state.Contains("phase: previewed") && !confirmed && (!stop || slow)
+                        && (!late || deadline.ElapsedMilliseconds-currentStart>=417000)) { Send(input,"yes\r"); confirmed=true; }
                     else if(state.Contains("phase: awaiting-answers")) {
                         var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
                         if(step.Success && step.Groups[1].Value!=last && !stopped) {
                             last=step.Groups[1].Value;
                             if(firstQuestion<0) firstQuestion=deadline.ElapsedMilliseconds;
-                            if(stop && last!="user-language") {
-                                if(!hold) Send(input,new string((char)26,1)+"\r");
+                            if(stop && !slow && last!="user-language") {
+                                if(parentExit) { helper.Kill(); }
+                                else if(!hold) Send(input,new string((char)26,1)+"\r");
                                 stopped=true;
                             } else { Send(input,last=="user-language" ? "1\r" : "\r"); answered++; }
                         }
                     }
                     if(helper!=null && helper.HasExited) {
                         if(stop) {
-                            if(!stopped || helper.ExitCode!=2 || state.Contains("phase: complete") || confirmed) return 32;
-                            File.WriteAllText(args[2],"{\"helper_exit_code\":2,\"questions\":"+answered+",\"confirmed\":false,\"question_wait_ms\":"+(deadline.ElapsedMilliseconds-firstQuestion)+"}");
+                            if((!stopped && !slow) || helper.ExitCode==0 || state.Contains("phase: complete") || confirmed!=slow) return 32;
+                            if(!parentExit && !parentApply && helper.ExitCode!=2) return 32;
+                            WaitPrivateExit(args[0],host);
+                            File.WriteAllText(args[2],"{\"helper_exit_code\":"+helper.ExitCode+",\"questions\":"+answered+",\"confirmed\":"+(confirmed?"true":"false")+",\"question_wait_ms\":"+(deadline.ElapsedMilliseconds-firstQuestion)+",\"updater_elapsed_ms\":"+(currentStart<0?-1:deadline.ElapsedMilliseconds-currentStart)+",\"host_observed\":"+(host!=null?"true":"false")+",\"owned_processes_ended\":true}");
                             return 0;
                         }
                         if(helper.ExitCode!=0 || !state.Contains("phase: complete") || !confirmed) return 31;
@@ -176,14 +203,28 @@ public static class SetupConsoleFixture {
         } finally {
             if(!File.Exists(args[2])) File.WriteAllText(args[2],"step="+last+"; confirmed="+confirmed+"; helper="+(helper==null?"absent":helper.HasExited?helper.ExitCode.ToString():"running")+"\n"+OwnConsoleTail(),new UTF8Encoding(false,false));
             if(helper!=null) { if(!helper.HasExited) helper.Kill(); helper.Dispose(); }
+            if(host!=null) host.Dispose();
         }
+    }
+    static string PlainPath(string value) { return Path.GetFullPath(value.StartsWith(@"\\?\")?value.Substring(4):value); }
+    static void WaitPrivateExit(string executable, Process host) {
+        var waiting=Stopwatch.StartNew(); var pids=new uint[128];
+        while(waiting.ElapsedMilliseconds<10000) {
+            bool unlocked=false;
+            try { using(File.Open(executable,FileMode.Open,FileAccess.Write,FileShare.ReadWrite|FileShare.Delete)) { unlocked=true; } } catch(IOException) { } catch(UnauthorizedAccessException) { }
+            uint count=GetConsoleProcessList(pids,(uint)pids.Length);
+            if(unlocked && count==1 && pids[0]==Process.GetCurrentProcess().Id && (host==null || host.HasExited)) return;
+            Thread.Sleep(50);
+        }
+        throw new InvalidOperationException("owned updater or host remained after interruption");
     }
     public static int Main(string[] args) {
         Process child=null;
         try {
             bool project=args.Length==7 && (args[3]=="connection-loss" || args[3]=="project-quick");
             bool review=args.Length==4 && args[3]=="review-all";
-            bool legacy=args.Length==4 && (args[3]=="legacy-direct" || args[3]=="legacy-cancel" || args[3]=="legacy-deadline");
+            bool legacy=args.Length==4 && (args[3]=="legacy-direct" || args[3]=="legacy-cancel" || args[3]=="legacy-deadline"
+                || args[3]=="legacy-parent-exit" || args[3]=="legacy-parent-apply" || args[3]=="legacy-slow" || args[3]=="legacy-late-slow");
             bool resumeUpdate=args.Length==4 && args[3]=="update-resume";
             if(args.Length!=4 && !project) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
