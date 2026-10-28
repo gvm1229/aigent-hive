@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 6/15(40.0%). Windows 직접 첫 갱신·npm 제거, macOS 첫 갱신·중단 복구, 세 OS 직접 본체 제거와 POSIX 공개test.1 연결 부분 수용. 다음은 Windows EOF/기한 재개 검증
+- 현재: `feature/interactive-cli-0.14.0`, 6/15(40.0%). Windows 직접 첫 갱신·EOF/기한 재개와0aa329e4 제품 CI 통과. macOS 중단 복구·세 OS 본체 제거·POSIX 공개test.1 연결 부분 수용 유지. 다음은 Windows 부모 종료·느린 적용 검증
 - 모델 시험: 과거16회 보존, 역할 추가 호출 중단. 같은 임무 누적9회 이하·예정 비교8회, 일반 속도 경로 미확보.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`

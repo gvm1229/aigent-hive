@@ -118,6 +118,8 @@ Windows ReadConsole의 반환값은 실제로 읽은 글자 수. 기존 StringBu
 - `9984961b`: 프로그램을 읽은 뒤 정확한 자체 전달 변수만 자식 환경에서 제거. 다른 환경·지문·소유·콘솔·기한 조건 유지. [큰 환경을 포함한 연결4개](../../tests/results/runs/20261028T055203-acfe0611bc2e.md)·[clippy](../../tests/results/runs/20261028T055259-2b5cf7ef9add.md) 통과. 원인 확인용 변형·사전 부모 조회는 제거, 정상 소스의 실제 명령 수용은 후속 검증
 - [정상 소스의 후속 실행](../../tests/results/runs/20261028T060304-ace76caa5e32.md): 새 언어·빠른 질문·최종 확인까지 통과, 적용 단계 실패. 시험 앱이 실제로 같은 폴더의 Windows 정규 표기를 거부하는 [독립 재현](../../tests/results/runs/20261028T060716-e5c3ab6bca42.md) 확인. 시험만 정확한 플러그인 폴더의 실제 식별자로 비교하도록 수정, [같은 폴더 허용·외부 폴더 거부](../../tests/results/runs/20261028T060751-c1d6ef8ebf0c.md) 통과. 실제 앱이나 전체 갱신 성공의 근거로 확대 제외
 - 소스2b9e88e1의 [Windows 직접 갱신 정상 수용](../../tests/results/runs/20261028T061634-2047a83bc92b.md)·[플랫폼 Rust 회귀](../../tests/results/runs/20261028T061655-3c7439bfd07c.md) 통과. 사전 연결 진단·제품 변형 없는 원본0.13.1 명령에서 한국어 질문·확인·적용·추가 검증과 보조 프로그램 exit0, 설치1회·원본 지문·사용자 메모 보존. Windows Server2025 격리 콘솔·대역 설치기/Antigravity 범위, 실제 앱·공개0.14.0 수용과 EOF/기한 재개는 별도
+- 소스0aa329e4의 [EOF 취소·재개](../../tests/results/runs/20261028T064446-ef44b85bc477.md)와 [질문 기한·재개](../../tests/results/runs/20261028T064509-bbad9c162686.md) 통과. 첫 질문 뒤419.648초에 exit2, 적용 전 설정 파일 없음. 같은 update에서 이전 언어 질문 반복 없이 완료, 출처·시각·작업 ID와 설치1회 보존
+- 같은 소스의 [Windows 플랫폼 회귀](../../tests/results/runs/20261028T065217-31b6b925380d.md)와 [필수 제품 CI](https://github.com/gvm1229/aigent-hive/actions/runs/40645294920) 통과. 기록의 PR 병합 소스57be887d와0aa329e4의 트리 동일, 실행 중 소스 변경false. 질문/적용 중 부모 종료·느린 적용·늦은 최종 확인의 Windows 수용은 별도 검증
 
 ## POSIX 공개0.13.2 호환 보완
 
