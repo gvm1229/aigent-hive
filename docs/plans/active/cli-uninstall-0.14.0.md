@@ -5,8 +5,8 @@
 
 ## 항목
 
-- [ ] [D140-001] 대화형 안전 제거와 비대화형 계약
-  - state: agent-owned; depends: U140-002,G140-002
+- [x] [D140-001] 대화형 안전 제거와 비대화형 계약
+  - state: complete; depends: U140-002,G140-002; evidence: repo:docs/research/cli-uninstall-validation-0.14.0.md#sha256:cf4e5b3e4350a64c54e51c801f7764078c29f219548af15ac9b801452384c0c2
 
 ## 범위와 인터페이스
 
@@ -57,4 +57,4 @@
 
 ## 후속 실제 운영체제 검증
 
-- [실제 제거·자료 보존과 한계](../../research/cli-uninstall-validation-0.14.0.md). 직접 본체의 세 OS·Windows npm 제거, 활성 감시 종료 거부/재개·보조 처리 잠금 실패 복구·재설치 수용. 실제 호스트·공개 파일은 미완료
+- [제거·보존·실제 Codex/감시·실패 복구의 수용 대응](../../research/cli-uninstall-validation-0.14.0.md#d140-001-수용-대응). 공개 파일은 Q140 별도

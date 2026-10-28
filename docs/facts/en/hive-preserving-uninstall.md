@@ -13,15 +13,15 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/plans/active/cli-uninstall-0.14.0.md#sha256:0c2eb105923a862a46a9035abe66e3eb239060d70832843c5a10bae53f65a2c2"
+  - "repo:docs/plans/active/cli-uninstall-0.14.0.md#sha256:33659bb4c34713cc4d8ad10bf6a3151d9f772f2bb79ba4ac4258ddb7252a89f5"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:7c483d40d8ad13ba52cdc9a7d1c10928320853530cd1a5abe5d3df8b8dd6cee7"
 links: [global-onboarding, knowledge-preservation, release-verification]
-reviewed_revision: "git:8c396a991cefeff19dc4a745d91caf7f2ef7c723"
+reviewed_revision: "git:7565804c77597fea7e64b3c330f9f76031effd27"
 status: active
 ---
 
 # Hive Preserving Uninstall
 
-0.14.0 previews and confirms removal, stops the owned monitor first, and preserves knowledge, preferences, project registrations, history and foreign bytes. Unknown program ownership stays pending; actual OS removal acceptance remains open.
+0.14.0 previews and confirms removal, stops the owned monitor first and preserves knowledge, preferences, project registrations, history and foreign bytes. Unknown ownership stays pending. Isolated OS removal and Windows Codex/monitor recovery passed; public14 artifacts remain separate.
 
 Earlier cleanup scope and test.19 Mac findings (44 empty agents leaves and an empty transaction folder), their exact fixture and 0.9.1 Windows zero-leftover evidence remain in [UOS-021–022](../../archive/plans/foundations/user-onboarding-shared-index.md). Authenticated empty ancestors are pruned leaf-first. Keep `.hive/dev-install` as developer rollback state. In 0.12.1, an enabled monitor required owned-task disable before uninstall.
