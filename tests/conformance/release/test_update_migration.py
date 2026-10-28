@@ -1841,6 +1841,17 @@ try {
         throw "regular replacement did not preserve atomic leaf semantics"
     }
 
+    $sameBin = Join-Path $safePrefix "same-bin\bin"
+    New-Item -ItemType Directory -Path $sameBin -Force | Out-Null
+    $sameImage = Join-Path $sameBin "hive.exe"
+    [IO.File]::WriteAllText($sameImage, "preserve identical image")
+    Assert-Rejected -Label "identical deferred source" -Operation {
+        Move-InstallFile -Source $sameImage -Destination $sameImage -Replace $true -DeferredPackageVersion "0.14.0-test.1"
+    }
+    if ([IO.File]::ReadAllText($sameImage) -ne "preserve identical image") {
+        throw "identical deferred source was removed"
+    }
+
     $utf8Probe = Join-Path $safePrefix "utf8-probe"
     $utf8Bytes = [Text.UTF8Encoding]::new($false).GetBytes('{"schema_version":1}')
     [IO.File]::WriteAllBytes($utf8Probe, $utf8Bytes)
