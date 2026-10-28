@@ -27,11 +27,41 @@ user, prefix, shim = work / "user", work / "prefix", work / "shim"
 for path in [user, prefix / "bin", prefix / "share/aigent-hive", shim, work / "incoming"]:
     path.mkdir(parents=True, exist_ok=True)
 candidate = ROOT / "target/debug/hive.exe"
+diagnostic = sys.argv[1:] == ["--diagnostic"]
+assert not sys.argv[1:] or diagnostic
+diagnostic_source = ROOT / "crates/hive-cli/src/main.rs"
+original_source = patched_source = None
+if diagnostic:
+    original_source = diagnostic_source.read_bytes()
+    needle = b"fn emit_action_result(result: &ActionResult) -> ExitCode {"
+    assert original_source.count(needle) == 1
+    replacement = needle + b'''
+    if let Some(root) = std::env::args().collect::<Vec<_>>().windows(2)
+        .find(|pair| pair[0] == "--user-root")
+        .map(|pair| std::path::PathBuf::from(&pair[1])) {
+        let _ = std::fs::write(root.join(".hive/runtime/update/bridge-diagnostic.txt"),
+            format!("{}: {}", result.code, result.message));
+    }
+'''
+    patched_source = original_source.replace(needle, replacement)
+    diagnostic_source.write_bytes(patched_source)
+    build_command = [shutil.which("cargo"), "build", "-p", "hive-cli", "--locked"]
+    build = Run("격리 CI 전용 반환 오류 진단 빌드", build_command, paths=["target/debug"])
+    build_code = 1
+    try:
+        build_code = build.execute(build_command, env=dict(os.environ, CARGO_INCREMENTAL="0"))
+    finally:
+        build.finish(build_code, details={"scope": "diagnostic incoming variant only; copied result message, unchanged authorization/return; not product acceptance"})
+        if build_code:
+            assert diagnostic_source.read_bytes() == patched_source
+            diagnostic_source.write_bytes(original_source)
+    if build_code:
+        raise SystemExit(build_code)
 original = prefix / "bin/hive.exe"
 original_hash = "e34e5b7486feb6adc52f5b0ca59c01da303a14af2ecd397b1c8e60c9ecab7824"
 sha = lambda data: hashlib.sha256(data).hexdigest()
 run = Run("격리 Windows의 공개0.13.1 직접 갱신·질문·완료",
-          [sys.executable, str(Path(__file__).resolve())],
+          [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
           paths=[work.relative_to(ROOT).as_posix()], binary=candidate)
 code = 1
 try:
@@ -157,6 +187,7 @@ else:print('{}')
     assert process.returncode == 0, (process.returncode,
         result.read_text(encoding="utf-8", errors="replace") if result.exists() else process.stderr.decode(errors="replace"),
         error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception",
+        (user / ".hive/runtime/update/bridge-diagnostic.txt").read_text(encoding="utf-8", errors="replace") if (user / ".hive/runtime/update/bridge-diagnostic.txt").exists() else "no incoming diagnostic",
         (work / "bridge-probe.txt").read_text(encoding="utf-8", errors="replace")[-8000:] if (work / "bridge-probe.txt").exists() else "no parent probe")
     report = json.loads(result.read_text())
     assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
@@ -170,10 +201,17 @@ else:print('{}')
     assert sha((work / "original-preserved.exe").read_bytes()) == original_hash
     assert (work / "install-count").read_text() == "1"
     assert (user / "README.txt").read_bytes() == b"Preserve this synthetic user note.\r\n"
-    code = 0
+    code = 1 if diagnostic else 0
 finally:
-    run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
-        "untracked_paths": subprocess.run(["git", "ls-files", "--others", "--exclude-standard"],
-                                          cwd=ROOT, capture_output=True, text=True, check=True).stdout.splitlines(),
-        "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; not public14 installer, real app/monitor control or personal installation"})
+    try:
+        run.finish(code, details={"original_sha256": original_hash, "candidate_sha256": sha(candidate.read_bytes()),
+            "diagnostic_incoming_variant": diagnostic,
+            "incoming_diagnostic": (user / ".hive/runtime/update/bridge-diagnostic.txt").read_text(encoding="utf-8", errors="replace") if (user / ".hive/runtime/update/bridge-diagnostic.txt").exists() else None,
+            "untracked_paths": subprocess.run(["git", "ls-files", "--others", "--exclude-standard"],
+                                              cwd=ROOT, capture_output=True, text=True, check=True).stdout.splitlines(),
+            "scope": "isolated Windows VM; frozen public13.1 direct helper and private native console, synthetic installer/Antigravity; diagnostic variants never acceptance; not public14 installer, real app/monitor control or personal installation"})
+    finally:
+        if diagnostic:
+            assert diagnostic_source.read_bytes() == patched_source
+            diagnostic_source.write_bytes(original_source)
 raise SystemExit(code)

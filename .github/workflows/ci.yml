@@ -242,7 +242,7 @@ jobs:
       - run: python tests/fixtures/interactive-cli/native-core-removal.py
       - run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - if: runner.os == 'Windows'
-        run: python tests/fixtures/interactive-cli/windows-legacy-ci.py
+        run: python tests/fixtures/interactive-cli/windows-legacy-ci.py --diagnostic
       - run: python scripts/test-artifacts.py run --purpose '플랫폼 파일 처리·설치·갱신 단위 시험' --path target/debug --command cargo test -p hive-core -p hive-render -p hive-update -p hive-cli --locked
       - if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
