@@ -77,6 +77,8 @@ public static class FixtureInstaller {
         bridge = bridge.replace(placeholder, base64.b64encode((ROOT / "crates/hive-cli/src/update_bridge" / filename).read_bytes()).decode())
     # Only this test copy returns a bounded exception message for the synthetic parent.
     bridge = bridge.replace("reason='parent-or-console-unavailable'", "reason=$_.Exception.Message")
+    bridge = "$probeStarted=[DateTime]::UtcNow\n" + bridge.replace(
+        "function Reply($value) {", "function Reply($value) { $value.elapsed_ms=([DateTime]::UtcNow-$probeStarted).TotalMilliseconds;")
     for statement, stage in [
         ("    $request = Request", "request-read"),
         ('    $self = Get-CimInstance Win32_Process -Filter "ProcessId = $PID"', "self-found"),
@@ -133,7 +135,8 @@ if args==['plugin','list']:
 else:print('{}')
 ''')
     (shim / "agy.cmd").write_text('@echo off\r\n"' + sys.executable + '" "' + str(work / "agy.py") + '" %*\r\n')
-    environment = {"PATH": str(shim), "HIVE_TEST_USER_ROOT": str(user), "PYTHONUTF8": "1"}
+    environment = {"PATH": str(shim), "HIVE_TEST_USER_ROOT": str(user), "PYTHONUTF8": "1",
+                   "PSModuleAnalysisCachePath": str(work / "powershell-module-cache")}
     for key in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"]:
         if key in os.environ:
             environment[key] = os.environ[key]
