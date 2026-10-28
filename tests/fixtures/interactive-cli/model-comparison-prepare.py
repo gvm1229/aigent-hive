@@ -40,10 +40,8 @@ tree = ast.parse((ROOT / "tests/conformance/integration/test_connected_setup_lif
 klass = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ConnectedSetupLifecycleConformance")
 method = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == "_write_fake_host")
 stub = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value.startswith("import json"))
-project_choices = yaml.safe_load(subprocess.check_output([str(git), "show", OLD_COMMIT + ":tests/fixtures/setup/answers-no-role-no-hook.yml"], text=True))
-project_choices.pop("schema_version")
-project_choices["project_name"] = "luna-quick"
-project_choices["knowledge_exclude_paths"] = yaml.safe_load((ROOT / "tests/work/m19-luna-project-role-complete-command/project/.hive/setup-answers.yml").read_text(encoding="utf-8"))["knowledge_exclude_paths"]
+fixed_choices = json.loads((ROOT / "tests/fixtures/interactive-cli/model-fixed-choices.json").read_text(encoding="utf-8"))
+project_choices = fixed_choices["project-quick"]
 common_user = {"interface_language": "ko", "selected_hosts": ["codex"],
     "wiki": {"enabled": True, "language": "ko", "backend": "markdown"},
     "profile": {"contexts": ["non-developer"]}, "persona": {"id": "balanced"},
@@ -64,18 +62,12 @@ try:
                 (trial / scope / "README.txt").write_bytes(b"Synthetic user note. Preserve exactly.\n")
                 skill_name = "user-setup" if scope == "user" else "project-setup"
                 source = "harness/skills/" + skill_name
-                if version == "0.13.1":
-                    files = subprocess.check_output([str(git), "ls-tree", "-r", "--name-only", OLD_COMMIT, "--", source], text=True).splitlines()
-                    for name in files:
-                        target = trial / "skill" / Path(name).relative_to(source)
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        target.write_bytes(subprocess.check_output([str(git), "show", OLD_COMMIT + ":" + name]))
-                else:
-                    for path in (ROOT / source).rglob("*"):
-                        if path.is_file():
-                            target = trial / "skill" / path.relative_to(ROOT / source)
-                            target.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copyfile(path, target)
+                skill_commit = OLD_COMMIT if version == "0.13.1" else "1d01e7d0"
+                files = subprocess.check_output([str(git), "ls-tree", "-r", "--name-only", skill_commit, "--", source], text=True).splitlines()
+                for name in files:
+                    target = trial / "skill" / Path(name).relative_to(source)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(subprocess.check_output([str(git), "show", skill_commit + ":" + name]))
                 shutil.copyfile(ROOT / "tests/fixtures/interactive-cli/model-trial-tool.py", trial / "tool.py")
                 shutil.copyfile(ROOT / "tests/fixtures/setup/capabilities-codex-host-native.json", trial / "capabilities.json")
                 user_before, fragments = {}, {}

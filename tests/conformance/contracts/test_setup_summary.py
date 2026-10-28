@@ -10,6 +10,100 @@ from tests.conformance.support.harness import (
 
 
 class SetupSummaryConformance(Phase1CliTestCase):
+    def assert_fixed_choices(self, actual, expected):
+        for key, value in expected.items():
+            if isinstance(value, dict):
+                self.assert_fixed_choices(actual[key], value)
+            else:
+                self.assertEqual(actual[key], value, key)
+
+    def test_recorded_model_project_choices_remain_a_real_cli_regression_gate(self):
+        choices = json.loads((REPOSITORY_ROOT / "tests/fixtures/interactive-cli/model-fixed-choices.json").read_text(encoding="utf-8"))["project-quick"]
+        config = self.setup_user_root / ".hive/config/user-setup.yml"
+        global_settings = read_yaml(config)
+        global_settings["usage_guard"].update(enabled=False, codexbar_fallback_enabled=False)
+        write_yaml(config, global_settings)
+        global_before = config.read_bytes()
+        target = self.work_root / "recorded-project"
+        target.mkdir()
+        originals = {"README.txt": b"Synthetic user note. Preserve exactly.\n",
+                     "AGENTS.md": b"Synthetic user instruction. Preserve exactly.\r\n",
+                     ".gitignore": b"user-cache/\r\n"}
+        for name, content in originals.items():
+            (target / name).write_bytes(content)
+        before = snapshot_tree(target)
+        status = self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        document = status["data"]["answer_patch_template"]
+        document["answers"] = choices
+        patch = self.work_root / "recorded-project.json"
+        patch.write_text(json.dumps(document), encoding="utf-8")
+        preview, _ = self.invoke_setup(target, answers=patch, mode="--dry-run", extra_arguments=("--input-channel", "agent"))
+        self.assertEqual(preview.returncode, 0, preview.stdout)
+        self.assertEqual(snapshot_tree(target), before)
+        applied, result = self.invoke_setup(target, answers=patch, extra_arguments=("--input-channel", "agent", "--summary"))
+        self.assertEqual(applied.returncode, 0, applied.stdout)
+        self.assertTrue(result["data"]["completion_verified"])
+        self.assertLessEqual(len(applied.stdout.encode("utf-8")), 8192)
+        stored = read_yaml(target / ".hive/setup-answers.yml")
+        self.assert_fixed_choices(stored, choices)
+        self.assertEqual(stored["preference_decisions"]["/project_name"]["input_channel"], "agent")
+        self.assertIsNone(stored["preference_decisions"]["/project_name"]["decided_at"])
+        self.assertEqual(config.read_bytes(), global_before)
+        for name, content in originals.items():
+            self.assertIn(content, (target / name).read_bytes(), name)
+        after = snapshot_tree(target)
+        self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        checked, valid = self.invoke_setup(target, answers=patch, mode="--validate", extra_arguments=("--summary",))
+        self.assertEqual(checked.returncode, 0, checked.stdout)
+        self.assertEqual(valid["code"], "hive.setup-valid")
+        self.assertEqual(snapshot_tree(target), after)
+        self.assertEqual(config.read_bytes(), global_before)
+
+    def test_recorded_model_user_choices_remain_a_real_cli_regression_gate(self):
+        from tests.conformance.integration.test_project_lifecycle import ProjectLifecycleConformance
+        choices = json.loads((REPOSITORY_ROOT / "tests/fixtures/interactive-cli/model-fixed-choices.json").read_text(encoding="utf-8"))["user-quick"]
+        root = self.work_root / "recorded-user"
+        root.mkdir()
+        note = root / "README.txt"
+        note.write_bytes(b"Synthetic user note. Preserve exactly.\r\n")
+        fake = ProjectLifecycleConformance()
+        fake.work_root = self.work_root
+        fake.fake_bin = self.work_root / "recorded-host"
+        fake.fake_bin.mkdir()
+        fake.host_log = self.work_root / "recorded-host.jsonl"
+        fake._write_fake_host("codex")
+        environment = {**os.environ, "PATH": str(fake.fake_bin),
+                       "HIVE_TEST_HOST_LOG": str(fake.host_log), "HIVE_TEST_USER_ROOT": str(root)}
+
+        def invoke(*flags, limit=8192):
+            process = subprocess.run([str(self.hive_binary), "setup", "--scope", "user", "--user-root", str(root),
+                *map(str, flags), "--output", "json"], input="", capture_output=True, text=True,
+                encoding="utf-8", timeout=45, env=environment)
+            self.assertEqual(process.returncode, 0, (process.stdout, process.stderr))
+            self.assertLessEqual(len(process.stdout.encode("utf-8")), limit)
+            return json.loads(process.stdout)
+
+        status = invoke("--show", "--summary", limit=4096)
+        document = status["data"]["answer_patch_template"]
+        document["answers"] = choices
+        patch = self.work_root / "recorded-user.json"
+        patch.write_text(json.dumps(document), encoding="utf-8")
+        before = snapshot_tree(root)
+        invoke("--answers", patch, "--input-channel", "agent", "--dry-run", limit=65536)
+        self.assertEqual(snapshot_tree(root), before)
+        result = invoke("--answers", patch, "--input-channel", "agent", "--apply", "--summary")
+        self.assertTrue(result["data"]["completion_verified"])
+        config = root / ".hive/config/user-setup.yml"
+        stored = read_yaml(config)
+        self.assert_fixed_choices(stored, choices)
+        self.assertEqual(stored["preference_decisions"]["/interface_language"]["input_channel"], "agent")
+        self.assertIsNone(stored["preference_decisions"]["/interface_language"]["decided_at"])
+        after = snapshot_tree(root)
+        invoke("--show", "--summary", limit=4096)
+        invoke("--answers", patch, "--input-channel", "agent", "--validate", "--summary")
+        self.assertEqual(snapshot_tree(root), after)
+        self.assertEqual(note.read_bytes(), b"Synthetic user note. Preserve exactly.\r\n")
+
     def test_minimal_new_project_patch_applies_shared_defaults_without_invented_choices(self):
         config = self.setup_user_root / ".hive/config/user-setup.yml"
         global_settings = read_yaml(config)
