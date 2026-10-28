@@ -66,7 +66,9 @@ def comparison_arguments(args):
     if not readonly:
         assert args.count("--user-root") == 1
     if "--user-root" in seen:
-        assert Path(args[args.index("--user-root") + 1]).resolve() == ROOT / "user"
+        actual = Path(args[args.index("--user-root") + 1]).resolve()
+        if actual != ROOT / "user":
+            raise ValueError(f"--user-root scope mismatch: expected exactly {ROOT / 'user'}; received {actual}")
     if CONFIG["setup_scope"] == "user":
         assert "--target" not in seen
         if not feature:
@@ -76,7 +78,9 @@ def comparison_arguments(args):
         if not readonly:
             assert args.count("--target") == 1
         if "--target" in seen:
-            assert Path(args[args.index("--target") + 1]).resolve() == ROOT / "project"
+            actual = Path(args[args.index("--target") + 1]).resolve()
+            if actual != ROOT / "project":
+                raise ValueError(f"--target scope mismatch: expected exactly {ROOT / 'project'}; received {actual}")
     if "--id" in seen:
         assert feature and args[args.index("--id") + 1] == "vector-search"
     if "--progress" in seen:
@@ -178,6 +182,10 @@ except Exception as failure:
         "project-info": "Use project-info alone; it reads only the private project Git status.",
         "discard-answers": "Use discard-answers alone after verification; the exact temporary answer file is archived.",
     }.get(operation, "Supported operations: read-skill, write-answers, hive.")
-    message = ("Trial input rejected: " + type(failure).__name__ + ". " + hint + "\n").encode("utf-8")
-    emit({"operation": operation, "exit_code": 2, "failure_kind": "fixture-input"}, error=message)
+    detail = str(failure) if CONFIG.get("comparison") and isinstance(failure, ValueError) else ""
+    message = ("Trial input rejected: " + type(failure).__name__ + ". " + detail + " " + hint + "\n").encode("utf-8")
+    event = {"operation": operation, "exit_code": 2, "failure_kind": "fixture-input"}
+    if operation == "hive":
+        event["arguments"] = [arg[:2048] for arg in sys.argv[2:]][:32]
+    emit(event, error=message)
     raise SystemExit(2)

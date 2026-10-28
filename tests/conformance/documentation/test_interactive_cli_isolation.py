@@ -221,9 +221,12 @@ class ModelProjectReceipt(unittest.TestCase):
         for args in commands:
             result = subprocess.run([sys.executable, str(tool), *args], capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 2, result.stdout)
+            if "--show" in args:
+                self.assertIn(b"expected exactly", result.stderr)
         events = [json.loads(line) for line in (self.trial / "events.jsonl").read_text().splitlines()]
         self.assertEqual(len(events), 3)
         self.assertTrue(all(e["failure_kind"] == "fixture-input" for e in events))
+        self.assertEqual(events[0]["arguments"], commands[0][1:])
 
     def test_comparison_argument_contract_keeps_readonly_help_and_exact_user_scope(self):
         import ast
@@ -238,7 +241,7 @@ class ModelProjectReceipt(unittest.TestCase):
             validate(args)
         for args in [["setup", "--help", "--apply"], ["setup", "--scope", "user", "--user-root", str(self.trial / "user"), "--apply", "--confirm-session-disable"],
                      ["setup", "--scope", "user", "--user-root", str(self.trial.parent), "--show"]]:
-            with self.assertRaises(AssertionError):
+            with self.assertRaises((AssertionError, ValueError)):
                 validate(args)
 
 
