@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.2 release-date=2026-10-23 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -89,7 +89,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
-| [`0.13.2`](releases/0.13.2.md) | 기능 호환 확인·0% 하한·소진 보호 |
+| [`0.13.2`](releases/0.13.2.md) | 정식 게시 보류·기능 호환/소진 보호 개발 기록 |
 | [`0.13.1`](releases/0.13.1.md) | 하한 직접 중단·조회 회복·보존 갱신 보정 |
 | [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
