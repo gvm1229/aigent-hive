@@ -106,7 +106,10 @@ else:print('{}')
     startup.wShowWindow = subprocess.SW_HIDE
     process = subprocess.run([str(work / "console.exe"), str(original), str(user), str(result), "legacy-direct"],
         env=environment, capture_output=True, timeout=150, creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
-    assert process.returncode == 0, (process.returncode, result.read_text() if result.exists() else process.stderr.decode(errors="replace"))
+    error = Path(str(result) + ".error.txt")
+    assert process.returncode == 0, (process.returncode,
+        result.read_text(encoding="utf-8", errors="replace") if result.exists() else process.stderr.decode(errors="replace"),
+        error.read_text(encoding="utf-8", errors="replace") if error.exists() else "no fixture exception")
     report = json.loads(result.read_text())
     assert report["helper_exit_code"] == 0 and report["confirmed"] and report["questions"] >= 2
     shown = subprocess.run([str(original), "setup", "--scope", "user", "--user-root", str(user), "--show", "--output", "json"],

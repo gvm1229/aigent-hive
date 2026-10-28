@@ -161,7 +161,7 @@ public static class SetupConsoleFixture {
             }
             throw new InvalidOperationException("legacy direct flow timeout at "+last);
         } finally {
-            if(!File.Exists(args[2])) File.WriteAllText(args[2],"step="+last+"; confirmed="+confirmed+"; helper="+(helper==null?"absent":helper.HasExited?helper.ExitCode.ToString():"running")+"\n"+OwnConsoleTail());
+            if(!File.Exists(args[2])) File.WriteAllText(args[2],"step="+last+"; confirmed="+confirmed+"; helper="+(helper==null?"absent":helper.HasExited?helper.ExitCode.ToString():"running")+"\n"+OwnConsoleTail(),new UTF8Encoding(false,false));
             if(helper!=null) { if(!helper.HasExited) helper.Kill(); helper.Dispose(); }
         }
     }
@@ -198,7 +198,10 @@ public static class SetupConsoleFixture {
                 File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
                 return child.ExitCode==0 ? 24 : 0;
             }
-        } catch(Exception e) { Console.Error.WriteLine(e.Message); return 25; }
+        } catch(Exception e) {
+            if(args.Length>=3) File.WriteAllText(args[2]+".error.txt",e.ToString(),new UTF8Encoding(false,false));
+            Console.Error.WriteLine(e.Message); return 25;
+        }
         finally { if(child!=null && !child.HasExited) { child.Kill(); child.WaitForExit(); } }
     }
 }
