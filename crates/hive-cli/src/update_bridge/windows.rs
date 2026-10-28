@@ -54,7 +54,7 @@ struct Parent {
 pub(super) fn connect(root: &Path, budget: LegacyBudget) -> Result<Option<Connection>, String> {
     let mut session = Session::spawn(budget)?;
     let reply = session.exchange(
-        &json!({"operation":"inspect","caller_pid":std::process::id(),"registry":REGISTRY}),
+        &json!({"operation":"inspect","caller_pid":std::process::id()}),
         Instant::now() + Duration::from_secs(20),
     )?;
     match reply["event"].as_str() {
@@ -174,6 +174,7 @@ impl Session {
         use std::os::windows::process::CommandExt;
         let encode = |text: &str| base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
         let script = include_str!("windows.ps1")
+            .replace("{{REGISTRY_SOURCE}}", &REGISTRY.replace('\'', "''"))
             .replace(
                 "{{REGISTRY_DIGEST}}",
                 &hive_core::sha256_digest(REGISTRY.as_bytes()),

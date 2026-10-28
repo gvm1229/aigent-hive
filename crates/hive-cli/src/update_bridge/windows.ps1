@@ -34,8 +34,9 @@ try {
         [IO.Path]::GetFileName([string]$parent.ExecutablePath) -notin @('hive.exe','hive-direct-update-helper.exe')) {
         Reply @{ event='not-legacy-parent' }; exit 0
     }
-    if ((Sha256 ([string]$request.registry)) -ne '{{REGISTRY_DIGEST}}') { throw 'public registry differs' }
-    $registry = [string]$request.registry | ConvertFrom-Json
+    $registrySource = '{{REGISTRY_SOURCE}}'
+    if ((Sha256 $registrySource) -ne '{{REGISTRY_DIGEST}}') { throw 'public registry differs' }
+    $registry = $registrySource | ConvertFrom-Json
     Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{{PARENT_SOURCE}}'))) -Language CSharp
     $arguments = [HiveParentImage]::Arguments([string]$parent.CommandLine)
     if ($arguments[1] -ne 'update') { Reply @{ event='not-legacy-parent' }; exit 0 }

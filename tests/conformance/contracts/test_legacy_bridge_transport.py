@@ -30,20 +30,33 @@ class LegacyBridgeTransportTests(unittest.TestCase):
     def setUpClass(cls):
         cls.registry = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode()
         cls.script = (SOURCE / "windows.ps1").read_text(encoding="utf-8")
+        cls.script = cls.script.replace("{{REGISTRY_SOURCE}}", cls.registry.replace("'", "''"))
         cls.script = cls.script.replace("{{REGISTRY_DIGEST}}", "sha256:" + hashlib.sha256(cls.registry.encode()).hexdigest())
         for placeholder, filename in [("{{PARENT_SOURCE}}", "windows-parent.cs"), ("{{CONSOLE_SOURCE}}", "windows-console.cs")]:
             cls.script = cls.script.replace(placeholder, base64.b64encode((SOURCE / filename).read_bytes()).decode())
 
     def test_non_hive_parent_does_not_open_a_console_or_wait_for_input(self):
-        result = run_fixed_script(self.script, {"operation":"inspect", "caller_pid":os.getpid(), "registry":self.registry})
+        result = run_fixed_script(self.script, {"operation":"inspect", "caller_pid":os.getpid()})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"event":"not-legacy-parent"})
         self.assertEqual(result.stderr, "")
 
     def test_a_different_caller_cannot_select_an_arbitrary_parent(self):
-        result = run_fixed_script(self.script, {"operation":"inspect", "caller_pid":1, "registry":self.registry})
+        result = run_fixed_script(self.script, {"operation":"inspect", "caller_pid":1})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"event":"closed", "reason":"parent-or-console-unavailable"})
+
+    def test_embedded_registry_keeps_its_exact_digest_and_rejects_changed_bytes(self):
+        prefix = self.script.split("\ntry {\n", 1)[0]
+        binding = "    $registrySource = " + self.script.split("    $registrySource = ", 1)[1].split("    Add-Type", 1)[0]
+        script = prefix + "\n" + binding + "\nReply @{versions=@($registry.images.version)}\n"
+        result = run_fixed_script(script, {})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {"versions":["0.13.1","0.13.2-test.1","0.13.2-test.2"]})
+        self.assertIn('"schema_version": 1', script)
+        changed = run_fixed_script(script.replace('"schema_version": 1', '"schema_version": 9', 1), {})
+        self.assertNotEqual(changed.returncode, 0)
+        self.assertIn("public registry differs", changed.stderr)
 
     def test_native_command_line_parser_preserves_quoted_paths_and_rejects_invalid_counts(self):
         source = base64.b64encode((SOURCE / "windows-parent.cs").read_bytes()).decode()

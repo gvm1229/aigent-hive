@@ -72,6 +72,7 @@ public static class FixtureInstaller {
     (work / "installer.cs").write_text(installer)
     registry = (ROOT / "harness/setup/legacy-update-images.json").read_bytes().decode("utf-8")
     bridge = (ROOT / "crates/hive-cli/src/update_bridge/windows.ps1").read_text()
+    bridge = bridge.replace("{{REGISTRY_SOURCE}}", registry.replace("'", "''"))
     bridge = bridge.replace("{{REGISTRY_DIGEST}}", "sha256:" + sha(registry.encode()))
     for placeholder, filename in [("{{PARENT_SOURCE}}", "windows-parent.cs"), ("{{CONSOLE_SOURCE}}", "windows-console.cs")]:
         bridge = bridge.replace(placeholder, base64.b64encode((ROOT / "crates/hive-cli/src/update_bridge" / filename).read_bytes()).decode())
@@ -95,7 +96,7 @@ public static class FixtureInstaller {
             bridge = bridge.replace(statement, statement + "; " + trace, 1)
     bridge = bridge.replace("try {\n    $request = Request", "try {\n    Reply @{event='probe-stage'; stage='script-started'}\n    $request = Request", 1)
     (work / "probe.ps1").write_text(bridge, encoding="utf-8")
-    (work / "probe-request.json").write_text(json.dumps({"operation": "inspect", "caller_pid": "__CALLER__", "registry": registry}))
+    (work / "probe-request.json").write_text(json.dumps({"operation": "inspect", "caller_pid": "__CALLER__"}))
     installer = installer.replace('File.WriteAllText(Path.Combine(root,"install-count"),"1"); return 0;', r'''
         File.WriteAllText(Path.Combine(root,"install-count"),"1");
         var probe=new ProcessStartInfo(Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"),"System32/WindowsPowerShell/v1.0/powershell.exe"),"-NoProfile -NonInteractive -WindowStyle Hidden -File \""+Path.Combine(root,"probe.ps1")+"\"");
