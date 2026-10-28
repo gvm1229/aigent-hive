@@ -54,6 +54,10 @@ pub(crate) fn fetch_registry_metadata() -> Result<Vec<u8>, String> {
 }
 
 pub(crate) fn fetch_https(url: &str, maximum: usize) -> Result<Vec<u8>, String> {
+    #[cfg(debug_assertions)]
+    if let Some(bytes) = crate::update_activation::qualification::download(url, maximum)? {
+        return Ok(bytes);
+    }
     if !url.starts_with("https://") {
         return Err("update download URL must use HTTPS".to_owned());
     }

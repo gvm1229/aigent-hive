@@ -1,5 +1,7 @@
 mod completion;
 mod output;
+#[cfg(debug_assertions)]
+pub(crate) mod qualification;
 mod removal;
 pub(crate) use removal::remove_owned_core;
 
