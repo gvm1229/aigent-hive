@@ -43,6 +43,27 @@ class InteractiveCliIsolation(unittest.TestCase):
             with self.assertRaises(MODULE.IsolationError):
                 MODULE.Inspection(fixture, binary, source=self.source)
 
+    def test_mutating_driver_requires_isolated_os_and_confined_explicit_roots(self):
+        import argparse
+        options = argparse.Namespace(fixture=self.fixture, binary=self.binary,
+            user_root=self.fixture / "user", result=self.fixture / "results.json", scenario="project", language="ko")
+        with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+            with self.assertRaises(MODULE.IsolationError):
+                MODULE.lifecycle_command(options, source=self.source)
+        self.assertFalse(self.fixture.exists())
+        with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}):
+            command = MODULE.lifecycle_command(options, source=self.source)
+            self.assertIn(str(self.fixture / "user"), command)
+            self.assertIn(str(self.fixture / "results.json"), command)
+            options.user_root = self.source / "personal"
+            with self.assertRaises(MODULE.IsolationError):
+                MODULE.lifecycle_command(options, source=self.source)
+            options.user_root = self.fixture / "user"
+            options.result = self.source / "outside.json"
+            with self.assertRaises(MODULE.IsolationError):
+                MODULE.lifecycle_command(options, source=self.source)
+        self.assertFalse(self.fixture.exists())
+
     def test_mutation_and_scope_override_are_refused_before_writes(self):
         for command in (["update", "--confirm"], ["uninstall", "--confirm"],
                         ["usage", "monitor", "enable"], ["setup", "--apply"],

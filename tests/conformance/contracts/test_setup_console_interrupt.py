@@ -102,7 +102,7 @@ public static class SetupConsoleFixture {
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
         return child.ExitCode;
     }
-    static int ReviewAll(Process child, SafeFileHandle input, string[] args, bool resumeUpdate=false) {
+    static int ReviewAll(Process child, SafeFileHandle input, string[] args, bool resumeUpdate=false, string quickLanguage=null) {
         string path=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string last=""; bool confirmed=false; int answered=0;
         var deadline=Stopwatch.StartNew();
@@ -115,7 +115,7 @@ public static class SetupConsoleFixture {
                     if(step.Success && step.Groups[1].Value!=last) {
                         last=step.Groups[1].Value;
                         if(resumeUpdate && last=="user-language") throw new InvalidOperationException("saved language asked twice");
-                        Send(input,resumeUpdate ? "\r" : last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
+                        Send(input,quickLanguage!=null ? (last=="user-language" ? (quickLanguage=="ko" ? "1\r" : "2\r") : "\r") : resumeUpdate ? "\r" : last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
                         answered++;
                     }
                 }
@@ -223,6 +223,8 @@ public static class SetupConsoleFixture {
         try {
             bool project=args.Length==7 && (args[3]=="connection-loss" || args[3]=="project-quick");
             bool review=args.Length==4 && args[3]=="review-all";
+            bool quick=args.Length==4 && (args[3]=="user-quick-ko" || args[3]=="user-quick-en");
+            bool resumeUser=args.Length==4 && args[3]=="user-resume";
             bool legacy=args.Length==4 && (args[3]=="legacy-direct" || args[3]=="legacy-cancel" || args[3]=="legacy-deadline"
                 || args[3]=="legacy-parent-exit" || args[3]=="legacy-parent-apply" || args[3]=="legacy-slow" || args[3]=="legacy-late-slow");
             bool resumeUpdate=args.Length==4 && args[3]=="update-resume";
@@ -235,15 +237,17 @@ public static class SetupConsoleFixture {
                 string command=legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
                     ? "update --interactive --user-root \""+args[1]+"\"" : project
                     ? "setup --target \""+args[4]+"\""+(args[5]=="-" ? "" : " --capabilities \""+args[5]+"\"")+" --interactive --user-root \""+args[1]+"\""
-                    : "setup --scope user "+(review ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
+                    : "setup --scope user "+(resumeUser ? "--resume " : review || quick ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
                 var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
-                if(!review && !legacy && !resumeUpdate) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
+                if(!review && !legacy && !resumeUpdate && !quick && !resumeUser) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
                 if(legacy) return LegacyDirect(child,input,args);
                 if(resumeUpdate) return ReviewAll(child,input,args,true);
                 if(project) return ProjectFlow(child,input,args);
+                if(quick) return ReviewAll(child,input,args,false,args[3].EndsWith("-ko") ? "ko" : "en");
+                if(resumeUser) return ReviewAll(child,input,args,true);
                 if(review) return ReviewAll(child,input,args);
                 string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
                 WaitStep(child,progress,"user-language"); Send(input,"1\r");

@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+LIFECYCLE_SCENARIOS = ("setup", "project", "cancel-resume", "unattended")
 
 
 class IsolationError(ValueError):
@@ -90,18 +91,40 @@ class Inspection:
         )
 
 
+def lifecycle_command(options, *, source=ROOT) -> list[str]:
+    if not (os.environ.get("GITHUB_ACTIONS") == "true"
+            and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
+        raise IsolationError("mutating qualification requires an isolated GitHub-hosted OS")
+    inspection = Inspection(options.fixture, options.binary, source=source)
+    if options.user_root is None or options.result is None:
+        raise IsolationError("lifecycle qualification requires explicit --user-root and --result")
+    user = beneath(options.user_root, inspection.fixture)
+    result = beneath(options.result, inspection.fixture)
+    return [sys.executable, str(source / "tests/fixtures/interactive-cli/terminal-setup-ci.py"),
+            "--fixture", str(inspection.fixture), "--binary", str(inspection.binary),
+            "--user-root", str(user), "--result", str(result),
+            "--scenario", options.scenario, "--language", options.language]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
     parser.add_argument("--binary", type=Path, required=True)
-    parser.add_argument("--scenario", choices=("version", "describe", "show"), required=True)
+    parser.add_argument("--scenario", choices=("version", "describe", "show", *LIFECYCLE_SCENARIOS), required=True)
+    parser.add_argument("--user-root", type=Path)
+    parser.add_argument("--result", type=Path)
+    parser.add_argument("--language", choices=("ko", "en"), default="ko")
     options = parser.parse_args()
-    arguments = {
-        "version": ["--version"],
-        "describe": ["setup", "--scope", "user", "--describe"],
-        "show": ["setup", "--scope", "user", "--show"],
-    }[options.scenario]
     try:
+        if options.scenario in LIFECYCLE_SCENARIOS:
+            return subprocess.run(lifecycle_command(options), cwd=ROOT, check=False).returncode
+        if options.user_root is not None or options.result is not None:
+            raise IsolationError("inspection roots are fixed by --fixture; lifecycle overrides are not accepted")
+        arguments = {
+            "version": ["--version"],
+            "describe": ["setup", "--scope", "user", "--describe"],
+            "show": ["setup", "--scope", "user", "--show"],
+        }[options.scenario]
         result = Inspection(options.fixture, options.binary).run(arguments)
         sys.stdout.buffer.write(result.stdout)
         sys.stderr.buffer.write(result.stderr)

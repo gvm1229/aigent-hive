@@ -136,6 +136,18 @@ jobs:
         run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - if: matrix.lane == 'integration'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py --legacy-version 0.13.2-test.1 direct
+      - name: Qualify actual setup terminals and noninteractive entrypoints
+        if: matrix.lane == 'integration'
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess, sys
+          for scenario, language in [("setup", "ko"), ("setup", "en"), ("project", "ko"), ("cancel-resume", "ko"), ("unattended", "ko")]:
+              fixture = Path("tests/work/terminal-" + scenario + "-" + language).resolve()
+              subprocess.run([sys.executable, "scripts/qualify-interactive-cli.py", "--fixture", str(fixture),
+                  "--binary", str(Path("target/debug/hive").resolve()), "--scenario", scenario,
+                  "--language", language, "--user-root", str(fixture / "user"),
+                  "--result", str(fixture / "results.json")], check=True)
       - name: Run complete named conformance inventory
         run: python scripts/test-artifacts.py run --purpose "CI conformance ${{ matrix.lane }} lane" --path target/debug --command python scripts/test-lanes.py --lane ${{ matrix.lane }}
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -230,11 +242,29 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-conformance.txt
+      - name: Install pinned terminal qualification dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-conformance.txt
       - if: runner.os == 'macOS'
         run: python scripts/test-artifacts.py run --purpose 'macOS 첫 갱신 연결의 운영체제 조회 검사' --path target/debug --command cargo test -p hive-cli update_bridge --locked
       - if: runner.os == 'macOS'
         run: cargo clippy -p hive-cli --all-targets --all-features --locked -- -D warnings
       - run: python scripts/test-artifacts.py run --purpose '격리 OS 실제 명령 시험용 CLI 빌드' --path target/debug --command cargo build -p hive-cli --locked
+      - name: Qualify actual setup terminals and noninteractive entrypoints
+        shell: python
+        run: |
+          from pathlib import Path
+          import os, subprocess, sys
+          binary = Path("target/debug") / ("hive.exe" if os.name == "nt" else "hive")
+          for scenario, language in [("setup", "ko"), ("setup", "en"), ("project", "ko"), ("cancel-resume", "ko"), ("unattended", "ko")]:
+              fixture = Path("tests/work/terminal-" + scenario + "-" + language).resolve()
+              subprocess.run([sys.executable, "scripts/qualify-interactive-cli.py", "--fixture", str(fixture),
+                  "--binary", str(binary.resolve()), "--scenario", scenario, "--language", language,
+                  "--user-root", str(fixture / "user"), "--result", str(fixture / "results.json")], check=True)
       - if: runner.os == 'macOS'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py direct
       - if: runner.os == 'macOS'
