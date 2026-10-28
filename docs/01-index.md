@@ -271,6 +271,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 ## 0.14.0 대화형 CLI
 
+- [실제 모델 정확성·입력 비용·지속 회귀](research/cli-model-validation-0.14.0.md): 고정 사례와 비교 표본, 실패 보존·조건별 반복 제한
+
 - [장기 정체 감사와 상세 인계](research/0.14.0-handoff-2026-10-26.md): 원래 완료 조건·확인한 구현·현재 결함·다음 수용
 
 - [미게시 변경 안내 초안](releases/0.14.0.md): 확인한 범위와 남은 수용 조건
