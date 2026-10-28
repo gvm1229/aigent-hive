@@ -14,7 +14,7 @@ sources:
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:docs/plans/active/cli-uninstall-0.14.0.md#sha256:0c2eb105923a862a46a9035abe66e3eb239060d70832843c5a10bae53f65a2c2"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:14b97538abd3ac185627d5dc0a573b540122f780e5549edf80373c6c98866e69"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:7c483d40d8ad13ba52cdc9a7d1c10928320853530cd1a5abe5d3df8b8dd6cee7"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:8c396a991cefeff19dc4a745d91caf7f2ef7c723"
 status: active

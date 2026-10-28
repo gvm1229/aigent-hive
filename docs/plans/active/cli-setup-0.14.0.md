@@ -11,8 +11,8 @@
   - state: complete; evidence: repo:docs/research/cli-user-settings-0.14.0.md#sha256:029f15d8f36dbc94ad6e63444e3ba8ad22ae8ef1566a0f2a6080d77bb110f636
 - [x] [S140-003] AI 없는 프로젝트 설정·기능 확인·보존
   - state: complete; evidence: repo:docs/research/cli-project-reconfiguration-0.14.0.md#sha256:caa6cfad253427edbf24f6203cdb4f41ff714aa3f1d3a4a107065ed43315ee1d
-- [ ] [S140-004] 얇은 AI 연결과 제한된 결과 반환
-  - state: agent-owned; depends: S140-002,S140-003
+- [x] [S140-004] 얇은 AI 연결과 제한된 결과 반환
+  - state: complete; depends: S140-002,S140-003; evidence: repo:docs/research/cli-local-validation-0.14.0.md#sha256:54f0a6b1c84cf230acb0ddc021de81e6181cf93495463d5d3fec06c1d463437b
 
 ## S140-001 — 공통 엔진
 
@@ -57,7 +57,7 @@
 
 ## S140-004 — AI 연결
 
-- M17 `44ced505`: [작은 답안·제한 요약·CLI 연결과 검증 한계](../details/0.14.0-delivery-milestones.md#m17m18-현재-검증). Windows 임시 루트·가짜 앱 적용/재개 통과, M18 연결 오류 모의 `41f59243` 통과, 실제 모델·다른 OS 수용 별도
+- [입력·크기·중단·모델 안내의 수용 대응](../../research/cli-local-validation-0.14.0.md#s140-004-얇은-ai-연결-수용). 실제 모델 비용·전체 정확성은 Q140-001 별도
 
 - user-setup/project-setup Skill은 시작 조건·한 번의 상태 조회·CLI 실행/안내·결과 확인만 소유. 질문 번역·매 답변의 전체 YAML 작성·반복 schema 조회·일반 설정의 별도 Judge/하위 에이전트 제거
 - 호스트의 사용자용 대화형 터미널이 있으면 해당 경로 사용. 비대화형 도구 호출만 가능하면 단일 CLI 실행 명령과 이유 안내, 숨은 입력창을 기다리거나 AI 질문 반복으로 자동 전환 금지
