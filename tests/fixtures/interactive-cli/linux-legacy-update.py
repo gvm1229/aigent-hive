@@ -34,21 +34,25 @@ package = root / "package"
 shim = root / "shim"
 shim.mkdir()
 binary = package / "bin/hive"
-predecessor = source / "tests/work/public131-posix-0140" / platform / "hive"
+version = os.environ.get("HIVE_LEGACY_FIXTURE_VERSION", "0.13.1")
+assert version in {"0.13.1", "0.13.2-test.1"}
+product = version.split("-", 1)[0]
+images = source / "tests/work/public131-posix-0140" if version == "0.13.1" else source / "tests/work/public132-posix-0140" / version
+predecessor = images / platform / "hive"
 old_digest = hashlib.sha256(predecessor.read_bytes()).hexdigest()
 registry = json.loads((source / "harness/setup/legacy-update-posix-images.json").read_text())
-original = next(item for item in registry["images"] if item["platform"] == platform and item["version"] == "0.13.1")
+original = next(item for item in registry["images"] if item["platform"] == platform and item["version"] == version)
 assert old_digest == original["binary_sha256"]
 shutil.copyfile(predecessor, binary)
 binary.chmod(0o755)
 source_digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
-metadata = {"name": "@aigent-hive/" + platform, "version": "0.13.1", "aigentHive": {"productVersion": "0.13.1"}}
+metadata = {"name": "@aigent-hive/" + platform, "version": version, "aigentHive": {"productVersion": product}}
 (package / "package.json").write_text(json.dumps(metadata))
 receipt = package / "share/aigent-hive/install-receipt.json"
 if mode == "direct":
     receipt.parent.mkdir(parents=True)
     receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-                                  "version": "0.13.1", "package_version": "0.13.1", "artifact_sha256": "sha256:" + old_digest}))
+                                  "version": product, "package_version": version, "artifact_sha256": "sha256:" + old_digest}))
 
 installer = '''#!/usr/bin/python3
 import hashlib,json,os,shutil,subprocess,sys
@@ -568,7 +572,7 @@ incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,
     "incoming_stripped_sha256": incoming["sha256"], "installer_stub": incoming["installer"], "answers": answers,
-    "original_parent": "public 0.13.1 " + platform, "incoming": "development 0.14.0",
+    "original_parent": "public " + version + " " + platform, "incoming": "development 0.14.0",
     "registry_target": "0.13.2-test.2", "private_user_mount": False, "terminal_runs": terminal_runs,
     "installer_invocations": int((root / "install-count").read_text()),
     "scope": ("Hosted isolated POSIX VM" if hosted else "Linux Docker") + " PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}

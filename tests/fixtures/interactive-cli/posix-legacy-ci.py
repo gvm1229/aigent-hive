@@ -1,5 +1,6 @@
 """Qualify the frozen updater in a disposable GitHub-hosted POSIX VM."""
 import base64
+import argparse
 import hashlib
 import io
 import json
@@ -20,23 +21,29 @@ if not (sys.platform in {"linux", "darwin"} and os.environ.get("GITHUB_ACTIONS")
     raise SystemExit("requires an isolated GitHub-hosted POSIX VM")
 
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
+arguments = argparse.ArgumentParser()
+arguments.add_argument("--legacy-version", choices=["0.13.1", "0.13.2-test.1"], default="0.13.1")
+arguments.add_argument("modes", nargs="*")
+arguments = arguments.parse_args()
+version = arguments.legacy_version
 registry = json.loads((ROOT / "harness/setup/legacy-update-posix-images.json").read_text())
-original = next(row for row in registry["images"] if row["platform"] == platform and row["version"] == "0.13.1")
+original = next(row for row in registry["images"] if row["platform"] == platform and row["version"] == version)
 (ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix="posix-legacy-ci-", dir=ROOT / "tests/work")).resolve()
-image = ROOT / "tests/work/public131-posix-0140" / platform / "hive"
+images = ROOT / "tests/work/public131-posix-0140" if version == "0.13.1" else ROOT / "tests/work/public132-posix-0140" / version
+image = images / platform / "hive"
 candidate = ROOT / "target/debug/hive"
-command = [sys.executable, str(Path(__file__).resolve())]
-run = Run("격리 POSIX VM의 공개0.13.1 첫 갱신 연결", command,
+command = [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]]
+run = Run(f"격리 POSIX VM의 공개{version} 첫 갱신 연결", command,
           paths=[work.relative_to(ROOT).as_posix(), image.parent.relative_to(ROOT).as_posix()], binary=candidate)
 code = 1
 completed = []
-modes = sys.argv[1:] or ["npm", "direct", "confirm", "cancel-resume"]
+modes = arguments.modes or ["npm", "direct", "confirm", "cancel-resume"]
 assert modes and len(modes) == len(set(modes))
 assert set(modes) <= {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 try:
     if not image.is_file():
-        url = f"https://registry.npmjs.org/@aigent-hive/{platform}/-/{platform}-0.13.1.tgz"
+        url = f"https://registry.npmjs.org/@aigent-hive/{platform}/-/{platform}-{version}.tgz"
         with urllib.request.urlopen(url, timeout=30) as response:
             archive = response.read(128 * 1024 * 1024 + 1)
         assert len(archive) <= 128 * 1024 * 1024
@@ -51,7 +58,8 @@ try:
         image.chmod(0o755)
     assert hashlib.sha256(image.read_bytes()).hexdigest() == original["binary_sha256"]
     for mode in modes:
-        environment = dict(os.environ, HIVE_QUALIFICATION_VM="1", HIVE_LEGACY_FIXTURE_ROOT=str(work / mode))
+        environment = dict(os.environ, HIVE_QUALIFICATION_VM="1", HIVE_LEGACY_FIXTURE_ROOT=str(work / mode),
+                           HIVE_LEGACY_FIXTURE_VERSION=version)
         code = run.execute([sys.executable, str(ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py"), mode], env=environment)
         if code:
             break
