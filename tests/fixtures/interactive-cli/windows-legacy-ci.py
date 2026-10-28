@@ -51,7 +51,7 @@ try:
     installer = r'''
 using System; using System.IO; using System.Reflection; using System.Security.Cryptography;
 public static class FixtureInstaller {
-    static string Plain(string value) { string path=Path.GetFullPath(value); return path.StartsWith(@"\\?\") ? path.Substring(4) : path; }
+    static string Plain(string value) { return Path.GetFullPath(value.StartsWith(@"\\?\") ? value.Substring(4) : value); }
     public static int Main(string[] args) {
         string root=Directory.GetParent(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)).FullName;
         if(!Path.GetFileName(root).StartsWith("windows-legacy-ci-") || File.ReadAllText(Path.Combine(root,"fixture-only"))!="0.14.0-direct-fixture") return 20;
