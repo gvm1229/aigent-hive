@@ -56,7 +56,7 @@ def journal(user, project):
     return {}
 
 
-def posix_terminal(binary, arguments, environment, user, project=False, cancel=False, language="ko", *, preserve_legacy=False, timeout_seconds=120):
+def posix_terminal(binary, arguments, environment, user, project=False, cancel=False, language="ko", *, preserve_legacy=False, timeout_seconds=120, trace=None):
     import pty
     import select
     pid, descriptor = pty.fork()
@@ -66,9 +66,32 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
     steps = []
     status = None
     replied = set()
+    software_answered = False
+    observed_images = set()
     began = time.monotonic()
     try:
         while time.monotonic() - began < timeout_seconds:
+            if trace is not None and sys.platform == "linux":
+                descendants = [pid]
+                for _ in range(4):
+                    following = []
+                    for child in descendants[:16]:
+                        base = Path("/proc") / str(child)
+                        try:
+                            following.extend(int(n) for n in (base / "task" / str(child) / "children").read_text().split()[:16])
+                            with (base / "cmdline").open("rb") as command:
+                                argv = command.read(8192).split(b"\0")
+                            if len(argv) < 3 or argv[1] not in {b"update", b"install"} or str(user).encode() not in argv:
+                                continue
+                            executable = os.readlink(base / "exe")
+                            key = (argv[0].decode(errors="replace"), executable, argv[1].decode())
+                            if key not in observed_images and len(observed_images) < 8:
+                                observed_images.add(key)
+                                trace.setdefault("process_images", []).append({"argv0": key[0], "image_path": key[1],
+                                    "action": key[2], "image_path_exists": Path(executable.removesuffix(" (deleted)")).exists()})
+                        except (OSError, ValueError):
+                            pass
+                    descendants = following
             if select.select([descriptor], [], [], 0.1)[0]:
                 try:
                     output.extend(os.read(descriptor, 65536))
@@ -76,6 +99,10 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
                     pass
                 if len(output) > 512 * 1024:
                     raise AssertionError("unexpected unbounded terminal output")
+            if preserve_legacy and not software_answered and b"Proceed? [y/N]" in output:
+                os.write(descriptor, b"yes\n")
+                software_answered = True
+                steps.append({"phase": "software-confirmation", "step": "legacy-update-approval"})
             state = journal(user, project)
             phase, step = state.get("phase"), state.get("step")
             key = (phase, step)

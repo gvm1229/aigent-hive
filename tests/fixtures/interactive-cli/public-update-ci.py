@@ -198,8 +198,9 @@ runpy.run_path(STUB,run_name='__main__')
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         project_before = {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()}
-        update = [*entry, "update", "--channel", "test", "--confirm", "--user-root", user]
+        update = [*entry, "update", "--channel", "test", "--user-root", user]
         if args.redirected:
+            update.append("--confirm")
             invoke(update, timeout=610)
         else:
             spec = importlib.util.spec_from_file_location("terminal_setup", ROOT / "tests/fixtures/interactive-cli/terminal-setup-ci.py")
@@ -222,7 +223,7 @@ runpy.run_path(STUB,run_name='__main__')
                 events.append({"command": list(map(str, update)), "terminal": "private Windows console", **outcome})
             else:
                 outcome = terminal.posix_terminal(Path(entry[0]), list(map(str, update[1:])), env, user,
-                    preserve_legacy=True, timeout_seconds=610, language="en")
+                    preserve_legacy=True, timeout_seconds=610, language="en", trace=details.setdefault("terminal_trace", {}))
                 assert any(s["step"] == "usage-enforcement" for s in outcome["steps"]), outcome
                 events.append({"command": list(map(str, update)), **outcome})
         current = old
@@ -282,6 +283,25 @@ runpy.run_path(STUB,run_name='__main__')
         code = 0
     except Exception as error:
         details["error"] = str(error)[:5000]
+        if "old" in locals() and old.is_file():
+            details["image_after_failure_sha256"] = sha(old)
+            if sha(old) == wanted_hash:
+                try:
+                    state = subprocess.run([str(old), "setup", "--scope", "user", "--user-root", str(user), "--show", "--summary", "--output", "json"],
+                        env=env, cwd=work, input=b"", capture_output=True, timeout=15)
+                    details["state_after_failure"] = {"exit_code": state.returncode, "stdout": state.stdout.decode(errors="replace")[:5000]}
+                except Exception as diagnostic_error:
+                    details["state_diagnostic_error"] = str(diagnostic_error)[:1000]
+        details["npm_moves"] = []
+        for log in sorted((work / "npm-cache/_logs").glob("*.log"), key=lambda p: p.stat().st_mtime)[-2:]:
+            if not log.resolve().is_relative_to(work) or log.is_symlink():
+                continue
+            lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+            selected = set()
+            for index, line in enumerate(lines):
+                if any(word in line.lower() for word in ["reify moves", "retired", "rename", "error"]):
+                    selected.update(range(index, min(index + 10, len(lines))))
+            details["npm_moves"].append({"file": log.name, "lines": [lines[n][:500] for n in sorted(selected)[:70]]})
         details["console_errors"] = {p.name: p.read_text(encoding="utf-8", errors="replace")[-4000:]
                                      for p in work.glob("*.error.txt") if p.is_file() and not p.is_symlink()}
         raise

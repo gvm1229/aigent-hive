@@ -106,6 +106,7 @@ public static class SetupConsoleFixture {
         string path=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string last=""; bool confirmed=false; int answered=0;
         var deadline=Stopwatch.StartNew();
+        if(publicUpdate) Send(input,"yes\r");
         while(!child.HasExited && deadline.ElapsedMilliseconds<(publicUpdate ? 600000 : 30000)) {
             try {
                 string state=File.ReadAllText(path);
@@ -124,7 +125,7 @@ public static class SetupConsoleFixture {
         }
         if(!child.HasExited) throw new InvalidOperationException("review timeout at "+last);
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+",\"questions\":"+answered+",\"confirmed\":"+(confirmed?"true":"false")+"}");
-        if(child.ExitCode!=0) File.WriteAllText(args[2]+".error.txt",OwnConsoleTail(),new UTF8Encoding(false,false));
+        if(publicUpdate || child.ExitCode!=0) File.WriteAllText(args[2]+".error.txt",OwnConsoleTail(),new UTF8Encoding(false,false));
         return child.ExitCode;
     }
     static int LegacyDirect(Process child, SafeFileHandle input, string[] args) {
@@ -236,7 +237,7 @@ public static class SetupConsoleFixture {
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
-                string command=publicUpdate ? (args.Length==5 ? "\""+args[4]+"\" " : "")+"update --channel test --confirm --user-root \""+args[1]+"\"" : legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
+                string command=publicUpdate ? (args.Length==5 ? "\""+args[4]+"\" " : "")+"update --channel test --user-root \""+args[1]+"\"" : legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
                     ? "update --interactive --user-root \""+args[1]+"\"" : project
                     ? "setup --target \""+args[4]+"\""+(args[5]=="-" ? "" : " --capabilities \""+args[5]+"\"")+" --interactive --user-root \""+args[1]+"\""
                     : "setup --scope user "+(resumeUser ? "--resume " : review || quick ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
