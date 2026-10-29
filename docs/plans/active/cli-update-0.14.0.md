@@ -5,12 +5,12 @@
 
 ## 항목
 
-- [x] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
-  - state: complete; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
-- [x] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
-  - state: complete; depends: U140-001,P140-002,G140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
-- [x] [U140-003] 상세 결과·설정 안내·호환 출력
-  - state: complete; depends: U140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
+- [ ] [U140-001] 공개0.13.1에서 시작한 첫 대화형 갱신 연결
+  - state: agent-owned; depends: S140-001; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
+- [ ] [U140-002] 새 갱신 조정기·질문·보존·복구 통합
+  - state: agent-owned; depends: U140-001,P140-002,G140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
+- [ ] [U140-003] 상세 결과·설정 안내·호환 출력
+  - state: agent-owned; depends: U140-002; evidence: repo:docs/research/cli-update-validation-0.14.0.md#sha256:af76d9b58f82d29c0549c0217a8b4b1ad129dbdb1cd2974a35e9bb7379a64a2a
 
 ## 현재 확인 사실과 선택
 
