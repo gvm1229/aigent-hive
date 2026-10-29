@@ -519,12 +519,19 @@ try {
             -Signature $signature `
             -AuthorizedThumbprint $AuthorizedSignerThumbprint
     }
-    if (-not (Test-HiveVersionOutput `
-        -Output (& $binary --version) `
-        -ExpectedVersion $Version `
-        -ExpectedPackageVersion $PackageVersion
-    )) {
-        throw "signed binary version differs from requested release"
+    $previousOutputEncoding = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+        $binaryVersion = & $binary --version
+        if ($LASTEXITCODE -ne 0 -or -not (Test-HiveVersionOutput `
+            -Output $binaryVersion `
+            -ExpectedVersion $Version `
+            -ExpectedPackageVersion $PackageVersion
+        )) {
+            throw "signed binary version differs from requested release"
+        }
+    } finally {
+        [Console]::OutputEncoding = $previousOutputEncoding
     }
 
     Publish-DirectInstall -Binary $binary -Prefix $Prefix -Version $Version `

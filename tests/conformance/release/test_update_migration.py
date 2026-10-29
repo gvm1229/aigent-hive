@@ -1969,6 +1969,72 @@ try {
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_windows_installer_decodes_native_version_and_restores_encoding(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("native version decoding requires Windows PowerShell")
+        system = Path(os.environ["SystemRoot"])
+        shells = [system / "System32/WindowsPowerShell/v1.0/powershell.exe"]
+        if modern := shutil.which("pwsh.exe"):
+            shells.append(Path(modern))
+        with tempfile.TemporaryDirectory(prefix="hive-version-decoding-") as temporary:
+            work = Path(temporary)
+            source, binary = work / "version.cs", work / "version.exe"
+            source.write_text('''using System;
+using System.Text;
+public static class VersionFixture {
+    public static int Main() {
+        byte[] bytes=Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("HIVE_TEST_VERSION")+"\\n");
+        Console.OpenStandardOutput().Write(bytes,0,bytes.Length);
+        return Int32.Parse(Environment.GetEnvironmentVariable("HIVE_TEST_EXIT"));
+    }
+}''', encoding="ascii")
+            compiler = system / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+            subprocess.run([str(compiler), "/nologo", "/target:exe", f"/out:{binary}", str(source)],
+                           capture_output=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            script = work / "check.ps1"
+            script.write_text(r'''param([string]$Installer,[string]$Binary)
+$ErrorActionPreference='Stop'
+$tokens=$null;$errors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile($Installer,[ref]$tokens,[ref]$errors)
+if($errors.Count){throw 'installer syntax differs'}
+$function=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Test-HiveVersionOutput'},$true)
+Invoke-Expression $function.Extent.Text
+$check=$ast.Find({param($n) $n -is [Management.Automation.Language.TryStatementAst] -and
+    @($n.Body.Statements | Where-Object {$_ -is [Management.Automation.Language.AssignmentStatementAst] -and $_.Left.Extent.Text -eq '$binaryVersion'}).Count -eq 1},$true)
+if($null -eq $check){throw 'native version check missing'}
+$Version='0.14.0';$PackageVersion='0.14.0-test.2'
+foreach($case in @('valid','different-version','failed-command')) {
+    [Console]::OutputEncoding=[Text.Encoding]::GetEncoding(437)
+    $previousOutputEncoding=[Console]::OutputEncoding
+    $env:HIVE_TEST_VERSION='AIgent Hive v0.14.0-test #2 '+[char]0x00b7+' developer test build (released 2026-10-30)'
+    $env:HIVE_TEST_EXIT='0'
+    if($case -eq 'different-version'){$env:HIVE_TEST_VERSION='AIgent Hive v0.13.1 (released 2026-10-21)'}
+    if($case -eq 'failed-command'){$env:HIVE_TEST_EXIT='3'}
+    $accepted=$true
+    try {Invoke-Expression $check.Extent.Text} catch {
+        if($_.Exception.Message -ne 'signed binary version differs from requested release'){throw}
+        $accepted=$false
+    }
+    if($accepted -ne ($case -eq 'valid')){throw ('wrong version result: '+$case)}
+    if([Console]::OutputEncoding.CodePage -ne 437){throw 'caller encoding was not restored'}
+}
+Write-Output 'native UTF-8 version accepted; mismatch and exit failure refused; encoding restored'
+''', encoding="ascii")
+            environment = {key: os.environ[key] for key in
+                           ("SystemRoot", "WINDIR", "COMSPEC", "PATHEXT", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432")
+                           if key in os.environ}
+            for key in ("HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP", "CODEX_HOME"):
+                environment[key] = str(work)
+            environment["PATH"] = str(system / "System32")
+            for shell in shells:
+                with self.subTest(shell=shell.name):
+                    result = subprocess.run([str(shell), "-NoProfile", "-NonInteractive", "-File", str(script),
+                                             "-Installer", str(ROOT / "scripts/install.ps1"), "-Binary", str(binary)],
+                                            cwd=work, env=environment, input=b"", capture_output=True, timeout=30,
+                                            creationflags=subprocess.CREATE_NO_WINDOW)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn(b"encoding restored", result.stdout)
+
     def test_windows_shell_install_boundaries_are_explicit(self) -> None:
         installer = (ROOT / "scripts/install.ps1").read_text(encoding="utf-8")
         dependency_setup = (
