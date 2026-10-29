@@ -17,9 +17,9 @@ hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
 if not hosted and (sys.platform != "linux" or os.environ.get("HIVE_QUALIFICATION_CONTAINER") != "1"):
     raise SystemExit("requires the isolated qualification container or hosted POSIX VM")
 mode = sys.argv[1]
-assert mode in {"npm", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
+assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply", "worker-unowned", "monitor-decline", "file-monitor-block", "project-file", "project-file-interrupt", "vector-choice", "host-deselect", "locale-input", "monitor-review", "migration-review"}
 if hosted:
-    assert mode in {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
+    assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
@@ -30,6 +30,10 @@ root.mkdir()
 user = root / "user"
 user.mkdir()
 package = root / "package"
+if mode == "npm-retired":
+    assert hosted
+    package = root / "node_modules/aigent-hive/node_modules/@aigent-hive" / platform
+    (root / "retire-package").write_text("owned synthetic npm retirement")
 (package / "bin").mkdir(parents=True)
 shim = root / "shim"
 shim.mkdir()
@@ -69,7 +73,22 @@ assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.]0-test[.][1-9][0-9]
 product=requested.split('-test.',1)[0]
 if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
-binary=package/'bin/hive';binary.unlink();shutil.copyfile('/build/debug/hive',binary);binary.chmod(0o755)
+binary=package/'bin/hive'
+if (root/'retire-package').exists():
+    outer=package.parents[2]
+    assert outer==root/'node_modules/aigent-hive' and not outer.is_symlink()
+    retired=outer.with_name('.aigent-hive-fixture1')
+    outer.rename(retired);shutil.rmtree(retired)
+    if sys.platform=='darwin':
+        # The authenticated original parent is still waiting for this installer.
+        parent=os.getppid()
+        state=subprocess.run(['/bin/ps','-p',str(parent),'-o','stat='],capture_output=True,text=True,check=True)
+        probe=subprocess.run([str(root.parent/'mac-parent-probe'),str(parent),str(root/'user'),'__ORIGINAL_CDHASH__'],capture_output=True,text=True,check=True,timeout=5)
+        (root/'retired-parent.json').write_text(json.dumps({'parent_state':state.stdout.strip(),'probe':json.loads(probe.stdout)}))
+    binary.parent.mkdir(parents=True)
+else:
+    binary.unlink()
+shutil.copyfile('/build/debug/hive',binary);binary.chmod(0o755)
 subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)
 digest=hashlib.sha256(binary.read_bytes()).hexdigest()
 (root/'incoming.json').write_text(json.dumps({'sha256':digest,'installer':'env/sh' if direct else 'npm','registry_target':requested}))
@@ -130,6 +149,9 @@ if hosted:
         content = script.read_text().replace("/usr/bin/python3", sys.executable)
         content = content.replace("/tmp/hive-first-update", str(root)).replace("/build/debug/hive", str(candidate))
         content = content.replace("@aigent-hive/linux-x64", "@aigent-hive/" + platform)
+        if mode == "npm-retired":
+            content = content.replace("package=root/'package'", "package=root/'node_modules/aigent-hive/node_modules/@aigent-hive'/" + repr(platform))
+            content = content.replace("__ORIGINAL_CDHASH__", original.get("code_directory_hash", ""))
         if sys.platform == "darwin":
             content = content.replace("subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)",
                                       "# Keep the incoming Mach-O code signature intact.")

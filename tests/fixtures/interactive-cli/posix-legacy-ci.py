@@ -40,7 +40,7 @@ code = 1
 completed = []
 modes = arguments.modes or ["npm", "direct", "confirm", "cancel-resume"]
 assert modes and len(modes) == len(set(modes))
-assert set(modes) <= {"npm", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
+assert set(modes) <= {"npm", "npm-retired", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 try:
     if not image.is_file():
         url = f"https://registry.npmjs.org/@aigent-hive/{platform}/-/{platform}-{version}.tgz"
@@ -57,6 +57,11 @@ try:
         image.write_bytes(data)
         image.chmod(0o755)
     assert hashlib.sha256(image.read_bytes()).hexdigest() == original["binary_sha256"]
+    if sys.platform == "darwin" and "npm-retired" in modes:
+        code = run.execute(["/usr/bin/swiftc", "-module-cache-path", str(work / "swift-cache"),
+            str(ROOT / "tests/fixtures/interactive-cli/macos-parent-probe.swift"), "-o", str(work / "mac-parent-probe")])
+        if code:
+            raise RuntimeError("private parent probe compilation failed")
     for mode in modes:
         environment = dict(os.environ, HIVE_QUALIFICATION_VM="1", HIVE_LEGACY_FIXTURE_ROOT=str(work / mode),
                            HIVE_LEGACY_FIXTURE_VERSION=version)
@@ -64,7 +69,11 @@ try:
         if code:
             break
         completed.append(json.loads((work / mode / "results" / (mode + ".json")).read_text()))
+except BaseException:
+    code = 1
+    raise
 finally:
-    run.finish(code, details={"platform": platform, "original": original, "completed": completed,
+    probes = [json.loads(path.read_text()) for path in work.glob("*/retired-parent.json")]
+    run.finish(code, details={"platform": platform, "original": original, "completed": completed, "retired_parent_probes": probes,
         "scope": "isolated hosted VM; original public parent, replaced development child, real PTY and pipes; synthetic installer and Antigravity; no model, real host registration, public14 package or personal installation"})
 raise SystemExit(code)

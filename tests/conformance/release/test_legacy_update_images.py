@@ -5,9 +5,11 @@ import hashlib
 import importlib.util
 import io
 import os
+import shutil
 import struct
 import sys
 import tarfile
+import tempfile
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -49,6 +51,33 @@ def pe_image():
 
 
 class LegacyUpdateImageTests(unittest.TestCase):
+    def test_retired_npm_fixture_replaces_only_its_owned_native_tree(self):
+        tree = ast.parse((ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py").read_text(encoding="utf-8"))
+        installer = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
+                         and any(isinstance(target, ast.Name) and target.id == "installer" for target in node.targets))
+        replacement = "binary=package/'bin/hive'" + installer.split("binary=package/'bin/hive'", 1)[1].split("subprocess.run(['/usr/bin/strip'", 1)[0]
+        replacement = replacement.replace("'/build/debug/hive'", "str(incoming)")
+        with tempfile.TemporaryDirectory(prefix="hive-retired-npm-") as temporary:
+            root = Path(temporary).resolve()
+            package = root / "node_modules/aigent-hive/node_modules/@aigent-hive/fixture"
+            (package / "bin").mkdir(parents=True)
+            (package / "bin/hive").write_bytes(b"old owned image")
+            incoming = root / "candidate"
+            incoming.write_bytes(b"new fixture image")
+            sentinel = root / "unrelated"
+            sentinel.write_bytes(b"keep")
+            (root / "retire-package").touch()
+            namespace = dict(root=root, package=package, incoming=incoming, shutil=shutil, sys=sys)
+            with patch.object(sys, "platform", "linux"):
+                exec(replacement, namespace)
+            self.assertEqual((package / "bin/hive").read_bytes(), incoming.read_bytes())
+            self.assertFalse((root / "node_modules/.aigent-hive-fixture1").exists())
+            self.assertEqual(sentinel.read_bytes(), b"keep")
+            namespace["package"] = root / "unrelated-native"
+            with self.assertRaises(AssertionError):
+                exec(replacement, namespace)
+            self.assertEqual(sentinel.read_bytes(), b"keep")
+
     def test_posix_installer_fixture_binds_the_requested_test_version(self):
         tree = ast.parse((ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py").read_text(encoding="utf-8"))
         installer = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
