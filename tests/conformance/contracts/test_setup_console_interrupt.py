@@ -128,20 +128,20 @@ public static class SetupConsoleFixture {
         if(publicUpdate || child.ExitCode!=0) File.WriteAllText(args[2]+".error.txt",OwnConsoleTail(),new UTF8Encoding(false,false));
         return child.ExitCode;
     }
-    static int LegacyDirect(Process child, SafeFileHandle input, string[] args) {
+    static int LegacyDirect(Process child, SafeFileHandle input, string[] args, bool publicUpdate=false) {
         string progress=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string expected=Path.GetFullPath(Path.Combine(args[1],".hive/runtime/update/hive-direct-update-helper.exe"));
         Process helper=null; string last=""; bool confirmed=false; int answered=0;
-        bool stop=args[3]!="legacy-direct", hold=args[3]=="legacy-deadline", stopped=false;
+        bool stop=!publicUpdate && args[3]!="legacy-direct", hold=args[3]=="legacy-deadline", stopped=false;
         bool parentExit=args[3]=="legacy-parent-exit", parentApply=args[3]=="legacy-parent-apply";
         bool late=args[3]=="legacy-late-slow", slow=args[3]=="legacy-slow" || late || parentApply;
         Process host=null; long currentStart=-1;
         long firstQuestion=-1;
         var deadline=Stopwatch.StartNew();
         // The two frozen 0.13.1 bootstrap questions precede the new question engine.
-        Send(input,"yes\rantigravity\r");
+        Send(input,publicUpdate ? "yes\r" : "yes\rantigravity\r");
         try {
-            while(deadline.ElapsedMilliseconds<(late?580000:hold?470000:150000)) {
+            while(deadline.ElapsedMilliseconds<(publicUpdate?600000:late?580000:hold?470000:150000)) {
                 if(helper==null) foreach(var candidate in Process.GetProcessesByName("hive-direct-update-helper")) {
                     try {
                         if(candidate.Handle==IntPtr.Zero) { candidate.Dispose(); continue; }
@@ -177,12 +177,13 @@ public static class SetupConsoleFixture {
                         var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
                         if(step.Success && step.Groups[1].Value!=last && !stopped) {
                             last=step.Groups[1].Value;
+                            if(publicUpdate && last=="user-language") throw new InvalidOperationException("saved language asked twice");
                             if(firstQuestion<0) firstQuestion=deadline.ElapsedMilliseconds;
                             if(stop && !slow && last!="user-language") {
                                 if(parentExit) { helper.Kill(); }
                                 else if(!hold) Send(input,new string((char)26,1)+"\r");
                                 stopped=true;
-                            } else { Send(input,last=="user-language" ? "1\r" : "\r"); answered++; }
+                            } else { Send(input,publicUpdate && last=="usage-enforcement" ? "yes\r" : publicUpdate && last=="usage-warnings" ? "no\r" : last=="user-language" ? "1\r" : "\r"); answered++; }
                         }
                     }
                     if(helper!=null && helper.HasExited) {
@@ -194,7 +195,7 @@ public static class SetupConsoleFixture {
                             return 0;
                         }
                         if(helper.ExitCode!=0 || !state.Contains("phase: complete") || !confirmed) return 31;
-                        File.WriteAllText(args[2],"{\"helper_exit_code\":0,\"questions\":"+answered+",\"confirmed\":true}");
+                        File.WriteAllText(args[2],"{"+(publicUpdate?"\"exit_code\":0,":"")+"\"helper_exit_code\":0,\"questions\":"+answered+",\"confirmed\":true}");
                         return 0;
                     }
                 } catch(IOException) { }
@@ -203,6 +204,7 @@ public static class SetupConsoleFixture {
             }
             throw new InvalidOperationException("legacy direct flow timeout at "+last);
         } finally {
+            if(publicUpdate) File.WriteAllText(args[2]+".error.txt",OwnConsoleTail(),new UTF8Encoding(false,false));
             if(!File.Exists(args[2])) File.WriteAllText(args[2],"step="+last+"; confirmed="+confirmed+"; helper="+(helper==null?"absent":helper.HasExited?helper.ExitCode.ToString():"running")+"\n"+OwnConsoleTail(),new UTF8Encoding(false,false));
             if(helper!=null) { if(!helper.HasExited) helper.Kill(); helper.Dispose(); }
             if(host!=null) host.Dispose();
@@ -247,7 +249,7 @@ public static class SetupConsoleFixture {
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
                 if(legacy) return LegacyDirect(child,input,args);
-                if(publicUpdate) return ReviewAll(child,input,args,true,null,true);
+                if(publicUpdate) return args.Length==4 ? LegacyDirect(child,input,args,true) : ReviewAll(child,input,args,true,null,true);
                 if(resumeUpdate) return ReviewAll(child,input,args,true);
                 if(project) return ProjectFlow(child,input,args);
                 if(quick) return ReviewAll(child,input,args,false,args[3].EndsWith("-ko") ? "ko" : "en");

@@ -190,9 +190,12 @@ runpy.run_path(STUB,run_name='__main__')
         answers.write_text(json.dumps(project_answers), encoding="utf-8")
         invoke([*entry, "setup", "--target", project, "--user-root", user, "--answers", answers,
             "--capabilities", ROOT / "tests/fixtures/setup/capabilities-antigravity-absent.json", "--apply", "--output", "json"])
+        runtime_note = user / ".hive/runtime/usage-monitor/incidents/acceptance.json"
+        history_note = user / ".hive/history/usage-monitor/acceptance.json"
         sentinels = {user / "README.txt": b"Synthetic user bytes.\r\n",
             user / ".hive/knowledge/acceptance.md": b"# Synthetic acceptance knowledge\n",
-            user / ".hive/runtime/usage-monitor/incidents/acceptance.json": b'{"synthetic_preservation_fixture":true}\n',
+            runtime_note: b'{"synthetic_preservation_fixture":true}\n',
+            history_note: b'{"synthetic_durable_history_fixture":true}\n',
             project / ".hive/team/roles/user-note.md": b"# Synthetic user role note\nPreserve this body.\n"}
         for path, data in sentinels.items():
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -249,14 +252,22 @@ runpy.run_path(STUB,run_name='__main__')
         assert {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()} == project_before
         for path, data in sentinels.items():
             assert path.read_bytes() == data
+        details["runtime_preserved_through_update"] = True
         config = user / ".hive/config/user-setup.yml"
         sentinels[config] = config.read_bytes()
         preview = json.loads(invoke([*entry, "uninstall", "--user-root", user, "--dry-run", "--output", "json"]).stdout)
         assert preview["data"]["preview"]["core"]["owner"] == args.owner
+        entries = preview["data"]["preview"]["entries"]
+        assert entries[runtime_note.relative_to(user).as_posix()]["kind"] == "file"
+        assert history_note.relative_to(user).as_posix() not in entries
         assert current.is_file() and sha(current) == wanted_hash
         refused = invoke([*entry, "uninstall", "--user-root", user, "--output", "json"], expected=(2,))
         assert json.loads(refused.stdout)["code"] == "hive.uninstall-needs-input"
         assert current.is_file() and sha(current) == wanted_hash
+        for path, data in sentinels.items():
+            assert path.read_bytes() == data
+        # Observation runtime is displayed for removal; durable history is retained.
+        sentinels.pop(runtime_note)
         removed = json.loads(invoke([*entry, "uninstall", "--user-root", user, "--confirm", "--output", "json"], expected=(0, 2)).stdout)
         receipt = (user / removed["data"]["receipt"]).resolve()
         assert receipt.is_relative_to(user / ".hive/history/lifecycle")
@@ -267,6 +278,8 @@ runpy.run_path(STUB,run_name='__main__')
                 break
             time.sleep(0.1)
         assert completion["phase"] == "complete" and not current.exists(), completion
+        assert not runtime_note.exists()
+        details["runtime_removed_only_after_confirmation"] = True
         for path, data in sentinels.items():
             assert path.read_bytes() == data
         assert {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()} == project_before
@@ -274,6 +287,8 @@ runpy.run_path(STUB,run_name='__main__')
         if args.owner == "direct":
             current = direct_install(args.package_version, package)
         assert sha(current) == wanted_hash
+        invoke([*entry, "install", "--scope", "user", "--host", "antigravity", "--user-root", user, "--apply", "--output", "json"])
+        assert json.loads((work / "host.jsonl.antigravity.state").read_text(encoding="utf-8"))["plugin"]
         for path, data in sentinels.items():
             assert path.read_bytes() == data
         assert {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()} == project_before
