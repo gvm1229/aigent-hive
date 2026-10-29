@@ -139,6 +139,12 @@ jobs:
             --command python -m unittest -v \
             tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_project_choices_remain_a_real_cli_regression_gate \
             tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_user_choices_remain_a_real_cli_regression_gate
+      - name: Qualify public removal with real Codex and active idle monitor
+        if: inputs.product_version == '0.14.0' && runner.os == 'Windows'
+        env:
+          HIVE_PUBLIC_PACKAGE_VERSION: ${{ inputs.package_version }}
+        shell: bash
+        run: python tests/fixtures/interactive-cli/windows-monitor-ci.py real-codex
       - name: Qualify Skill delivery using the exact public binary
         shell: bash
         run: |

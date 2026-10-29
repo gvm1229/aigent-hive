@@ -28,13 +28,20 @@ if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS"
         and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
     raise SystemExit("requires isolated GitHub-hosted Windows; personal installations excluded")
 
+public_package = os.environ.get("HIVE_PUBLIC_PACKAGE_VERSION")
+if public_package:
+    assert real_codex and re.fullmatch(r"0\.14\.0-test\.[1-9][0-9]*", public_package)
+    candidate = Path(os.environ["HIVE_BIN"]).resolve()
+    assert candidate.is_relative_to((ROOT / "tests/work").resolve()) and candidate.is_file()
+else:
+    candidate = ROOT / "target/debug/hive.exe"
+
 (ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix="windows-monitor-ci-", dir=ROOT / "tests/work")).resolve()
 user = work / "user"
 user.mkdir()
 fake_bin = work / "fake-bin"
 fake_bin.mkdir()
-candidate = ROOT / "target/debug/hive.exe"
 binary = work / "prefix/bin/hive.exe" if direct_mode or uninstall_mode else work / "hive.exe"
 binary.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(candidate, binary)
@@ -337,6 +344,8 @@ def uninstall_case(base, on_file, consent):
     match = re.match(r"AIgent Hive v(0\.14\.0(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
     assert match, version.stdout
     package = match[1] + ("." + match[2] if match[2] else "")
+    if public_package:
+        assert package == public_package, (package, public_package)
     receipt = work / "prefix/share/aigent-hive/install-receipt.json"
     receipt.parent.mkdir(parents=True)
     receipt_bytes = json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
@@ -534,6 +543,7 @@ finally:
             diagnostics[name] = json.loads(path.read_text())
     run.finish(code, details={"events": events, "diagnostics": diagnostics,
         "candidate_sha256": sha(candidate.read_bytes()),
+        "public_package_version": public_package,
         "input_sha256": {p.name: sha(p.read_bytes()) for p in work.glob("*.json")},
-        "scope": "GitHub-hosted Windows; pinned public Codex CLI with fresh private home/cache and no credentials, local plugin commands only. Real idle monitor/task and private direct Hive image. No model, desktop session control, subscription observation or public14 artifact acceptance." if real_codex else "GitHub-hosted Windows; actual owned task/idle monitor and private direct image, stop failure/refusal/same-operation removal/resume/reinstall. Fixed Codex plugin CLI only, no actual app/subscription/model/public14 artifact acceptance." if uninstall_mode else "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
+        "scope": "GitHub-hosted Windows; exact public Hive image, pinned public Codex CLI and real idle monitor/task. Private direct receipt, refusal/failed-stop/same-operation removal/reinstall and preservation. No model, desktop session control or subscription observation; real installer separately qualified." if public_package else "GitHub-hosted Windows; pinned public Codex CLI with fresh private home/cache and no credentials, local plugin commands only. Real idle monitor/task and private direct Hive image. No model, desktop session control, subscription observation or public14 artifact acceptance." if real_codex else "GitHub-hosted Windows; actual owned task/idle monitor and private direct image, stop failure/refusal/same-operation removal/resume/reinstall. Fixed Codex plugin CLI only, no actual app/subscription/model/public14 artifact acceptance." if uninstall_mode else "GitHub-hosted Windows, private actual direct image/receipt, actual fixed-registry current-version reconciliation and fixed Codex plugin CLI. No actual newer-core replacement, monitor or desktop app." if direct_mode else "Private file preparation only, fake Codex CLI; no native probe, monitor registration or activation." if prepare_only else "GitHub-hosted Windows; actual Task Scheduler and candidate monitor in idle state; fixed Codex plugin CLI only. No desktop app, subscription observation, active-chat interruption, provider calls or public14 package acceptance."})
 raise SystemExit(code)
