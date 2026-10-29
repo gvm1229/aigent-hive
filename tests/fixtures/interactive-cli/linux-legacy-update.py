@@ -55,24 +55,27 @@ if mode == "direct":
                                   "version": product, "package_version": version, "artifact_sha256": "sha256:" + old_digest}))
 
 installer = '''#!/usr/bin/python3
-import hashlib,json,os,shutil,subprocess,sys
+import hashlib,json,os,re,shutil,subprocess,sys
 from pathlib import Path
 root=Path('/tmp/hive-first-update'); package=root/'package'
 direct=Path(sys.argv[0]).name=='sh'
 if direct:
-    assert os.environ['AIGENT_HIVE_VERSION']=='0.13.2'
-    assert os.environ['AIGENT_HIVE_PACKAGE_VERSION']=='0.13.2-test.2'
+    requested=os.environ['AIGENT_HIVE_PACKAGE_VERSION']
     assert os.environ['AIGENT_HIVE_PREFIX']==str(package)
 else:
-    assert sys.argv[1:]==['install','-g','aigent-hive@0.13.2-test.2'],sys.argv
+    assert len(sys.argv)==4 and sys.argv[1:3]==['install','-g'] and sys.argv[3].startswith('aigent-hive@'),sys.argv
+    requested=sys.argv[3].removeprefix('aigent-hive@')
+assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.]0-test[.][1-9][0-9]*',requested),requested
+product=requested.split('-test.',1)[0]
+if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
 binary=package/'bin/hive';binary.unlink();shutil.copyfile('/build/debug/hive',binary);binary.chmod(0o755)
 subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)
 digest=hashlib.sha256(binary.read_bytes()).hexdigest()
-(root/'incoming.json').write_text(json.dumps({'sha256':digest,'installer':'env/sh' if direct else 'npm'}))
-(package/'package.json').write_text(json.dumps({'name':'@aigent-hive/linux-x64','version':'0.13.2-test.2','aigentHive':{'productVersion':'0.13.2'}}))
+(root/'incoming.json').write_text(json.dumps({'sha256':digest,'installer':'env/sh' if direct else 'npm','registry_target':requested}))
+(package/'package.json').write_text(json.dumps({'name':'@aigent-hive/linux-x64','version':requested,'aigentHive':{'productVersion':product}}))
 if direct:
-    (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':'0.13.2','package_version':'0.13.2-test.2','artifact_sha256':'sha256:'+digest}))
+    (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':product,'package_version':requested,'artifact_sha256':'sha256:'+digest}))
 '''
 for name in ("npm", "sh"):
     (shim / name).write_text(installer)
@@ -555,7 +558,7 @@ if mode == "migration-review":
     decision = settings["stored"]["preference_decisions"]["/usage_guard/enforcement_enabled"]
     assert decision["origin"] == "explicit" and decision["input_channel"] == "terminal"
     assert settings["pending_questions"] == []
-    # The frozen 0.13.1 handshake used the public 0.13.2-test.2 label. The following
+    # The frozen handshake used the registry's public test label. The following
     # command is owned by development 0.14.0, so authenticate its private fixture as 0.14.0.
     (package / "package.json").write_text(json.dumps({"name": "@aigent-hive/linux-x64",
         "version": "0.14.0", "aigentHive": {"productVersion": "0.14.0"}}))
@@ -573,11 +576,11 @@ assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,
     "incoming_stripped_sha256": incoming["sha256"], "installer_stub": incoming["installer"], "answers": answers,
     "original_parent": "public " + version + " " + platform, "incoming": "development 0.14.0",
-    "registry_target": "0.13.2-test.2", "private_user_mount": False, "terminal_runs": terminal_runs,
+    "registry_target": incoming["registry_target"], "private_user_mount": False, "terminal_runs": terminal_runs,
     "installer_invocations": int((root / "install-count").read_text()),
     "scope": ("Hosted isolated POSIX VM" if hosted else "Linux Docker") + " PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
 if mode == "migration-review":
-    evidence["followup"] = {"private_package_version": "0.14.0", "registry_candidate": "0.13.2-test.2",
+    evidence["followup"] = {"private_package_version": "0.14.0", "initial_registry_target": incoming["registry_target"],
         "settings_preserved": True, "original_migration_receipt_preserved": True,
         "no_reinstall": True, "scope": "current development package reconciliation; not public 0.14 acceptance"}
 results = root / "results" if hosted else Path("/results")

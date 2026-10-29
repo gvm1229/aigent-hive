@@ -1,11 +1,15 @@
 """Fixed public executable fingerprints cannot accept ambiguous PE or package inputs."""
 import base64
+import ast
 import hashlib
 import importlib.util
 import io
+import os
 import struct
+import sys
 import tarfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -45,6 +49,38 @@ def pe_image():
 
 
 class LegacyUpdateImageTests(unittest.TestCase):
+    def test_posix_installer_fixture_binds_the_requested_test_version(self):
+        tree = ast.parse((ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py").read_text(encoding="utf-8"))
+        installer = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
+                         and any(isinstance(target, ast.Name) and target.id == "installer" for target in node.targets))
+        validation, rest = installer.split("count=root/'install-count'", 1)
+        self.assertTrue(rest)
+        for version in ["0.13.2-test.2", "0.14.0-test.1", "0.14.0-test.2", "0.14.0", "0.14.0-test.0", "0.15.0-test.1"]:
+            for direct in [False, True]:
+                with self.subTest(version=version, direct=direct):
+                    product = version.split("-test.", 1)[0]
+                    environment = {"AIGENT_HIVE_VERSION": product, "AIGENT_HIVE_PACKAGE_VERSION": version,
+                                   "AIGENT_HIVE_PREFIX": str(Path("/tmp/hive-first-update/package"))}
+                    argv = ["sh", "install.sh"] if direct else ["npm", "install", "-g", "aigent-hive@" + version]
+                    with patch.dict(os.environ, environment, clear=True), patch.object(sys, "argv", argv):
+                        if version in {"0.13.2-test.2", "0.14.0-test.1", "0.14.0-test.2"}:
+                            namespace = {}
+                            exec(validation, namespace)
+                            self.assertEqual(namespace["requested"], version)
+                            self.assertEqual(namespace["product"], product)
+                        else:
+                            with self.assertRaises(AssertionError):
+                                exec(validation, {})
+        environment = {"AIGENT_HIVE_VERSION": "0.14.0", "AIGENT_HIVE_PACKAGE_VERSION": "0.14.0-test.2",
+                       "AIGENT_HIVE_PREFIX": str(Path("/tmp/hive-first-update/package"))}
+        for changed in [{"AIGENT_HIVE_VERSION": "0.13.2"}, {"AIGENT_HIVE_PREFIX": "/outside"}]:
+            with patch.dict(os.environ, {**environment, **changed}, clear=True), patch.object(sys, "argv", ["sh", "install.sh"]):
+                with self.assertRaises(AssertionError):
+                    exec(validation, {})
+        with patch.object(sys, "argv", ["npm", "install", "-g", "foreign@0.14.0-test.2"]):
+            with self.assertRaises(AssertionError):
+                exec(validation, {})
+
     def test_image_hashes_include_immutable_code_and_data_with_only_loader_addresses_excluded(self):
         image = pe_image()
         result = MODULE.image_fingerprint(image)
