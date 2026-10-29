@@ -113,12 +113,15 @@ def main():
             system_paths = [str(Path(os.environ["SystemRoot"]) / "System32")]
         env["PATH"] = os.pathsep.join(dict.fromkeys([str(fake_bin), str(node.parent), str(npm.parent), *system_paths]))
         stub = ROOT / "tests/fixtures/native-orchestration/agy-stub.py"
-        wrapper = """import os,runpy,shutil
+        wrapper = r"""import os,runpy,shutil
 from pathlib import Path
-root=Path(os.environ['HIVE_PUBLIC_FIXTURE_ROOT']).resolve()
+def normalized(path):
+    resolved=Path(path).resolve()
+    return Path(str(resolved).removeprefix("\\\\?\\")) if os.name=="nt" else resolved
+root=normalized(os.environ['HIVE_PUBLIC_FIXTURE_ROOT'])
 remove,copy=shutil.rmtree,shutil.copytree
 def confined(path):
-    resolved=Path(path).resolve()
+    resolved=normalized(path)
     assert resolved.is_relative_to(root) and resolved!=root
 def safe_remove(path,*args,**kwargs):
     confined(path);return remove(path,*args,**kwargs)
