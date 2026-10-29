@@ -84,7 +84,12 @@ if (root/'retire-package').exists():
         parent=os.getppid()
         state=subprocess.run(['/bin/ps','-p',str(parent),'-o','stat='],capture_output=True,text=True,check=True)
         probe=subprocess.run([str(root.parent/'mac-parent-probe'),str(parent),str(root/'user'),'__ORIGINAL_CDHASH__'],capture_output=True,text=True,check=True,timeout=5)
-        (root/'retired-parent.json').write_text(json.dumps({'parent_state':state.stdout.strip(),'probe':json.loads(probe.stdout)}))
+        evidence={'parent_state':state.stdout.strip(),'probe':json.loads(probe.stdout)}
+        kernel_script=Path('__KERNEL_PROBE__').read_text()
+        kernel=subprocess.run(['/usr/bin/osascript','-l','JavaScript','-e',kernel_script,'--',str(parent)],capture_output=True,text=True,timeout=5)
+        evidence['kernel_reader']={'exit_code':kernel.returncode,'stdout':kernel.stdout[:4096],'stderr':kernel.stderr[:1000]}
+        (root/'retired-parent.json').write_text(json.dumps(evidence))
+        assert kernel.returncode==0,evidence['kernel_reader']
     binary.parent.mkdir(parents=True)
 else:
     binary.unlink()
@@ -152,6 +157,7 @@ if hosted:
         if mode == "npm-retired":
             content = content.replace("package=root/'package'", "package=root/'node_modules/aigent-hive/node_modules/@aigent-hive'/" + repr(platform))
             content = content.replace("__ORIGINAL_CDHASH__", original.get("code_directory_hash", ""))
+            content = content.replace("__KERNEL_PROBE__", str(source / "crates/hive-cli/src/update_bridge/macos-kernel-identity.js"))
         if sys.platform == "darwin":
             content = content.replace("subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)",
                                       "# Keep the incoming Mach-O code signature intact.")

@@ -7,6 +7,7 @@ import io
 import os
 import shutil
 import struct
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -51,6 +52,39 @@ def pe_image():
 
 
 class LegacyUpdateImageTests(unittest.TestCase):
+    def test_macos_kernel_reader_uses_only_bounded_read_operations(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node is required for the JavaScript transport contract")
+        script = r'''
+const fs=require('fs'), vm=require('vm'), assert=require('assert');
+const source=fs.readFileSync(process.argv[1],'utf8');
+function reader(failAt=-1, changed=false) {
+  const calls=[];
+  const hash={mutableBytes:{},base64EncodedStringWithOptions:()=>Buffer.alloc(20,1).toString('base64')};
+  const context={ObjC:{import:()=>{},bindFunction:(name,signature)=>{
+    assert.strictEqual(name,'csops');assert.strictEqual(JSON.stringify(signature),JSON.stringify(['int',['int','unsigned int','void *','unsigned long']]));
+  },unwrap:x=>x},Ref:type=>{assert.strictEqual(type,'unsigned int');return [0]},
+  $:{NSMutableData:{dataWithLength:n=>{assert.strictEqual(n,20);return hash}},csops:(pid,op,buffer,size)=>{
+    const index=calls.length;calls.push([pid,op,size]);
+    if(op===0)buffer[0]=changed&&index===2?0:1;
+    return index===failAt?-1:0;
+  }}};
+  vm.createContext(context);vm.runInContext(source,context);
+  return {run:context.run,calls};
+}
+const good=reader();assert.strictEqual(JSON.parse(good.run(['7'])).pid,7);
+assert.deepStrictEqual(good.calls,[[7,0,4],[7,5,20],[7,0,4]]);
+for(const args of [[],['0'],['-1'],['2147483648'],['7','8'],['7;write']]) {
+  const test=reader();assert.throws(()=>test.run(args));assert.strictEqual(test.calls.length,0);
+}
+for(const failed of [0,1,2])assert.throws(()=>reader(failed).run(['7']));
+assert.throws(()=>reader(-1,true).run(['7']));
+'''
+        result = subprocess.run([node, "-e", script, str(ROOT / "crates/hive-cli/src/update_bridge/macos-kernel-identity.js")],
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_retired_npm_fixture_replaces_only_its_owned_native_tree(self):
         tree = ast.parse((ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py").read_text(encoding="utf-8"))
         installer = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
