@@ -110,7 +110,8 @@ def main():
         system_paths = ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]
         if windows:
             env.update({k: os.environ[k] for k in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"] if k in os.environ})
-            system_paths = [str(Path(os.environ["SystemRoot"]) / "System32")]
+            system_paths = [str(Path(os.environ["SystemRoot"]) / relative)
+                            for relative in ["System32", "System32/WindowsPowerShell/v1.0"]]
         env["PATH"] = os.pathsep.join(dict.fromkeys([str(fake_bin), str(node.parent), str(npm.parent), *system_paths]))
         stub = ROOT / "tests/fixtures/native-orchestration/agy-stub.py"
         wrapper = r"""import os,runpy,shutil
