@@ -54,9 +54,36 @@ func inspect() -> [String: Any] {
     return ["argv0": argv[0], "action": argv[1], "kernel_executable": executable,
             "process_group": getpgid(pid), "session": getsid(pid),
             "image_path": imagePath, "image_path_status": pathStatus,
+            "image_path_exists": FileManager.default.fileExists(atPath: imagePath),
             "code_copy_status": copied, "requirement_status": parsed,
             "code_validity_status": checked]
 }
 
-let result = try JSONSerialization.data(withJSONObject: inspect(), options: [.sortedKeys])
+var observation = inspect()
+// Observe unlink without pausing the original updater or changing its inputs.
+if observation["action"] as? String == "update",
+   observation["code_validity_status"] as? Int32 == 0,
+   let path = observation["image_path"] as? String, path.contains("/.aigent-hive-"),
+   let pid = Int32(CommandLine.arguments[1]) {
+    let deadline = ProcessInfo.processInfo.systemUptime + 3
+    var changes = [[String: Any]]()
+    var previous = "\(observation["image_path_status"] ?? 0):\(path):\(FileManager.default.fileExists(atPath: path))"
+    while ProcessInfo.processInfo.systemUptime < deadline && changes.count < 4 {
+        var image = [UInt8](repeating: 0, count: 4096)
+        let status = image.withUnsafeMutableBytes { processPath(pid, $0.baseAddress!, UInt32($0.count)) }
+        let current = String(decoding: image.prefix(while: { $0 != 0 }), as: UTF8.self)
+        let key = "\(status):\(current):\(FileManager.default.fileExists(atPath: current))"
+        if key != previous {
+            var next = inspect()
+            next["observed_path_status"] = status
+            next["process_present"] = getpgid(pid) != -1
+            changes.append(next)
+            previous = key
+            if next["process_present"] as? Bool == false { break }
+        }
+        usleep(1000)
+    }
+    observation["path_changes"] = changes
+}
+let result = try JSONSerialization.data(withJSONObject: observation, options: [.sortedKeys])
 print(String(decoding: result, as: UTF8.self))

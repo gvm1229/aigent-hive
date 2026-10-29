@@ -266,7 +266,7 @@ public static class SetupConsoleFixture {
                 return child.ExitCode==0 ? 24 : 0;
             }
         } catch(Exception e) {
-            if(args.Length>=3) File.WriteAllText(args[2]+".error.txt",e.ToString(),new UTF8Encoding(false,false));
+            if(args.Length>=3) File.AppendAllText(args[2]+".error.txt","\n"+e.ToString(),new UTF8Encoding(false,false));
             Console.Error.WriteLine(e.Message); return 25;
         }
         finally { if(child!=null && !child.HasExited) { child.Kill(); child.WaitForExit(); } }

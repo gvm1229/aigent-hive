@@ -106,7 +106,7 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
                                 capture_output=True, text=True, timeout=2)
                             following.extend(int(n) for n in children.stdout.split()[:16])
                             probe = subprocess.run([trace["mac_probe"], str(child), str(user), trace["original_cdhash"]],
-                                env=environment, capture_output=True, text=True, timeout=2)
+                                env=environment, capture_output=True, text=True, timeout=5)
                             if probe.returncode == 0:
                                 observed = json.loads(probe.stdout)
                                 key = json.dumps(observed, sort_keys=True)

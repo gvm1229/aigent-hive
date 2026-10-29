@@ -226,7 +226,7 @@ runpy.run_path(STUB,run_name='__main__')
                 startup = subprocess.STARTUPINFO()
                 startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 startup.wShowWindow = subprocess.SW_HIDE
-                process = subprocess.run(list(map(str, command)), env=env, capture_output=True, timeout=610,
+                process = subprocess.run(list(map(str, command)), env=env, cwd=work, capture_output=True, timeout=610,
                     creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
                 assert process.returncode == 0, (process.returncode, process.stderr[-3000:])
                 outcome = json.loads(result.read_text())
