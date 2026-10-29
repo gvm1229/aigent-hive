@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 9/15(60.0%). test.2 Linux 수용·Windows npm 통과, 직접 설치 문자 수정·macOS 진단
+- 현재: `feature/interactive-cli-0.14.0`, 9/15(60.0%). test.2 Linux·Windows npm 수용. 개발판 직접 설치 문자 수정·macOS 구성 수용
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`

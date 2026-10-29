@@ -81,3 +81,6 @@
 
 - CI40968179592의 [npm 폴더 삭제 재현](../../tests/results/runs/20261029T224736-38f4cf1eea89.md): 원본 부모가 설치 자식을 기다리는 S 상태에서도 경로0·서명-67065, 종료 경합과 무관한 실패 확인. 실제 소스a060e3d1·실행 중 변경 없음, 설치/앱 대역의 구성 시험 범위
 - [Apple 커널의 csops](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_proc.c)는 보존 실행 파일의 코드 지문과 유효 상태 조회 제공. [Apple의 JavaScript 함수 연결](https://developer.apple.com/library/archive/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/Articles/OSX10-10.html)로 이 읽기만 호출하고 기존 원본 목록과 대조하는 최소 보정. 파일 경로 부재 때의 현재 npm 위치·원래 실행 경로 결합과 기존 수명/소유/터미널 검사 유지, 새 파일 지문으로 옛 부모 인증 대체 금지
+
+- 수정5fe92e90·CI40970272866: [원본0.13.1 npm 폴더 삭제·직접 설치](../../tests/results/runs/20261029T230626-6d749bd562c8.md)와 [0.13.2-test.1 직접 설치](../../tests/results/runs/20261029T230658-8af3f5ffd77a.md)의 실제 질문·답변·설정 완료 통과. 삭제 후 S 상태의 부모에서 커널 조회0·유효 상태와 원본 코드 지문4eded7b8… 일치. 기존 동적 조회 실패를 성공으로 바꾸는 예외 처리 없음
+- 같은 격리 macOS arm64의 [운영체제 조회 검사](../../tests/results/runs/20261029T230337-dbee9240abd8.md)·[플랫폼 Rust 검사](../../tests/results/runs/20261029T230752-8411a09c7863.md) 통과. 실제 검사 소스d9c178db·트리0347535f30c9f64b5debe6160ca550ae0484de39는6c16b74a와 동일, 실행 중 소스 변경 없음. 설치·앱 대역의 개발 바이너리 범위이며 공개test.3 수용은 별도
