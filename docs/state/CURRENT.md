@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 9/15(60.0%). test.1 공개, POSIX npm 이동 오류 수정·의존 조건 재개
+- 현재: `feature/interactive-cli-0.14.0`, 9/15(60.0%). test.1 공개. POSIX npm 보정329da0a0, test.2 재수용 대기
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`
