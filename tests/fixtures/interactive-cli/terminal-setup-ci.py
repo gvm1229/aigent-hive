@@ -92,6 +92,33 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
                         except (OSError, ValueError):
                             pass
                     descendants = following
+            if trace is not None and sys.platform == "darwin" and "mac_probe" in trace:
+                try:
+                    trace["terminal_foreground_group"] = os.tcgetpgrp(descriptor)
+                except OSError as error:
+                    trace["foreground_probe_error"] = str(error)
+                descendants = [pid]
+                for _ in range(3):
+                    following = []
+                    for child in descendants[:16]:
+                        try:
+                            children = subprocess.run(["/usr/bin/pgrep", "-P", str(child)], env=environment,
+                                capture_output=True, text=True, timeout=2)
+                            following.extend(int(n) for n in children.stdout.split()[:16])
+                            probe = subprocess.run([trace["mac_probe"], str(child), str(user), trace["original_cdhash"]],
+                                env=environment, capture_output=True, text=True, timeout=2)
+                            if probe.returncode == 0:
+                                observed = json.loads(probe.stdout)
+                                key = json.dumps(observed, sort_keys=True)
+                                if observed and key not in observed_images and len(observed_images) < 8:
+                                    observed_images.add(key)
+                                    descriptors = subprocess.run(["/usr/sbin/lsof", "-nP", "-a", "-p", str(child), "-d", "0,2", "-F0ftr"],
+                                        env=environment, capture_output=True, timeout=2)
+                                    observed["terminal_descriptors"] = descriptors.stdout[:8192].decode(errors="replace")
+                                    trace.setdefault("process_images", []).append(observed)
+                        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+                            trace["probe_error"] = str(error)[:1000]
+                    descendants = following
             if select.select([descriptor], [], [], 0.1)[0]:
                 try:
                     output.extend(os.read(descriptor, 65536))

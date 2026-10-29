@@ -202,6 +202,13 @@ runpy.run_path(STUB,run_name='__main__')
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         project_before = {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()}
+        if sys.platform == "darwin" and not args.redirected:
+            probe = work / "mac-parent-probe"
+            invoke(["/usr/bin/swiftc", "-module-cache-path", work / "swift-cache",
+                ROOT / "tests/fixtures/interactive-cli/macos-parent-probe.swift", "-o", probe])
+            registry = json.loads((ROOT / "harness/setup/legacy-update-posix-images.json").read_text(encoding="utf-8"))
+            original = next(row for row in registry["images"] if row["platform"] == platform_name and row["version"] == args.previous_version)
+            details["terminal_trace"] = {"mac_probe": str(probe), "original_cdhash": original["code_directory_hash"], "probe_sha256": sha(probe)}
         update = [*entry, "update", "--channel", "test", "--user-root", user]
         if args.redirected:
             update.append("--confirm")
@@ -288,7 +295,19 @@ runpy.run_path(STUB,run_name='__main__')
         if args.owner == "direct":
             current = direct_install(args.package_version, package)
         assert sha(current) == wanted_hash
-        invoke([*entry, "install", "--scope", "user", "--host", "antigravity", "--user-root", user, "--apply", "--output", "json"])
+        reinstall = [*entry, "install", "--scope", "user", "--host", "antigravity", "--user-root", user, "--apply", "--output", "json"]
+        restored = invoke(reinstall, expected=(0, 5))
+        if restored.returncode == 5:
+            refusal = json.loads(restored.stdout)
+            assert refusal["code"] == "hive.user-install-verification-failed"
+            assert "index recovery needs an explicit hive index rebuild --user-root action" in refusal["message"]
+            assert all(path.read_bytes() == data for path, data in sentinels.items())
+            assert {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()} == project_before
+            # This fixture explicitly authorizes its own registered synthetic user/project store.
+            rebuilt = json.loads(invoke([current, "index", "rebuild", "--user-root", user, "--output", "json"]).stdout)
+            assert rebuilt["code"] == "hive.index-rebuilt"
+            details["reinstall_index_recovery"] = {"initial_refusal": refusal["code"], "explicit_user_root_rebuild": True}
+            invoke(reinstall)
         assert json.loads((work / "host.jsonl.antigravity.state").read_text(encoding="utf-8"))["plugin"]
         for path, data in sentinels.items():
             assert path.read_bytes() == data
