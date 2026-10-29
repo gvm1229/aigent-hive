@@ -87,7 +87,7 @@ def main():
         assert (original_hash, original_integrity) == original_identity(platform_name, args.previous_version)
         details.update(original_image_sha256=original_hash, original_integrity=original_integrity,
                        target_image_sha256=wanted_hash, target_integrity=wanted_integrity, registry_tags=tags)
-        work.mkdir()
+        work.mkdir(parents=True)
         user, project, fake_bin, prefix = work / "user", work / "project", work / "fake-bin", work / "npm-prefix"
         for path in [user, project, fake_bin, prefix]:
             path.mkdir()
