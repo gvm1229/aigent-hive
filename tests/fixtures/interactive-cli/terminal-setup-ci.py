@@ -56,7 +56,7 @@ def journal(user, project):
     return {}
 
 
-def posix_terminal(binary, arguments, environment, user, project=False, cancel=False, language="ko"):
+def posix_terminal(binary, arguments, environment, user, project=False, cancel=False, language="ko", *, preserve_legacy=False, timeout_seconds=120):
     import pty
     import select
     pid, descriptor = pty.fork()
@@ -68,7 +68,7 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
     replied = set()
     began = time.monotonic()
     try:
-        while time.monotonic() - began < 120:
+        while time.monotonic() - began < timeout_seconds:
             if select.select([descriptor], [], [], 0.1)[0]:
                 try:
                     output.extend(os.read(descriptor, 65536))
@@ -85,7 +85,10 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
                 if cancel and step != "user-language" and phase == "awaiting-answers":
                     os.write(descriptor, b"\x04")
                 else:
-                    answer = ("yes" if phase == "previewed" else ("1" if language == "ko" else "2")
+                    if preserve_legacy and step == "user-language":
+                        raise AssertionError("saved language was asked again during update")
+                    answer = ("yes" if phase == "previewed" or preserve_legacy and step == "usage-enforcement"
+                              else "no" if preserve_legacy and step == "usage-warnings" else ("1" if language == "ko" else "2")
                               if step == "user-language" else "terminal-project" if step == "project-name" else "")
                     os.write(descriptor, (answer + "\n").encode())
             ended, raw = os.waitpid(pid, os.WNOHANG)

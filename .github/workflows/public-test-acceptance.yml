@@ -90,15 +90,55 @@ jobs:
           stable_version=$(jq -r .stable_version docs/public-stable-release.json)
           [[ "$stable_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$(npm view aigent-hive 'dist-tags.latest')" = "$stable_version"
+      - name: Qualify original public update, removal, and reinstall
+        if: inputs.product_version == '0.14.0'
+        shell: bash
+        run: |
+          for previous in 0.13.1 0.13.2-test.2; do
+            python tests/fixtures/interactive-cli/public-update-ci.py \
+              --fixture "tests/work/public-update-npm-$previous" \
+              --package-version "$PACKAGE_VERSION" --previous-version "$previous" --owner npm
+          done
+          python tests/fixtures/interactive-cli/public-update-ci.py \
+            --fixture tests/work/public-update-direct-0.13.1 \
+            --package-version "$PACKAGE_VERSION" --previous-version 0.13.1 --owner direct
+          python tests/fixtures/interactive-cli/public-update-ci.py \
+            --fixture tests/work/public-update-redirected-0.13.1 \
+            --package-version "$PACKAGE_VERSION" --previous-version 0.13.1 --owner npm --redirected
       - name: Install the exact public npm package
         shell: bash
         run: |
-          install_root="$RUNNER_TEMP/public-hive"
-          npm install --prefix "$install_root" --ignore-scripts=false \
+          install_root="$GITHUB_WORKSPACE/tests/work/public-hive-package"
+          npm_state="$RUNNER_TEMP/public-hive-npm"
+          mkdir -p "$npm_state"
+          touch "$npm_state/user.npmrc" "$npm_state/global.npmrc"
+          npm --cache "$npm_state/cache" --userconfig "$npm_state/user.npmrc" \
+            --globalconfig "$npm_state/global.npmrc" install --prefix "$install_root" --ignore-scripts=false \
             "aigent-hive@$PACKAGE_VERSION"
           binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify interactive setup using the exact public binary
+        if: inputs.product_version == '0.14.0'
+        shell: bash
+        run: |
+          for case in setup-ko setup-en project cancel-resume unattended; do
+            scenario="$case"
+            language=ko
+            if [[ "$case" == setup-* ]]; then scenario=setup; language="${case#setup-}"; fi
+            fixture="tests/work/public-terminal-$case"
+            python scripts/qualify-interactive-cli.py --scenario "$scenario" --language "$language" \
+              --binary "$HIVE_BIN" --fixture "$fixture" --user-root "$fixture/user" --result "$fixture/results.json"
+          done
+          if [ "$RUNNER_OS" = Windows ]; then
+            fixture=tests/work/public-terminal-windows-terminal
+            python scripts/qualify-interactive-cli.py --scenario windows-terminal \
+              --binary "$HIVE_BIN" --fixture "$fixture" --user-root "$fixture/user" --result "$fixture/results.json"
+          fi
+          python scripts/test-artifacts.py run --purpose "공개 CLI 고정 답안 회귀 $PLATFORM_PACKAGE" \
+            --command python -m unittest -v \
+            tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_project_choices_remain_a_real_cli_regression_gate \
+            tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_user_choices_remain_a_real_cli_regression_gate
       - name: Qualify Skill delivery using the exact public binary
         shell: bash
         run: |

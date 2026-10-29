@@ -102,11 +102,11 @@ public static class SetupConsoleFixture {
         File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
         return child.ExitCode;
     }
-    static int ReviewAll(Process child, SafeFileHandle input, string[] args, bool resumeUpdate=false, string quickLanguage=null) {
+    static int ReviewAll(Process child, SafeFileHandle input, string[] args, bool resumeUpdate=false, string quickLanguage=null, bool publicUpdate=false) {
         string path=Path.Combine(args[1],".hive/config/setup-progress/user.yml");
         string last=""; bool confirmed=false; int answered=0;
         var deadline=Stopwatch.StartNew();
-        while(!child.HasExited && deadline.ElapsedMilliseconds<30000) {
+        while(!child.HasExited && deadline.ElapsedMilliseconds<(publicUpdate ? 600000 : 30000)) {
             try {
                 string state=File.ReadAllText(path);
                 if(state.Contains("phase: previewed") && !confirmed) { Send(input,"yes\r"); confirmed=true; }
@@ -115,7 +115,7 @@ public static class SetupConsoleFixture {
                     if(step.Success && step.Groups[1].Value!=last) {
                         last=step.Groups[1].Value;
                         if(resumeUpdate && last=="user-language") throw new InvalidOperationException("saved language asked twice");
-                        Send(input,quickLanguage!=null ? (last=="user-language" ? (quickLanguage=="ko" ? "1\r" : "2\r") : "\r") : resumeUpdate ? "\r" : last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
+                        Send(input,publicUpdate && last=="usage-enforcement" ? "yes\r" : publicUpdate && last=="usage-warnings" ? "no\r" : quickLanguage!=null ? (last=="user-language" ? (quickLanguage=="ko" ? "1\r" : "2\r") : "\r") : resumeUpdate ? "\r" : last=="user-section" ? "1\r" : last=="user-mode" ? "2\r" : "\r");
                         answered++;
                     }
                 }
@@ -226,25 +226,27 @@ public static class SetupConsoleFixture {
             bool review=args.Length==4 && args[3]=="review-all";
             bool quick=args.Length==4 && (args[3]=="user-quick-ko" || args[3]=="user-quick-en");
             bool resumeUser=args.Length==4 && args[3]=="user-resume";
+            bool publicUpdate=(args.Length==4 && args[3]=="public-update") || (args.Length==5 && args[3]=="public-update-npm");
             bool legacy=args.Length==4 && (args[3]=="legacy-direct" || args[3]=="legacy-cancel" || args[3]=="legacy-deadline"
                 || args[3]=="legacy-parent-exit" || args[3]=="legacy-parent-apply" || args[3]=="legacy-slow" || args[3]=="legacy-late-slow");
             bool resumeUpdate=args.Length==4 && args[3]=="update-resume";
-            if(args.Length!=4 && !project) return 20;
+            if(args.Length!=4 && !project && !publicUpdate) return 20;
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
                     || !SetStdHandle(-10,input) || !SetStdHandle(-12,output)) return 21;
-                string command=legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
+                string command=publicUpdate ? (args.Length==5 ? "\""+args[4]+"\" " : "")+"update --channel test --confirm --user-root \""+args[1]+"\"" : legacy ? "update --channel test --user-root \""+args[1]+"\"" : resumeUpdate
                     ? "update --interactive --user-root \""+args[1]+"\"" : project
                     ? "setup --target \""+args[4]+"\""+(args[5]=="-" ? "" : " --capabilities \""+args[5]+"\"")+" --interactive --user-root \""+args[1]+"\""
                     : "setup --scope user "+(resumeUser ? "--resume " : review || quick ? "" : "--section usage ")+"--interactive --user-root \""+args[1]+"\"";
                 var start=new ProcessStartInfo(args[0],command);
                 start.UseShellExecute=false;
-                if(!review && !legacy && !resumeUpdate && !quick && !resumeUser) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
+                if(!review && !legacy && !resumeUpdate && !quick && !resumeUser && !publicUpdate) start.EnvironmentVariables["PATH"]=Path.Combine(args[1],"no-external-tools");
                 start.EnvironmentVariables["CODEX_HOME"]=Path.Combine(args[1],"codex-home");
                 child=Process.Start(start);
                 if(legacy) return LegacyDirect(child,input,args);
+                if(publicUpdate) return ReviewAll(child,input,args,true,null,true);
                 if(resumeUpdate) return ReviewAll(child,input,args,true);
                 if(project) return ProjectFlow(child,input,args);
                 if(quick) return ReviewAll(child,input,args,false,args[3].EndsWith("-ko") ? "ko" : "en");
