@@ -212,13 +212,7 @@ pub(super) fn connect(
         return Ok(None);
     }
     let current = std::env::current_exe().map_err(|_| "current executable unavailable")?;
-    if path
-        .canonicalize()
-        .map_err(|_| "legacy install path unavailable")?
-        != current
-            .canonicalize()
-            .map_err(|_| "current install path unavailable")?
-    {
+    if !super::same_installation_path(&path, &argv[0], &current)? {
         return Err("legacy updater installation scope differs".into());
     }
     let needs_terminal = posix::interactive(&argv, root)? && terminal(old, &child);

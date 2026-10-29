@@ -136,13 +136,7 @@ pub(super) fn connect(root: &Path, budget: LegacyBudget) -> Result<Option<Connec
         return Ok(None);
     }
     let current = std::env::current_exe().map_err(|_| "current executable unavailable")?;
-    if name
-        .canonicalize()
-        .map_err(|_| "legacy install path unavailable")?
-        != current
-            .canonicalize()
-            .map_err(|_| "current install path unavailable")?
-    {
+    if !super::same_installation_path(name, &arguments[0], &current)? {
         return Err("legacy updater installation scope differs".into());
     }
     let needs_terminal = posix::interactive(&arguments, root)?;

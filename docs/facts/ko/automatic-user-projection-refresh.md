@@ -9,7 +9,7 @@ summary: "0.9.5 직접 설치 갱신의 mode별 사용자 설치 action 검증�
 tags: [installation, migration, projection, update]
 aliases: ["갱신 뒤 투영 refresh"]
 sources:
-  - "repo:crates/hive-cli/src/update_activation.rs#sha256:6904ac8f28c89053291d1ece8d585e245920387bb0050cea3ff5e6f9bb6ccb12"
+  - "repo:crates/hive-cli/src/update_activation.rs#sha256:9488b87b8123e4cfbf702193a6c1ebf066fe143af522c51bea9ba5bdc5b3a6f5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"

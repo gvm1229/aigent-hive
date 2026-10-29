@@ -572,6 +572,16 @@ pub(crate) fn uninstall_owner_preview(executable: &Path) -> Result<serde_json::V
     )
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos", test))]
+pub(crate) fn is_npm_installation(executable: &Path) -> bool {
+    env!("CARGO_PKG_VERSION").parse().is_ok_and(|version| {
+        matches!(
+            discover_owner(executable, version),
+            Ok(InstallOwner::Npm { .. })
+        )
+    })
+}
+
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     let mut channel = UpdateChannel::Stable;
     let mut channel_seen = false;
