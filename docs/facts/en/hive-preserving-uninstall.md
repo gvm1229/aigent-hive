@@ -13,7 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/plans/active/cli-uninstall-0.14.0.md#sha256:33659bb4c34713cc4d8ad10bf6a3151d9f772f2bb79ba4ac4258ddb7252a89f5"
+  - "repo:docs/plans/active/cli-uninstall-0.14.0.md#sha256:4bc25601207fc81e6d8353f4b5e76eaf4c6781599a9db69a9aa111e8ccaea2dc"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:828eb911da5e50ef6cadd88c301e07f5aa454c2bbe1c9bcd7ef460f7efae00fe"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:7565804c77597fea7e64b3c330f9f76031effd27"
