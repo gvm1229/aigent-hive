@@ -78,3 +78,6 @@
 - 공개 Windows 바이너리4dd3b31d의 읽기 전용 [문자 해석 재현](../../tests/results/runs/20261029T223136-9775bcc685b1.md): PowerShell5.1에서437번 문자 방식은 가운데 점을 두 글자로 읽어 버전 거부, UTF-8은 정상. 앞선223043은 시험 환경의 SystemRoot 누락으로 PowerShell 시작 실패, 제품 실행 증거에서 제외. 기존 직접 교체 대역의 선행 UTF-8 설정과 제품 설치기의 누락 차이 확인
 - 수정a03c6a2e: 실제 버전 읽기 동안만 UTF-8 사용 후 원래 설정 복원. [공개 바이너리의 수정된 검사](../../tests/results/runs/20261029T223512-967275e97cca.md)와 PowerShell5.1/7의 정상·다른 버전·종료 실패·설정 복원 검사 통과. 전체 공개 직접 갱신은 다음 시험판 수용 대상
 - [macOS 삭제 경로 관측](../../tests/results/runs/20261029T222243-9ac48a3d9c25.md): 이동된 경로 다음에 경로 조회0·서명 검사-67065 관측. -67065는 Apple의 `errSecCSNoSuchCode`, 단순 프로세스 존재 확인만으로 종료 전 실행 상태 증명 불가. 기존 격리 구성 시험의 설치 대역에서 옛 폴더 이동·삭제 후 부모가 자식을 기다리는 동안 관측하여 두 상태 분리. 인증 우회나 정식 수용 대체 제외
+
+- CI40968179592의 [npm 폴더 삭제 재현](../../tests/results/runs/20261029T224736-38f4cf1eea89.md): 원본 부모가 설치 자식을 기다리는 S 상태에서도 경로0·서명-67065, 종료 경합과 무관한 실패 확인. 실제 소스a060e3d1·실행 중 변경 없음, 설치/앱 대역의 구성 시험 범위
+- [Apple 커널의 csops](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_proc.c)는 보존 실행 파일의 코드 지문과 유효 상태 조회 제공. [Apple의 JavaScript 함수 연결](https://developer.apple.com/library/archive/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/Articles/OSX10-10.html)로 이 읽기만 호출하고 기존 원본 목록과 대조하는 최소 보정. 파일 경로 부재 때의 현재 npm 위치·원래 실행 경로 결합과 기존 수명/소유/터미널 검사 유지, 새 파일 지문으로 옛 부모 인증 대체 금지
