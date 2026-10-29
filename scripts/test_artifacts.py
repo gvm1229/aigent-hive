@@ -630,7 +630,12 @@ class Run:
                                   report_sha256=digest, reason="completed test; report awaits commit" if complete else "shared build or failure reproduction review",
                                   review_at=(now() + MAX_REUSE).isoformat())
                     if complete:
-                        record["inventory"] = self.manager.inventory(record["path"])
+                        try:
+                            record["inventory"] = self.manager.inventory(record["path"])
+                        except ArtifactError as error:
+                            # A valid test can leave links or special files that cleanup refuses.
+                            record.pop("inventory", None)
+                            record.update(state="review", reason="artifact inventory requires review: " + str(error))
                     self.manager.save(record)
         return self.relative
 
