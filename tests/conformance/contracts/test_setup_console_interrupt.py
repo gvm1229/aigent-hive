@@ -74,15 +74,23 @@ public static class SetupConsoleFixture {
     }
     static string WaitProjectStep(Process child, string root, string step) {
         string directory=Path.Combine(root,".hive/config/setup-progress/projects");
+        string promptKo=step=="project-mode" ? "설정 방식을 골라 주세요." : "프로젝트 이름을 입력해 주세요.";
+        string promptEn=step=="project-mode" ? "Choose a setup mode." : "Enter the project name.";
         var deadline=Stopwatch.StartNew();
         while(deadline.ElapsedMilliseconds<15000 && !child.HasExited) {
             if(Directory.Exists(directory)) foreach(string path in Directory.GetFiles(directory,"*.yml")) {
-                try { if(File.ReadAllText(path).Contains("step: "+step)) return path; }
+                try {
+                    if(File.ReadAllText(path).Contains("step: "+step)) {
+                        // The journal precedes rendering. Wait for the actual console question before typing.
+                        string screen=OwnConsoleTail();
+                        if((screen.Contains(promptKo) || screen.Contains(promptEn)) && screen.TrimEnd().EndsWith(">")) return path;
+                    }
+                }
                 catch(IOException) { }
             }
             Thread.Sleep(25);
         }
-        throw new InvalidOperationException("project CLI did not reach the expected private question");
+        throw new InvalidOperationException("project CLI did not display the expected private question: "+step);
     }
     static int ProjectFlow(Process child, SafeFileHandle input, string[] args) {
         WaitProjectStep(child,args[1],"project-mode"); Send(input,"\r");
@@ -284,7 +292,7 @@ public static class SetupConsoleFixture {
                 return child.ExitCode==0 ? 24 : 0;
             }
         } catch(Exception e) {
-            if(args.Length>=3) File.AppendAllText(args[2]+".error.txt","\n"+e.ToString(),new UTF8Encoding(false,false));
+            if(args.Length>=3) File.AppendAllText(args[2]+".error.txt","\n"+e.ToString()+"\n"+OwnConsoleTail(),new UTF8Encoding(false,false));
             Console.Error.WriteLine(e.Message); return 25;
         }
         finally { if(child!=null && !child.HasExited) { child.Kill(); child.WaitForExit(); } }
