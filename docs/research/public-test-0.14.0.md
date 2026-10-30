@@ -109,3 +109,42 @@
 - [Microsoft의 제어 처리 규약](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler): Ctrl+C 무시 여부의 자식 상속과 현재 프로세스만의 복원. 소스 CI는 Python, 공개 검증은 Git Bash에서 시작하는 차이 확인
 - 수정4c10b364: 검증기의 상속 무시를 해제한 뒤 보호 콜백·제품 자식 시작, 원래10초 종료·미적용/선택 보존 조건 유지. 실패 시 이벤트 수/화면 보존. [같은 공개test.3의 Git Bash 회귀](../../tests/results/runs/20261030T012901-e32da48ccdce.md)에서 일반 Ctrl+C·강제 무시 상속·EOF와 비대화형 재개3검사 통과. 실제 앱·예약·설치 변경 없음
 - 강제 무시 상속 사례를 develop 및 공개 Windows 검사에 연결. 제품 바이트는170db926…로 동일, 원래 공개 검증기 수정 규칙에 따라 test.4로 최종 수용. test.3 전체 합격 표시 제외
+
+## test.4 최종 공개 수용
+
+- 소스 `5ae6a5e2cfa8241f892183d695413cd447e8046c`, 제품 지문 `170db9262d8e7617f253f36fde097f091d5a2a6c1bd0a60f5652e531695ddc58`. [정확 소스 CI40989010752](https://github.com/gvm1229/aigent-hive/actions/runs/40989010752)와 [후보40992421959](https://github.com/gvm1229/aigent-hive/actions/runs/40992421959) 전체 성공. 다섯 배포 대상·기존 안정판 복구·직접 설치기 검증 포함
+- [게시40995484009](https://github.com/gvm1229/aigent-hive/actions/runs/40995484009) 성공. 첫40994978732의 업로드 후60초 태그 확인 실패는 같은 후보의 기존 지문 대조·재사용으로 복구, 공개 파일 덮어쓰기 없음. 여섯 npm 정확 버전/test 태그와 GitHub 주석 태그의 소스5ae 일치, 모든 npm latest와 GitHub 최신 안정판13.1 독립 확인
+- [공개test.4](https://github.com/gvm1229/aigent-hive/releases/tag/v0.14.0-test.4) 묶음 SHA256: `fbbf4083ebe5f93441f32530fc5958e6ecb7dbc560dfd02d236f1cda30e94ac6`. SHA512: `82da420e226c6380a2ba1a4a02c14eae1d15ba3cd286ee63d97e89e8f804b36429816f567e66e87b5c95bc76a2ca671f15052714e2f707b65bc90ef2dfa32c0a`
+- [공개 수용40995822179](https://github.com/gvm1229/aigent-hive/actions/runs/40995822179), 첫 실행에서 세 OS 모두 성공. 아래45개 정본 실행 기록의 source5ae·공개 바이너리/입력 지문·명령·환경 결합과 실행 중 소스 변경 없음 확인. 이전 실패 기록 보존, 과거 결과로 새 공개 파일 실행 대체 없음
+
+| 실제 실행 환경 | 공개 원본 갱신·보존 제거 | 새 프로젝트 | 취소·재개 | 고정 답안·기타 계약 |
+| --- | --- | --- | --- | --- |
+| Windows Server2025 x64, build26100 | [0.13.1 npm](../../tests/results/runs/20261030T031052-8a57c827436f.md)·[0.13.2-test.2 npm](../../tests/results/runs/20261030T031130-3e46508e66aa.md)·[직접 설치](../../tests/results/runs/20261030T031203-a321c69ab687.md)·[비대화형](../../tests/results/runs/20261030T031456-34829da2b47e.md) | [프로젝트](../../tests/results/runs/20261030T031552-47f4d0be4838.md) | [Ctrl+C 재개](../../tests/results/runs/20261030T031557-f60f2a350d50.md)·[무시 상속 회귀](../../tests/results/runs/20261030T031632-31d5ce546db5.md) | [고정 답안](../../tests/results/runs/20261030T031637-d5891e1f46bc.md)·[지침 복구](../../tests/results/runs/20261030T031756-132d9ecd2b80.md) |
+| macOS15.7.9 arm64 | [0.13.1 npm](../../tests/results/runs/20261030T031030-981ba9233b87.md)·[0.13.2-test.2 npm](../../tests/results/runs/20261030T031106-25fe5457a290.md)·[직접 설치](../../tests/results/runs/20261030T031136-0d6a87fbaec0.md)·[비대화형](../../tests/results/runs/20261030T031202-de98e6434b9c.md) | [프로젝트](../../tests/results/runs/20261030T031230-03d112655677.md) | [취소·재개](../../tests/results/runs/20261030T031233-a83a2174a562.md) | [고정 답안](../../tests/results/runs/20261030T031238-dda3da37f8ed.md)·[지침 복구](../../tests/results/runs/20261030T031255-3a24d8f09090.md) |
+| Linux x64, Ubuntu24.04·Azure kernel7.0 | [0.13.1 npm](../../tests/results/runs/20261030T031019-40d9b8766325.md)·[0.13.2-test.2 npm](../../tests/results/runs/20261030T031037-919a455f1ef3.md)·[직접 설치](../../tests/results/runs/20261030T031054-bececaeb277a.md)·[비대화형](../../tests/results/runs/20261030T031112-d0897c81d664.md) | [프로젝트](../../tests/results/runs/20261030T031135-538786fc293f.md) | [취소·재개](../../tests/results/runs/20261030T031138-620c1b13d312.md) | [고정 답안](../../tests/results/runs/20261030T031143-57f8f2a8ba38.md)·[지침 복구](../../tests/results/runs/20261030T031157-97cc75c92ac4.md) |
+
+- 각 OS의 한국어/영어 전역 설정·비대화형 입력·협업 지침·벡터 선택 검사도 같은 실행에서 통과. Windows의 실제 [Windows Terminal](../../tests/results/runs/20261030T031605-9739ba5a0b50.md), [Codex CLI·대기 감시·예약·제거 실패 복구/재설치](../../tests/results/runs/20261030T031650-69c22f560e94.md) 포함
+- 범위: 격리 GitHub OS와 임시 사용자/설치/캐시/프로젝트. 일반 설정·원본 갱신의 앱 연결은 제한된 대역, Codex 결합은 새 프로필의 실제 로컬 plugin/marketplace 명령. 실제 모델·구독 관측·데스크톱 대화 중단·개인 설치의 증명으로 확대하지 않는 한계. 나머지 Linux arm64·macOS x64는 후보 빌드/설치 검사 범위
+- 모델 수용은 [별도 실제 Luna 근거](cli-model-validation-0.14.0.md): 고정7사례, 두 빠른 설정별 각판2표본. 입력 중앙값 전역60.70%·프로젝트50.009% 감소, 프로젝트 여유3바이트. 토큰·실비·처리 속도 미관측, 단위/대역 검사를 실제 모델 평가로 대체하는 처리 없음
+
+## 원래 15개 완료 조건과 최종 근거
+
+| 조건 | 완료 근거 | 최종 확인 |
+| --- | --- | --- |
+| P140-001 자료 형식·선택 출처 | [정책·자료형 기반](cli-foundations-0.14.0.md) | 완료 |
+| P140-002 이전·중단 복구 | [설정 복구](cli-state-recovery-0.14.0.md) | 완료 |
+| S140-001 공통 질문·입력 분리 | [공통 엔진·프로젝트](cli-project-validation-0.14.0.md), 위 공개4 터미널 | 완료 |
+| S140-002 두 언어 전역 설정 | [전역 설정](cli-user-settings-0.14.0.md), 공개4 한국어/영어·재개 | 완료 |
+| S140-003 프로젝트·기능·보존 | [보존 재설정](cli-project-reconfiguration-0.14.0.md), 위 공개4 프로젝트 | 완료 |
+| S140-004 얇은 AI 연결·제한 출력 | [연결·출력](cli-local-validation-0.14.0.md), 공개4 고정 답안 회귀 | 완료 |
+| U140-001 원본0.13.1 첫 연결 | [갱신 수용](cli-update-validation-0.14.0.md), 위 세 OS 공개4 npm/직접 명령 | 완료 |
+| U140-002 조정기·보존·복구 | [기한·부분 실패·동일 버전 재개](cli-update-validation-0.14.0.md), 공개4 보존·재설치 | 완료 |
+| U140-003 결과·안내·호환 출력 | [출력 계약](cli-update-validation-0.14.0.md), 공개4 원본 부모 결과 | 완료 |
+| G140-001 기본값·전체 스위치 | [사용량 선택](cli-usage-settings-0.14.0.md), 공개4 새 설정·비대화형 | 완료 |
+| G140-002 선택·감시 전환·실제 상태 | [감시 수용](cli-usage-settings-0.14.0.md), 공개4 실제 Windows 대기 감시 제거 | 완료 |
+| D140-001 안전 제거·자료 보존 | [제거 수용](cli-uninstall-validation-0.14.0.md), 공개4 세 OS·Codex·예약 | 완료 |
+| Q140-001 실제 모델·입력 비용 | [실제 Luna 측정](cli-model-validation-0.14.0.md), 지속 회귀 연결 | 완료 |
+| Q140-002 통합 수용 | 위 정확한 공개4의 세 OS 첫 실행 전체 성공 | 완료 |
+| Q140-003 공개 시험·출시 준비 | 후보40992421959·게시40995484009·독립 지문/태그·수용40995822179 | 완료 |
+
+원래 승인된 구현·번호 공개 시험 범위15/15,100.0% 수용. `agent-owned`·`awaiting-external-evidence`·`blocked` 없음. 별도 `awaiting-user-authority`: 정식0.14.0 main 통합·정식 태그/게시·실사용 설치·새 공지 전송. 현재 버전별 명시 승인 전 실행 제외, 시험판 완료를 정식 출시로 표시하는 처리 없음.

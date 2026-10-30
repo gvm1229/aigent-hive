@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 13/15(86.7%). test.3 세 OS 첫 갱신·제거 수용. Windows 취소 검증기 수정, test.4 최종 수용 대기
+- 현재: `feature/interactive-cli-0.14.0`, 15/15(100.0%). 공개test.4 세 OS 수용 완료. 정식 출시·실사용 설치·공지는 별도 승인 대기
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). 단위별 ship·실제 0.13.1 설치 변경 금지
 - 제품 버전: `0.14.0`
-- [공개 시험 근거](../research/public-test-0.14.0.md), 최종 수용 미완료. 안정판·사용자 설치0.13.1
+- [공개 시험 근거](../research/public-test-0.14.0.md), [조건별 최종 근거](../research/public-test-0.14.0.md#원래-15개-완료-조건과-최종-근거). 안정판·사용자 설치0.13.1
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
 - [갱신 근거](../research/cli-update-validation-0.14.0.md)·[직접 제거 근거](../research/cli-uninstall-validation-0.14.0.md): 원본0.13.1 부모·개발0.14.0·격리 VM의 실제 명령. 등록 앱/감시·공개 파일 수용은 별도
 
@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.14.0`
-- 현재 등록 항목: 13/15 완료
+- 현재 등록 항목: 15/15 완료
 
-- `agent-owned`: `Q140-002`, `Q140-003`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
@@ -49,7 +49,7 @@
 - [이전 격리 사고와 복구](../research/legacy-update-test-isolation-0.14.0.md) 보존. 재개 후 실제 CLI 시험은 임시 사용자·설치·캐시·가짜 앱에 한정, 실제 0.13.1 실행 파일과 확인한 설정 4개 지문 대조. Linux 시험에는 실제 설치 폴더 연결 없음
 - [직전 누적 상태](../archive/state/0.14.0-cli-foundations-2026-10-24.md)에 단계별 과거 검사 횟수와 당시 한계 보존. 현재 소스 전체·모든 운영체제의 합격 근거로 합산 금지
 
-## 다음 구현과 수용
+## 검증 근거와 승인 경계
 
 - M02-A–B3 [철회 복구](../plans/details/monitor-consent-withdrawal-0.14.0.md)·[C1–C2 취소/인계·CLI 적용](../plans/details/monitor-setup-review-0.14.0.md) 검증. Linux 실제 CLI·대역 회귀와 Windows 실제 감시 동의/대기 실행/해제/재활성 통과. 중단·철회·해제 실패 복구/연속 갱신 수용. 실제 앱/관측·공개 파일은 별도
 
@@ -60,5 +60,5 @@
 - [일반 감시 해제·경고·상태 조회](../research/cli-usage-settings-0.14.0.md)의 부분 수용: Windows 최종 설정189·사용량178·분리 예약 제거/대역 종료·무쓰기 조회, 앞선 Linux 설정190 통과. 실제 센서4회 시험1개는 기존 별도 조건으로 미실행. 활성화 동의·결과 표시·수동 조회는 M02·M09·M13 근거 참조, 실제 감시 수용 별도
 - M03 `892035fa`: [프로젝트 답안 파일의 공통 적용·복구 근거와 한계](../plans/details/project-file-input-0.14.0.md). 파일 입력 흐름 유지
 - 전역 0.14.0+미갱신 프로젝트 0.13.1, POSIX 첫 갱신, 실제 시간 제한/부모 종료 복구, Windows 직접 설치의 동기 완료·옛 실행 파일 정리
-- [과거 실패](../research/0.14.0-handoff-2026-10-26.md) 보존. CI40970272866·Linux 공개40965341233 통과. 취소 검증기 수정 후 test.4 수용
+- [과거 실패](../research/0.14.0-handoff-2026-10-26.md) 보존. CI40989010752·공개40995822179 세 OS 통과. test.4 수용 완료
 - 다른 작업의 학습·평가·사실·별도 계획 문서 보존. 정식 0.14.0 main 통합·게시·현재 사용자 설치·공지 전송은 해당 승인 전 제외
