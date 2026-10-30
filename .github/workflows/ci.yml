@@ -260,6 +260,11 @@ jobs:
           from pathlib import Path
           import os, subprocess, sys
           binary = Path("target/debug") / ("hive.exe" if os.name == "nt" else "hive")
+          if os.name == "nt":
+              subprocess.run([sys.executable, "scripts/test-artifacts.py", "run", "--purpose", "Windows Ctrl+C 무시 상속 회귀",
+                  "--path", "target/debug", "--command", sys.executable, "-m", "unittest", "-v",
+                  "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_ctrl_c_remains_deliverable_after_an_ignoring_native_launcher"],
+                  env={**os.environ, "HIVE_BIN": str(binary.resolve())}, check=True)
           for scenario, language in [("setup", "ko"), ("setup", "en"), ("project", "ko"), ("cancel-resume", "ko"), ("unattended", "ko")]:
               fixture = Path("tests/work/terminal-" + scenario + "-" + language).resolve()
               subprocess.run([sys.executable, "scripts/qualify-interactive-cli.py", "--fixture", str(fixture),

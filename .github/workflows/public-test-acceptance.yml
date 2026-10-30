@@ -134,6 +134,9 @@ jobs:
             fixture=tests/work/public-terminal-windows-terminal
             python scripts/qualify-interactive-cli.py --scenario windows-terminal \
               --binary "$HIVE_BIN" --fixture "$fixture" --user-root "$fixture/user" --result "$fixture/results.json"
+            python scripts/test-artifacts.py run --purpose "공개 Windows Ctrl+C 무시 상속 회귀" \
+              --command python -m unittest -v \
+              tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_ctrl_c_remains_deliverable_after_an_ignoring_native_launcher
           fi
           python scripts/test-artifacts.py run --purpose "공개 CLI 고정 답안 회귀 $PLATFORM_PACKAGE" \
             --command python -m unittest -v \

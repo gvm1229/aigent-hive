@@ -36,6 +36,8 @@ public static class SetupConsoleFixture {
     static extern uint GetConsoleProcessList([Out] uint[] processes, uint count);
     [DllImport("kernel32.dll", SetLastError=true)]
     static extern bool GenerateConsoleCtrlEvent(uint kind, uint group);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern bool SetConsoleCtrlHandler(IntPtr handler, bool add);
     [DllImport("kernel32.dll", EntryPoint="WriteConsoleInputW", SetLastError=true)]
     static extern bool WriteConsoleInput(SafeFileHandle handle, [In] Record[] records, uint count, out uint written);
     static void Send(SafeFileHandle input, string text) {
@@ -223,8 +225,18 @@ public static class SetupConsoleFixture {
         throw new InvalidOperationException("owned updater or host remained after interruption");
     }
     public static int Main(string[] args) {
-        Process child=null;
+        Process child=null; int observedControls=0;
         try {
+            if(args.Length==4 && args[3]=="ctrl-c-inherited") {
+                if(!SetConsoleCtrlHandler(IntPtr.Zero,true)) return 21;
+                // Reproduce a native launcher that disables Ctrl+C in its children.
+                var inherited=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,
+                    "\""+args[0]+"\" \""+args[1]+"\" \""+args[2]+"\" ctrl-c");
+                inherited.UseShellExecute=false;
+                child=Process.Start(inherited);
+                if(!child.WaitForExit(30000)) return 23;
+                return child.ExitCode;
+            }
             bool project=args.Length==7 && (args[3]=="connection-loss" || args[3]=="project-quick");
             bool review=args.Length==4 && args[3]=="review-all";
             bool quick=args.Length==4 && (args[3]=="user-quick-ko" || args[3]=="user-quick-en");
@@ -234,7 +246,10 @@ public static class SetupConsoleFixture {
                 || args[3]=="legacy-parent-exit" || args[3]=="legacy-parent-apply" || args[3]=="legacy-slow" || args[3]=="legacy-late-slow");
             bool resumeUpdate=args.Length==4 && args[3]=="update-resume";
             if(args.Length!=4 && !project && !publicUpdate) return 20;
-            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; };
+            // Git Bash can pass an ignored Ctrl+C attribute even into a new console.
+            // Enable the requested input before creating the product child; protect only this driver.
+            if(!SetConsoleCtrlHandler(IntPtr.Zero,false)) return 21;
+            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel=true; Interlocked.Increment(ref observedControls); };
             using(var input=CreateFile("CONIN$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero))
             using(var output=CreateFile("CONOUT$",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
                 if(input.IsInvalid || output.IsInvalid || !SetHandleInformation(input,1,1) || !SetHandleInformation(output,1,1)
@@ -261,8 +276,11 @@ public static class SetupConsoleFixture {
                 if(args[3]=="ctrl-c") { if(!GenerateConsoleCtrlEvent(0,0)) return 22; }
                 else if(args[3]=="eof") { Send(input,new string((char)26,1)+"\r"); }
                 else return 26;
-                if(!child.WaitForExit(10000)) return 23;
-                File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+"}");
+                if(!child.WaitForExit(10000)) {
+                    File.WriteAllText(args[2]+".error.txt","CLI did not exit after "+args[3]+"; controls observed="+observedControls+"\n"+OwnConsoleTail(),new UTF8Encoding(false,false));
+                    return 23;
+                }
+                File.WriteAllText(args[2],"{\"exit_code\":"+child.ExitCode+",\"control_events\":"+observedControls+"}");
                 return child.ExitCode==0 ? 24 : 0;
             }
         } catch(Exception e) {
@@ -379,6 +397,9 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
 
     def test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume(self):
         self.check_interruption("ctrl-c")
+
+    def test_ctrl_c_remains_deliverable_after_an_ignoring_native_launcher(self):
+        self.check_interruption("ctrl-c-inherited")
 
     def test_eof_is_not_a_negative_answer_and_saved_choices_resume(self):
         self.check_interruption("eof")
