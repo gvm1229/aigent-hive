@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 15/15(100.0%). 공개test.4 세 OS 수용 완료. [정식 출시·PC 갱신·공지](../plans/0.14.0-stable-release.md) 승인, 실행 진행
+- 현재: `feature/interactive-cli-0.14.0`, 15/15(100%). [정식 실행](../plans/0.14.0-stable-release.md): main e17b400b·후보41011732088·CI41011679379 통과, 게시 진행
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). ship 적용·실제 설치의 시험 사용 금지
 - 제품 버전: `0.14.0`
