@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product_version": "0.14.0",
-  "package_version": "0.14.0-test.3",
+  "package_version": "0.14.0-test.4",
   "plan_ids": [
     "P140-001",
     "P140-002",
@@ -9,8 +9,12 @@
     "S140-002",
     "S140-003",
     "S140-004",
+    "U140-001",
+    "U140-002",
+    "U140-003",
     "G140-001",
     "G140-002",
+    "D140-001",
     "Q140-001"
   ],
   "product_tree_sha256": "sha256:170db9262d8e7617f253f36fde097f091d5a2a6c1bd0a60f5652e531695ddc58"
