@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import time
 import os
 import subprocess
 import tempfile
@@ -21,6 +23,9 @@ ACTION_RESULT_SCHEMA = json.loads(
 )
 # Exact shipped companion inventory; never treat a whole references directory as owned.
 BUILTIN_REFERENCE_PATHS = (
+    "project-setup/references/advanced-setup.md",
+    "project-setup/references/directive-recovery.md",
+    "project-setup/references/structured-choices.md",
     "amend-directive/references/transplant.md",
     "knowledge-capture/references/ingest.md",
     "knowledge-recall/references/confidential.md",
@@ -83,6 +88,38 @@ def snapshot_tree(root: Path) -> dict[str, tuple[str, bytes | str]]:
         elif path.is_dir():
             snapshot[relative] = ("directory", "")
     return snapshot
+
+
+def assert_initial_file_provenance(test, answers: dict, supplied: dict, started_at: int) -> None:
+    """Check the new envelope independently before comparing legacy rendering bytes."""
+    test.assertEqual(answers["schema_version"], 2)
+    Draft202012Validator(json.loads((REPOSITORY_ROOT / "schemas/setup-answers.schema.json").read_text())).validate(answers)
+    inherited = {
+        "/interface_language": "/interface_language", "/wiki": "/wiki", "/persona": "/persona",
+        "/skills": "/project_defaults/skills", "/usage_stop_remaining_percent": "/usage_guard/stop_remaining_percent",
+    } if answers["setup_mode"] == "expedited" else {}
+    records = answers["preference_decisions"]
+    expected_paths = {"/" + key for key in answers if key not in {"schema_version", "preference_decisions", "user_store_binding"}} | inherited.keys()
+    test.assertEqual(set(records), expected_paths)
+    for pointer, record in records.items():
+        key = pointer[1:]
+        explicit = key in supplied and (key != "project_identity" or supplied[key] != "")
+        origin = "inherited" if pointer in inherited else "explicit" if explicit else "default"
+        declaration = {"inherit": {"scope": "user", "key": inherited[pointer]}} if pointer in inherited else answers[key]
+        # These fixtures contain no floats or non-ASCII object keys; sorted JSON is their JCS form.
+        digest = "sha256:" + hashlib.sha256(json.dumps(declaration, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        dated = origin == "explicit" or (origin == "inherited" and "setup_mode" in supplied)
+        if dated:
+            test.assertIs(type(record["decided_at"]), int)
+            test.assertGreaterEqual(record["decided_at"], started_at)
+            test.assertLessEqual(record["decided_at"], int(time.time()))
+        expected = {"origin": origin, "input_channel": "answers-file", "scope": "project",
+                    "question_id": None, "question_revision": None, "policy_version": "0.14.0",
+                    "changed_in_version": "0.14.0", "decided_at": record["decided_at"] if dated else None,
+                    "value_digest": digest}
+        if pointer in inherited:
+            expected["inherited_from"] = declaration["inherit"]
+        test.assertEqual(record, expected, pointer)
 
 
 def recursive_strings(value: object) -> list[str]:

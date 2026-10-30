@@ -21,6 +21,31 @@ VECTOR_ONBOARDING_SCRIPT = ROOT / "scripts/qualify-vector-onboarding-public-test
 
 
 class PublicTestAcceptanceContract(unittest.TestCase):
+    def test_interactive_acceptance_starts_with_original_public_updater(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertLess(text.index("Qualify original public update"), text.index("Install the exact public npm package"))
+        for required in (
+            "for previous in 0.13.1 0.13.2-test.2", "--owner direct", "--owner npm --redirected",
+            "setup-ko setup-en project cancel-resume unattended", "--scenario windows-terminal",
+            "test_recorded_model_project_choices_remain_a_real_cli_regression_gate",
+            "test_recorded_model_user_choices_remain_a_real_cli_regression_gate",
+            "HIVE_PUBLIC_PACKAGE_VERSION: ${{ inputs.package_version }}",
+            "windows-monitor-ci.py real-codex",
+        ):
+            self.assertIn(required, text)
+
+    def test_public_update_refuses_local_os_before_installing_or_creating_fixture(self) -> None:
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "must-not-exist"
+            result = subprocess.run([sys.executable, str(ROOT / "tests/fixtures/interactive-cli/public-update-ci.py"),
+                "--fixture", str(fixture), "--package-version", "0.14.0-test.1", "--previous-version", "0.13.1", "--owner", "npm"],
+                env={**os.environ, "GITHUB_ACTIONS": "false", "RUNNER_ENVIRONMENT": ""}, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("requires an isolated hosted OS", result.stderr)
+            self.assertFalse(fixture.exists())
+
     def test_promotion_artifact_command_accepts_reruns_but_requires_exact_live_set(self) -> None:
         text = CANDIDATE_WORKFLOW.read_text(encoding="utf-8")
         command = re.search(r"artifact_names=\$\(python3 -c '([^']+)'", text)

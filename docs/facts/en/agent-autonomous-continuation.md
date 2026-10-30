@@ -12,15 +12,15 @@ sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
   - "repo:AGENTS.md#sha256:8b785024ed26e2d916e39dc4b96c90c64171c8eb28f671c4c7f8af1de77d0a68"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:cd9973f27fdd4952ee1936257cb4ed0f2f98d6b8033aa1f89fc2b93eefeb34fd"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:a7caad0d660d83378b297ec3678312fa741b411b8115ed9eca98400d1db703d0"
-  - "repo:crates/hive-render/src/lib.rs#sha256:0f57f976119a94d844faa5fbcab16eae37ed838041ffc9d089ebeb5b8a36ae3f"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
+  - "repo:crates/hive-render/src/lib.rs#sha256:ae4532f02e5c3bd00a88534dfb974cbda2a7d6c02d5b43f43d50e156a9137904"
   - "repo:harness/directives/00-project-harness.md#sha256:5d4e8b3c34a968b86735f59d449b194021c16ff8e9b4741b4c3ccaf130aa94b6"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:f901c85a4769dba3021471341fe9a14c0daba392661212bd233d852bfed80304"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:02cfaea5d05fc9e51b5a368cc70290f6f2b041912433bf640ad2ccaa0f6b2c39"
-  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:5a20040c568570b7501cf6715838becb35f24adea960c4f63bd6e245b358ef13"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:4c71dbbc592620844bff81765151014d4a657924d03aea602c08bc517e1c8727"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:ab0902d90e75ac32219217b3617c46008f3a906a84a68453bf389fd69e9ec529"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:f55b00d6b7a34433fe32eb03d0914cc3e8726c879591a46b4c09fb70b4686b82"
 links: [automated-user-handoff, source-development, steering-preservation]
-reviewed_revision: "git:f6bec784d94c76ef79cda8ff28e60a0b05765805"
+reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
 ---
 

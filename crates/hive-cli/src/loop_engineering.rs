@@ -2373,6 +2373,7 @@ mod tests {
         initial: LoopGraphDocument,
         plan_bytes: Vec<u8>,
         capability_path: PathBuf,
+        user_root: Option<PathBuf>,
     }
 
     fn digest(label: &str) -> String {
@@ -2596,6 +2597,7 @@ mod tests {
             initial,
             plan_bytes,
             capability_path,
+            user_root: None,
         }
     }
 
@@ -2653,7 +2655,7 @@ mod tests {
                     "antigravity",
                     "loop-session",
                     4242,
-                    None,
+                    fixture.user_root.as_deref(),
                 )
                 .expect("session binding")
             }),
@@ -2690,6 +2692,7 @@ mod tests {
             "session_id": session_id,
             "session_id_digest": session_scope_digest("antigravity", session_id),
             "process_id": 4242,
+            "user_root": fixture.user_root,
         });
         let envelope_bytes = serde_json::to_vec(&envelope).expect("usage envelope");
         let evidence_digest = sha256_digest(&envelope_bytes);
@@ -3122,6 +3125,70 @@ mod tests {
                 "{drift}"
             );
             assert!(!fixture_prepared_path(&fixture, &brief).exists());
+        }
+    }
+
+    #[test]
+    fn master_off_loop_preserves_old_halts_and_reenablement_invalidates_authorization() {
+        for reenable in [false, true] {
+            let mut fixture = fixture(CapabilitySupportLevel::Supported);
+            let user = fixture.root.join("user");
+            let config_path = user.join(".hive/config/user-setup.yml");
+            fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+            let mut policy = hive_core::preferences::UsageProtection::from_legacy(true, true, true);
+            policy.enforcement_enabled = false;
+            let mut config = json!({
+                "schema_version": 2, "interface_language": "en",
+                "wiki": {"enabled": true, "language": "both", "backend": "markdown"},
+                "profile": {"contexts": ["non-developer"]}, "persona": {"id": "balanced"},
+                "selected_hosts": ["antigravity"], "skills": {"mode": "all"},
+                "update_check": {"enabled": false}, "usage_guard": policy,
+            });
+            config["usage_guard"]["stop_remaining_percent"] = json!(20);
+            config["usage_guard"]["codexbar_fallback_enabled"] = json!(false);
+            let saved = serde_yaml::to_string(&config).unwrap();
+            fs::write(&config_path, &saved).unwrap();
+            fixture.user_root = Some(user.clone());
+            let runtime = fixture_usage_session_root(&fixture);
+            for file in ["control.json", "halt.json"] {
+                fs::write(runtime.join(file), b"damaged old runtime").unwrap();
+            }
+            let checked = crate::usage_control::dispatch_preflight(
+                &fixture.target,
+                "antigravity",
+                "loop-session",
+                4242,
+                Some(&user),
+                RUN_ID,
+                None,
+                |_| panic!("disabled loop requested a sensor"),
+            )
+            .unwrap();
+            assert_eq!(checked.result.code, "hive.usage-disabled");
+            initialize_fixture(&fixture);
+            let brief = digest("master-off-loop");
+            let current = usage_checkpoint(&fixture, LoopDispatchKind::Node, &brief);
+            let request = prepare_request(&fixture, &current, &brief);
+            if reenable {
+                config["usage_guard"]["enforcement_enabled"] = json!(true);
+                fs::write(&config_path, serde_yaml::to_string(&config).unwrap()).unwrap();
+                assert!(prepare((fixture.target.clone(), request)).is_err());
+                assert!(!fixture_prepared_path(&fixture, &brief).exists());
+            } else {
+                let first = prepare((fixture.target.clone(), request.clone())).unwrap();
+                assert_eq!(first.code, "hive.loop-dispatch-prepared");
+                assert_eq!(first.data.as_ref().unwrap()["spawned"], false);
+                let replay = prepare((fixture.target.clone(), request)).unwrap();
+                assert_eq!(replay.code, "hive.loop-dispatch-already-prepared");
+                assert!(replay.next_action.is_none());
+                assert_eq!(fs::read_to_string(&config_path).unwrap(), saved);
+            }
+            for file in ["control.json", "halt.json"] {
+                assert_eq!(
+                    fs::read(runtime.join(file)).unwrap(),
+                    b"damaged old runtime"
+                );
+            }
         }
     }
 

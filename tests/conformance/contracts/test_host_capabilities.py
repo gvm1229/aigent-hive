@@ -24,7 +24,7 @@ CURRENT_REQUIRED = {
         ".agents/directives/00-project-harness.md",
         "no silent runtime switch",
     ),
-    "harness/skills/project-setup/SKILL.md": (
+    "harness/skills/project-setup/references/advanced-setup.md": (
         "Default a new run to the active host's verified native capabilities",
         "Do not select OMX/OMC for a new run",
         "including a 0.8.x OMX/OMC owner",
@@ -70,6 +70,11 @@ FROZEN_080 = {
 
 class V09HostNativeContractTests(unittest.TestCase):
     def test_current_contracts_default_host_native_and_bound_external_selection(self) -> None:
+        for base in ["harness/skills", "harness/plugins/aigent-hive/skills", "harness/template/.agents/skills", "harness/template/.claude/skills"]:
+            root = REPOSITORY_ROOT / base / "project-setup"
+            self.assertIn("references/advanced-setup.md", (root / "SKILL.md").read_text(encoding="utf-8"))
+            self.assertEqual((root / "references/advanced-setup.md").read_bytes(),
+                             (REPOSITORY_ROOT / "harness/skills/project-setup/references/advanced-setup.md").read_bytes())
         for relative, required in CURRENT_REQUIRED.items():
             text = " ".join((REPOSITORY_ROOT / relative).read_text(encoding="utf-8").split())
             with self.subTest(path=relative):

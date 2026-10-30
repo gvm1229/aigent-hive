@@ -3,7 +3,8 @@ param(
     [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test(\.[1-9][0-9]*)?)?$')]
     [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
-    [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
+    [string]$Prefix = "$env:LOCALAPPDATA\AigentHive",
+    [switch]$DeferLockedBackup
 )
 
 $ErrorActionPreference = "Stop"
@@ -110,7 +111,7 @@ function Assert-SafeDirectoryChain {
         if ($component -eq "." -or $component -eq "..") {
             throw "install path contains a reparse point or non-directory"
         }
-        $currentPath = Join-Path $currentPath $component
+        $currentPath = [IO.Path]::Combine($currentPath, $component)
         $item = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
         if ($null -eq $item) {
             New-Item -ItemType Directory -Path $currentPath -ErrorAction Stop | Out-Null
@@ -209,6 +210,33 @@ function Assert-ExistingDirectInstall {
     }
 }
 
+function New-DirectReplacementRecord {
+    param([string]$Destination,[string]$Backup,[string]$BeforeDigest,[string]$AfterDigest,[string]$Package,[string]$Identity)
+    if ($Identity -notmatch '^sha256:[0-9a-f]{64}$') { throw 'direct replacement prefix identity is missing' }
+    $prefixPath = Split-Path -Parent (Split-Path -Parent $Destination)
+    $sharePath = [IO.Path]::Combine($prefixPath, 'share\aigent-hive')
+    Assert-SafeDirectoryChain -Path $sharePath
+    $previous = Get-ValidatedDirectReceipt -ReceiptPath ([IO.Path]::Combine($sharePath, 'install-receipt.json'))
+    if ((Split-Path -Leaf $Destination) -ne 'hive.exe' -or $previous.artifact_sha256 -ne "sha256:$BeforeDigest") {
+        throw 'retired image does not match the owned direct installation'
+    }
+    $recordPath = [IO.Path]::Combine($sharePath, 'replacement-pending.json')
+    if (Test-Path -LiteralPath $recordPath) { throw 'finish the previous replacement with hive update first' }
+    $temporary = [IO.Path]::Combine($sharePath, ('.replacement-record-' + [Guid]::NewGuid().ToString('N')))
+    $bytes = [Text.UTF8Encoding]::new($false).GetBytes((@{
+        schema_version=1; prefix_identity=$Identity; backup_name=(Split-Path -Leaf $Backup)
+        before_sha256="sha256:$BeforeDigest"; after_sha256="sha256:$AfterDigest"
+        before_package_version=$previous.package_version; after_package_version=$Package
+    } | ConvertTo-Json -Compress))
+    try {
+        $stream=[IO.File]::Open($temporary,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        try { $stream.Write($bytes,0,$bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
+        Move-InstallFile -Source $temporary -Destination $recordPath -Replace $false
+    } finally {
+        if(Test-Path -LiteralPath $temporary){Remove-Item -LiteralPath $temporary -Force}
+    }
+}
+
 function Move-InstallFile {
     param(
         [Parameter(Mandatory = $true)]
@@ -216,7 +244,9 @@ function Move-InstallFile {
         [Parameter(Mandatory = $true)]
         [string]$Destination,
         [Parameter(Mandatory = $true)]
-        [bool]$Replace
+        [bool]$Replace,
+        [string]$DeferredPackageVersion = '',
+        [string]$DeferredPrefixIdentity = ''
     )
 
     $sourceItem = Get-Item -LiteralPath $Source -Force -ErrorAction Stop
@@ -237,10 +267,26 @@ function Move-InstallFile {
         throw "install file target is not a regular leaf"
     }
     if ($Replace -and $null -ne $destinationItem) {
+        $deferred = $DeferredPackageVersion -ne ''
+        if ($deferred) {
+            if ((Split-Path -Leaf $Destination) -ne 'hive.exe' -or
+                (Split-Path -Leaf (Split-Path -Parent $Destination)) -ne 'bin') {
+                throw 'deferred replacement must target the owned bin/hive.exe'
+            }
+            $beforeDigest=Get-FileSha256 -Path $Destination
+            $afterDigest=Get-FileSha256 -Path $Source
+            if ($beforeDigest -eq $afterDigest) {
+                throw 'deferred replacement requires different verified program bytes'
+            }
+        }
         $destinationDirectory = Split-Path -Parent $Destination
-        $backup = Join-Path $destinationDirectory (
+        $backup = [IO.Path]::Combine($destinationDirectory, (
             ".hive-replace-backup-" + [Guid]::NewGuid().ToString("N")
-        )
+        ))
+        if ($deferred) {
+            New-DirectReplacementRecord -Destination $Destination -Backup $backup `
+                -BeforeDigest $beforeDigest -AfterDigest $afterDigest -Package $DeferredPackageVersion -Identity $DeferredPrefixIdentity
+        }
         [IO.File]::Replace($Source, $Destination, $backup)
         $backupItem = Get-Item -LiteralPath $backup -Force -ErrorAction Stop
         if (
@@ -249,7 +295,12 @@ function Move-InstallFile {
         ) {
             throw "install replacement backup is not a regular leaf"
         }
-        Remove-Item -LiteralPath $backup -Force
+        try { Remove-Item -LiteralPath $backup -Force }
+        catch [UnauthorizedAccessException] {
+            if (-not $deferred) { throw }
+            # The exact recorded image is removed after its caller exits.
+            # Do not turn any other filesystem failure into success.
+        }
     } else {
         [IO.File]::Move($Source, $Destination)
     }
@@ -338,15 +389,90 @@ function Assert-AuthorizedAuthenticodeSignature {
     }
 }
 
+function Publish-DirectInstall {
+    param([string]$Binary,[string]$Prefix,[string]$Version,[string]$PackageVersion,[switch]$DeferLockedBackup)
+    $stagedBinary=$null; $stagedReceipt=$null; $receiptStream=$null
+    try {
+        $binDirectory = [IO.Path]::Combine($Prefix, 'bin')
+        $shareDirectory = [IO.Path]::Combine($Prefix, 'share\aigent-hive')
+        Assert-SafeDirectoryChain -Path $Prefix
+        Assert-SafeDirectoryChain -Path $binDirectory
+        Assert-SafeDirectoryChain -Path $shareDirectory
+        $destination = [IO.Path]::Combine($binDirectory, 'hive.exe')
+        $receiptPath = [IO.Path]::Combine($shareDirectory, 'install-receipt.json')
+        $pendingReceiptPath = [IO.Path]::Combine($shareDirectory, 'install-receipt.pending.json')
+        if (Test-Path -LiteralPath ([IO.Path]::Combine($shareDirectory, 'replacement-pending.json'))) {
+            throw 'finish the previous replacement with hive update first'
+        }
+        Repair-PendingDirectInstall -Destination $destination -ReceiptPath $receiptPath -PendingReceiptPath $pendingReceiptPath
+        Assert-ExistingDirectInstall -Destination $destination -ReceiptPath $receiptPath
+        $stagedBinary = [IO.Path]::Combine($binDirectory, ('.hive-install-' + [Guid]::NewGuid()))
+        $stagedReceipt = [IO.Path]::Combine($shareDirectory, ('.install-receipt-' + [Guid]::NewGuid()))
+        Assert-SafeDirectoryChain -Path $binDirectory
+        Assert-SafeDirectoryChain -Path $shareDirectory
+        [IO.File]::Copy($Binary, $stagedBinary, $false)
+        $binaryDigest = Get-FileSha256 -Path $Binary
+        $receiptJson = @{
+            schema_version = 1
+            owner = "direct"
+            product = "aigent-hive"
+            version = $Version
+            package_version = $PackageVersion
+            artifact_sha256 = "sha256:$binaryDigest"
+        } | ConvertTo-Json -Compress
+        $receiptBytes = [Text.UTF8Encoding]::new($false).GetBytes($receiptJson)
+        $receiptStream = [IO.File]::Open($stagedReceipt,[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,
+            ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        $receiptStream.Lock(0, 1)
+        $receiptStream.Write($receiptBytes, 0, $receiptBytes.Length)
+        $receiptStream.Flush($true)
+        Assert-SafeDirectoryChain -Path $binDirectory
+        Assert-SafeDirectoryChain -Path $shareDirectory
+        if ($null -ne (Get-Item -LiteralPath $pendingReceiptPath -Force -ErrorAction SilentlyContinue)) {
+            throw 'existing hive install transaction is not recoverable'
+        }
+        Move-InstallFile -Source $stagedReceipt -Destination $pendingReceiptPath -Replace $false
+        $stagedReceipt = $null
+        Assert-SafeDirectoryChain -Path $binDirectory
+        Assert-SafeDirectoryChain -Path $shareDirectory
+        $deferredPackage = if ($DeferLockedBackup) { $PackageVersion } else { '' }
+        $deferredIdentity = ''
+        if ($DeferLockedBackup) {
+            $scopeOutput = & $Binary __direct-install-scope --prefix $Prefix
+            if ($LASTEXITCODE -ne 0) { throw 'cannot bind the direct replacement prefix' }
+            $deferredIdentity = ($scopeOutput | ConvertFrom-Json).prefix_identity
+        }
+        Move-InstallFile -Source $stagedBinary -Destination $destination -Replace $true `
+            -DeferredPackageVersion $deferredPackage -DeferredPrefixIdentity $deferredIdentity
+        $stagedBinary = $null
+        Assert-SafeDirectoryChain -Path $binDirectory
+        Assert-SafeDirectoryChain -Path $shareDirectory
+        # Keep the pending receipt locked until publication and removal finish.
+        # ReplaceFile cannot consume that locked stream, so publish the same bytes from a closed copy.
+        $stagedReceipt = [IO.Path]::Combine($shareDirectory, ('.install-receipt-final-' + [Guid]::NewGuid()))
+        $finalStream=[IO.File]::Open($stagedReceipt,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        try { $finalStream.Write($receiptBytes,0,$receiptBytes.Length);$finalStream.Flush($true) } finally { $finalStream.Dispose() }
+        Move-InstallFile -Source $stagedReceipt -Destination $receiptPath -Replace $true
+        $stagedReceipt = $null
+        [IO.File]::Delete($pendingReceiptPath)
+        Write-Output "installed hive $Version to $binDirectory\hive.exe"
+    } finally {
+        if ($null -ne $receiptStream) { $receiptStream.Dispose() }
+        foreach ($stagedPath in @($stagedBinary, $stagedReceipt)) {
+            if ($null -ne $stagedPath -and (Test-Path -LiteralPath $stagedPath)) {
+                Remove-Item -LiteralPath $stagedPath -Force
+            }
+        }
+    }
+}
+
 $npmPackage = "win32-x64"
 $archive = "$npmPackage-$PackageVersion.tgz"
 $base = "https://registry.npmjs.org/@aigent-hive/$npmPackage/-"
-$work = Join-Path ([IO.Path]::GetTempPath()) ("aigent-hive-install-" + [Guid]::NewGuid())
+$work = [IO.Path]::Combine([IO.Path]::GetTempPath(), ("aigent-hive-install-" + [Guid]::NewGuid()))
 New-Item -ItemType Directory -Path $work | Out-Null
-$stagedBinary = $null
-$stagedReceipt = $null
 try {
-    $archivePath = Join-Path $work $archive
+    $archivePath = [IO.Path]::Combine($work, $archive)
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
     $actual = Get-FileSha256 -Path $archivePath
     if ($ExpectedArchiveSha256 -ne $actual) {
@@ -386,94 +512,32 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "release archive could not be extracted"
     }
-    $binary = Join-Path $work "package\bin\hive.exe"
+    $binary = [IO.Path]::Combine($work, "package\bin\hive.exe")
     if ($AuthorizedSignerThumbprint -ne "") {
         $signature = Get-AuthenticodeSignature -LiteralPath $binary
         Assert-AuthorizedAuthenticodeSignature `
             -Signature $signature `
             -AuthorizedThumbprint $AuthorizedSignerThumbprint
     }
-    if (-not (Test-HiveVersionOutput `
-        -Output (& $binary --version) `
-        -ExpectedVersion $Version `
-        -ExpectedPackageVersion $PackageVersion
-    )) {
-        throw "signed binary version differs from requested release"
+    $previousOutputEncoding = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+        $binaryVersion = & $binary --version
+        if ($LASTEXITCODE -ne 0 -or -not (Test-HiveVersionOutput `
+            -Output $binaryVersion `
+            -ExpectedVersion $Version `
+            -ExpectedPackageVersion $PackageVersion
+        )) {
+            throw "signed binary version differs from requested release"
+        }
+    } finally {
+        [Console]::OutputEncoding = $previousOutputEncoding
     }
 
-    $binDirectory = Join-Path $Prefix "bin"
-    $shareDirectory = Join-Path $Prefix "share\aigent-hive"
-    Assert-SafeDirectoryChain -Path $Prefix
-    Assert-SafeDirectoryChain -Path $binDirectory
-    Assert-SafeDirectoryChain -Path $shareDirectory
-    $destination = Join-Path $binDirectory "hive.exe"
-    $receiptPath = Join-Path $shareDirectory "install-receipt.json"
-    $pendingReceiptPath = Join-Path $shareDirectory "install-receipt.pending.json"
-    Repair-PendingDirectInstall `
-        -Destination $destination `
-        -ReceiptPath $receiptPath `
-        -PendingReceiptPath $pendingReceiptPath
-    Assert-ExistingDirectInstall -Destination $destination -ReceiptPath $receiptPath
-    $stagedBinary = Join-Path $binDirectory (".hive-install-" + [Guid]::NewGuid())
-    $stagedReceipt = Join-Path $shareDirectory (".install-receipt-" + [Guid]::NewGuid())
-    Assert-SafeDirectoryChain -Path $binDirectory
-    Assert-SafeDirectoryChain -Path $shareDirectory
-    [IO.File]::Copy($binary, $stagedBinary, $false)
-    $binaryDigest = Get-FileSha256 -Path $binary
-    $receiptJson = @{
-        schema_version = 1
-        owner = "direct"
-        product = "aigent-hive"
-        version = $Version
-        package_version = $PackageVersion
-        artifact_sha256 = "sha256:$binaryDigest"
-    } | ConvertTo-Json -Compress
-    $receiptBytes = [Text.UTF8Encoding]::new($false).GetBytes($receiptJson)
-    $receiptStream = [IO.File]::Open(
-        $stagedReceipt,
-        [IO.FileMode]::CreateNew,
-        [IO.FileAccess]::Write,
-        [IO.FileShare]::None
-    )
-    try {
-        $receiptStream.Write($receiptBytes, 0, $receiptBytes.Length)
-    }
-    finally {
-        $receiptStream.Dispose()
-    }
-    Assert-SafeDirectoryChain -Path $binDirectory
-    Assert-SafeDirectoryChain -Path $shareDirectory
-    if ($null -ne (
-        Get-Item -LiteralPath $pendingReceiptPath -Force -ErrorAction SilentlyContinue
-    )) {
-        throw "existing hive install transaction is not recoverable"
-    }
-    Move-InstallFile `
-        -Source $stagedReceipt `
-        -Destination $pendingReceiptPath `
-        -Replace $false
-    $stagedReceipt = $null
-    Assert-SafeDirectoryChain -Path $binDirectory
-    Assert-SafeDirectoryChain -Path $shareDirectory
-    Move-InstallFile `
-        -Source $stagedBinary `
-        -Destination $destination `
-        -Replace $true
-    $stagedBinary = $null
-    Assert-SafeDirectoryChain -Path $binDirectory
-    Assert-SafeDirectoryChain -Path $shareDirectory
-    Move-InstallFile `
-        -Source $pendingReceiptPath `
-        -Destination $receiptPath `
-        -Replace $true
-    Write-Output "installed hive $Version to $binDirectory\hive.exe"
+    Publish-DirectInstall -Binary $binary -Prefix $Prefix -Version $Version `
+        -PackageVersion $PackageVersion -DeferLockedBackup:$DeferLockedBackup
 }
 finally {
-    foreach ($stagedPath in @($stagedBinary, $stagedReceipt)) {
-        if ($null -ne $stagedPath -and (Test-Path -LiteralPath $stagedPath)) {
-            Remove-Item -LiteralPath $stagedPath -Force
-        }
-    }
     if (Test-Path -LiteralPath $work) {
         Remove-Item -LiteralPath $work -Recurse -Force
     }

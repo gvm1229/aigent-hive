@@ -1,10 +1,33 @@
 # Embedded, fixed Windows adapter. Requests are JSON on stdin, never shell fragments.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# Avoid cold module-catalog discovery inside the bounded native request.
+Import-Module -Name @(
+    ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'),
+    ($PSHOME + '\Modules\CimCmdlets\CimCmdlets.psd1')
+)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+if ($request.operation -eq 'inspect') {
+    Import-Module -Name ($PSHOME + '\Modules\Appx\Appx.psd1')
+}
+if ($request.operation -in @('register', 'start', 'inspect-task', 'unregister')) {
+    Import-Module -Name ($PSHOME + '\Modules\ScheduledTasks\ScheduledTasks.psd1')
+}
 function Emit($value) { ConvertTo-Json -InputObject $value -Depth 12 -Compress }
+function Owned-Task($task,$expected) {
+    if(-not $task -or $task.Description -ne 'Aigent Hive version-bound Codex usage protection' -or @($task.Actions).Count -ne 1 -or
+        $task.Actions[0].Execute -ne $expected.executable -or $task.Actions[0].Arguments -ne $expected.arguments){return $false}
+    $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+    if($task.Principal.LogonType -notin @('Interactive',3) -or $task.Principal.RunLevel -notin @('Limited',0)){return $false}
+    try {
+        $user=[string]$task.Principal.UserId
+        $sid=if($user -match '^S-1-') {([Security.Principal.SecurityIdentifier]::new($user)).Value}
+            else {([Security.Principal.NTAccount]::new($user)).Translate([Security.Principal.SecurityIdentifier]).Value}
+        return $sid -eq $identity.User.Value
+    } catch {return $false}
+}
 function App-Roots {
     $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
     $packages = @(Get-AppxPackage -Name 'OpenAI.Codex' | Where-Object { $_.PublisherId -eq '2p2nqsd0c76g0' })
@@ -79,7 +102,12 @@ try {
             $exe = [string]$request.executable
             $args = [string]$request.arguments
             $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-            if ($existing) { throw 'Task already exists; disable the owned monitor before replacing it' }
+            if ($existing) {
+                if($request.allow_existing_exact -eq $true -and (Owned-Task $existing $request) -and $existing.Settings.Enabled){
+                    Emit @{registered=$true;reused=$true};break
+                }
+                throw 'Task already exists; disable the owned monitor before replacing it'
+            }
             $action = New-ScheduledTaskAction -Execute $exe -Argument $args
             $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
             $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
@@ -88,16 +116,27 @@ try {
             Emit @{ registered = $true }
         }
         'start' {
-            Start-ScheduledTask -TaskName ([string]$request.task_name)
-            Emit @{ started = $true }
+            $taskName=[string]$request.task_name
+            if($taskName -notmatch '^AigentHive-UsageMonitor-[a-f0-9]{16}$'){throw 'Invalid owned task name'}
+            $task=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            if(-not (Owned-Task $task $request) -or -not $task.Settings.Enabled){throw 'Owned task is absent, disabled, or changed; no start'}
+            if([string]$task.State -in @('Running','Queued')){Emit @{started=$true;reused=$true};break}
+            Start-ScheduledTask -TaskName $taskName
+            Emit @{ started = $true;reused=$false }
+        }
+        'inspect-task' {
+            $taskName=[string]$request.task_name
+            if($taskName -notmatch '^AigentHive-UsageMonitor-[a-f0-9]{16}$'){throw 'Invalid owned task name'}
+            $task=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            if(-not $task){Emit @{present=$false};break}
+            Emit @{present=$true;owned=(Owned-Task $task $request);enabled=[bool]$task.Settings.Enabled;state=[string]$task.State}
         }
         'unregister' {
             $taskName = [string]$request.task_name
             if ($taskName -notmatch '^AigentHive-UsageMonitor-[a-f0-9]{16}$') { throw 'Invalid owned task name' }
             $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
             if ($task) {
-                if ($task.Description -ne 'Aigent Hive version-bound Codex usage protection' -or @($task.Actions).Count -ne 1 -or
-                    $task.Actions[0].Execute -ne $request.executable -or $task.Actions[0].Arguments -ne $request.arguments) {
+                if (-not (Owned-Task $task $request)) {
                     throw 'Owned task identity differs; no removal'
                 }
                 Stop-ScheduledTask -TaskName $taskName

@@ -14,6 +14,25 @@ SCRIPT = ROOT / "crates/hive-cli/src/usage_monitor/windows.ps1"
 
 @unittest.skipUnless(os.name == "nt", "Windows process handles and Task Scheduler adapter")
 class WindowsUsageMonitor(unittest.TestCase):
+    def test_cold_adapter_rejects_unknown_operation_within_native_deadline(self):
+        executable = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        with tempfile.TemporaryDirectory(prefix="hive-monitor-cold-") as directory:
+            root = Path(directory)
+            environment = {key: os.environ[key] for key in ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT"]
+                           if key in os.environ}
+            for key in ["PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"]:
+                path = root / key
+                path.mkdir()
+                environment[key] = str(path)
+            environment["PSModuleAnalysisCachePath"] = str(root / "module-cache")
+            environment["HIVE_TEST_MONITOR_SCRIPT"] = SCRIPT.read_text(encoding="utf-8")
+            result = subprocess.run([str(executable), "-NoLogo", "-NoProfile", "-NonInteractive",
+                "-Command", "& ([scriptblock]::Create([Environment]::GetEnvironmentVariable('HIVE_TEST_MONITOR_SCRIPT')))"],
+                env=environment, input=b'{"operation":"fixture-unknown"}', capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, b"")
+        self.assertIn(b"Unsupported monitor operation", result.stderr)
+
     def powershell(self, source: str) -> dict:
         executable = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
         with tempfile.TemporaryDirectory(prefix="hive-monitor-test-") as directory:
@@ -26,6 +45,11 @@ class WindowsUsageMonitor(unittest.TestCase):
 
     def adapter_functions(self) -> str:
         source = SCRIPT.read_text(encoding="utf-8")
+        # Scheduler behavior tests supply their own cmdlets; never replace those
+        # stubs with real OS effects. Native imports are checked by the hosted flow.
+        scheduler_import = "Import-Module -Name ($PSHOME + '\\Modules\\ScheduledTasks\\ScheduledTasks.psd1')"
+        self.assertEqual(source.count(scheduler_import), 1)
+        source = source.replace(scheduler_import, "# scheduler supplied by the fixture")
         # Exercise production functions and switch without accepting arbitrary product targets.
         return source.replace("$request = [Console]::In.ReadToEnd() | ConvertFrom-Json", "# request supplied by the fixture")
 
@@ -302,6 +326,55 @@ if(-not $rejected){throw 'Foreign task accepted'}
 @{rejected=$rejected} | ConvertTo-Json -Compress
 """
             self.assertTrue(self.powershell(source)["rejected"])
+
+    def test_exact_scheduler_replay_does_not_repeat_registration_or_running_start(self):
+        script = self.adapter_functions().replace("exit 1", "throw")
+        fixture = r"""
+$identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+$task=[pscustomobject]@{Description='Aigent Hive version-bound Codex usage protection';
+ Actions=@([pscustomobject]@{Execute='owned';Arguments='owned'});
+ Principal=[pscustomobject]@{UserId=$identity.User.Value;LogonType=3;RunLevel=0};
+ Settings=[pscustomobject]@{Enabled=$true};State='Running'}
+function Get-ScheduledTask {$task}
+function Register-ScheduledTask {throw 'Unexpected duplicate registration'}
+function Start-ScheduledTask {throw 'Unexpected duplicate start'}
+$request=[pscustomobject]@{operation='OP';task_name='AigentHive-UsageMonitor-0123456789abcdef';executable='owned';arguments='owned';allow_existing_exact=$true}
+"""
+        for identity in ["$identity.User.Value", "([Environment]::UserName)"]:
+            for operation, field in [("register", "registered"), ("start", "started"), ("inspect-task", "owned")]:
+                source = fixture.replace("UserId=$identity.User.Value", "UserId=" + identity).replace("'OP'", repr(operation))
+                result = self.powershell(source + script)
+                self.assertTrue(result[field])
+                if operation != "inspect-task":
+                    self.assertTrue(result["reused"])
+
+    def test_scheduler_replay_preserves_disabled_foreign_owner_and_elevated_tasks(self):
+        script = self.adapter_functions().replace("exit 1", "throw")
+        fixture = r"""
+$identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+$task=[pscustomobject]@{Description='Aigent Hive version-bound Codex usage protection';
+ Actions=@([pscustomobject]@{Execute='owned';Arguments='owned'});
+ Principal=[pscustomobject]@{UserId=$identity.User.Value;LogonType=3;RunLevel=0};
+ Settings=[pscustomobject]@{Enabled=$true};State='Ready'}
+function Get-ScheduledTask {$task}
+function Register-ScheduledTask {throw 'Unexpected registration'}
+function Start-ScheduledTask {throw 'Unexpected start'}
+function Unregister-ScheduledTask {throw 'Unexpected removal'}
+function Stop-ScheduledTask {throw 'Unexpected stop'}
+$request=[pscustomobject]@{operation='OP';task_name='AigentHive-UsageMonitor-0123456789abcdef';executable='owned';arguments='owned';allow_existing_exact=$true}
+CHANGE
+$rejected=$false
+try {
+"""
+        for change in ["$task.Principal.UserId='foreign-user'", "$task.Principal.RunLevel=1", "$task.Settings.Enabled=$false"]:
+            operations = ("register", "start") if "Enabled" in change else ("register", "start", "unregister")
+            for operation in operations:
+                source = fixture.replace("'OP'", repr(operation)).replace("CHANGE", change) + script + r"""
+} catch {$rejected=$true}
+if(-not $rejected){throw 'Changed task accepted'}
+@{rejected=$true}|ConvertTo-Json -Compress
+"""
+                self.assertTrue(self.powershell(source)["rejected"])
 
     def test_background_catalog_requires_owner_confirmation(self):
         source=(ROOT / "crates/hive-cli/src/usage_monitor/desktop.ps1").read_text(encoding="utf-8")

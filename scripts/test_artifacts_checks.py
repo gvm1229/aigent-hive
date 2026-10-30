@@ -326,6 +326,28 @@ class ArtifactTests(unittest.TestCase):
             self.assertIn("skipped=1", text)
             self.assertNotIn(str(self.root), text)
 
+    def test_inventory_refusal_preserves_result_without_cleanup_authority(self):
+        run = a.Run("fixture", ["synthetic"], root=self.root, paths=["tests/work/old"])
+        for reason in ("linked descendant refused", "special file refused"):
+            with self.subTest(reason=reason), patch.object(run.manager, "inventory", side_effect=a.ArtifactError(reason)):
+                report = run.finish(0)
+            self.assertIn('"status": "passed"', (self.root / report).read_text(encoding="utf-8"))
+            record = self.manager.records()[0]
+            self.assertEqual("review", record["state"])
+            self.assertIn(reason, record["reason"])
+            self.assertNotIn("inventory", record)
+        self.git("add", "tests/results")
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "evidence")
+        self.assertEqual("review", self.manager.cleanup(apply=True, selected=["tests/work/old"])[0]["status"])
+        self.assertEqual("synthetic", (self.root / "tests/work/old/data").read_text(encoding="utf-8"))
+
+    def test_inventory_io_failure_is_not_silenced(self):
+        run = a.Run("fixture", ["synthetic"], root=self.root, paths=["tests/work/old"])
+        with patch.object(run.manager, "inventory", side_effect=OSError("disk unavailable")):
+            with self.assertRaisesRegex(OSError, "disk unavailable"):
+                run.finish(0)
+        self.assertEqual("active", self.manager.records()[0]["state"])
+
     def test_windows_process_snapshot_uses_utf8_with_replacement(self):
         result = subprocess.CompletedProcess(
             args=["pwsh"],

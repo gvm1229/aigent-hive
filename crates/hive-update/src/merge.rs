@@ -1,5 +1,5 @@
 use crate::UpdateError;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -7,7 +7,7 @@ const MAX_MERGE_BYTES: usize = 1024 * 1024;
 const MAX_LCS_CELLS: usize = 2_000_000;
 
 /// Stable three-way merge disposition.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum MergeDisposition {
     /// Unmodified installed bytes replaced by the incoming release.

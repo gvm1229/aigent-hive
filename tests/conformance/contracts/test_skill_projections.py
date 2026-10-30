@@ -170,6 +170,11 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     "hive run resume --dispatch-intent automatic",
                     "enforced=true",
                     "outcome=authorized",
+                    "policy_evaluated=true",
+                    "enforcement_enabled=false",
+                    "outcome=disabled",
+                    "observation_required=false",
+                    "outcome=observation-unavailable",
                     "exactly one dispatch brief",
                     "never authorizes dispatch",
                     "ordinary",
@@ -181,6 +186,10 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 ):
                     self.assertIn(required, skill.lower())
                 self.assertNotIn("At every turn boundary", agents)
+                resume = (self.discovery_root(target, host) / "run-resume/SKILL.md").read_text(encoding="utf-8")
+                for required in ("policy_evaluated=true", "outcome=disabled", "authorization ID",
+                                 "exactly", "observation-unavailable", "v2 master opt-out"):
+                    self.assertIn(required, resume)
                 self.assertNotIn("start a watcher", agents)
                 self.assertIn(
                     "illustrative rather than a finite phrase",
@@ -447,13 +456,25 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         )
         self.assertEqual(install.returncode, 0, install.stderr)
 
-        process, result = self.invoke_setup(
+        before = snapshot_tree(target)
+        rejected, result = self.invoke_setup(
             target,
             answers=self.answers_for_host("codex"),
             capabilities=self.capability_for_host("codex"),
         )
+        self.assertEqual(rejected.returncode, 3, rejected.stderr)
+        self.assertIn("orchestration owner", result["message"])
+        self.assertEqual(snapshot_tree(target), before)
 
+        # Revoke the approved hooks without migrating the existing owner.
+        process, result = self.invoke_setup(
+            target,
+            answers=self.answers_for_host("codex"),
+            capabilities="capabilities-codex-host-native-hooks.json",
+        )
         self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertIn('resolved_owner = "host-native"',
+                      (target / ".hive/config/harness.toml").read_text(encoding="utf-8"))
         self.assertFalse(
             (target / ".hive/config/approved-hooks.yml").exists()
         )

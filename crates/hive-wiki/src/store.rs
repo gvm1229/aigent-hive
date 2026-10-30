@@ -271,6 +271,60 @@ pub struct RagStore {
     root: Dir,
 }
 
+struct UserSetupIndexScope {
+    registry: CollectionRegistry,
+    declarations: Vec<crate::CapabilityFileSnapshot>,
+    external_approved: bool,
+}
+
+mod setup_index;
+pub use setup_index::{SetupIndexPreview, SetupIndexSource};
+
+impl UserSetupIndexScope {
+    fn verify_original(
+        &self,
+        root: &Dir,
+        writes: &[crate::CapabilityFileSnapshot],
+    ) -> Result<(), WikiError> {
+        for declaration in &self.declarations {
+            if writes.iter().any(|snapshot| {
+                snapshot.relative == declaration.relative
+                    && snapshot.original != declaration.original
+            }) {
+                return Err(WikiError::Conflict(
+                    "setup registry changed before index initialization".into(),
+                ));
+            }
+        }
+        self.verify_current(root, writes)
+    }
+
+    fn verify_current(
+        &self,
+        root: &Dir,
+        writes: &[crate::CapabilityFileSnapshot],
+    ) -> Result<(), WikiError> {
+        if !self.external_approved
+            && self.registry.collections.iter().any(|collection| {
+                collection.state == CollectionState::Attached
+                    && collection.kind != CollectionKind::UserRoot
+            })
+        {
+            return Err(WikiError::Conflict(
+                "user setup cannot read an external collection".into(),
+            ));
+        }
+        for declaration in &self.declarations {
+            writes
+                .iter()
+                .find(|snapshot| snapshot.relative == declaration.relative)
+                .unwrap_or(declaration)
+                .verify_current(root)?;
+        }
+        Ok(())
+    }
+}
+
 /// Exclusive capability-backed lock shared by canonical knowledge mutations and
 /// short-lived authorization state transitions.
 pub struct CanonicalKnowledgeLock {
@@ -293,6 +347,36 @@ impl RagStore {
         let root_path = crate::shared::canonical_root(user_root)?;
         let root = pin_absolute_directory(&root_path, "user root")?;
         Ok(Self { root_path, root })
+    }
+
+    /// Open the same directory already pinned by a setup or installation operation.
+    ///
+    /// # Errors
+    /// Rejects path replacement instead of writing a newly selected directory through the path.
+    pub fn open_bound(user_root: &Path, expected: &Dir) -> Result<Self, WikiError> {
+        let live = Self::open(user_root)?;
+        let original = expected
+            .dir_metadata()
+            .map_err(|error| WikiError::Io(error.to_string()))?;
+        let current = live
+            .root
+            .dir_metadata()
+            .map_err(|error| WikiError::Io(error.to_string()))?;
+        if (
+            CapMetadataExt::dev(&original),
+            CapMetadataExt::ino(&original),
+        ) != (CapMetadataExt::dev(&current), CapMetadataExt::ino(&current))
+        {
+            return Err(WikiError::Conflict(
+                "user root changed before index preparation".into(),
+            ));
+        }
+        Ok(Self {
+            root_path: live.root_path,
+            root: expected
+                .try_clone()
+                .map_err(|error| WikiError::Io(error.to_string()))?,
+        })
     }
 
     pub(crate) fn from_pinned(root_path: PathBuf, root: Dir) -> Self {
@@ -374,6 +458,54 @@ impl RagStore {
             PathBuf::from(COLLECTION_REGISTRY_RELATIVE),
             bytes,
         )])
+    }
+
+    /// Prepare user setup without reading another collection's directory or content.
+    ///
+    /// A valid published snapshot is preserved, not presented as a new canonical rebuild.
+    /// Initialization is restricted to the user-root collection. An incomplete store with
+    /// attached external sources requires an explicit `hive index rebuild --user-root` action.
+    ///
+    /// # Errors
+    /// Preserves dirty, invalid, or externally scoped state that cannot be repaired in user setup.
+    pub fn ensure_user_setup_index(&self) -> Result<StoreCommit, WikiError> {
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.reject_dirty_mutation()?;
+        let declarations = [
+            COLLECTION_REGISTRY_RELATIVE,
+            crate::shared::PROJECT_REGISTRY_RELATIVE,
+        ]
+        .map(|path| crate::CapabilityFileSnapshot::capture(&self.root, Path::new(path)))
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+        let prior = self.load_registry_optional()?;
+        if self.index_state_is_complete()? && prior.is_some() {
+            return self.current_commit();
+        }
+        let projects = crate::shared::load_project_registry_metadata(&self.root_path)?;
+        let registry = prior.unwrap_or(self.default_registry()?);
+        if projects.projects.iter().any(|project| project.enabled)
+            || registry.collections.iter().any(|collection| {
+                collection.state == CollectionState::Attached
+                    && collection.kind != CollectionKind::UserRoot
+            })
+        {
+            return Err(WikiError::Conflict(
+                "index recovery needs an explicit hive index rebuild --user-root action; user setup did not inspect other collections".to_owned(),
+            ));
+        }
+        let writes = vec![(
+            PathBuf::from(COLLECTION_REGISTRY_RELATIVE),
+            registry_bytes(&registry)?,
+        )];
+        self.commit_scoped_canonical_writes_locked(
+            writes,
+            Some(&UserSetupIndexScope {
+                registry,
+                declarations,
+                external_approved: false,
+            }),
+        )
     }
 
     /// Synchronize the legacy project registry into the normalized collection registry.
@@ -2331,6 +2463,15 @@ impl RagStore {
         projects: &crate::shared::ProjectRegistry,
         prior: Option<CollectionRegistry>,
     ) -> Result<CollectionRegistry, WikiError> {
+        self.synchronize_project_collection_metadata(projects, prior, true)
+    }
+
+    fn synchronize_project_collection_metadata(
+        &self,
+        projects: &crate::shared::ProjectRegistry,
+        prior: Option<CollectionRegistry>,
+        inspect_roots: bool,
+    ) -> Result<CollectionRegistry, WikiError> {
         let mut registry = prior.unwrap_or(self.default_registry()?);
         let active_ids = projects
             .projects
@@ -2350,8 +2491,13 @@ impl RagStore {
             }
         }
         for project in projects.projects.iter().filter(|project| project.enabled) {
-            let canonical = crate::shared::canonical_root(&project.root)?;
-            let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
+            let canonical = if inspect_roots {
+                let canonical = crate::shared::canonical_root(&project.root)?;
+                let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
+                canonical
+            } else {
+                project.root.clone()
+            };
             let default_visibility = match project.visibility {
                 crate::shared::KnowledgeVisibility::Shared => CollectionVisibility::Shared,
                 crate::shared::KnowledgeVisibility::ProjectPrivate => {
@@ -2704,7 +2850,15 @@ impl RagStore {
 
     fn commit_canonical_writes_locked(
         &self,
+        writes: Vec<(PathBuf, Vec<u8>)>,
+    ) -> Result<StoreCommit, WikiError> {
+        self.commit_scoped_canonical_writes_locked(writes, None)
+    }
+
+    fn commit_scoped_canonical_writes_locked(
+        &self,
         mut writes: Vec<(PathBuf, Vec<u8>)>,
+        scope: Option<&UserSetupIndexScope>,
     ) -> Result<StoreCommit, WikiError> {
         writes.sort_by(|left, right| left.0.cmp(&right.0));
         if writes.windows(2).any(|pair| pair[0].0 == pair[1].0) {
@@ -2724,10 +2878,16 @@ impl RagStore {
             .iter()
             .map(|path| crate::CapabilityFileSnapshot::capture(&self.root, path))
             .collect::<Result<Vec<_>, _>>()?;
+        if let Some(scope) = scope {
+            scope.verify_original(&self.root, &snapshots)?;
+        }
         let absent_directories = absent_claim_directories(&self.root, &writes)?;
         let write_count = writes.len();
         let result = crate::transactional_capability(&self.root, &mut snapshots, |snapshots| {
             snapshots[0].install_staged(&self.root, &dirty_bytes)?;
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(0);
+            }
             let mut changed = Vec::new();
             for (index, (path, bytes)) in writes.iter().enumerate() {
                 if snapshots[index + 1].install_staged(&self.root, bytes)? {
@@ -2735,26 +2895,57 @@ impl RagStore {
                 }
             }
             injected_failure_after_canonical_writes()?;
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(1);
+            }
             let transient_claim_paths = snapshots[1..=write_count]
                 .iter()
                 .flat_map(crate::CapabilityFileSnapshot::transient_claim_paths)
                 .filter(|path| path.starts_with(CLAIMS_RELATIVE))
                 .map(Path::to_path_buf)
                 .collect::<BTreeSet<_>>();
-            let snapshot =
-                self.load_canonical_snapshot_excluding(generation, &transient_claim_paths)?;
+            let snapshot = if let Some(scope) = scope {
+                scope.verify_current(&self.root, snapshots)?;
+                RagSnapshot {
+                    schema_version: RAG_SCHEMA_VERSION,
+                    generation,
+                    registry: scope.registry.clone(),
+                    claims: self.load_claims_excluding(&scope.registry, &transient_claim_paths)?,
+                    documents: self.load_documents(&scope.registry)?,
+                }
+            } else {
+                self.load_canonical_snapshot_excluding(generation, &transient_claim_paths)?
+            };
             let artifact = build_rag_index(&snapshot).map_err(rag_error)?;
+            if let Some(scope) = scope {
+                scope.verify_current(&self.root, snapshots)?;
+            }
             let manifest_bytes = json_bytes(&artifact.manifest, "RAG generation manifest")?;
             let trust_bytes = rag_trust_bytes_for_manifest(&artifact.manifest, &manifest_bytes)?;
             if snapshots[write_count + 1].install_staged(&self.root, &artifact.sqlite_bytes)? {
                 changed.push(SHARED_INDEX_RELATIVE.to_owned());
             }
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(2);
+            }
             if snapshots[write_count + 2].install_staged(&self.root, &manifest_bytes)? {
                 changed.push(RAG_MANIFEST_RELATIVE.to_owned());
             }
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(3);
+            }
             snapshots[0].remove(&self.root)?;
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(4);
+            }
             if snapshots[write_count + 3].install_staged(&self.root, &trust_bytes)? {
                 changed.push(RAG_TRUST_RELATIVE.to_owned());
+            }
+            if scope.is_some_and(|s| s.external_approved) {
+                setup_index::interrupt(5);
+            }
+            if let Some(scope) = scope {
+                scope.verify_current(&self.root, snapshots)?;
             }
             changed.sort();
             changed.dedup();
@@ -4707,6 +4898,129 @@ mod tests {
         let store = RagStore::open(temporary.path()).expect("open store");
         store.ensure_registry().expect("initialize store");
         (temporary, store)
+    }
+
+    #[test]
+    fn user_setup_index_initializes_only_user_root_and_repairs_its_own_projection() {
+        let root = tempfile::tempdir().unwrap();
+        let store = RagStore::open(root.path()).unwrap();
+        let first = store.ensure_user_setup_index().unwrap();
+        assert_eq!(store.load_registry().unwrap().collections.len(), 1);
+        assert_eq!(
+            store.validate_current().unwrap().generation,
+            first.generation
+        );
+        std::fs::write(root.path().join(SHARED_INDEX_RELATIVE), b"damaged index").unwrap();
+        store.ensure_user_setup_index().unwrap();
+        store.validate_current().unwrap();
+        assert!(!root.path().join(PROJECT_REGISTRY_RELATIVE).exists());
+    }
+
+    #[test]
+    fn user_setup_index_rejects_a_different_directory_from_the_installation_binding() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        let pinned = Dir::open_ambient_dir(first.path(), ambient_authority()).unwrap();
+        assert!(RagStore::open_bound(second.path(), &pinned).is_err());
+        assert!(!second.path().join(".hive").exists());
+        RagStore::open_bound(first.path(), &pinned)
+            .unwrap()
+            .ensure_user_setup_index()
+            .unwrap();
+        assert!(first.path().join(SHARED_INDEX_RELATIVE).is_file());
+        assert!(!second.path().join(".hive").exists());
+    }
+
+    #[test]
+    fn user_setup_index_preserves_published_external_data_and_requires_explicit_recovery() {
+        let (root, store) = store();
+        let project = tempfile::tempdir().unwrap();
+        store
+            .register_project_atomic(RegisteredProject {
+                id: "kept-project".into(),
+                root: project.path().to_path_buf(),
+                enabled: true,
+                language: KnowledgeLanguage::En,
+                visibility: KnowledgeVisibility::Shared,
+            })
+            .unwrap();
+        let paths = [
+            PROJECT_REGISTRY_RELATIVE,
+            COLLECTION_REGISTRY_RELATIVE,
+            SHARED_INDEX_RELATIVE,
+            RAG_MANIFEST_RELATIVE,
+            RAG_TRUST_RELATIVE,
+        ];
+        let before: BTreeMap<_, _> = paths
+            .iter()
+            .map(|path| (*path, std::fs::read(root.path().join(path)).unwrap()))
+            .collect();
+        let generation = store.validate_current().unwrap().generation;
+        project.close().unwrap();
+        let preserved = store.ensure_user_setup_index().unwrap();
+        assert_eq!(preserved.generation, generation);
+        assert_eq!(preserved.changed_paths, Vec::<String>::new());
+        for path in paths {
+            assert_eq!(std::fs::read(root.path().join(path)).unwrap(), before[path]);
+        }
+        std::fs::remove_file(root.path().join(SHARED_INDEX_RELATIVE)).unwrap();
+        let error = store.ensure_user_setup_index().unwrap_err();
+        assert!(error.to_string().contains("explicit hive index rebuild"));
+        assert!(!root.path().join(SHARED_INDEX_RELATIVE).exists());
+        for path in paths.into_iter().filter(|p| *p != SHARED_INDEX_RELATIVE) {
+            assert_eq!(std::fs::read(root.path().join(path)).unwrap(), before[path]);
+        }
+    }
+
+    #[test]
+    fn user_setup_index_does_not_rebuild_an_attached_directory_without_legacy_projects() {
+        let (root, store) = store();
+        let directory = tempfile::tempdir().unwrap();
+        store
+            .register_collection(registration(directory.path(), "user-setup-scope"))
+            .unwrap();
+        directory.close().unwrap();
+        std::fs::remove_file(root.path().join(SHARED_INDEX_RELATIVE)).unwrap();
+        assert!(store
+            .ensure_user_setup_index()
+            .unwrap_err()
+            .to_string()
+            .contains("explicit hive index rebuild"));
+        assert!(!root.path().join(PROJECT_REGISTRY_RELATIVE).exists());
+        assert!(!root.path().join(SHARED_INDEX_RELATIVE).exists());
+    }
+
+    #[test]
+    fn user_setup_index_preserves_a_registry_changed_after_its_scope_snapshot() {
+        let root = tempfile::tempdir().unwrap();
+        let store = RagStore::open(root.path()).unwrap();
+        let registry = store.default_registry().unwrap();
+        let declarations = [COLLECTION_REGISTRY_RELATIVE, PROJECT_REGISTRY_RELATIVE]
+            .map(|path| {
+                crate::CapabilityFileSnapshot::capture(&store.root, Path::new(path)).unwrap()
+            })
+            .into();
+        let planned = registry_bytes(&registry).unwrap();
+        let scope = UserSetupIndexScope {
+            registry: registry.clone(),
+            declarations,
+            external_approved: false,
+        };
+        let mut changed = registry;
+        changed.collections[0].aliases.push("user-edited".into());
+        let changed = registry_bytes(&changed.canonicalized().unwrap()).unwrap();
+        let path = root.path().join(COLLECTION_REGISTRY_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        assert!(store
+            .commit_scoped_canonical_writes_locked(
+                vec![(PathBuf::from(COLLECTION_REGISTRY_RELATIVE), planned)],
+                Some(&scope)
+            )
+            .is_err());
+        assert_eq!(std::fs::read(path).unwrap(), changed);
+        assert!(!root.path().join(SHARED_INDEX_RELATIVE).exists());
+        assert!(!root.path().join(RAG_DIRTY_RELATIVE).exists());
     }
 
     fn registration(root: &Path, inventory: &str) -> CollectionRegistration {

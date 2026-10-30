@@ -1,0 +1,30 @@
+{
+  "routes": [
+    {
+      "forbidden_inputs": [
+        "sqlite",
+        "runtime",
+        "backup"
+      ],
+      "from_max": "0.13.2",
+      "from_min": "0.9.1",
+      "inputs": [
+        "canonical-markdown",
+        "typed-yaml",
+        "typed-toml"
+      ],
+      "kind": "same-major",
+      "migration_id": "same-major-render-v1",
+      "preserves": [
+        "project-files",
+        "docs",
+        "user-markdown-body",
+        "foreign-bytes"
+      ],
+      "route_id": "same-major-0-to-0-v1",
+      "to_version": "0.14.0"
+    }
+  ],
+  "schema_version": 1,
+  "target_version": "0.14.0"
+}

@@ -26,6 +26,14 @@ EXPECTED_ACTIONS = {
     "SetupHarness",
     "SetupHiveUser",
     "DescribeHiveUserSetup",
+    "DescribeHiveSetupSection",
+    "DescribeHiveSetupQuestion",
+    "SaveUserSetupProgress",
+    "InspectUserSetupProgress",
+    "ClearUserSetupProgress",
+    "SaveProjectSetupProgress",
+    "InspectProjectSetupProgress",
+    "ClearProjectSetupProgress",
     "ManageHiveUserFeature",
     "InstallHiveUser",
     "UninstallHiveUser",
@@ -117,6 +125,7 @@ GENERIC_EVIDENCE_KINDS = {
     "report",
     "release",
     "user-setup-catalog",
+    "setup-questions",
     "session-manifest",
 }
 EXPECTED_LOOP_EVIDENCE_KINDS = {

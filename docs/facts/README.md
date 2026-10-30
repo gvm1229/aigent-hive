@@ -21,6 +21,12 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| Windows 실행 파일의 버전 문자 해석 | [en](en/windows-native-version-output.md) | [ko](ko/windows-native-version-output.md) |
+| 대화형 CLI 모델 수용과 지속 회귀 | [en](en/interactive-cli-model-qualification.md) | [ko](ko/interactive-cli-model-qualification.md) |
+| Windows 구버전 연결의 환경 전달 | [en](en/windows-legacy-bridge-environment.md) | [ko](ko/windows-legacy-bridge-environment.md) |
+| Windows 감시의 모듈 시작 기한 | [en](en/windows-monitor-module-deadline.md) | [ko](ko/windows-monitor-module-deadline.md) |
+| Windows 직접 교체와 옛 사본 정리 | [en](en/windows-direct-replacement.md) | [ko](ko/windows-direct-replacement.md) |
+| npm 경로의 소유 범위와 명령 표기 | [en](en/npm-path-identity.md) | [ko](ko/npm-path-identity.md) |
 | 과거 재개 차단 재현 | [en](en/codex-resume-lock-reference.md) | [ko](ko/codex-resume-lock-reference.md) |
 | 알림 전용 중단 안내 | [en](en/usage-stop-notice.md) | [ko](ko/usage-stop-notice.md) |
 | 추가 지시 보존의 후속 범위 | [en](en/steering-preservation.md) | [ko](ko/steering-preservation.md) |
@@ -160,3 +166,5 @@ Derived SQLite와 advisory lock:
 | 기본 활성 소진 보호 | [en](en/zero-quota-safeguard.md) | [ko](ko/zero-quota-safeguard.md) |
 
 - [0.13.2 이전 사용량 보호 사실 본문 보존](../archive/facts/usage-guard-before-0.13.2.md)
+
+| 사용량 중단 기본 비활성화 계획 | [en](en/usage-default-off-scope.md) | [ko](ko/usage-default-off-scope.md) |

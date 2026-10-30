@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "user-quick": {
+    "interface_language": "ko",
+    "selected_hosts": [
+      "codex"
+    ],
+    "wiki": {
+      "enabled": true,
+      "language": "ko",
+      "backend": "markdown"
+    },
+    "profile": {
+      "contexts": [
+        "non-developer"
+      ]
+    },
+    "persona": {
+      "id": "balanced"
+    },
+    "skills": {
+      "mode": "all"
+    },
+    "judge_invocation": "explicit",
+    "update_check": {
+      "enabled": false
+    },
+    "usage_guard": {
+      "enforcement_enabled": false,
+      "stop_remaining_percent": 20,
+      "codexbar_fallback_enabled": false,
+      "discord": {
+        "enabled": false
+      }
+    }
+  },
+  "project-quick": {
+    "project_name": "luna-quick",
+    "setup_mode": "expedited",
+    "project_kind": "general",
+    "primary_host": "codex",
+    "usage_stop_remaining_percent": 20,
+    "elevated_judge_quorum": "2/3",
+    "critical_judge_quorum": "3/3+human",
+    "persistent_roles": [],
+    "knowledge_include_paths": [],
+    "knowledge_exclude_paths": [
+      ".env",
+      "**/.env",
+      "**/.env.*",
+      "**/credentials*",
+      "**/secrets/**"
+    ],
+    "approved_optional_skills": [],
+    "approved_fallback_hooks": []
+  }
+}

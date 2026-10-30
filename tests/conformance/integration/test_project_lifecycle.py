@@ -886,6 +886,17 @@ else:
             usage_enabled=True,
             threshold=17,
         )
+        # The old enabled flag cannot turn a stored v2 master switch back on.
+        # This scenario explicitly selects v2 protection while reducing its Skills.
+        reduced_values = read_yaml(reduced)
+        reduced_values["schema_version"] = 2
+        reduced_values["usage_guard"] = read_yaml(
+            user_root / ".hive/config/user-setup.yml"
+        )["usage_guard"]
+        reduced_values["usage_guard"]["enforcement_enabled"] = True
+        reduced_values["usage_guard"]["preflight"]["threshold_enabled"] = True
+        reduced_values["usage_guard"]["stop_remaining_percent"] = 17
+        write_yaml(reduced, reduced_values)
         reapplied, reapplied_result = self.invoke(
             "setup",
             "--scope",

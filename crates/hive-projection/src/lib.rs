@@ -616,10 +616,10 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 23] = [
+    const SUPPORTED: [&str; 24] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
         "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0",
-        "0.11.1", "0.12.0", "0.13.0", "0.13.1",
+        "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -1440,6 +1440,26 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
         }
     }
     let resources: &[(&str, &[u8])] = match name {
+        "project-setup" => &[
+            (
+                "references/advanced-setup.md",
+                include_bytes!(
+                    "../../../harness/skills/project-setup/references/advanced-setup.md"
+                ),
+            ),
+            (
+                "references/directive-recovery.md",
+                include_bytes!(
+                    "../../../harness/skills/project-setup/references/directive-recovery.md"
+                ),
+            ),
+            (
+                "references/structured-choices.md",
+                include_bytes!(
+                    "../../../harness/skills/project-setup/references/structured-choices.md"
+                ),
+            ),
+        ],
         "amend-directive" => &[(
             "references/transplant.md",
             include_bytes!("../../../harness/skills/amend-directive/references/transplant.md"),
@@ -3148,16 +3168,34 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn setup_router_resources_are_complete_for_each_host() {
-        let selected = vec!["user-setup".to_owned()];
+        let selected = vec!["user-setup".to_owned(), "project-setup".to_owned()];
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
             let projection = compile_user_projection(host, &selected, &[]).expect("projection");
             for (relative, source) in user_setup_resources() {
                 let path = format!("{}/user-setup/{relative}", host.skill_root());
                 assert_eq!(projection.files.get(&path).map(Vec::as_slice), Some(source));
             }
+            for resource in [
+                "advanced-setup.md",
+                "directive-recovery.md",
+                "structured-choices.md",
+            ] {
+                let relative = format!("{}/project-setup/references/{resource}", host.skill_root());
+                let source = std::fs::read(
+                    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                        .join("../../harness/skills/project-setup/references")
+                        .join(resource),
+                )
+                .unwrap();
+                assert_eq!(projection.files.get(&relative), Some(&source));
+            }
             let other = compile_user_projection(host, &["quick-answer".to_owned()], &[])
                 .expect("unrelated skill");
             assert!(!other.files.keys().any(|path| path.contains("/user-setup/")));
+            assert!(!other
+                .files
+                .keys()
+                .any(|path| path.contains("/project-setup/")));
         }
     }
 
@@ -3477,6 +3515,7 @@ description: Inspect one local file without changing it.
             ("0.12.0", 28),
             ("0.13.0", 28),
             ("0.13.1", 28),
+            ("0.13.2", 28),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");

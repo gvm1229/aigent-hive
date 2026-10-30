@@ -347,6 +347,10 @@ impl CommandRunner for SystemCommandRunner {
         timeout: Duration,
         output_limit: usize,
     ) -> Result<CommandOutput, SensorError> {
+        let timeout = crate::user_setup::command_timeout(timeout);
+        if timeout.is_zero() {
+            return Err(SensorError::Timeout);
+        }
         verify_executable_identity(program)?;
         let mut command = Command::new(&program.path);
         command

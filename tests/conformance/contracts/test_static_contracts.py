@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import importlib.util
 import json
 import re
 import struct
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -131,6 +134,37 @@ class Phase3SchemaContract(unittest.TestCase):
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_digest_sync_rejects_crlf_sources_before_replacing_the_ledger(self) -> None:
+        spec = importlib.util.spec_from_file_location("sync_user_plugin", ROOT / "scripts/sync-user-plugin.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module.SOURCE = root / "skills"
+            module.ACTIVE_SKILLS_LEDGER = root / "ledger.yml"
+            source = module.SOURCE / "fixture/SKILL.md"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"# Fixture\r\n")
+            ledger = "- name: fixture\n  source_type: built-in\n  content_digest: sha256:" + "0" * 64 + "\n"
+            module.ACTIVE_SKILLS_LEDGER.write_bytes(ledger.encode())
+            with self.assertRaisesRegex(ValueError, "must use LF"):
+                module.sync_active_skill_digests()
+            self.assertEqual(module.ACTIVE_SKILLS_LEDGER.read_bytes(), ledger.encode())
+            source.write_bytes(b"# Fixture\n")
+            module.sync_active_skill_digests()
+            self.assertIn(hashlib.sha256(source.read_bytes()).hexdigest(), module.ACTIVE_SKILLS_LEDGER.read_text())
+
+    def test_current_skill_ledger_hashes_match_exact_canonical_and_projected_bytes(self) -> None:
+        ledger = (ROOT / "harness/template/.hive/config/active-skills.yml.jinja").read_text()
+        entries = re.findall(r"- name: ([a-z0-9-]+)\n  source_type: built-in\n  content_digest: sha256:([0-9a-f]{64})", ledger)
+        self.assertTrue(entries)
+        for name, expected in entries:
+            canonical = (SKILLS / name / "SKILL.md").read_bytes()
+            self.assertNotIn(b"\r\n", canonical, name)
+            self.assertEqual(hashlib.sha256(canonical).hexdigest(), expected, name)
+            for root in [PLUGIN_SKILLS, TEMPLATE_SKILLS, ROOT / "harness/template/.claude/skills"]:
+                self.assertEqual((root / name / "SKILL.md").read_bytes(), canonical, (root, name))
+
     def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
         workflow = directive_text(".agents/directives/03-workflow.md")
         coordination = directive_text(".agents/directives/06-session-coordination.md")
@@ -327,19 +361,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
         skill += "\n".join(path.read_text(encoding="utf-8") for path in
                            sorted((SKILLS / "user-setup/references").glob("*.md")))
+        normalized = " ".join(skill.split())
         for required in (
-            "hive setup --scope user --describe --output json",
-            "Get-Command hive",
-            "where.exe hive",
-            "npm prefix -g",
-            "hive setup --progress save --scope user",
-            "활성화 (권장)",
-            "hive usage probe-native --host codex --output json",
-            "Continue from where I left off",
-            "Discord usage notification",
-            "CodexBar fallback",
+            "--show --summary --output json",
+            "hive setup --scope user --user-root <user-root>",
+            "--describe --question <question-id> --output json",
+            "--input-channel agent",
+            "--resume --review",
+            "A hidden tool PTY is not a user terminal",
+            "Never regenerate the full YAML after each answer",
+            "Optional downloads, external delivery, hooks and monitor interruption retain separate exact consent",
+            "inspect status, not to apply again",
         ):
-            self.assertIn(required, skill)
+            self.assertIn(required, normalized)
+        self.assertNotIn("hive setup --scope user --describe --output json", skill)
+        self.assertNotIn("hive usage probe-native", skill)
         self.assertIn("Do not translate `Skill` as `기술`", skill)
         resolver = SKILLS / "user-setup/scripts/resolve-hive.ps1"
         self.assertTrue(resolver.is_file())
@@ -372,7 +408,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
             encoding="utf-8"
         )
-        user_setup_skill = (SKILLS / "user-setup/references/workflow.md").read_text(encoding="utf-8")
+        user_setup_skill = (SKILLS / "user-setup/references/recovery.md").read_text(encoding="utf-8")
         project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
             encoding="utf-8"
         )

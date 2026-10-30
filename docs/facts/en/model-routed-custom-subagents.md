@@ -10,12 +10,12 @@ tags: [antigravity, claude, codex, model-routing, subagent, v0-10, v0-9]
 aliases: ["Sol Advisor parity", "Task-appropriate model routing"]
 sources:
   - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:315e8160293b1df22289c1b688ff8fb7ce444a791c858013324a73195b01c194"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:a7caad0d660d83378b297ec3678312fa741b411b8115ed9eca98400d1db703d0"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
   - "repo:crates/hive-core/src/native_workflow.rs#sha256:246f845d21fe73c070abdfa4ffa78d28e829d84b3da498dcc1530355a54a0900"
   - "repo:docs/archive/plans/foundations/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"
   - "repo:docs/research/host-work-delegation-2026-08-20.md#sha256:00e8c2821082ececec3cbef81538030fc9487a8ba0903f1ee1fb378d73aa6c74"
 links: [judge-verification, orchestration-ownership, role-state, skill-routing]
-reviewed_revision: "git:0ee29cc7a10c6786f5d325569f85182e654cd4b1"
+reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
 ---
 

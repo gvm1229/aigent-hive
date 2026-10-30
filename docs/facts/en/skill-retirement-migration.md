@@ -10,14 +10,14 @@ tags: [migration, skills, upgrade, v0-10]
 aliases: ["Retired Skill cleanup"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:240f5376bc7ea26109a1c34be965c6e74f9dc840e400af78bb1e55a2bac01263"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:cd9973f27fdd4952ee1936257cb4ed0f2f98d6b8033aa1f89fc2b93eefeb34fd"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:5327d6c3417a62069df8eda30e76fe907c48418806023847eb16189cbe3041ef"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:3e2106b90defce8839164efed8054463a8504b873abcb7cd07d7e8a8a45c60bc"
-  - "repo:harness/release/stable-skill-ledger.yml#sha256:b623022f72471cc76527bb784586ab2a0832307c3b29e6f89127e26366b77293"
+  - "repo:harness/release/stable-skill-ledger.yml#sha256:d7fda1a06f11a20c483bbf3b7f3f2eefbdbca86727c31932403206fb67f522ef"
   - "repo:scripts/check-stable-skill-ledger.py#sha256:0aa6a3582d31854106dd69d7faf05072a9027a3e3cfa707e00fce43b7090de58"
 links: [global-onboarding, v0-10-product-scope, verified-workflow]
-reviewed_revision: "git:55b0498374de1a10818ab15b2b0eda5fbb4a645d"
+reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
 ---
 

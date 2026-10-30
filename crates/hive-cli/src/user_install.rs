@@ -1,4 +1,8 @@
+pub(crate) mod deactivation;
 mod host_state;
+mod index_removal;
+mod monitor_claim_retirement;
+mod uninstall;
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{CommandOutput, CommandRunner, QualifiedExecutable, SystemCommandRunner};
 use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
@@ -27,6 +31,9 @@ use host_state::{
 use host_state::{
     parse_antigravity_plugin_state, parse_claude_marketplace_state, parse_claude_plugin_state,
     parse_codex_marketplace_state, parse_codex_plugin_state,
+};
+pub(crate) use monitor_claim_retirement::{
+    retire_monitor_config_claim, retire_monitor_state_claim,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -427,6 +434,8 @@ struct UserBackupManifest {
     host_mutations: Vec<HostMutation>,
     #[serde(default)]
     index_existed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    index_removal: Option<index_removal::RemovalBackup>,
     #[serde(default)]
     codex_state_before: Option<CodexHostState>,
     #[serde(default)]
@@ -460,7 +469,8 @@ struct UserBackupEntry {
     unix_mode: Option<u32>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 struct FilePermissions {
     executable: bool,
     unix_mode: Option<u32>,
@@ -616,13 +626,16 @@ const USER_UNINSTALL_USAGE: &str = "\
 Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge.
 
 USAGE:
-    hive uninstall [--user-root <absolute-dir>] [--output json]
+    hive uninstall [--user-root <absolute-dir>] [--dry-run | --confirm] [--output json]
+    hive uninstall --user-root <absolute-dir> --resume <operation-id> [--output json]
 
 RESULT:
-    Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Always preserve `.hive/knowledge/` and saved user preferences.
+    Preview removal and preservation before confirmation. JSON and redirected input do not grant consent.
+    Preserve saved preferences, knowledge, lifecycle history, and project source files.
 ";
 
 struct UserUninstallArguments {
+    user_root: PathBuf,
     root_cap: Dir,
 }
 
@@ -631,10 +644,11 @@ pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
         print!("{USER_UNINSTALL_USAGE}");
         return ExitCode::SUCCESS;
     }
-    let result = parse_uninstall(arguments)
-        .and_then(|arguments| execute_uninstall(&arguments, &SystemCommandRunner))
-        .unwrap_or_else(|error| failure("UninstallHiveUser", &error));
-    emit_action_result(&result)
+    uninstall::run(arguments)
+}
+
+pub(crate) fn run_uninstall_completion(arguments: &[String]) -> ExitCode {
+    uninstall::complete_helper(arguments)
 }
 
 fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, InstallError> {
@@ -669,9 +683,31 @@ fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, Insta
     }
     let requested_user_root =
         user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let (_, root_cap) = open_canonical_user_root(&requested_user_root)?;
-    Ok(UserUninstallArguments { root_cap })
+    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserUninstallArguments {
+        user_root,
+        root_cap,
+    })
 }
+
+const UNINSTALL_TREES: &[&str] = &[
+    ".hive/install",
+    ".hive/install-transactions",
+    ".hive/backups",
+    ".hive/marketplaces",
+    ".hive/plugins",
+    ".hive/index",
+    ".hive/runtime",
+    ".hive/claims",
+    ".hive/guides",
+];
+const UNINSTALL_FILES: &[&str] = &[
+    ROOT_INDEX_RELATIVE,
+    ".hive/config/user-active-skills.yml",
+    ".hive/config/user-setup-progress.yml",
+    ".hive/config/user-setup-review.yml",
+    ".hive/config/projects.yml",
+];
 
 fn execute_uninstall(
     arguments: &UserUninstallArguments,
@@ -719,26 +755,10 @@ fn execute_uninstall(
     {
         remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
     }
-    for relative in [
-        ".hive/install",
-        ".hive/install-transactions",
-        ".hive/backups",
-        ".hive/marketplaces",
-        ".hive/plugins",
-        ".hive/index",
-        ".hive/runtime",
-        ".hive/claims",
-        ".hive/guides",
-    ] {
+    for relative in UNINSTALL_TREES {
         remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
-    for relative in [
-        ROOT_INDEX_RELATIVE,
-        ".hive/config/user-active-skills.yml",
-        ".hive/config/user-setup-progress.yml",
-        ".hive/config/user-setup-review.yml",
-        ".hive/config/projects.yml",
-    ] {
+    for relative in UNINSTALL_FILES {
         remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
     for relative in [
@@ -1304,6 +1324,34 @@ fn execute_command(
     command: &UserCommandArguments,
     runner: &impl CommandRunner,
 ) -> ActionResult {
+    if command.mode == UserMode::Apply {
+        let hosts: Vec<_> = command
+            .hosts
+            .iter()
+            .map(|host| host.as_str().to_owned())
+            .collect();
+        match crate::update_bridge::maybe_setup(&command.user_root, &hosts) {
+            Ok(Some(mut result)) => {
+                result.action = action_name(operation, command.mode);
+                return result;
+            }
+            Ok(None) => {}
+            Err(message) => {
+                return ActionResult {
+                    schema_version: 1,
+                    action: action_name(operation, command.mode),
+                    status: "needs-input",
+                    exit_code: 2,
+                    code: "hive.update-input-pending",
+                    message,
+                    changed_paths: Vec::new(),
+                    evidence: Vec::new(),
+                    next_action: Some(crate::update_bridge::resume_command(&command.user_root)),
+                    data: Some(json!({"settings_preserved":true,"legacy_interaction":"pending"})),
+                }
+            }
+        }
+    }
     let mut result = execute_hosts(operation, command, runner);
     if result.exit_code == 0
         && operation == UserOperation::Update
@@ -1865,6 +1913,134 @@ pub(crate) fn read_user_setup_file(
     read_optional_regular(root, relative, maximum).map_err(|error| error.message().to_owned())
 }
 
+pub(crate) fn inspect_setup_host(host: crate::user_setup::SelectedHost) -> (bool, Option<String>) {
+    let host = match host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let runner = SystemCommandRunner;
+    let program = if host == UserHost::Antigravity {
+        "agy"
+    } else {
+        host.as_str()
+    };
+    let Ok(executable) = runner.qualify(program) else {
+        return (false, None);
+    };
+    (
+        true,
+        probe_supported_host_version(host, &executable, &runner).ok(),
+    )
+}
+
+pub(crate) fn lock_user_setup(root: &Dir) -> Result<std::fs::File, String> {
+    let (parent, name) = capability_parent(root, Path::new(".hive/config/setup-apply.lock"), true)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "setup lock parent is unavailable".to_owned())?;
+    let mut options = OpenOptions::new();
+    options
+        .read(true)
+        .write(true)
+        .create(true)
+        .follow(FollowSymlinks::No);
+    let file = parent
+        .open_with(&name, &options)
+        .map_err(|_| "cannot open the owned setup lock".to_owned())?;
+    if !file
+        .metadata()
+        .map_err(|_| "cannot inspect setup lock")?
+        .is_file()
+    {
+        return Err("setup lock is not a regular file".into());
+    }
+    let file = file.into_std();
+    file.try_lock()
+        .map_err(|_| "another setup apply or recovery is running".to_owned())?;
+    Ok(file)
+}
+
+pub(crate) fn lock_setup_state(root: &Dir, scope: &str) -> Result<std::fs::File, String> {
+    if scope.len() != 64 || !scope.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("invalid setup state scope".into());
+    }
+    let relative = Path::new(".hive/config/setup-progress/locks").join(format!("{scope}.lock"));
+    let (parent, name) = capability_parent(root, &relative, true)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or("setup state lock parent is unavailable")?;
+    let mut options = OpenOptions::new();
+    options
+        .read(true)
+        .write(true)
+        .create(true)
+        .follow(FollowSymlinks::No);
+    let file = parent
+        .open_with(&name, &options)
+        .map_err(|_| "cannot open setup state lock")?;
+    if !file
+        .metadata()
+        .map_err(|_| "cannot inspect setup state lock")?
+        .is_file()
+    {
+        return Err("setup state lock is not a regular file".into());
+    }
+    let file = file.into_std();
+    file.try_lock()
+        .map_err(|_| "another setup state write is running".to_owned())?;
+    Ok(file)
+}
+
+/// Read retained objects only; callers must hold their scope lock before recovery.
+pub(crate) struct SetupWriteClaim {
+    pub before: Option<Vec<u8>>,
+    pub before_mode: Option<u32>,
+    pub staged: Option<Vec<u8>>,
+}
+
+pub(crate) fn inspect_setup_write_claim(
+    root: &Dir,
+    relative: &Path,
+    limit: u64,
+) -> Result<Option<SetupWriteClaim>, String> {
+    let Some((parent, _)) =
+        capability_parent(root, relative, false).map_err(|error| error.message().to_owned())?
+    else {
+        return Ok(None);
+    };
+    let claim = match parent.open_dir_nofollow(claim_name(relative)) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    for entry in claim.entries().map_err(|error| error.to_string())? {
+        let name = entry.map_err(|error| error.to_string())?.file_name();
+        if name != OsStr::new("claimed.bin") && name != OsStr::new("replacement.bin") {
+            return Err("setup state claim contains an unrecognized object".into());
+        }
+    }
+    let before = read_optional_regular(&claim, Path::new("claimed.bin"), limit)
+        .map_err(|error| error.message().to_owned())?;
+    let before_mode = if before.is_some() {
+        host_policy_mode(&claim, Path::new("claimed.bin"))?
+    } else {
+        None
+    };
+    let staged = read_optional_regular(&claim, Path::new("replacement.bin"), limit)
+        .map_err(|error| error.message().to_owned())?;
+    if staged.is_some()
+        && file_permissions(&claim, Path::new("replacement.bin"))
+            .map_err(|error| error.message().to_owned())?
+            != setup_file_permissions(relative)
+    {
+        return Err("setup state replacement permissions changed".into());
+    }
+    Ok(Some(SetupWriteClaim {
+        before,
+        before_mode,
+        staged,
+    }))
+}
+
 pub(crate) fn replace_user_setup_file(
     root: &Dir,
     relative: &Path,
@@ -1884,12 +2060,24 @@ pub(crate) fn replace_user_setup_file(
                 .expect("existing setup file requires a permission token"),
         }),
         desired,
-        FilePermissions {
-            executable: false,
-            unix_mode: None,
-        },
+        setup_file_permissions(relative),
     )
     .map_err(|error| error.message().to_owned())
+}
+
+fn setup_file_permissions(relative: &Path) -> FilePermissions {
+    let mut permissions = installed_file_permissions(false);
+    if cfg!(unix)
+        && (relative.starts_with(".hive/config/setup-progress")
+            || relative.starts_with(".hive/history/lifecycle"))
+    {
+        permissions.unix_mode = Some(0o600);
+    }
+    permissions
+}
+
+pub(crate) fn setup_file_mode(relative: &Path) -> Option<u32> {
+    setup_file_permissions(relative).unix_mode
 }
 
 /// Reuse the owned-file CAS while retaining the permissions of foreign host settings.
@@ -1921,6 +2109,39 @@ pub(crate) fn replace_host_policy_file(
     .map_err(|error| error.message().to_owned())
 }
 
+/// Restore a journaled setup change with its original bytes and permissions.
+pub(crate) fn restore_setup_file(
+    root: &Dir,
+    relative: &Path,
+    published: Option<&[u8]>,
+    original: Option<&[u8]>,
+    original_mode: Option<u32>,
+) -> Result<(), String> {
+    let expected_mode = if original.is_some() {
+        original_mode
+    } else {
+        setup_file_mode(relative)
+    };
+    let permissions = FilePermissions {
+        executable: original_mode.map_or(!cfg!(unix), |mode| mode & 0o111 != 0),
+        unix_mode: original_mode,
+    };
+    cas_activate(
+        root,
+        relative,
+        published.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: FilePermissions {
+                executable: expected_mode.map_or(!cfg!(unix), |mode| mode & 0o111 != 0),
+                unix_mode: expected_mode,
+            },
+        }),
+        original,
+        permissions,
+    )
+    .map_err(|error| error.message().to_owned())
+}
+
 pub(crate) fn host_policy_mode(root: &Dir, relative: &Path) -> Result<Option<u32>, String> {
     file_permissions(root, relative)
         .map(|value| value.unix_mode)
@@ -1934,6 +2155,241 @@ pub(crate) fn recover_host_policy_file(
     before: &str,
     after: &str,
     mode: Option<u32>,
+) -> Result<(), String> {
+    let installed_mode = if cfg!(unix) {
+        Some(mode.unwrap_or(0o600))
+    } else {
+        None
+    };
+    recover_bound_user_file(root, relative, before, after, mode, installed_mode)
+}
+
+pub(crate) fn recover_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<(), String> {
+    if finish_setup_claim(root, relative, before, after, mode)
+        .map_err(|error| error.message().to_owned())?
+    {
+        return Ok(());
+    }
+    recover_bound_user_file(
+        root,
+        relative,
+        before,
+        after,
+        mode,
+        setup_file_mode(relative),
+    )
+}
+
+/// Restore an interrupted journal removal so its bound payload remains available for replay.
+pub(crate) fn recover_user_setup_record(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<(), String> {
+    recover_bound_user_file(
+        root,
+        relative,
+        before,
+        after,
+        mode,
+        setup_file_mode(relative),
+    )
+}
+
+fn finish_setup_claim(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+) -> Result<bool, InstallError> {
+    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    if current
+        .as_deref()
+        .map_or_else(|| "absent".into(), sha256_digest)
+        != after
+    {
+        return Ok(false);
+    }
+    let Some((parent, _)) = capability_parent(root, relative, false)? else {
+        return Ok(false);
+    };
+    let name = claim_name(relative);
+    let claim = match parent.open_dir_nofollow(&name) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(io_internal("open setup recovery claim", relative, error)),
+    };
+    if current.is_some() && file_permissions(root, relative)? != setup_file_permissions(relative) {
+        return Ok(false);
+    }
+    let names = claim
+        .entries()
+        .map_err(|error| io_internal("read setup recovery claim", relative, error))?
+        .map(|entry| entry.map(|entry| entry.file_name()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| io_internal("read setup recovery claim entry", relative, error))?;
+    for name in &names {
+        let (digest, permissions) = if name == OsStr::new("claimed.bin") {
+            (
+                Some(before),
+                Some(FilePermissions {
+                    executable: !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0),
+                    unix_mode: mode,
+                }),
+            )
+        } else if name == OsStr::new("replacement.bin") {
+            (
+                (after != "absent").then_some(after),
+                (after != "absent").then(|| setup_file_permissions(relative)),
+            )
+        } else {
+            return Err(InstallError::Conflict(
+                "setup recovery claim contains an unrecognized object".into(),
+            ));
+        };
+        validate_retained_object(
+            &claim,
+            Path::new(name),
+            digest,
+            permissions,
+            relative,
+            "setup",
+        )?;
+    }
+    for name in &names {
+        claim
+            .remove_file(name)
+            .map_err(|error| io_internal("finish setup recovery object", relative, error))?;
+    }
+    drop(claim);
+    parent
+        .remove_dir(name)
+        .map_err(|error| io_internal("finish setup recovery claim", relative, error))?;
+    Ok(true)
+}
+
+pub(crate) fn retained_user_setup_original(
+    root: &Dir,
+    relative: &Path,
+) -> Result<Option<Vec<u8>>, String> {
+    let Some((parent, _)) =
+        capability_parent(root, relative, false).map_err(|error| error.message().to_owned())?
+    else {
+        return Ok(None);
+    };
+    let claim = match parent.open_dir_nofollow(claim_name(relative)) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    read_optional_regular(&claim, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)
+        .map_err(|error| error.message().to_owned())
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_replace(
+    root: &Dir,
+    relative: &Path,
+    before: &[u8],
+    after: &[u8],
+    published: bool,
+) {
+    let permissions = file_permissions(root, relative).unwrap();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = cas_activate_with_barrier(
+            root,
+            relative,
+            Some(ExpectedFile {
+                bytes: before,
+                permissions,
+            }),
+            Some(after),
+            setup_file_permissions(relative),
+            Some(&|parent, name, claim| {
+                if published {
+                    stage_file(
+                        claim,
+                        "replacement.bin",
+                        after,
+                        setup_file_permissions(relative),
+                        relative,
+                    )
+                    .unwrap();
+                    publish_exclusive(claim, OsStr::new("replacement.bin"), parent, name).unwrap();
+                }
+                panic!("injected setup replacement interruption");
+            }),
+        );
+    }));
+    assert!(result.is_err());
+}
+
+#[cfg(test)]
+pub(crate) fn retained_setup_path_for_test(relative: &Path) -> PathBuf {
+    recovery_locator(relative)
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_remove(root: &Dir, relative: &Path, before: &[u8]) {
+    let permissions = file_permissions(root, relative).unwrap();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = cas_activate_with_barrier(
+            root,
+            relative,
+            Some(ExpectedFile {
+                bytes: before,
+                permissions,
+            }),
+            None,
+            setup_file_permissions(relative),
+            Some(&|_, _, _| panic!("injected removal interruption")),
+        );
+    }));
+    assert!(result.is_err());
+}
+
+#[cfg(test)]
+pub(crate) fn interrupt_setup_creation(
+    root: &Dir,
+    relative: &Path,
+    desired: Option<&[u8]>,
+    published: bool,
+) {
+    let (parent, name) = capability_parent(root, relative, true).unwrap().unwrap();
+    let claim_name = claim_name(relative);
+    parent.create_dir(&claim_name).unwrap();
+    let claim = parent.open_dir_nofollow(&claim_name).unwrap();
+    if let Some(bytes) = desired {
+        stage_file(
+            &claim,
+            "replacement.bin",
+            bytes,
+            setup_file_permissions(relative),
+            relative,
+        )
+        .unwrap();
+        if published {
+            publish_exclusive(&claim, OsStr::new("replacement.bin"), &parent, &name).unwrap();
+        }
+    }
+}
+
+fn recover_bound_user_file(
+    root: &Dir,
+    relative: &Path,
+    before: &str,
+    after: &str,
+    mode: Option<u32>,
+    installed_mode: Option<u32>,
 ) -> Result<(), String> {
     if let Some((parent, name)) =
         capability_parent(root, relative, false).map_err(|error| error.message().to_owned())?
@@ -1959,10 +2415,8 @@ pub(crate) fn recover_host_policy_file(
                     let actual = host_policy_mode(root, relative)?;
                     let expected = if current == before {
                         mode
-                    } else if cfg!(unix) {
-                        Some(mode.unwrap_or(0o600))
                     } else {
-                        None
+                        installed_mode
                     };
                     if actual != expected {
                         return Err("host setting permissions changed during recovery".to_owned());
@@ -1980,18 +2434,13 @@ pub(crate) fn recover_host_policy_file(
             Err(error) => return Err(error.to_string()),
         }
     }
-    let installed_mode = if cfg!(unix) {
-        Some(mode.unwrap_or(0o600))
-    } else {
-        None
-    };
     let entry = UserBackupEntry {
         path: portable(relative),
         existed: before != "absent",
         digest: (before != "absent").then(|| before.to_owned()),
         installed_digest: (after != "absent").then(|| after.to_owned()),
         installed_executable: (after != "absent")
-            .then(|| !cfg!(unix) || mode.is_some_and(|value| value & 0o111 != 0)),
+            .then(|| !cfg!(unix) || installed_mode.is_some_and(|value| value & 0o111 != 0)),
         installed_unix_mode: if after == "absent" {
             None
         } else {
@@ -2017,6 +2466,11 @@ fn execute(
 ) -> Result<ActionResult, InstallError> {
     if arguments.mode == UserMode::Recover {
         return recover(arguments, runner);
+    }
+    if arguments.mode == UserMode::Validate && has_open_transaction(arguments)? {
+        return Err(InstallError::Conflict(
+            "user installation has an unfinished transaction; recover it before validation".into(),
+        ));
     }
     let mut plan = match build_plan(arguments) {
         Ok(plan) => plan,
@@ -2134,8 +2588,14 @@ fn execute_preserving_reinstall(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
-    let (_, root_cap) = open_canonical_user_root(&arguments.user_root)?;
-    let removed = execute_uninstall(&UserUninstallArguments { root_cap }, runner)?;
+    let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let removed = execute_uninstall(
+        &UserUninstallArguments {
+            user_root,
+            root_cap,
+        },
+        runner,
+    )?;
     let mut reinstalled = execute(operation, arguments, runner)?;
     reinstalled.code = match operation {
         UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
@@ -2197,7 +2657,7 @@ fn execute_apply(
         if operation == UserOperation::Update {
             Ok(())
         } else {
-            rebuild_root_index(arguments)
+            rebuild_root_index(arguments, &mut transaction)
         }
     })
     .and_then(|()| {
@@ -2313,7 +2773,10 @@ fn execute_apply(
     Ok(result)
 }
 
-fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
+fn rebuild_root_index(
+    arguments: &UserArguments,
+    transaction: &mut UserTransaction,
+) -> Result<(), InstallError> {
     let installed = crate::user_setup::load_operational_config(&arguments.root_cap)
         .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
     let setup = arguments
@@ -2321,20 +2784,28 @@ fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
         .as_ref()
         .map(|(config, _)| config)
         .or(installed.as_ref());
-    if setup.as_ref().is_none_or(|config| !config.wiki.enabled) {
-        return remove_disposable_root_index(&arguments.root_cap);
+    let Some(setup) = setup else { return Ok(()) };
+    if !setup.wiki.enabled {
+        return index_removal::apply(arguments, transaction);
     }
-    if setup.is_some_and(|config| config.wiki.backend == crate::user_setup::WikiBackend::Notion) {
+    if setup.wiki.backend == crate::user_setup::WikiBackend::Notion {
         return Ok(());
     }
-    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
-        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+    prepare_user_root_index(arguments)
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
-                "shared knowledge index rebuild failed after installation: {error}"
+                "user-scope knowledge index preparation failed after installation: {error}"
             ))
         })
+}
+
+fn prepare_user_root_index(
+    arguments: &UserArguments,
+) -> Result<hive_wiki::store::StoreCommit, hive_wiki::WikiError> {
+    let store = hive_wiki::store::RagStore::open_bound(&arguments.user_root, &arguments.root_cap)?;
+    hive_wiki::shared::ensure_project_registry_metadata(&arguments.user_root, &arguments.root_cap)?;
+    store.ensure_user_setup_index()
 }
 
 fn validate_applied_bytes(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
@@ -3082,20 +3553,20 @@ fn render_user_guidance(
             }
         },
     );
-    let question_gate = if question_pending {
+    let optional_questions = if question_pending && setup.is_some() {
         match setup.map(|config| config.interface_language) {
             Some(crate::user_setup::InterfaceLanguage::Ko) => {
-                "- 상태: `setup-required`. 새 release의 전역 질문이 아직 답변되지 않았음. 일반 Hive 작업 전에 설치된 `aigent-hive:user-setup` Skill로 질문을 한 번 묻고 답을 저장. 답변 전에는 setup, doctor, update, recover, 질문 명령만 허용.\n"
+                "- 선택형 설정 질문 보류. 일반 Hive 작업은 계속 진행. 사용자가 설정 검토를 원할 때 `hive setup --scope user` 안내, 기존 선택 보존과 새 기능의 별도 선택.\n"
             }
             _ => {
-                "- State: `setup-required`. A global question introduced by this release is unanswered. Use the installed `aigent-hive:user-setup` Skill to ask and save the answer before ordinary Hive work. Until then only setup, doctor, update, recover, and question commands are available.\n"
+                "- Optional setup questions are pending. Continue ordinary Hive work. When the user requests a settings review, offer `hive setup --scope user`; preserve existing choices and ask separately before enabling new features.\n"
             }
         }
     } else {
         ""
     };
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{question_gate}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -4679,6 +5150,7 @@ fn apply_plan(
         plan_digest: plan.plan_digest.clone(),
         host_mutations: Vec::new(),
         index_existed,
+        index_removal: None,
         codex_state_before,
         claude_state_before,
         antigravity_state_before,
@@ -4958,7 +5430,10 @@ fn recover(
     .ok_or_else(|| InstallError::Verification("user backup manifest is missing".to_owned()))?;
     let mut backup: UserBackupManifest = serde_json::from_slice(&backup_bytes)
         .map_err(|_| InstallError::Verification("user backup manifest is malformed".to_owned()))?;
-    if !(1..=2).contains(&backup.schema_version) || backup.host != arguments.host {
+    if !(1..=3).contains(&backup.schema_version)
+        || backup.host != arguments.host
+        || (backup.schema_version == 3) != backup.index_removal.is_some()
+    {
         return Err(InstallError::Verification(
             "user backup manifest binding is invalid".to_owned(),
         ));
@@ -5004,7 +5479,7 @@ fn recover(
         )?;
     }
     let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
-    reconcile_root_index_after_rollback(arguments, backup.index_existed)?;
+    restore_root_index_after_rollback(arguments, &backup_relative, &backup)?;
     compensate_host_mutations(
         arguments,
         &backup_relative,
@@ -5166,11 +5641,20 @@ fn restore_backup_files(
     Ok(changed)
 }
 
-#[allow(clippy::too_many_lines)]
 fn reconcile_retained_claim(
     root: &Dir,
     relative: &Path,
     entry: &UserBackupEntry,
+) -> Result<(), InstallError> {
+    reconcile_retained_claim_bounded(root, relative, entry, MAX_USER_FILE_BYTES)
+}
+
+#[allow(clippy::too_many_lines)]
+fn reconcile_retained_claim_bounded(
+    root: &Dir,
+    relative: &Path,
+    entry: &UserBackupEntry,
+    maximum: u64,
 ) -> Result<(), InstallError> {
     let Some((parent, destination)) = capability_parent(root, relative, false)? else {
         return Ok(());
@@ -5209,13 +5693,14 @@ fn reconcile_retained_claim(
     let prior_permissions = prior_backup_permissions(entry)?;
     let installed_permissions = installed_backup_permissions(entry)?;
     if names.iter().any(|name| name == OsStr::new("published.bin")) {
-        validate_retained_object(
+        validate_retained_object_bounded(
             &claim,
             Path::new("published.bin"),
             entry.installed_digest.as_deref(),
             installed_permissions,
             relative,
             "published",
+            maximum,
         )?;
         return Err(InstallError::Conflict(format!(
             "retained user installation claim has an unresolved published object at {}",
@@ -5226,23 +5711,24 @@ fn reconcile_retained_claim(
         .iter()
         .any(|name| name == OsStr::new("replacement.bin"))
     {
-        validate_retained_object(
+        validate_retained_object_bounded(
             &claim,
             Path::new("replacement.bin"),
             entry.installed_digest.as_deref(),
             installed_permissions,
             relative,
             "replacement",
+            maximum,
         )?;
     }
-    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    let current = read_optional_regular(root, relative, maximum)?;
     let current_digest = current.as_deref().map(sha256_digest);
     let current_permissions = current
         .as_ref()
         .map(|_| file_permissions(root, relative))
         .transpose()?;
     if entry.existed {
-        let claimed = read_optional_regular(&claim, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)?
+        let claimed = read_optional_regular(&claim, Path::new("claimed.bin"), maximum)?
             .ok_or_else(|| {
                 InstallError::Verification(format!(
                     "retained user installation claim omitted prior bytes at {}",
@@ -5268,11 +5754,10 @@ fn reconcile_retained_claim(
             parent
                 .rename(&destination, &claim, OsStr::new("published.bin"))
                 .map_err(|error| retained_claim_error(relative, "claim published bytes", error))?;
-            let published =
-                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
-                    .ok_or_else(|| {
-                        retained_claim_error(relative, "verify published bytes", "missing")
-                    })?;
+            let published = read_optional_regular(&claim, Path::new("published.bin"), maximum)?
+                .ok_or_else(|| {
+                    retained_claim_error(relative, "verify published bytes", "missing")
+                })?;
             let published_permissions = file_permissions(&claim, Path::new("published.bin"))?;
             if Some(sha256_digest(&published)) != entry.installed_digest
                 || Some(published_permissions) != installed_permissions
@@ -5310,11 +5795,8 @@ fn reconcile_retained_claim(
             parent
                 .rename(&destination, &claim, OsStr::new("published.bin"))
                 .map_err(|error| retained_claim_error(relative, "claim created bytes", error))?;
-            let published =
-                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
-                    .ok_or_else(|| {
-                        retained_claim_error(relative, "verify created bytes", "missing")
-                    })?;
+            let published = read_optional_regular(&claim, Path::new("published.bin"), maximum)?
+                .ok_or_else(|| retained_claim_error(relative, "verify created bytes", "missing"))?;
             let published_permissions = file_permissions(&claim, Path::new("published.bin"))?;
             if Some(sha256_digest(&published)) != entry.installed_digest
                 || Some(published_permissions) != installed_permissions
@@ -5339,11 +5821,10 @@ fn reconcile_retained_claim(
         .iter()
         .any(|name| name == OsStr::new("replacement.bin"))
     {
-        let replacement =
-            read_optional_regular(&claim, Path::new("replacement.bin"), MAX_USER_FILE_BYTES)?
-                .ok_or_else(|| {
-                    retained_claim_error(relative, "verify staged replacement", "missing")
-                })?;
+        let replacement = read_optional_regular(&claim, Path::new("replacement.bin"), maximum)?
+            .ok_or_else(|| {
+                retained_claim_error(relative, "verify staged replacement", "missing")
+            })?;
         let replacement_permissions = file_permissions(&claim, Path::new("replacement.bin"))?;
         if Some(sha256_digest(&replacement)) != entry.installed_digest
             || Some(replacement_permissions) != installed_permissions
@@ -5372,7 +5853,27 @@ fn validate_retained_object(
     relative: &Path,
     label: &str,
 ) -> Result<(), InstallError> {
-    let bytes = read_optional_regular(claim, name, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+    validate_retained_object_bounded(
+        claim,
+        name,
+        expected_digest,
+        expected_permissions,
+        relative,
+        label,
+        MAX_USER_FILE_BYTES,
+    )
+}
+
+fn validate_retained_object_bounded(
+    claim: &Dir,
+    name: &Path,
+    expected_digest: Option<&str>,
+    expected_permissions: Option<FilePermissions>,
+    relative: &Path,
+    label: &str,
+    maximum: u64,
+) -> Result<(), InstallError> {
+    let bytes = read_optional_regular(claim, name, maximum)?.ok_or_else(|| {
         retained_claim_error(
             relative,
             &format!("verify retained {label} object"),
@@ -5549,14 +6050,25 @@ fn reconcile_root_index_after_rollback(
     if !index_existed {
         return remove_disposable_root_index(&arguments.root_cap);
     }
-    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
-        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+    prepare_user_root_index(arguments)
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
                 "root knowledge index reconstruction failed during rollback; existing index was preserved: {error}"
             ))
         })
+}
+
+fn restore_root_index_after_rollback(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    if let Some(index) = &backup.index_removal {
+        index_removal::restore(arguments, backup_relative, index)
+    } else {
+        reconcile_root_index_after_rollback(arguments, backup.index_existed)
+    }
 }
 
 fn qualify_recovery_host(
@@ -5617,9 +6129,11 @@ fn rollback_after_failure(
             error.message()
         ));
     }
-    if let Err(error) =
-        reconcile_root_index_after_rollback(arguments, transaction.backup.index_existed)
-    {
+    if let Err(error) = restore_root_index_after_rollback(
+        arguments,
+        &transaction.backup_relative,
+        &transaction.backup,
+    ) {
         return InstallError::Internal(format!(
             "{}; root index rollback failed: {}",
             primary.message(),
@@ -6934,10 +7448,131 @@ fn unix_seconds() -> Result<u64, InstallError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn private_setup_records_use_owner_only_modes_and_recover_old_public_records() {
+        use std::os::unix::fs::PermissionsExt;
+        for published in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = Dir::open_ambient_dir(temp.path(), ambient_authority()).unwrap();
+            for relative in [
+                ".hive/config/setup-progress/recovery/test.projection.json",
+                ".hive/history/lifecycle/test.json",
+            ] {
+                let relative = Path::new(relative);
+                replace_user_setup_file(&root, relative, None, Some(b"before")).unwrap();
+                assert_eq!(host_policy_mode(&root, relative).unwrap(), Some(0o600));
+                fs::set_permissions(
+                    temp.path().join(relative),
+                    fs::Permissions::from_mode(0o644),
+                )
+                .unwrap();
+                interrupt_setup_replace(&root, relative, b"before", b"after", published);
+                recover_user_setup_file(
+                    &root,
+                    relative,
+                    &sha256_digest(b"before"),
+                    &sha256_digest(b"after"),
+                    Some(0o644),
+                )
+                .unwrap();
+                let expected = if published {
+                    b"after".as_slice()
+                } else {
+                    b"before".as_slice()
+                };
+                assert_eq!(
+                    read_user_setup_file(&root, relative, 64).unwrap().unwrap(),
+                    expected
+                );
+                replace_user_setup_file(&root, relative, Some(expected), Some(b"final")).unwrap();
+                assert_eq!(host_policy_mode(&root, relative).unwrap(), Some(0o600));
+            }
+        }
+        assert_eq!(
+            setup_file_mode(Path::new(".hive/config/harness.toml")),
+            Some(0o644)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn widening_published_recovery_record_permissions_refuses_recovery() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let root = Dir::open_ambient_dir(temp.path(), ambient_authority()).unwrap();
+        let relative = Path::new(".hive/config/setup-progress/user.yml");
+        interrupt_setup_creation(&root, relative, Some(b"pending"), true);
+        fs::set_permissions(
+            temp.path().join(relative),
+            fs::Permissions::from_mode(0o644),
+        )
+        .unwrap();
+        assert!(recover_user_setup_file(
+            &root,
+            relative,
+            "absent",
+            &sha256_digest(b"pending"),
+            None
+        )
+        .is_err());
+        assert_eq!(fs::read(temp.path().join(relative)).unwrap(), b"pending");
+    }
     use crate::usage::{CommandOutput, QualifiedExecutable, SensorError};
     use crate::user_setup::DiscordGuardPreferences;
     use std::sync::Mutex;
     use tempfile::tempdir;
+
+    #[test]
+    fn setup_recovery_restores_a_claimed_file_before_resuming_its_replace() {
+        let temporary = tempdir().unwrap();
+        let (_, root) = open_canonical_user_root_for_setup(temporary.path()).unwrap();
+        let relative = Path::new(".agents/directives/00-hive-user.md");
+        replace_user_setup_file(&root, relative, None, Some(b"old directive")).unwrap();
+        let permissions = file_permissions(&root, relative).unwrap();
+        let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = cas_activate_with_barrier(
+                &root,
+                relative,
+                Some(ExpectedFile {
+                    bytes: b"old directive",
+                    permissions,
+                }),
+                Some(b"new directive"),
+                FilePermissions {
+                    executable: false,
+                    unix_mode: None,
+                },
+                Some(&|_, _, _| panic!("injected interruption after claim")),
+            );
+        }));
+        assert!(interrupted.is_err());
+        assert!(!temporary.path().join(relative).exists());
+        recover_user_setup_file(
+            &root,
+            relative,
+            &sha256_digest(b"old directive"),
+            &sha256_digest(b"new directive"),
+            permissions.unix_mode,
+        )
+        .unwrap();
+        assert_eq!(
+            read_user_setup_file(&root, relative, 1024).unwrap(),
+            Some(b"old directive".to_vec())
+        );
+        replace_user_setup_file(
+            &root,
+            relative,
+            Some(b"old directive"),
+            Some(b"new directive"),
+        )
+        .unwrap();
+        assert_eq!(
+            read_user_setup_file(&root, relative, 1024).unwrap(),
+            Some(b"new directive".to_vec())
+        );
+    }
 
     struct FakeRunner {
         calls: Mutex<Vec<String>>,
@@ -7637,6 +8272,7 @@ mod tests {
         let user_root = root.canonicalize().expect("canonical user root");
         UserUninstallArguments {
             root_cap: open_user_root(&user_root).expect("pinned user root"),
+            user_root,
         }
     }
 
@@ -8100,6 +8736,140 @@ mod tests {
     }
 
     #[test]
+    fn host_deactivation_preserves_user_bytes_sources_and_supports_reselection() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let root = tempdir().unwrap();
+            write_operational_setup(root.path(), &["codex", "claude"]);
+            let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+            let install = args(root.path(), host, UserMode::Apply);
+            let guidance = guidance_path(host, &install.root_cap).unwrap();
+            fs::create_dir_all(root.path().join(&guidance).parent().unwrap()).unwrap();
+            fs::write(root.path().join(&guidance), b"User preface.\n").unwrap();
+            execute(UserOperation::Install, &install, &runner).unwrap();
+            let config = fs::read(root.path().join(".hive/config/user-setup.yml")).unwrap();
+            let manifest_path = root
+                .path()
+                .join(format!(".hive/install/{}.json", host.as_str()));
+            let manifest_bytes = fs::read(&manifest_path).unwrap();
+            let manifest: UserOwnershipManifest = serde_json::from_slice(&manifest_bytes).unwrap();
+            let source = manifest
+                .entries
+                .iter()
+                .filter(|entry| is_managed_ownership(&entry.ownership))
+                .map(|entry| {
+                    (
+                        entry.path.clone(),
+                        fs::read(root.path().join(&entry.path)).unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let selected = if host == UserHost::Codex {
+                crate::user_setup::SelectedHost::Codex
+            } else {
+                crate::user_setup::SelectedHost::Claude
+            };
+            let plans = deactivation::preview_using(root.path(), &[selected], &runner).unwrap();
+            assert!(runner.plugin_installed.lock().unwrap().to_owned());
+            assert_eq!(
+                deactivation::apply_using(root.path(), &plans, &runner).unwrap(),
+                vec![portable(&guidance)]
+            );
+            assert_eq!(
+                fs::read(root.path().join(&guidance)).unwrap(),
+                b"User preface.\n"
+            );
+            assert_eq!(fs::read(&manifest_path).unwrap(), manifest_bytes);
+            assert_eq!(
+                fs::read(root.path().join(".hive/config/user-setup.yml")).unwrap(),
+                config
+            );
+            for (path, bytes) in source {
+                assert_eq!(fs::read(root.path().join(path)).unwrap(), bytes);
+            }
+            runner.calls.lock().unwrap().clear();
+            assert_eq!(
+                deactivation::apply_using(root.path(), &plans, &runner).unwrap(),
+                Vec::<String>::new()
+            );
+            assert!(runner
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .all(|call| !call.contains("remove") && !call.contains("uninstall")));
+            execute(UserOperation::Install, &install, &runner).unwrap();
+            assert!(*runner.plugin_installed.lock().unwrap());
+        }
+    }
+
+    #[test]
+    fn host_deactivation_resumes_after_plugin_removal_and_preserves_external_edits() {
+        let root = tempdir().unwrap();
+        write_operational_setup(root.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+        let install = args(root.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let plans = deactivation::preview_using(
+            root.path(),
+            &[crate::user_setup::SelectedHost::Codex],
+            &runner,
+        )
+        .unwrap();
+        *runner.plugin_installed.lock().unwrap() = false;
+        runner.calls.lock().unwrap().clear();
+        deactivation::apply_using(root.path(), &plans, &runner).unwrap();
+        assert!(!runner
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
+        assert!(runner
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let plans = deactivation::preview_using(
+            root.path(),
+            &[crate::user_setup::SelectedHost::Codex],
+            &runner,
+        )
+        .unwrap();
+        let path = root
+            .path()
+            .join(guidance_path(UserHost::Codex, &install.root_cap).unwrap());
+        let changed = [
+            fs::read(&path).unwrap(),
+            b"\nUser edit after preview.\n".to_vec(),
+        ]
+        .concat();
+        fs::write(&path, &changed).unwrap();
+        assert!(deactivation::apply_using(root.path(), &plans, &runner).is_err());
+        assert!(*runner.plugin_installed.lock().unwrap());
+        assert_eq!(fs::read(path).unwrap(), changed);
+    }
+
+    #[test]
+    fn host_deactivation_rejects_missing_ownership_and_unsupported_native_versions() {
+        let root = tempdir().unwrap();
+        write_operational_setup(root.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(root.path(), HostSabotage::None);
+        let install = args(root.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).unwrap();
+        let selected = [crate::user_setup::SelectedHost::Codex];
+        let unsupported = VersionRunner {
+            stdout: b"codex-cli 0.1.0".to_vec(),
+            success: true,
+        };
+        assert!(deactivation::preview_using(root.path(), &selected, &unsupported).is_err());
+        fs::remove_file(root.path().join(".hive/install/codex.json")).unwrap();
+        assert!(deactivation::preview_using(root.path(), &selected, &runner).is_err());
+        assert!(*runner.plugin_installed.lock().unwrap());
+    }
+
+    #[test]
     fn authenticated_saved_projection_scope_uses_only_selected_exact_current_hosts() {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex", "claude"]);
@@ -8476,9 +9246,12 @@ mod tests {
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
                 quota_reset_guard_enabled: true,
+                popup_enabled: None,
+                policy: None,
                 discord: DiscordGuardPreferences::default(),
                 project_overrides: BTreeMap::new(),
             },
+            preference_decisions: BTreeMap::new(),
         };
 
         let english = String::from_utf8(render_user_guidance(
@@ -8576,6 +9349,18 @@ mod tests {
             let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)), false);
             validate_operational_guidance(&guidance, Some(&config(InterfaceLanguage::En)))
                 .expect("every host must retain the mandatory capture contract");
+        }
+        for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+            let pending = String::from_utf8(render_user_guidance(
+                UserHost::Codex,
+                Some(&config(language)),
+                true,
+            ))
+            .unwrap();
+            assert!(pending.contains("`operational`"));
+            assert!(!pending.contains("setup-required"));
+            assert!(pending.contains("hive setup --scope user"));
+            assert!(!pending.contains("Until then only"));
         }
     }
 
@@ -9131,6 +9916,7 @@ mod tests {
                 ("0.12.0", 74),
                 ("0.13.0", 74),
                 ("0.13.1", 74),
+                ("0.13.2", 74),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -9296,6 +10082,7 @@ mod tests {
                         | "0.12.0"
                         | "0.13.0"
                         | "0.13.1"
+                        | "0.13.2"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -11367,6 +12154,27 @@ mod tests {
                 .path()
                 .join(".hive/install-transactions/codex.json")
                 .is_file());
+        }
+    }
+
+    #[test]
+    fn unchanged_forward_prestate_recovers_without_adopting_an_unobserved_mutation() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            for sabotage in [
+                HostSabotage::FailBeforeMarketplaceMutation,
+                HostSabotage::FailBeforePluginMutation,
+            ] {
+                let temporary = tempdir().unwrap();
+                let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+                let arguments = args(temporary.path(), host, UserMode::Apply);
+                assert!(execute(UserOperation::Install, &arguments, &runner).is_err());
+                recover(&arguments, &runner).expect("exact unchanged prestate can be restored");
+                assert_eq!(runner.external_state(), (false, false));
+                assert!(!temporary
+                    .path()
+                    .join(format!(".hive/install-transactions/{}.json", host.as_str()))
+                    .exists());
+            }
         }
     }
 

@@ -14,6 +14,7 @@ from tests.conformance.support.harness import (
     ACTION_RESULT_SCHEMA,
     Phase1CliTestCase,
     REPOSITORY_ROOT,
+    snapshot_tree,
 )
 
 
@@ -61,6 +62,7 @@ class UpdateDiscoveryConformance(Phase1CliTestCase):
             user_root = Path(temporary)
             sentinel = user_root / "sentinel"
             sentinel.write_bytes(b"preserve")
+            before = snapshot_tree(user_root)
             environment = os.environ.copy()
             environment["USERPROFILE" if os.name == "nt" else "HOME"] = str(user_root)
 
@@ -74,8 +76,11 @@ class UpdateDiscoveryConformance(Phase1CliTestCase):
                 capture_output=True,
             )
 
-            self.assertEqual(process.returncode, 3)
-            self.assertIn("interactive terminal", process.stderr)
+            self.assertEqual(process.returncode, 2)
+            self.assertIn("Software update approval is required", process.stderr)
+            self.assertIn("no update was installed", process.stderr)
+            self.assertEqual(process.stdout, "")
+            self.assertEqual(snapshot_tree(user_root), before)
             self.assertEqual(
                 {
                     path.relative_to(user_root).as_posix(): path.read_bytes()

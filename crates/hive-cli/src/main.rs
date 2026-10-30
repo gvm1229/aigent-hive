@@ -23,6 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod custom_agent_cli;
 mod discord;
+mod display_options;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -38,11 +39,23 @@ mod session;
 mod source_wiki;
 mod update;
 mod update_activation;
+mod update_bridge;
 mod update_discovery;
 mod usage;
 mod usage_control;
 mod usage_install;
 mod usage_monitor;
+
+#[cfg(test)]
+pub(crate) fn test_tempdir() -> tempfile::TempDir {
+    let parent = std::env::temp_dir();
+    // macOS exposes its temporary root through /var; target guards reject aliases.
+    #[cfg(unix)]
+    let parent = parent
+        .canonicalize()
+        .expect("canonical test temporary parent");
+    tempfile::tempdir_in(parent).expect("private test directory")
+}
 mod user_directives;
 mod user_install;
 mod user_setup;
@@ -53,16 +66,20 @@ Aigent Hive
 USAGE:
     hive doctor
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
-    hive uninstall [--user-root <dir>] [--output json]
+    hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
     hive check-target <path>
     hive setup --help
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
+    hive setup --target <dir> --user-root <dir> --show --summary --output json
+    hive setup --target <dir> --user-root <dir> --describe --question <question-id> --output json
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] --output json
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] --output json
     hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
-    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
+    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm] [--interactive|--non-interactive] [--output json]
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
@@ -107,9 +124,12 @@ const SETUP_USAGE: &str = "\
 Create or validate an installed Aigent Hive consumer harness.
 
 USAGE:
+    hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
 
 MODES:
+    --summary    Bound JSON status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
@@ -200,10 +220,25 @@ struct SetupArguments {
     user_root: PathBuf,
     mode: SetupMode,
     reconfigure_roles: BTreeSet<String>,
+    input_channel: hive_core::preferences::PreferenceInput,
 }
 
 fn main() -> ExitCode {
-    let arguments: Vec<String> = env::args().skip(1).collect();
+    update_bridge::mark_process_start();
+    let mut arguments: Vec<String> = env::args().skip(1).collect();
+    display_options::configure(&mut arguments);
+    if arguments == ["__setup-apply-worker"] {
+        return user_setup::run_apply_worker();
+    }
+    if arguments.first().map(String::as_str) == Some("__complete-user-update") {
+        return user_setup::run_update_completion(&arguments[1..]);
+    }
+    if arguments.first().map(String::as_str) == Some("__cleanup-direct-replacement") {
+        return update_activation::run_replacement_cleanup(&arguments[1..]);
+    }
+    if arguments.first().map(String::as_str) == Some("__direct-install-scope") {
+        return update_activation::run_replacement_scope(&arguments[1..]);
+    }
     if arguments == ["__usage-observation-worker"] {
         return usage_monitor::run_worker();
     }
@@ -215,6 +250,10 @@ fn main() -> ExitCode {
     if arguments.first().map(String::as_str) == Some("__usage-monitor-qualification") {
         return usage_monitor::run_qualification(&arguments[1..]);
     }
+    dispatch(arguments)
+}
+
+fn dispatch(arguments: Vec<String>) -> ExitCode {
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")
@@ -236,6 +275,9 @@ fn main() -> ExitCode {
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
         Some("uninstall") => user_install::run_uninstall(&arguments[1..]),
+        Some("__complete-user-uninstall") => {
+            user_install::run_uninstall_completion(&arguments[1..])
+        }
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("discord") => discord::run(&arguments[1..]),
@@ -256,12 +298,22 @@ fn main() -> ExitCode {
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("korean") => korean::run(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
+        Some("update") if arguments.iter().any(|argument| argument == "--scope") => {
+            user_install::run_update(&arguments[1..])
+        }
         Some("update")
             if arguments.len() == 1
                 || arguments.get(1).is_some_and(|argument| {
                     matches!(
                         argument.as_str(),
-                        "--channel" | "--user-root" | "--confirm" | "--direct-handoff" | "--help"
+                        "--channel"
+                            | "--user-root"
+                            | "--confirm"
+                            | "--direct-handoff"
+                            | "--help"
+                            | "--interactive"
+                            | "--non-interactive"
+                            | "--output"
                     )
                 }) =>
         {
@@ -269,9 +321,6 @@ fn main() -> ExitCode {
         }
         Some("update") if arguments.get(1).map(String::as_str) == Some("--check") => {
             update_discovery::run(&arguments[1..])
-        }
-        Some("update") if arguments.iter().any(|argument| argument == "--scope") => {
-            user_install::run_update(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
         _ if wants_json(&arguments) => {
@@ -318,7 +367,15 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     }
     if matches!(
         arguments.first().map(String::as_str),
-        Some("enforce" | "status" | "threshold" | "session" | "capture" | "summarize-tokens")
+        Some(
+            "show"
+                | "enforce"
+                | "status"
+                | "threshold"
+                | "session"
+                | "capture"
+                | "summarize-tokens"
+        )
     ) {
         return usage_control::run_usage_control(arguments);
     }
@@ -626,31 +683,22 @@ fn wants_json(arguments: &[String]) -> bool {
 }
 
 fn run_setup(arguments: &[String]) -> ExitCode {
-    let parsed = parse_setup(arguments);
+    if !arguments.iter().any(|argument| argument == "--answers") {
+        return user_setup::run_project_setup(arguments);
+    }
+    let (filtered, summary) = match user_setup::setup_output_arguments(arguments) {
+        Ok(value) => value,
+        Err(error) => {
+            return emit_action_result(&failure_result(&RenderError::Input(
+                error.message().to_owned(),
+            )))
+        }
+    };
+    let parsed = parse_setup(&filtered);
     let result = match parsed {
         Ok(arguments) => {
-            let global_preferences =
-                user_setup::project_preferences(&arguments.user_root).map_err(RenderError::Input);
-            let mut global_preferences = match global_preferences {
-                Ok(preferences) => preferences,
-                Err(error) => return emit_setup_result(&failure_result(&error)),
-            };
-            global_preferences.codex_plugin_files =
-                user_install::validated_codex_plugin_files(&arguments.user_root)
-                    .unwrap_or_default();
-            let global_wiki_enabled = global_preferences.wiki_enabled;
             let setup_mode = arguments.mode;
-            let user_root = arguments.user_root.clone();
-            let target = arguments.target.clone();
-            let request = SetupRequest {
-                target: &arguments.target,
-                answers: &arguments.answers,
-                capabilities: &arguments.capabilities,
-                mode: setup_mode,
-                reconfigure_roles: arguments.reconfigure_roles,
-                global_preferences: Some(global_preferences),
-            };
-            match execute_setup_and_registry(&request, &user_root, &target, global_wiki_enabled) {
+            match user_setup::execute_project_file(&arguments) {
                 Ok(outcome) => ActionResult {
                     schema_version: 1,
                     action: "SetupHarness",
@@ -687,6 +735,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
         }
         Err(error) => failure_result(&error),
     };
+    let result = user_setup::setup_summary(result, summary);
     emit_json_result(&result);
     if result.exit_code != 0 {
         eprintln!("error: {}", result.message);
@@ -868,14 +917,6 @@ fn reconcile_project_registry(
     Ok(())
 }
 
-fn emit_setup_result(result: &ActionResult) -> ExitCode {
-    emit_json_result(result);
-    if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
-    }
-    ExitCode::from(result.exit_code)
-}
-
 fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     let mut target = None;
     let mut answers = None;
@@ -884,6 +925,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     let mut mode = None;
     let mut output = None;
     let mut reconfigure_roles = BTreeSet::new();
+    let mut input_channel = None;
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].as_str() {
@@ -894,6 +936,20 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             }
             "--user-root" => {
                 user_root = Some(next_value(arguments, &mut index, "--user-root")?);
+            }
+            "--input-channel" => {
+                let channel = match next_value(arguments, &mut index, "--input-channel")?.as_str() {
+                    "answers-file" => hive_core::preferences::PreferenceInput::AnswersFile,
+                    "agent" => hive_core::preferences::PreferenceInput::Agent,
+                    _ => {
+                        return Err(RenderError::Input(
+                            "project input channel must be answers-file or agent".into(),
+                        ))
+                    }
+                };
+                if input_channel.replace(channel).is_some() {
+                    return Err(RenderError::Input("duplicate project input channel".into()));
+                }
             }
             "--reconfigure-role" => {
                 reconfigure_roles.insert(next_value(arguments, &mut index, "--reconfigure-role")?);
@@ -924,6 +980,8 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
         })?,
         reconfigure_roles,
+        input_channel: input_channel
+            .unwrap_or(hive_core::preferences::PreferenceInput::AnswersFile),
     })
 }
 

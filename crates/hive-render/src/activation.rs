@@ -346,6 +346,24 @@ pub(super) fn stage_and_validate(
     resolution: &CapabilityResolution,
     corrupt_after_render: bool,
 ) -> Result<(), RenderError> {
+    stage_and_validate_against(
+        target,
+        files,
+        files,
+        answers,
+        resolution,
+        corrupt_after_render,
+    )
+}
+
+pub(super) fn stage_and_validate_against(
+    target: Option<&Path>,
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    expected: &BTreeMap<PathBuf, Vec<u8>>,
+    answers: &SetupAnswers,
+    resolution: &CapabilityResolution,
+    corrupt_after_render: bool,
+) -> Result<(), RenderError> {
     let mut builder = tempfile::Builder::new();
     builder.prefix(".aigent-hive-stage-");
     let staging = match target {
@@ -372,12 +390,13 @@ pub(super) fn stage_and_validate(
         )
         .map_err(io_internal)?;
     }
-    validate_staged(&staging_root, files, answers, resolution)
+    validate_staged(&staging_root, files, expected, answers, resolution)
 }
 
 pub(super) fn validate_staged(
     staging: &Path,
     files: &BTreeMap<PathBuf, Vec<u8>>,
+    canonical: &BTreeMap<PathBuf, Vec<u8>>,
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
 ) -> Result<(), RenderError> {
@@ -400,7 +419,7 @@ pub(super) fn validate_staged(
         fs::read_to_string(staging.join(".hive/config/harness.toml")).map_err(io_internal)?;
     let _: toml::Value = toml::from_str(&harness)
         .map_err(|error| RenderError::Verification(format!("invalid harness TOML: {error}")))?;
-    validate_installed_against(staging, answers, resolution, files)
+    validate_installed_against(staging, answers, resolution, canonical)
 }
 
 pub(super) fn open_target_capability(target: &Path) -> Result<Dir, RenderError> {

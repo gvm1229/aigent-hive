@@ -129,13 +129,15 @@ class VectorOnboardingContract(Phase1CliTestCase):
         for path in paths[1:]:
             with self.subTest(path=path):
                 self.assertEqual(path.read_bytes(), source)
-        relative = "references/workflow.md"
+        relative = "references/reconfiguration.md"
         reference = paths[0].parent / relative
         self.assertIn(relative, source.decode("utf-8"))
         for path in paths[1:]:
             self.assertEqual((path.parent / relative).read_bytes(), reference.read_bytes())
         text = reference.read_text(encoding="utf-8")
         for required in (
+            "Normal CLI setup already owns its vector question",
+            "Download and index preparation",
             "hive setup feature claim --id vector-search",
             "question_required",
             "claim expires",

@@ -838,15 +838,25 @@ pub(super) fn resolve_pending_host_transition(
     backup: &mut UserBackupManifest,
     executable: &QualifiedExecutable,
     runner: &impl CommandRunner,
-    allow_dangling_codex_recovery: bool,
+    explicit_recovery: bool,
 ) -> Result<(), InstallError> {
     let pending = backup
         .pending_host_transition
         .as_ref()
         .ok_or_else(|| InstallError::Internal("pending host transition is missing".to_owned()))?;
-    if allow_dangling_codex_recovery
-        && is_recoverable_dangling_codex_marketplace(arguments, backup)?
+    // An unchanged distinct prestate needs no compensation. This does not attribute
+    // success or adopt the expected after-state, which could belong to another actor.
+    if explicit_recovery
+        && pending.phase == HostTransitionPhase::Forward
+        && pending.before != pending.after
+        && probe_host_snapshot(arguments.host, executable, runner)
+            .is_ok_and(|observed| observed == pending.before)
     {
+        backup.pending_host_transition = None;
+        persist_backup(arguments, backup_relative, backup)?;
+        return Ok(());
+    }
+    if explicit_recovery && is_recoverable_dangling_codex_marketplace(arguments, backup)? {
         let probe_error = probe_host_snapshot(arguments.host, executable, runner)
             .err()
             .ok_or_else(|| {

@@ -2,6 +2,24 @@
 
 Read before any threshold, disable, enable, or toggle operation.
 
+## Global policy and legacy compatibility
+
+- For an explicit request to change the whole v2 policy, use
+  `hive setup --scope user --section usage --user-root <user-root>` and its confirmed CLI flow.
+  If the installed CLI rejects this input, report unsupported and preserve the policy.
+  Do not turn a global request into a session override or write settings by hand.
+- New v2 protection defaults off. `enforcement_enabled=false` disables all blocking and midway
+  interruption, including zero-quota checks; it preserves dormant settings. With the master
+  enabled, only the selected preflight/midway causes apply. Legacy v1 ordinary disable still
+  leaves independent zero-quota protection active. The installed CLI owns this interpretation.
+- A fresh exit-0 `hive.usage-disabled` or `hive.usage-preflight-disabled` with
+  `policy_schema_version=2` and `policy_evaluated=true` needs no sensor. A successful
+  `hive.usage-observation-warning` is the selected v2 warning policy, not a valid measurement.
+  These are valid preflight results, never dispatch authorization. Do not change policy merely
+  to obtain `hive.usage-allowed` or `enforced=true`.
+
+## Threshold and current-session controls
+
 7. Perform at most the explicitly requested control mutation:
    - A global threshold requires explicit global intent and an integer from 0 through 99:
 
@@ -30,7 +48,9 @@ Read before any threshold, disable, enable, or toggle operation.
 
    - Toggle uses the same command with `--action toggle`. Include
      `--confirm-session-disable` whenever the result would disable enforcement.
-Zero is an enabled exhaustion floor, not a disable action. Positive subscription quota may run; zero quota stops work regardless of paid credits. Never promise zero credit consumption from periodic client-side interruption.
+Threshold zero does not disable selected checks or enable unselected checks. With an enabled
+zero-quota check, exhausted subscription quota stops work regardless of paid credits. Never
+promise zero credit consumption from periodic client-side interruption.
 
 ## Same-session policy recheck
 
@@ -40,12 +60,14 @@ Zero is an enabled exhaustion floor, not a disable action. Positive subscription
    When a threshold mutation returns `session_recheck_required=true` for an active task, run
    `enforce` immediately with the same exact target, host, session id, process id, user root, and
    available account digest. This recheck also applies to manual source work. Continue only after
-   fresh `hive.usage-allowed`; limited, unknown, or policy-changed results remain blocked. Never
+   fresh `hive.usage-allowed` or a valid v2 policy result defined above; limited, unknown, or
+   policy-changed failures remain blocked. Never
    disable the session merely to acknowledge a changed threshold.
 
 ## Quota reset stop
 
-- A reset stops the current request only. A new user request uses fresh sensing; no acknowledgement or unlock is required. Normal thresholds and zero-quota protection still apply.
+- A selected reset check stops the current request only. A new request reevaluates the installed
+  policy; no acknowledgement or unlock is required. Other selected checks still apply.
 - A monitor incident is a reason/status record, not dispatch authority or a resume lock. Users may resume directly in Codex. The notice only closes; it never starts or controls work.
 
 ## Reset-only session control
@@ -57,9 +79,13 @@ Zero is an enabled exhaustion floor, not a disable action. Positive subscription
   ```
 
 - Restore reset detection with `--action enable-reset-guard`, without the disable confirmation. Both actions require the overall usage guard to remain enabled.
-- These actions preserve the global settings and threshold guard. Missing or low usage still blocks work. Other hosts, sessions, and processes do not inherit the opt-out; changing the general guard does not silently clear a current reset-only preference.
+- These actions preserve global settings and other selected checks. Missing or low usage blocks
+  only when the installed policy requires it. Other hosts, sessions, and processes do not inherit
+  the opt-out; changing the general guard does not clear a current reset-only preference.
 - Reset-only disable never repairs a damaged marker. Use fresh enforce after repairing damaged state.
-- After either successful action, run one same-binding `enforce`. Continue only after fresh `hive.usage-allowed`. Control success never grants dispatch authority or supplies periodic monitoring.
+- After either successful action, run one same-binding `enforce`. Continue only after fresh
+  `hive.usage-allowed` or a valid v2 policy result defined above. Control success never grants
+  dispatch authority or supplies periodic monitoring.
 - Do not use general `disable` or `toggle` for a reset-only request. A bare continuation request authorizes neither kind of bypass.
 
 ## Zero-quota session control
@@ -74,10 +100,12 @@ Zero is an enabled exhaustion floor, not a disable action. Positive subscription
   ```
 
 - Restore with `--action enable-zero-quota-guard`, without the disable confirmation. General
-  controls preserve this separate preference. New hosts, conversations, and processes default on.
+  controls preserve this separate preference. New hosts, conversations, and processes use the
+  installed policy; they do not inherit a previous session's opt-out.
 - After either action, run one same-binding `enforce`. A successful control is not dispatch authority.
   An opt-out leaves an enabled ordinary threshold guard in force. Only disabling both allows sensing
-  to be bypassed. Warn that the opt-out permits work that may use paid account credits.
+  to be bypassed in v1. A v2 master opt-out also skips sensing. Explain that disabled protection
+  does not change the provider's billing rules.
 - Exhaustion returns exit `3` and `hive.usage-quota-exhausted`. Stop Hive-controlled work, keep the
   halt receipt, and report the exhausted window. A bare continue does not remove the stop.
   After exhaustion is observed, do not call another tool for checkpoints, knowledge capture,

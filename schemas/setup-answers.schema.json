@@ -21,7 +21,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     },
     "project_name": {
       "type": "string",
@@ -34,13 +37,22 @@
       "pattern": "^(?:|\\S(?:.*\\S)?)$"
     },
     "setup_mode": {
-      "enum": ["expedited", "custom"]
+      "enum": [
+        "expedited",
+        "custom"
+      ]
     },
     "project_kind": {
-      "enum": ["general", "custom"]
+      "enum": [
+        "general",
+        "custom"
+      ]
     },
     "interface_language": {
-      "enum": ["en", "ko"]
+      "enum": [
+        "en",
+        "ko"
+      ]
     },
     "wiki": {
       "$ref": "#/$defs/wiki"
@@ -52,7 +64,11 @@
       "$ref": "#/$defs/skill_selection"
     },
     "primary_host": {
-      "enum": ["codex", "claude", "antigravity"]
+      "enum": [
+        "codex",
+        "claude",
+        "antigravity"
+      ]
     },
     "usage_stop_remaining_percent": {
       "type": "integer",
@@ -93,15 +109,24 @@
           "responsibilities": {
             "type": "array",
             "minItems": 1,
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "non_responsibilities": {
             "type": "array",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "context_paths": {
             "type": "array",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "allowed_capabilities": {
             "type": "array",
@@ -119,33 +144,57 @@
           },
           "write_scope": {
             "type": "array",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "verification_duties": {
             "type": "array",
             "minItems": 1,
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
     },
     "knowledge_include_paths": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "knowledge_exclude_paths": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "root_knowledge_promotion_categories": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "enum": ["fact", "preference", "workflow"] }
+      "items": {
+        "enum": [
+          "fact",
+          "preference",
+          "workflow"
+        ]
+      }
     },
     "confidential_knowledge_categories": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "enum": ["fact", "preference", "workflow"] }
+      "items": {
+        "enum": [
+          "fact",
+          "preference",
+          "workflow"
+        ]
+      }
     },
     "user_store_binding": {
       "type": "string",
@@ -168,10 +217,21 @@
           "consent_digest"
         ],
         "properties": {
-          "consent_version": { "const": 1 },
-          "name": { "type": "string", "minLength": 1 },
-          "source": { "type": "string", "minLength": 1 },
-          "revision": { "type": "string", "minLength": 1 },
+          "consent_version": {
+            "const": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1
+          },
           "content_digest": {
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
@@ -233,7 +293,9 @@
           "consent_digest"
         ],
         "properties": {
-          "consent_version": { "const": 1 },
+          "consent_version": {
+            "const": 1
+          },
           "capability": {
             "enum": [
               "protect-hive-owned-state",
@@ -245,7 +307,13 @@
             ]
           },
           "event": {
-            "enum": ["PreToolUse", "PostToolUse", "PreCompact", "Stop", "AfterAgent"]
+            "enum": [
+              "PreToolUse",
+              "PostToolUse",
+              "PreCompact",
+              "Stop",
+              "AfterAgent"
+            ]
           },
           "path": {
             "type": "string",
@@ -273,13 +341,19 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "protect-hive-owned-state" }
+                "capability": {
+                  "const": "protect-hive-owned-state"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "const": "PreToolUse" },
+                "event": {
+                  "const": "PreToolUse"
+                },
                 "path": {
                   "const": ".hive/hooks/protect-hive-owned-state"
                 },
@@ -292,13 +366,19 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "update-integrity-guard" }
+                "capability": {
+                  "const": "update-integrity-guard"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "const": "PreToolUse" },
+                "event": {
+                  "const": "PreToolUse"
+                },
                 "path": {
                   "const": ".hive/hooks/update-integrity-guard"
                 },
@@ -311,13 +391,19 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "derived-state-invalidation" }
+                "capability": {
+                  "const": "derived-state-invalidation"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "const": "PostToolUse" },
+                "event": {
+                  "const": "PostToolUse"
+                },
                 "path": {
                   "const": ".hive/hooks/derived-state-invalidation"
                 },
@@ -330,13 +416,22 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "checkpoint-reminder" }
+                "capability": {
+                  "const": "checkpoint-reminder"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "enum": ["PreCompact", "Stop"] },
+                "event": {
+                  "enum": [
+                    "PreCompact",
+                    "Stop"
+                  ]
+                },
                 "path": {
                   "const": ".hive/hooks/checkpoint-reminder"
                 }
@@ -344,7 +439,9 @@
               "oneOf": [
                 {
                   "properties": {
-                    "event": { "const": "PreCompact" },
+                    "event": {
+                      "const": "PreCompact"
+                    },
                     "command": {
                       "const": "hive hook --capability checkpoint-reminder --event PreCompact --capabilities .hive/runtime/current-capability-resolution.json --output json"
                     }
@@ -352,7 +449,9 @@
                 },
                 {
                   "properties": {
-                    "event": { "const": "Stop" },
+                    "event": {
+                      "const": "Stop"
+                    },
                     "command": {
                       "const": "hive hook --capability checkpoint-reminder --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
                     }
@@ -364,14 +463,22 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "continue-active-run" }
+                "capability": {
+                  "const": "continue-active-run"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "const": "Stop" },
-                "path": { "const": ".hive/hooks/continue-active-run" },
+                "event": {
+                  "const": "Stop"
+                },
+                "path": {
+                  "const": ".hive/hooks/continue-active-run"
+                },
                 "command": {
                   "const": "hive hook --capability continue-active-run --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
                 }
@@ -381,19 +488,32 @@
           {
             "if": {
               "properties": {
-                "capability": { "const": "validate-korean-output" }
+                "capability": {
+                  "const": "validate-korean-output"
+                }
               },
-              "required": ["capability"]
+              "required": [
+                "capability"
+              ]
             },
             "then": {
               "properties": {
-                "event": { "enum": ["Stop", "AfterAgent"] },
-                "path": { "const": ".hive/hooks/validate-korean-output" }
+                "event": {
+                  "enum": [
+                    "Stop",
+                    "AfterAgent"
+                  ]
+                },
+                "path": {
+                  "const": ".hive/hooks/validate-korean-output"
+                }
               },
               "oneOf": [
                 {
                   "properties": {
-                    "event": { "const": "Stop" },
+                    "event": {
+                      "const": "Stop"
+                    },
                     "command": {
                       "const": "hive hook --capability validate-korean-output --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
                     }
@@ -401,7 +521,9 @@
                 },
                 {
                   "properties": {
-                    "event": { "const": "AfterAgent" },
+                    "event": {
+                      "const": "AfterAgent"
+                    },
                     "command": {
                       "const": "hive hook --capability validate-korean-output --event AfterAgent --capabilities .hive/runtime/current-capability-resolution.json --output json"
                     }
@@ -412,24 +534,54 @@
           }
         ]
       }
+    },
+    "preference_decisions": {
+      "$ref": "#/$defs/preference_decisions"
     }
   },
   "allOf": [
     {
       "if": {
-        "properties": { "setup_mode": { "const": "custom" } },
-        "required": ["setup_mode"]
+        "properties": {
+          "setup_mode": {
+            "const": "custom"
+          }
+        },
+        "required": [
+          "setup_mode"
+        ]
       },
       "then": {
-        "required": ["interface_language", "wiki", "persona", "skills"]
+        "required": [
+          "interface_language",
+          "wiki",
+          "persona",
+          "skills"
+        ]
       },
       "else": {
         "not": {
           "anyOf": [
-            { "required": ["interface_language"] },
-            { "required": ["wiki"] },
-            { "required": ["persona"] },
-            { "required": ["skills"] }
+            {
+              "required": [
+                "interface_language"
+              ]
+            },
+            {
+              "required": [
+                "wiki"
+              ]
+            },
+            {
+              "required": [
+                "persona"
+              ]
+            },
+            {
+              "required": [
+                "skills"
+              ]
+            }
           ]
         }
       }
@@ -445,10 +597,21 @@
     "wiki": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "language"],
+      "required": [
+        "enabled",
+        "language"
+      ],
       "properties": {
-        "enabled": { "type": "boolean" },
-        "language": { "enum": ["en", "ko", "both"] }
+        "enabled": {
+          "type": "boolean"
+        },
+        "language": {
+          "enum": [
+            "en",
+            "ko",
+            "both"
+          ]
+        }
       }
     },
     "persona": {
@@ -456,18 +619,33 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id"],
+          "required": [
+            "id"
+          ],
           "properties": {
-            "id": { "enum": ["strict", "balanced", "friendly"] }
+            "id": {
+              "enum": [
+                "strict",
+                "balanced",
+                "friendly"
+              ]
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "custom_description"],
+          "required": [
+            "id",
+            "custom_description"
+          ],
           "properties": {
-            "id": { "const": "custom" },
-            "custom_description": { "$ref": "#/$defs/nonempty_single_line" }
+            "id": {
+              "const": "custom"
+            },
+            "custom_description": {
+              "$ref": "#/$defs/nonempty_single_line"
+            }
           }
         }
       ]
@@ -509,29 +687,180 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "recommended_suite"],
+          "required": [
+            "mode",
+            "recommended_suite"
+          ],
           "properties": {
-            "mode": { "const": "recommended" },
+            "mode": {
+              "const": "recommended"
+            },
             "recommended_suite": {
-              "enum": ["daily-work", "web-developer", "game-developer", "non-developer"]
+              "enum": [
+                "daily-work",
+                "web-developer",
+                "game-developer",
+                "non-developer"
+              ]
             }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "selected"],
+          "required": [
+            "mode",
+            "selected"
+          ],
           "properties": {
-            "mode": { "const": "individual" },
+            "mode": {
+              "const": "individual"
+            },
             "selected": {
               "type": "array",
               "minItems": 0,
               "uniqueItems": true,
-              "items": { "$ref": "#/$defs/skill_name" }
+              "items": {
+                "$ref": "#/$defs/skill_name"
+              }
             }
           }
         }
       ]
+    },
+    "preference_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "input_channel",
+        "scope",
+        "question_id",
+        "question_revision",
+        "policy_version",
+        "changed_in_version",
+        "decided_at",
+        "value_digest"
+      ],
+      "properties": {
+        "origin": {
+          "enum": [
+            "default",
+            "explicit",
+            "accepted-default",
+            "inherited",
+            "legacy-unknown",
+            "external-change"
+          ]
+        },
+        "input_channel": {
+          "enum": [
+            "terminal",
+            "answers-file",
+            "agent",
+            "migration"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "user",
+            "project"
+          ]
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "question_revision": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "changed_in_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "decided_at": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "value_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "inherited_from": {
+          "type": "object",
+          "required": [
+            "scope",
+            "key"
+          ],
+          "properties": {
+            "scope": {
+              "const": "user"
+            },
+            "key": {
+              "type": "string",
+              "pattern": "^/[^\\r\\n]+$",
+              "maxLength": 512
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "origin": {
+                "const": "inherited"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "inherited_from"
+            ],
+            "properties": {
+              "scope": {
+                "const": "project"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "inherited_from"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "preference_decisions": {
+      "type": "object",
+      "maxProperties": 512,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^/[^\\r\\n\\u0000]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/preference_decision"
+      }
     }
   }
 }

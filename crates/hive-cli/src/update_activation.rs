@@ -1,4 +1,15 @@
+mod completion;
+mod direct_replacement;
+mod output;
+#[cfg(debug_assertions)]
+pub(crate) mod qualification;
+mod removal;
+pub(crate) use direct_replacement::run_scope as run_replacement_scope;
+pub(crate) use direct_replacement::run_worker as run_replacement_cleanup;
+pub(crate) use removal::remove_owned_core;
+
 use crate::usage::{CommandRunner, SystemCommandRunner};
+use hive_core::setup::{InteractionMode, InteractionRequest};
 use hive_core::sha256_digest;
 use hive_update::SemVersion;
 use serde::Deserialize;
@@ -7,7 +18,7 @@ use std::env;
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::ExitCode;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -16,7 +27,6 @@ const MAX_BINARY_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_INSTALLER_BYTES: usize = 1024 * 1024;
 const INSTALL_TIMEOUT: Duration = Duration::from_mins(10);
 const INSTALL_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
-const DIRECT_HANDOFF_HELPER: &str = ".hive/runtime/update/hive-direct-update-helper.exe";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum PackageChannel {
@@ -37,6 +47,7 @@ struct UpdateArguments {
     confirm: bool,
     handoff_executable: Option<PathBuf>,
     user_root: Option<PathBuf>,
+    interaction: InteractionRequest,
 }
 
 #[derive(Clone, Copy)]
@@ -50,9 +61,12 @@ Update the installed Aigent Hive package and its authenticated user projections.
 
 USAGE:
     hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
+                [--interactive | --non-interactive] [--output json]
 
 The default channel is stable. The test channel requires explicit --channel test.
---confirm accepts the displayed exact update without an interactive terminal.
+--confirm accepts only the software update. It does not answer setup questions.
+--non-interactive and --output json never wait for input.
+--interactive requires a terminal and conflicts with non-interactive or JSON output.
 ";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -111,6 +125,13 @@ struct UpdateFlowContext<'a> {
 }
 
 trait ProjectionRefresher {
+    fn requires_host_selection(&self) -> bool {
+        true
+    }
+    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) {
+        (language, hosts.to_vec())
+    }
+
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String>;
 
     fn refresh_and_validate(
@@ -128,77 +149,60 @@ trait ProjectionRefresher {
     ) -> Result<(), String>;
 }
 
-struct LiveProjectionRefresher;
+struct LiveProjectionRefresher {
+    interactive: bool,
+    report: std::cell::RefCell<Option<completion::Report>>,
+}
+
+impl LiveProjectionRefresher {
+    fn new(interactive: bool) -> Self {
+        Self {
+            interactive,
+            report: std::cell::RefCell::new(None),
+        }
+    }
+    fn complete(&self, executable: &Path, root: &Path) -> Result<(), String> {
+        let report = completion::run(executable, root, self.interactive)?;
+        let success = report.succeeded();
+        let message = format!("{} [{}]", report.message, report.code);
+        *self.report.borrow_mut() = Some(report);
+        if success {
+            Ok(())
+        } else {
+            Err(message)
+        }
+    }
+}
 
 impl ProjectionRefresher for LiveProjectionRefresher {
+    fn requires_host_selection(&self) -> bool {
+        false
+    }
+    fn summary(&self, language: Language, hosts: &[String]) -> (Language, Vec<String>) {
+        self.report.borrow().as_ref().map_or_else(
+            || (language, hosts.to_vec()),
+            |report| report.summary(language, hosts),
+        )
+    }
     fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String> {
         crate::user_install::authenticated_saved_projection_hosts(user_root)
     }
-
     fn refresh_and_validate(
         &self,
         executable: &Path,
         user_root: &Path,
-        hosts: &[String],
+        _hosts: &[String],
     ) -> Result<(), String> {
-        run_user_projection(executable, user_root, hosts, "update")
+        self.complete(executable, user_root)
     }
-
     fn bootstrap_and_validate(
         &self,
         executable: &Path,
         user_root: &Path,
-        hosts: &[String],
+        _hosts: &[String],
     ) -> Result<(), String> {
-        run_user_projection(executable, user_root, hosts, "install")
+        self.complete(executable, user_root)
     }
-}
-
-fn run_user_projection(
-    executable: &Path,
-    user_root: &Path,
-    hosts: &[String],
-    operation: &str,
-) -> Result<(), String> {
-    let executable = executable.to_string_lossy();
-    let program = SystemCommandRunner
-        .qualify(&executable)
-        .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
-    let hosts = hosts.join(",");
-    let user_root = user_root.to_string_lossy();
-    for mode in ["--apply", "--validate"] {
-        let expected_action = projection_refresh_action(operation, mode);
-        let output = SystemCommandRunner
-            .run(
-                &program,
-                &[
-                    operation,
-                    "--scope",
-                    "user",
-                    "--hosts",
-                    &hosts,
-                    mode,
-                    "--user-root",
-                    &user_root,
-                    "--output",
-                    "json",
-                ],
-                INSTALL_TIMEOUT,
-                INSTALL_OUTPUT_LIMIT,
-            )
-            .map_err(|error| {
-                format!("activated Hive user projection {mode} command failed: {error}")
-            })?;
-        let result: ChildActionResult = serde_json::from_slice(&output.stdout).map_err(|_| {
-            format!("activated Hive user projection {mode} command returned malformed JSON")
-        })?;
-        if !output.success || !projection_refresh_reported_success(expected_action, &result) {
-            return Err(format!(
-                "activated Hive user projection {mode} command did not report success"
-            ));
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -229,6 +233,7 @@ impl ProjectionRefresher for NoopProjectionRefresher {
     }
 }
 
+#[cfg(test)]
 #[derive(Deserialize)]
 struct ChildActionResult {
     action: String,
@@ -236,6 +241,7 @@ struct ChildActionResult {
     exit_code: u8,
 }
 
+#[cfg(test)]
 fn projection_refresh_action(operation: &str, mode: &str) -> &'static str {
     match (operation, mode) {
         ("install", "--apply") => "InstallHiveUser",
@@ -245,6 +251,7 @@ fn projection_refresh_action(operation: &str, mode: &str) -> &'static str {
     }
 }
 
+#[cfg(test)]
 fn projection_refresh_reported_success(expected_action: &str, result: &ChildActionResult) -> bool {
     result.status == "success" && result.exit_code == 0 && result.action == expected_action
 }
@@ -253,11 +260,14 @@ trait RegistrySource {
     fn fetch(&self) -> Result<Vec<u8>, String>;
 }
 
-struct LiveRegistry;
+#[derive(Default)]
+struct LiveRegistry(std::cell::OnceCell<Result<Vec<u8>, String>>);
 
 impl RegistrySource for LiveRegistry {
     fn fetch(&self) -> Result<Vec<u8>, String> {
-        crate::update_discovery::fetch_registry_metadata()
+        self.0
+            .get_or_init(crate::update_discovery::fetch_registry_metadata)
+            .clone()
     }
 }
 
@@ -265,15 +275,20 @@ trait Installer {
     fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String>;
 }
 
-struct LiveInstaller;
+struct LiveInstaller {
+    defer_loaded_image: bool,
+}
 
 impl Installer for LiveInstaller {
     fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String> {
         match owner {
             InstallOwner::Npm { .. } => install_with_npm(target, &SystemCommandRunner),
-            InstallOwner::Direct { prefix, .. } => {
-                install_direct(prefix, target, &SystemCommandRunner)
-            }
+            InstallOwner::Direct { prefix, .. } => install_direct(
+                prefix,
+                target,
+                &SystemCommandRunner,
+                self.defer_loaded_image,
+            ),
         }
     }
 }
@@ -328,20 +343,23 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         print!("{UPDATE_USAGE}");
         return ExitCode::SUCCESS;
     }
+    let json_output = arguments
+        .windows(2)
+        .any(|pair| pair == ["--output", "json"]);
     let arguments = match parse_arguments(arguments) {
         Ok(arguments) => arguments,
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     };
-    let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
-    if !interactive && !arguments.confirm {
-        eprintln!(
-            "update blocked: `hive update` requires an interactive terminal or explicit --confirm; no update was installed"
-        );
-        return ExitCode::from(3);
+    let mode = arguments
+        .interaction
+        .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
+        .expect("parsed interaction contract");
+    if mode == InteractionMode::NeedsInput {
+        return output::needs_input(json_output, "--interactive requires a usable terminal");
     }
+    let interactive = mode == InteractionMode::Terminal;
     let user_root = match arguments
         .user_root
         .as_deref()
@@ -350,47 +368,72 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         }) {
         Ok(root) => root,
         Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
-        }
-    };
-    let language = match selected_language(&user_root) {
-        Ok(language) => language,
-        Err(message) => {
-            eprintln!("error: {message}");
-            return ExitCode::from(2);
+            return output::error(json_output, message);
         }
     };
     let current_executable = match env::current_exe() {
         Ok(path) => path,
         Err(error) => {
-            eprintln!("error: cannot resolve the running Hive executable: {error}");
-            return ExitCode::from(2);
+            return output::error(
+                json_output,
+                format!("cannot resolve the running Hive executable: {error}"),
+            )
+        }
+    };
+    if arguments.handoff_executable.is_none() {
+        match resume_direct_replacement(&current_executable, &user_root, interactive) {
+            Ok(Some(result)) => return output::emit(json_output, &result),
+            Ok(None) => {}
+            Err(message) => return output::error(json_output, message),
+        }
+    }
+    // Finish an approved interrupted setup before registry lookup or another binary install.
+    // Software --confirm never supplies answers to the setup engine.
+    match crate::user_setup::resume_pending_update(
+        &user_root,
+        interactive,
+        !interactive && !arguments.confirm,
+    ) {
+        Ok(Some(result)) => {
+            return output::emit(json_output, &result);
+        }
+        Ok(None) => {}
+        Err(message) => {
+            return output::error(json_output, message);
+        }
+    }
+    if !interactive && !arguments.confirm {
+        return output::needs_input(json_output,
+            "Software update approval is required. Run in a terminal or pass --confirm; no update was installed.");
+    }
+    let language = match selected_language(&user_root) {
+        Ok(language) => language,
+        Err(message) => {
+            return output::error(json_output, message);
         }
     };
     let executable = arguments
         .handoff_executable
         .as_deref()
         .unwrap_or(&current_executable);
-    if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
-        if let Err(error) =
-            spawn_windows_direct_handoff(&current_executable, &user_root, &arguments)
-        {
-            eprintln!("error: cannot start Windows direct update handoff: {error}");
-            return ExitCode::from(2);
+    let registry = LiveRegistry::default();
+    let defer_loaded_image = if cfg!(windows) && arguments.handoff_executable.is_none() {
+        match direct_replacement_required(executable, arguments.channel, &registry) {
+            Ok(required) => required,
+            Err(error) => return output::error(json_output, error),
         }
-        eprintln!(
-            "Windows direct update handoff started; completion continues in the child process."
-        );
-        return ExitCode::SUCCESS;
-    }
+    } else {
+        false
+    };
+    let installer = LiveInstaller { defer_loaded_image };
     if arguments.handoff_executable.is_some() {
         if let Err(error) = wait_for_windows_direct_unlock(executable) {
-            eprintln!("error: {error}");
-            return ExitCode::from(2);
+            return output::error(json_output, error);
         }
     }
     let mut output = io::stderr().lock();
+    let refresher = LiveProjectionRefresher::new(interactive);
+    let mut core_update = output::CoreUpdate::default();
     let outcome = if arguments.confirm {
         let mut input = io::Cursor::new(b"y\n".as_slice());
         update_flow_with_projection_channel(
@@ -399,15 +442,16 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 user_root: &user_root,
                 language,
             },
-            &LiveRegistry,
-            &LiveInstaller,
-            &LiveProjectionRefresher,
+            &registry,
+            &installer,
+            &refresher,
             UpdateSelection {
                 channel: arguments.channel,
                 confirmed: true,
             },
             &mut input,
             &mut output,
+            &mut core_update,
         )
     } else {
         let mut input = io::stdin().lock();
@@ -417,24 +461,125 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 user_root: &user_root,
                 language,
             },
-            &LiveRegistry,
-            &LiveInstaller,
-            &LiveProjectionRefresher,
+            &registry,
+            &installer,
+            &refresher,
             UpdateSelection {
                 channel: arguments.channel,
                 confirmed: false,
             },
             &mut input,
             &mut output,
+            &mut core_update,
         )
     };
-    match outcome {
-        Ok(_) => ExitCode::SUCCESS,
-        Err(message) => {
-            eprintln!("error: {message}");
-            ExitCode::from(2)
+    let mut result = output::finished(
+        outcome,
+        refresher.report.borrow().as_ref(),
+        language,
+        &core_update,
+    );
+    if core_update.status == "verified" {
+        match direct_replacement::finish(executable, None, false) {
+            Ok(Some(view)) => {
+                let failure = if view["state"] == "after-process-exit" {
+                    direct_replacement::spawn(executable, &view).err()
+                } else {
+                    None
+                };
+                output::cleanup(&mut result, language, view, failure);
+            }
+            Ok(None) => {}
+            Err(error) => output::cleanup(
+                &mut result,
+                language,
+                serde_json::json!({"state":"unverified","scope":"direct-install-prefix"}),
+                Some(error),
+            ),
         }
     }
+    supply_resume(&mut result, &user_root, &core_update);
+    output::emit(json_output, &result)
+}
+
+fn supply_resume(
+    result: &mut crate::ActionResult,
+    user_root: &Path,
+    core_update: &output::CoreUpdate,
+) {
+    if result.exit_code != 0 && core_update.status == "verified" && result.next_action.is_none() {
+        result.next_action = Some(crate::update_bridge::resume_command(user_root));
+        result.data.as_mut().expect("update result data")["resume_command"] =
+            serde_json::json!(result.next_action);
+    }
+}
+
+fn resume_direct_replacement(
+    executable: &Path,
+    user_root: &Path,
+    interactive: bool,
+) -> Result<Option<crate::ActionResult>, String> {
+    let Some(view) = direct_replacement::finish(executable, None, false)? else {
+        return Ok(None);
+    };
+    let language = selected_language(user_root)?;
+    if view["state"] != "complete" {
+        return Ok(Some(output::cleanup_pending(
+            language,
+            &view,
+            crate::update_bridge::resume_command(user_root),
+        )));
+    }
+    let core = output::CoreUpdate {
+        status: "verified",
+        from_version: view["from_version"].as_str().map(str::to_owned),
+        to_version: view["to_version"].as_str().map(str::to_owned),
+        requested_version: view["to_version"].as_str().map(str::to_owned),
+    };
+    let refresher = LiveProjectionRefresher::new(interactive);
+    let outcome = refresher
+        .complete(executable, user_root)
+        .map(|()| FlowOutcome::Reconciled);
+    let mut result = output::finished(outcome, refresher.report.borrow().as_ref(), language, &core);
+    output::cleanup(&mut result, language, view, None);
+    result.data.as_mut().expect("completion data")["recovered"] = serde_json::json!(true);
+    supply_resume(&mut result, user_root, &core);
+    Ok(Some(result))
+}
+
+pub(crate) fn result_guidance(result: &crate::ActionResult) -> Vec<String> {
+    output::guidance(result)
+}
+
+pub(crate) fn uninstall_owner_preview(executable: &Path) -> Result<serde_json::Value, String> {
+    let version = env!("CARGO_PKG_VERSION")
+        .parse()
+        .map_err(|_| "invalid compiled version")?;
+    let owner = discover_owner(executable, version)?;
+    let binary = fs::read(executable).map_err(|_| "cannot fingerprint the installed program")?;
+    let receipt = match &owner {
+        InstallOwner::Direct { prefix, .. } => Some(sha256_digest(
+            &fs::read(prefix.join("share/aigent-hive/install-receipt.json"))
+                .map_err(|_| "cannot fingerprint the direct receipt")?,
+        )),
+        InstallOwner::Npm { .. } => None,
+    };
+    Ok(
+        serde_json::json!({"owner":owner.label(),"package_version":owner.package_version().exact,
+        "executable":executable.canonicalize().map_err(|_|"cannot resolve installed program")?,
+        "executable_digest":sha256_digest(&binary),"receipt_digest":receipt,
+        "prefix":match &owner { InstallOwner::Direct {prefix,..}=>Some(prefix), InstallOwner::Npm {..}=>None }}),
+    )
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos", test))]
+pub(crate) fn is_npm_installation(executable: &Path) -> bool {
+    env!("CARGO_PKG_VERSION").parse().is_ok_and(|version| {
+        matches!(
+            discover_owner(executable, version),
+            Ok(InstallOwner::Npm { .. })
+        )
+    })
 }
 
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
@@ -443,6 +588,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     let mut confirm = false;
     let mut handoff_executable = None;
     let mut user_root = None;
+    let mut interaction = InteractionRequest::default();
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].as_str() {
@@ -461,6 +607,21 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
             "--confirm" if !confirm => {
                 confirm = true;
                 index += 1;
+            }
+            "--interactive" if !interaction.interactive => {
+                interaction.interactive = true;
+                index += 1;
+            }
+            "--non-interactive" if !interaction.non_interactive => {
+                interaction.non_interactive = true;
+                index += 1;
+            }
+            "--output" if !interaction.json => {
+                if arguments.get(index + 1).map(String::as_str) != Some("json") {
+                    return Err("--output must be json".into());
+                }
+                interaction.json = true;
+                index += 2;
             }
             "--direct-handoff" if handoff_executable.is_none() => {
                 let value = arguments
@@ -487,74 +648,34 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
             option => return Err(format!("unknown or duplicate update option: {option}")),
         }
     }
+    interaction.resolve(false, false)?;
     Ok(UpdateArguments {
         channel,
         confirm,
         handoff_executable,
         user_root,
+        interaction,
     })
 }
 
-fn is_direct_owner(executable: &Path) -> bool {
-    let Ok(expected) = env!("CARGO_PKG_VERSION").parse() else {
-        return false;
-    };
-    matches!(
-        discover_owner(executable, expected),
-        Ok(InstallOwner::Direct { .. })
-    )
-}
-
-fn spawn_windows_direct_handoff(
+fn direct_replacement_required(
     executable: &Path,
-    user_root: &Path,
-    arguments: &UpdateArguments,
-) -> Result<(), String> {
-    if !cfg!(windows) {
-        return Err("Windows direct update handoff is unavailable on this platform".to_owned());
-    }
-    let helper = user_root.join(DIRECT_HANDOFF_HELPER);
-    let parent = helper
-        .parent()
-        .ok_or_else(|| "direct update helper has no parent directory".to_owned())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("cannot create direct update helper directory: {error}"))?;
-    if helper.exists() {
-        fs::remove_file(&helper)
-            .map_err(|error| format!("cannot replace prior direct update helper: {error}"))?;
-    }
-    fs::copy(executable, &helper)
-        .map_err(|error| format!("cannot copy direct update helper: {error}"))?;
-    let channel = match arguments.channel {
-        UpdateChannel::Stable => "stable",
-        UpdateChannel::Test => "test",
+    channel: UpdateChannel,
+    registry: &impl RegistrySource,
+) -> Result<bool, String> {
+    let expected: SemVersion = env!("CARGO_PKG_VERSION")
+        .parse()
+        .map_err(|_| "invalid compiled version")?;
+    let Ok(owner @ InstallOwner::Direct { .. }) = discover_owner(executable, expected) else {
+        return Ok(false);
     };
-    let user_root = user_root
-        .to_str()
-        .ok_or_else(|| "Hive user root is not UTF-8".to_owned())?;
-    let executable = executable
-        .to_str()
-        .ok_or_else(|| "Hive executable path is not UTF-8".to_owned())?;
-    let mut command = Command::new(&helper);
-    command.args([
-        "update",
-        "--direct-handoff",
-        executable,
-        "--channel",
-        channel,
-        "--user-root",
-        user_root,
-    ]);
-    if arguments.confirm {
-        command.arg("--confirm");
-    }
-    command
-        .spawn()
-        .map_err(|error| format!("cannot launch direct update helper: {error}"))?;
-    Ok(())
+    let target = target_package(&registry.fetch()?, channel)?;
+    // Only an actual compatible replacement needs the installer's locked-image protocol.
+    // The same cached metadata is used by the normal flow after this decision.
+    Ok(target.product.major == expected.major && target > *owner.package_version())
 }
 
-fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
+pub(crate) fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
     if !cfg!(windows) {
         return Ok(());
     }
@@ -632,9 +753,11 @@ fn update_flow_with_projection(
         },
         input,
         output,
+        &mut output::CoreUpdate::default(),
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_flow_with_projection_channel(
     context: &UpdateFlowContext<'_>,
     registry: &impl RegistrySource,
@@ -643,13 +766,17 @@ fn update_flow_with_projection_channel(
     selection: UpdateSelection,
     input: &mut impl BufRead,
     output: &mut impl Write,
+    core_update: &mut output::CoreUpdate,
 ) -> Result<FlowOutcome, String> {
     let current_product: SemVersion = env!("CARGO_PKG_VERSION")
         .parse()
         .map_err(|error| format!("compiled Hive version is invalid: {error}"))?;
     let owner = discover_owner(context.executable, current_product)?;
+    core_update.from_version = Some(owner.package_version().exact.clone());
+    core_update.to_version.clone_from(&core_update.from_version);
     let metadata = registry.fetch()?;
     let target = target_package(&metadata, selection.channel)?;
+    core_update.requested_version = Some(target.exact.clone());
     if target.product.major != current_product.major {
         return Err(format!(
             "the npm distribution targets product {} and requires explicit major-version authority",
@@ -659,20 +786,25 @@ fn update_flow_with_projection_channel(
     let mut hosts = refresher.authenticated_hosts(context.user_root)?;
     let bootstrap = hosts.is_empty();
     if target <= *owner.package_version() {
+        core_update.status = "unchanged";
         if !bootstrap {
             refresher
                 .refresh_and_validate(context.executable, context.user_root, &hosts)
                 .map_err(|error| {
                     format!("authenticated user projection reconciliation failed: {error}")
                 })?;
-            write_reconciled(output, context.language, &hosts)?;
+            let (language, hosts) = refresher.summary(context.language, &hosts);
+            write_reconciled(output, language, &hosts)?;
             return Ok(FlowOutcome::Reconciled);
         }
-        hosts = select_bootstrap_hosts(context.language, input, output)?;
+        if refresher.requires_host_selection() {
+            hosts = select_bootstrap_hosts(context.language, input, output)?;
+        }
         refresher
             .bootstrap_and_validate(context.executable, context.user_root, &hosts)
             .map_err(|error| format!("initial user projection bootstrap failed: {error}"))?;
-        write_bootstrapped(output, context.language, &hosts)?;
+        let (language, hosts) = refresher.summary(context.language, &hosts);
+        write_bootstrapped(output, language, &hosts)?;
         return Ok(FlowOutcome::Reconciled);
     }
     write_prompt(output, context.language, &owner, &target, &hosts)?;
@@ -686,14 +818,18 @@ fn update_flow_with_projection_channel(
             return Ok(FlowOutcome::Declined);
         }
     }
-    if bootstrap {
+    if bootstrap && refresher.requires_host_selection() {
         hosts = select_bootstrap_hosts(context.language, input, output)?;
     }
+    core_update.status = "unverified";
+    core_update.to_version = None;
     installer.install(&owner, &target)?;
     let activated_owner = discover_owner(context.executable, target.product)?;
     if activated_owner.label() != owner.label() || activated_owner.package_version() != &target {
         return Err("the install owner did not activate the exact requested package".to_owned());
     }
+    core_update.status = "verified";
+    core_update.to_version = Some(target.exact.clone());
     if bootstrap {
         refresher
             .bootstrap_and_validate(context.executable, context.user_root, &hosts)
@@ -711,7 +847,8 @@ fn update_flow_with_projection_channel(
                 )
             })?;
     }
-    write_installed(output, context.language, &target, &hosts)?;
+    let (language, hosts) = refresher.summary(context.language, &hosts);
+    write_installed(output, language, &target, &hosts)?;
     Ok(FlowOutcome::Installed)
 }
 
@@ -932,6 +1069,7 @@ fn install_direct(
     prefix: &Path,
     target: &PackageVersion,
     runner: &impl CommandRunner,
+    defer_loaded_image: bool,
 ) -> Result<(), String> {
     let extension = if cfg!(windows) { ".ps1" } else { ".sh" };
     let url = format!(
@@ -967,26 +1105,26 @@ fn install_direct(
         let program = runner
             .qualify("powershell.exe")
             .map_err(|error| format!("cannot qualify Windows PowerShell 5.1: {error}"))?;
-        runner.run(
-            &program,
-            &[
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                installer_path,
-                "-Version",
-                &target.product.to_string(),
-                "-PackageVersion",
-                &target.exact,
-                "-Prefix",
-                prefix,
-            ],
-            INSTALL_TIMEOUT,
-            INSTALL_OUTPUT_LIMIT,
-        )
+        let product = target.product.to_string();
+        let mut arguments = vec![
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            installer_path,
+            "-Version",
+            &product,
+            "-PackageVersion",
+            &target.exact,
+            "-Prefix",
+            prefix,
+        ];
+        if defer_loaded_image {
+            arguments.push("-DeferLockedBackup");
+        }
+        runner.run(&program, &arguments, INSTALL_TIMEOUT, INSTALL_OUTPUT_LIMIT)
     } else {
         let program = runner
             .qualify("env")
@@ -1131,11 +1269,11 @@ fn write_reconciled(
 ) -> Result<(), String> {
     let message = match language {
         Language::En => format!(
-            "Aigent Hive is current; refreshed and validated user projection hosts: {}.\n",
+            "Aigent Hive is current; user guidance updated and verified for: {}.\n",
             hosts.join(", ")
         ),
         Language::Ko => format!(
-            "Aigent Hive는 최신 상태이며 사용자 투영 호스트를 갱신·검증했습니다: {}.\n",
+            "Aigent Hive는 최신 상태이며 다음 앱의 사용자 지침을 갱신·검증했습니다: {}.\n",
             hosts.join(", ")
         ),
     };
@@ -1150,8 +1288,8 @@ fn write_bootstrapped(
     hosts: &[String],
 ) -> Result<(), String> {
     let message = match language {
-        Language::En => format!("Aigent Hive is current; initialized setup-required user projections for: {}. Open one selected host to complete setup.\n", hosts.join(", ")),
-        Language::Ko => format!("Aigent Hive는 최신 상태이며 다음 호스트에 설정 대기 사용자 투영을 초기화했습니다: {}. 선택한 호스트 하나를 열어 설정을 완료하세요.\n", hosts.join(", ")),
+        Language::En => format!("Aigent Hive is current; user settings and guidance installed and verified for: {}.\n", hosts.join(", ")),
+        Language::Ko => format!("Aigent Hive는 최신 상태입니다. 다음 앱의 초기 설정과 사용자 지침 설치·검증을 마쳤습니다: {}.\n", hosts.join(", ")),
     };
     output
         .write_all(message.as_bytes())
@@ -1184,12 +1322,12 @@ fn write_installed(
             target.exact
         ),
         Language::En => format!(
-            "Aigent Hive update complete: {}. Refreshed and validated user projection hosts: {}.\n",
+            "Aigent Hive update complete: {}. User guidance updated and verified for: {}.\n",
             target.exact,
             hosts.join(", ")
         ),
         Language::Ko => format!(
-            "Aigent Hive 갱신 완료: {}. 갱신·검증한 사용자 투영 호스트: {}.\n",
+            "Aigent Hive 갱신 완료: {}. 사용자 지침을 갱신·검증한 앱: {}.\n",
             target.exact,
             hosts.join(", ")
         ),
@@ -1202,8 +1340,8 @@ fn write_installed(
 fn projection_scope_message(language: Language, hosts: &[String]) -> String {
     if hosts.is_empty() {
         return match language {
-            Language::En => "none (binary-only update)".to_owned(),
-            Language::Ko => "없음(바이너리만 갱신)".to_owned(),
+            Language::En => "initial setup after update".to_owned(),
+            Language::Ko => "갱신 후 초기 설정".to_owned(),
         };
     }
     hosts.join(", ")
@@ -1443,7 +1581,7 @@ mod tests {
         assert_eq!(installer.calls.borrow().len(), 0);
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("사용자 투영 호스트를 갱신·검증"));
+            .contains("사용자 지침을 갱신·검증"));
     }
 
     #[test]
@@ -1501,6 +1639,7 @@ mod tests {
             },
             &mut input,
             &mut output,
+            &mut output::CoreUpdate::default(),
         )
         .expect("test update installed");
 
@@ -1534,6 +1673,7 @@ mod tests {
             },
             &mut input,
             &mut output,
+            &mut output::CoreUpdate::default(),
         )
         .expect_err("missing test channel");
 
@@ -1559,6 +1699,62 @@ mod tests {
         assert!(parse_arguments(&["--channel".to_owned(), "preview".to_owned()]).is_err());
         assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_err());
         assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
+    }
+
+    #[test]
+    fn update_input_mode_is_independent_of_software_confirmation() {
+        for confirmed in [false, true] {
+            for stdin in [false, true] {
+                for guidance in [false, true] {
+                    let parse = |flags: &[&str]| {
+                        let mut args: Vec<_> = flags.iter().map(ToString::to_string).collect();
+                        if confirmed {
+                            args.push("--confirm".into());
+                        }
+                        parse_arguments(&args)
+                            .unwrap()
+                            .interaction
+                            .resolve(stdin, guidance)
+                            .unwrap()
+                    };
+                    assert_eq!(
+                        parse(&[]),
+                        if stdin && guidance {
+                            InteractionMode::Terminal
+                        } else {
+                            InteractionMode::NonInteractive
+                        }
+                    );
+                    assert_eq!(
+                        parse(&["--interactive"]),
+                        if stdin && guidance {
+                            InteractionMode::Terminal
+                        } else {
+                            InteractionMode::NeedsInput
+                        }
+                    );
+                    assert_eq!(
+                        parse(&["--non-interactive"]),
+                        InteractionMode::NonInteractive
+                    );
+                    assert_eq!(
+                        parse(&["--output", "json"]),
+                        InteractionMode::NonInteractive
+                    );
+                }
+            }
+        }
+        for flags in [
+            vec!["--interactive", "--non-interactive"],
+            vec!["--interactive", "--output", "json"],
+            vec!["--output", "text"],
+            vec!["--non-interactive", "--non-interactive"],
+            vec!["--output", "json", "--output", "json"],
+        ] {
+            assert!(
+                parse_arguments(&flags.into_iter().map(str::to_owned).collect::<Vec<_>>()).is_err()
+            );
+        }
     }
 
     #[test]
@@ -1658,7 +1854,7 @@ mod tests {
         );
         let text = String::from_utf8(output).expect("output");
         assert!(text.contains("User projection refresh: claude, codex"));
-        assert!(text.contains("Refreshed and validated user projection hosts: claude, codex"));
+        assert!(text.contains("User guidance updated and verified for: claude, codex"));
     }
 
     #[test]
@@ -1759,7 +1955,8 @@ mod tests {
         let mut input = Cursor::new(b"y\n");
         let mut output = Vec::new();
 
-        let error = update_flow_with_projection(
+        let mut core = output::CoreUpdate::default();
+        let error = update_flow_with_projection_channel(
             &UpdateFlowContext {
                 executable: &binary,
                 user_root: user_root.path(),
@@ -1768,11 +1965,18 @@ mod tests {
             &metadata(&target),
             &installer,
             &refresher,
+            UpdateSelection {
+                channel: UpdateChannel::Stable,
+                confirmed: false,
+            },
             &mut input,
             &mut output,
+            &mut core,
         )
         .expect_err("refresh failure");
 
+        assert_eq!(core.status, "verified");
+        assert_eq!(core.to_version.as_deref(), Some(target.as_str()));
         assert!(error.contains("binary update completed"));
         assert_eq!(installer.calls.borrow().as_slice(), [target]);
         assert_eq!(refresher.calls.borrow().len(), 1);
@@ -1809,5 +2013,35 @@ mod tests {
             owner.package_version().exact,
             format!("{}-test.1", env!("CARGO_PKG_VERSION"))
         );
+        let current = format!("{}-test.1", env!("CARGO_PKG_VERSION"));
+        let newer = format!("{}-test.2", env!("CARGO_PKG_VERSION"));
+        for (stable, test, channel, required) in [
+            (
+                "0.1.0",
+                Some(current.as_str()),
+                UpdateChannel::Stable,
+                false,
+            ),
+            ("0.1.0", Some(current.as_str()), UpdateChannel::Test, false),
+            ("0.1.0", Some(newer.as_str()), UpdateChannel::Test, true),
+            (env!("CARGO_PKG_VERSION"), None, UpdateChannel::Stable, true),
+            ("1.0.0", None, UpdateChannel::Stable, false),
+        ] {
+            assert_eq!(
+                direct_replacement_required(
+                    &binary,
+                    channel,
+                    &metadata_with_channels(stable, test)
+                )
+                .unwrap(),
+                required,
+            );
+        }
+        assert!(direct_replacement_required(
+            &binary,
+            UpdateChannel::Stable,
+            &FakeRegistry(b"invalid".to_vec())
+        )
+        .is_err());
     }
 }

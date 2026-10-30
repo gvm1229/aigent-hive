@@ -9,14 +9,14 @@ summary: "Global developer replacement is retired; authenticated Windows recover
 tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
-  - "repo:crates/hive-cli/build.rs#sha256:67a27be3e7eb6823b4633ea9e95a3cb535925c5b06c0020be045e4e851a2b16c"
-  - "repo:crates/hive-cli/src/main.rs#sha256:53492315e69a8d63cfa180d672e2557eb99b9102a7606998462eb334f192dd8f"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:cd9973f27fdd4952ee1936257cb4ed0f2f98d6b8033aa1f89fc2b93eefeb34fd"
+  - "repo:crates/hive-cli/build.rs#sha256:ccace02d7847f79937d69dc9819b46727f36b23ac1518484c30de9a0d20206a3"
+  - "repo:crates/hive-cli/src/main.rs#sha256:dc14d1ddb9b68d254c1b3548c2011e29d07efb4ed7b4259fd708dd9aa95317a8"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
   - "repo:docs/research/developer-install-recovery.md#sha256:552390190deb914cf2dfd84106461b994b7ee3587a5ce954102cfa62f74d9925"
   - "repo:scripts/dev-install.sh#sha256:49d7e923900b37bf30b8678e150bfb7f21ad4427876da5031b46aac04df8560e"
   - "repo:scripts/recover-dev-install.py#sha256:128ee7d1aa5dbd883f963df2ec9eb1449771d4343bda1deef1e94161d7bf964b"
 links: [interactive-binary-update, source-development, version-policy]
-reviewed_revision: "git:0ee29cc7a10c6786f5d325569f85182e654cd4b1"
+reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
 ---
 

@@ -1,11 +1,17 @@
 //! Independent Windows Codex interruption. Never starts model work or persists transcripts.
+mod activation;
 mod desktop;
 mod platform;
+mod preferences;
 #[cfg(debug_assertions)]
 mod qualification;
+pub(crate) mod review;
 mod sensor;
 mod state;
+mod status;
 mod threshold;
+mod transition;
+pub(crate) use transition::StoppedReader;
 mod upgrade;
 
 #[cfg(debug_assertions)]
@@ -13,6 +19,8 @@ pub(crate) use qualification::run_qualification;
 #[cfg(debug_assertions)]
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
+pub(crate) use status::setup_status;
+pub(crate) use upgrade::resume_after_setup;
 pub(crate) use upgrade::upgrade_existing;
 
 use crate::run::{AdapterError, PinnedTarget};
@@ -39,7 +47,7 @@ const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 
 const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Configuration {
     schema_version: u8,
@@ -53,7 +61,7 @@ struct Configuration {
     launcher: Option<TaskLauncher>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct TaskLauncher {
     executable: PathBuf,
@@ -141,6 +149,33 @@ fn lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
     Ok(file)
 }
 
+fn existing_lock(root: &PinnedTarget, name: &str) -> Result<File, AdapterError> {
+    let mut parent = root
+        .target_dir()
+        .try_clone()
+        .map_err(|_| error("cannot pin lock parent"))?;
+    for component in Path::new(BASE).components() {
+        parent = parent
+            .open_dir_nofollow(component.as_os_str())
+            .map_err(|_| error("monitor lock parent is absent or unsafe"))?;
+    }
+    if !parent
+        .symlink_metadata(name)
+        .is_ok_and(|metadata| metadata.is_file())
+    {
+        return Err(error("monitor lock is absent or unsafe"));
+    }
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).follow(FollowSymlinks::No);
+    let file = parent
+        .open_with(name, &options)
+        .map_err(|_| error("cannot pin monitor lock"))?
+        .into_std();
+    file.try_lock()
+        .map_err(|_| AdapterError::Conflict("monitor operation already running".into()))?;
+    Ok(file)
+}
+
 fn with_state<T>(
     root: &PinnedTarget,
     apply: impl FnOnce(&mut MonitorState) -> Result<T, AdapterError>,
@@ -187,6 +222,68 @@ pub(crate) fn monitor_enabled(root: &PinnedTarget) -> bool {
         .ok()
         .flatten()
         .is_some_and(|configuration| configuration.enabled)
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SavedMonitorChoice {
+    pub enabled: bool,
+    pub configured: bool,
+    pub config_digest: String,
+}
+
+pub(crate) fn inspect_saved_choice(user_root: &Path) -> Result<SavedMonitorChoice, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let before = root.snapshot_bounded(Path::new(CONFIG), 65536)?;
+    let choice = transition::selection(&root)?;
+    let after = root.snapshot_bounded(Path::new(CONFIG), 65536)?;
+    root.verify_current()?;
+    if before.bytes() != after.bytes() {
+        return Err(error("monitor choice changed during inspection"));
+    }
+    Ok(SavedMonitorChoice {
+        enabled: choice.unwrap_or(false),
+        configured: choice.is_some(),
+        config_digest: before
+            .bytes()
+            .map_or_else(|| "absent".to_owned(), sha256_digest),
+    })
+}
+
+pub(crate) fn quiesce_for_setup(
+    user_root: &Path,
+    choice: &SavedMonitorChoice,
+    operation_id: &str,
+) -> Result<transition::StoppedReader, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    transition::quiesce_operation(
+        &root,
+        platform::call,
+        Duration::from_secs(15),
+        Some(&choice.config_digest),
+        Some(operation_id),
+    )
+}
+
+pub(crate) fn verify_stopped_for_setup(user_root: &Path) -> Result<(), AdapterError> {
+    transition::verify_stopped(&PinnedTarget::open_usage(user_root)?)
+}
+
+pub(crate) fn quiesce_for_uninstall(
+    user_root: &Path,
+    choice: &SavedMonitorChoice,
+    operation_id: &str,
+) -> Result<transition::StoppedReader, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let stopped = transition::quiesce_operation(
+        &root,
+        platform::call,
+        Duration::from_secs(15),
+        Some(&choice.config_digest),
+        Some(operation_id),
+    )?;
+    activation::retire_disabled(&root)?;
+    Ok(stopped)
 }
 
 pub(crate) fn threshold_already_handled(
@@ -340,9 +437,11 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
 
 fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
     let configuration: Option<Configuration> = load(root, CONFIG)?;
+    let selection = transition::selection(root);
     let mut state: MonitorState = load(root, STATE)?.unwrap_or_else(MonitorState::new);
     let probe = configuration
         .as_ref()
+        .filter(|_| selection.is_ok())
         .zip(state.controller_pid)
         .and_then(|(config, pid)| {
             platform::call(
@@ -379,10 +478,14 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         json!({"configuration":configuration,"state":state,"startup":load::<Value>(root, STARTUP).ok().flatten(),"observation_gap_seconds":gap.as_secs(),"controller_alive":alive,"controller_heartbeat_fresh":heartbeat_fresh,"sensor_health":sensor_health,
         "configured_monitor_version":configuration.as_ref().map(|config| &config.version),"running_monitor_version":alive.then_some(&state.runtime_version),
         "last_query_source":state.last_query_source,"last_primary_error":state.primary_query_error,"last_query_error":state.last_query_error,"consecutive_query_failures":state.consecutive_query_failures,"last_stop_confirmed":state.incident.as_ref().map(|incident| incident.stop_confirmed),
-        "automatic_control_available":cfg!(windows),"compatibility_policy":"protocol","monitoring_verified": require_app_safe_control().is_ok() && configuration.as_ref().is_some_and(|c| c.enabled) && alive && heartbeat_fresh
+        "automatic_control_available":cfg!(windows),"compatibility_policy":"protocol","monitoring_verified": require_app_safe_control().is_ok() && selection.as_ref().is_ok_and(|value| *value == Some(true)) && alive && heartbeat_fresh
             && observed && state.last_query_error.is_none() && state.control_compatibility.as_deref() == Some("compatible") && state.control_connected && !state.control_stopping && state.unknown_sessions == 0 && state.threshold_policy_errors == 0,
         "desktop_compatibility":{"actual_version":state.desktop_version,"state":if !alive || !heartbeat_fresh {"unavailable"} else {state.control_compatibility.as_deref().unwrap_or("pending")},"stage":state.control_stage,"error":state.control_error},
         "upgrade":load::<Value>(root, upgrade::JOURNAL)?,
+        "saved_selection_verified":selection.is_ok(),
+        "verified_saved_selection":selection.as_ref().ok().copied().flatten(),
+        "selection_error":selection.as_ref().err().map(AdapterError::message),
+        "disable":load::<Value>(root, transition::JOURNAL)?,
         "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
     )
 }
@@ -411,23 +514,7 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
         ))
         .components()
         .collect();
-    let launch = format!(
-        "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
-        installed_executable.to_string_lossy().replace('\'', "''"),
-        root_text.replace('\'', "''")
-    );
-    let encoded = base64::engine::general_purpose::STANDARD.encode(
-        launch
-            .encode_utf16()
-            .flat_map(u16::to_le_bytes)
-            .collect::<Vec<_>>(),
-    );
-    let launcher = std::env::var_os("SystemRoot").map(|path| TaskLauncher {
-        executable: Path::new(&path).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
-        arguments: format!(
-            "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}"
-        ),
-    });
+    let launcher = task_launcher(&installed_executable, root_text);
     Ok(Configuration {
         schema_version: 1,
         enabled: true,
@@ -437,6 +524,26 @@ fn configuration(root: &Path) -> Result<Configuration, AdapterError> {
         task_name: monitor_task_name(root),
         arguments: format!("usage monitor run --user-root \"{root_text}\" --output json"),
         launcher,
+    })
+}
+
+fn task_launcher(executable: &Path, root_text: &str) -> Option<TaskLauncher> {
+    let launch = format!(
+        "& '{}' usage monitor run --user-root '{}' --output json\nexit $LASTEXITCODE",
+        executable.to_string_lossy().replace('\'', "''"),
+        root_text.replace('\'', "''")
+    );
+    let encoded = base64::engine::general_purpose::STANDARD.encode(
+        launch
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect::<Vec<_>>(),
+    );
+    std::env::var_os("SystemRoot").map(|path| TaskLauncher {
+        executable: Path::new(&path).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
+        arguments: format!(
+            "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}"
+        ),
     })
 }
 
@@ -494,7 +601,23 @@ fn monitor_root_path(root: &Path) -> Result<PathBuf, AdapterError> {
     Ok(root.to_owned())
 }
 fn preview(root: &Path) -> Result<Value, AdapterError> {
-    let mut config = configuration(root)?;
+    let pinned = PinnedTarget::open_usage(root)?;
+    let binding = activation::Binding::capture(&pinned)?;
+    preview_bound(&pinned, &binding)
+}
+
+pub(crate) fn setup_activation_preview(root: &Path) -> Result<Value, AdapterError> {
+    preview(root)
+}
+
+pub(crate) fn activate_after_setup(root: &Path, approval: &str) -> Result<Value, AdapterError> {
+    enable(&PinnedTarget::open_usage(root)?, approval)
+}
+fn preview_bound(
+    pinned: &PinnedTarget,
+    binding: &activation::Binding,
+) -> Result<Value, AdapterError> {
+    let mut config = configuration(pinned.requested_path())?;
     let available = cfg!(windows);
     config.enabled = available;
     let changed = if available {
@@ -507,7 +630,8 @@ fn preview(root: &Path) -> Result<Value, AdapterError> {
         "scope":"all-local-chats-in-current-user-OpenAI.Codex-package","emergency_termination":false,"session_interrupt":available,"app_preserved":available,"compatibility_policy":"protocol","automatic_control_available":available,
         "changed_paths":changed,"scheduled_task_operation":if available {"register-current-user-login"} else {"none-unsupported-os"},
         "remove":"hive usage monitor disable --user-root <user-root> --output json",
-        "supports_current_os":available,"remote_execution_supported":false});
+        "supports_current_os":available,"remote_execution_supported":false,"activation_binding":binding});
+    pinned.verify_current()?;
     let digest = sha256_digest(&serialize(&data)?);
     data["preview_digest"] = json!(digest);
     Ok(data)
@@ -538,6 +662,7 @@ fn require_desktop_inspection(inspection: &Value) -> Result<(), AdapterError> {
     }
 }
 fn prepare_activation(state: &mut MonitorState) {
+    state.suppress_pending();
     // Only an explicit enable starts a new observation period. A controller crash
     // or upgrade must retain its prior gap and must not gain sixty extra seconds.
     state.observation_count = 0;
@@ -545,82 +670,22 @@ fn prepare_activation(state: &mut MonitorState) {
     state.watch_started_uptime_ms = None;
     state.last_success_uptime_ms = None;
     state.sensor_outage_stopped_at = None;
+    state.observation_outage_noticed_at = None;
     state.control_connected = false;
     state.heartbeat = 0;
     state.heartbeat_uptime_ms = None;
 }
 
-fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
-    require_app_safe_control()?;
-    let _control = lock(root, "control.lock")?;
-    if preview(root.requested_path())?["preview_digest"].as_str() != Some(confirm) {
-        return Err(error("preview digest changed"));
-    }
-    if load::<Configuration>(root, CONFIG)?.is_some_and(|c| c.enabled) {
-        return Err(error("monitor already enabled"));
-    }
-    let manifest: Value = load(root, ".hive/install/codex.json")?.ok_or_else(|| {
-        error("install the matching Hive Codex version before enabling its monitor")
-    })?;
-    if manifest["product_version"] != env!("CARGO_PKG_VERSION") {
-        return Err(error(
-            "installed Hive Codex version differs; update it before enabling the monitor",
-        ));
-    }
-    require_desktop_inspection(&platform::call(
-        &json!({"operation":"inspect"}),
-        Duration::from_secs(5),
-    )?)?;
-    let config = configuration(root.requested_path())?;
-    let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
-        .map_err(|_| error("cannot stage monitor executable"))?;
-    if sha256_digest(&bytes) != config.executable_digest {
-        return Err(error("monitor executable changed after preview"));
-    }
-    let relative = config
-        .executable
-        .strip_prefix(root.requested_path())
-        .map_err(|_| error("monitor executable escaped root"))?;
-    let before = root.snapshot_bounded(relative, 128 * 1024 * 1024)?;
-    root.publish_runtime(relative, &before, &bytes)?;
-    platform::call(&task_request(&config, "register"), Duration::from_secs(15))?;
-    with_state(root, |s| {
-        prepare_activation(s);
-        Ok(())
-    })?;
-    if let Err(e) = write(root, CONFIG, &config) {
-        let _ = platform::call(
-            &task_request(&config, "unregister"),
-            Duration::from_secs(15),
-        );
-        return Err(e);
-    }
-    if let Err(e) = platform::call(&task_request(&config, "start"), Duration::from_secs(10)) {
-        platform::call(
-            &task_request(&config, "unregister"),
-            Duration::from_secs(15),
-        )?;
-        let mut inactive = config.clone();
-        inactive.enabled = false;
-        write(root, CONFIG, &inactive)?;
-        return Err(e);
-    }
-    Ok(
-        json!({"enabled":true,"activation":"awaiting-first-observation","changed_paths":[CONFIG],"task_name":config.task_name}),
-    )
+fn usage_policy_disabled(root: &PinnedTarget) -> Result<bool, AdapterError> {
+    Ok(!preferences::load(root)?.checks.enabled)
 }
+
+fn enable(root: &PinnedTarget, confirm: &str) -> Result<Value, AdapterError> {
+    activation::enable(root, confirm)
+}
+
 fn disable(root: &PinnedTarget) -> Result<Value, AdapterError> {
-    let _control = lock(root, "control.lock")?;
-    let Some(mut config): Option<Configuration> = load(root, CONFIG)? else {
-        return Ok(json!({"enabled":false}));
-    };
-    platform::call(
-        &task_request(&config, "unregister"),
-        Duration::from_secs(15),
-    )?;
-    config.enabled = false;
-    write(root, CONFIG, &config)?;
-    Ok(json!({"enabled":false,"incident_preserved":true,"changed_paths":[CONFIG]}))
+    transition::disable(root, platform::call, Duration::from_secs(15))
 }
 type SampleResult = sensor::Sample;
 fn sensor_worker() -> mpsc::SyncSender<(bool, mpsc::SyncSender<SampleResult>)> {
@@ -648,6 +713,9 @@ fn inspect_async() -> Receiver<Result<Value, ()>> {
 }
 
 fn controller(root: &PinnedTarget) -> Result<Value, AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+    }
     let mut report = json!({"started_at":now(),"pid":std::process::id(),
         "version":env!("HIVE_PACKAGE_VERSION"),"error":null});
     write(root, STARTUP, &report)?;
@@ -663,6 +731,9 @@ fn controller_scoped(
     root: &PinnedTarget,
     qualification: Option<String>,
 ) -> Result<Value, AdapterError> {
+    if usage_policy_disabled(root)? {
+        return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+    }
     require_app_safe_control()?;
     let _lease = lock(root, "controller.lock")?;
     let config: Configuration =
@@ -702,22 +773,39 @@ fn controller_scoped(
     let desktop = desktop::Desktop::start_scoped(qualification);
     let mut fault_notice = None;
     loop {
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+        }
         if load::<Configuration>(root, CONFIG)?.is_some_and(|current| !current.enabled) {
             return Ok(json!({"stopped":true}));
         }
         if let Ok(value) = controller_loop(root, active, &desktop) {
             return Ok(value);
         }
-        let incident = match with_state(root, |s| Ok(s.controller_fault(now()))) {
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+        }
+        let selected = preferences::load(root)?;
+        let incident = match with_state(root, |s| {
+            if selected.stop_on_failure() {
+                Ok(s.controller_fault(now()))
+            } else {
+                s.controller_warning(now());
+                Ok(None)
+            }
+        }) {
             Ok(value) => value,
-            Err(_) => fault_notice
+            Err(_) if selected.stop_on_failure() => fault_notice
                 .is_none()
                 .then(|| sha256_digest(b"monitor-state-repair-required")),
+            Err(_) => None,
         };
         if let Some(incident) = incident {
             desktop.stop(&incident, Some(now().saturating_mul(1000)));
-            let _notice =
-                platform::notify("monitor-fault", false, &incident, root.requested_path());
+            if selected.notify() {
+                let _notice =
+                    platform::notify("monitor-fault", false, &incident, root.requested_path());
+            }
             fault_notice = Some(incident);
         }
         // Recover observation without repeatedly stopping user-resumed work.
@@ -827,36 +915,48 @@ fn record_sample(
     elapsed: u64,
     policies: &[crate::usage_control::MonitorPolicy],
 ) -> (bool, bool) {
+    let Ok(selected) = preferences::load(root) else {
+        return (false, false);
+    };
     #[cfg(debug_assertions)]
     let measured = qualification::observation(root.requested_path(), measured);
     with_state(root, |state| {
         state.query_elapsed_ms = Some(elapsed);
         let result = state.record_query(measured, now());
+        selected.filter_pending(state);
         if result.0 {
             threshold::observe(state, policies, &state.baseline.clone(), now());
         }
+        selected.filter_pending(state);
         Ok(result)
     })
     .unwrap_or((false, false))
 }
 
-fn claim_halt(root: &PinnedTarget, digest: &str) -> Result<Option<bool>, AdapterError> {
+fn claim_halt(
+    root: &PinnedTarget,
+    digest: &str,
+    selected: &preferences::Preferences,
+) -> Result<Option<(state::Incident, bool)>, AdapterError> {
     with_state(root, |s| {
+        selected.filter_pending(s);
         let Some(current) = s.incident.as_mut().filter(|i| i.digest == digest) else {
             return Ok(None);
         };
-        if current.stop_dispatched_at.is_some() {
+        if current.stop_dispatched_at.is_some() || current.policy_suppressed {
             return Ok(None);
         }
         current.stop_dispatched_at = Some(now());
         if current.reason == "usage-reset" {
             s.last_reset_dispatched_at = Some(current.detected_at);
         }
-        let notify = current.notification == "pending";
+        let notify = current.notification == "pending" && selected.notify();
         if notify {
             current.notification = "requested".into();
+        } else if current.notification == "pending" {
+            current.notification = "suppressed".into();
         }
-        Ok(Some(notify))
+        Ok(Some((current.clone(), notify)))
     })
     .or_else(|failure| {
         if matches!(failure, AdapterError::Conflict(_)) {
@@ -874,8 +974,9 @@ fn dispatch_halt(
     sent_incident: &mut Option<String>,
     notification: &mut Option<(String, Receiver<bool>)>,
 ) -> Result<(), AdapterError> {
+    let selected = preferences::load(root)?;
     if let Some(incident) = incident {
-        let Some(should_notify) = claim_halt(root, &incident.digest)? else {
+        let Some((incident, should_notify)) = claim_halt(root, &incident.digest, &selected)? else {
             return Ok(());
         };
         if sent_incident.as_deref() != Some(incident.digest.as_str()) {
@@ -959,6 +1060,9 @@ fn controller_loop(
         .unwrap_or(started);
     loop {
         let tick = Instant::now();
+        if usage_policy_disabled(root)? {
+            return Ok(json!({"stopped":true,"reason":"usage-policy-disabled"}));
+        }
         collect_notice(root, &mut notification);
         let Some(current): Option<Configuration> = load(root, CONFIG)? else {
             return Err(error("monitor configuration disappeared"));
@@ -1012,14 +1116,17 @@ fn controller_loop(
             if let Ok((updated, errors)) = receive.try_recv() {
                 policies = updated;
                 policies_at = tick;
+                let selected = preferences::load(root)?;
                 with_state(root, |state| {
                     state.threshold_policy_errors = errors;
+                    selected.filter_pending(state);
                     if state
                         .last_success
                         .is_some_and(|at| now().saturating_sub(at) <= 5)
                     {
                         threshold::observe(state, &policies, &state.baseline.clone(), now());
                     }
+                    selected.filter_pending(state);
                     Ok(())
                 })?;
                 policy_job = None;
@@ -1065,8 +1172,14 @@ fn controller_loop(
             }
         }
         if active && cadence.blind(tick.duration_since(started)) {
+            let selected = preferences::load(root)?;
             with_state(root, |state| {
-                state.observation_blind(now());
+                if selected.stop_on_failure() {
+                    state.observation_blind(now());
+                } else {
+                    state.observation_warning(now());
+                }
+                selected.filter_pending(state);
                 Ok(())
             })?;
         }
@@ -1099,6 +1212,45 @@ fn controller_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn opted_in_user_policy() -> Value {
+        let mut guard = serde_json::to_value(hive_core::preferences::UsageProtection::from_legacy(
+            true, true, true,
+        ))
+        .unwrap();
+        guard["stop_remaining_percent"] = json!(20);
+        json!({"schema_version":2,"interface_language":"en","wiki":{"language":"en"},
+            "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+            "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":guard})
+    }
+
+    #[test]
+    fn explicit_master_disable_prevents_monitor_start_or_registration() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join(".hive/config/user-setup.yml");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut config = opted_in_user_policy();
+        let root = PinnedTarget::open_usage(directory.path()).unwrap();
+        for (master, midway) in [(false, true), (true, false)] {
+            config["usage_guard"]["enforcement_enabled"] = json!(master);
+            config["usage_guard"]["midway"]["enabled"] = json!(midway);
+            std::fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+            assert!(usage_policy_disabled(&root).unwrap());
+            assert_eq!(
+                controller(&root).unwrap()["reason"],
+                "usage-policy-disabled"
+            );
+            assert!(enable(&root, "unconfirmed").is_err());
+            assert!(!directory.path().join(".hive/runtime").exists());
+        }
+        config["usage_guard"]["midway"]["enabled"] = json!(true);
+        std::fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+        assert!(!usage_policy_disabled(&root).unwrap());
+        std::fs::write(&path, "broken: policy").unwrap();
+        assert!(usage_policy_disabled(&root).is_err());
+        std::fs::remove_file(&path).unwrap();
+        assert!(usage_policy_disabled(&root).is_err());
+    }
     #[test]
     fn live_contract_failure_and_disconnect_never_reuse_compatible_state() {
         let temporary = tempfile::tempdir().unwrap();
@@ -1131,7 +1283,11 @@ mod tests {
         prepare_activation(&mut state);
         assert_eq!(state.observation_count, 0);
         assert_eq!(state.last_success, Some(100));
-        assert_eq!(serde_json::to_value(&state.incident).unwrap(), incident);
+        assert_eq!(
+            serde_json::to_value(&state.incident).unwrap()["digest"],
+            incident["digest"]
+        );
+        assert!(state.incident.as_ref().unwrap().policy_suppressed);
         assert_eq!(
             state.observation_gap_monotonic(true, 900, Some(900_000)),
             Duration::ZERO
@@ -1175,6 +1331,13 @@ mod tests {
     fn rejected_startup_is_visible_without_publishing_a_stop_or_changing_choice() {
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let user_policy = temporary.path().join(".hive/config/user-setup.yml");
+        std::fs::create_dir_all(user_policy.parent().unwrap()).unwrap();
+        std::fs::write(
+            user_policy,
+            serde_yaml::to_string(&opted_in_user_policy()).unwrap(),
+        )
+        .unwrap();
         let mut config = configuration(temporary.path()).unwrap();
         config.enabled = false;
         write(&root, CONFIG, &config).unwrap();
@@ -1257,6 +1420,10 @@ mod tests {
     }
     #[test]
     fn dispatch_claim_is_atomic_and_never_replays_the_same_event() {
+        let selected = preferences::Preferences {
+            checks: hive_core::preferences::UsageProtection::from_legacy(true, true, true).midway,
+            popup_enabled: true,
+        };
         let temporary = tempfile::tempdir().unwrap();
         let root = PinnedTarget::open_usage(temporary.path()).unwrap();
         let incident = with_state(&root, |s| {
@@ -1265,22 +1432,73 @@ mod tests {
         })
         .unwrap();
         let held = lock(&root, "state.lock").unwrap();
-        assert!(claim_halt(&root, &incident).unwrap().is_none());
+        assert!(claim_halt(&root, &incident, &selected)
+            .unwrap()
+            .map(|(_, notify)| notify)
+            .is_none());
         assert!(record_control(&root, &json!({"control_stopping":false}), true, true).is_ok());
         drop(held);
-        assert_eq!(claim_halt(&root, &incident).unwrap(), Some(true));
-        assert_eq!(claim_halt(&root, &incident).unwrap(), None);
+        assert_eq!(
+            claim_halt(&root, &incident, &selected)
+                .unwrap()
+                .map(|(_, notify)| notify),
+            Some(true)
+        );
+        assert_eq!(
+            claim_halt(&root, &incident, &selected)
+                .unwrap()
+                .map(|(_, notify)| notify),
+            None
+        );
         with_state(&root, |s| {
             s.incident = None;
             Ok(())
         })
         .unwrap();
-        assert!(claim_halt(&root, &incident).unwrap().is_none());
+        assert!(claim_halt(&root, &incident, &selected)
+            .unwrap()
+            .map(|(_, notify)| notify)
+            .is_none());
         assert!(load::<MonitorState>(&root, STATE)
             .unwrap()
             .unwrap()
             .incident
             .is_none());
+    }
+
+    #[test]
+    fn dispatch_claim_uses_filtered_targets_and_requires_popup_choice() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = PinnedTarget::open_usage(temporary.path()).unwrap();
+        let mut selected = preferences::Preferences {
+            checks: hive_core::preferences::UsageProtection::from_legacy(true, true, true).midway,
+            popup_enabled: false,
+        };
+        let digest = with_state(&root, |state| {
+            state.halt("usage-reset", 100);
+            Ok(state.incident.as_ref().unwrap().digest.clone())
+        })
+        .unwrap();
+        let (claimed, notify) = claim_halt(&root, &digest, &selected).unwrap().unwrap();
+        assert!(!notify);
+        assert_eq!(claimed.notification, "suppressed");
+        assert!(claimed.stop_dispatched_at.is_some());
+        selected.checks.reset_enabled = false;
+        selected.popup_enabled = true;
+        let digest = with_state(&root, |state| {
+            state.halt("usage-reset", 101);
+            Ok(state.incident.as_ref().unwrap().digest.clone())
+        })
+        .unwrap();
+        assert!(claim_halt(&root, &digest, &selected).unwrap().is_none());
+        let history = load::<MonitorState>(&root, STATE)
+            .unwrap()
+            .unwrap()
+            .incident
+            .unwrap();
+        assert_eq!(history.digest, digest);
+        assert!(history.policy_suppressed);
+        assert_eq!(history.stop_dispatched_at, None);
     }
     #[test]
     fn no_monitor_event_is_a_dispatch_permission_or_resume_lock() {

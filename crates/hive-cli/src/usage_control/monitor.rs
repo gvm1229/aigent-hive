@@ -59,8 +59,20 @@ fn from_config(
             .bytes()
             .map_or_else(|| "absent".into(), sha256_digest),
         threshold: config.threshold,
-        enabled: effective_enabled(loaded, config.guard_enabled),
-        zero_enabled: effective_zero_quota_enabled(loaded),
+        enabled: effective_enabled(
+            loaded,
+            config
+                .policy
+                .as_ref()
+                .map_or(config.guard_enabled, |policy| {
+                    policy.effective_midway().threshold_enabled
+                }),
+        ),
+        zero_enabled: effective_zero_quota_enabled(loaded)
+            && config
+                .policy
+                .as_ref()
+                .is_none_or(|policy| policy.effective_midway().zero_quota_enabled),
         turn_digest: None,
     })
 }
@@ -89,6 +101,13 @@ pub(crate) fn monitor_policy(
     let target = PinnedTarget::open_usage(scope)?;
     let runtime = PinnedTarget::open_usage(user_root)?;
     let config = read_effective_config(&target, Some(user_root), Some("codex"))?;
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
+        return Ok(None);
+    }
     let mut binding = bind_runtime_session(
         &ParsedBinding {
             session_id: session.to_owned(),
@@ -169,7 +188,15 @@ pub(super) fn register(
     target: &PinnedTarget,
     binding: &SessionBinding,
     control_bytes: &[u8],
+    config: &InstalledUsageConfig,
 ) -> Result<Option<String>, AdapterError> {
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
+        return Ok(None);
+    }
     if !crate::usage_monitor::monitor_enabled(root) || binding.host_scope != "codex" {
         return Ok(None);
     }
@@ -199,19 +226,26 @@ pub(super) fn register_for_arguments(
     let Some(root) = arguments.user_root.as_deref() else {
         return Ok(None);
     };
+    let target = PinnedTarget::open_usage(&arguments.target)?;
+    let config = read_effective_config(&target, Some(root), arguments.host.as_deref())?;
+    if config
+        .policy
+        .as_ref()
+        .is_some_and(|policy| !policy.effective_midway().enabled)
+    {
+        return Ok(None);
+    }
     let runtime = PinnedTarget::open_usage(root)?;
     if !crate::usage_monitor::monitor_enabled(&runtime) {
         return Ok(None);
     }
-    let target = PinnedTarget::open_usage(&arguments.target)?;
-    let config = read_effective_config(&target, Some(root), arguments.host.as_deref())?;
     let binding = bind_runtime_session(&arguments.binding, &config.primary_host, &target, true);
     let loaded = load_control(&runtime, &binding)?;
     if loaded.state != OverrideState::Current {
         return Ok(None);
     }
     match loaded.snapshot.bytes() {
-        Some(bytes) => register(&runtime, &target, &binding, bytes),
+        Some(bytes) => register(&runtime, &target, &binding, bytes, &config),
         None => Ok(None),
     }
 }
@@ -220,6 +254,51 @@ pub(super) fn register_for_arguments(
 mod tests {
     use super::*;
     use crate::usage_control::tests::{installed_config, write_global_config};
+
+    #[test]
+    fn midway_checks_do_not_inherit_preflight_threshold_or_zero_flags() {
+        let user = tempfile::tempdir().unwrap();
+        write_global_config(user.path(), 20);
+        let path = user.path().join(".hive/config/user-setup.yml");
+        let mut config: serde_json::Value =
+            serde_yaml::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        config["schema_version"] = serde_json::json!(2);
+        config["usage_guard"]
+            .as_object_mut()
+            .unwrap()
+            .remove("enabled");
+        let mut policy = hive_core::preferences::UsageProtection {
+            enforcement_enabled: true,
+            ..Default::default()
+        };
+        policy.midway.enabled = true;
+        let target = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(target.path().join(".hive/config")).unwrap();
+        std::fs::write(
+            target.path().join(super::super::CONFIG_PATH),
+            installed_config("codex", true, false),
+        )
+        .unwrap();
+        for live in [false, true] {
+            policy.preflight.threshold_enabled = !live;
+            policy.preflight.zero_quota_enabled = !live;
+            policy.midway.threshold_enabled = live;
+            policy.midway.zero_quota_enabled = live;
+            config["usage_guard"].as_object_mut().unwrap().extend(
+                serde_json::to_value(&policy)
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .clone(),
+            );
+            std::fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+            let observed = monitor_policy(user.path(), target.path(), "midway-flags")
+                .unwrap()
+                .unwrap();
+            assert_eq!(observed.enabled, live);
+            assert_eq!(observed.zero_enabled, live);
+        }
+    }
 
     #[test]
     fn live_policy_reuses_the_global_project_maximum_and_leaves_unconfigured_folders_alone() {

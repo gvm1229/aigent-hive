@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.2 release-date=2026-10-23 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.0 release-date=2026-10-30 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -89,7 +89,8 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
-| [`0.13.2`](releases/0.13.2.md) | 기능 호환 확인·0% 하한·소진 보호 |
+| [`0.14.0`](releases/0.14.0.md) | 모델 없는 터미널 설정·재개·자료 보존 제거 |
+| [`0.13.2`](releases/0.13.2.md) | 정식 게시 보류·기능 호환/소진 보호 개발 기록 |
 | [`0.13.1`](releases/0.13.1.md) | 하한 직접 중단·조회 회복·보존 갱신 보정 |
 | [`0.13.0`](releases/0.13.0.md) | 선택형 Windows Codex 실행 중단·알림 전용 창 |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
@@ -265,5 +266,30 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 ## 0.13.2 기능 호환·0% 보호
 
+- [기본 비활성화 계획·출시 보류](plans/active/usage-default-off-0.13.2.md)·[현재 선택](decisions/reset-stop-boundary.md#0132-기본-비활성화-설계)
 - [공개 시험 수용](research/public-test-0.13.2.md)·[실제 중단 검증](research/usage-compatibility-0.13.2.md)
 - [정식 게시·로컬 적용](plans/0.13.2-stable-release.md)·[승인 범위](plans/active/usage-compatibility-0.13.2.md)
+
+## 0.14.0 대화형 CLI
+
+- [실제 모델 정확성·입력 비용·지속 회귀](research/cli-model-validation-0.14.0.md): 고정 사례와 비교 표본, 실패 보존·조건별 반복 제한
+
+- [장기 정체 감사와 상세 인계](research/0.14.0-handoff-2026-10-26.md): 원래 완료 조건·확인한 구현·현재 결함·다음 수용
+
+- [미게시 변경 안내 초안](releases/0.14.0.md): 확인한 범위와 남은 수용 조건
+
+- [상세 구현 계획](plans/0.14.0-implementation.md)·[현재 결정](decisions/interactive-cli-0.14.0.md)·[조사 근거](research/interactive-cli-0.14.0.md)
+- [전역 CLI의 로컬 검증](research/cli-local-validation-0.14.0.md): 설정 이전·실패 뒤 재개·증명 범위와 이전 근거
+- [0.14.0 공개 시험 근거](research/public-test-0.14.0.md): 후보·게시·고정 지문·공개 파일 수용과 한계
+- [갱신 연결의 Windows 검증](research/cli-update-validation-0.14.0.md): 공개0.13.1 원본의 첫 질문·적용, 콘솔 입력 수정, 새 명령의 무입력 결과
+- [진행 기록의 대상과 쓰기 복구](research/cli-state-recovery-0.14.0.md): 같은 경로의 다른 폴더 구분, 중단된 기록 교체, 범위별 복구
+- [설정 입력과 프로젝트 CLI 검증](research/cli-project-validation-0.14.0.md): 입력 출처·전역 변경 메뉴·콘솔 중단·새 프로젝트 설정
+- [프로젝트 재설정과 역할 보존](research/cli-project-reconfiguration-0.14.0.md): 사용자 수정 병합·기존 답안 이전·역할 동의·중단 재개
+- [전역 맞춤 설정과 범위 검사](research/cli-user-settings-0.14.0.md): 알림·배경 설명·프로젝트별 기준·등록 정보 조회와 남은 색인 범위
+- [색인 범위와 종료 복구](research/cli-index-lifecycle-0.14.0.md): 게시 색인 보존·해제 원문 복원·잠금 재사용·실제 종료 재개
+- [위키 재활성화와 색인 게시 복구](research/cli-index-reactivation-0.14.0.md): 외부 폴더 범위 동의·일반 파일 승인·여섯 종료 지점 재개
+- [사용량 경고와 일반 설정의 감시 해제](research/cli-usage-settings-0.14.0.md): 기준별 경고 이력·종료 확인·해제 보존·분리한 예약 시험
+- [CLI 기반 구현의 누적 상태 보존](archive/state/0.14.0-cli-foundations-2026-10-24.md): 과거 단계별 검사 횟수와 당시 증명 한계
+- [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
+- [첫 갱신 시험의 격리 실수와 복구](research/legacy-update-test-isolation-0.14.0.md): 잘못된 npm 대역·기존13.1 복구·시험 설치 경로 제한
+- [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)

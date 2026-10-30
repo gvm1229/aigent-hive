@@ -4,6 +4,8 @@ pub mod bundle_io;
 pub mod bundle_store;
 pub mod collection;
 pub mod graph;
+mod knowledge_lock;
+use knowledge_lock::CapabilityKnowledgeLock;
 pub mod graphify;
 pub mod notion;
 pub mod portable;
@@ -3477,12 +3479,16 @@ fn capability_parent(
                     )));
                 }
                 Err(error) if error.kind() == io::ErrorKind::NotFound && create_missing => {
-                    current.create_dir(component).map_err(|error| {
-                        WikiError::Io(format!(
-                            "cannot create managed knowledge directory {}: {error}",
-                            relative.display()
-                        ))
-                    })?;
+                    match current.create_dir(component) {
+                        Ok(()) => {}
+                        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+                        Err(error) => {
+                            return Err(WikiError::Io(format!(
+                                "cannot create managed knowledge directory {}: {error}",
+                                relative.display()
+                            )))
+                        }
+                    }
                 }
                 Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
                 Err(error) => {
@@ -4580,67 +4586,8 @@ fn is_sha256(value: &str) -> bool {
     })
 }
 
-struct CapabilityKnowledgeLock {
-    index: Dir,
-    name: OsString,
-}
-
-impl CapabilityKnowledgeLock {
-    fn acquire(root: &Dir) -> Result<Self, WikiError> {
-        Self::acquire_at(root, Path::new(LOCK_RELATIVE))
-    }
-
-    fn acquire_shared_operation(root: &Dir) -> Result<Self, WikiError> {
-        Self::acquire_at(root, Path::new(SHARED_OPERATION_LOCK_RELATIVE))
-    }
-
-    fn acquire_at(root: &Dir, relative: &Path) -> Result<Self, WikiError> {
-        let (index, name) = capability_parent(root, relative, true)?
-            .ok_or_else(|| WikiError::Io("lock directory disappeared".to_owned()))?;
-        let started = Instant::now();
-        loop {
-            let mut options = CapOpenOptions::new();
-            options
-                .write(true)
-                .create_new(true)
-                .follow(FollowSymlinks::No);
-            match index.open_with(&name, &options) {
-                Ok(mut file) => {
-                    if let Err(error) = file
-                        .write_all(b"schema_version=1\n")
-                        .and_then(|()| file.sync_all())
-                    {
-                        drop(file);
-                        let _ = index.remove_file(&name);
-                        return Err(WikiError::Io(format!("cannot persist lock: {error}")));
-                    }
-                    return Ok(Self { index, name });
-                }
-                Err(error) if retryable_lock_contention(error.kind()) => {
-                    if started.elapsed() >= LOCK_TIMEOUT {
-                        return Err(WikiError::Conflict(
-                            "timed out waiting for canonical knowledge integration lock".to_owned(),
-                        ));
-                    }
-                    thread::sleep(Duration::from_millis(10));
-                }
-                Err(error) => {
-                    return Err(WikiError::Io(format!(
-                        "cannot acquire canonical knowledge integration lock: {error}"
-                    )));
-                }
-            }
-        }
-    }
-}
-
-impl Drop for CapabilityKnowledgeLock {
-    fn drop(&mut self) {
-        let _ = self.index.remove_file(&self.name);
-    }
-}
-
 struct KnowledgeLock {
+    guard: Option<CapabilityKnowledgeLock>,
     path: PathBuf,
     remove_parent_on_drop: bool,
 }
@@ -4650,48 +4597,22 @@ impl KnowledgeLock {
         let path = target.join(LOCK_RELATIVE);
         let parent = path
             .parent()
-            .ok_or_else(|| WikiError::Io("lock path has no parent".to_owned()))?;
+            .ok_or_else(|| WikiError::Io("lock path has no parent directory".into()))?;
         let remove_parent_on_drop = !parent.exists();
-        fs::create_dir_all(parent)
-            .map_err(|error| WikiError::Io(format!("cannot create lock directory: {error}")))?;
-        let started = Instant::now();
-        loop {
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
-                Ok(mut file) => {
-                    file.write_all(b"schema_version=1\n")
-                        .and_then(|()| file.sync_all())
-                        .map_err(|error| WikiError::Io(format!("cannot persist lock: {error}")))?;
-                    return Ok(Self {
-                        path,
-                        remove_parent_on_drop,
-                    });
-                }
-                Err(error) if retryable_lock_contention(error.kind()) => {
-                    if started.elapsed() >= LOCK_TIMEOUT {
-                        return Err(WikiError::Conflict(
-                            "timed out waiting for canonical knowledge integration lock".to_owned(),
-                        ));
-                    }
-                    thread::sleep(Duration::from_millis(10));
-                }
-                Err(error) => {
-                    return Err(WikiError::Io(format!(
-                        "cannot acquire canonical knowledge integration lock: {error}"
-                    )));
-                }
-            }
-        }
+        let root = Dir::open_ambient_dir(target, ambient_authority())
+            .map_err(|error| WikiError::Io(format!("cannot open knowledge lock root: {error}")))?;
+        let guard = CapabilityKnowledgeLock::acquire(&root)?;
+        Ok(Self {
+            guard: Some(guard),
+            path,
+            remove_parent_on_drop,
+        })
     }
-}
-
-fn retryable_lock_contention(kind: io::ErrorKind) -> bool {
-    kind == io::ErrorKind::AlreadyExists
-        || (cfg!(windows) && kind == io::ErrorKind::PermissionDenied)
 }
 
 impl Drop for KnowledgeLock {
     fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
+        drop(self.guard.take());
         if self.remove_parent_on_drop {
             if let Some(parent) = self.path.parent() {
                 let _ = fs::remove_dir(parent);
@@ -4703,16 +4624,6 @@ impl Drop for KnowledgeLock {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn lock_contention_is_bounded_to_existing_and_windows_sharing_errors() {
-        assert!(retryable_lock_contention(io::ErrorKind::AlreadyExists));
-        assert_eq!(
-            retryable_lock_contention(io::ErrorKind::PermissionDenied),
-            cfg!(windows)
-        );
-        assert!(!retryable_lock_contention(io::ErrorKind::NotFound));
-    }
 
     fn write_seed(root: &Path) {
         fs::create_dir_all(root.join(WIKI_RELATIVE)).unwrap();

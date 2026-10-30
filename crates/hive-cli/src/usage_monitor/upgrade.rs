@@ -19,13 +19,30 @@ pub(crate) fn upgrade_existing(user_root: &Path) -> Result<Option<Value>, Adapte
     let root = PinnedTarget::open_usage(user_root)?;
     match load::<Configuration>(&root, CONFIG)? {
         None => return Ok(None),
+        Some(_) if policy_disables_monitor(&root)? => {
+            return super::transition::disable(&root, platform::call, Duration::from_secs(15))
+                .map(Some);
+        }
         Some(config) if config.enabled => require_app_safe_control()?,
         Some(_) => {}
     }
     upgrade_with(&root, platform::call, await_ready).map(Some)
 }
 
-fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
+fn policy_disables_monitor(root: &PinnedTarget) -> Result<bool, AdapterError> {
+    let Some(bytes) = root.read_optional(Path::new(".hive/config/user-setup.yml"), 1024 * 1024)?
+    else {
+        return Ok(false);
+    };
+    let settings = crate::user_setup::parse_and_validate_installed_config(&bytes)
+        .map_err(|failure| error(failure.message()))?;
+    Ok(settings
+        .usage_guard
+        .policy
+        .is_some_and(|policy| !policy.enforcement_enabled || !policy.midway.enabled))
+}
+
+pub(super) fn stage(root: &PinnedTarget, config: &Configuration) -> Result<(), AdapterError> {
     let bytes = std::fs::read(std::env::current_exe().map_err(|_| error("unknown executable"))?)
         .map_err(|_| error("cannot stage upgraded monitor executable"))?;
     stage_bytes(root, config, &bytes)
@@ -53,7 +70,7 @@ fn stage_bytes(
     Ok(())
 }
 
-fn owned_binary_relative(
+pub(super) fn owned_binary_relative(
     root: &PinnedTarget,
     executable: &Path,
 ) -> Result<std::path::PathBuf, AdapterError> {
@@ -76,10 +93,135 @@ fn upgrade_with(
     call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
     ready: impl Fn(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
 ) -> Result<Value, AdapterError> {
+    upgrade_with_choice(root, call, ready, None)
+}
+
+pub(crate) fn resume_after_setup(
+    user_root: &Path,
+    operation_id: &str,
+) -> Result<Value, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    if policy_disables_monitor(&root)? {
+        return super::transition::disable(&root, platform::call, Duration::from_secs(15));
+    }
+    let stopped: Value = load(&root, super::transition::JOURNAL)?
+        .ok_or_else(|| error("setup monitor stop record is missing"))?;
+    let bytes = root.read_required(Path::new(CONFIG), 65536)?;
+    if stopped["operation_id"] != operation_id || stopped["phase"] != "complete" {
+        return Err(error("monitor choice changed after setup paused it"));
+    }
+    if stopped["after_digest"] != sha256_digest(&bytes) {
+        let prior: Value =
+            load(&root, JOURNAL)?.ok_or_else(|| error("monitor changed after setup"))?;
+        let current: Configuration =
+            serde_json::from_slice(&bytes).map_err(|_| error("invalid monitor configuration"))?;
+        if prior["setup_operation"] == operation_id
+            && matches!(
+                prior["phase"].as_str(),
+                Some("complete" | "checking" | "incomplete")
+            )
+            && prior["to"]
+                == serde_json::to_value(&current)
+                    .map_err(|_| error("invalid monitor configuration"))?
+        {
+            return finish_saved_setup_upgrade(
+                &root,
+                operation_id,
+                &stopped,
+                &current,
+                &prior,
+                await_ready,
+            );
+        }
+        return Err(error(
+            "monitor changed after setup; no automatic reactivation",
+        ));
+    }
+    require_app_safe_control()?;
+    upgrade_with_choice(&root, platform::call, await_ready, Some(operation_id))
+}
+
+fn finish_saved_setup_upgrade(
+    root: &PinnedTarget,
+    operation_id: &str,
+    stopped: &Value,
+    current: &Configuration,
+    prior: &Value,
+    ready: impl FnOnce(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
+) -> Result<Value, AdapterError> {
+    if prior["setup_operation"] != operation_id
+        || stopped["operation_id"] != operation_id
+        || stopped["phase"] != "complete"
+        || !matches!(
+            prior["phase"].as_str(),
+            Some("complete" | "checking" | "incomplete")
+        )
+        || prior["to"]
+            != serde_json::to_value(current)
+                .map_err(|_| error("invalid saved monitor configuration"))?
+    {
+        return Err(error(
+            "saved monitor readiness does not match the setup operation",
+        ));
+    }
+    authenticate_ownership(
+        root,
+        current,
+        &monitor_task_name(&monitor_root_path(root.requested_path())?),
+    )?;
+    if !current.enabled || current.version != env!("HIVE_PACKAGE_VERSION") {
+        return Err(error("saved monitor does not match this update"));
+    }
+    let health = ready(root, current)?;
+    let _control = lock(root, "control.lock")?;
+    let latest: Configuration = load(root, CONFIG)?
+        .ok_or_else(|| error("monitor configuration missing after readiness check"))?;
+    let stop: Value = load(root, super::transition::JOURNAL)?
+        .ok_or_else(|| error("monitor stop record missing after readiness check"))?;
+    let upgrade_snapshot = root.snapshot(Path::new(JOURNAL))?;
+    let upgrade: Value = serde_json::from_slice(
+        upgrade_snapshot
+            .bytes()
+            .ok_or_else(|| error("monitor update record missing after readiness check"))?,
+    )
+    .map_err(|_| error("invalid monitor update record after readiness check"))?;
+    if policy_disables_monitor(root)?
+        || super::serialize(&latest)? != super::serialize(current)?
+        || stop != *stopped
+        || upgrade != *prior
+        || prior["setup_operation"] != operation_id
+    {
+        return Err(error(
+            "monitor selection changed during readiness check; changes preserved",
+        ));
+    }
+    if prior["phase"] != "complete" {
+        let mut complete = prior.clone();
+        complete["phase"] = json!("complete");
+        complete["completed_at"] = json!(now());
+        complete["error"] = Value::Null;
+        root.publish_runtime(
+            Path::new(JOURNAL),
+            &upgrade_snapshot,
+            &super::serialize(&complete)?,
+        )?;
+    }
+    Ok(health)
+}
+
+fn upgrade_with_choice(
+    root: &PinnedTarget,
+    call: impl Fn(&Value, Duration) -> Result<Value, AdapterError>,
+    ready: impl Fn(&PinnedTarget, &Configuration) -> Result<Value, AdapterError>,
+    setup_operation: Option<&str>,
+) -> Result<Value, AdapterError> {
+    if policy_disables_monitor(root)? {
+        return super::transition::disable(root, call, Duration::from_secs(15));
+    }
     let mut next = configuration(root.requested_path())?;
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
-    next.enabled = old.enabled;
+    next.enabled = setup_operation.is_some() || old.enabled;
     authenticate_previous(root, &old, &next)?;
     let manifest: Value = load(root, ".hive/install/codex.json")?
         .ok_or_else(|| error("matching Codex installation required for monitor update"))?;
@@ -88,21 +230,24 @@ fn upgrade_with(
             "Codex installation and upgraded monitor versions differ",
         ));
     }
-    let mut journal = json!({"schema_version":1,"from":old,"to":next,
+    let mut journal = json!({"schema_version":1,"from":old,"to":next,"setup_operation":setup_operation,
         "phase":"preparing","started_at":now(),"error":null,"completed_at":null});
+    let mut journal_started = false;
     let operation: Result<Value, AdapterError> = (|| {
         {
             let _control = lock(root, "control.lock")?;
+            verify_upgrade_inputs(root, &old, setup_operation)?;
             write(root, JOURNAL, &journal)?;
+            journal_started = true;
             stage(root, &next)?;
-            if old.enabled {
+            if next.enabled {
                 require_desktop_inspection(&call(
                     &json!({"operation":"inspect"}),
                     Duration::from_secs(5),
                 )?)?;
             }
             let previous_lease = pause_previous(root, &old, Duration::from_secs(15))?;
-            if old.enabled {
+            if old.enabled || next.enabled {
                 // Exact stored action/description must match; never stop by process name.
                 if let Err(failure) =
                     call(&task_request(&old, "unregister"), Duration::from_secs(15))
@@ -116,7 +261,7 @@ fn upgrade_with(
                 write(root, CONFIG, &old)?;
                 return Err(failure);
             }
-            if old.enabled {
+            if next.enabled {
                 with_state(root, |state| {
                     // Preserve baseline, incidents, deduplication and manual-resume receipts.
                     state.observation_count = 0;
@@ -131,14 +276,14 @@ fn upgrade_with(
                 call(&task_request(&next, "register"), Duration::from_secs(15))?;
                 call(&task_request(&next, "start"), Duration::from_secs(10))?;
             }
-            journal["phase"] = json!(if old.enabled {
+            journal["phase"] = json!(if next.enabled {
                 "checking"
             } else {
                 "disabled-preserved"
             });
             write(root, JOURNAL, &journal)?;
         } // Release control lock so the user can still disable while health is checked.
-        let health = if old.enabled {
+        let health = if next.enabled {
             ready(root, &next)?
         } else {
             json!({"enabled":false})
@@ -148,23 +293,56 @@ fn upgrade_with(
         write(root, JOURNAL, &journal)?;
         Ok(
             json!({"enabled":next.enabled,"version":next.version,"executable":next.executable,
-            "task_replaced":old.enabled,"history_preserved":true,"health":health,
+            "task_replaced":old.enabled || next.enabled,"history_preserved":true,"health":health,
             "changed_paths":[CONFIG,JOURNAL,next.executable]}),
         )
     })();
     if let Err(failure) = &operation {
         journal["phase"] = json!("incomplete");
         journal["error"] = json!(failure.message());
-        let _ = write(root, JOURNAL, &journal);
+        if journal_started {
+            let _ = write(root, JOURNAL, &journal);
+        }
         // Never enable a disabled choice, discard evidence, or restart an older unsafe binary.
     }
     operation
+}
+
+fn verify_upgrade_inputs(
+    root: &PinnedTarget,
+    old: &Configuration,
+    setup_operation: Option<&str>,
+) -> Result<(), AdapterError> {
+    let current: Configuration =
+        load(root, CONFIG)?.ok_or_else(|| error("monitor changed before update"))?;
+    if super::serialize(&current)? != super::serialize(old)? || policy_disables_monitor(root)? {
+        return Err(error("monitor or policy changed before update"));
+    }
+    if let Some(id) = setup_operation {
+        let stopped: Value = load(root, super::transition::JOURNAL)?
+            .ok_or_else(|| error("setup stop record missing"))?;
+        if stopped["operation_id"] != id
+            || stopped["phase"] != "complete"
+            || stopped["after_digest"] != sha256_digest(&super::serialize(old)?)
+        {
+            return Err(error("monitor choice changed before setup resume"));
+        }
+    }
+    Ok(())
 }
 
 fn authenticate_previous(
     root: &PinnedTarget,
     previous: &Configuration,
     next: &Configuration,
+) -> Result<(), AdapterError> {
+    authenticate_ownership(root, previous, &next.task_name)
+}
+
+pub(super) fn authenticate_ownership(
+    root: &PinnedTarget,
+    previous: &Configuration,
+    task_name: &str,
 ) -> Result<(), AdapterError> {
     let root_text = previous
         .arguments
@@ -199,8 +377,7 @@ fn authenticate_previous(
         }
     }
     if previous.schema_version != 1
-        || (previous.task_name != next.task_name
-            && previous.task_name != monitor_task_name(prior_path))
+        || (previous.task_name != task_name && previous.task_name != monitor_task_name(prior_path))
         || owned_binary_relative(&prior, &previous.executable).is_err()
     {
         return Err(error(
@@ -234,9 +411,13 @@ fn pause_previous(
     }
 }
 
-fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, AdapterError> {
+pub(super) fn await_ready(
+    root: &PinnedTarget,
+    expected: &Configuration,
+) -> Result<Value, AdapterError> {
     let began = Instant::now();
-    while began.elapsed() < Duration::from_secs(70) {
+    let budget = crate::user_setup::command_timeout(Duration::from_secs(70));
+    while began.elapsed() < budget {
         let config: Configuration =
             load(root, CONFIG)?.ok_or_else(|| error("monitor update configuration missing"))?;
         if !config.enabled || config.executable_digest != expected.executable_digest {
@@ -262,7 +443,7 @@ fn await_ready(root: &PinnedTarget, expected: &Configuration) -> Result<Value, A
                 );
             }
         }
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(500).min(budget.saturating_sub(began.elapsed())));
     }
     Err(error("monitor update incomplete: new controller and four fresh observations were not verified; choice and history preserved"))
 }
@@ -273,8 +454,18 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
 
+    fn restore_owned_launcher(config: &mut Configuration) {
+        // Keep the saved argument spelling, including legitimate Windows short paths.
+        let root = config
+            .arguments
+            .strip_prefix("usage monitor run --user-root \"")
+            .and_then(|value| value.strip_suffix("\" --output json"))
+            .unwrap();
+        config.launcher = super::super::task_launcher(&config.executable, root);
+    }
+
     fn fixture(enabled: bool) -> (tempfile::TempDir, PinnedTarget) {
-        let directory = tempfile::tempdir().unwrap();
+        let directory = crate::test_tempdir();
         let root = PinnedTarget::open_usage(directory.path()).unwrap();
         let mut old = configuration(root.requested_path()).unwrap();
         old.enabled = enabled;
@@ -305,6 +496,71 @@ mod tests {
     }
 
     #[test]
+    fn setup_checking_recovery_only_verifies_readiness_and_preserves_later_choices() {
+        for phase in ["checking", "incomplete", "complete"] {
+            let (_directory, root) = fixture(false);
+            let current = configuration(root.requested_path()).unwrap();
+            write(&root, CONFIG, &current).unwrap();
+            let stopped = json!({"schema_version":1,"operation":"disable","operation_id":"setup-a",
+                "phase":"complete","after_digest":sha256_digest(b"old paused configuration")});
+            let prior = json!({"schema_version":1,"setup_operation":"setup-a","phase":phase,
+                "to":current,"error":"prior timeout","completed_at":null});
+            write(&root, super::super::transition::JOURNAL, &stopped).unwrap();
+            write(&root, JOURNAL, &prior).unwrap();
+            let before_state = root.read_required(Path::new(STATE), 65536).unwrap();
+            let before_config = root.read_required(Path::new(CONFIG), 65536).unwrap();
+            assert!(finish_saved_setup_upgrade(
+                &root,
+                "setup-a",
+                &stopped,
+                &current,
+                &prior,
+                |_, _| Err(error("still not ready"))
+            )
+            .is_err());
+            assert_eq!(load::<Value>(&root, JOURNAL).unwrap().unwrap(), prior);
+            let health =
+                finish_saved_setup_upgrade(&root, "setup-a", &stopped, &current, &prior, |_, _| {
+                    Ok(json!({"controller_verified":true,"state":"idle-awaiting-Codex"}))
+                })
+                .unwrap();
+            assert_eq!(health["controller_verified"], true);
+            assert_eq!(
+                load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
+                "complete"
+            );
+            assert_eq!(
+                root.read_required(Path::new(STATE), 65536).unwrap(),
+                before_state
+            );
+            assert_eq!(
+                root.read_required(Path::new(CONFIG), 65536).unwrap(),
+                before_config
+            );
+            write(&root, JOURNAL, &prior).unwrap();
+            assert!(finish_saved_setup_upgrade(
+                &root,
+                "setup-a",
+                &stopped,
+                &current,
+                &prior,
+                |root, _| {
+                    let mut later = stopped.clone();
+                    later["operation_id"] = Value::Null;
+                    write(root, super::super::transition::JOURNAL, &later)?;
+                    Ok(json!({"controller_verified":true}))
+                }
+            )
+            .is_err());
+            assert_eq!(load::<Value>(&root, JOURNAL).unwrap().unwrap(), prior);
+            assert!(load::<Value>(&root, super::super::transition::JOURNAL)
+                .unwrap()
+                .unwrap()["operation_id"]
+                .is_null());
+        }
+    }
+
+    #[test]
     fn disabled_choice_is_updated_without_registering_or_starting() {
         let (_directory, root) = fixture(false);
         let before: MonitorState = load(&root, STATE).unwrap().unwrap();
@@ -331,6 +587,60 @@ mod tests {
                 .unwrap()
                 .enabled
         );
+    }
+
+    #[test]
+    fn disabled_v2_policy_stops_leftover_registration_without_inspection_or_staging() {
+        for (master, midway) in [(false, true), (true, false)] {
+            let (_directory, root) = fixture(true);
+            let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+            restore_owned_launcher(&mut old);
+            write(&root, CONFIG, &old).unwrap();
+            let policy = hive_core::preferences::UsageProtection {
+                enforcement_enabled: master,
+                midway: hive_core::preferences::MidwayPreferences {
+                    enabled: midway,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let mut guard = serde_json::to_value(policy).unwrap();
+            guard["stop_remaining_percent"] = json!(20);
+            guard["popup_enabled"] = json!(false);
+            let settings = json!({"schema_version":2,"interface_language":"en","wiki":{"language":"ko"},
+                "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},
+                "selected_hosts":["codex"],"skills":{"mode":"all"},"usage_guard":guard});
+            let path = root.requested_path().join(".hive/config/user-setup.yml");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, serde_json::to_vec(&settings).unwrap()).unwrap();
+            let before = root.read_required(Path::new(STATE), 65536).unwrap();
+            let calls = RefCell::new(Vec::new());
+            let result = upgrade_with(
+                &root,
+                |request, _| {
+                    calls
+                        .borrow_mut()
+                        .push(request["operation"].as_str().unwrap().to_owned());
+                    assert_eq!(request["operation"], "unregister");
+                    Ok(json!({"removed":true}))
+                },
+                |_, _| panic!("disabled policy cannot observe health"),
+            )
+            .unwrap();
+            assert_eq!(calls.into_inner(), ["unregister"]);
+            assert_eq!(result["controller_stopped"], true);
+            assert!(
+                !load::<Configuration>(&root, CONFIG)
+                    .unwrap()
+                    .unwrap()
+                    .enabled
+            );
+            assert_eq!(root.read_required(Path::new(STATE), 65536).unwrap(), before);
+            assert!(root
+                .read_optional(Path::new(JOURNAL), 65536)
+                .unwrap()
+                .is_none());
+        }
     }
 
     #[test]
@@ -541,7 +851,7 @@ mod tests {
     #[test]
     fn previous_arguments_must_name_the_same_root_with_the_known_command() {
         let (_directory, root) = fixture(false);
-        let foreign = tempfile::tempdir().unwrap();
+        let foreign = crate::test_tempdir();
         let original: Configuration = load(&root, CONFIG).unwrap().unwrap();
         for arguments in [
             "unrelated-command".into(),
@@ -603,6 +913,55 @@ mod tests {
             load::<Value>(&root, JOURNAL).unwrap().unwrap()["phase"],
             "complete"
         );
+    }
+
+    #[test]
+    fn setup_resume_activates_only_the_new_reader_and_honors_a_later_manual_disable() {
+        let (_directory, root) = fixture(false);
+        let mut old: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        restore_owned_launcher(&mut old);
+        write(&root, CONFIG, &old).unwrap();
+        let before = sha256_digest(&super::super::serialize(&old).unwrap());
+        let stopped = super::super::transition::quiesce_operation(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+            Some(&before),
+            Some("migration-a"),
+        )
+        .unwrap();
+        drop(stopped);
+        verify_upgrade_inputs(&root, &old, Some("migration-a")).unwrap();
+        let result = upgrade_with_choice(
+            &root,
+            |request, _| {
+                let current: Configuration = load(&root, CONFIG)?.unwrap();
+                if matches!(
+                    request["operation"].as_str(),
+                    Some("inspect" | "unregister")
+                ) {
+                    assert!(!current.enabled);
+                    assert_eq!(current.version, "0.13.0");
+                } else {
+                    assert!(current.enabled);
+                    assert_eq!(current.version, env!("HIVE_PACKAGE_VERSION"));
+                }
+                Ok(json!({"available":true,"app_count":1,"desktop_package_version":"99.0.0.0"}))
+            },
+            |_, _| Ok(json!({"fresh_observations":4})),
+            Some("migration-a"),
+        )
+        .unwrap();
+        assert_eq!(result["enabled"], true);
+        super::super::transition::disable(
+            &root,
+            |_, _| Ok(json!({"removed":true})),
+            Duration::ZERO,
+        )
+        .unwrap();
+        let disabled: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        assert!(!disabled.enabled);
+        assert!(verify_upgrade_inputs(&root, &disabled, Some("migration-a")).is_err());
     }
 
     #[test]

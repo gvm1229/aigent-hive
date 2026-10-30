@@ -21,8 +21,65 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod migration;
+mod progress_store;
+mod projection_journal;
+mod setup_engine;
+mod usage_preferences;
+pub(crate) use usage_preferences::UsageGuardPreferences;
+
+pub(crate) fn run_apply_worker() -> ExitCode {
+    setup_engine::run_apply_worker()
+}
+
+pub(crate) fn run_update_completion(arguments: &[String]) -> ExitCode {
+    setup_engine::run_update_completion(arguments)
+}
+
+pub(crate) fn run_project_setup(arguments: &[String]) -> ExitCode {
+    setup_engine::run_project(arguments)
+}
+
+pub(crate) fn execute_project_file(
+    arguments: &crate::SetupArguments,
+) -> Result<hive_render::SetupOutcome, hive_render::RenderError> {
+    setup_engine::execute_project_file(arguments)
+}
+
+pub(crate) fn command_timeout(requested: std::time::Duration) -> std::time::Duration {
+    setup_engine::command_timeout(requested)
+}
+
+pub(crate) fn resume_pending_update(
+    root: &Path,
+    interactive: bool,
+    confirmed_only: bool,
+) -> Result<Option<ActionResult>, String> {
+    setup_engine::resume_pending_update(root, interactive, confirmed_only)
+        .map_err(|error| error.message().to_owned())
+}
+
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
+pub(crate) fn update_without_terminal(
+    root: &Path,
+    hosts: &[String],
+    budget: &crate::update_bridge::LegacyBudget,
+) -> ActionResult {
+    setup_engine::update_without_terminal(root, hosts, budget)
+}
+
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
+pub(crate) fn update_with_terminal<R: std::io::BufRead, W: std::io::Write>(
+    root: &Path,
+    reader: R,
+    writer: W,
+    budget: crate::update_bridge::LegacyBudget,
+    hosts: &[String],
+) -> ActionResult {
+    setup_engine::update_with_terminal(root, reader, writer, budget, hosts)
+}
+
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
-const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
 const USER_FEATURE_ANSWERS_RELATIVE: &str = ".hive/config/user-feature-answers.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";
 const LEGACY_USER_SETUP_REVIEW_RELATIVE: &str = ".hive/config/user-setup-review.yml";
@@ -32,7 +89,7 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
     include_str!("../../../schemas/user-setup-catalog.schema.json");
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
-const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+pub(crate) const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
 const FEATURE_QUESTION_CLAIM_SECONDS: u64 = 15 * 60;
 const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 /// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
@@ -50,16 +107,21 @@ Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --describe --output json
-    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --scope user --user-root <dir> --show --summary --output json
+    hive setup --scope user --user-root <dir> --describe --question <question-id> --output json
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] --output json
     hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
     hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
     hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
+    hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] --output json
 
 MODES:
+    --summary    Bound JSON status/completion output; not an approval preview
     --dry-run    Validate answers and preview the owned user configuration change
     --apply      Validate and atomically apply the owned user configuration
     --validate   Validate the installed operational user configuration
+    --index-rebuild-scope <digest>  Approve only the source scope shown by --dry-run; requires --apply
 ";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -293,28 +355,6 @@ fn default_discord_message_fields() -> Vec<DiscordMessageField> {
     ]
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct UsageGuardPreferences {
-    #[serde(default)]
-    pub(crate) enabled: bool,
-    pub(crate) stop_remaining_percent: u8,
-    #[serde(default)]
-    pub(crate) codexbar_fallback_enabled: bool,
-    /// Stop automatic work when a previously observed quota window refills.
-    #[serde(default = "default_quota_reset_guard_enabled")]
-    pub(crate) quota_reset_guard_enabled: bool,
-    #[serde(default)]
-    pub(crate) discord: DiscordGuardPreferences,
-    /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
-    #[serde(default)]
-    pub(crate) project_overrides: BTreeMap<String, u8>,
-}
-
-const fn default_quota_reset_guard_enabled() -> bool {
-    true
-}
-
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UpdateCheckPreferences {
@@ -361,6 +401,8 @@ pub(crate) struct UserSetupConfig {
     #[serde(default)]
     pub(crate) judge_invocation: JudgeInvocation,
     pub(crate) usage_guard: UsageGuardPreferences,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) preference_decisions: hive_core::preferences::PreferenceDecisions,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -399,6 +441,10 @@ struct UserFeatureAnswers {
     answered_at_unix: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     question_claimed_at_unix: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    decision: Option<hive_core::preferences::PreferenceDecision>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    setup_operation: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -470,21 +516,24 @@ struct UserProjectionBaseEntry {
     content: String,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct AppliedProjection {
     pub(crate) changes: Vec<ProjectionChange>,
     pub(crate) changed_paths: Vec<String>,
     pub(crate) reports: Vec<UserProjectionPathReport>,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ProjectionChange {
     pub(crate) path: PathBuf,
     pub(crate) before: Option<Vec<u8>>,
     pub(crate) after: Option<Vec<u8>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct UserProjectionPathReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<String>,
@@ -543,6 +592,16 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    let (filtered, summary) = match setup_engine::summary_arguments(arguments) {
+        Ok(value) => value,
+        Err(error) => {
+            return emit_action_result(&setup_engine::messages::failure(
+                &error,
+                setup_engine::messages::language(arguments),
+            ))
+        }
+    };
+    let arguments = filtered.as_slice();
     if arguments.iter().any(|argument| argument == "--describe") {
         return run_describe(arguments);
     }
@@ -552,11 +611,22 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments.first().map(String::as_str) == Some("feature") {
         return run_feature(&arguments[1..]);
     }
-    let result = parse(arguments)
-        .and_then(|arguments| execute(&arguments))
-        .unwrap_or_else(|error| failure(&error));
-    emit_action_result(&result)
+    if setup_engine::handles(arguments) {
+        return setup_engine::run(arguments, summary);
+    }
+    let result = setup_engine::file_options(arguments)
+        .and_then(|(arguments, options)| {
+            parse(&arguments).and_then(|arguments| setup_engine::execute_file(&arguments, &options))
+        })
+        .unwrap_or_else(|error| {
+            setup_engine::messages::failure(&error, setup_engine::messages::language(arguments))
+        });
+    emit_action_result(&setup_engine::compact_result(result, summary))
 }
+
+pub(crate) use setup_engine::{
+    compact_result as setup_summary, summary_arguments as setup_output_arguments,
+};
 
 #[derive(Clone, Copy, Debug)]
 enum FeatureAction {
@@ -662,6 +732,8 @@ fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswe
             introduced_in: None,
             answered_at_unix: None,
             question_claimed_at_unix: None,
+            decision: None,
+            setup_operation: None,
         },
     };
     if answers.schema_version != 1 {
@@ -716,6 +788,18 @@ fn save_feature_answers(
         desired.push_str("question_claimed_at_unix: ");
         desired.push_str(&question_claimed_at_unix.to_string());
         desired.push('\n');
+    }
+    if let Some(decision) = &answers.decision {
+        desired.push_str(
+            &serde_yaml::to_string(&serde_json::json!({"decision":decision}))
+                .map_err(|error| SetupError::Internal(error.to_string()))?,
+        );
+    }
+    if let Some(operation) = &answers.setup_operation {
+        desired.push_str(
+            &serde_yaml::to_string(&serde_json::json!({"setup_operation":operation}))
+                .map_err(|error| SetupError::Internal(error.to_string()))?,
+        );
     }
     super::user_install::replace_user_setup_file(
         root,
@@ -797,6 +881,9 @@ fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupEr
             )
         }
         FeatureAction::Answer(answer) => {
+            // This legacy command does not identify its input channel.
+            answers.decision = None;
+            answers.setup_operation = None;
             answers.vector_search = Some(answer);
             answers
                 .introduced_in
@@ -900,6 +987,14 @@ fn vector_setup_prompt(
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
+    if arguments
+        .iter()
+        .any(|value| matches!(value.as_str(), "--section" | "--question"))
+    {
+        return emit_action_result(
+            &setup_engine::describe_section(arguments).unwrap_or_else(|error| failure(&error)),
+        );
+    }
     let valid = arguments.len() == 5
         && arguments.iter().any(|value| value == "--scope")
         && arguments.iter().any(|value| value == "user")
@@ -923,53 +1018,19 @@ fn describe_result() -> Result<ActionResult, SetupError> {
     let catalog: JsonValue = serde_yaml::from_str(USER_SETUP_CATALOG).map_err(|error| {
         SetupError::Internal(format!("invalid embedded user setup catalog: {error}"))
     })?;
-    let question_order = json!([
-        "interface-language",
-        "daily-update-check",
-        "setup-mode",
-        "wiki",
-        "user-contexts",
-        "persona",
-        "hosts",
-        "judge-invocation",
-        "skills",
-        "usage-guard",
-        "discord"
-    ]);
-    let example = json!({
-        "schema_version": 1,
-        "interface_language": "en",
-        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
-        "profile": { "contexts": ["non-developer"] },
-        "persona": { "id": "balanced" },
-        "selected_hosts": ["codex"],
-        "skills": { "mode": "all" },
-        "update_check": { "enabled": false },
-        "judge_invocation": "explicit",
-        "usage_guard": { "enabled": true,
-            "stop_remaining_percent": "<user-chosen-integer-0-to-99>",
-            "codexbar_fallback_enabled": false,
-            "discord": { "enabled": false, "request_privacy": "summary",
-                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
-        }
-    });
-    let expedited_defaults = json!({
-        "schema_version": 1,
-        "interface_language": "en",
-        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
-        "profile": { "contexts": ["non-developer"] },
-        "persona": { "id": "strict" },
-        "selected_hosts": ["codex"],
-        "skills": { "mode": "all" },
-        "update_check": { "enabled": false },
-        "judge_invocation": "explicit",
-        "usage_guard": { "enabled": true,
-            "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
-            "codexbar_fallback_enabled": false,
-            "discord": { "enabled": false, "request_privacy": "summary",
-                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
-        }
-    });
+    let questions = setup_engine::catalog()?.questions;
+    let user_questions: Vec<_> = questions
+        .iter()
+        .filter(|question| question.scope == hive_core::preferences::PreferenceScope::User)
+        .collect();
+    let question_order: Vec<_> = user_questions.iter().map(|question| &question.id).collect();
+    let sections: BTreeSet<_> = user_questions
+        .iter()
+        .map(|question| &question.section)
+        .collect();
+    let expedited_defaults = setup_engine::default_answers(Some(InterfaceLanguage::En));
+    let mut example = expedited_defaults.clone();
+    example["usage_guard"]["stop_remaining_percent"] = json!("<user-chosen-integer-0-to-99>");
     Ok(ActionResult {
         schema_version: 1,
         action: "DescribeHiveUserSetup",
@@ -985,13 +1046,14 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         }],
         next_action: None,
         data: Some(json!({
-            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}").as_bytes()),
+            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}\n{}", setup_engine::QUESTIONS).as_bytes()),
             "schema": schema,
             "catalog": catalog,
             "answer_template": example,
-            "answer_template_notice": "Usage protection is recommended. In Custom setup, replace <user-chosen-integer-0-to-99> with the user's own value before validation; Expedited setup uses 20% remaining.",
+            "answer_template_notice": "Usage blocking and interruption are off by default. In Custom setup, replace <user-chosen-integer-0-to-99> with the user's value before validation. Quick setup keeps 20% as an inactive threshold; new optional controls require an explicit choice.",
             "expedited_defaults": expedited_defaults,
             "question_order": question_order,
+            "sections": sections,
         })),
     })
 }
@@ -1013,7 +1075,7 @@ enum ProgressAction {
 #[derive(Debug)]
 struct ProgressArguments {
     action: ProgressAction,
-    root_cap: Dir,
+    store: progress_store::ProgressStore,
 }
 
 fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError> {
@@ -1021,6 +1083,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
         SetupError::Input("setup progress requires save, status, or clear".to_owned())
     })?;
     let mut scope = None;
+    let mut target = None;
     let mut answers = None;
     let mut step = None;
     let mut output = None;
@@ -1034,6 +1097,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
         let slot = match option {
             "--scope" => &mut scope,
+            "--target" => &mut target,
             "--answers" | "--quick-answers" => &mut answers,
             "--step" => &mut step,
             "--output" => &mut output,
@@ -1049,9 +1113,12 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
         }
         index += 2;
     }
-    if scope.as_deref() != Some("user") || output.as_deref() != Some("json") {
+    if !matches!(scope.as_deref(), Some("user" | "project"))
+        || output.as_deref() != Some("json")
+        || (scope.as_deref() == Some("project")) != target.is_some()
+    {
         return Err(SetupError::Input(
-            "setup progress requires --scope user and --output json".to_owned(),
+            "setup progress requires --scope user or --scope project --target <dir>, and --output json".to_owned(),
         ));
     }
     let action = match action.as_str() {
@@ -1059,16 +1126,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             let step = step.ok_or_else(|| {
                 SetupError::Input("setup progress save requires --step".to_owned())
             })?;
-            if step.is_empty()
-                || step.len() > 80
-                || !step
-                    .bytes()
-                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-            {
-                return Err(SetupError::Input(
-                    "setup progress step must use lowercase letters, digits, or hyphens".to_owned(),
-                ));
-            }
+            validate_progress_step(&step)?;
             ProgressAction::Save {
                 step,
                 answers: PathBuf::from(answers.ok_or_else(|| {
@@ -1101,88 +1159,81 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
         }
     };
     let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let root_cap =
-        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
-    Ok(ProgressArguments { action, root_cap })
+    let store = progress_store::ProgressStore::open(&user_root, target.as_deref().map(Path::new))?;
+    Ok(ProgressArguments { action, store })
 }
 
 fn execute_progress(arguments: ProgressArguments) -> Result<ActionResult, SetupError> {
-    let relative = Path::new(USER_SETUP_PROGRESS_RELATIVE);
-    let existing = super::user_install::read_user_setup_file(
-        &arguments.root_cap,
-        relative,
-        MAX_USER_SETUP_BYTES,
-    )
-    .map_err(SetupError::Conflict)?;
-    match arguments.action {
+    let store = arguments.store;
+    let snapshot = store.load()?;
+    let result = match arguments.action {
         ProgressAction::Save { step, answers } => {
             let answer_bytes = read_bounded_regular(&answers, MAX_ANSWERS_BYTES)?;
             let answers: JsonValue = serde_yaml::from_slice(&answer_bytes).map_err(|error| {
-                SetupError::Input(format!("invalid user setup progress YAML: {error}"))
+                SetupError::Input(format!("invalid setup progress YAML: {error}"))
             })?;
-            validate_progress_answers(&answers)?;
-            let progress = UserSetupProgress {
-                schema_version: 1,
-                step,
-                answers,
+            let mut progress = if let Some(progress) = &snapshot.progress {
+                progress.clone()
+            } else {
+                store.new_progress(step.clone(), answers.clone())?
             };
-            let desired = serde_yaml::to_string(&progress)
-                .map_err(|error| {
-                    SetupError::Internal(format!("cannot serialize setup progress: {error}"))
-                })?
-                .into_bytes();
-            super::user_install::replace_user_setup_file(
-                &arguments.root_cap,
-                relative,
-                existing.as_deref(),
-                Some(&desired),
-            )
-            .map_err(SetupError::Conflict)?;
-            Ok(progress_result(
+            progress.step = step;
+            progress.answers = answers;
+            store.save(&snapshot, &progress)?;
+            progress_result(
                 "SaveUserSetupProgress",
                 "success",
                 0,
                 "hive.user-setup-progress-saved",
-                "user setup progress saved",
-                vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()],
+                "setup progress saved",
+                vec![store.relative.to_string_lossy().into_owned()],
                 Some(&progress),
-            ))
+            )
         }
-        ProgressAction::Status => {
-            let progress = existing.as_deref().map(parse_progress_file).transpose()?;
-            Ok(progress_result(
-                "InspectUserSetupProgress",
-                "success",
-                0,
-                "hive.user-setup-progress-status",
-                "user setup progress inspected",
-                Vec::new(),
-                progress.as_ref(),
-            ))
-        }
-        ProgressAction::Clear => {
-            if existing.is_some() {
-                super::user_install::replace_user_setup_file(
-                    &arguments.root_cap,
-                    relative,
-                    existing.as_deref(),
-                    None,
-                )
-                .map_err(SetupError::Conflict)?;
-            }
-            Ok(progress_result(
-                "ClearUserSetupProgress",
-                "success",
-                0,
-                "hive.user-setup-progress-cleared",
-                "user setup progress cleared",
-                existing
-                    .map(|_| vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()])
-                    .unwrap_or_default(),
-                None,
-            ))
-        }
+        ProgressAction::Status => progress_result(
+            "InspectUserSetupProgress",
+            "success",
+            0,
+            "hive.user-setup-progress-status",
+            "setup progress inspected",
+            Vec::new(),
+            snapshot.progress.as_ref(),
+        ),
+        ProgressAction::Clear => progress_result(
+            "ClearUserSetupProgress",
+            "success",
+            0,
+            "hive.user-setup-progress-cleared",
+            "setup progress cleared",
+            store.clear(&snapshot)?,
+            None,
+        ),
+    };
+    let mut result = result;
+    if store.binding.scope == hive_core::preferences::PreferenceScope::Project {
+        (result.action, result.code) = match result.code {
+            "hive.user-setup-progress-saved" => (
+                "SaveProjectSetupProgress",
+                "hive.project-setup-progress-saved",
+            ),
+            "hive.user-setup-progress-cleared" => (
+                "ClearProjectSetupProgress",
+                "hive.project-setup-progress-cleared",
+            ),
+            _ => (
+                "InspectProjectSetupProgress",
+                "hive.project-setup-progress-status",
+            ),
+        };
     }
+    if let Some(data) = result.data.as_mut() {
+        data["binding"] = json!(store.binding);
+        data["resume_ready"] = json!(snapshot
+            .progress
+            .as_ref()
+            .is_none_or(|p| store.resume_ready(p)));
+    }
+    Ok(result)
 }
 
 fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
@@ -1194,17 +1245,7 @@ fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
             "unsupported user setup progress schema".to_owned(),
         ));
     }
-    if progress.step.is_empty()
-        || progress.step.len() > 80
-        || !progress
-            .step
-            .bytes()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-    {
-        return Err(SetupError::Verification(
-            "invalid user setup progress step".to_owned(),
-        ));
-    }
+    validate_progress_step(&progress.step)?;
     validate_progress_answers(&progress.answers)?;
     Ok(progress)
 }
@@ -1216,7 +1257,7 @@ fn progress_result(
     code: &'static str,
     message: &'static str,
     changed_paths: Vec<String>,
-    progress: Option<&UserSetupProgress>,
+    progress: Option<&progress_store::SetupProgress>,
 ) -> ActionResult {
     ActionResult {
         schema_version: 1,
@@ -1229,39 +1270,88 @@ fn progress_result(
         evidence: Vec::new(),
         next_action: None,
         data: Some(json!({
-            "pending": progress.is_some(),
+            "pending": progress.is_some_and(|value| value.phase != progress_store::ProgressPhase::Complete),
             "step": progress.map(|value| value.step.as_str()),
             "answers": progress.map(|value| &value.answers),
+            "operation_id": progress.map(|value| &value.operation_id),
+            "phase": progress.map(|value| value.phase),
+            "question_revision": progress.map(|value| value.question_revision),
         })),
     }
 }
 
-fn validate_progress_answers(answers: &JsonValue) -> Result<(), SetupError> {
-    let object = answers.as_object().ok_or_else(|| {
-        SetupError::Verification("user setup progress answers must be a YAML object".to_owned())
-    })?;
-    let allowed = [
-        "schema_version",
-        "interface_language",
-        "wiki",
-        "profile",
-        "persona",
-        "selected_hosts",
-        "skills",
-        "update_check",
-        "usage_guard",
-    ];
-    if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+fn validate_progress_step(step: &str) -> Result<(), SetupError> {
+    if step.is_empty()
+        || step.len() > 80
+        || !step
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
         return Err(SetupError::Verification(
-            "user setup progress contains an unknown setting".to_owned(),
+            "setup progress step must use lowercase letters, digits, or hyphens".to_owned(),
         ));
     }
-    if progress_contains_secret(answers) {
+    Ok(())
+}
+
+fn validate_progress_answers(answers: &JsonValue) -> Result<(), SetupError> {
+    validate_progress_answers_for_scope(answers, hive_core::preferences::PreferenceScope::User)
+}
+
+fn validate_progress_answers_for_scope(
+    answers: &JsonValue,
+    scope: hive_core::preferences::PreferenceScope,
+) -> Result<(), SetupError> {
+    let object = answers.as_object().ok_or_else(|| {
+        SetupError::Verification("setup progress answers must be a YAML object".to_owned())
+    })?;
+    let schema = match scope {
+        hive_core::preferences::PreferenceScope::User => USER_SETUP_SCHEMA,
+        hive_core::preferences::PreferenceScope::Project => {
+            include_str!("../../../schemas/setup-answers.schema.json")
+        }
+    };
+    let schema: JsonValue = serde_json::from_str(schema).map_err(|error| {
+        SetupError::Internal(format!("invalid embedded answer schema: {error}"))
+    })?;
+    let properties = schema["properties"]
+        .as_object()
+        .ok_or_else(|| SetupError::Internal("answer schema has no properties".to_owned()))?;
+    if object.keys().any(|key| !properties.contains_key(key)) {
+        return Err(SetupError::Verification(
+            "setup progress contains an unknown setting".to_owned(),
+        ));
+    }
+    let mut inspected = answers.clone();
+    if scope == hive_core::preferences::PreferenceScope::Project {
+        if let Some(skills) = inspected["approved_optional_skills"].as_array_mut() {
+            for skill in skills {
+                if skill["source"].as_str().is_some_and(public_skill_source) {
+                    // The original URL remains in the approval. Only this secret scan omits it.
+                    skill["source"] = JsonValue::Null;
+                }
+            }
+        }
+    }
+    if progress_contains_secret(&inspected) {
         return Err(SetupError::Verification(
             "user setup progress cannot contain a webhook URL, token, or secret".to_owned(),
         ));
     }
     Ok(())
+}
+
+fn public_skill_source(value: &str) -> bool {
+    let Ok(uri) = value.parse::<ureq::http::Uri>() else {
+        return false;
+    };
+    matches!(uri.scheme_str(), Some("http" | "https"))
+        && uri
+            .authority()
+            .is_some_and(|authority| !authority.as_str().contains('@'))
+        && uri.query().is_none()
+        && !value.contains('#')
+        && !value.to_ascii_lowercase().contains("webhook")
 }
 
 fn progress_contains_secret(value: &JsonValue) -> bool {
@@ -1362,9 +1452,27 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
     Ok(PathBuf::from(value))
 }
 
-#[allow(clippy::too_many_lines)]
+#[cfg(test)]
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
-    let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
+    setup_engine::execute_file(arguments, &setup_engine::FileOptions::default())
+}
+
+#[derive(Clone, Copy)]
+enum SetupBase<'a> {
+    Current,
+    Expected(Option<&'a [u8]>),
+    Bound {
+        expected: Option<&'a [u8]>,
+        progress: &'a progress_store::SetupProgress,
+    },
+}
+
+#[allow(clippy::too_many_lines)]
+fn execute_answers(
+    arguments: &Arguments,
+    answer_bytes: &[u8],
+    expected_config: SetupBase<'_>,
+) -> Result<ActionResult, SetupError> {
     let relative = Path::new(USER_SETUP_RELATIVE);
     let existing = super::user_install::read_user_setup_file(
         &arguments.root_cap,
@@ -1372,25 +1480,52 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
         MAX_USER_SETUP_BYTES,
     )
     .map_err(SetupError::Conflict)?;
-    let legacy_answers = existing.as_deref() == Some(answer_bytes.as_slice())
-        && has_legacy_recommended_skill_selection(&answer_bytes)?;
+    let expected = match expected_config {
+        SetupBase::Expected(expected) | SetupBase::Bound { expected, .. } => Some(expected),
+        SetupBase::Current => None,
+    };
+    if expected.is_some_and(|expected| expected != existing.as_deref()) {
+        return Err(SetupError::Conflict(
+            "settings changed after the setup preview".to_owned(),
+        ));
+    }
+    let legacy_answers = existing.as_deref() == Some(answer_bytes)
+        && has_legacy_recommended_skill_selection(answer_bytes)?;
     let config = if legacy_answers {
-        parse_and_validate_installed_config(&answer_bytes)?
+        parse_and_validate_installed_config(answer_bytes)?
     } else {
-        parse_and_validate_config(&answer_bytes)?
+        parse_and_validate_config(answer_bytes)?
     };
     validate_registered_project_overrides(&config, &arguments.user_root)?;
     let catalog = parse_and_validate_catalog()?;
     let resolved_skills = resolve_skills(&config, &catalog)?;
     let desired = canonical_config(&config)?;
+    if let SetupBase::Bound { progress, .. } = expected_config {
+        let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
+        if store.load()?.progress.as_ref() != Some(progress) || !store.questions_match(progress) {
+            return Err(SetupError::Conflict(
+                "setup operation changed before activation".into(),
+            ));
+        }
+        projection_journal::preflight(&arguments.root_cap, &store, progress)?;
+    }
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
-    if matches!(arguments.mode, SetupMode::DryRun | SetupMode::Apply) {
-        reject_host_deselection(existing.as_deref(), &config)?;
+    let removed = host_deselections(existing.as_deref(), &config)?;
+    if arguments.mode == SetupMode::Apply
+        && !removed.is_empty()
+        && !matches!(expected_config, SetupBase::Bound { .. })
+    {
+        return Err(SetupError::Conflict(
+            "host deselection requires the common confirmed setup journal".into(),
+        ));
     }
 
     match arguments.mode {
         SetupMode::DryRun => {
+            let deactivations =
+                super::user_install::deactivation::preview(&arguments.user_root, &removed)
+                    .map_err(SetupError::Verification)?;
             let projection =
                 plan_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
             let mut changed_paths = projection.changed_paths;
@@ -1414,7 +1549,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
             }
             changed_paths.sort();
             changed_paths.dedup();
-            Ok(success(
+            let mut result = success(
                 arguments,
                 &config,
                 &resolved_skills,
@@ -1422,10 +1557,14 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 changed_paths,
                 "hive.user-setup-dry-run-complete",
                 "user setup dry run completed",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &projection.reports,
-            ))
+            );
+            if let Some(data) = result.data.as_mut() {
+                data["host_deactivations"] = json!(deactivations);
+            }
+            Ok(result)
         }
         SetupMode::Validate => {
             let installed = existing.ok_or_else(|| {
@@ -1466,7 +1605,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 Vec::new(),
                 "hive.user-setup-valid",
                 "installed user setup is valid",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &[],
             ))
@@ -1476,6 +1615,17 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
             let mut host_changed_paths = Vec::new();
             let mut activated_hosts = Vec::new();
             for host in &config.selected_hosts {
+                if matches!(expected_config, SetupBase::Bound { .. })
+                    && super::user_install::validate_configured_host(
+                        &arguments.user_root,
+                        *host,
+                        &config,
+                        &resolved_skills,
+                    )
+                    .is_ok()
+                {
+                    continue;
+                }
                 match super::user_install::apply_configured_host(
                     &arguments.user_root,
                     *host,
@@ -1508,17 +1658,22 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                     }
                 }
             }
-            let projection =
-                apply_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)
-                    .map_err(|primary| {
-                        match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
-                            Ok(()) => primary,
-                            Err(error) => SetupError::Conflict(format!(
-                                "{}; host rollback failed: {error}",
-                                primary.message()
-                            )),
-                        }
-                    })?;
+            let projection = apply_setup_projection(
+                arguments,
+                expected_config,
+                &config,
+                &resolved_skills,
+                &desired,
+            )
+            .map_err(|primary| {
+                match rollback_activated_hosts(&arguments.user_root, &activated_hosts) {
+                    Ok(()) => primary,
+                    Err(error) => SetupError::Conflict(format!(
+                        "{}; host rollback failed: {error}",
+                        primary.message()
+                    )),
+                }
+            })?;
             if changed {
                 if let Err(primary) = super::user_install::replace_user_setup_file(
                     &arguments.root_cap,
@@ -1585,11 +1740,28 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 host_changed_paths,
                 "hive.user-setup-complete",
                 "user setup completed",
-                &answer_bytes,
+                answer_bytes,
                 &desired,
                 &projection.reports,
             ))
         }
+    }
+}
+
+fn apply_setup_projection(
+    arguments: &Arguments,
+    base: SetupBase<'_>,
+    config: &UserSetupConfig,
+    skills: &[String],
+    desired: &[u8],
+) -> Result<AppliedProjection, SetupError> {
+    if let SetupBase::Bound { progress, .. } = base {
+        let store = progress_store::ProgressStore::open(&arguments.user_root, None)?;
+        projection_journal::apply(&arguments.root_cap, &store, progress, || {
+            plan_user_projection(&arguments.root_cap, config, skills, desired)
+        })
+    } else {
+        apply_user_projection(&arguments.root_cap, config, skills, desired)
     }
 }
 
@@ -1706,7 +1878,9 @@ fn parse_and_validate_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError
     parse_and_validate_config_inner(bytes, false)
 }
 
-fn parse_and_validate_installed_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
+pub(crate) fn parse_and_validate_installed_config(
+    bytes: &[u8],
+) -> Result<UserSetupConfig, SetupError> {
     parse_and_validate_config_inner(bytes, true)
 }
 
@@ -1725,12 +1899,21 @@ fn parse_and_validate_config_inner(
     }
     migrate_legacy_skill_names(&mut value)?;
     migrate_legacy_single_profile(&mut value);
-    if allow_legacy_recommended {
+    if allow_legacy_recommended && value["schema_version"] == 1 {
         migrate_legacy_missing_usage_threshold(&mut value);
     }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
-    let config: UserSetupConfig = serde_json::from_value(value)
+    let mut config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
+    let declarations = serde_json::to_value(&config).map_err(|error| {
+        SetupError::Internal(format!("cannot inspect setup declarations: {error}"))
+    })?;
+    hive_core::preferences::reconcile_decisions(
+        &declarations,
+        &mut config.preference_decisions,
+        hive_core::preferences::PreferenceScope::User,
+    )
+    .map_err(SetupError::Input)?;
     validate_config_semantics(&config)?;
     Ok(config)
 }
@@ -1952,9 +2135,9 @@ fn validate_schema(schema_source: &str, value: &JsonValue, label: &str) -> Resul
 
 #[allow(clippy::too_many_lines)]
 fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError> {
-    if config.schema_version != 1 {
+    if !matches!(config.schema_version, 1 | 2) {
         return Err(SetupError::Input(
-            "user setup schema_version must be 1".to_owned(),
+            "user setup schema_version must be 1 or 2".to_owned(),
         ));
     }
     validate_user_profile(&config.profile)?;
@@ -2021,14 +2204,17 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
-    if !config.usage_guard.enabled && config.usage_guard.codexbar_fallback_enabled {
+    if config.schema_version == 1
+        && !config.usage_guard.projection_enabled()
+        && config.usage_guard.codexbar_fallback_enabled
+    {
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
         ));
     }
     let discord = &config.usage_guard.discord;
     match (
-        config.usage_guard.enabled,
+        config.schema_version == 2 || config.usage_guard.projection_enabled(),
         discord.enabled,
         discord.webhook_url_env.as_deref(),
     ) {
@@ -2074,11 +2260,12 @@ fn validate_registered_project_overrides(
     if config.usage_guard.project_overrides.is_empty() {
         return Ok(());
     }
-    let registry = hive_wiki::shared::load_project_registry(user_root).map_err(|error| {
-        SetupError::Input(format!(
-            "usage guard project overrides require a valid registered-project list: {error}"
-        ))
-    })?;
+    let registry =
+        hive_wiki::shared::load_project_registry_metadata(user_root).map_err(|error| {
+            SetupError::Input(format!(
+                "usage guard project overrides require a valid registered-project list: {error}"
+            ))
+        })?;
     for project_identity in config.usage_guard.project_overrides.keys() {
         if !registry
             .projects
@@ -2175,12 +2362,12 @@ fn validate_user_profile(profile: &UserProfile) -> Result<(), SetupError> {
     Ok(())
 }
 
-fn reject_host_deselection(
+fn host_deselections(
     installed: Option<&[u8]>,
     desired: &UserSetupConfig,
-) -> Result<(), SetupError> {
+) -> Result<Vec<SelectedHost>, SetupError> {
     let Some(installed) = installed else {
-        return Ok(());
+        return Ok(Vec::new());
     };
     let installed = parse_and_validate_installed_config(installed).map_err(|error| {
         SetupError::Conflict(format!(
@@ -2204,16 +2391,19 @@ fn reject_host_deselection(
         .iter()
         .copied()
         .filter(|host| !desired_hosts.contains(host))
-        .map(SelectedHost::as_str)
         .collect::<Vec<_>>();
-    if removed.is_empty() {
-        Ok(())
-    } else {
-        Err(SetupError::Conflict(format!(
-            "cannot remove configured hosts until transactional host deactivation is available; keep these selected_hosts entries: {}",
-            removed.join(", ")
-        )))
+    if removed.contains(&SelectedHost::Codex)
+        && desired
+            .usage_guard
+            .policy
+            .as_ref()
+            .is_some_and(|policy| policy.enforcement_enabled && policy.midway.enabled)
+    {
+        return Err(SetupError::Input(
+            "turn off Codex background monitoring before deselecting Codex".into(),
+        ));
     }
+    Ok(removed)
 }
 
 fn validate_sorted_unique_hosts(hosts: &[SelectedHost]) -> Result<(), SetupError> {
@@ -2404,7 +2594,7 @@ fn resolve_skills(
             )
         });
     }
-    if config.usage_guard.enabled {
+    if config.usage_guard.projection_enabled() {
         selected.insert("usage-guard".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
@@ -3150,18 +3340,7 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     let mut previous = None;
     for entry in &manifest.entries {
         let path = Path::new(&entry.path);
-        let allowed = matches!(
-            entry.path.as_str(),
-            ".agents/directives/00-hive-user.md"
-                | ".hive/config/user-active-skills.yml"
-                | ".agents/skills/user-setup/references/workflow.md"
-                | ".agents/skills/user-setup/references/questions.md"
-                | ".agents/skills/user-setup/references/reconfiguration.md"
-                | ".agents/skills/user-setup/references/recovery.md"
-                | ".agents/skills/user-setup/references/language.md"
-                | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
-        ) || (path.starts_with(".agents/skills/")
-            && hive_core::validate_hive_skill_projection_relative(path).is_ok());
+        let allowed = valid_user_projection_path(path);
         if path.is_absolute()
             || !allowed
             || path
@@ -3177,6 +3356,23 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
         previous = Some(entry.path.as_str());
     }
     Ok(manifest)
+}
+
+pub(crate) fn valid_user_projection_path(path: &Path) -> bool {
+    matches!(
+        path.to_str(),
+        Some(
+            ".agents/directives/00-hive-user.md"
+                | ".hive/config/user-active-skills.yml"
+                | ".agents/skills/user-setup/references/workflow.md"
+                | ".agents/skills/user-setup/references/questions.md"
+                | ".agents/skills/user-setup/references/reconfiguration.md"
+                | ".agents/skills/user-setup/references/recovery.md"
+                | ".agents/skills/user-setup/references/language.md"
+                | ".agents/skills/user-setup/scripts/resolve-hive.ps1"
+        )
+    ) || (path.starts_with(".agents/skills/")
+        && hive_core::validate_hive_skill_projection_relative(path).is_ok())
 }
 
 pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
@@ -3211,6 +3407,35 @@ pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, Set
     paths.push(manifest_path.to_path_buf());
     paths.sort();
     paths.dedup();
+    Ok(paths)
+}
+
+pub(crate) fn verified_uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
+    let path = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let Some(bytes) = super::user_install::read_user_setup_file(root, path, MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?
+    else {
+        return Ok(Vec::new());
+    };
+    let manifest = parse_projection_manifest(&bytes)?;
+    let mut paths = Vec::new();
+    for entry in manifest.entries {
+        let relative = PathBuf::from(entry.path);
+        let current =
+            super::user_install::read_user_setup_file(root, &relative, MAX_USER_SETUP_BYTES)
+                .map_err(SetupError::Conflict)?;
+        if current
+            .as_deref()
+            .is_some_and(|bytes| sha256_digest(bytes) != entry.digest)
+        {
+            return Err(SetupError::Conflict(format!(
+                "user projection changed; preserved: {}",
+                relative.display()
+            )));
+        }
+        paths.push(relative);
+    }
+    paths.push(path.to_owned());
     Ok(paths)
 }
 
@@ -3528,9 +3753,11 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         persona_id: config.persona.id,
         persona_custom_description: config.persona.custom_description,
         selected_project_skills,
-        usage_guard_enabled: config.usage_guard.enabled,
-        codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
-        discord_guard_enabled: config.usage_guard.discord.enabled,
+        usage_guard_enabled: config.usage_guard.projection_enabled(),
+        codexbar_fallback_enabled: config.usage_guard.projection_enabled()
+            && config.usage_guard.codexbar_fallback_enabled,
+        discord_guard_enabled: config.usage_guard.projection_enabled()
+            && config.usage_guard.discord.enabled,
         discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
         discord_message_fields: config
             .usage_guard
@@ -3546,11 +3773,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
 
 fn detect_state(root: &Dir) -> Result<UserSetupState, SetupError> {
     if load_operational_config(root)?.is_some() {
-        return if feature_question_pending(root)? {
-            Ok(UserSetupState::SetupRequired)
-        } else {
-            Ok(UserSetupState::Operational)
-        };
+        return Ok(UserSetupState::Operational);
     }
     let install = Path::new(".hive/install");
     let metadata = match root.symlink_metadata(install) {
@@ -3721,6 +3944,270 @@ usage_guard:
         .expect("valid config")
     }
 
+    fn v2_config_value() -> JsonValue {
+        let mut value = serde_json::to_value(valid_config()).unwrap();
+        value["schema_version"] = json!(2);
+        let guard = value["usage_guard"].as_object_mut().unwrap();
+        guard.remove("enabled");
+        guard.remove("quota_reset_guard_enabled");
+        guard.extend(
+            serde_json::to_value(hive_core::preferences::UsageProtection::default())
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .clone(),
+        );
+        value
+    }
+
+    #[test]
+    fn version_two_roundtrip_preserves_policy_and_decision_together() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &value["wiki"]["enabled"],
+            DecisionOrigin::AcceptedDefault,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/wiki/enabled": decision});
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(!config.usage_guard.reset_enabled());
+        let stored = canonical_config(&config).unwrap();
+        let restored = parse_and_validate_installed_config(&stored).unwrap();
+        assert_eq!(restored, config);
+        assert_eq!(restored.preference_decisions["/wiki/enabled"], decision);
+        let stored: JsonValue = serde_yaml::from_slice(&stored).unwrap();
+        assert!(stored["usage_guard"].get("enabled").is_none());
+        assert_eq!(stored["usage_guard"]["enforcement_enabled"], false);
+    }
+
+    #[test]
+    fn schema_version_cannot_silently_change_a_policy_interpretation() {
+        let mut v2 = v2_config_value();
+        v2["schema_version"] = json!(1);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&v2).unwrap()).is_err());
+        let mut v1 = serde_json::to_value(valid_config()).unwrap();
+        v1["schema_version"] = json!(2);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&v1).unwrap()).is_err());
+    }
+
+    #[test]
+    fn version_two_keeps_saved_integration_choices_while_master_is_off() {
+        let mut value = v2_config_value();
+        value["usage_guard"]["codexbar_fallback_enabled"] = json!(true);
+        value["usage_guard"]["discord"]["enabled"] = json!(true);
+        value["usage_guard"]["discord"]["webhook_url_env"] = json!("HIVE_DISCORD_WEBHOOK_URL");
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(config.usage_guard.codexbar_fallback_enabled);
+        assert!(config.usage_guard.discord.enabled);
+    }
+
+    #[test]
+    fn version_two_external_edit_is_preserved_with_corrected_provenance() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &value["usage_guard"]["stop_remaining_percent"],
+            DecisionOrigin::Explicit,
+            PreferenceInput::Terminal,
+            PreferenceScope::User,
+            "0.14.0",
+            Some(100),
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent": decision});
+        value["usage_guard"]["stop_remaining_percent"] = json!(45);
+        let bytes = serde_json::to_vec(&value).unwrap();
+        let config = parse_and_validate_installed_config(&bytes).unwrap();
+        assert_eq!(config.usage_guard.stop_remaining_percent, 45);
+        let record = &config.preference_decisions["/usage_guard/stop_remaining_percent"];
+        assert_eq!(record.origin, DecisionOrigin::ExternalChange);
+        assert_eq!(record.decided_at, None);
+        assert!(record.matches_declaration(&json!(45)).unwrap());
+        assert_eq!(
+            parse_and_validate_installed_config(&canonical_config(&config).unwrap()).unwrap(),
+            config
+        );
+    }
+
+    #[test]
+    fn setup_preview_snapshot_rejects_changed_config_before_any_host_mutation() {
+        let root = crate::test_tempdir();
+        let path = root.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, b"changed after preview").unwrap();
+        let arguments = Arguments {
+            answers: root.path().join("answers.yml"),
+            mode: SetupMode::Apply,
+            user_root: root.path().to_owned(),
+            root_cap: super::super::user_install::open_user_root_for_setup(root.path()).unwrap(),
+        };
+        let Err(error) = execute_answers(&arguments, b"unused", SetupBase::Expected(None)) else {
+            panic!("changed setup input was accepted");
+        };
+        assert!(error.message().contains("changed after the setup preview"));
+        assert_eq!(fs::read(&path).unwrap(), b"changed after preview");
+        assert!(!root.path().join(".hive/install").exists());
+    }
+
+    #[test]
+    fn version_two_values_and_decisions_are_replaced_together_and_resist_stale_writers() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let choice = |threshold: u8, origin| {
+            let mut value = v2_config_value();
+            value["usage_guard"]["stop_remaining_percent"] = json!(threshold);
+            let decision = PreferenceDecision::new(
+                &json!(threshold),
+                origin,
+                PreferenceInput::Terminal,
+                PreferenceScope::User,
+                "0.14.0",
+                Some(100),
+            )
+            .unwrap();
+            value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent":decision});
+            let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+            canonical_config(&config).unwrap()
+        };
+        let root = crate::test_tempdir();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let path = Path::new(USER_SETUP_RELATIVE);
+        let first = choice(25, DecisionOrigin::Explicit);
+        super::super::user_install::replace_user_setup_file(&cap, path, None, Some(&first))
+            .unwrap();
+        let winner = choice(35, DecisionOrigin::AcceptedDefault);
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            path,
+            Some(&first),
+            Some(&winner),
+        )
+        .unwrap();
+        let stale = choice(45, DecisionOrigin::Explicit);
+        assert!(super::super::user_install::replace_user_setup_file(
+            &cap,
+            path,
+            Some(&first),
+            Some(&stale)
+        )
+        .is_err());
+        let stored =
+            super::super::user_install::read_user_setup_file(&cap, path, MAX_USER_SETUP_BYTES)
+                .unwrap()
+                .unwrap();
+        assert_eq!(stored, winner);
+        let config = parse_and_validate_installed_config(&stored).unwrap();
+        assert_eq!(config.usage_guard.stop_remaining_percent, 35);
+        let decision = &config.preference_decisions["/usage_guard/stop_remaining_percent"];
+        assert_eq!(decision.origin, DecisionOrigin::AcceptedDefault);
+        assert!(decision.matches_declaration(&json!(35)).unwrap());
+    }
+
+    #[test]
+    fn version_two_rejects_wrong_scope_or_invented_default_answer_time() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let mut value = v2_config_value();
+        let decision = PreferenceDecision::new(
+            &json!(20),
+            DecisionOrigin::Default,
+            PreferenceInput::Migration,
+            PreferenceScope::User,
+            "0.14.0",
+            None,
+        )
+        .unwrap();
+        value["preference_decisions"] = json!({"/usage_guard/stop_remaining_percent":decision});
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["scope"] =
+            json!("project");
+        assert!(parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).is_err());
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["scope"] =
+            json!("user");
+        value["preference_decisions"]["/usage_guard/stop_remaining_percent"]["decided_at"] =
+            json!(100);
+        assert!(parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+
+    #[test]
+    fn optional_feature_question_keeps_an_existing_setup_operational() {
+        let root = crate::test_tempdir();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let config = canonical_config(&valid_config()).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            None,
+            Some(&config),
+        )
+        .unwrap();
+        assert!(feature_question_pending(&cap).unwrap());
+        assert_eq!(detect_state(&cap).unwrap(), UserSetupState::Operational);
+        let inspected = super::super::user_install::read_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            MAX_USER_SETUP_BYTES,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(inspected, config);
+    }
+
+    #[test]
+    fn version_two_projection_keeps_reset_only_protection_and_masks_dormant_integrations() {
+        let root = crate::test_tempdir();
+        let cap = super::super::user_install::open_user_root_for_setup(root.path()).unwrap();
+        let mut value = v2_config_value();
+        value["usage_guard"]["enforcement_enabled"] = json!(true);
+        value["usage_guard"]["preflight"]["reset_enabled"] = json!(true);
+        value["usage_guard"]["codexbar_fallback_enabled"] = json!(true);
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(!config.usage_guard.threshold_enabled());
+        assert!(config.usage_guard.projection_enabled());
+        let stored = canonical_config(&config).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            None,
+            Some(&stored),
+        )
+        .unwrap();
+        let projected = project_preferences(root.path()).unwrap();
+        assert!(projected.usage_guard_enabled);
+        assert!(projected.codexbar_fallback_enabled);
+        value["usage_guard"]["enforcement_enabled"] = json!(false);
+        let config = parse_and_validate_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        super::super::user_install::replace_user_setup_file(
+            &cap,
+            Path::new(USER_SETUP_RELATIVE),
+            Some(&stored),
+            Some(&canonical_config(&config).unwrap()),
+        )
+        .unwrap();
+        let projected = project_preferences(root.path()).unwrap();
+        assert!(!projected.usage_guard_enabled);
+        assert!(!projected.codexbar_fallback_enabled);
+        assert!(
+            load_operational_config(&cap)
+                .unwrap()
+                .unwrap()
+                .usage_guard
+                .codexbar_fallback_enabled
+        );
+    }
+
     #[test]
     fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
         assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
@@ -3778,27 +4265,68 @@ usage_guard:
             .filter_map(serde_json::Value::as_str)
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            question_order,
-            vec![
-                "interface-language",
-                "daily-update-check",
-                "setup-mode",
-                "wiki",
-                "user-contexts",
-                "persona",
-                "hosts",
-                "judge-invocation",
-                "skills",
-                "usage-guard",
-                "discord",
-            ]
+        assert_eq!(&question_order[..2], &["user-language", "user-mode"]);
+        assert!(
+            question_order.iter().position(|id| *id == "user-judge")
+                < question_order.iter().position(|id| *id == "user-skills")
         );
+        assert_eq!(
+            question_order.iter().collect::<BTreeSet<_>>().len(),
+            question_order.len()
+        );
+        let catalog = setup_engine::catalog().unwrap();
+        for id in question_order {
+            assert!(catalog.questions.iter().any(|question| question.id == id
+                && question.scope == hive_core::preferences::PreferenceScope::User));
+        }
         assert_eq!(data["answer_template"]["judge_invocation"], "explicit");
         assert_eq!(
             data["schema"]["$defs"]["judge_invocation"]["enum"],
             serde_json::json!(["explicit", "implicit"])
         );
+    }
+
+    #[test]
+    fn described_quick_defaults_match_terminal_defaults_and_never_enable_usage_enforcement() {
+        let data = describe_result().unwrap().data.unwrap();
+        let defaults = &data["expedited_defaults"];
+        assert_eq!(
+            *defaults,
+            setup_engine::default_answers(Some(InterfaceLanguage::En))
+        );
+        let config = parse_and_validate_config(&serde_json::to_vec(defaults).unwrap()).unwrap();
+        assert_eq!(config.schema_version, 2);
+        let policy = config.usage_guard.policy.as_ref().unwrap();
+        assert!(!policy.enforcement_enabled);
+        assert!(policy.warnings_enabled);
+        for layer in ["preflight", "midway"] {
+            for flag in ["threshold_enabled", "reset_enabled", "zero_quota_enabled"] {
+                assert_eq!(defaults["usage_guard"][layer][flag], false);
+            }
+            assert_eq!(
+                defaults["usage_guard"][layer]["observation_failure"],
+                "warn"
+            );
+        }
+        assert_eq!(defaults["usage_guard"]["midway"]["enabled"], false);
+        assert_eq!(
+            data["answer_template"]["usage_guard"]["enforcement_enabled"],
+            false
+        );
+        assert!(!data["answer_template_notice"]
+            .as_str()
+            .unwrap()
+            .contains("protection is recommended"));
+        for language in [InterfaceLanguage::En, InterfaceLanguage::Ko] {
+            let defaults = setup_engine::default_answers(Some(language));
+            let config =
+                parse_and_validate_config(&serde_json::to_vec(&defaults).unwrap()).unwrap();
+            assert_eq!(config.interface_language, language);
+            assert_eq!(defaults["wiki"]["language"], defaults["interface_language"]);
+        }
+        assert!(setup_engine::default_answers(None)
+            .get("interface_language")
+            .is_none());
     }
 
     #[test]
@@ -4041,8 +4569,9 @@ usage_guard:
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive");
+            .replace("# Global setup through the CLI", "# Earlier Setup Hive");
         base = replaced.into_bytes();
+        assert_ne!(base, incoming, "synthetic old heading must differ");
 
         let (planned, expected, target) = seeded_projection_plan(&base, base.clone());
         let report = planned
@@ -4070,10 +4599,11 @@ usage_guard:
         let files = user_projection_files(&config, &skills).expect("desired files");
         let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let incoming = files.get(&path).expect("user-setup source").clone();
-        let base = String::from_utf8(incoming)
+        let base = String::from_utf8(incoming.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global Aigent Hive setup", "# Earlier Setup Hive")
+            .replace("# Global setup through the CLI", "# Earlier Setup Hive")
             .into_bytes();
+        assert_ne!(base, incoming, "synthetic old heading must differ");
 
         let mut disjoint_local = base.clone();
         disjoint_local.extend_from_slice(b"\n<!-- local note -->\n");
@@ -4653,6 +5183,61 @@ usage_guard: {}
     }
 
     #[test]
+    fn project_progress_preserves_public_skill_sources_without_allowing_secret_urls() {
+        use hive_core::preferences::PreferenceScope;
+        let mut answers = serde_json::json!({"approved_optional_skills":[{
+            "source":"https://example.invalid/fixture-readonly"
+        }]});
+        validate_progress_answers_for_scope(&answers, PreferenceScope::Project).unwrap();
+        assert!(validate_progress_answers_for_scope(&answers, PreferenceScope::User).is_err());
+        for source in [
+            "https://user:password@example.invalid/skill",
+            "https://example.invalid/skill?token=hidden",
+            "https://example.invalid/skill#hidden",
+            "https://discord.example/api/webhooks/hidden",
+        ] {
+            answers["approved_optional_skills"][0]["source"] = source.into();
+            assert!(
+                validate_progress_answers_for_scope(&answers, PreferenceScope::Project).is_err()
+            );
+        }
+        answers["approved_optional_skills"][0]["source"] =
+            "https://example.invalid/fixture-readonly".into();
+        answers["approved_optional_skills"][0]["token"] = "hidden".into();
+        assert!(validate_progress_answers_for_scope(&answers, PreferenceScope::Project).is_err());
+        assert!(progress_contains_secret(&serde_json::json!({
+            "source":"https://example.invalid/fixture-readonly"
+        })));
+    }
+
+    #[test]
+    fn project_progress_requires_the_target_and_reports_its_scope() {
+        let root = crate::test_tempdir();
+        let project = crate::test_tempdir();
+        let mut arguments = vec![
+            "status".to_owned(),
+            "--scope".to_owned(),
+            "project".to_owned(),
+            "--user-root".to_owned(),
+            root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        assert!(parse_progress(&arguments).is_err());
+        arguments.extend(["--target".to_owned(), project.path().display().to_string()]);
+        let result = execute_progress(parse_progress(&arguments).unwrap()).unwrap();
+        assert_eq!(result.code, "hive.project-setup-progress-status");
+        hive_core::validate_json_schema(
+            include_str!("../../../schemas/action-result.schema.json"),
+            &serde_json::to_value(&result).unwrap(),
+            "project progress result",
+        )
+        .unwrap();
+        assert_eq!(result.data.unwrap()["binding"]["scope"], "project");
+        assert!(!root.path().join(".hive").exists());
+    }
+
+    #[test]
     fn project_override_requires_a_registered_project_identity() {
         let temporary = tempfile::tempdir().expect("temporary user root");
         let mut config = valid_config();
@@ -4664,7 +5249,9 @@ usage_guard: {}
         let error = validate_registered_project_overrides(&config, temporary.path())
             .expect_err("unregistered project override");
 
-        assert!(error.message().contains("registered-project"));
+        assert!(error
+            .message()
+            .contains("not a registered project identity"));
     }
 
     #[test]
@@ -4803,19 +5390,15 @@ usage_guard:
     }
 
     #[test]
-    fn reconfigure_rejects_host_deselection_with_actionable_conflict() {
+    fn reconfigure_identifies_only_the_deselected_hosts_for_confirmed_deactivation() {
         let installed = valid_config();
         let installed_bytes = canonical_config(&installed).expect("installed bytes");
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex];
 
-        let error = reject_host_deselection(Some(&installed_bytes), &desired)
-            .expect_err("host deselection must fail closed");
-
-        assert_eq!(error.status(), "conflict");
         assert_eq!(
-            error.message(),
-            "cannot remove configured hosts until transactional host deactivation is available; keep these selected_hosts entries: claude"
+            host_deselections(Some(&installed_bytes), &desired).unwrap(),
+            vec![SelectedHost::Claude]
         );
     }
 
@@ -4827,7 +5410,10 @@ usage_guard:
         let mut desired = installed;
         desired.selected_hosts = vec![SelectedHost::Codex, SelectedHost::Claude];
 
-        reject_host_deselection(Some(&installed_bytes), &desired).expect("host addition");
+        assert_eq!(
+            host_deselections(Some(&installed_bytes), &desired).unwrap(),
+            Vec::<SelectedHost>::new()
+        );
     }
 
     #[test]
@@ -5332,7 +5918,7 @@ usage_guard:
 
     #[test]
     fn codex_user_projection_retires_all_exact_resources_and_is_idempotent() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
         let applied = apply_user_projection(&root, &config, &skills, &answers).unwrap();
@@ -5356,7 +5942,7 @@ usage_guard:
     #[test]
     fn codex_user_projection_preserves_the_entire_modified_or_extended_skill() {
         for suffix in ["SKILL.md", "references/workflow.md", "custom.txt"] {
-            let temporary = tempfile::tempdir().unwrap();
+            let temporary = crate::test_tempdir();
             let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
             let changed = temporary
                 .path()
@@ -5388,7 +5974,7 @@ usage_guard:
 
     #[test]
     fn codex_user_projection_rejects_a_change_after_the_cleanup_preview() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let root = super::super::user_install::open_user_root_for_setup(temporary.path()).unwrap();
         let preview = plan_user_projection(&root, &config, &skills, &answers).unwrap();
@@ -5404,7 +5990,7 @@ usage_guard:
 
     #[test]
     fn codex_cleanup_does_not_trust_a_self_consistent_forged_original() {
-        let temporary = tempfile::tempdir().unwrap();
+        let temporary = crate::test_tempdir();
         let (config, skills, answers) = seed_codex_delivery_fixture(temporary.path());
         let path = ".agents/skills/user-setup/SKILL.md";
         let custom = b"User-created Skill content\n";
