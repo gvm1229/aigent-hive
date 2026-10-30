@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 현재: `feature/interactive-cli-0.14.0`, 15/15(100%). [정식 실행](../plans/0.14.0-stable-release.md): 정식0.14.0·공지 완료, PC 갱신 진행
+- 현재: `feature/interactive-cli-0.14.0`, 15/15(100%). [정식 실행](../plans/0.14.0-stable-release.md): 정식0.14.0·공지 완료, PC 본체14.0·감시의 Windows 승인 대기
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). ship 적용·실제 설치의 시험 사용 금지
 - 제품 버전: `0.14.0`
-- [공개 시험 근거](../research/public-test-0.14.0.md), [조건별 최종 근거](../research/public-test-0.14.0.md#원래-15개-완료-조건과-최종-근거). 안정판0.14.0·사용자 설치0.13.1
+- [공개 시험 근거](../research/public-test-0.14.0.md), [조건별 최종 근거](../research/public-test-0.14.0.md#원래-15개-완료-조건과-최종-근거). 안정판·사용자 본체0.14.0
 - [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
 - [갱신 근거](../research/cli-update-validation-0.14.0.md)·[직접 제거 근거](../research/cli-uninstall-validation-0.14.0.md): 원본0.13.1 부모·개발0.14.0·격리 VM의 실제 명령. 등록 앱/감시·공개 파일 수용은 별도
 
