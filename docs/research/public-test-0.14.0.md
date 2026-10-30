@@ -86,3 +86,26 @@
 - 같은 격리 macOS arm64의 [운영체제 조회 검사](../../tests/results/runs/20261029T230337-dbee9240abd8.md)·[플랫폼 Rust 검사](../../tests/results/runs/20261029T230752-8411a09c7863.md) 통과. 실제 검사 소스d9c178db·트리0347535f30c9f64b5debe6160ca550ae0484de39는6c16b74a와 동일, 실행 중 소스 변경 없음. 설치·앱 대역의 개발 바이너리 범위이며 공개test.3 수용은 별도
 - 같은 소스의 격리 Windows x64: [Windows Terminal](../../tests/results/runs/20261029T230552-e685f79cd966.md), [직접 설치 제거](../../tests/results/runs/20261029T230631-71d499ee883d.md)·[npm 제거](../../tests/results/runs/20261029T230708-eb4df41c196b.md), [공개 Codex CLI와 대기 감시의 보존 제거](../../tests/results/runs/20261029T230744-2ec97bff0a9e.md), [플랫폼 Rust 검사](../../tests/results/runs/20261029T231019-701c20f9cd75.md) 통과. 새 임시 프로필·캐시와 개발 Hive 사용, 실행 중 소스 변경 없음. 모델 호출·실제 구독 관측·대화 중단·공개0.14.0 파일 수용과 구분
 - [CI40970272866](https://github.com/gvm1229/aigent-hive/actions/runs/40970272866) 전체 성공, 소스6c16b74a의 PR83 develop 통합 완료. 후속 문서·사실·검증 기록만 추가하며 제품 지문170db926… 유지. 다음test.3 후보는 문서 확인까지 끝난 정확 소스에서 생성, 공개 수용 전 원래9/15 유지
+
+## test.3 공개와 첫 갱신 수용
+
+- 소스1ab3c773·제품 지문170db9262d8e7617f253f36fde097f091d5a2a6c1bd0a60f5652e531695ddc58. 제품 CI40970272866·문서 CI40976504251, 후보40977030789의 다섯 배포 대상과 기존 안정판 복구 통과
+- 첫 게시40979719398은 여섯 npm 업로드 후60초 태그 반영 확인 실패. 같은 후보 복구40980557213 성공, 기존 공개 파일 지문 대조 후 재업로드 없이 GitHub 게시. 여섯 정확 버전·test 태그와 주석 태그의 소스1ab 일치, npm/GitHub latest 모두13.1 독립 확인
+- [공개test.3](https://github.com/gvm1229/aigent-hive/releases/tag/v0.14.0-test.3)의 묶음 SHA256: `0ac7ec49d542f4196908272be9034559273a9f1772c87a5a534a35a903f75221`
+
+| 실행 환경 | 원본0.13.1 npm | 원본0.13.2-test.2 npm | 원본0.13.1 직접 설치 | 원본0.13.1 비대화형 |
+| --- | --- | --- | --- | --- |
+| Windows x64 | [004109](../../tests/results/runs/20261030T004109-6c481e61e14c.md) | [004144](../../tests/results/runs/20261030T004144-b0239fd36746.md) | [004218](../../tests/results/runs/20261030T004218-9e7a239f9f55.md) | [004411](../../tests/results/runs/20261030T004411-f06e7b6edfac.md) |
+| macOS arm64 | [004047](../../tests/results/runs/20261030T004047-86326b3b4a39.md) | [004121](../../tests/results/runs/20261030T004121-6ff91b94e5b0.md) | [004152](../../tests/results/runs/20261030T004152-0f7dd9003ca2.md) | [004215](../../tests/results/runs/20261030T004215-cdfec9e33de5.md) |
+| Linux x64 | [004035](../../tests/results/runs/20261030T004035-3300260b09a2.md) | [004047](../../tests/results/runs/20261030T004047-72f0618ed6a9.md) | [004058](../../tests/results/runs/20261030T004058-903bb3284c43.md) | [004111](../../tests/results/runs/20261030T004111-63cbeeb15858.md) |
+
+- 모두 실제 공개 실행 파일·설치 관리자와 격리 GitHub OS에서 갱신→설정 확인→미리보기/거부/승인 제거→명시적 색인 복구→재설치 통과, 실행 중 소스 변경 없음. 앱은 제한된 대역, 역할·지식·이력은 합성 보존 자료. 모델·실제 구독 관측·개인 설치 증명과 구분
+- U140-001–003·D140-001의 공개 첫 연결과 의존 조건 재수용, 원래13/15(86.7%). 전체 공개 수용 Q140-002·003은 아래 취소 검증기 보정 후 test.4에서 판정
+
+## Windows 취소 검증기의 상속 입력 보정
+
+- 수용40981139083의 Linux·macOS 전체 통과. Windows는 위 네 갱신 흐름과 한국어/영어 설정·프로젝트 통과 후 [Ctrl+C 대기 종료23](../../tests/results/runs/20261030T004456-23d9db508920.md). 실패한 Windows만 새 VM에서1회 재실행해 [같은 실패 재현](../../tests/results/runs/20261030T010931-deb01db9d333.md), 통과한 Linux·macOS 실행 시각 유지
+- [PowerShell 시작 비교](../../tests/results/runs/20261030T005929-9078b6154c95.md)는 직접/PowerShell 경유 모두 이벤트1·실제 종료. 같은 공개 파일의 [Git Bash 시작](../../tests/results/runs/20261030T011958-fb28105b91d9.md)은 두 경로 모두 이벤트0·종료23, 사용량 질문 대기 재현. 제품 입력·기한 변화 없이 시작 환경만 변경
+- [Microsoft의 제어 처리 규약](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler): Ctrl+C 무시 여부의 자식 상속과 현재 프로세스만의 복원. 소스 CI는 Python, 공개 검증은 Git Bash에서 시작하는 차이 확인
+- 수정4c10b364: 검증기의 상속 무시를 해제한 뒤 보호 콜백·제품 자식 시작, 원래10초 종료·미적용/선택 보존 조건 유지. 실패 시 이벤트 수/화면 보존. [같은 공개test.3의 Git Bash 회귀](../../tests/results/runs/20261030T012901-e32da48ccdce.md)에서 일반 Ctrl+C·강제 무시 상속·EOF와 비대화형 재개3검사 통과. 실제 앱·예약·설치 변경 없음
+- 강제 무시 상속 사례를 develop 및 공개 Windows 검사에 연결. 제품 바이트는170db926…로 동일, 원래 공개 검증기 수정 규칙에 따라 test.4로 최종 수용. test.3 전체 합격 표시 제외
