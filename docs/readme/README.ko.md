@@ -6,23 +6,23 @@
 
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.13.1-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.14.0-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.0 release-date=2026-10-30 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.13.1`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.14.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.13.1|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.14.0|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.13.1
+npm install -g aigent-hive@0.14.0
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.13.1 (released 2026-10-21)
+AIgent Hive v0.14.0 (released 2026-10-30)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.13.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.14.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.13.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.14.0/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.13.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.0/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.13.1. The stable install guidance is
+Install the current stable release 0.14.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,19 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.13.1 주요 변경
+## 0.14.0 주요 변경
+
+- 모델 호출 없이 한국어·영어의 터미널 질문으로 전역 환경과 프로젝트 설정
+- 저장한 선택 재사용·한 항목 변경·중단한 질문 재개, 사용자 글·역할 보존
+- 새 설치의 사용량 자동 중단 기본 비활성, 기존 보호 변경 전 선택 확인
+- `hive uninstall --dry-run`으로 제거·보존 대상 확인, 프로그램 제거 뒤에도 설정·지식·기록·프로젝트 자료 보존과 재설치 지원
+- 보호 활성 시 남은 사용량0~99% 하한 선택. 초기화·할당량 소진·실행 중 감시의 개별 제어.0%에서도 소진 보호 유지, 크레딧 차감0 보장 제외
+- 0.13.1 갱신에서 새 터미널 질문까지 연결. 질문할 수 없는 환경의 승인된 보존 갱신은 기존 선택 유지·새 선택형 기능 비활성·남은 질문 안내. 과거 설치도 전체 파일 소유 검증 유지
+- 내려받기·후크·외부 알림·Windows Codex 실행 중 중단의 별도 동의 유지. 앱의 필요한 통신 기능 확인, 앱 유지·직접 재개 지원. 다른 운영체제·원격·클라우드 직접 중단 미지원
+- 기존 답안 파일 지원 유지, 직접 선택·기본값·상속·과거 출처 불명의 구분
+
+## 이전 0.13.1 변경
+
 
 - 중간 중단 감시를 켠 기존 보호 대상 대화에 설정한 잔여량 하한 적용, 소유 대화의 정책을 AI 하위 작업에 계승. 앱 유지·직접 재개·새 메시지 허용, 같은 사건의 반복 중단 방지·독립0% 보호 유지
 - 기존 조회 실패 시 새 기본 조회 프로세스로 재확인, 두 경로는 같은 제공자 사용.15초 시작 간격·경로별5초 제한·연속60초 정상 조회 부재의 한 차례 중단 유지
@@ -109,16 +121,17 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.13.1 근거 |
+| Platform | Native target | 0.14.0 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
-| Linux x86_64 | `x86_64-unknown-linux-musl` | native 후보 검증 |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | 공개 번호 시험판 수용 |
 | Linux arm64 | `aarch64-unknown-linux-musl` | native 후보 검증 |
 | Windows x86_64 | `x86_64-pc-windows-msvc` | 공개 번호 시험판 수용 |
 
-Codex·Antigravity는 실제 host 증거가 있음. Claude Code package·projection은 fixture로
-검증했지만 실제 subscription-backed session은 미검증. Stable `0.13.1`: macOS ad-hoc signing,
+공개 시험의 Windows x64·Linux x64·macOS arm64 설정·취소·복구·갱신·제거·재설치 수용.
+Windows의 실제 Codex CLI 등록·대기 감시 포함, 모든 호스트의 실제 데스크톱 모델·할당량 조회 증명 제외.
+Claude Code의 실제 구독 세션 미검증. Stable `0.14.0`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 
@@ -144,9 +157,9 @@ hive update
 
 ### 3. 새 전역 질문 답변
 
-선택한 호스트 열기. 새 버전의 전역 선택은 일반 작업 전에 질문. 의미 검색처럼 저장소·다운로드·향후 동작에 영향을 주는 선택의 답변 확인 목적. `yes`·`no` 모두 유효한 답. 취소·무응답은 일반 Hive 작업 대기 유지.
+`hive update`의 터미널 질문에 답한 뒤 적용 전 변경 내용 확인. 의미 검색처럼 저장소·다운로드·향후 동작에 영향을 주는 선택은 별도 확인. 취소는 동의로 처리하지 않고, 질문할 수 없는 보존 갱신은 기존 선택 유지와 남은 질문 안내.
 
-마지막 답 뒤 Hive가 전역 사용자 투영을 자동 재적용·검증. `hive install` 또는 별도 setup 명령 직접 실행 불필요.
+확인 뒤 전역 사용자 파일 적용·검증, 프로젝트 설정은 별도 작업 유지.
 
 ### 4. Project 한 개 설정
 
@@ -176,7 +189,7 @@ hive update
 
 즉시 version 확인과 Hive 소유 전역 사용자 파일 수렴 수행. 실행 파일이 최신이어도 불완전한 사용자
 설치를 복구. 새 version이면 exact update 내용을 설명하고 authenticated install owner 실행 전 질문.
-거절·stdin 종료·noninteractive 실행에서는 설치 mutation 0건. 최초 초기화에는 대화형 host 선택 필요.
+명시한 갱신 승인 없는 거절·입력 종료·비대화형 실행의 설치 변경0건. 최초 초기화에는 대화형 host 선택 필요.
 
 Daily check: 마지막 성공 확인부터 24시간 throttle. Offline·failed check는 성공
 기록 제외; 다음 Codex·Claude Code·Antigravity session에서 재시도.

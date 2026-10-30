@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.13.1 release-date=2026-10-21 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.0 release-date=2026-10-30 -->
 
 ## 목적
 
@@ -65,7 +65,7 @@ provider-neutral 로컬 agent harness.
 | 실행 중 중단·알림 | 선택형 Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 하한·실제 초기화·60초 조회 공백 중단, 앱 유지·직접 재개·이유 안내 | [0.13.1 안내](../releases/0.13.1.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.13.1` release](../releases/0.13.1.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.14.0` release](../releases/0.14.0.md) |
 
 ## Artifact 흐름
 
@@ -83,7 +83,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.13.1` (released 2026-10-21)
+- Current public stable version: `0.14.0` (released 2026-10-30)
+- `0.14.0`: 모델 없는 터미널 설정·저장 선택 재사용·취소 후 재개·자료 보존 제거·보호 설정 선택
 - `0.13.1`: 기존 하한의 실행 중 중단·조회 회복·초기화 비교·보존 갱신 보정
 - `0.13.0`: 선택형 Windows Codex 실행 중단·공식 로고의 알림 전용 창, 직접 재개 지원
 - `0.12.0`: 기본 활성0% 보호·지식 관계 검증과 저장 보호·검색 오류 안내·시험판 출처 구분
