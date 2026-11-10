@@ -502,5 +502,287 @@
     "line": 29,
     "reason": "2026-10-06 사용자 승인한 새섹션 공지의 동일본문·새배치 보존; 승인된870자원문",
     "text_sha256": "f466347252fbbaa37fa59b400eb04faba77bc27c6aeb64439d3dde698e4ab5a5"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 1,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "c9a6130b07ba9094697df66ca610682edd4a9851adb5c405b82117c96390c54a"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 3,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "ac92ef660b8f90e299992ae365ef0fad5c4c02cab8267056cb7d13d670a1f8ed"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 8,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "0fcf16215bd4d2ee84cda6cc3aa9ba7760bc887fb3afaa748aa15ce5fbfbc130"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 11,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "e192afa864a3fafbded0f19e4234b0535290cf213948905bf0f7c8b30dd0e99e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 13,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "977300b0d8bdd69b38dcc471334f3658cf077ba0678a43b0d41bef71039edfe9"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 24,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "7c9deab45c4c1ad037acf0201056beda45f3b2ba146d1c014910bdc70897fb17"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 26,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "b35f4b01ed1ec99fd0df756e47be1b4ef008ba0f442f58b6dae9e12fa52e3b22"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 28,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "620d9d576c95847fa980e9cbc9e16cd16e6a3b9bc30103949eb41a28d35d8c86"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 30,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "1938b7b00b8e5b182271551128a51552d36d3eee7715f7419f43597454116696"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 41,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "ffd9e22e876c53e6d358ac0149421c57fa1b759495891dfff9a14124ded91819"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 43,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "f9d15d7e9c3f83b3219850dac4cbc94feb0f4ad8e7ad5b87a15c35af01db5b1e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 45,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "f3a1efe07b24cdf692856a0120916bdc790fba714c42ea48255ad642eb978497"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 56,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "4fb30c56e2dbca7a3884c81a987053449ed92594a696c1721af9b6ac8c02edf5"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 65,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "9275cdded8bd8dcdbe8f36abc23d84c4478516ac031009f94138f56a22de13bd"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 67,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "8ee7f4c656d4e3c7e5f0dd1c96b1e74228815b4bcc5d6c75fa6a2141d47cc733"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 69,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "a70e068d50b0cf67a8896dfe6aec1b16c37fa776019c90b2d053c84bac54718e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 74,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "353e07d580cd374c54e8f6c5b839e15ba550eac49edcedd6965684d18fdf45ab"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 75,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "80906164751c1bbe0e27f22f991ca25299c4deaaf842808f4c6dcd4eef24b96a"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 77,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "ed31df891c49d465b38c4774ba8ca83f96bd3472aa855decc3fc427d119e23ff"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 79,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "5ad0d21e5a6287205fe6b01a6b3e13aa9f24a77ccffb060d3cff81de9a5de4dd"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 81,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "067b05b183adfee9fc0104435203b158a0ff8280e7026558f541bac29dea838c"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 89,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "88b49536c2fbc862b82726e8cea3bf95a9fbd02f8dfcd74d14d7134130463611"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 91,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "e2d4d101230be4674f11fa44c2e549719562ba7634e5d0dc487ed6ea62f2d85a"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline-original.md",
+    "line": 93,
+    "reason": "Verbatim preserved assistant answer before the merge; exact source record, not authored project prose.",
+    "text_sha256": "d4469006915c562866a9b1166bb221032c81dcbe0d8f680394dd469c6cd4103b"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 10,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "c9a6130b07ba9094697df66ca610682edd4a9851adb5c405b82117c96390c54a"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 12,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "ac92ef660b8f90e299992ae365ef0fad5c4c02cab8267056cb7d13d670a1f8ed"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 17,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "0fcf16215bd4d2ee84cda6cc3aa9ba7760bc887fb3afaa748aa15ce5fbfbc130"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 22,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "e192afa864a3fafbded0f19e4234b0535290cf213948905bf0f7c8b30dd0e99e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 24,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "977300b0d8bdd69b38dcc471334f3658cf077ba0678a43b0d41bef71039edfe9"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 35,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "7c9deab45c4c1ad037acf0201056beda45f3b2ba146d1c014910bdc70897fb17"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 37,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "b35f4b01ed1ec99fd0df756e47be1b4ef008ba0f442f58b6dae9e12fa52e3b22"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 39,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "620d9d576c95847fa980e9cbc9e16cd16e6a3b9bc30103949eb41a28d35d8c86"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 41,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "1938b7b00b8e5b182271551128a51552d36d3eee7715f7419f43597454116696"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 52,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "ffd9e22e876c53e6d358ac0149421c57fa1b759495891dfff9a14124ded91819"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 54,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "f9d15d7e9c3f83b3219850dac4cbc94feb0f4ad8e7ad5b87a15c35af01db5b1e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 56,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "f3a1efe07b24cdf692856a0120916bdc790fba714c42ea48255ad642eb978497"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 67,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "4fb30c56e2dbca7a3884c81a987053449ed92594a696c1721af9b6ac8c02edf5"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 76,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "9275cdded8bd8dcdbe8f36abc23d84c4478516ac031009f94138f56a22de13bd"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 78,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "8ee7f4c656d4e3c7e5f0dd1c96b1e74228815b4bcc5d6c75fa6a2141d47cc733"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 80,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "a70e068d50b0cf67a8896dfe6aec1b16c37fa776019c90b2d053c84bac54718e"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 85,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "353e07d580cd374c54e8f6c5b839e15ba550eac49edcedd6965684d18fdf45ab"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 86,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "80906164751c1bbe0e27f22f991ca25299c4deaaf842808f4c6dcd4eef24b96a"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 88,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "ed31df891c49d465b38c4774ba8ca83f96bd3472aa855decc3fc427d119e23ff"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 90,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "5ad0d21e5a6287205fe6b01a6b3e13aa9f24a77ccffb060d3cff81de9a5de4dd"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 92,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "067b05b183adfee9fc0104435203b158a0ff8280e7026558f541bac29dea838c"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 100,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "88b49536c2fbc862b82726e8cea3bf95a9fbd02f8dfcd74d14d7134130463611"
+  },
+  {
+    "path": "docs/research/ai-learning/score-evaluation-2026-10-23/baseline.md",
+    "line": 102,
+    "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
+    "text_sha256": "e2d4d101230be4674f11fa44c2e549719562ba7634e5d0dc487ed6ea62f2d85a"
   }
 ]
