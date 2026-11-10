@@ -28,7 +28,7 @@
   - 변경: `crates/hive-cli/src/usage_monitor.rs`(설치 경로 `:507-514`)에서 설치 성공 뒤 `runtime/usage-monitor/bin/hive-*.exe` 중 현재·직전 외 정리. 실행 중·잠긴 파일은 건너뛰고 기록
   - 확인: 임시 사용자 폴더의 5개 → 2개, 실행 중 파일 보존, 실패 시 기존 파일 불변 시험
 - [ ] [OV141-006] 미완료 감시 갱신 복구
-  - state: agent-owned; depends: OV141-005
+  - state: awaiting-external-evidence; depends: OV141-005; owner: user; reason: 격리 Windows 재현 필요, 클라우드 Linux 세션에서 PowerShell·작업 스케줄러 실행 불가. 단계 표시 진단과 조사는 [중간 기록](../../research/overhaul/OV141-006-partial.md)
   - 변경: `runtime/usage-monitor/upgrade.json`의 `phase: incomplete`("Windows monitor adapter failed")를 임시 사용자로 재현, 원인 기록, 재시도·복구 경로 구현
   - 확인: 격리 Windows 재현과 복구 통과. 실제 PC 적용은 OV141-011
 - [ ] [OV141-007] 저장 용량 보고와 정리 미리보기

@@ -7,7 +7,7 @@
 ## 현재 위치
 
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
-- 다음 항목: `OV141-006` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
+- 다음 항목: `OV141-007` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md)). `OV141-006`은 Windows 재현 대기
 - 마지막 완료: `OV141-004`(공통 지식 연결 수정)
 - 승인 대기: 없음
 - 중단 메모: 없음

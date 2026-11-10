@@ -317,6 +317,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-003 근거 — 공통 지식 연결 동작 결정](research/overhaul/OV141-003.md)
 - [OV141-004 근거 — 공통 지식 연결 상태 수정](research/overhaul/OV141-004.md)
 - [OV141-005 근거 — 감시 실행 파일 보관 2개 제한](research/overhaul/OV141-005.md)
+- [OV141-006 중간 기록 — 미완료 감시 갱신 복구](research/overhaul/OV141-006-partial.md)
 
 ### 점수 기반 개선 설계 초안
 
