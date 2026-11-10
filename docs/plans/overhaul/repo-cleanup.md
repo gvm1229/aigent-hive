@@ -15,8 +15,8 @@
   - state: complete; depends: OVD-001; evidence: repo:docs/research/overhaul/OVD-002.md#sha256:b5d3e03cecee3a8626850cdf6d183941c391bfefcb9be80953bb9204e2003a36
   - 변경: 결정대로 관심사별 커밋([커밋 규칙](../../guides/commit-rules.md)), 보류 파일은 그대로 유지
   - 확인: `git status --short`에 보류 결정 파일만 잔존
-- [ ] [OVD-003] develop push와 병합 완료 브랜치 정리
-  - state: awaiting-user-authority; depends: OVD-002; owner: user; reason: 사용자 PC 자격 증명의 push와 브랜치 삭제 승인
+- [x] [OVD-003] develop push와 병합 완료 브랜치 정리
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-003.md#sha256:a259ac6a326df0df78e223b150ee4a28e3fb204f65b55a7c3526f784d86bad0a
   - 변경: 로컬 `develop`의 `feature/interactive-cli-0.14.0` fast-forward는 완료. 남은 일은 `git push origin feature/interactive-cli-0.14.0 develop`, 병합 완료 `docs/update-notes-sections`와 `feature/interactive-cli-0.14.0`의 삭제 여부 결정
   - 확인: `git status -sb`, `git branch --merged origin/main`
 - [x] [OVD-004] 미등록 활성 조각의 보관 이동
@@ -27,8 +27,8 @@
   - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-005.md#sha256:cda4ee933238e4acc6fa67f538263081f6c1518fa4e9ec4dc76eb7cf957d4226
   - 변경: 출시 완료된 0.14.0 근거 단락을 `docs/archive/state/`로 이동, "PC 본체14.0" 오타와 붙여 쓴 버전 표기(`정식0.14.0` 등) 수정, `PLAN.md` 같은 표기 수정
   - 확인: `wc -c docs/state/CURRENT.md` 6144 이하, `python scripts/check-human-documentation-style.py`, `python scripts/check-plan-state.py`
-- [ ] [OVD-006] 사용량 지침 보완
-  - state: agent-owned; depends: OVD-002
+- [x] [OVD-006] 사용량 지침 보완
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-006.md#sha256:d1da967cd2f82ec814a8d0f90f02f1699c21bdbc1aa07797a19af0a1b2a59d39
   - 변경: `.agents/directives/07-installed-usage-guard.md`에 "`hive` 실행 불가 세션은 사전 확인을 건너뛰고 작업을 진행하되 미실행 사실을 보고" 추가(2026-11-10 사용자 결정으로 원래의 읽기 전용 제한 대신 채택), 날짜 붙은 승인 문단(`:36`)을 `docs/decisions/`로 이동
   - 확인: `python scripts/check-agent-directives.py`
 - [x] [OVD-007] AI 공동 작성자 표기 거부 검사
@@ -51,5 +51,7 @@
 
 ## 메모
 
-- OVD-006은 승인 대기라 병합 조건에서 제외, 승인 시 같은 브랜치 또는 다음 단계에서 처리
+- OVD-006은 2026-11-10 사용자 결정으로 agent-owned 전환, 단계 1 브랜치에서 처리
+- [Fable 사후 검토](../../research/overhaul/stage0-review.md): 단계 0은 병합 전 검토 규칙 도입 전에 병합. OVD-005·008·009 근거의 문체 검사 "실패 0"은 단계 0 당시 실제로 종료 코드 1(지적 48건). 문서 홈 도달·사실 근거 정렬 실패와 함께 develop `aaa7acb8`(작성자 정정 전 `b7c45c3c`)에서 복구
+- OVD-001 근거는 파일별 표 대신 커밋별 표. 계획의 "행 수 = `git status --short` 수" 확인은 미충족, 결과(미커밋 0)만 확인
 - 0.14.0 정식의 남은 사용자 승인(이 PC 갱신·감시 복구)은 OV141-006·OV141-010과 함께 처리

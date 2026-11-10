@@ -1,6 +1,7 @@
 # ripgrep 등 검색 도구 제외 목록. 파일은 Git에 보존
 # 과거 기준본
 harness/project-bases/
+!harness/project-bases/registry.yml
 harness/user-bases/
 # 시험 기록
 tests/results/runs/
@@ -8,3 +9,4 @@ tests/results/legacy/
 tests/results/cleanup/
 tests/results/archive/
 tests/results/INDEX.md
+# 참조 확인·보관 절차의 검색은 rg --no-ignore-dot 사용

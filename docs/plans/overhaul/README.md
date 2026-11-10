@@ -9,7 +9,7 @@
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
 - 다음 항목: `OV141-005` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
 - 마지막 완료: `OV141-003`(공통 지식 연결 4건 결정)
-- 승인 대기: `OVD-003`(원격 `chore/overhaul-0-repo-cleanup`·`feature/interactive-cli-0.14.0` 삭제. 2026-11-10 승인, 이 세션 연결에서 삭제 요청이 끊김. GitHub 화면 또는 사용자 PC에서 삭제 필요)
+- 승인 대기: 없음
 - 중단 메모: 없음
 
 ## 재개 절차
@@ -22,7 +22,7 @@
 4. 선택: 위에서부터 첫 `- [ ]` 항목 중 `state: agent-owned`이고 `depends`가 모두 완료인 항목 하나
 5. 예약: `.agents/work/active-sessions/`의 세션 기록에 수정 경로 등록([06](../../../.agents/directives/06-session-coordination.md))
 6. 실행: 항목의 "변경"만 수행. 범위 확장·설계 변경 금지, 설계 문제는 계획 소유자에게 보고
-7. 확인: 항목의 "확인" 실행. 실패 시 미완료 유지와 중단 메모 기록
+7. 확인: 항목의 "확인" 실행. 실패 시 미완료 유지와 중단 메모 기록. 문서 변경 항목은 `python scripts/test-lanes.py --lane documentation`과 문체 검사기의 종료 코드 0까지 확인
 8. 체크: `- [x]`와 `state: complete; evidence: repo:docs/research/overhaul/<ID>.md#sha256:<값>`으로 변경. 근거 문서에 실행 명령·결과·한계 기록
 9. 갱신: "현재 위치"와 아래 진행 표 갱신, 커밋([03](../../../.agents/directives/03-workflow.md)), 다음 항목
 
@@ -75,7 +75,7 @@
 
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
-| 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 8/10 |
+| 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
 | 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 3/11 |
 | 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.1 정식 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |

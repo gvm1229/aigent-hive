@@ -303,8 +303,11 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 ### 재정비 근거
 
 - [OVD-001·OVD-002 근거 — 기존 작업 분리와 커밋](research/overhaul/OVD-002.md)
+- [OVD-003 근거 — develop push와 병합 완료 브랜치 정리](research/overhaul/OVD-003.md)
+- [단계 0 사후 검토 — Fable 5.2 advisor](research/overhaul/stage0-review.md)
 - [OVD-004 근거 — 미등록 활성 조각 보관](research/overhaul/OVD-004.md)
 - [OVD-005 근거 — CURRENT.md 축소와 표기 수정](research/overhaul/OVD-005.md)
+- [OVD-006 근거 — 사용량 지침 보완](research/overhaul/OVD-006.md)
 - [OVD-007 근거 — AI 공동 작성자 표기 거부 검사](research/overhaul/OVD-007.md)
 - [OVD-008 근거 — 백로그·개요 문서 갱신](research/overhaul/OVD-008.md)
 - [OVD-009 근거 — 시험 기록 보존과 검색 제외](research/overhaul/OVD-009.md)
