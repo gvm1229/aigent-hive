@@ -11,8 +11,8 @@
   - state: complete; evidence: repo:docs/research/overhaul/OV141-001.md#sha256:ae3d91d0047ccd2cab3f975206b6e326e8ca759ad580f61132f8dfb800fa1884
   - 변경: 0.14.0 계획 묶음을 `docs/archive/`로 보관, 이 파일을 `docs/plans/active/overhaul-0.14.1.md`로 이동·등록, 제품 버전 0.14.1 동기화
   - 확인: `python scripts/check-plan-state.py` valid, `bash scripts/check-release-version.sh`
-- [ ] [OV141-002] 사용량 임계값 확인 기록 오류 수정
-  - state: agent-owned; depends: OV141-001
+- [x] [OV141-002] 사용량 임계값 확인 기록 오류 수정
+  - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-002.md#sha256:326c576e5e49b35ca728949f095d6a419849f898fe99acc26f4171a8e40a5d0b
   - 변경: [임계값 백로그](../backlog/usage-threshold-provenance.md)의 "수정 후보" 그대로. `crates/hive-cli/src/user_setup.rs`의 `set_operational_usage_threshold`에서 기록 정규화, 시험 `global_threshold_with_valid_provenance_updates_atomically` 추가
   - 확인: `python scripts/dev-check.py rust -- test -p hive-cli usage --locked`, 백로그 "완료 조건" 4개 충족
 - [ ] [OV141-003] 공통 지식 연결 상태의 동작 결정

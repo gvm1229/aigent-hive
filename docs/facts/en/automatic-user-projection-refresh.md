@@ -11,7 +11,7 @@ aliases: ["Post-update projection refresh"]
 sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:9488b87b8123e4cfbf702193a6c1ebf066fe143af522c51bea9ba5bdc5b3a6f5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:55eaf705a654fb71c981e5788610d8d88cce19b2cc4eaa511b1c8a4fa1471553"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3c6e0b3a0f62d5598e68024fd7a69d82cb2b0dcfbb29d5602f6f362bc0df2d40"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:800de1795d32bd05d22a67f768913f40a0717782d5ba5bcee039245282a71ce2"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]

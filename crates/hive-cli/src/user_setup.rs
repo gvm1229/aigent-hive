@@ -3645,6 +3645,15 @@ pub(crate) fn set_operational_usage_threshold(
         ));
     }
     config.usage_guard.stop_remaining_percent = remaining_percent;
+    // Apply the same provenance rule that the reload uses, so the published candidate and the
+    // reloaded setup agree. The changed value becomes an external change with a new fingerprint.
+    let declarations = serde_json::to_value(&config)
+        .map_err(|error| format!("cannot inspect setup declarations: {error}"))?;
+    hive_core::preferences::reconcile_decisions(
+        &declarations,
+        &mut config.preference_decisions,
+        hive_core::preferences::PreferenceScope::User,
+    )?;
     validate_config_semantics(&config).map_err(|error| error.message().to_owned())?;
     let catalog = parse_and_validate_catalog().map_err(|error| error.message().to_owned())?;
     let resolved_skills =
@@ -5769,6 +5778,81 @@ usage_guard:
         assert_eq!(installed.usage_guard.stop_remaining_percent, 5);
         validate_user_projection(&root, &installed, &skills, &update.config_bytes)
             .expect("updated projection binding");
+    }
+
+    #[test]
+    fn global_threshold_with_valid_provenance_updates_atomically() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        for origin in [DecisionOrigin::Explicit, DecisionOrigin::LegacyUnknown] {
+            let temporary = tempfile::tempdir().expect("temporary user root");
+            let mut config = valid_config();
+            config.usage_guard.enabled = true;
+            config.usage_guard.stop_remaining_percent = 20;
+            let decided_at = (origin == DecisionOrigin::Explicit).then_some(100);
+            let threshold = PreferenceDecision::new(
+                &json!(20),
+                origin,
+                PreferenceInput::Terminal,
+                PreferenceScope::User,
+                "0.14.0",
+                decided_at,
+            )
+            .expect("threshold decision");
+            let unrelated = PreferenceDecision::new(
+                &serde_json::to_value(config.wiki.enabled).expect("wiki declaration"),
+                DecisionOrigin::Explicit,
+                PreferenceInput::Terminal,
+                PreferenceScope::User,
+                "0.14.0",
+                Some(100),
+            )
+            .expect("unrelated decision");
+            config
+                .preference_decisions
+                .insert("/usage_guard/stop_remaining_percent".to_owned(), threshold);
+            config
+                .preference_decisions
+                .insert("/wiki/enabled".to_owned(), unrelated.clone());
+            let bytes = canonical_config(&config).expect("config bytes");
+            let config_path = temporary.path().join(USER_SETUP_RELATIVE);
+            fs::create_dir_all(config_path.parent().expect("config parent"))
+                .expect("config directory");
+            fs::write(&config_path, &bytes).expect("operational config");
+            let root = super::super::user_install::open_user_root_for_setup(temporary.path())
+                .expect("user root");
+            let catalog = parse_and_validate_catalog().expect("catalog");
+            let skills = resolve_skills(&config, &catalog).expect("resolved skills");
+            apply_user_projection(&root, &config, &skills, &bytes).expect("initial projection");
+
+            let same = set_operational_usage_threshold(temporary.path(), 20).expect("same value");
+            assert!(same.changed_paths.is_empty());
+            assert_eq!(fs::read(&config_path).expect("unchanged config"), bytes);
+
+            for target in [25_u8, 0, 99, 10] {
+                let update = set_operational_usage_threshold(temporary.path(), target)
+                    .expect("threshold update with valid provenance");
+                assert_eq!(update.current, target);
+                let installed = load_operational_config(&root)
+                    .expect("load updated config")
+                    .expect("updated config");
+                assert_eq!(installed.usage_guard.stop_remaining_percent, target);
+                let record = &installed.preference_decisions["/usage_guard/stop_remaining_percent"];
+                assert_eq!(record.origin, DecisionOrigin::ExternalChange);
+                assert_eq!(record.decided_at, None);
+                assert!(record.matches_declaration(&json!(target)).expect("digest"));
+                assert_eq!(installed.preference_decisions["/wiki/enabled"], unrelated);
+                assert_eq!(fs::read(&config_path).expect("config"), update.config_bytes);
+                assert_eq!(
+                    parse_and_validate_installed_config(&update.config_bytes)
+                        .expect("reload published bytes"),
+                    installed
+                );
+                validate_user_projection(&root, &installed, &skills, &update.config_bytes)
+                    .expect("updated projection binding");
+            }
+        }
     }
 
     #[test]
