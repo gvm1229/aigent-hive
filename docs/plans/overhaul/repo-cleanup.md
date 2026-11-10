@@ -28,8 +28,8 @@
   - 변경: 출시 완료된 0.14.0 근거 단락을 `docs/archive/state/`로 이동, "PC 본체14.0" 오타와 붙여 쓴 버전 표기(`정식0.14.0` 등) 수정, `PLAN.md` 같은 표기 수정
   - 확인: `wc -c docs/state/CURRENT.md` 6144 이하, `python scripts/check-human-documentation-style.py`, `python scripts/check-plan-state.py`
 - [ ] [OVD-006] 사용량 지침 보완
-  - state: awaiting-user-authority; depends: OVD-002; owner: user; reason: 에이전트 지침 변경 승인
-  - 변경: `.agents/directives/07-installed-usage-guard.md`에 "`hive` 실행 불가 세션은 읽기 전용 작업만 하고 사전 확인 미실행을 보고" 추가, 날짜 붙은 승인 문단(`:36`)을 `docs/decisions/`로 이동
+  - state: agent-owned; depends: OVD-002
+  - 변경: `.agents/directives/07-installed-usage-guard.md`에 "`hive` 실행 불가 세션은 사전 확인을 건너뛰고 작업을 진행하되 미실행 사실을 보고" 추가(2026-11-10 사용자 결정으로 원래의 읽기 전용 제한 대신 채택), 날짜 붙은 승인 문단(`:36`)을 `docs/decisions/`로 이동
   - 확인: `python scripts/check-agent-directives.py`
 - [x] [OVD-007] AI 공동 작성자 표기 거부 검사
   - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-007.md#sha256:31673b47cd543fd99ceba17b1d2a428d2b171345c43abe959e5df526c10f5bba
@@ -45,7 +45,7 @@
   - 확인: `INDEX.md`의 모든 링크 유효, 저장소 전체 `rg` 검색 시간 전후 비교
 
 - [x] [OVD-010] develop 병합과 단계 브랜치 종료
-  - state: complete; depends: OVD-004,OVD-005,OVD-007,OVD-008,OVD-009; evidence: repo:docs/research/overhaul/OVD-010.md#sha256:6dbc1e88ad4afef0211b5483453a36adce596713222998a2bc4975176dc02a20
+  - state: complete; depends: OVD-004,OVD-005,OVD-007,OVD-008,OVD-009; evidence: repo:docs/research/overhaul/OVD-010.md#sha256:eee330e55ff2c503c75bc8058bed674e6d342a8fde38bde15beef1cf84f6fd9f
   - 변경: 단계 브랜치 `chore/overhaul-0-repo-cleanup`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 병합 뒤 단계 브랜치 삭제
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치
 

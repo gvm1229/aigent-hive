@@ -7,9 +7,9 @@
 ## 현재 위치
 
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
-- 다음 항목: `OV141-005` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md)). `OV141-003`은 사용자 결정 대기
-- 마지막 완료: `OV141-002`(임계값 확인 기록 정규화)
-- 승인 대기: `OVD-003`(push·브랜치 삭제는 2026-11-10 승인. 클라우드 세션의 원격 브랜치 삭제가 HTTP 403으로 거부, 사용자 PC에서 `git push origin --delete chore/overhaul-0-repo-cleanup feature/interactive-cli-0.14.0` 필요), `OVD-006`(에이전트 지침 변경 승인 여부)
+- 다음 항목: `OV141-005` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
+- 마지막 완료: `OV141-003`(공통 지식 연결 4건 결정)
+- 승인 대기: `OVD-003`(원격 `chore/overhaul-0-repo-cleanup`·`feature/interactive-cli-0.14.0` 삭제. 2026-11-10 승인, 이 세션 연결에서 삭제 요청이 끊김. GitHub 화면 또는 사용자 PC에서 삭제 필요)
 - 중단 메모: 없음
 
 ## 재개 절차
@@ -76,7 +76,7 @@
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 8/10 |
-| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 2/11 |
+| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 3/11 |
 | 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.1 정식 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-001 | 0/7 |

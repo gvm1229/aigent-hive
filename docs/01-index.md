@@ -310,6 +310,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OVD-009 근거 — 시험 기록 보존과 검색 제외](research/overhaul/OVD-009.md)
 - [OVD-010 근거 — develop 병합과 단계 0 브랜치 종료](research/overhaul/OVD-010.md)
 - [OV141-001 근거 — 0.14.1 시작과 계획 전환](research/overhaul/OV141-001.md)
+- [OV141-002 근거 — 사용량 임계값 확인 기록 오류 수정](research/overhaul/OV141-002.md)
+- [OV141-003 근거 — 공통 지식 연결 동작 결정](research/overhaul/OV141-003.md)
 
 ### 점수 기반 개선 설계 초안
 
