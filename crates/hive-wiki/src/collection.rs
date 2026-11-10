@@ -72,6 +72,10 @@ pub struct CollectionRecord {
     pub source_project_id: Option<String>,
     /// Default visibility for new canonical items.
     pub default_visibility: CollectionVisibility,
+    /// The user detached this collection explicitly. Registry synchronization keeps it
+    /// detached until an explicit attach; an automatic detach leaves this false.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub explicitly_detached: bool,
 }
 
 /// Canonical collection registry metadata.
@@ -290,6 +294,11 @@ fn validate_collection(collection: &CollectionRecord) -> Result<(), CollectionEr
         ));
     }
     match (collection.state, collection.local_locator.as_deref()) {
+        (CollectionState::Attached, Some(_)) if collection.explicitly_detached => {
+            return Err(CollectionError::invalid(
+                "an attached collection cannot be marked explicitly detached",
+            ));
+        }
         (CollectionState::Attached, Some(locator)) if Path::new(locator).is_absolute() => {}
         (CollectionState::Attached, _) => {
             return Err(CollectionError::invalid(
@@ -386,6 +395,7 @@ mod tests {
                 .then(|| std::env::temp_dir().display().to_string()),
             source_project_id: Some(format!("legacy-{alias}")),
             default_visibility: CollectionVisibility::ProjectPrivate,
+            explicitly_detached: false,
         }
     }
 

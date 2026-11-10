@@ -950,6 +950,7 @@ fn notion_registry(workspace_id: &str, scope_id: &str) -> Result<CollectionRegis
             local_locator: None,
             source_project_id: None,
             default_visibility: CollectionVisibility::Shared,
+            explicitly_detached: false,
         }],
     }
     .canonicalized()

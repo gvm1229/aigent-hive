@@ -315,6 +315,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-001 근거 — 0.14.1 시작과 계획 전환](research/overhaul/OV141-001.md)
 - [OV141-002 근거 — 사용량 임계값 확인 기록 오류 수정](research/overhaul/OV141-002.md)
 - [OV141-003 근거 — 공통 지식 연결 동작 결정](research/overhaul/OV141-003.md)
+- [OV141-004 근거 — 공통 지식 연결 상태 수정](research/overhaul/OV141-004.md)
 - [OV141-005 근거 — 감시 실행 파일 보관 2개 제한](research/overhaul/OV141-005.md)
 
 ### 점수 기반 개선 설계 초안

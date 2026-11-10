@@ -879,3 +879,5 @@
 | [passed](runs/20261110T143500-90f5bad6c8a6.md) | Python conformance: documentation | c8d77da5bf9829050fa713ea5636e7975a44f7de | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T143536-a54982ada445.md) | 개발 검증: cargo | 194c0f61a60221d37064ea36b4e04fc47a171248 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T150822-6567cf1f8bb9.md) | 개발 검증: cargo | 9f8b39bf85c08f49206a0bf162a93799e3dbd55c | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T174741-b54f7939bf10.md) | 개발 검증: cargo | bdef85297198b1bdc3895edf35936dc177186548 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T174807-06a3ecc5f43a.md) | 개발 검증: cargo | bdef85297198b1bdc3895edf35936dc177186548 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |

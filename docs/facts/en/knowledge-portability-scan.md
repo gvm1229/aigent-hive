@@ -10,7 +10,7 @@ tags: [collection, knowledge, portability, scan, v0-9]
 aliases: ["Directory knowledge scan", "Hive knowledge bundle"]
 sources:
   - "repo:crates/hive-wiki/tests/knowledge_bundle_qualification.rs#sha256:5ab4962fcae05cc6e4020bb292889824e905b98ce7851214d8978bde7008f9f4"
-  - "repo:crates/hive-wiki/tests/knowledge_retrieval_qualification.rs#sha256:5ab69e6461b2583aa2bdc095ffe71b05476cde24e92d9d76ba81bf0b40f68a4c"
+  - "repo:crates/hive-wiki/tests/knowledge_retrieval_qualification.rs#sha256:91c6cdbe9eec6b6f2cb5a7078bcca772cc8b1154dce7f50a4d77f10c667bd7a0"
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-portability-scan.md#sha256:976150863fbb552b17b456b5bdaf4f6ce2780dcd7ed9af45ebcf565aae709e05"
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:fcbeb8013ecc51ea78bb0087d0172372840585b7878f3f72c3fdf0b74b805080"
   - "repo:docs/research/knowledge-portability-ingestion-retrieval.md#sha256:983844189f92fca165ed1c85eadf975dc404b46ddea4111ab956823448b15de6"

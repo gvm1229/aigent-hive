@@ -427,7 +427,46 @@ pub fn ingest(
     source: &Path,
     wiki_draft: &Path,
 ) -> Result<KnowledgeOutcome, WikiError> {
-    ingest_with_projection(target, source, wiki_draft, None)
+    let prepared = prepare_ingest(source, wiki_draft)?;
+    ingest_with_projection(target, source, &prepared, None)
+}
+
+/// Source and draft bytes that passed the state-independent ingest checks.
+///
+/// Shared callers validate these bytes before any shared preparation changes state, then
+/// ingest the same bytes. State-dependent checks still run under the knowledge lock.
+#[derive(Debug, Clone)]
+pub struct PreparedIngest {
+    source_bytes: Vec<u8>,
+    draft_bytes: Vec<u8>,
+}
+
+/// Read and check Raw source and Wiki draft bytes without touching any store.
+///
+/// # Errors
+///
+/// Returns an error for an unreadable or empty source, likely credentials, or an
+/// unreadable or malformed draft.
+pub fn prepare_ingest(source: &Path, wiki_draft: &Path) -> Result<PreparedIngest, WikiError> {
+    let source_bytes = read_raw_source(source)?;
+    if source_bytes.is_empty() {
+        return Err(WikiError::InvalidInput(
+            "Raw source must not be empty".to_owned(),
+        ));
+    }
+    reject_likely_credentials(&source_bytes)?;
+    let draft_bytes = fs::read(wiki_draft).map_err(|error| {
+        WikiError::Io(format!(
+            "cannot read Wiki draft {}: {error}",
+            wiki_draft.display()
+        ))
+    })?;
+    reject_likely_credentials(&draft_bytes)?;
+    parse_page_bytes(&draft_bytes, "draft")?;
+    Ok(PreparedIngest {
+        source_bytes,
+        draft_bytes,
+    })
 }
 
 /// Ingest canonical Raw/Wiki bytes for a shared RAG collection without writing a legacy index.
@@ -446,12 +485,28 @@ pub fn ingest_shared(
     user_root: &Path,
     namespace: &str,
 ) -> Result<KnowledgeOutcome, WikiError> {
+    let prepared = prepare_ingest(source, wiki_draft)?;
+    ingest_shared_prepared(target, source, &prepared, user_root, namespace)
+}
+
+/// Ingest bytes already checked by [`prepare_ingest`] into a shared RAG collection.
+///
+/// # Errors
+///
+/// Returns the same errors as [`ingest_shared`] except source and draft read errors.
+pub fn ingest_shared_prepared(
+    target: &Path,
+    source: &Path,
+    prepared: &PreparedIngest,
+    user_root: &Path,
+    namespace: &str,
+) -> Result<KnowledgeOutcome, WikiError> {
     validate_id(namespace)?;
     let store = store::RagStore::open(user_root)?;
     ingest_with_projection(
         target,
         source,
-        wiki_draft,
+        prepared,
         Some(SharedMutationProjection {
             store: &store,
             namespace,
@@ -473,18 +528,12 @@ fn shared_dirty_path(namespace: &str, relative: &str) -> PathBuf {
 fn ingest_with_projection(
     target: &Path,
     source: &Path,
-    wiki_draft: &Path,
+    prepared: &PreparedIngest,
     shared: Option<SharedMutationProjection<'_>>,
 ) -> Result<KnowledgeOutcome, WikiError> {
     validate_target(target)?;
     let lock = KnowledgeLock::acquire(target)?;
-    let source_bytes = read_raw_source(source)?;
-    if source_bytes.is_empty() {
-        return Err(WikiError::InvalidInput(
-            "Raw source must not be empty".to_owned(),
-        ));
-    }
-    reject_likely_credentials(&source_bytes)?;
+    let source_bytes = prepared.source_bytes.clone();
     let fingerprint = sha256_digest(&source_bytes);
     let ledger = read_suppression(target)?;
     if ledger
@@ -497,14 +546,7 @@ fn ingest_with_projection(
         )));
     }
 
-    let draft_bytes = fs::read(wiki_draft).map_err(|error| {
-        WikiError::Io(format!(
-            "cannot read Wiki draft {}: {error}",
-            wiki_draft.display()
-        ))
-    })?;
-    reject_likely_credentials(&draft_bytes)?;
-    let mut page = parse_page_bytes(&draft_bytes, "draft")?;
+    let mut page = parse_page_bytes(&prepared.draft_bytes, "draft")?;
     let raw_path = raw_revision_path(source, &fingerprint)?;
     let raw_locator = format!("raw:{}#{fingerprint}", raw_path.replace('\\', "/"));
     for locator in &mut page.frontmatter.sources {

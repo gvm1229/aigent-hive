@@ -853,6 +853,7 @@ fn user_registry(root: &Path) -> CollectionRegistry {
             local_locator: Some(root.display().to_string()),
             source_project_id: None,
             default_visibility: CollectionVisibility::Shared,
+            explicitly_detached: false,
         }],
     }
     .canonicalized()

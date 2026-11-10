@@ -2091,6 +2091,7 @@ fn build_import_plan(
                 local_locator: None,
                 source_project_id: portable.source_project_id.clone(),
                 default_visibility: portable.default_visibility,
+                explicitly_detached: false,
             });
         }
     }
@@ -2630,6 +2631,7 @@ fn validate_portable_registry(
                 local_locator: None,
                 source_project_id: collection.source_project_id.clone(),
                 default_visibility: collection.default_visibility,
+                explicitly_detached: false,
             })
             .collect(),
     };
@@ -2689,6 +2691,7 @@ fn load_registry(root_path: &Path, root: &Dir) -> Result<LoadedRegistry, WikiErr
                 local_locator: Some(root_path.display().to_string()),
                 source_project_id: None,
                 default_visibility: CollectionVisibility::Shared,
+                explicitly_detached: false,
             }],
         }
         .canonicalized()

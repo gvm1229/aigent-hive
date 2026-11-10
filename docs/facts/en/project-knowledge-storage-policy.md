@@ -10,7 +10,7 @@ tags: [index, knowledge, policy]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b3f259173a92bf050ca26df5b462330ea4ce9d96bb9bca431b6a54700ddfea36"
-  - "repo:crates/hive-wiki/src/shared.rs#sha256:4e65063d1f7d0dca6db2361f465136c892d8d357fa641c8337f29ba68a356965"
+  - "repo:crates/hive-wiki/src/shared.rs#sha256:86928dc23e8cf611cdd79c8dd8f0a51b967c107bd17aa00e47eb043859b92097"
   - "repo:docs/plans/details/project-local-global-readonly/design.md#sha256:18defa9a2f898ab073eebdf6345a2e64a449619879f2b4f46af074708b335a12"
 links: [knowledge-cross-project-access, shared-index]
 reviewed_revision: "git:dd581c30013516a6649e74e3c0d80bf7d46cb278"

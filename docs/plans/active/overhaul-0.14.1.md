@@ -19,8 +19,8 @@
   - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-003.md#sha256:6db8940f4cdc9861b6cff9505b5f56e5b42c281e09b03f16bf7d18c68254a805
   - 변경: [연결 상태 백로그](../backlog/knowledge-attachment-consistency.md)의 "별도 판단이 필요한 동작" 4건의 선택지와 영향 제시, 결정 기록
   - 확인: 4건 모두 결정 기록
-- [ ] [OV141-004] 공통 지식 연결 상태 수정
-  - state: agent-owned; depends: OV141-003
+- [x] [OV141-004] 공통 지식 연결 상태 수정
+  - state: complete; depends: OV141-003; evidence: repo:docs/research/overhaul/OV141-004.md#sha256:4e68ab3812f0a7ec04039d0bf4f97dda451250903af5aae7f62b0e08d1620560
   - 변경: 결정 범위만 `crates/hive-wiki/src/store.rs`의 `sync_project_registry`·`synchronize_project_collection_metadata`와 CLI `ensure_rag_registry`에 반영
   - 확인: 백로그 "변경 후보와 검증" 4번의 회귀, `python scripts/dev-check.py rust -- test -p hive-wiki --locked`
 - [x] [OV141-005] 감시 실행 파일 보관 2개 제한
