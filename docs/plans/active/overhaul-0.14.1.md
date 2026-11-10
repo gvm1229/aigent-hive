@@ -23,8 +23,8 @@
   - state: agent-owned; depends: OV141-003
   - 변경: 결정 범위만 `crates/hive-wiki/src/store.rs`의 `sync_project_registry`·`synchronize_project_collection_metadata`와 CLI `ensure_rag_registry`에 반영
   - 확인: 백로그 "변경 후보와 검증" 4번의 회귀, `python scripts/dev-check.py rust -- test -p hive-wiki --locked`
-- [ ] [OV141-005] 감시 실행 파일 보관 2개 제한
-  - state: agent-owned; depends: OV141-001
+- [x] [OV141-005] 감시 실행 파일 보관 2개 제한
+  - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-005.md#sha256:1c287dde42c36065b23fb5a59fb2cebf3133774ec169580015e41bc831f85bb8
   - 변경: `crates/hive-cli/src/usage_monitor.rs`(설치 경로 `:507-514`)에서 설치 성공 뒤 `runtime/usage-monitor/bin/hive-*.exe` 중 현재·직전 외 정리. 실행 중·잠긴 파일은 건너뛰고 기록
   - 확인: 임시 사용자 폴더의 5개 → 2개, 실행 중 파일 보존, 실패 시 기존 파일 불변 시험
 - [ ] [OV141-006] 미완료 감시 갱신 복구
