@@ -63,6 +63,27 @@ def validate_pr(head: str, base: str, head_repo: str, base_repo: str, repo: Path
         raise PolicyError("main accepts only develop from the same repository")
 
 
+AI_COAUTHOR = re.compile(
+    r"^\s*co-authored-by:.*\b(claude|anthropic|codex|openai|chatgpt|gpt|gemini|copilot|omx|"
+    r"agent|bot)\b.*",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def check_commits(revisions: list[str], repo: Path) -> int:
+    """Reject AI, bot or agent Co-Authored-By trailers in the listed commits."""
+    listed = git(repo, "rev-list", *revisions).stdout.split()
+    offenders = []
+    for oid in listed:
+        message = git(repo, "show", "-s", "--format=%B", oid).stdout
+        found = [m.group(0).strip() for m in AI_COAUTHOR.finditer(message)]
+        if found:
+            offenders.append(f"{oid[:12]}: {found[0]}")
+    if offenders:
+        raise PolicyError("AI Co-Authored-By trailer is prohibited:\n" + "\n".join(offenders))
+    return len(listed)
+
+
 def zero_oid(value: str) -> bool:
     return len(value) in (40, 64) and set(value) == {"0"}
 
@@ -201,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
         pr.add_argument("--" + field, required=True)
     install = commands.add_parser("install-hooks")
     install.add_argument("--apply", action="store_true")
+    commits = commands.add_parser("commits")
+    commits.add_argument("revisions", nargs="+")
     generate = commands.add_parser("ruleset")
     generate.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
@@ -226,6 +249,9 @@ def main(argv: list[str] | None = None) -> int:
             validate_push(sys.stdin.read(), args.repo)
         elif args.command == "pr":
             validate_pr(args.head, args.base, args.head_repo, args.base_repo, args.repo)
+        elif args.command == "commits":
+            count = check_commits(args.revisions, args.repo)
+            print(f"branch-policy: {count} commits without AI Co-Authored-By trailers")
         elif args.command == "install-hooks":
             print(json.dumps({"apply": args.apply, "paths": install_hooks(args.repo, args.apply)}))
         elif args.command == "ruleset":

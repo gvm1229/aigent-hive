@@ -31,8 +31,8 @@
   - state: awaiting-user-authority; depends: OVD-002; owner: user; reason: 에이전트 지침 변경 승인
   - 변경: `.agents/directives/07-installed-usage-guard.md`에 "`hive` 실행 불가 세션은 읽기 전용 작업만 하고 사전 확인 미실행을 보고" 추가, 날짜 붙은 승인 문단(`:36`)을 `docs/decisions/`로 이동
   - 확인: `python scripts/check-agent-directives.py`
-- [ ] [OVD-007] AI 공동 작성자 표기 거부 검사
-  - state: agent-owned; depends: OVD-002
+- [x] [OVD-007] AI 공동 작성자 표기 거부 검사
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-007.md#sha256:31673b47cd543fd99ceba17b1d2a428d2b171345c43abe959e5df526c10f5bba
   - 변경: `.github/workflows/branch-policy.yml`에 커밋 메시지의 AI `Co-Authored-By` 거부 단계 추가([git 규칙](../../../.agents/directives/references/git-commits.md))
   - 확인: 표기 포함 시험 커밋의 실패, 표기 없는 커밋의 통과
 - [ ] [OVD-008] 백로그·개요 문서 갱신
