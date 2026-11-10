@@ -31,8 +31,8 @@
   - state: awaiting-external-evidence; depends: OV141-005; owner: user; reason: 격리 Windows 재현 필요, 클라우드 Linux 세션에서 PowerShell·작업 스케줄러 실행 불가. 단계 표시 진단과 조사는 [중간 기록](../../research/overhaul/OV141-006-partial.md)
   - 변경: `runtime/usage-monitor/upgrade.json`의 `phase: incomplete`("Windows monitor adapter failed")를 임시 사용자로 재현, 원인 기록, 재시도·복구 경로 구현
   - 확인: 격리 Windows 재현과 복구 통과. 실제 PC 적용은 OV141-011
-- [ ] [OV141-007] 저장 용량 보고와 정리 미리보기
-  - state: agent-owned; depends: OV141-005
+- [x] [OV141-007] 저장 용량 보고와 정리 미리보기
+  - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-007.md#sha256:9c9c1f36fd332d3158961f18b921dce868691d0dffc0e57018d12161905d608e
   - 변경: `hive storage`(지식·색인·벡터·감시 실행 파일·백업별 용량)와 `hive prune --dry-run`(삭제 후보만 표시, 실제 삭제는 `--confirm`). 출력 접두 `[Hades]`
   - 확인: 임시 폴더의 분류 합계 = `du` 합계, dry-run 전후 파일 해시 불변
 - [ ] [OV141-008] README·출시일·Claude Code 표시

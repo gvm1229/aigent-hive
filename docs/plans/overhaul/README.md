@@ -7,8 +7,8 @@
 ## 현재 위치
 
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
-- 다음 항목: `OV141-007` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md)). `OV141-006`은 Windows 재현 대기
-- 마지막 완료: `OV141-004`(공통 지식 연결 수정)
+- 다음 항목: `OV141-008` ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md)). `OV141-006`은 Windows 재현 대기
+- 마지막 완료: `OV141-007`(storage·prune 명령)
 - 승인 대기: 없음
 - 중단 메모: 없음
 
@@ -76,7 +76,7 @@
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
-| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 5/11 |
+| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 6/11 |
 | 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.1 정식 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-001 | 0/7 |
