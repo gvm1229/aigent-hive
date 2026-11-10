@@ -869,3 +869,6 @@
 | [failed](runs/20261104T100842-55708eee289d.md) | 임계값 확인 기록 오류와 미완료 설정의 독립 원인 재현 | dd581c30013516a6649e74e3c0d80bf7d46cb278 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261104T100941-84da4d494329.md) | 임계값 확인 기록과 미완료 기록의 독립 재현, 기존 가짜 호스트 사용 | dd581c30013516a6649e74e3c0d80bf7d46cb278 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261104T101442-c92f2ca4d54f.md) | 임계값 전용 명령의 확인 정보 누락, 완료 상태와 미완료 상태 대조 | dd581c30013516a6649e74e3c0d80bf7d46cb278 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261110T134445-3f3ac4cdbaa9.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T134853-feae9517d701.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T134915-79f8d06314e6.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
