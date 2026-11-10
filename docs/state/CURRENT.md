@@ -1,11 +1,13 @@
 # 현재 상태
 
+- [지식 경계 계획](../plans/backlog/project-local-global-readonly.md)
+
 - 현재: `feature/interactive-cli-0.14.0`, 15/15(100%). [정식 실행](../plans/0.14.0-stable-release.md): 정식0.14.0·공지 완료, PC 본체14.0·감시의 Windows 승인 대기
 - 모델 시험: 전역/프로젝트 입력 중앙값60.70%/50.009% 감소, 각판2표본 수용. 같은 조건 최대5회. 토큰/속도 미관측.
 - 재개 계획: [M00–M24 검증·커밋 단위](../plans/details/0.14.0-delivery-milestones.md). ship 적용·실제 설치의 시험 사용 금지
 - 제품 버전: `0.14.0`
 - [공개 시험 근거](../research/public-test-0.14.0.md), [조건별 최종 근거](../research/public-test-0.14.0.md#원래-15개-완료-조건과-최종-근거). 안정판·사용자 본체0.14.0
-- [승인된 제품 계약](../plans/0.14.0-implementation.md) 유지. 실행 순서는 M00–M24 기준
+- [제품 계약](../plans/0.14.0-implementation.md) 유지, 실행 M00–M24 순서
 - [갱신 근거](../research/cli-update-validation-0.14.0.md)·[직접 제거 근거](../research/cli-uninstall-validation-0.14.0.md): 원본0.13.1 부모·개발0.14.0·격리 VM의 실제 명령. 등록 앱/감시·공개 파일 수용은 별도
 
 ## 생성된 구현·수용 항목
@@ -47,7 +49,7 @@
 - 명령 결과를 알 수 없는 외부 플러그인 변경은 보존 후 재개 거부. 자동 복구 성공으로 표시하지 않는 구분
 - [색인 범위·종료 복구](../research/cli-index-lifecycle-0.14.0.md): 전역 설정의 게시 색인 보존, 위키 해제의 원문 복구, 종료 시 해제되는 새 잠금 구현. Windows 실제 종료 88 재개와 Linux 관련 잠금 4개·제거 4개 통과. 구형 잠금의 소유 불명은 자동 우회 없음
 - [이전 격리 사고와 복구](../research/legacy-update-test-isolation-0.14.0.md) 보존. 재개 후 실제 CLI 시험은 임시 사용자·설치·캐시·가짜 앱에 한정, 실제 0.13.1 실행 파일과 확인한 설정 4개 지문 대조. Linux 시험에는 실제 설치 폴더 연결 없음
-- [직전 누적 상태](../archive/state/0.14.0-cli-foundations-2026-10-24.md)에 단계별 과거 검사 횟수와 당시 한계 보존. 현재 소스 전체·모든 운영체제의 합격 근거로 합산 금지
+- [과거 단계별 검사·한계](../archive/state/0.14.0-cli-foundations-2026-10-24.md) 보존. 현재 전체 소스·모든 운영체제 합격으로 합산 금지
 
 ## 검증 근거와 승인 경계
 
