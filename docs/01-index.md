@@ -319,6 +319,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-005 근거 — 감시 실행 파일 보관 2개 제한](research/overhaul/OV141-005.md)
 - [OV141-006 중간 기록 — 미완료 감시 갱신 복구](research/overhaul/OV141-006-partial.md)
 - [OV141-007 근거 — 저장 용량 보고와 정리 미리보기](research/overhaul/OV141-007.md)
+- [OV141-008 근거 — README·출시일·Claude Code 표시](research/overhaul/OV141-008.md)
 
 ### 점수 기반 개선 설계 초안
 

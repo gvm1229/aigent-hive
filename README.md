@@ -4,7 +4,7 @@
   <img src="docs/assets/branding/hive-readme-banner-en.png" alt="hive — persistent context for every project" width="100%">
 </p>
 
-> A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
+> A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
 [![Version](https://img.shields.io/badge/version-0.14.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)

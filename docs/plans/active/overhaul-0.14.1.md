@@ -35,8 +35,8 @@
   - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-007.md#sha256:9c9c1f36fd332d3158961f18b921dce868691d0dffc0e57018d12161905d608e
   - 변경: `hive storage`(지식·색인·벡터·감시 실행 파일·백업별 용량)와 `hive prune --dry-run`(삭제 후보만 표시, 실제 삭제는 `--confirm`). 출력 접두 `[Hades]`
   - 확인: 임시 폴더의 분류 합계 = `du` 합계, dry-run 전후 파일 해시 불변
-- [ ] [OV141-008] README·출시일·Claude Code 표시
-  - state: agent-owned; depends: OV141-001
+- [x] [OV141-008] README·출시일·Claude Code 표시
+  - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-008.md#sha256:09f91719f2cc30871d2980c0096b48acb56dd8aa9b41bc86851a42fce2e13bd1
   - 변경: `README.md:15`와 `Cargo.toml:23` 출시일 일치, `README.md:326-327` 문구, `README.md:134`에 Claude Code "검증 전" 표시
   - 확인: `python scripts/check-public-stable-docs.py`, `python scripts/check-human-documentation-style.py`
 - [ ] [OV141-009] 0.14.1-test.1 공개 시험
