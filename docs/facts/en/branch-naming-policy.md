@@ -10,7 +10,7 @@ tags: [branch, git, policy]
 aliases: []
 sources:
   - "repo:docs/guides/branching-rules.md#sha256:3820e9a509c4eaee972e2900550d03d2f1a8f7140c8dbc3f6adf1c55596a00ae"
-  - "repo:scripts/branch-policy.py#sha256:cc8f0b1988bca0651009f537555d55ae4e7b1609299f4d71a2c8e68063e279f7"
+  - "repo:scripts/branch-policy.py#sha256:1c73ce7f830a91ea3720ff6a5f4cfab4833c1da463064fc5d3d650b2fe87822f"
 links: [git-worktree-lifecycle]
 reviewed_revision: "git:a642bd91e1cabdf80673b836f2e801a2c6cf9b61"
 status: active

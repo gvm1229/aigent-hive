@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: branch-policy-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Push runs must not cancel each other: each push checks only its own commit range.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   policy:
@@ -40,7 +41,7 @@ jobs:
             python scripts/branch-policy.py check "$BRANCH"
           fi
           python scripts/branch-policy.py ruleset --check
-      - name: Reject AI Co-Authored-By trailers
+      - name: Reject AI commit identity, co-author and session links
         env:
           EVENT: ${{ github.event_name }}
           BRANCH: ${{ github.ref_name }}
@@ -55,6 +56,6 @@ jobs:
           elif [[ -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             python scripts/branch-policy.py commits -- "$BEFORE..$AFTER"
           else
-            mapfile -t others < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -vx "refs/remotes/origin/$BRANCH" | grep -vx refs/remotes/origin/HEAD)
+            mapfile -t others < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -vxF "refs/remotes/origin/$BRANCH" | grep -vx refs/remotes/origin/HEAD)
             python scripts/branch-policy.py commits -- "$AFTER" --not "${others[@]}"
           fi

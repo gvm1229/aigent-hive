@@ -63,24 +63,42 @@ def validate_pr(head: str, base: str, head_repo: str, base_repo: str, repo: Path
         raise PolicyError("main accepts only develop from the same repository")
 
 
-AI_COAUTHOR = re.compile(
-    r"^\s*co-authored-by:.*\b(claude|anthropic|codex|openai|chatgpt|gpt|gemini|copilot|omx|"
-    r"agent|bot)\b.*",
-    re.IGNORECASE | re.MULTILINE,
+AI_NAMES = (
+    r"claude|claudecode|anthropic|codex|openai|chatgpt|gpt\d*|gemini|copilot|omx|cursor"
+    r"|cursoragent|devin|aider|windsurf|codeium|opencode|ai|agent|bot"
 )
+AI_IDENTITY = re.compile(rf"\b({AI_NAMES})\b|\[bot\]|noreply@anthropic\.com", re.IGNORECASE)
+AI_COAUTHOR = re.compile(r"^\s*co-authored-by\s*:(.*)$", re.IGNORECASE | re.MULTILINE)
+SESSION_LINK = re.compile(r"^\s*claude-session\s*:.*$|https://claude\.ai/code/session_\S*",
+                          re.IGNORECASE | re.MULTILINE)
+
+
+def commit_violations(author: str, committer: str, message: str) -> list[str]:
+    """Return AI authorship, AI co-author and session-link findings for one commit."""
+    found = []
+    for role, identity in (("author", author), ("committer", committer)):
+        if AI_IDENTITY.search(identity):
+            found.append(f"AI {role}: {identity}")
+    for match in AI_COAUTHOR.finditer(message):
+        if AI_IDENTITY.search(match.group(1)):
+            found.append(f"AI co-author: {match.group(0).strip()}")
+    found.extend(f"session link: {m.group(0).strip()}" for m in SESSION_LINK.finditer(message))
+    return found
 
 
 def check_commits(revisions: list[str], repo: Path) -> int:
-    """Reject AI, bot or agent Co-Authored-By trailers in the listed commits."""
+    """Reject AI author/committer identities, AI co-author trailers and session links."""
     listed = git(repo, "rev-list", *revisions).stdout.split()
     offenders = []
     for oid in listed:
+        author = git(repo, "show", "-s", "--format=%an <%ae>", oid).stdout.strip()
+        committer = git(repo, "show", "-s", "--format=%cn <%ce>", oid).stdout.strip()
         message = git(repo, "show", "-s", "--format=%B", oid).stdout
-        found = [m.group(0).strip() for m in AI_COAUTHOR.finditer(message)]
+        found = commit_violations(author, committer, message)
         if found:
             offenders.append(f"{oid[:12]}: {found[0]}")
     if offenders:
-        raise PolicyError("AI Co-Authored-By trailer is prohibited:\n" + "\n".join(offenders))
+        raise PolicyError("AI commit identity or session link is prohibited:\n" + "\n".join(offenders))
     return len(listed)
 
 
@@ -251,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
             validate_pr(args.head, args.base, args.head_repo, args.base_repo, args.repo)
         elif args.command == "commits":
             count = check_commits(args.revisions, args.repo)
-            print(f"branch-policy: {count} commits without AI Co-Authored-By trailers")
+            print(f"branch-policy: {count} commits without AI identity, co-author or session link")
         elif args.command == "install-hooks":
             print(json.dumps({"apply": args.apply, "paths": install_hooks(args.repo, args.apply)}))
         elif args.command == "ruleset":
