@@ -23,8 +23,8 @@
   - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-004.md#sha256:204d2a464ecd224fd3116b9241d2e3e4b82c228548723bc45bcbef6c8806c2d5
   - 변경: `docs/plans/active/` 중 `PLAN.md` 미등록 파일을 `docs/archive/plans/`로 `git mv`, 깨진 링크 수정
   - 확인: `ls docs/plans/active | wc -l` = 등록 수, `python scripts/check-plan-state.py`, `python scripts/check-markdown-links.py`
-- [ ] [OVD-005] CURRENT.md 축소와 표기 수정
-  - state: agent-owned; depends: OVD-002
+- [x] [OVD-005] CURRENT.md 축소와 표기 수정
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-005.md#sha256:cda4ee933238e4acc6fa67f538263081f6c1518fa4e9ec4dc76eb7cf957d4226
   - 변경: 출시 완료된 0.14.0 근거 단락을 `docs/archive/state/`로 이동, "PC 본체14.0" 오타와 붙여 쓴 버전 표기(`정식0.14.0` 등) 수정, `PLAN.md` 같은 표기 수정
   - 확인: `wc -c docs/state/CURRENT.md` 6144 이하, `python scripts/check-human-documentation-style.py`, `python scripts/check-plan-state.py`
 - [ ] [OVD-006] 사용량 지침 보완
