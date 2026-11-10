@@ -1,7 +1,7 @@
 # Aigent Hive 활성 계획
 
-> Revision: 490
-> 기준일: 2026-11-04
+> Revision: 491
+> 기준일: 2026-11-10
 > Product version: `0.14.0`
 > 공개 Stable: `0.14.0`
 > 현재 단계: 원래 조건15/15 완료. 정식0.14.0 게시·공지 완료, PC 본체14.0·감시 복구의 Windows 승인 대기
@@ -50,6 +50,7 @@
 
 ## 결정과 이전 근거
 
+- [Hive 재정비 할 일](overhaul/README.md): 단계 0–7 체크 목록, 재개 절차, 단계별 전용 브랜치 규칙. 사용자가 재정비 작업을 지정할 때의 실행 기준, 제품 단계는 버전별 승인 뒤 활성 등록
 - 별도 조사: [프로젝트 지식 읽기·쓰기와 전역 읽기 전용](backlog/project-local-global-readonly.md). 진단·격리 재현·계획만 승인, 기존 출시 완료 집계와 구분
 - 후속 정정: 기존 읽기·쓰기 보존·명시적 추가 옵션, [공통 연결 작업](backlog/knowledge-attachment-consistency.md) 분리. [임계값 확인 기록 오류](backlog/usage-threshold-provenance.md)는0.14.1 수정 후보, 구현·버전 확정 미승인
 
