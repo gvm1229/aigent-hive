@@ -7,8 +7,8 @@
 ## 현재 위치
 
 - 현재 단계 브랜치: `chore/overhaul-0-repo-cleanup`
-- 다음 항목: `OVD-008` ([repo-cleanup.md](repo-cleanup.md))
-- 마지막 완료: `OVD-007`(branch-policy CI의 AI 공동 작성자 표기 거부)
+- 다음 항목: `OVD-009` ([repo-cleanup.md](repo-cleanup.md))
+- 마지막 완료: `OVD-008`(백로그 검토일·Claude 호스트 상태, 개요 Orchestration 행)
 - 승인 대기: `OVD-003`(push·브랜치 삭제는 2026-11-10 승인. 클라우드 세션의 원격 브랜치 삭제가 HTTP 403으로 거부, 사용자 PC에서 `git push origin --delete feature/interactive-cli-0.14.0` 필요), `OVD-006`(에이전트 지침 변경 승인 여부)
 - 중단 메모: 없음
 
@@ -73,7 +73,7 @@
 
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
-| 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 5/10 |
+| 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 6/10 |
 | 1 0.14.1 수정판 | [0.14.1-fixes.md](0.14.1-fixes.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 0/11 |
 | 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.1 정식 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |

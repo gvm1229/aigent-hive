@@ -31,7 +31,7 @@ provider-neutral 로컬 agent harness.
 | Operating system | macOS arm64·Intel, Windows x86_64 candidate runtime 검증; Linux musl x86_64·arm64 qualification 진행 |
 | Agent host | Codex·Claude Code·Gemini Antigravity adapter |
 | Live evidence | Codex·Antigravity actual host; Claude subscription session 미검증 |
-| Orchestration | Hive-native iterative·team·multi-goal control plane 계획 활성; host가 declarative envelope 실행, OMX·OMC 신규 dependency 없음 |
+| Orchestration | 현재 제품 범위 밖, Hive-native 오케스트레이터의 0.15.0 계획 승인 대기([재정비 단계 3](../plans/overhaul/README.md)); host가 declarative envelope 실행, OMX·OMC 신규 dependency 없음 |
 | Model access | 사용자의 subscription-authenticated host session |
 | Data | Local-first tracked text, disposable SQLite |
 | Consumer shell | Unix shell, Windows PowerShell 5.1, `cmd.exe`; PowerShell 7 불필요 |

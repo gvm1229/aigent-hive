@@ -1,7 +1,7 @@
 # Platform signing
 
 - 상태: `blocked`
-- 마지막 검토일: 2026-08-20
+- 마지막 검토일: 2026-11-10(이전 2026-08-20)
 - 관련 안내: [`code-signing-policy.md`](../../guides/code-signing-policy.md)
 
 ## 문제
