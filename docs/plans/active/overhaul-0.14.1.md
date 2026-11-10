@@ -3,12 +3,12 @@
 > Plan version: 0.14.1
 > Scope: product
 
-브랜치: `fix/overhaul-1-0.14.1`([브랜치 규칙](README.md)). 진입: 단계 0의 develop 병합과 버전 승인. 새 제품 바이트는 0.14.1과 test.1 필요([03](../../../.agents/directives/03-workflow.md)). 시험은 `tests/work/`의 임시 사용자·설치만 사용
+브랜치: `fix/overhaul-1-0.14.1`([브랜치 규칙](../overhaul/README.md)). 진입: 단계 0의 develop 병합과 버전 승인. 새 제품 바이트는 0.14.1과 test.1 필요([03](../../../.agents/directives/03-workflow.md)). 시험은 `tests/work/`의 임시 사용자·설치만 사용
 
 ## 항목
 
-- [ ] [OV141-001] 0.14.1 시작 승인과 계획 전환
-  - state: awaiting-user-authority; owner: user; reason: 새 제품 버전과 구현 범위 승인
+- [x] [OV141-001] 0.14.1 시작 승인과 계획 전환
+  - state: complete; evidence: repo:docs/research/overhaul/OV141-001.md#sha256:ae3d91d0047ccd2cab3f975206b6e326e8ca759ad580f61132f8dfb800fa1884
   - 변경: 0.14.0 계획 묶음을 `docs/archive/`로 보관, 이 파일을 `docs/plans/active/overhaul-0.14.1.md`로 이동·등록, 제품 버전 0.14.1 동기화
   - 확인: `python scripts/check-plan-state.py` valid, `bash scripts/check-release-version.sh`
 - [ ] [OV141-002] 사용량 임계값 확인 기록 오류 수정
