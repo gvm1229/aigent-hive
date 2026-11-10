@@ -10,7 +10,7 @@ tags: [scope, v0-12-0, windows]
 aliases: []
 sources:
   - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:958df30cdb8c19d4591eed2324587cd0cdb3fb90a30da8ef01daee015efc150e"
-  - "repo:docs/plans/backlog/0.12.0-deferred-host-acceptance.md#sha256:a08ecefcd819be4b39c1eaf2ee8707d026a0388b37a5c4ec0f5dd70ce4db6dde"
+  - "repo:docs/plans/backlog/0.12.0-deferred-host-acceptance.md#sha256:d404407a6f688ed519b2194ada82f6e8771495076980e0e4c12bf2d199ea93bd"
   - "repo:tests/results/stable-release-0.12.0.md#sha256:86e82330a7ff083ef920d3aa390656826517a83fca16b6fa7bb68c3e295b5873"
 links: [knowledge-storage, marketing-deck-record, product-purpose]
 reviewed_revision: "git:a4f381a4e81fb3a5f398732e13833421eb82cac0"

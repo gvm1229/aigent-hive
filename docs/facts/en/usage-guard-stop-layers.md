@@ -18,7 +18,7 @@ sources:
   - "repo:docs/research/stable-release-0.13.1.md#sha256:8bb27b7af203a2a4c6a54dc39aa7fd978075e1fb373e6b6d9617e8550acaef4e"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
-  - "repo:docs/research/usage-guard-stop-comparison.md#sha256:bdd17b2745522c0f5ed813a4dcf1673e0fa34185970bca7e20402f5eac55015f"
+  - "repo:docs/research/usage-guard-stop-comparison.md#sha256:6819e9b5a746e525e045d0a9f0a1e38509f9d9ab04e19efc9944e269c35b3203"
   - "repo:harness/skills/usage-guard/references/control.md#sha256:4c71dbbc592620844bff81765151014d4a657924d03aea602c08bc517e1c8727"
   - "repo:tests/results/public-test-0.13.2-test.2.json#sha256:7eb3e11914f44421bbaa13db06d2b3edfc2c791170586eee259355ec75587005"
   - "repo:tests/results/release-0.13.1-stable.md#sha256:a8c2566122cb825217755f8c9901570e63517e114fbe7a484a7ce6af229e1420"

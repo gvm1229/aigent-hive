@@ -9,9 +9,9 @@ summary: "Global developer replacement is retired; authenticated Windows recover
 tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
-  - "repo:crates/hive-cli/build.rs#sha256:ccace02d7847f79937d69dc9819b46727f36b23ac1518484c30de9a0d20206a3"
+  - "repo:crates/hive-cli/build.rs#sha256:0db2c3f6795088035c4121f4ef096f01373a4a794f53b0c0b099bc3e8fd49f21"
   - "repo:crates/hive-cli/src/main.rs#sha256:dc14d1ddb9b68d254c1b3548c2011e29d07efb4ed7b4259fd708dd9aa95317a8"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2fade132e2fe4e60b3f7b70e089d5deaa145a25e2976bdfdb62a58a82fa86192"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:55eaf705a654fb71c981e5788610d8d88cce19b2cc4eaa511b1c8a4fa1471553"
   - "repo:docs/research/developer-install-recovery.md#sha256:552390190deb914cf2dfd84106461b994b7ee3587a5ce954102cfa62f74d9925"
   - "repo:scripts/dev-install.sh#sha256:49d7e923900b37bf30b8678e150bfb7f21ad4427876da5031b46aac04df8560e"
   - "repo:scripts/recover-dev-install.py#sha256:128ee7d1aa5dbd883f963df2ec9eb1449771d4343bda1deef1e94161d7bf964b"

@@ -872,3 +872,6 @@
 | [passed](runs/20261110T134445-3f3ac4cdbaa9.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T134853-feae9517d701.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T134915-79f8d06314e6.md) | 개발 검증: cargo | 092a0d7cabd960a1c6bb130a080c5900a869afe3 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [failed](runs/20261110T143237-2fe50069d523.md) | Python conformance: documentation | 4deacab375d89a9938d03531dab291bdb6874747 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T143321-da013052139d.md) | Python conformance: documentation | 4deacab375d89a9938d03531dab291bdb6874747 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261110T143500-90f5bad6c8a6.md) | Python conformance: documentation | c8d77da5bf9829050fa713ea5636e7975a44f7de | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |

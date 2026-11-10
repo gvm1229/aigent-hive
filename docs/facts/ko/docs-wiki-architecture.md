@@ -12,7 +12,7 @@ sources:
   - "repo:docs/archive/README.md#sha256:4fa687e5a3603890bca9e557df8ad8e80de9f87eafa76d18e7bdf11c827eef6f"
   - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:c9e698b54b31db5561a9b3611164ebc2d851bd7fa92087161864ea2092801b93"
   - "repo:docs/decisions/ADR-0014-docs-wiki-architecture.md#sha256:ec0fe3e284ab7ea2effc9330f4a82918bc643c58aaae88866fc8af28e2be477f"
-  - "repo:docs/plans/README.md#sha256:85944730779c8686d4f436fe735f8e65b0ee34f8e5dee048103a8e85cd3f508a"
+  - "repo:docs/plans/README.md#sha256:c546623067ecf99a30b8e7aedd1b421487e7bd321f71b41f8ad3b4ef7b2e8851"
 links: [knowledge-preservation, knowledge-storage]
 reviewed_revision: "git:41f05a55741e319594e5f7ffe811e0e623ade499"
 status: active

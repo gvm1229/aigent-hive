@@ -295,3 +295,64 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [첫 갱신의 콘솔 연결 조사](research/legacy-update-console-0.14.0.md): 공개0.13.1 원본·Windows 실제 경로 조회와 부모 식별 한계
 - [첫 갱신 시험의 격리 실수와 복구](research/legacy-update-test-isolation-0.14.0.md): 잘못된 npm 대역·기존13.1 복구·시험 설치 경로 제한
 - [이전0.13.2 계획](archive/plans/0.13.2-before-interactive-cli.md)·[이전 전체 상태](archive/state/0.13.2-before-interactive-cli.md)
+
+## 보존 기록 색인
+
+문서 홈에서 직접 연결되지 않던 보존 문서의 진입점.
+
+### 재정비 근거
+
+- [OVD-001·OVD-002 근거 — 기존 작업 분리와 커밋](research/overhaul/OVD-002.md)
+- [OVD-004 근거 — 미등록 활성 조각 보관](research/overhaul/OVD-004.md)
+- [OVD-005 근거 — CURRENT.md 축소와 표기 수정](research/overhaul/OVD-005.md)
+- [OVD-007 근거 — AI 공동 작성자 표기 거부 검사](research/overhaul/OVD-007.md)
+- [OVD-008 근거 — 백로그·개요 문서 갱신](research/overhaul/OVD-008.md)
+- [OVD-009 근거 — 시험 기록 보존과 검색 제외](research/overhaul/OVD-009.md)
+- [OVD-010 근거 — develop 병합과 단계 0 브랜치 종료](research/overhaul/OVD-010.md)
+- [OV141-001 근거 — 0.14.1 시작과 계획 전환](research/overhaul/OV141-001.md)
+
+### 점수 기반 개선 설계 초안
+
+- [점수 기반 작업·하네스 개선 설계 결정](decisions/score-driven-improvement.md)
+- [Score-Based Hive Improvement Direction](facts/en/harness-improvement-research.md)
+- [점수 기반 Hive 개선 방향](facts/ko/harness-improvement-research.md)
+- [01 — 점수·자료 계약과 증거 결합](plans/details/score-driven-improvement/01-contracts.md)
+- [02 — 작업별 평가표와 평가 신뢰도](plans/details/score-driven-improvement/02-profiles.md)
+- [03 — 두 반복의 제어·예산·소스 적용](plans/details/score-driven-improvement/03-workflow.md)
+- [04 — 제한된 하네스 개선과 경험 재사용](plans/details/score-driven-improvement/04-harness.md)
+- [05 — 경험 재사용·승격·복구](plans/details/score-driven-improvement/05-experience.md)
+- [06 — 출하·호환·실제 수용](plans/details/score-driven-improvement/06-delivery.md)
+- [07 — 실제 호스트·운영체제·공개 수용](plans/details/score-driven-improvement/07-qualification.md)
+- [점수 기반 작업·하네스 개선 최종 구현 계획](plans/score-driven-improvement-0.14.0.md)
+- [기존 점수 평가 논의와 분리한 추가 후보](research/ai-learning/score-evaluation-2026-10-23/additional-findings.md)
+- [research/ai-learning/score-evaluation-2026-10-23/baseline-original.md](research/ai-learning/score-evaluation-2026-10-23/baseline-original.md)
+- [Hive 작업별 점수 평가 제안](research/ai-learning/score-evaluation-2026-10-23/baseline.md)
+- [Harness² 심층 조사와 Hive 비교](research/ai-learning/score-evaluation-2026-10-23/harness2-research.md)
+- [점수 평가 제안 저장과 추가 자료 검토](research/ai-learning/score-evaluation-2026-10-23/review-plan.md)
+
+### AI 학습 일일 검토
+
+- [2026-10-21 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-21.md)
+- [2026-10-22 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-22.md)
+- [2026-10-23 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-23.md)
+- [2026-10-24 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-24.md)
+- [2026-10-25 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-25.md)
+- [2026-10-26 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-26.md)
+- [2026-10-30 AI_Learning 일일 검토](research/ai-learning/reviews/2026-10-30.md)
+- [2026-11-01 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-01.md)
+- [2026-11-03 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-03.md)
+- [2026-11-04 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-04.md)
+- [2026-11-05 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-05.md)
+- [2026-11-08 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-08.md)
+- [2026-11-09 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-09.md)
+- [2026-11-10 AI_Learning 일일 검토](research/ai-learning/reviews/2026-11-10.md)
+
+### 기타 보존 기록
+
+- [예시 협업 프로젝트의 Hive 갱신 계획](research/example-project-hive-repair-0.11.0.md)
+- [협업자 설치 선택권 검증](research/project-directives-collaboration-0.11.0.md)
+- [0.11.0 통합 수용과 번호 공개 시험](research/refactor-release-qualification-0.11.0.md)
+- [0.14.0 정식 출시·사용자 PC 적용](plans/0.14.0-stable-release.md)
+- [0.14.0 감시 활성화의 결합과 재개](plans/details/usage-monitor-activation-0.14.0.md)
+- [Aigent Hive v0.14.0 업데이트 내역:](releases/0.14.0.subscriber.ko.md)
+- [0.14.0 정식 배포 근거](research/stable-release-0.14.0.md)
