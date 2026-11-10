@@ -39,8 +39,8 @@
   - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-008.md#sha256:0f7f614f0c7ef08d7f4b943e299a83b00170c8f6cfe20829803ea1393bb5e2f4
   - 변경: `docs/plans/backlog/claude-host-acceptance.md`의 상태·항목 수 갱신, 모든 백로그 첫머리에 검토일, `docs/overview/product.md:31` 갱신
   - 확인: `python scripts/check-markdown-links.py`, 문체 검사기
-- [ ] [OVD-009] 시험 기록 보존과 검색 제외
-  - state: agent-owned; depends: OVD-002
+- [x] [OVD-009] 시험 기록 보존과 검색 제외
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-009.md#sha256:825abcd5a1c02e385de927208189c9a04f8514b1942bd0320cab4b329186dc26
   - 변경: `tests/results/runs/`의 정식 이전 기록은 버전별 요약과 압축 보관, `tests/results/INDEX.md` 유지. 과거 기준본·시험 기록을 `.ignore`에 등록, 파일은 보존
   - 확인: `INDEX.md`의 모든 링크 유효, 저장소 전체 `rg` 검색 시간 전후 비교
 
