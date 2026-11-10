@@ -44,8 +44,8 @@
   - 변경: `tests/results/runs/`의 정식 이전 기록은 버전별 요약과 압축 보관, `tests/results/INDEX.md` 유지. 과거 기준본·시험 기록을 `.ignore`에 등록, 파일은 보존
   - 확인: `INDEX.md`의 모든 링크 유효, 저장소 전체 `rg` 검색 시간 전후 비교
 
-- [ ] [OVD-010] develop 병합과 단계 브랜치 종료
-  - state: agent-owned; depends: OVD-004,OVD-005,OVD-007,OVD-008,OVD-009
+- [x] [OVD-010] develop 병합과 단계 브랜치 종료
+  - state: complete; depends: OVD-004,OVD-005,OVD-007,OVD-008,OVD-009; evidence: repo:docs/research/overhaul/OVD-010.md#sha256:6dbc1e88ad4afef0211b5483453a36adce596713222998a2bc4975176dc02a20
   - 변경: 단계 브랜치 `chore/overhaul-0-repo-cleanup`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 병합 뒤 단계 브랜치 삭제
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치
 
