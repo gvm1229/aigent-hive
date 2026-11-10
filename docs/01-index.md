@@ -179,11 +179,11 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Plan 안내](plans/README.md) | Plan structure |
 | [계획 상태 검사](guides/plan-state.md) | 단일 파서·생성 구간·출시 근거 연결 |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
-| [기반 구조 리팩터링](plans/active/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
-| [작업 후 개선 후보 검토](plans/active/hook-review-candidates-0.11.0.md) | 승인 제안의 후보·사람 검토·자동 수정 방지 |
-| [지식·호스트 리팩터링](plans/active/refactor-context-hosts.md) | 지식 이어 가기·Codex 우선 수용 |
-| [안전·설치 리팩터링](plans/active/refactor-policy-transactions.md) | 코드 검사·파일 변경 책임 분리 |
-| [계획·상태 리팩터링](plans/active/refactor-plan-state.md) | Markdown 정본 기반 집계 생성 |
+| [기반 구조 리팩터링](archive/plans/refactor-foundations.md) | 공통 기준·실행 순서·검증·되돌리기 |
+| [작업 후 개선 후보 검토](archive/plans/hook-review-candidates-0.11.0.md) | 승인 제안의 후보·사람 검토·자동 수정 방지 |
+| [지식·호스트 리팩터링](archive/plans/refactor-context-hosts.md) | 지식 이어 가기·Codex 우선 수용 |
+| [안전·설치 리팩터링](archive/plans/refactor-policy-transactions.md) | 코드 검사·파일 변경 책임 분리 |
+| [계획·상태 리팩터링](archive/plans/refactor-plan-state.md) | Markdown 정본 기반 집계 생성 |
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
 | [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
@@ -191,29 +191,29 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [시험 구조 재편](archive/plans/releases/0.10.0/test-organization-0.10.0.md) | 목적별 시험·fixture 완료 기록 |
 | [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |
 | [작업 자동 분담 조사](archive/plans/releases/0.10.0/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 완료 기록 |
-| [`0.10.0` 관계 graph](plans/active/knowledge-relationship-graph-0.10.0.md) | Markdown 관계·Graphify code-only adapter |
-| [`0.10.0` vector search](plans/active/hybrid-vector-search-0.10.0.md) | 조건부 hybrid vector 구현 gate |
-| [`0.10.0` Skill 예약](plans/active/host-owned-skill-reservations-0.10.0.md) | Host-owned Skill 세션 예약 |
-| [`0.10.0` nested scan](plans/active/nested-project-knowledge-scan-0.10.0.md) | 상위 Git 저장소 아래 등록 project scan |
-| [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |
-| [`0.10.0` Judge](plans/active/adversarial-judge-0.10.0.md) | 명시적 adversarial Judge |
-| [`0.10.0` Agent 지침](plans/active/agent-directive-optimization-0.10.0.md) | Source·소비자 지침 정리 |
-| [`0.10.0` 시험 gate](plans/active/automatic-test-release-gate-0.10.0.md) | 제품 변경 공개 시험 자동화 |
-| [`0.10.0` 연속 실행](plans/active/host-neutral-continuation-0.10.0.md) | Host-neutral closure·hook |
-| [`0.10.0` Skill migration](plans/active/skill-retirement-migration-0.10.0.md) | Rename·폐기 artifact 정리 |
-| [Source devlog](plans/active/source-draft-devlog.md) | Source-only 기술 글 초안 |
-| [`0.9.5` 공개 문서](plans/active/stable-public-documentation-0.9.5.md) | Stable-only 공개 안내 |
-| [`0.10.0` vector onboarding](plans/active/vector-onboarding-0.10.0.md) | 벡터 최초 설정 안내 |
+| [`0.10.0` 관계 graph](archive/plans/knowledge-relationship-graph-0.10.0.md) | Markdown 관계·Graphify code-only adapter |
+| [`0.10.0` vector search](archive/plans/hybrid-vector-search-0.10.0.md) | 조건부 hybrid vector 구현 gate |
+| [`0.10.0` Skill 예약](archive/plans/host-owned-skill-reservations-0.10.0.md) | Host-owned Skill 세션 예약 |
+| [`0.10.0` nested scan](archive/plans/nested-project-knowledge-scan-0.10.0.md) | 상위 Git 저장소 아래 등록 project scan |
+| [`0.10.0` 출시](archive/plans/release-0.10.0.md) | 번호 시험판·안정판 |
+| [`0.10.0` Judge](archive/plans/adversarial-judge-0.10.0.md) | 명시적 adversarial Judge |
+| [`0.10.0` Agent 지침](archive/plans/agent-directive-optimization-0.10.0.md) | Source·소비자 지침 정리 |
+| [`0.10.0` 시험 gate](archive/plans/automatic-test-release-gate-0.10.0.md) | 제품 변경 공개 시험 자동화 |
+| [`0.10.0` 연속 실행](archive/plans/host-neutral-continuation-0.10.0.md) | Host-neutral closure·hook |
+| [`0.10.0` Skill migration](archive/plans/skill-retirement-migration-0.10.0.md) | Rename·폐기 artifact 정리 |
+| [Source devlog](archive/plans/source-draft-devlog.md) | Source-only 기술 글 초안 |
+| [`0.9.5` 공개 문서](archive/plans/stable-public-documentation-0.9.5.md) | Stable-only 공개 안내 |
+| [`0.10.0` vector onboarding](archive/plans/vector-onboarding-0.10.0.md) | 벡터 최초 설정 안내 |
 | [연속 실행 hook 조사](research/host-neutral-continuation-hooks-0.10-feasibility-2026-08-22.md) | 세 host 가능성 검토 |
-| [`0.10.1` harness·usage 수정](plans/active/harness-upgrade-0.10.1.md) | 일반 migration·threshold recheck |
-| [`0.10.1` 공개 시험](plans/active/release-0.10.1.md) | `test.1` 공개 수용 |
-| [0.11.1 스킬 제공·자동 정리](plans/active/skill-delivery-0.11.1.md) | Codex 중복 제거·수정 보존 |
+| [`0.10.1` harness·usage 수정](archive/plans/harness-upgrade-0.10.1.md) | 일반 migration·threshold recheck |
+| [`0.10.1` 공개 시험](archive/plans/release-0.10.1.md) | `test.1` 공개 수용 |
+| [0.11.1 스킬 제공·자동 정리](archive/plans/skill-delivery-0.11.1.md) | Codex 중복 제거·수정 보존 |
 | [0.11.1 출시 기록](releases/0.11.1.md) | 호환 수정·시험 준비 |
 | [0.11.1 자동 정리 검증](research/skill-delivery-0.11.1.md) | 실행 범위·예외·남은 수용 |
 | [0.11.1 공개 시험 수용](research/skill-delivery-public-test-0.11.1.md) | 세 운영체제·공개 소스·설치 승인 인계 |
-| [0.10.2 전역 갱신](plans/active/global-user-update-0.10.2.md) | 이전 구현·검증 보존 |
-| [0.10.2 지침 품질](plans/active/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
-| [0.10.2 출시](plans/active/release-0.10.2.md) | 이전 출시 검증 보존 |
+| [0.10.2 전역 갱신](archive/plans/global-user-update-0.10.2.md) | 이전 구현·검증 보존 |
+| [0.10.2 지침 품질](archive/plans/instruction-quality-0.10.2.md) | 이전 개선·근거 보존 |
+| [0.10.2 출시](archive/plans/release-0.10.2.md) | 이전 출시 검증 보존 |
 
 ## 0.12.0 범위와 이전 조사
 
@@ -224,25 +224,25 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [기본 활성 0% 보호 구현](plans/usage-zero-guard-0.12.0.md)·[0.12.0 검증](research/implementation-evidence-0.12.0.md)
 - [Linux 격리 검증 순서](plans/linux-qualification-0.12.0.md)
 - [승인 뒤 실제 호스트 검증](plans/host-acceptance-0.12.0.md)
-- [시험판 출처와 안정판 호환성 분리](plans/active/release-provenance-0.12.0.md)
+- [시험판 출처와 안정판 호환성 분리](archive/plans/release-provenance-0.12.0.md)
 - [0.12.0 정식 출시 실행](plans/0.12.0-stable-release.md)
 - [0.12.0에서 이관한 미완료9개](plans/backlog/0.12.0-deferred-host-acceptance.md)
 - [호스트 지원과 연결 검토](guides/host-support-0.11.2.md)
 - [범위 결정](decisions/ADR-0025-0.11.2-scope.md)
-- [호스트 사용량·중단·분담](plans/active/host-control-0.11.2.md)
-- [Graphify 잔여](plans/active/knowledge-graph-0.11.2.md)
-- [계측·진단·macOS 최종 수용](plans/active/qualification-0.11.2.md)
+- [호스트 사용량·중단·분담](archive/plans/host-control-0.11.2.md)
+- [Graphify 잔여](archive/plans/knowledge-graph-0.11.2.md)
+- [계측·진단·macOS 최종 수용](archive/plans/qualification-0.11.2.md)
 
 - [0.11.2 사실 English](facts/en/v0-11-2-scope.md)·[한국어](facts/ko/v0-11-2-scope.md)
 
 ## 이전 출시의 완료 문서
 
 - [0.11.0 정식 출시](plans/0.11.0-stable-release.md)·[게시 근거](research/0.11.0-stable-release-2026-09-27.md)
-- [0.11.1 Claude 설치](plans/active/claude-user-install-0.11.1.md)
-- [0.11.1 지침·스킬 계획](plans/active/directive-localization-and-project-skills-0.11.1.md)·[조사](research/directive-localization-and-project-skills-0.11.1.md)
-- [0.11.1 출시 검증 보완](plans/active/release-qualification-repairs-0.11.1.md)
-- [0.11.1 스킬 결합 계획](plans/active/skill-merge-0.11.1.md)·[조사](research/skill-merge-0.11.1.md)·[test.7 기록](research/skill-merge-public-test7-0.11.1.md)
-- [0.11.1 시험 정리](plans/active/test-cleanup-0.11.1.md)·[승인된 공지](releases/0.11.1.subscriber.ko.md)
+- [0.11.1 Claude 설치](archive/plans/claude-user-install-0.11.1.md)
+- [0.11.1 지침·스킬 계획](archive/plans/directive-localization-and-project-skills-0.11.1.md)·[조사](research/directive-localization-and-project-skills-0.11.1.md)
+- [0.11.1 출시 검증 보완](archive/plans/release-qualification-repairs-0.11.1.md)
+- [0.11.1 스킬 결합 계획](archive/plans/skill-merge-0.11.1.md)·[조사](research/skill-merge-0.11.1.md)·[test.7 기록](research/skill-merge-public-test7-0.11.1.md)
+- [0.11.1 시험 정리](archive/plans/test-cleanup-0.11.1.md)·[승인된 공지](releases/0.11.1.subscriber.ko.md)
 
 - [0.12.0 정식 게시의 독립 확인](../tests/results/stable-release-0.12.0.md)
 - [0.12.0 Discord 누락 공지 복구](plans/0.12.0-discord-recovery.md)
@@ -258,19 +258,19 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [현재 앱 수용](research/usage-current-app-0.13.1.md)·[초기화 비교 기준](research/usage-preflight-baseline-0.13.1.md)
 - [0.13.1 정식 공개 확인](research/stable-release-0.13.1.md)·[공개 파일 검증](../tests/results/release-0.13.1-stable.md)
 
-- [초기화 비교 계획](plans/active/usage-baseline-0.13.1.md)·[갱신 보정 계획](plans/active/usage-upgrade-0.13.1.md)·[반복 갱신 검증](research/usage-upgrade-repeat-0.13.1.md)
-- [개발 설치 복구 계획](plans/active/developer-install-recovery.md)·[추가 지시 보존 결정](decisions/steering-preservation.md)
+- [초기화 비교 계획](archive/plans/usage-baseline-0.13.1.md)·[갱신 보정 계획](archive/plans/usage-upgrade-0.13.1.md)·[반복 갱신 검증](research/usage-upgrade-repeat-0.13.1.md)
+- [개발 설치 복구 계획](archive/plans/developer-install-recovery.md)·[추가 지시 보존 결정](decisions/steering-preservation.md)
 
 ## 0.13.2 호환·소진 보호
 
-- [승인 구현 계획](plans/active/usage-compatibility-0.13.2.md)·[현재 앱 실제 중단 검증](research/usage-compatibility-0.13.2.md)
+- [승인 구현 계획](archive/plans/usage-compatibility-0.13.2.md)·[현재 앱 실제 중단 검증](research/usage-compatibility-0.13.2.md)
 - [출시 범위 검토본](releases/0.13.2.md)·[미발송 구독자 안내 초안](releases/0.13.2.subscriber.ko.md)
 
 ## 0.13.2 기능 호환·0% 보호
 
-- [기본 비활성화 계획·출시 보류](plans/active/usage-default-off-0.13.2.md)·[현재 선택](decisions/reset-stop-boundary.md#0132-기본-비활성화-설계)
+- [기본 비활성화 계획·출시 보류](archive/plans/usage-default-off-0.13.2.md)·[현재 선택](decisions/reset-stop-boundary.md#0132-기본-비활성화-설계)
 - [공개 시험 수용](research/public-test-0.13.2.md)·[실제 중단 검증](research/usage-compatibility-0.13.2.md)
-- [정식 게시·로컬 적용](plans/0.13.2-stable-release.md)·[승인 범위](plans/active/usage-compatibility-0.13.2.md)
+- [정식 게시·로컬 적용](plans/0.13.2-stable-release.md)·[승인 범위](archive/plans/usage-compatibility-0.13.2.md)
 
 ## 0.14.0 대화형 CLI
 

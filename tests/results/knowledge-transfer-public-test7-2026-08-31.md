@@ -54,4 +54,4 @@
 
 - [사용자 안내](../../docs/guides/knowledge-transfer.md)
 - [구독자 업데이트 검토 초안](../../docs/releases/0.10.0.subscriber.ko.md): 미전송
-- [지식 이전 계획](../../docs/plans/active/knowledge-transfer-0.10.0.md)
+- [지식 이전 계획](../../docs/archive/plans/knowledge-transfer-0.10.0.md)

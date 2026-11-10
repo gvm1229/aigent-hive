@@ -1,6 +1,6 @@
 # 0.11.0 지침 복구 구현 검증
 
-- 소유 기준: [DCR-001–006](../plans/active/directive-context-recovery-0.11.0.md)
+- 소유 기준: [DCR-001–006](../archive/plans/directive-context-recovery-0.11.0.md)
 - 제품 코드: `c00202a0`, Windows 11·Codex CLI 0.155.1 설치 환경
 - 이번 자동 검증: CLI·생성된 훅 명령과 파일 상태. 실제 Codex 모델의 압축 실행·준수는 미검증
 

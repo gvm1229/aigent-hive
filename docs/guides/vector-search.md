@@ -1,7 +1,7 @@
 # 선택형 의미 검색 사용
 
 공개 `0.10.0-test.6`의 선택형 벡터 기능 안내. `test.4`에는 벡터 기능 없음.
-성능 수용과 세 운영체제 공개 설치 검증 완료. [수용 근거](../research/vector-public-test6-2026-08-29.md)·[활성 계획](../plans/active/hybrid-vector-search-0.10.0.md) 참조.
+성능 수용과 세 운영체제 공개 설치 검증 완료. [수용 근거](../research/vector-public-test6-2026-08-29.md)·[활성 계획](../archive/plans/hybrid-vector-search-0.10.0.md) 참조.
 
 ## 미리 알아둘 대기 시간
 

@@ -46,4 +46,4 @@
 - 설정의 `context_current`는 승인된 원문 일치만 증명. 호스트의 실제 로드·모델 준수는 별도 검증
 - Codex 우선 구현. Claude 실제 수용은 기존 제외 범위 유지. Antigravity는 기존 파일 보호만 유지하며 압축 복구 미지원 표시
 
-근거: [설계](../plans/directive-context-recovery-0.11.0.md), [조사](../research/directive-context-hooks-2026-09-25.md), [실행 기준](../plans/active/directive-context-recovery-0.11.0.md).
+근거: [설계](../plans/directive-context-recovery-0.11.0.md), [조사](../research/directive-context-hooks-2026-09-25.md), [실행 기준](../archive/plans/directive-context-recovery-0.11.0.md).

@@ -56,4 +56,4 @@
 
 - [0.14.0 결정](../decisions/interactive-cli-0.14.0.md)·[조사 근거](../research/interactive-cli-0.14.0.md)
 - [이전0.13.2 활성 계획](../archive/plans/0.13.2-before-interactive-cli.md)·[이전 상태](../archive/state/0.13.2-before-interactive-cli.md)·[최초 일괄 해제안](../archive/plans/usage-default-off-0.13.2-original.md)
-- [기존0.13.2 구현/수용](active/usage-compatibility-0.13.2.md)·[출시 보류 기록](0.13.2-stable-release.md). 기존 완료5개는 새15개에 중복 집계하지 않는 구분
+- [기존0.13.2 구현/수용](../archive/plans/usage-compatibility-0.13.2.md)·[출시 보류 기록](0.13.2-stable-release.md). 기존 완료5개는 새15개에 중복 집계하지 않는 구분

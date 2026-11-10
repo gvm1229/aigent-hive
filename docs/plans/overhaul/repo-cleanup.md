@@ -19,8 +19,8 @@
   - state: awaiting-user-authority; depends: OVD-002; owner: user; reason: 사용자 PC 자격 증명의 push와 브랜치 삭제 승인
   - 변경: 로컬 `develop`의 `feature/interactive-cli-0.14.0` fast-forward는 완료. 남은 일은 `git push origin feature/interactive-cli-0.14.0 develop`, 병합 완료 `docs/update-notes-sections`와 `feature/interactive-cli-0.14.0`의 삭제 여부 결정
   - 확인: `git status -sb`, `git branch --merged origin/main`
-- [ ] [OVD-004] 미등록 활성 조각의 보관 이동
-  - state: agent-owned; depends: OVD-002
+- [x] [OVD-004] 미등록 활성 조각의 보관 이동
+  - state: complete; depends: OVD-002; evidence: repo:docs/research/overhaul/OVD-004.md#sha256:204d2a464ecd224fd3116b9241d2e3e4b82c228548723bc45bcbef6c8806c2d5
   - 변경: `docs/plans/active/` 중 `PLAN.md` 미등록 파일을 `docs/archive/plans/`로 `git mv`, 깨진 링크 수정
   - 확인: `ls docs/plans/active | wc -l` = 등록 수, `python scripts/check-plan-state.py`, `python scripts/check-markdown-links.py`
 - [ ] [OVD-005] CURRENT.md 축소와 표기 수정

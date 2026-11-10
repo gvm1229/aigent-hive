@@ -20,7 +20,7 @@
 
 - `PRF-004`: 정식 0.10.3 합성 설치에서 발견한 실행 주체 판정 오류를 실제 예시 적용 전에 수정. 과거 기준본 원문은 보존
 
-- 후속 승인: 프로젝트 갱신 스킬의 자연어 선택·설치 노출 검증을 `0.11.0`에 포함, 검증 뒤 예시 프로젝트 6단계 실제 적용. [PRF 계획](../plans/active/project-refresh-exposure-0.11.0.md)
+- 후속 승인: 프로젝트 갱신 스킬의 자연어 선택·설치 노출 검증을 `0.11.0`에 포함, 검증 뒤 예시 프로젝트 6단계 실제 적용. [PRF 계획](../archive/plans/project-refresh-exposure-0.11.0.md)
 
 - 기존 기능·CLI·기본값 유지, 핵심 지식 흐름부터 단계적으로 개선
 - 미출시 `0.10.4` 변경을 기준으로 `0.11.0` 구현; 별도 `0.10.4` 출시 제외
@@ -46,7 +46,7 @@
 - 현재 브랜치의 목적: 검토 가능한 계획. 구현 성공·실제 호스트 수용을 의미하지 않는 계획 상태
 - 제품 파일의 번호 변경은 후속 `RFB-001`에서 수행; 공개된 `0.10.3`에 새 시험판 추가 금지
 - 기존 `RB104-*` 작업 보존, 미지원 동작의 완료 추정 제외
-- 합격 기준·선행 관계·시험·되돌리기: [총괄 계획](../plans/active/refactor-foundations.md)
+- 합격 기준·선행 관계·시험·되돌리기: [총괄 계획](../archive/plans/refactor-foundations.md)
 - 현재 실행 환경: Windows Codex의 문서·코드 조사. 다른 호스트와 운영체제 제품 수용 미실행
 
 ## 2026-09-18 범위 보완
@@ -72,13 +72,13 @@
 
 | 승인 제안 | 수용 기준의 단일 소유 항목 |
 | --- | --- |
-| 1. 규칙 추가 전 실패 종류 구분 | [HK-001](../plans/active/host-policy-hooks-0.11.0.md) |
-| 2. 누락 결과의 전체 성공 처리 방지 | [HK-001](../plans/active/host-policy-hooks-0.11.0.md) |
-| 3. 설정 존재와 실제 작동 상태 구분 | [HK-002](../plans/active/host-policy-hooks-0.11.0.md) |
-| 4. 수정에 사용하지 않은 보류 사례 평가 | [HK-004](../plans/active/host-policy-hooks-0.11.0.md) |
-| 5. 고정 규칙 설명과 동적 상태 분리 | [HK-002](../plans/active/host-policy-hooks-0.11.0.md) |
-| 6. 작업 후 회고와 자동 정책 수정 분리 | [HK-005](../plans/active/hook-review-candidates-0.11.0.md) |
-| 7. 코드 변경과 재사용 문맥의 유효성 연결 | [RFK-002](../plans/active/refactor-context-hosts.md) |
+| 1. 규칙 추가 전 실패 종류 구분 | [HK-001](../archive/plans/host-policy-hooks-0.11.0.md) |
+| 2. 누락 결과의 전체 성공 처리 방지 | [HK-001](../archive/plans/host-policy-hooks-0.11.0.md) |
+| 3. 설정 존재와 실제 작동 상태 구분 | [HK-002](../archive/plans/host-policy-hooks-0.11.0.md) |
+| 4. 수정에 사용하지 않은 보류 사례 평가 | [HK-004](../archive/plans/host-policy-hooks-0.11.0.md) |
+| 5. 고정 규칙 설명과 동적 상태 분리 | [HK-002](../archive/plans/host-policy-hooks-0.11.0.md) |
+| 6. 작업 후 회고와 자동 정책 수정 분리 | [HK-005](../archive/plans/hook-review-candidates-0.11.0.md) |
+| 7. 코드 변경과 재사용 문맥의 유효성 연결 | [RFK-002](../archive/plans/refactor-context-hosts.md) |
 
 - `HK-003`: 위 기능의 실제 호스트 수용을 검증하는 기존 책임 유지, 개별 구현 기준의 중복 집계 제외
 - 신규 체크리스트는 `HK-005` 한 개, 나머지는 기존 항목의 수용 기준 구체화
@@ -128,7 +128,7 @@
 ## 2026-09-23 협업자의 Hive 설치 선택권
 
 - 사용자 결정: 프로젝트 지침 생성기 개선을 `0.11.0`에 포함, 협업자의 Hive 설치는 선택 사항
-- [PDC-001–003](../plans/active/project-directives-collaboration-0.11.0.md): 공통 규칙과 Hive 전용 절차 분리, 설치 상태별 행동·보호 경계·기존 설치 갱신 검증
+- [PDC-001–003](../archive/plans/project-directives-collaboration-0.11.0.md): 공통 규칙과 Hive 전용 절차 분리, 설치 상태별 행동·보호 경계·기존 설치 갱신 검증
 - 미설치자의 일반 개발 지속. 설치된 Hive의 오류·설정 손상·보호 중단을 미설치로 취급하는 우회 금지
 - 사용자 작성 규칙·외부 표시 블록·기존 다른 도구 설정 보존. 강제 설치·자동 도구 전환 제외
 - 예시 프로젝트의 지침은 읽기 전용 참고. 제품 개선·검증 완료 후 수정된 Hive 버전으로 해당 프로젝트 수정 계획 수립, 실제 수정 필요성 유지
@@ -141,12 +141,12 @@
 - [조사 기반 구현안](../plans/directive-context-recovery-0.11.0.md): 짧은 핵심 복원·작업별 상세 전달·변경 지점 검사
 - 조사와 계획만 완료. 기존 완료 항목과 별도이며 제품 구현·호스트 설치·반복 압축 실증은 미실행
 
-- 후속 사용자 승인: 위 지침 복구를 0.11.0에 구현. [DCR-001–006](../plans/active/directive-context-recovery-0.11.0.md) 등록, RFR-001 재개, test.8 재수용 전 안정판 완료 제외
+- 후속 사용자 승인: 위 지침 복구를 0.11.0에 구현. [DCR-001–006](../archive/plans/directive-context-recovery-0.11.0.md) 등록, RFR-001 재개, test.8 재수용 전 안정판 완료 제외
 
 - DCR-001–005 구현·자동 검증과 test.8 공개 수용 완료. DCR-006·RFR-001은 실제 Codex 임시 훅 활성화·새 검증 대화 승인 대기, 안정판 완료 판정 제외
 
 ## 2026-09-25 계획 인계와 소스 지침 읽기
 
 - 사용자 요청: 계획 단계에서 구체적 구현 방법·판정을 확정, 다른 모델의 구현 단계가 임의로 설계를 바꾸지 않는 인계
-- [PDO-001–003](../plans/active/planning-directive-efficiency.md): 소스 공통 지침·작업별 절차 분리와 참조를 포함한 읽기량 검사
+- [PDO-001–003](../archive/plans/planning-directive-efficiency.md): 소스 공통 지침·작업별 절차 분리와 참조를 포함한 읽기량 검사
 - 소스 전용 변경. 제품·설치본·라이브 훅 활성화 승인과 기존 버전별 출시 경계 유지

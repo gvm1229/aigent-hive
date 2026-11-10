@@ -39,7 +39,7 @@
 ## 현재 근거와 한계
 
 - Windows 로컬에서 아홉 실제 구버전 표본의 전체 갱신·보존·실패·중단 복구 통과
-- 전체 Rust 회귀 통과. Python·공개 패키지·최종 통합 결과는 [소유 계획](../plans/active/all-public-project-refresh-0.11.0.md)의 완료 근거로 확정
+- 전체 Rust 회귀 통과. Python·공개 패키지·최종 통합 결과는 [소유 계획](../archive/plans/all-public-project-refresh-0.11.0.md)의 완료 근거로 확정
 - 실제 AI의 모든 호스트·운영체제·사용자 설정 조합, 모든 가능한 중단 시점에 대한 전수 증명 제외
 
 ## 최종 수용과 이력 보존
