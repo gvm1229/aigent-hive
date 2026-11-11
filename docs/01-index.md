@@ -379,3 +379,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV142-003 정리 회귀와 이전판 자료 근거](research/overhaul/OV142-003.md)
 
 - [0.14.2 출시 설명](releases/0.14.2.md)·[구독자 안내 문안](releases/0.14.2.subscriber.ko.md)
+- [OV142-004 출시 문안과 검토 전 인계](research/overhaul/OV142-004.md)
