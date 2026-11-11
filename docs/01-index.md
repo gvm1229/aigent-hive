@@ -368,5 +368,6 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.11.0 통합 수용과 번호 공개 시험](research/refactor-release-qualification-0.11.0.md)
 - [0.14.0 정식 출시·사용자 PC 적용](plans/0.14.0-stable-release.md)
 - [0.14.0 감시 활성화의 결합과 재개](plans/details/usage-monitor-activation-0.14.0.md)
+- [0.14.1 미발송 구독자 안내 초안](releases/0.14.1.subscriber.ko.md)
 - [Aigent Hive v0.14.0 업데이트 내역:](releases/0.14.0.subscriber.ko.md)
 - [0.14.0 정식 배포 근거](research/stable-release-0.14.0.md)
