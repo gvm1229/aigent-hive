@@ -5827,7 +5827,7 @@ usage_guard:
             apply_user_projection(&root, &config, &skills, &bytes).expect("initial projection");
 
             let same = set_operational_usage_threshold(temporary.path(), 20).expect("same value");
-            assert!(same.changed_paths.is_empty());
+            assert_eq!(same.changed_paths, Vec::<String>::new());
             assert_eq!(fs::read(&config_path).expect("unchanged config"), bytes);
 
             for target in [25_u8, 0, 99, 10] {

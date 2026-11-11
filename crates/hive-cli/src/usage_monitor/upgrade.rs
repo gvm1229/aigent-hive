@@ -726,7 +726,10 @@ mod tests {
             ["hive-new.exe", "hive-old.exe", "notes.txt"]
         );
         assert_eq!(report["removed"].as_array().unwrap().len(), 3);
-        assert!(report["skipped"].as_array().unwrap().is_empty());
+        assert_eq!(
+            report["skipped"].as_array().unwrap().as_slice(),
+            &[] as &[Value]
+        );
         assert!(report["error"].is_null());
     }
 
@@ -782,7 +785,10 @@ mod tests {
 
         assert_eq!(binary_names(&root), before);
         assert_eq!(report["skipped"].as_array().unwrap().len(), 2);
-        assert!(report["removed"].as_array().unwrap().is_empty());
+        assert_eq!(
+            report["removed"].as_array().unwrap().as_slice(),
+            &[] as &[Value]
+        );
         for name in &before {
             assert_eq!(
                 std::fs::read(root.requested_path().join(BASE).join("bin").join(name)).unwrap(),
