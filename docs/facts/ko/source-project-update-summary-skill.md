@@ -9,19 +9,18 @@ summary: "소스 전용 update-summary의 검증 기반 제품 홍보: 새 기�
 tags: [development, release-notes, skill]
 aliases: ["update-summary"]
 sources:
-  - "repo:.agents/skills/update-summary/SKILL.md#sha256:39d78386d806ec055193c0e27b1e074f85655b752624eb756afdac3d82f4aa95"
+  - "repo:.agents/skills/update-summary/SKILL.md#sha256:4575d3fedf4c6b3f378b88a86fcab9b444b15d647ce0ff716eb31b548513716a"
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
+  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:c7e93ba643f4cced01e070e6e80e312f709b044e6a87d067fa49c44ee9f65131"
   - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
-  - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [public-skill-identity, source-development, v0-9-full-release]
 reviewed_revision: "git:0bcae67aa54b63c6d52b58ee959bdb4425fcbe82"
 status: active
 ---
 
-# Source 프로젝트 전용 업데이트 요약 Skill
+# 소스 전용 업데이트 요약 스킬
 
-`update-summary`는 소스전용·소비자배포 제외. 요청버전대비완료·검증된이점·핵심기술명·예시·선택·비용·한계를Hive초심자에게안내, 실패내부기록.
-새기능→수정→개선 섹션·구분선·빈범주생략·변경당1회분류. 기본말투는명사형, 습니다종결·기계적함/음변환 제외.0.11.1말투·0.10.0기능설명 참고.
-전체2,000자한계·초과때만자동정리. 미출시는초안, 문구승인과출시권한별도. gh지문등록만·수동설정불필요, 출시/전송·지문자동갱신 제외. 변경문구새승인·동일지문재시도.
-0.12.0승인870자발송이력 보존. 명사형652자수정초안은미승인·미전송.
+소비자 배포 제외. 요청 버전의 검증된 이점·기술명·예시·선택·비용·한계 안내, 실패는 내부 기록. 명사형 문구, 기계적 종결 변환 제외. 0.11.1 말투·승인된 0.10.0 설명 참고.
+새 기능→수정→개선, 구분선·빈 범주 생략·변경당 한 번 분류. 전체 2,000자, 초과 때만 정리. 미출시는 초안.
+원문·SHA-256 파일의 검토된 main PR 승인, 최초 1회 환경 변수로 전송 허용. 출시 소스·파일명·바이트 검사, 변경 문구는 새 PR·출시 소스 필요. 출시별 등록 폐기, PR만으로 출시·전송 권한 발생 없음. 상세: 출시 안내·2026-11-12 결정.
