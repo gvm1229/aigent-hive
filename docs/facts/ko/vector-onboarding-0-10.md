@@ -10,7 +10,7 @@ tags: [knowledge, onboarding, v0-10, vector]
 aliases: ["벡터 최초 설정"]
 sources:
   - "repo:docs/archive/plans/vector-onboarding-0.10.0.md#sha256:96f2f93129dc8ac8d7a70789e940b57d217d360ae112ea1c91521097abf2b086"
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:7cde28cf97ebc30a192ad9836184c813677689b354600773c1f594a71d33875f"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:51b9b644b6ab76831b590a97780549e6fa994594ba637205a7ababba359246f5"
   - "repo:docs/guides/vector-search.md#sha256:051fd23554897a9376fe29d457d20c2de3a2e05eb2b87faeaa47a6165e3a9d03"
 links: [hive-preserving-uninstall, hybrid-vector-search-0-10, v0-10-product-scope]
 reviewed_revision: "git:64a9f1929b96fcd3a274f2dd0e86b7d9e7c4399c"

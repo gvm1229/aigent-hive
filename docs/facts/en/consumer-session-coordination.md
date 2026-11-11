@@ -11,7 +11,7 @@ aliases: ["CHS93"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:1ab23dbb5a8b60322f6c1068ba7cc09f54bc34151915068a748a1cc5a2c38018"
   - "repo:crates/hive-cli/src/session.rs#sha256:a41fd95ca2576269d347b4635afa064dc9dc53a70d96434daef1eb819e0fbf19"
-  - "repo:docs/archive/plans/release-0.10.0.md#sha256:c32466403567296cfb7277b12ae3d178a76b91bc55b48cf9b8587e90be24c584"
+  - "repo:docs/archive/plans/release-0.10.0.md#sha256:dd25843eba105668c1f07aaac450147c2ab3572a55ad2b40bf202d2b0a763a8e"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:harness/directives/03-session-coordination.md#sha256:bdef62f4f837e3c0c84a794a9f4c7bca1b8947a92b5b3ea66ff8314bb2c7dfec"
   - "repo:harness/skills/project-setup/SKILL.md#sha256:ca3fb27f62800e87d4c80742fc6c97ff21ca791fbae70d97b0d487f453adeed0"

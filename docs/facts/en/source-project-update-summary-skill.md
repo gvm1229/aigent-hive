@@ -9,9 +9,9 @@ summary: "The source-only update-summary Skill promotes verified product changes
 tags: [development, release-notes, skill]
 aliases: ["update-summary"]
 sources:
-  - "repo:.agents/skills/update-summary/SKILL.md#sha256:4575d3fedf4c6b3f378b88a86fcab9b444b15d647ce0ff716eb31b548513716a"
+  - "repo:.agents/skills/update-summary/SKILL.md#sha256:b604e489dedcf902d819d30609c2c1a3a2705521c79b9e45ff4cac6a7dcebaa3"
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
-  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:c7e93ba643f4cced01e070e6e80e312f709b044e6a87d067fa49c44ee9f65131"
+  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:b13d2a1daa032c150155f465f06e57604bd493a2995f2590c0338e076cd72c2d"
   - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [public-skill-identity, source-development, v0-9-full-release]

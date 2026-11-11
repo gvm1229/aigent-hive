@@ -39,3 +39,9 @@
 - `test_executable_change_after_version_fails_closed`: Unix 실행 파일 식별용 시험 자료, Windows 미지원
 
 - `test_symlink_swap_cannot_change_the_qualified_executable`: Unix 심볼릭 링크 식별용 시험 자료, Windows 미지원
+
+## 브랜치 전달
+
+- 구현 `1570b621`·문서 `d9259553`의 지정 원격 브랜치 push 성공
+- 보호 브랜치 통합·PR·GitHub 설정·workflow 조작 없음. 다른 출시 세션 작업 트리 접근 없음
+- 완료 후 남은 이번 범위의 에이전트 소유 작업 없음. 환경 변수 설정·실제 발송은 범위 밖
