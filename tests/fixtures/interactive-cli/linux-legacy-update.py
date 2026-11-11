@@ -70,10 +70,8 @@ else:
     assert len(sys.argv)==4 and sys.argv[1:3]==['install','-g'] and sys.argv[3].startswith('aigent-hive@'),sys.argv
     requested=sys.argv[3].removeprefix('aigent-hive@')
 assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.][0-9]+-test[.][1-9][0-9]*',requested),requested
-if direct: assert os.environ['AIGENT_HIVE_VERSION']==requested.split('-test.',1)[0]
-# The installed bytes are the development build, so label them with its product version.
-product='0.14.1'
-packaged=product+requested[len(requested.split('-test.',1)[0]):]
+product=requested.split('-test.',1)[0]
+if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
 binary=package/'bin/hive'
 if (root/'retire-package').exists():
@@ -99,9 +97,9 @@ shutil.copyfile('/build/debug/hive',binary);binary.chmod(0o755)
 subprocess.run(['/usr/bin/strip','--strip-debug',str(binary)],check=True)
 digest=hashlib.sha256(binary.read_bytes()).hexdigest()
 (root/'incoming.json').write_text(json.dumps({'sha256':digest,'installer':'env/sh' if direct else 'npm','registry_target':requested}))
-(package/'package.json').write_text(json.dumps({'name':'@aigent-hive/linux-x64','version':packaged,'aigentHive':{'productVersion':product}}))
+(package/'package.json').write_text(json.dumps({'name':'@aigent-hive/linux-x64','version':requested,'aigentHive':{'productVersion':product}}))
 if direct:
-    (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':product,'package_version':packaged,'artifact_sha256':'sha256:'+digest}))
+    (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':product,'package_version':requested,'artifact_sha256':'sha256:'+digest}))
 '''
 for name in ("npm", "sh"):
     (shim / name).write_text(installer)

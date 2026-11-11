@@ -52,7 +52,6 @@ def pe_image():
     return image
 
 
-WORKSPACE_VERSION = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
 
 
 class LegacyUpdateImageTests(unittest.TestCase):
@@ -134,8 +133,7 @@ assert.throws(()=>reader(-1,true).run(['7']));
                             namespace = {}
                             exec(validation, namespace)
                             self.assertEqual(namespace["requested"], version)
-                            # Installed bytes are the development build, labelled with its version.
-                            self.assertEqual(namespace["product"], WORKSPACE_VERSION)
+                            self.assertEqual(namespace["product"], product)
                         else:
                             with self.assertRaises(AssertionError):
                                 exec(validation, {})
