@@ -19,14 +19,14 @@
   - state: complete; depends: OV142-001; evidence: repo:docs/research/overhaul/OV142-002.md#sha256:c447ef664d558ad3a4e8bb0adeb827ad1035e4d9874f8ac5c5849fa082282401
   - 변경: `crates/hive-cli/src/run.rs::remove_parent_file`에서 격리 파일을 no-follow로 열고 64 KiB씩 비교. 예상 길이 뒤 EOF 확인. 읽기 실패·다른 바이트는 기존 restore_claim_error로 복구
   - 확인: hive-cli run 시험과 strict Clippy. 변경·추가·짧은 파일·비정상 경로 보존 확인. 예상 스냅샷의 128 MiB 한도 유지
-- [ ] [OV142-003] 자동 정리·수동 정리 큰 파일 회귀
-  - state: agent-owned; depends: OV142-002
+- [x] [OV142-003] 자동 정리·수동 정리 큰 파일 회귀
+  - state: complete; depends: OV142-002; evidence: repo:docs/research/overhaul/OV142-003.md#sha256:d47f74746c332a0ef804eb943106ecd472ed490995c924e7303587dcfd545ae9
   - 변경: `usage_monitor/upgrade.rs`의 임시 사용자 bin에 1 MiB 초과 파일 추가, upgrade_with의 binary_cleanup 및 prune_unused의 preview/confirm 경로 확인. run.rs의 길이·꼬리 변조 복구 반례
-  - 확인: `python scripts/dev-check.py rust -- test -p hive-cli --locked`, 영향 crates 시험, `python scripts/test-lanes.py --all`, fmt·Clippy. Windows Codex의 실제 실행만 완료 근거, macOS/Linux 공개 수용은 OV142-007
+  - 확인: `python scripts/dev-check.py rust -- test --workspace --locked -- --test-threads=4`, Python documentation·security·contract·integration 검사 묶음, fmt·Clippy. 공개 0.14.1의 누락된 이전판 시험 자료는 출처 증명·SHA-256 확인 뒤 임시 setup으로 생성. release 묶음은 안내문 파일이 필요한 OV142-004에서 실행. Windows Codex의 실제 실행만 완료 근거, macOS/Linux 공개 수용은 OV142-007
 - [ ] [OV142-004] 출시 설명·구독자 안내와 로컬 검사
   - state: agent-owned; depends: OV142-003
   - 변경: `docs/releases/0.14.2.md`, `0.14.2.subscriber.ko.md`와 SHA-256 파일. 큰 감시 프로그램 정리와 현재·직전·사용 중 보존을 쉬운 한국어로 설명. 근거·사실 쌍·현재 상태 갱신
-  - 확인: 문서 검사 묶음·`python scripts/check-human-documentation-style.py --all`·출시 설명 검사·Source Wiki index/lint. 항목별 한국어 커밋과 정확한 단계 브랜치 push, 근거 지문 기록
+  - 확인: documentation·release 검사 묶음·`python scripts/check-human-documentation-style.py --all`·출시 설명 검사·Source Wiki index/lint. 항목별 한국어 커밋과 정확한 단계 브랜치 push, 근거 지문 기록
 - [ ] [OV142-005] Fable 5.2 advisor 병합 전 검토
   - state: agent-owned; depends: OV142-004; owner: orchestrator; reason: 이번 실행의 명시 중단 경계
   - 변경: orchestrator가 Fable 5.2 advisor 하위 에이전트로 `origin/develop..fix/overhaul-1-0.14.2` 검토. 발견 사항은 같은 브랜치에서 수정·재검사
