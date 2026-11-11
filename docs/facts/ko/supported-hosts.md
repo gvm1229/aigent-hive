@@ -9,7 +9,7 @@ summary: "Codex, Claude Code, Gemini Antigravity adapter 범위."
 tags: [host, support]
 aliases: ["Host 지원"]
 sources:
-  - "repo:docs/overview/product.md#sha256:4ae1388f9b2c31011c8ebbf755a30f0dc76ee3595ccd93ee4ace45cffd99b984"
+  - "repo:docs/overview/product.md#sha256:f1fc5829f177e9d99d5dd3f357e3daa5af8c00eed6591eb99b7bf9f1c01be0be"
 links: [product-purpose, usage-sensor-policy]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
 status: active

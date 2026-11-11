@@ -73,5 +73,5 @@ Antigravity의 비재개 종료 안내는 미지원으로 거부하며 명시적
 출하 절차는 [run-checkpoint 참조](../../harness/skills/run-checkpoint/references/policy-review.md).
 
 관련 근거: [전체 적용 분석](../research/project-policy-enforcement-2026-09-18.md),
-[호스트 훅 계획](../plans/active/host-policy-hooks-0.11.0.md),
+[호스트 훅 계획](../archive/plans/host-policy-hooks-0.11.0.md),
 [측정 기준](../research/refactor-baseline-0.11.0.md).

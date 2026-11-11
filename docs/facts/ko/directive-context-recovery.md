@@ -9,10 +9,10 @@ summary: "승인 구절 복원 구현과 실제 압축 준수 검증의 분리"
 tags: [context, hooks, policy]
 aliases: []
 sources:
-  - "repo:docs/guides/directive-context-recovery.md#sha256:20a1f22a3570c4dd8ad993c0ae04fee31ebcbc43646f90c72811501d30ea0438"
+  - "repo:docs/guides/directive-context-recovery.md#sha256:945cab54172231c66a27bcf4fdd3c124307df6010238648c5b24e5a8ba219514"
   - "repo:docs/research/0.11.0-test9-qualification.md#sha256:a2866f12daf03e438b220264686b045d82f41a4fb7a793cfb3781cd62d6a03c4"
   - "repo:docs/research/directive-context-host-acceptance-2026-09-27.md#sha256:9e433e57177676226e524b87ad4a35a7764f379555f2ea794d0f1522999fbd53"
-  - "repo:docs/research/directive-context-implementation-0.11.0.md#sha256:eb38786a9b205550a61a3a9a52f98aac7766b04999dbd31fcdd8bd51e6da2e6e"
+  - "repo:docs/research/directive-context-implementation-0.11.0.md#sha256:907647c6bcc50202bf9db302894cf8eeb8ada8f6e1ef7db1b88a0bc476887737"
   - "repo:docs/research/directive-context-instrumented-tests-2026-09-26.md#sha256:e2a20c1a87519399eca28095c6a4de7e267a3fe87ca9f4c103ab252a5b07c9ab"
 links: [project-policy-enforcement]
 reviewed_revision: "git:b90d51eb7d60c5f5f6b555d329cfef7800330c60"

@@ -8,6 +8,7 @@ import time
 import os
 import subprocess
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -17,6 +18,9 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPOSITORY_ROOT / "tests/fixtures/setup"
+PRODUCT_VERSION = tomllib.loads((REPOSITORY_ROOT / "Cargo.toml").read_text(encoding="utf-8"))[
+    "workspace"
+]["package"]["version"]
 EXPECTED_ROOT = FIXTURE_ROOT / "expected"
 ACTION_RESULT_SCHEMA = json.loads(
     (REPOSITORY_ROOT / "schemas/action-result.schema.json").read_text(encoding="utf-8")
@@ -114,8 +118,8 @@ def assert_initial_file_provenance(test, answers: dict, supplied: dict, started_
             test.assertGreaterEqual(record["decided_at"], started_at)
             test.assertLessEqual(record["decided_at"], int(time.time()))
         expected = {"origin": origin, "input_channel": "answers-file", "scope": "project",
-                    "question_id": None, "question_revision": None, "policy_version": "0.14.0",
-                    "changed_in_version": "0.14.0", "decided_at": record["decided_at"] if dated else None,
+                    "question_id": None, "question_revision": None, "policy_version": PRODUCT_VERSION,
+                    "changed_in_version": PRODUCT_VERSION, "decided_at": record["decided_at"] if dated else None,
                     "value_digest": digest}
         if pointer in inherited:
             expected["inherited_from"] = declaration["inherit"]

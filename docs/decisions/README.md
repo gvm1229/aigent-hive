@@ -28,3 +28,4 @@ Accepted product decision과 선택 근거의 정본.
 | `0.10.1` 갱신·사용량 정책 전이 | [ADR-0021](ADR-0021-0.10.1-upgrade-usage-fix.md) |
 | Codex 스킬 제공·자동 정리 | [ADR-0024](ADR-0024-codex-skill-delivery.md) |
 | 0.14.0 대화형 CLI·설정 출처 | [현재 결정](interactive-cli-0.14.0.md) |
+| 사용량 보호 날짜별 승인 | [승인 기록](usage-guard-approvals.md) |

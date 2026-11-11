@@ -603,6 +603,31 @@ pub fn register_project_with_shared_index_disabled(
     })
 }
 
+/// Synchronize collections with the current project registry, reloading it when another
+/// registration changed it after the read. Gives up after three changed reads.
+///
+/// # Errors
+///
+/// Returns an error for an invalid registry, a persistent concurrent change, or a failed
+/// synchronization.
+pub fn sync_current_project_registry(
+    user_root: &Path,
+    store: &RagStore,
+) -> Result<crate::store::StoreCommit, WikiError> {
+    let mut attempts = 0;
+    loop {
+        let registry = load_project_registry(user_root)?;
+        match store.sync_project_registry(&registry) {
+            Err(WikiError::Conflict(message))
+                if message == crate::store::STALE_PROJECT_REGISTRY && attempts < 2 =>
+            {
+                attempts += 1;
+            }
+            result => return result,
+        }
+    }
+}
+
 /// Rebuild the one user-root `SQLite` index from user Wiki plus enabled project Wikis.
 ///
 /// This function never creates or mutates a project-local database.
@@ -614,14 +639,13 @@ pub fn register_project_with_shared_index_disabled(
 #[allow(clippy::too_many_lines)]
 pub fn rebuild_shared_index(user_root: &Path) -> Result<SharedIndexOutcome, WikiError> {
     validate_absolute_root(user_root, "user root")?;
-    let registry = load_project_registry(user_root)?;
     let store = RagStore::open(user_root)?;
     let recovered = if store.is_dirty()? {
         Some(store.rebuild()?)
     } else {
         None
     };
-    let mut synchronized = store.sync_project_registry(&registry)?;
+    let mut synchronized = sync_current_project_registry(user_root, &store)?;
     if let Some(recovered) = recovered {
         synchronized.changed_paths.extend(recovered.changed_paths);
         synchronized.changed_paths.sort();
@@ -645,6 +669,7 @@ pub fn rebuild_shared_index(user_root: &Path) -> Result<SharedIndexOutcome, Wiki
     };
     committed.changed_paths.sort();
     committed.changed_paths.dedup();
+    let registry = load_project_registry(user_root)?;
     shared_outcome_from_commit(&store, &registry, &committed)
 }
 

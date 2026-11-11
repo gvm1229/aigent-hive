@@ -21,6 +21,8 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 임계값 확인 기록의 일치 | [en](en/usage-threshold-provenance.md) | [ko](ko/usage-threshold-provenance.md) |
+| 프로젝트 지식 저장과 접근 | [en](en/project-knowledge-storage-policy.md) | [ko](ko/project-knowledge-storage-policy.md) |
 | Windows 실행 파일의 버전 문자 해석 | [en](en/windows-native-version-output.md) | [ko](ko/windows-native-version-output.md) |
 | 대화형 CLI 모델 수용과 지속 회귀 | [en](en/interactive-cli-model-qualification.md) | [ko](ko/interactive-cli-model-qualification.md) |
 | Windows 구버전 연결의 환경 전달 | [en](en/windows-legacy-bridge-environment.md) | [ko](ko/windows-legacy-bridge-environment.md) |

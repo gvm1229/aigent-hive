@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -49,6 +50,8 @@ def pe_image():
     struct.pack_into("<Q", image, 0x610, 0x140001001)
     struct.pack_into("<IIHH", image, 0x800, 0x2000, 12, 0xA000, 0)
     return image
+
+
 
 
 class LegacyUpdateImageTests(unittest.TestCase):

@@ -9,8 +9,8 @@ summary: "미출시 0.10.4 변경을 계승하는 0.11.0 리팩터링, 기존 �
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/architecture/policy-rule-inventory.md#sha256:77bd57357ba6cb08f84c1ee8908d8859514bd114951faf6abc92b67d7ef30920"
-  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:b7c7305b2d0740c52bc48d09d8c20c6bf624731b5b00e708d2354b016eb6745b"
+  - "repo:docs/architecture/policy-rule-inventory.md#sha256:bc8d431af65678302984520646b8b5b4775a915714fdde21c42a4b863a0ef32a"
+  - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:e609abd004c690bcdce2822313645ba7dd733fa9114e778c6305314c4ada0813"
 links: [artifact-boundaries, knowledge-source-freshness, orchestration-ownership]
 reviewed_revision: "git:dd4e2773e98d7acb13fa0dc77ad11167faaf23fb"
 status: active

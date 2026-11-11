@@ -15,6 +15,7 @@ Use installed Hive policy; no source-local sensor, threshold, watcher or halt fo
 hive usage enforce --target <source-root> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --output json
 ```
 
+- No runnable `hive`/user root: skip preflight, continue, report. Never create root.
 - Exit 3, limited, unknown or reset blocks dispatch. Allow exact controls, consented fallback,
   same-binding threshold recheck or fresh enforcement for a new request. Require fresh
   `hive.usage-allowed`, or exit-0 v2 (`policy_schema_version=2`, `policy_evaluated=true`) with
@@ -33,9 +34,8 @@ hive usage enforce --target <source-root> --host <active-host> --session-id <cur
   goals grant no bypass.
 - Native sensor first; CodexBar requires separate failure-fallback consent. No credentials,
   provider calls, CLI reinstall or OMX/OMC.
-- 2026-10-23 approval: two designated Windows chats, reset/5%/0% stops, app survival, direct resume.
-  Synthetic readings: source-debug fixtures only. Keep failures, opt-in and the 60-second gap;
-  never deliberately drain quota.
+- Dated approvals: `docs/decisions/usage-guard-approvals.md`. Synthetic data: debug fixtures
+  only; keep failures, opt-in, 60s gap; no drain.
 - No resume lock or acknowledgement. Stop runs present at detection once; never block or reinterrupt
   user-resumed work for that event. Official-logo notice: cause/status and close only.
   Keep cadence, deduplication, fresh sensing, thresholds and zero-quota checks.

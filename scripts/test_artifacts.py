@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 UTC = timezone.utc
 MAX_REUSE = timedelta(hours=72)
 DEFAULT_MAX_BYTES = 20 * 1024**3
+INVENTORY_SCHEMA_VERSION = 2
 BUILD_ROOTS = ("target/debug", "target/release", "target/x86_64-pc-windows-gnu")
 
 
@@ -353,23 +354,28 @@ class Manager:
     def inventory(self, relative):
         path = self.target(relative)
         if not path.exists():
-            return {"bytes": 0, "files": 0, "fingerprint": "missing"}
+            return {"inventory_schema_version": INVENTORY_SCHEMA_VERSION, "bytes": 0, "files": 0, "fingerprint": "missing"}
         entries = [path]
-        digest, size, count = hashlib.sha256(), 0, 0
+        digest, size, count = hashlib.sha256(b"artifact-inventory-v2\n"), 0, 0
         while entries:
             item = entries.pop()
             if linked(item):
                 raise ArtifactError("linked descendant refused")
             info = item.stat()
-            digest.update(f"{item.relative_to(path.parent).as_posix()}:{info.st_size}:{info.st_mtime_ns}:{info.st_ino}\n".encode())
-            if item.is_dir():
+            is_directory = stat.S_ISDIR(info.st_mode)
+            if not is_directory and not stat.S_ISREG(info.st_mode):
+                raise ArtifactError("special file refused")
+            # Windows can report the same unchanged directory as either 0 or
+            # 4096 bytes. Entries, type, time and identity still detect changes.
+            entry_size = 0 if is_directory else info.st_size
+            kind = "directory" if is_directory else "file"
+            digest.update(f"{item.relative_to(path.parent).as_posix()}:{kind}:{entry_size}:{info.st_mtime_ns}:{info.st_ino}\n".encode())
+            if is_directory:
                 entries.extend(sorted(item.iterdir(), reverse=True))
-            elif item.is_file():
+            else:
                 size += info.st_size
                 count += 1
-            else:
-                raise ArtifactError("special file refused")
-        return {"bytes": size, "files": count, "fingerprint": digest.hexdigest()}
+        return {"inventory_schema_version": INVENTORY_SCHEMA_VERSION, "bytes": size, "files": count, "fingerprint": digest.hexdigest()}
 
     def process_block(self, relative, snapshot):
         absolute = str(self.root / relative).replace("\\", "/").casefold()
@@ -439,6 +445,8 @@ class Manager:
                 if (sizes or row["status"] == "eligible") and path != "tests/work":
                     row.update(self.inventory(path))
                 if row["status"] == "eligible":
+                    if any(r.get("inventory", {}).get("inventory_schema_version") != INVENTORY_SCHEMA_VERSION for r in completed):
+                        raise ArtifactError("inventory format changed; explicit review required")
                     if any(r.get("inventory", {}).get("fingerprint") != row["fingerprint"] for r in completed):
                         raise ArtifactError("artifact changed since completion review")
                 if row["status"] == "eligible" and self.git("ls-files", "--", path).strip():

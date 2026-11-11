@@ -2230,6 +2230,79 @@ fn frozen_project_base_0_13_2(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+// Exact source baseline of public stable v0.14.0.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_14_0_without_resources,
+    "0.14.0",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_14_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_14_0_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.14.0/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" {
+                files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec());
+            }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
@@ -2249,6 +2322,21 @@ fn historical_owner_matches_detection(
                 || (native_default && matches!(host, "codex" | "claude") && owner == "host-native")
         }
         "absent" | "incompatible" | "unknown" => owner == "host-native",
+        _ => false,
+    }
+}
+
+/// Setup answers gained preference records (schema 2) in public 0.14.0. Earlier frozen
+/// releases only wrote schema 1, so schema 2 there remains an inconsistent input.
+fn historical_answers_schema_supported(version: &str, schema_version: u32) -> bool {
+    let release = version
+        .split('.')
+        .map(str::parse::<u32>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap_or_default();
+    match schema_version {
+        1 => true,
+        2 => release.as_slice() >= [0, 14, 0].as_slice(),
         _ => false,
     }
 }
@@ -2345,7 +2433,7 @@ fn frozen_project_base_0_8_or_0_9(
         &resolution.detection,
         &resolution.resolved_owner,
     );
-    let inputs_match = answers.schema_version == 1
+    let inputs_match = historical_answers_schema_supported(version, answers.schema_version)
         && harness.schema_version == 1
         && harness.harness_version == version
         && harness.source_release_version == version
@@ -6978,6 +7066,15 @@ fn io_internal(error: io::Error) -> RenderError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn frozen_answers_accept_schema_two_only_from_0_14_0() {
+        assert!(super::historical_answers_schema_supported("0.13.1", 1));
+        assert!(!super::historical_answers_schema_supported("0.13.1", 2));
+        assert!(super::historical_answers_schema_supported("0.14.0", 1));
+        assert!(super::historical_answers_schema_supported("0.14.0", 2));
+        assert!(!super::historical_answers_schema_supported("0.14.0", 3));
+    }
+
     #[test]
     fn test_project_base_retains_exact_package_identity_in_its_digest() {
         let files = std::collections::BTreeMap::from([(

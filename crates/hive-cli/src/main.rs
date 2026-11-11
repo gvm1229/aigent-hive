@@ -37,6 +37,7 @@ mod role;
 mod run;
 mod session;
 mod source_wiki;
+mod storage;
 mod update;
 mod update_activation;
 mod update_bridge;
@@ -97,6 +98,8 @@ USAGE:
     hive usage check --account-digest <sha256:...> [--threshold <0..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
     hive usage monitor preview|enable|disable|status --user-root <dir> --output json
+    hive storage [--user-root <dir>] [--output json]
+    hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
@@ -290,6 +293,8 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("hook") => run_hook(&arguments[1..]),
         Some("policy") => policy::run(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
+        Some("storage") => storage::run_storage(&arguments[1..]),
+        Some("prune") => storage::run_prune(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),

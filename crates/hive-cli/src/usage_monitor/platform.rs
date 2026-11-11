@@ -81,6 +81,62 @@ pub(super) fn command_scoped(script: &str, scope: Option<&str>) -> Result<Comman
 
 /// Every invocation is bounded; model calls and credentials are never accepted here.
 pub(super) fn call(request: &Value, timeout: Duration) -> Result<Value, AdapterError> {
+    // Name the failed step without copying native error text into durable state.
+    let operation = adapter_operation(request);
+    call_inner(request, timeout).map_err(|failure| labelled(&failure, operation))
+}
+
+fn adapter_operation(request: &Value) -> &'static str {
+    match request["operation"].as_str() {
+        Some("inspect") => "inspect",
+        Some("register") => "register",
+        Some("start") => "start",
+        Some("inspect-task") => "inspect-task",
+        Some("unregister") => "unregister",
+        Some("stop") => "stop",
+        _ => "other",
+    }
+}
+
+fn labelled(failure: &AdapterError, operation: &str) -> AdapterError {
+    let message = format!("{} during {operation}", failure.message());
+    match failure {
+        AdapterError::Input(_) => AdapterError::Input(message),
+        AdapterError::Safety(_) => AdapterError::Safety(message),
+        AdapterError::Conflict(_) => AdapterError::Conflict(message),
+        AdapterError::UpdateRecoveryRequired(_) => AdapterError::UpdateRecoveryRequired(message),
+        AdapterError::OwnerBlocked(_) => AdapterError::OwnerBlocked(message),
+        AdapterError::Unsupported(_) => AdapterError::Unsupported(message),
+        AdapterError::OwnerUnsupported(_) => AdapterError::OwnerUnsupported(message),
+        AdapterError::Verification(_) => AdapterError::Verification(message),
+        AdapterError::Internal(_) => AdapterError::Internal(message),
+        AdapterError::Rollback(_) => AdapterError::Rollback(message),
+    }
+}
+
+#[cfg(test)]
+mod operation_label_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn adapter_failures_name_the_step_without_native_text() {
+        let failure = labelled(
+            &AdapterError::Verification("Windows monitor adapter failed".to_owned()),
+            adapter_operation(&json!({"operation":"inspect"})),
+        );
+        assert_eq!(
+            failure.message(),
+            "Windows monitor adapter failed during inspect"
+        );
+        assert_eq!(
+            adapter_operation(&json!({"operation":"unknown-op"})),
+            "other"
+        );
+    }
+}
+
+fn call_inner(request: &Value, timeout: Duration) -> Result<Value, AdapterError> {
     let mut child = command(SCRIPT)?
         .spawn()
         .map_err(|_| failure("cannot start Windows monitor adapter"))?;

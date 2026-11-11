@@ -31,7 +31,7 @@
 | A5: 원격 규칙 누락 | GitHub 실제 규칙 2개 모두 `main`·`develop` 각각에만 적용; 조사 대상 브랜치의 적용 규칙 조회 결과 0개 | 새 이름의 원격 생성·게시를 막는 규칙 부재 |
 | A6: 예외 충돌 | 지침과 안내의 승인된 단독 `staging` 허용 | 최신 사용자 요구인 두 기본 브랜치 외 작업 종류 접두사와 충돌 |
 | A7: 회귀 시험 공백 | [정적 계약](../../tests/conformance/contracts/test_static_contracts.py)의 병합 경로 문장 검사만 존재 | `codex/` 거부·유효 이름 허용·실제 생성 무변경을 증명하는 시험 부재 |
-| A8: 잘못된 이름의 현재 문서 전파 | [PLAN](../plans/PLAN.md), [CURRENT](../state/CURRENT.md), [리팩터링 총괄](../plans/active/refactor-foundations.md)의 동일 금지 이름 | 다음 작업에서 정상 이름처럼 재사용할 위험 |
+| A8: 잘못된 이름의 현재 문서 전파 | [PLAN](../plans/PLAN.md), [CURRENT](../state/CURRENT.md), [리팩터링 총괄](../archive/plans/refactor-foundations.md)의 동일 금지 이름 | 다음 작업에서 정상 이름처럼 재사용할 위험 |
 
 생성 경위: `develop@87b84f42` → `codex/refactor-hive-foundations` 전환 → `5829f07a`·`119a4058` 계획 커밋. 조사 시 로컬은 두 기본 브랜치와 문제 브랜치, GitHub 원격은 `main`·`develop`만 존재. 현재 문제 브랜치의 원격 게시 근거 없음.
 

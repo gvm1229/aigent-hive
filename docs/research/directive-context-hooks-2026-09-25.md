@@ -21,7 +21,7 @@
 - [등록기](../../crates/hive-cli/src/policy/configure.rs): 시작·편집 전·종료 이벤트 등록. 별도 문맥 세대별 복구 상태나 예산 부재
 - [보조 훅](../../crates/hive-cli/src/main.rs)의 `checkpoint_reminder`: 압축 전 기록 존재 안내. 전체 지침 복원과 구분
 - [정책 목록](../architecture/policy-rule-inventory.md): 이미 규칙과 실제 검사 위치를 구분. 기존 목록·판정기를 확장하는 방향 우선
-- [문맥 유효성 계획](../plans/active/refactor-context-hosts.md)의 RFK-002: 원본 지식의 최신성 검사. 모델의 현재 문맥에 지침이 남았다는 증명과 별개
+- [문맥 유효성 계획](../archive/plans/refactor-context-hosts.md)의 RFK-002: 원본 지식의 최신성 검사. 모델의 현재 문맥에 지침이 남았다는 증명과 별개
 - 소스 AGENTS.md와 지침 9개 합계 57,386 UTF-8 바이트. 현재 모델 입력량이나 소비 토큰의 측정값은 아닌 파일 목록 합계
 - 현재 소스 폴더의 Codex 프로젝트 훅 설정·등록 영수증 부재. 이 조사는 실제 훅 활성화나 반복 압축 시험을 수행하지 않은 범위
 

@@ -1,0 +1,674 @@
+{
+  "source_tag_commit": "e17b400be19979c421be82acdf6e496139f60173",
+  "source_head": "dd581c30013516a6649e74e3c0d80bf7d46cb278",
+  "binary_sha256": "sha256:7a2b66d135015b822ad546ad2c8d959715ab01cc72e123b07084bf55cdfe8af1",
+  "platform": "Windows 11 x64 10.0.26300; Codex; PowerShell",
+  "synthetic_only": true,
+  "total_recorded_cases": 79,
+  "observation": "ReadDirectoryChangesW; 64KiB; recursive; overflow/error fatal",
+  "cases": [
+    {
+      "case": "fresh-project-a",
+      "code": "hive.setup-complete",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/projects.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/config/setup-apply.lock",
+        ".hive/config/setup-progress/locks/<synthetic-target>.lock",
+        ".hive/config/setup-progress/projects/<synthetic-target>.yml",
+        ".hive/history/lifecycle/<synthetic-target>.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 107,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "no-user-root",
+      "code": "hive.knowledge-verification-failed",
+      "exit": 5,
+      "attachment_changes": [],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "empty-user-root",
+      "code": "hive.knowledge-verification-failed",
+      "exit": 5,
+      "attachment_changes": [],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "global-read",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 1,
+      "attachment_changes": [],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "session-begin",
+      "code": "hive.session-begun",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "session-check",
+      "code": "hive.session-clear",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "session-update",
+      "code": "hive.session-updated",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "session-close",
+      "code": "hive.session-closed",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "setup-status",
+      "code": "hive.project-setup-shown",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "setup-validate",
+      "code": "hive.setup-valid",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "query-detached",
+      "code": "hive.knowledge-query-complete",
+      "exit": 0,
+      "hit_count": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "retrieve-detached",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 1,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "lint-detached",
+      "code": "hive.knowledge-lint-passed",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "graph-status",
+      "code": "hive.knowledge-graph-status",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "restart-fresh-process",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 1,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "index-rebuild",
+      "code": "hive.index-rebuilt",
+      "exit": 0,
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 47,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false,
+      "selected_hashes": {
+        ".hive/config/collections.yml": [
+          "sha256:f423d4b97d7b72154068d9ba5d398f5bbcefd45a48bb3fe63cc2ef1be3162abe",
+          "sha256:0d9bfff10d937b171c03ab40997184e971bf6507753547ca372f29a1485ec5ae"
+        ],
+        ".hive/config/rag-trust.json": [
+          "sha256:efc751ef4128629261a3c49ca4ee8b198b7a917154fa52d7f2b7a8bb07972d55",
+          "sha256:1fb1ea409dd3b18f0e3453e917753be3472b8ad459e061165857186cf21b34cc"
+        ],
+        ".hive/index/hive.sqlite3": [
+          "sha256:bbdb24f61f9d45e7585c0ebbcc02859fbcbe269dcca56aed1df5e5fb2efba3e9",
+          "sha256:685804679216a2e8070553d5a1b85cacff424a485ce4de1b2a881526b4e51cb8"
+        ],
+        ".hive/index/rag-generation.json": [
+          "sha256:28c988fe3a22d032a14e0a1a9fa75f08d9ae8c66463284f52cd79ecc5f47f4c4",
+          "sha256:3390315704ca38f5b28541582d3262fca13d1c886b120a564aad5a35a1f5d281"
+        ]
+      }
+    },
+    {
+      "case": "refresh",
+      "code": "hive.knowledge-refreshed",
+      "exit": 0,
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 47,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "setup-reapply",
+      "code": "hive.setup-complete",
+      "exit": 0,
+      "attachment_changes": [],
+      "attached_count": 2,
+      "detached_count": 1,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "remember-existing-global-noop",
+      "code": "hive.knowledge-remembered",
+      "exit": 0,
+      "disposition": "noop",
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 3,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 42,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "setup-other-new-project",
+      "code": "hive.setup-complete",
+      "exit": 0,
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/projects.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/config/setup-progress/locks/<synthetic-target>.lock",
+        ".hive/config/setup-progress/projects/<synthetic-target>.yml",
+        ".hive/history/lifecycle/<synthetic-target>.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 96,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "failed-ingest-detached",
+      "code": "hive.knowledge-invalid-input",
+      "exit": 2,
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 44,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "project-remember",
+      "code": "hive.knowledge-remembered",
+      "exit": 0,
+      "disposition": "insert",
+      "attachment_changes": [],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json",
+        ".hive/knowledge/Claims/<project-collection>/claim-5a6635cc52a5f5ee31337d860a6c7804b30d7d04d834762d0b718b4e590c71b5.md"
+      ],
+      "filesystem_event_count": 43,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "duplicate-review",
+      "code": "hive.knowledge-remembered",
+      "exit": 0,
+      "disposition": "noop",
+      "attachment_changes": [],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "correct-reviewed-preference",
+      "code": "hive.knowledge-remembered",
+      "exit": 0,
+      "disposition": "supersede",
+      "attachment_changes": [],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json",
+        ".hive/knowledge/Claims/<project-collection>/claim-5a6635cc52a5f5ee31337d860a6c7804b30d7d04d834762d0b718b4e590c71b5.md",
+        ".hive/knowledge/Claims/<project-collection>/claim-a8746cd831379b44c6b4336d1e368b47987a73f314d1205502127b3afae1ef29.md"
+      ],
+      "filesystem_event_count": 47,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "own-retrieval",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 1,
+      "attachment_changes": [],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "unrelated-retrieval",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 0,
+      "attachment_changes": [],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "ingest-detached",
+      "code": "hive.knowledge-ingested",
+      "exit": 0,
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0,
+      "persistent_changes": [
+        ".hive/config/collections.yml",
+        ".hive/config/rag-trust.json",
+        ".hive/index/hive.sqlite3",
+        ".hive/index/rag-generation.json"
+      ],
+      "filesystem_event_count": 69,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "concurrent-rebuild-read-0",
+      "codes": [
+        "hive.index-rebuilt",
+        "hive.knowledge-retrieved"
+      ],
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-rebuild-read-1",
+      "codes": [
+        "hive.index-rebuilt",
+        "hive.knowledge-retrieved"
+      ],
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-rebuild-read-2",
+      "codes": [
+        "hive.index-rebuilt",
+        "hive.knowledge-retrieved"
+      ],
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-rebuild-read-3",
+      "codes": [
+        "hive.index-rebuilt",
+        "hive.knowledge-retrieved"
+      ],
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-rebuild-read-4",
+      "codes": [
+        "hive.index-rebuilt",
+        "hive.knowledge-retrieved"
+      ],
+      "attachment_changes": [
+        {
+          "before": "detached",
+          "after": "attached"
+        }
+      ],
+      "attached_count": 4,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-status-read-0",
+      "codes": [
+        "hive.project-setup-shown",
+        "hive.knowledge-retrieved"
+      ],
+      "attached_count": 3,
+      "detached_count": 1
+    },
+    {
+      "case": "concurrent-status-read-1",
+      "codes": [
+        "hive.project-setup-shown",
+        "hive.knowledge-retrieved"
+      ],
+      "attached_count": 3,
+      "detached_count": 1
+    },
+    {
+      "case": "concurrent-status-read-2",
+      "codes": [
+        "hive.project-setup-shown",
+        "hive.knowledge-retrieved"
+      ],
+      "attached_count": 3,
+      "detached_count": 1
+    },
+    {
+      "case": "concurrent-status-read-3",
+      "codes": [
+        "hive.project-setup-shown",
+        "hive.knowledge-retrieved"
+      ],
+      "attached_count": 3,
+      "detached_count": 1
+    },
+    {
+      "case": "concurrent-status-read-4",
+      "codes": [
+        "hive.project-setup-shown",
+        "hive.knowledge-retrieved"
+      ],
+      "attached_count": 3,
+      "detached_count": 1
+    },
+    {
+      "case": "concurrent-detach-register-0",
+      "codes": [
+        "hive.knowledge-collection-detached",
+        "hive.setup-complete"
+      ],
+      "attached_count": 5,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-detach-register-1",
+      "codes": [
+        "hive.knowledge-collection-detached",
+        "hive.setup-complete"
+      ],
+      "attached_count": 6,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-detach-register-2",
+      "codes": [
+        "hive.knowledge-collection-detached",
+        "hive.setup-complete"
+      ],
+      "attached_count": 7,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-detach-register-3",
+      "codes": [
+        "hive.knowledge-collection-detached",
+        "hive.setup-complete"
+      ],
+      "attached_count": 8,
+      "detached_count": 0
+    },
+    {
+      "case": "concurrent-detach-register-4",
+      "codes": [
+        "hive.knowledge-collection-detached",
+        "hive.setup-complete"
+      ],
+      "attached_count": 9,
+      "detached_count": 0
+    },
+    {
+      "case": "missing-global-index",
+      "code": "hive.knowledge-verification-failed",
+      "exit": 5,
+      "attachment_changes": [],
+      "attached_count": 9,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 0,
+      "observed_lock_create_and_remove": false,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "corrupt-global-index",
+      "code": "hive.knowledge-verification-failed",
+      "exit": 5,
+      "attachment_changes": [],
+      "attached_count": 9,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "dirty-global",
+      "code": "hive.knowledge-verification-failed",
+      "exit": 5,
+      "attachment_changes": [],
+      "attached_count": 9,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "final-global-read",
+      "code": "hive.knowledge-retrieved",
+      "exit": 0,
+      "hit_count": 1,
+      "attachment_changes": [],
+      "attached_count": 9,
+      "detached_count": 0,
+      "persistent_changes": [],
+      "filesystem_event_count": 6,
+      "observed_lock_create_and_remove": true,
+      "observed_sqlite_sidecar": false
+    },
+    {
+      "case": "physical-location-audit",
+      "project_local_index_exists": false,
+      "global_sqlite_project_rows": {
+        "documents": 1,
+        "claims": 2,
+        "chunks": 2
+      },
+      "global_canonical_project_claims": 2,
+      "local_canonical_wiki": true
+    }
+  ],
+  "filesystem_event_count_semantics": "Distinct (action, relative path) pairs; repeated notifications coalesced; not a count of write syscalls"
+}

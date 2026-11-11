@@ -8,7 +8,7 @@ use crate::run::{AdapterError, PinnedTarget};
 use hive_core::sha256_digest;
 use serde_json::{json, Value};
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     thread,
     time::{Duration, Instant},
 };
@@ -86,6 +86,129 @@ pub(super) fn owned_binary_relative(
         }
     }
     Err(error("monitor executable escaped its owned bin directory"))
+}
+
+/// Keep only the current and the directly previous version-bound monitor executables.
+///
+/// Cleanup never fails an update. A file that cannot be read or removed exactly (for example a
+/// running or locked executable on Windows) stays in place and is reported as skipped. When the
+/// update reused the same executable, the previous record's source executable stays too.
+pub(super) fn prune_binaries(
+    root: &PinnedTarget,
+    current: &Configuration,
+    previous: &Configuration,
+    prior_source: Option<&Path>,
+) -> Value {
+    let mut executables = vec![current.executable.as_path(), previous.executable.as_path()];
+    if current.executable == previous.executable {
+        executables.extend(prior_source);
+    }
+    match retained_binaries(root, &executables) {
+        Ok(keep) => prune_binaries_with(root, &keep, false, PinnedTarget::remove_runtime),
+        Err(failure) => json!({"kept":[],"removed":[],"skipped":[],
+            "error":format!("cleanup skipped: {}", failure.message())}),
+    }
+}
+
+/// Resolve every executable that must stay; an unresolvable one stops the cleanup.
+fn retained_binaries(
+    root: &PinnedTarget,
+    executables: &[&Path],
+) -> Result<Vec<PathBuf>, AdapterError> {
+    executables
+        .iter()
+        .map(|executable| owned_binary_relative(root, executable))
+        .collect()
+}
+
+/// Preview or remove monitor executables that neither the saved configuration nor the last
+/// update record uses. Missing or unreadable records refuse cleanup instead of guessing.
+pub(crate) fn prune_unused(user_root: &Path, confirm: bool) -> Result<Value, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let bin = Path::new(BASE).join("bin");
+    let present = match root.target_dir().read_dir(&bin) {
+        Ok(mut entries) => entries.next().is_some(),
+        Err(failure) if failure.kind() == std::io::ErrorKind::NotFound => false,
+        Err(failure) => {
+            return Err(error(&format!(
+                "cannot list monitor executables: {failure}"
+            )));
+        }
+    };
+    if !present {
+        return Ok(json!({"kept":[],"removed":[],"skipped":[],"candidates":[],"error":null}));
+    }
+    let _control = lock(&root, "control.lock")?;
+    let config: Configuration = load(&root, CONFIG)?.ok_or_else(|| {
+        error("monitor configuration is missing; no executable cleanup without a current record")
+    })?;
+    let journal: Option<Value> = load(&root, JOURNAL)?;
+    let mut executables = vec![config.executable.clone()];
+    if let Some(journal) = &journal {
+        for side in ["from", "to"] {
+            if let Some(path) = journal[side]["executable"].as_str() {
+                executables.push(PathBuf::from(path));
+            }
+        }
+    }
+    let borrowed: Vec<&Path> = executables.iter().map(PathBuf::as_path).collect();
+    let keep = retained_binaries(&root, &borrowed)?;
+    Ok(prune_binaries_with(
+        &root,
+        &keep,
+        !confirm,
+        PinnedTarget::remove_runtime,
+    ))
+}
+
+fn prune_binaries_with(
+    root: &PinnedTarget,
+    keep: &[PathBuf],
+    dry_run: bool,
+    remove: impl Fn(&PinnedTarget, &Path, &crate::run::FileSnapshot) -> Result<bool, AdapterError>,
+) -> Value {
+    let bin = Path::new(BASE).join("bin");
+    let entries = match root.target_dir().read_dir(&bin) {
+        Ok(entries) => entries,
+        Err(failure) => {
+            return json!({"kept":keep,"removed":[],"skipped":[],"candidates":[],
+                "error":format!("cannot list monitor executables: {failure}")});
+        }
+    };
+    let mut names = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let is_file = entry.file_type().is_ok_and(|kind| kind.is_file());
+        let is_exe = Path::new(&name)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"));
+        if is_file && is_exe && name.starts_with("hive-") {
+            names.push(name);
+        }
+    }
+    names.sort();
+    let (mut removed, mut skipped, mut candidates) = (Vec::new(), Vec::new(), Vec::new());
+    for name in names {
+        let relative = bin.join(&name);
+        if keep.contains(&relative) {
+            continue;
+        }
+        let snapshot = root.snapshot_bounded(&relative, 128 * 1024 * 1024);
+        if dry_run {
+            match snapshot {
+                Ok(snapshot) => candidates.push(json!({"path":relative,
+                    "bytes":snapshot.bytes().map_or(0, <[u8]>::len)})),
+                Err(failure) => skipped.push(json!({"path":relative,"reason":failure.message()})),
+            }
+            continue;
+        }
+        match snapshot.and_then(|snapshot| remove(root, &relative, &snapshot)) {
+            Ok(true) => removed.push(relative),
+            Ok(false) => skipped.push(json!({"path":relative,"reason":"changed or missing"})),
+            Err(failure) => skipped.push(json!({"path":relative,"reason":failure.message()})),
+        }
+    }
+    json!({"kept":keep,"removed":removed,"skipped":skipped,"candidates":candidates,"error":null})
 }
 
 fn upgrade_with(
@@ -221,6 +344,9 @@ fn upgrade_with_choice(
     let mut next = configuration(root.requested_path())?;
     let old: Configuration =
         load(root, CONFIG)?.ok_or_else(|| error("monitor configuration missing"))?;
+    // The previous update record names the executable before a same-version re-run.
+    let prior_source = load::<Value>(root, JOURNAL)?
+        .and_then(|journal| journal["from"]["executable"].as_str().map(PathBuf::from));
     next.enabled = setup_operation.is_some() || old.enabled;
     authenticate_previous(root, &old, &next)?;
     let manifest: Value = load(root, ".hive/install/codex.json")?
@@ -288,13 +414,16 @@ fn upgrade_with_choice(
         } else {
             json!({"enabled":false})
         };
+        // Keep the current and directly previous executables; skip running or locked files.
+        let cleanup = prune_binaries(root, &next, &old, prior_source.as_deref());
         journal["phase"] = json!("complete");
         journal["completed_at"] = json!(now());
+        journal["binary_cleanup"] = cleanup.clone();
         write(root, JOURNAL, &journal)?;
         Ok(
             json!({"enabled":next.enabled,"version":next.version,"executable":next.executable,
             "task_replaced":old.enabled || next.enabled,"history_preserved":true,"health":health,
-            "changed_paths":[CONFIG,JOURNAL,next.executable]}),
+            "binary_cleanup":cleanup,"changed_paths":[CONFIG,JOURNAL,next.executable]}),
         )
     })();
     if let Err(failure) = &operation {
@@ -493,6 +622,179 @@ mod tests {
         })
         .unwrap();
         (directory, root)
+    }
+
+    fn seed_binaries(root: &PinnedTarget, names: &[&str]) {
+        let bin = root.requested_path().join(BASE).join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        for name in names {
+            std::fs::write(bin.join(name), name.as_bytes()).unwrap();
+        }
+    }
+
+    fn binary_names(root: &PinnedTarget) -> Vec<String> {
+        let mut names: Vec<String> =
+            std::fs::read_dir(root.requested_path().join(BASE).join("bin"))
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn manual_prune_refuses_without_a_readable_current_record() {
+        let (directory, root) = fixture(false);
+        seed_binaries(&root, &["hive-a.exe", "hive-old.exe"]);
+        let config = directory.path().join(CONFIG);
+        std::fs::write(&config, b"{not json").unwrap();
+        assert!(prune_unused(directory.path(), true).is_err());
+        std::fs::remove_file(&config).unwrap();
+        assert!(prune_unused(directory.path(), true).is_err());
+        assert_eq!(binary_names(&root), ["hive-a.exe", "hive-old.exe"]);
+    }
+
+    #[test]
+    fn manual_prune_previews_then_keeps_recorded_executables() {
+        let (directory, root) = fixture(false);
+        let bin = root.requested_path().join(BASE).join("bin");
+        seed_binaries(
+            &root,
+            &[
+                "hive-a.exe",
+                "hive-b.exe",
+                "hive-old.exe",
+                "hive-prior.exe",
+                "hive-next.exe",
+            ],
+        );
+        write(
+            &root,
+            JOURNAL,
+            &json!({"from":{"executable":bin.join("hive-prior.exe")},
+                "to":{"executable":bin.join("hive-next.exe")}}),
+        )
+        .unwrap();
+        let before = binary_names(&root);
+        let preview = prune_unused(directory.path(), false).unwrap();
+        assert_eq!(binary_names(&root), before);
+        assert_eq!(preview["candidates"].as_array().unwrap().len(), 2);
+        let applied = prune_unused(directory.path(), true).unwrap();
+        assert_eq!(applied["removed"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            binary_names(&root),
+            ["hive-next.exe", "hive-old.exe", "hive-prior.exe"]
+        );
+    }
+
+    #[test]
+    fn same_version_rerun_keeps_the_prior_source_executable() {
+        let (_directory, root) = fixture(false);
+        let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let prior = root.requested_path().join(BASE).join("bin/hive-prior.exe");
+        seed_binaries(&root, &["hive-a.exe", "hive-old.exe", "hive-prior.exe"]);
+        prune_binaries(&root, &current, &current, Some(prior.as_path()));
+        assert_eq!(binary_names(&root), ["hive-old.exe", "hive-prior.exe"]);
+    }
+
+    #[test]
+    fn binary_cleanup_keeps_only_current_and_previous_executables() {
+        let (_directory, root) = fixture(false);
+        let previous: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let mut current = previous.clone();
+        current.executable = root.requested_path().join(BASE).join("bin/hive-new.exe");
+        seed_binaries(
+            &root,
+            &[
+                "hive-a.exe",
+                "hive-b.exe",
+                "hive-c.exe",
+                "hive-old.exe",
+                "hive-new.exe",
+            ],
+        );
+        std::fs::write(
+            root.requested_path().join(BASE).join("bin/notes.txt"),
+            b"foreign",
+        )
+        .unwrap();
+
+        let report = prune_binaries(&root, &current, &previous, None);
+
+        assert_eq!(
+            binary_names(&root),
+            ["hive-new.exe", "hive-old.exe", "notes.txt"]
+        );
+        assert_eq!(report["removed"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            report["skipped"].as_array().unwrap().as_slice(),
+            &[] as &[Value]
+        );
+        assert!(report["error"].is_null());
+    }
+
+    #[test]
+    fn binary_cleanup_skips_running_or_locked_files_and_reports_them() {
+        let (_directory, root) = fixture(false);
+        let previous: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let mut current = previous.clone();
+        current.executable = root.requested_path().join(BASE).join("bin/hive-new.exe");
+        seed_binaries(
+            &root,
+            &[
+                "hive-a.exe",
+                "hive-running.exe",
+                "hive-old.exe",
+                "hive-new.exe",
+            ],
+        );
+
+        let keep = retained_binaries(&root, &[&current.executable, &previous.executable]).unwrap();
+        let report = prune_binaries_with(&root, &keep, false, |root, relative, snapshot| {
+            if relative.ends_with("hive-running.exe") {
+                return Err(error("file is in use"));
+            }
+            root.remove_runtime(relative, snapshot)
+        });
+
+        assert_eq!(
+            binary_names(&root),
+            ["hive-new.exe", "hive-old.exe", "hive-running.exe"]
+        );
+        let skipped = report["skipped"].as_array().unwrap();
+        assert_eq!(skipped.len(), 1);
+        assert!(skipped[0]["reason"].as_str().unwrap().contains("in use"));
+    }
+
+    #[test]
+    fn binary_cleanup_failure_leaves_existing_files_unchanged() {
+        let (_directory, root) = fixture(false);
+        let previous: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        let mut current = previous.clone();
+        current.executable = root.requested_path().join(BASE).join("bin/hive-new.exe");
+        seed_binaries(
+            &root,
+            &["hive-a.exe", "hive-b.exe", "hive-old.exe", "hive-new.exe"],
+        );
+        let before = binary_names(&root);
+
+        let keep = retained_binaries(&root, &[&current.executable, &previous.executable]).unwrap();
+        let report = prune_binaries_with(&root, &keep, false, |_, _, _| {
+            Err(error("injected removal failure"))
+        });
+
+        assert_eq!(binary_names(&root), before);
+        assert_eq!(report["skipped"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            report["removed"].as_array().unwrap().as_slice(),
+            &[] as &[Value]
+        );
+        for name in &before {
+            assert_eq!(
+                std::fs::read(root.requested_path().join(BASE).join("bin").join(name)).unwrap(),
+                name.as_bytes()
+            );
+        }
     }
 
     #[test]

@@ -10,7 +10,7 @@ tags: [codex, skill, update]
 aliases: ["스킬 중복", "자동 정리"]
 sources:
   - "repo:crates/hive-render/src/skill_delivery.rs#sha256:89274e89fafa3a325edf96917faa943f25bd8531675c5a0ac3fec50fa4b09ecf"
-  - "repo:docs/decisions/ADR-0024-codex-skill-delivery.md#sha256:9e4511247d0ed17075ec0b9b6435a612448c18e341fa4fd628c41d91688bc720"
+  - "repo:docs/decisions/ADR-0024-codex-skill-delivery.md#sha256:670cfb990aa37bdc659afe890f601b5740954a7c69fb16d4223cb8e541279097"
   - "repo:docs/research/wproject-custom-ship-0.11.1.md#sha256:bfc275b9392b1ba2fcac66b3217f40a77a9d2fff264bf67ba3d172ad2da23004"
   - "repo:tests/results/legacy/7d159c3524fa28e6fde6.md#sha256:6d07e8da05964857e1e492e6ea596cdc6567947c998ddc39dbcd0bd60ede8bab"
   - "repo:tests/results/legacy/f41c995a82c3db97f0a4.md#sha256:e19a2a3862f6936c502a46ebb443b99d3df992385d79b26e14856a52526e4193"

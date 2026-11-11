@@ -456,6 +456,16 @@ class KnowledgeSchemaConformanceTests(unittest.TestCase):
         instance = collection_registry()
         self.assert_valid(name, instance)
 
+        detached = copy.deepcopy(instance)
+        project = next(c for c in detached["collections"] if c["kind"] != "user-root")
+        project["state"] = "detached"
+        project.pop("local_locator", None)
+        project["explicitly_detached"] = True
+        self.assert_valid(name, detached)
+        project["state"] = "attached"
+        project["local_locator"] = "/tmp/project"
+        self.assert_invalid(name, detached)
+
         hostile = copy.deepcopy(instance)
         hostile["runtime_path"] = "C:\\leak"
         self.assert_invalid(name, hostile)

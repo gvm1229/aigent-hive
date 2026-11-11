@@ -48,4 +48,4 @@
 
 - [구현 계약](../architecture/vector-search.md)
 - [기존 실측·실패 기록](vector-product-integration-2026-08-28.md)
-- [활성 벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
+- [활성 벡터 계획](../archive/plans/hybrid-vector-search-0.10.0.md)

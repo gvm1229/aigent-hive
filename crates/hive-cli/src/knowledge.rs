@@ -44,11 +44,11 @@ use hive_wiki::store::{
 };
 use hive_wiki::{
     activate_generation, build_graph as build_consumer_graph, delete_page, delete_page_shared,
-    ensure_graph_owned_path, export_generation, generation_relative_path, ingest, ingest_shared,
-    lint, list_pages, load_active_generation, normalize_graphify_code, promote, promote_shared,
-    query_filtered, query_generation, query_node_metadata, read_page, rebuild_index,
-    remove_active_generation, suppress, suppress_shared, LintIssue, LintSeverity,
-    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
+    ensure_graph_owned_path, export_generation, generation_relative_path, ingest, lint, list_pages,
+    load_active_generation, normalize_graphify_code, promote, promote_shared, query_filtered,
+    query_generation, query_node_metadata, read_page, rebuild_index, remove_active_generation,
+    suppress, suppress_shared, LintIssue, LintSeverity, PromotionCategory, PromotionMode,
+    SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -1849,8 +1849,7 @@ fn read_json_bounded<T: for<'de> Deserialize<'de>>(
 
 fn ensure_rag_registry(user_root: &Path, store: &RagStore) -> Result<StoreCommit, WikiError> {
     let project_registry = ensure_project_registry(user_root)?;
-    let projects = load_project_registry(user_root)?;
-    let mut commit = store.sync_project_registry(&projects)?;
+    let mut commit = hive_wiki::shared::sync_current_project_registry(user_root, store)?;
     commit.changed_paths.extend(project_registry.changed_paths);
     commit.changed_paths.sort();
     commit.changed_paths.dedup();
@@ -3123,16 +3122,21 @@ fn run_ingest(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     if shared.is_none() {
         authorize_legacy_target(&target)?;
     }
+    // Check input and credential safety before shared preparation can change any state.
+    let checked_input = shared
+        .as_ref()
+        .map(|_| hive_wiki::prepare_ingest(&source, &wiki))
+        .transpose()?;
     let prepared = shared
         .as_ref()
         .map(prepare_shared_mutation)
         .transpose()?
         .unwrap_or_default();
-    let outcome = if let Some(shared) = &shared {
-        ingest_shared(
+    let outcome = if let (Some(shared), Some(checked_input)) = (&shared, &checked_input) {
+        hive_wiki::ingest_shared_prepared(
             &target,
             &source,
-            &wiki,
+            checked_input,
             &shared.user_root,
             &shared.namespace,
         )?
@@ -5404,6 +5408,57 @@ mod tests {
             queried.data.expect("query data")["hits"][0]["page_id"],
             "global-commit-convention"
         );
+    }
+
+    #[test]
+    fn rejected_ingest_input_leaves_shared_state_unprepared() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        ensure_project_registry(user.path()).expect("project registry");
+        let source = user.path().join("secret-source.md");
+        let draft = user.path().join("secret-draft.md");
+        fs::write(&source, "token ghp_examplesecretvalue1234567890").expect("source");
+        fs::write(
+            &draft,
+            wiki_draft("blocked-secret", "workflow", "Never stored."),
+        )
+        .expect("draft");
+        let registry = user
+            .path()
+            .join(hive_wiki::store::COLLECTION_REGISTRY_RELATIVE);
+        let index = user.path().join(SHARED_INDEX_RELATIVE);
+        assert!(!registry.exists());
+
+        let Err(error) = run_add(&add_arguments(
+            user.path(),
+            user.path(),
+            &source,
+            &draft,
+            false,
+        )) else {
+            panic!("credential-like source was accepted");
+        };
+
+        assert!(
+            error
+                .to_string()
+                .to_ascii_lowercase()
+                .contains("credential"),
+            "{error}"
+        );
+        assert!(
+            !registry.exists(),
+            "shared preparation ran before input checks"
+        );
+        assert!(
+            !index.exists(),
+            "shared index was prepared for rejected input"
+        );
+        assert!(!user
+            .path()
+            .join(hive_wiki::store::RAG_DIRTY_RELATIVE)
+            .exists());
     }
 
     #[test]

@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 현재 실행 | [`PLAN.md`](PLAN.md) | 예 |
 | 버전 미지정 후보 | [`backlog/README.md`](backlog/README.md) | 아니요 |
+| 재정비 할 일 | [`overhaul/README.md`](overhaul/README.md) | 아니요 |
 | 완료·대체 기록 | [`../archive/README.md`](../archive/README.md) | 아니요 |
 | 외부 참고 | [`references.md`](references.md) | 아니요 |
 

@@ -4989,6 +4989,7 @@ mod tests {
                 .then(|| std::env::temp_dir().display().to_string()),
             source_project_id: Some(format!("project-{alias}")),
             default_visibility: visibility,
+            explicitly_detached: false,
         }
     }
 
@@ -5004,6 +5005,7 @@ mod tests {
                     local_locator: Some(std::env::temp_dir().display().to_string()),
                     source_project_id: None,
                     default_visibility: CollectionVisibility::Shared,
+                    explicitly_detached: false,
                 },
                 project_collection("alpha", CollectionState::Attached),
                 project_collection_with_visibility(

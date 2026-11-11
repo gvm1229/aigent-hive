@@ -2,7 +2,7 @@
 
 > 기준일: 2026-09-25
 > 대상: 현재 제품 목표 0.11.0
-> 상태: 초기 설계 기록. 2026-09-27 승인 범위의 [실행 기준](active/directive-context-recovery-0.11.0.md) 완료
+> 상태: 초기 설계 기록. 2026-09-27 승인 범위의 [실행 기준](../archive/plans/directive-context-recovery-0.11.0.md) 완료
 > 근거: [공식 자료·저장소 조사](../research/directive-context-hooks-2026-09-25.md)
 
 ## 목표와 범위

@@ -1,5 +1,7 @@
 # 버전 미지정 후속 목록
 
+> 검토일: 2026-11-10
+
 현재 대기 항목과 활성 계획으로 옮기거나 종료한 후보의 색인. [2026-10-05 결정](../../decisions/ADR-0025-0.11.2-scope.md) 기준.
 
 ## 대기
@@ -8,8 +10,9 @@
 
 | 항목 | 상태 | 재개 조건 |
 | --- | --- | --- |
-| [Claude 실제 호스트·사용량 검증](claude-host-acceptance.md) | 실행 환경 대기 | 사용 가능한 Claude 환경 확보와 미래 범위 편입 |
+| [Claude 실제 호스트·사용량 검증](claude-host-acceptance.md) | 실제 실행 근거 대기 | 재정비 단계 2 `OVX-005`–`OVX-007`의 Claude Code 창 실행 근거와 미래 범위 편입 |
 | [게시자 서명](platform-signing.md) | 외부 승인 대기 | 승인된 인증서·안전한 CI 서명 환경 |
+| [미완료 감시 갱신 복구](monitor-upgrade-recovery.md) | Windows 재현 대기 | 격리 Windows 재현 또는 이 PC 갱신의 실패 단계 확인 |
 
 ## 0.11.2 편입
 

@@ -112,5 +112,6 @@ modules = [
   "tests.conformance.release.test_stable_release_discord_notification",
   "tests.conformance.release.test_test_release_gate",
   "tests.conformance.release.test_stable_skill_ledger",
+  "tests.conformance.release.test_fixture_product_version",
   "tests.conformance.release.test_update_discovery",
 ]

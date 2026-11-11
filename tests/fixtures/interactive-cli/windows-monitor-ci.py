@@ -30,7 +30,7 @@ if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS"
 
 public_package = os.environ.get("HIVE_PUBLIC_PACKAGE_VERSION")
 if public_package:
-    assert real_codex and re.fullmatch(r"0\.14\.0-test\.[1-9][0-9]*", public_package)
+    assert real_codex and re.fullmatch(r"0\.14\.[0-9]+-test\.[1-9][0-9]*", public_package)
     candidate = Path(os.environ["HIVE_BIN"]).resolve()
     assert candidate.is_relative_to((ROOT / "tests/work").resolve()) and candidate.is_file()
 else:
@@ -71,7 +71,7 @@ method = next(n for n in fixture_class.body if isinstance(n, ast.FunctionDef)
 program = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant)
                and isinstance(n.value, str) and n.value.startswith("import json"))
 program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
-    "__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.0"))
+    "__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.1"))
 if not real_codex:
     (fake_bin / "codex.py").write_text(program, encoding="utf-8")
     (fake_bin / "codex.cmd").write_text(
@@ -174,7 +174,7 @@ def current_direct_update():
     receipt = work / "prefix/share/aigent-hive/install-receipt.json"
     receipt.parent.mkdir(parents=True)
     receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.0", "package_version": "0.14.0", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
+        "version": "0.14.1", "package_version": "0.14.1", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
     with urllib.request.urlopen("https://registry.npmjs.org/aigent-hive", timeout=15) as response:
         metadata = response.read(1024 * 1024 + 1)
     assert len(metadata) <= 1024 * 1024
@@ -341,7 +341,7 @@ def wait_for_removal_helper(path, operation):
 def uninstall_case(base, on_file, consent):
     version = subprocess.run([str(binary), "--version"], env=environment, capture_output=True, timeout=15)
     assert version.returncode == 0
-    match = re.match(r"AIgent Hive v(0\.14\.0(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
+    match = re.match(r"AIgent Hive v(0\.14\.[0-9]+(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
     assert match, version.stdout
     package = match[1] + ("." + match[2] if match[2] else "")
     if public_package:
@@ -349,7 +349,7 @@ def uninstall_case(base, on_file, consent):
     receipt = work / "prefix/share/aigent-hive/install-receipt.json"
     receipt.parent.mkdir(parents=True)
     receipt_bytes = json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.0", "package_version": package, "artifact_sha256": "sha256:" + sha(binary.read_bytes())}).encode()
+        "version": "0.14.1", "package_version": package, "artifact_sha256": "sha256:" + sha(binary.read_bytes())}).encode()
     receipt.write_bytes(receipt_bytes)
     invoke(*base, "--answers", on_file, "--monitor-confirm", consent, "--apply")
     assert_idle()

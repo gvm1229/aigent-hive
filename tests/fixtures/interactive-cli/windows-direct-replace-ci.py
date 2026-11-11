@@ -23,9 +23,9 @@ assert sys.argv[1:] in ([], ["npm"])
 work = Path(tempfile.mkdtemp(prefix="windows-direct-replace-", dir=ROOT / "tests/work")).resolve()
 sha = lambda data: hashlib.sha256(data).hexdigest()
 build_inputs = []
-REGISTRY = {"dist-tags": {"latest": "0.13.1", "test": "0.14.0-test.1"},
+REGISTRY = {"dist-tags": {"latest": "0.13.1", "test": "0.14.1-test.1"},
             "versions": {"0.13.1": {"aigentHive": {"productVersion": "0.13.1"}},
-                         "0.14.0-test.1": {"aigentHive": {"productVersion": "0.14.0"}}}}
+                         "0.14.1-test.1": {"aigentHive": {"productVersion": "0.14.1"}}}}
 
 
 def build_variant(package, name):
@@ -43,14 +43,14 @@ def build_variant(package, name):
     return target
 
 
-baseline = build_variant("0.14.0-test", "baseline.exe")
-incoming = build_variant("0.14.0-test.1", "incoming.exe")
+baseline = build_variant("0.14.1-test", "baseline.exe")
+incoming = build_variant("0.14.1-test.1", "incoming.exe")
 fixture_tree = ast.parse((ROOT / "tests/conformance/integration/test_connected_setup_lifecycle.py").read_text(encoding="utf-8"))
 fixture_class = next(n for n in fixture_tree.body if isinstance(n, ast.ClassDef) and n.name == "ConnectedSetupLifecycleConformance")
 method = next(n for n in fixture_class.body if isinstance(n, ast.FunctionDef) and n.name == "_write_fake_host")
 fake_host = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant)
                  and isinstance(n.value, str) and n.value.startswith("import json"))
-fake_host = fake_host.replace("__HIVE_TEST_HOST__", repr("codex")).replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.0"))
+fake_host = fake_host.replace("__HIVE_TEST_HOST__", repr("codex")).replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.1"))
 
 RELAY = r'''
 using System; using System.IO; using System.Diagnostics; using System.Reflection; using System.Text; using System.Security.Cryptography;
@@ -68,10 +68,10 @@ public static class DirectFixtureRelay {
     static string Hash(string path) { using(var s=File.OpenRead(path))using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(s)); }
     public static int Main(string[] args) {
         string root=Directory.GetParent(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)).FullName;
-        if(File.ReadAllText(Path.Combine(root,"fixture-only"))!="0.14.0-direct-fixture")return 20;
+        if(File.ReadAllText(Path.Combine(root,"fixture-only"))!="0.14.1-direct-fixture")return 20;
         if(args.Length!=14 || args[0]!="-NoLogo" || args[1]!="-NoProfile" || args[2]!="-NonInteractive" ||
-            args[3]!="-ExecutionPolicy" || args[4]!="Bypass" || args[5]!="-File" || args[7]!="-Version" || args[8]!="0.14.0" ||
-            args[9]!="-PackageVersion" || args[10]!="0.14.0-test.1" || args[11]!="-Prefix" || args[13]!="-DeferLockedBackup")return 21;
+            args[3]!="-ExecutionPolicy" || args[4]!="Bypass" || args[5]!="-File" || args[7]!="-Version" || args[8]!="0.14.1" ||
+            args[9]!="-PackageVersion" || args[10]!="0.14.1-test.1" || args[11]!="-Prefix" || args[13]!="-DeferLockedBackup")return 21;
         if(!String.Equals(Plain(args[12]),Path.Combine(root,"prefix with spaces"),StringComparison.OrdinalIgnoreCase))return 22;
         string script=Plain(args[6]);
         if(!script.StartsWith(root+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase) || Hash(script)!=Hash(Path.Combine(root,"installer.ps1")))return 23;
@@ -94,10 +94,10 @@ def run_case(name, interrupt):
     shutil.copyfile(baseline, binary)
     target = case / "incoming.exe"
     shutil.copyfile(incoming, target)
-    (case / "fixture-only").write_text("0.14.0-direct-fixture")
+    (case / "fixture-only").write_text("0.14.1-direct-fixture")
     receipt = prefix / "share/aigent-hive/install-receipt.json"
     receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.0", "package_version": "0.14.0-test", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
+        "version": "0.14.1", "package_version": "0.14.1-test", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
     environment = {"PATH": str(shim), "HIVE_TEST_USER_ROOT": str(user), "HIVE_TEST_HOST_STATE": str(case / "host-state.json")}
     for key in ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "GEMINI_CLI_HOME",
                 "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "TEMP", "TMP", "NPM_CONFIG_PREFIX", "NPM_CONFIG_CACHE"]:
@@ -116,7 +116,7 @@ def run_case(name, interrupt):
         env=environment, capture_output=True, timeout=30)
     assert compiled.returncode == 0, compiled.stdout + compiled.stderr
     shutil.copyfile(ROOT / "scripts/install.ps1", case / "publisher-source.ps1")
-    installer = r'''param([string]$Version = "0.14.0",[string]$PackageVersion = "0.14.0-test.1",[string]$Prefix,[switch]$DeferLockedBackup)
+    installer = r'''param([string]$Version = "0.14.1",[string]$PackageVersion = "0.14.1-test.1",[string]$Prefix,[switch]$DeferLockedBackup)
 $ErrorActionPreference='Stop'
 Import-Module -Name @(($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'),($PSHOME+'\Modules\Microsoft.PowerShell.Management\Microsoft.PowerShell.Management.psd1'))
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
@@ -166,7 +166,7 @@ Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -Pack
         assert result["data"]["steps"]["core"] == "verified" and result["data"]["steps"]["harness"] == "verified", result
         cleanup = result["data"]["cleanup"]
         assert cleanup["state"] == "after-process-exit", cleanup
-        assert result["data"]["from_version"] == "0.14.0-test" and result["data"]["to_version"] == "0.14.0-test.1"
+        assert result["data"]["from_version"] == "0.14.1-test" and result["data"]["to_version"] == "0.14.1-test.1"
         backup = prefix / cleanup["backup"]
         pending = prefix / cleanup["record"]
         lease = pending.parent / "replacement-operation.lock"
@@ -188,7 +188,7 @@ Publish-DirectInstall -Binary $candidate -Prefix $Prefix -Version $Version -Pack
         assert (case / "install-count").read_text() == "1"
         assert sha(binary.read_bytes()) == sha(target.read_bytes())
         assert config.read_bytes() == before_config and neighbor.read_bytes() == b"Preserve unrelated prefix content.\n"
-        assert json.loads(receipt.read_text())["package_version"] == "0.14.0-test.1"
+        assert json.loads(receipt.read_text())["package_version"] == "0.14.1-test.1"
         code = 0
     except BaseException as error:
         events.append({"failure": str(error)[:2500]})
@@ -229,7 +229,7 @@ def run_npm_case():
         NPM_CONFIG_AUDIT="false", NPM_CONFIG_FUND="false", NPM_CONFIG_IGNORE_SCRIPTS="true")
     (shim / "codex.py").write_text(fake_host, encoding="utf-8")
     (shim / "codex.cmd").write_text(f'@"{sys.executable}" "%~dp0codex.py" %*\r\n')
-    (case / "fixture-only").write_text("0.14.0-direct-fixture")
+    (case / "fixture-only").write_text("0.14.1-direct-fixture")
     (case / "registry.json").write_text(json.dumps(REGISTRY))
     events, packages = [], []
     record = Run("격리 Windows 실제 npm 갱신과 같은 버전 보존", [sys.executable, str(Path(__file__).resolve()), "npm"],
@@ -249,10 +249,10 @@ def run_npm_case():
         (staging / "bin").mkdir()
         shutil.copyfile(image, native / "bin/hive.exe")
         (native / "package.json").write_text(json.dumps({"name": "@aigent-hive/win32-x64", "version": version,
-            "aigentHive": {"productVersion": "0.14.0"}}))
+            "aigentHive": {"productVersion": "0.14.1"}}))
         shutil.copyfile(ROOT / "packaging/npm/bin/hive.cjs", staging / "bin/hive.cjs")
         (staging / "package.json").write_text(json.dumps({"name": "aigent-hive", "version": version,
-            "aigentHive": {"productVersion": "0.14.0"}, "bin": {"hive": "bin/hive.cjs"},
+            "aigentHive": {"productVersion": "0.14.1"}, "bin": {"hive": "bin/hive.cjs"},
             "dependencies": {"@aigent-hive/win32-x64": version}, "bundleDependencies": ["@aigent-hive/win32-x64"]}))
         archive = case / json.loads(npm_call("pack", "--json", "--pack-destination", str(case), cwd=staging))[0]["filename"]
         packages.append({"version": version, "archive_sha256": sha(archive.read_bytes()), "image_sha256": sha(image.read_bytes())})
@@ -270,7 +270,7 @@ def run_npm_case():
     try:
         packages.append({"npm_version": npm_call("--version"), "node_sha256": sha(node.read_bytes()),
                          "npm_entry_sha256": sha(npm_js.read_bytes())})
-        first, target = pack(baseline, "0.14.0-test"), pack(incoming, "0.14.0-test.1")
+        first, target = pack(baseline, "0.14.1-test"), pack(incoming, "0.14.1-test.1")
         npm_call("install", "--global", "--prefix", str(prefix), str(first))
         assert Path(npm_call("prefix", "--global")).samefile(prefix)
         assert Path(npm_call("root", "--global")).samefile(prefix / "node_modules")
@@ -293,9 +293,9 @@ def run_npm_case():
         relay = '''import hashlib,os,subprocess,sys
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-assert sys.argv[1:]==['install','-g','aigent-hive@0.14.0-test.1']
+assert sys.argv[1:]==['install','-g','aigent-hive@0.14.1-test.1']
 assert Path(os.environ['NPM_CONFIG_PREFIX']).samefile(root/'prefix with spaces')
-archive=root/'aigent-hive-0.14.0-test.1.tgz'
+archive=root/'aigent-hive-0.14.1-test.1.tgz'
 assert hashlib.sha256(archive.read_bytes()).hexdigest()==__HASH__
 count=root/'install-count'
 count.write_text(str(int(count.read_text())+1 if count.exists() else 1))
@@ -308,9 +308,9 @@ raise SystemExit(subprocess.run([__NODE__,__NPM__,'install','-g',str(archive)],e
         result = invoke("update", "--channel", "test", "--confirm", "--user-root", str(user))
         assert result["code"] == "hive.update-complete", result
         assert result["data"]["steps"]["core"] == "verified" and result["data"]["steps"]["harness"] == "verified", result
-        assert result["data"]["from_version"] == "0.14.0-test" and result["data"]["to_version"] == "0.14.0-test.1"
+        assert result["data"]["from_version"] == "0.14.1-test" and result["data"]["to_version"] == "0.14.1-test.1"
         assert sha(native.read_bytes()) == sha(incoming.read_bytes())
-        assert json.loads((prefix / "node_modules/aigent-hive/package.json").read_text())["version"] == "0.14.0-test.1"
+        assert json.loads((prefix / "node_modules/aigent-hive/package.json").read_text())["version"] == "0.14.1-test.1"
         repeat = invoke("update", "--channel", "test", "--confirm", "--user-root", str(user))
         assert repeat["code"] == "hive.update-complete" and repeat["data"]["steps"]["core"] == "unchanged", repeat
         assert (case / "install-count").read_text() == "1"

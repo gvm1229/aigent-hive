@@ -43,6 +43,9 @@ pub const RAG_MANIFEST_RELATIVE: &str = ".hive/index/rag-generation.json";
 pub const RAG_TRUST_RELATIVE: &str = ".hive/config/rag-trust.json";
 /// Crash-recovery journal present only while canonical/derived state is dirty.
 pub const RAG_DIRTY_RELATIVE: &str = ".hive/index/rag-dirty.json";
+/// Conflict message for a project list that changed after the caller read it.
+pub const STALE_PROJECT_REGISTRY: &str =
+    "project registry changed before synchronization; reload and retry";
 
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const MAX_REGISTRY_BYTES: usize = 1024 * 1024;
@@ -530,6 +533,20 @@ impl RagStore {
             crate::shared::validate_project_registry_bytes(&self.root_path, encoded.as_bytes())?;
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         self.reject_dirty_mutation()?;
+        // A caller may hold a project list read before another registration. Compare it with
+        // the current registry under the lock so a stale list cannot detach a newer project.
+        if let Some(current) = read_bounded_optional(
+            &self.root,
+            Path::new(crate::shared::PROJECT_REGISTRY_RELATIVE),
+            MAX_REGISTRY_BYTES,
+            "project registry",
+        )? {
+            let current =
+                crate::shared::validate_project_registry_bytes(&self.root_path, &current)?;
+            if current != projects {
+                return Err(WikiError::Conflict(STALE_PROJECT_REGISTRY.to_owned()));
+            }
+        }
         let prior = self.load_registry_optional()?;
         let registry = self.synchronize_project_collections(&projects, prior.clone())?;
         if prior.as_ref() == Some(&registry) && self.index_state_is_complete()? {
@@ -789,6 +806,8 @@ impl RagStore {
         } else {
             CollectionState::Detached
         };
+        // Explicit detach survives registry synchronization; explicit attach clears it.
+        existing.explicitly_detached = local_locator.is_none();
         existing.local_locator = match local_locator {
             Some(locator) => {
                 let canonical = crate::shared::canonical_root(locator)?;
@@ -2373,6 +2392,7 @@ impl RagStore {
                 local_locator: Some(self.root_path.display().to_string()),
                 source_project_id: None,
                 default_visibility: CollectionVisibility::Shared,
+                explicitly_detached: false,
             }],
         })
     }
@@ -2516,8 +2536,14 @@ impl RagStore {
                         project.id
                     )));
                 }
-                existing.state = CollectionState::Attached;
-                existing.local_locator = Some(canonical.display().to_string());
+                if existing.explicitly_detached {
+                    // Only an explicit attach restores a collection the user detached.
+                    existing.state = CollectionState::Detached;
+                    existing.local_locator = None;
+                } else {
+                    existing.state = CollectionState::Attached;
+                    existing.local_locator = Some(canonical.display().to_string());
+                }
                 existing.default_visibility = default_visibility;
                 existing.aliases.push(project.id.clone());
             } else {
@@ -2530,6 +2556,7 @@ impl RagStore {
                     local_locator: Some(canonical.display().to_string()),
                     source_project_id: Some(project.id.clone()),
                     default_visibility,
+                    explicitly_detached: false,
                 });
             }
         }
@@ -2577,6 +2604,7 @@ impl RagStore {
             local_locator,
             source_project_id: registration.source_project_id,
             default_visibility: registration.default_visibility,
+            explicitly_detached: false,
         };
         if let Some(existing) = registry
             .collections
@@ -5235,6 +5263,122 @@ mod tests {
         assert_eq!(detached.collection_id, stable_id);
         assert_eq!(detached.state, CollectionState::Detached);
         assert!(detached.local_locator.is_none());
+    }
+
+    fn project_collection(store: &RagStore, project_id: &str) -> CollectionRecord {
+        store
+            .load_registry()
+            .expect("registry")
+            .collections
+            .into_iter()
+            .find(|collection| collection.source_project_id.as_deref() == Some(project_id))
+            .expect("project collection")
+    }
+
+    fn registered(id: &str, root: &Path, enabled: bool) -> RegisteredProject {
+        RegisteredProject {
+            id: id.to_owned(),
+            root: crate::shared::canonical_root(root).expect("canonical project root"),
+            enabled,
+            language: KnowledgeLanguage::Both,
+            visibility: KnowledgeVisibility::Shared,
+        }
+    }
+
+    fn registry_digest(store: &RagStore) -> String {
+        sha256_digest(
+            &read_bounded_required(
+                &store.root,
+                Path::new(COLLECTION_REGISTRY_RELATIVE),
+                MAX_REGISTRY_BYTES,
+                "collection registry",
+            )
+            .expect("registry bytes"),
+        )
+    }
+
+    #[test]
+    fn explicit_detach_survives_registry_sync_until_explicit_attach() {
+        let (_temporary, store) = store();
+        let project = tempfile::tempdir().expect("project root");
+        store
+            .register_project_atomic(registered("project-d1", project.path(), true))
+            .expect("register project");
+        let id = project_collection(&store, "project-d1").collection_id;
+        store
+            .set_collection_attachment(&id, None, &registry_digest(&store))
+            .expect("explicit detach");
+        let current = crate::shared::load_project_registry(&store.root_path).expect("projects");
+        store
+            .sync_project_registry(&current)
+            .expect("sync keeps detach");
+        crate::shared::rebuild_shared_index(&store.root_path).expect("rebuild keeps detach");
+        let detached = project_collection(&store, "project-d1");
+        assert_eq!(detached.state, CollectionState::Detached);
+        assert!(detached.explicitly_detached);
+        assert!(detached.local_locator.is_none());
+
+        store
+            .set_collection_attachment(&id, Some(project.path()), &registry_digest(&store))
+            .expect("explicit attach");
+        store
+            .sync_project_registry(&current)
+            .expect("sync keeps attach");
+        let attached = project_collection(&store, "project-d1");
+        assert_eq!(attached.state, CollectionState::Attached);
+        assert!(!attached.explicitly_detached);
+    }
+
+    #[test]
+    fn automatic_detach_is_restored_when_the_project_is_enabled_again() {
+        let (_temporary, store) = store();
+        let project = tempfile::tempdir().expect("project root");
+        store
+            .register_project_atomic(registered("project-auto", project.path(), true))
+            .expect("register project");
+        store
+            .register_project_atomic(registered("project-auto", project.path(), false))
+            .expect("disable project");
+        let detached = project_collection(&store, "project-auto");
+        assert_eq!(detached.state, CollectionState::Detached);
+        assert!(!detached.explicitly_detached);
+        store
+            .register_project_atomic(registered("project-auto", project.path(), true))
+            .expect("enable project");
+        assert_eq!(
+            project_collection(&store, "project-auto").state,
+            CollectionState::Attached
+        );
+    }
+
+    #[test]
+    fn stale_project_list_cannot_detach_a_newer_registration() {
+        let (_temporary, store) = store();
+        let first = tempfile::tempdir().expect("first root");
+        let second = tempfile::tempdir().expect("second root");
+        store
+            .register_project_atomic(registered("project-old", first.path(), true))
+            .expect("register first");
+        let stale = crate::shared::load_project_registry(&store.root_path).expect("stale list");
+        store
+            .register_project_atomic(registered("project-new", second.path(), true))
+            .expect("register second");
+        let before = registry_digest(&store);
+        let error = store
+            .sync_project_registry(&stale)
+            .expect_err("stale list is rejected");
+        assert!(matches!(error, WikiError::Conflict(_)));
+        assert_eq!(registry_digest(&store), before);
+        assert_eq!(
+            project_collection(&store, "project-new").state,
+            CollectionState::Attached
+        );
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("current list synchronizes");
+        assert_eq!(
+            project_collection(&store, "project-new").state,
+            CollectionState::Attached
+        );
     }
 
     #[test]

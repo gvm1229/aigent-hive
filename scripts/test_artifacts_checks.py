@@ -3,9 +3,11 @@ from datetime import timedelta
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -45,6 +47,83 @@ class ArtifactTests(unittest.TestCase):
     def test_unknown_is_not_a_delete_candidate(self):
         self.assertEqual("review", self.scan()["status"])
         self.assertEqual("unowned-artifact", self.scan()["reason"])
+
+    def test_directory_allocation_size_does_not_invalidate_unchanged_files(self):
+        original_stat = Path.stat
+        allocation = {"bytes": 4096}
+
+        def directory_size(path, *args, **kwargs):
+            info = original_stat(path, *args, **kwargs)
+            if stat.S_ISDIR(info.st_mode):
+                return SimpleNamespace(st_mode=info.st_mode, st_size=allocation["bytes"],
+                                       st_mtime_ns=info.st_mtime_ns, st_ino=info.st_ino,
+                                       st_file_attributes=getattr(info, "st_file_attributes", 0))
+            return info
+
+        with patch.object(Path, "stat", directory_size):
+            self.review()
+            first = self.manager.inventory("tests/work/old")
+            allocation["bytes"] = 0
+            self.assertEqual(first, self.manager.inventory("tests/work/old"))
+            self.assertEqual("eligible", self.scan()["status"])
+
+    def test_same_size_file_edit_still_blocks_cleanup(self):
+        self.review()
+        target = self.root / "tests/work/old/data"
+        before = target.stat()
+        target.write_text("different", encoding="utf-8")
+        self.assertEqual(before.st_size, target.stat().st_size)
+        os.utime(target, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
+        rows = self.manager.cleanup(apply=True, selected=["tests/work/old"])
+        self.assertEqual("review", rows[0]["status"])
+        self.assertEqual("different", target.read_text(encoding="utf-8"))
+
+    def test_previous_inventory_format_requires_explicit_review(self):
+        self.review()
+        record = self.manager.records()[0]
+        record["inventory"].pop("inventory_schema_version")
+        self.manager.save(record)
+        self.assertEqual("inventory format changed; explicit review required", self.scan()["reason"])
+        self.assertTrue((self.root / "tests/work/old/data").exists())
+
+    def cache_fixture(self):
+        paths = ["target/debug/" + name for name in ("deps", "build", "incremental")]
+        frozen = {}
+        for name in ("hive-qualified.exe", "hive-qualified.pdb", "hive-qualified.d", "hive-0132-acceptance.exe"):
+            path = self.root / "target/debug" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = ("frozen " + name).encode()
+            path.write_bytes(payload)
+            frozen[path] = (payload, path.stat().st_mtime_ns)
+        for relative in paths:
+            path = self.root / relative
+            path.mkdir()
+            (path / "generated").write_bytes(b"rebuildable")
+            self.review(path=relative)
+        return paths, frozen
+
+    def test_reviewed_cache_subtrees_preserve_frozen_originals_in_place(self):
+        paths, frozen = self.cache_fixture()
+        head = self.git("rev-parse", "HEAD").stdout
+        evidence = (self.root / "tests/results/evidence.md").read_bytes()
+        rows = self.manager.cleanup(apply=True, selected=paths)
+        self.assertEqual(["removed"] * 3, [r["status"] for r in rows])
+        self.assertTrue((self.root / "target/debug").is_dir())
+        for path, (payload, modified) in frozen.items():
+            self.assertEqual(payload, path.read_bytes())
+            self.assertEqual(modified, path.stat().st_mtime_ns)
+        self.assertEqual(head, self.git("rev-parse", "HEAD").stdout)
+        self.assertEqual(evidence, (self.root / "tests/results/evidence.md").read_bytes())
+        self.assertFalse((self.root / "tests/results/cleanup").exists())
+
+    def test_live_shared_build_blocks_cache_subtree_cleanup(self):
+        paths, frozen = self.cache_fixture()
+        self.snapshot.append({"pid": 999, "parent": 0, "name": "cargo.exe", "start": "live",
+                              "command": "cargo test", "image": "cargo"})
+        rows = self.manager.cleanup(apply=True, selected=paths)
+        self.assertEqual(["active"] * 3, [r["status"] for r in rows])
+        self.assertTrue(all((self.root / p / "generated").exists() for p in paths))
+        self.assertTrue(all(p.exists() for p in frozen))
 
     def test_daily_preview_and_apply_preserve_unreviewed_files(self):
         self.review()

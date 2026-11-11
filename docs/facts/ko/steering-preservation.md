@@ -10,7 +10,7 @@ tags: [agent, directives]
 aliases: []
 sources:
   - "repo:.agents/directives/references/follow-up-instructions.md#sha256:e06c604bfc0f46b38c7affdc30c5a56e71945c340618f7167a96ad69f40c7ea9"
-  - "repo:docs/plans/backlog/steering-0.12.1.md#sha256:0d2c963c6af27ad7e137efcdc42f6c2ff16fe59634e6274c2e6652caa8fbd5ce"
+  - "repo:docs/plans/backlog/steering-0.12.1.md#sha256:b87c75e41077b9aca4ebd14a403fa33a0906f26431b2c158a20520624f0ee204"
   - "repo:docs/research/steering-preservation-0.12.1.md#sha256:f7857c23d4ee8fc5291c2f3571d32848a5988689be21ff7d82321829d0b0dc74"
 links: [agent-autonomous-continuation]
 reviewed_revision: "git:7673c0ca72551d413d7f9e41f00d88c3f388b027"

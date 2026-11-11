@@ -44,7 +44,7 @@
 - `test_halt_marker_is_not_replayed_to_another_binding`: 같은 조건의 `status`는 성공과 `stale` 반환 요구
 - `test_enforce_creates_a_latched_marker_and_repeat_skips_the_sensor`: 같은 정책의 중단 후 센서 재호출 금지 요구
 - `test_unknown_sensor_state_is_latched_without_raw_payload`: 측정 실패도 지속 중단 상태로 저장
-- [0.10.1 수용 항목](../plans/active/harness-upgrade-0.10.1.md)의 `UGR101-003`: 현재 정책 중단 결정의 즉시 재사용 유지
+- [0.10.1 수용 항목](../archive/plans/harness-upgrade-0.10.1.md)의 `UGR101-003`: 현재 정책 중단 결정의 즉시 재사용 유지
 - 결과: 시험 통과만으로 정상 재시작·사용량 회복·일시 센서 실패 이후 복구 증명 불가
 
 ### 제어와 복구의 혼동

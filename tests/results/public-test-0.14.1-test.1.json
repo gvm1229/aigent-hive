@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "product_version": "0.14.1",
+  "package_version": "0.14.1-test.1",
+  "source_commit": "6db14725452ab4b39e2cd01b743839b43e8c1819",
+  "candidate_run_id": 43013757939,
+  "publication_failed_run_ids": [
+    43016385581,
+    43017294707
+  ],
+  "publication_recovery_run_id": 43018899608,
+  "publication_failure": "npm test-tag propagation deadline on darwin-arm64; first recovery hit E409 on a still-staged win32-x64; unchanged candidate recovered after all six packages became visible",
+  "acceptance_run_id": 43019363819,
+  "acceptance_platforms": {
+    "Korean public test (Linux musl x64)": {
+      "job_id": 130518399713,
+      "conclusion": "success"
+    },
+    "Korean public test (macOS arm64)": {
+      "job_id": 130518400066,
+      "conclusion": "success"
+    },
+    "Korean public test (Windows x64)": {
+      "job_id": 130518400339,
+      "conclusion": "success"
+    }
+  },
+  "final_acceptance": true,
+  "develop_ci_after_publication": {
+    "run_id": 43013745942,
+    "conclusion": "success",
+    "note": "macOS smoke registry-bound legacy update failed before publication and passed on failed-job rerun after 0.14.1-test.1 reached the npm test tag"
+  },
+  "distribution": {
+    "npm_tag": "test",
+    "integrity": {
+      "aigent-hive": "sha512-1UQSv84BwBAr5UcR1znw41WyfdNtfwDTCmRgwv7zrWUmcHVIjLxhGZIccqrJwITXLxjPUicSL9HJWoIvHTW5Xg==",
+      "@aigent-hive/darwin-arm64": "sha512-iIaqoOLEc/MlyFaxQbeIFYG4PeFhTrGqcupqc/HsQ9+kpMvhYUit9+nTpRD8OWiSXiT/4Yj+BLYpFOM3V1tnxA==",
+      "@aigent-hive/darwin-x64": "sha512-bLZUDJGf+hnUfOerBlSX+VoL+gF5EvbL9HNUQvvIYRbHJWFTLWP85bX0+eRCjQ3vW5P60ElJd5fZzz8Pv2sEMg==",
+      "@aigent-hive/linux-arm64": "sha512-Dc4gdZy3nLa3TjQZ+bx4aaufuYF2Daa1Qme5MLFoprhTDSTVMK6o/4P7GDV5bxbl/QM7T4XZlNDLfkGFXFX1Mw==",
+      "@aigent-hive/linux-x64": "sha512-ZI/hZz51VEXxxovzWX5RigUw1ucmyTMCjLhKk/h9bEC6l3yTD+4wtz65rt9L6jZaUHztGBKQ0vO60xNO3UmO/g==",
+      "@aigent-hive/win32-x64": "sha512-xLd8L7ddjVwljYiBiDEMHBo98FAnD+NGVkFGYiiBrbxs3frfL35Umn+pXnbc6RVGPsajUkzU1INAnPb9qgHxOA=="
+    }
+  },
+  "product_tree_sha256": "sha256:4537f8e5a476eded04090d9a68666714826e0eae97e12689c4ecbacab29ab4de"
+}

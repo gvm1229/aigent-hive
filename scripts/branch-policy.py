@@ -63,6 +63,54 @@ def validate_pr(head: str, base: str, head_repo: str, base_repo: str, repo: Path
         raise PolicyError("main accepts only develop from the same repository")
 
 
+AI_NAMES = re.compile(
+    r"\b(claude|claudecode|anthropic|codex|openai|chatgpt|gpt\d*|gemini|copilot|omx|cursor"
+    r"|cursoragent|devin|aider|windsurf|codeium|opencode|ai|agent|bot)\b|\[bot\]",
+    re.IGNORECASE,
+)
+AI_EMAILS = re.compile(r"noreply@anthropic\.com|cursoragent@cursor\.com|\[bot\]@", re.IGNORECASE)
+AI_TRAILER = re.compile(r"^\s*(co-authored-by|signed-off-by)\s*:(.*)$", re.IGNORECASE | re.MULTILINE)
+SESSION_LINK = re.compile(
+    r"^\s*claude-session\s*:.*$|https://claude\.ai/code/session_\S*|generated with \[claude code\]",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def ai_identity(identity: str) -> bool:
+    """Match AI words in the name part only, plus known AI addresses."""
+    name, _, email = identity.partition("<")
+    return bool(AI_NAMES.search(name) or AI_EMAILS.search(email))
+
+
+def commit_violations(author: str, committer: str, message: str) -> list[str]:
+    """Return AI authorship, AI co-author and session-link findings for one commit."""
+    found = []
+    for role, identity in (("author", author), ("committer", committer)):
+        if ai_identity(identity):
+            found.append(f"AI {role}: {identity}")
+    for match in AI_TRAILER.finditer(message):
+        if ai_identity(match.group(2)):
+            found.append(f"AI trailer: {match.group(0).strip()}")
+    found.extend(f"session link: {m.group(0).strip()}" for m in SESSION_LINK.finditer(message))
+    return found
+
+
+def check_commits(revisions: list[str], repo: Path) -> int:
+    """Reject AI author/committer identities, AI co-author trailers and session links."""
+    listed = git(repo, "rev-list", *revisions).stdout.split()
+    offenders = []
+    for oid in listed:
+        author = git(repo, "show", "-s", "--format=%an <%ae>", oid).stdout.strip()
+        committer = git(repo, "show", "-s", "--format=%cn <%ce>", oid).stdout.strip()
+        message = git(repo, "show", "-s", "--format=%B", oid).stdout
+        found = commit_violations(author, committer, message)
+        if found:
+            offenders.append(f"{oid[:12]}: {found[0]}")
+    if offenders:
+        raise PolicyError("AI commit identity or session link is prohibited:\n" + "\n".join(offenders))
+    return len(listed)
+
+
 def zero_oid(value: str) -> bool:
     return len(value) in (40, 64) and set(value) == {"0"}
 
@@ -201,6 +249,8 @@ def main(argv: list[str] | None = None) -> int:
         pr.add_argument("--" + field, required=True)
     install = commands.add_parser("install-hooks")
     install.add_argument("--apply", action="store_true")
+    commits = commands.add_parser("commits")
+    commits.add_argument("revisions", nargs="+")
     generate = commands.add_parser("ruleset")
     generate.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
@@ -226,6 +276,9 @@ def main(argv: list[str] | None = None) -> int:
             validate_push(sys.stdin.read(), args.repo)
         elif args.command == "pr":
             validate_pr(args.head, args.base, args.head_repo, args.base_repo, args.repo)
+        elif args.command == "commits":
+            count = check_commits(args.revisions, args.repo)
+            print(f"branch-policy: {count} commits without AI identity, co-author or session link")
         elif args.command == "install-hooks":
             print(json.dumps({"apply": args.apply, "paths": install_hooks(args.repo, args.apply)}))
         elif args.command == "ruleset":

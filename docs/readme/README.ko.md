@@ -4,25 +4,25 @@
   <img src="../assets/branding/hive-readme-banner-ko.png" alt="hive — 모든 프로젝트를 위한 지속적 맥락" width="100%">
 </p>
 
-> Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
+> Codex, Claude Code(검증 전), Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.14.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.14.1-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.0 release-date=2026-10-30 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.1 release-date=2026-11-11 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.14.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.14.1`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.14.0|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.14.1|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.14.0
+npm install -g aigent-hive@0.14.1
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.14.0 (released 2026-10-30)
+AIgent Hive v0.14.1 (released 2026-11-11)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.14.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.14.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.14.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.14.1/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.1/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.14.0. The stable install guidance is
+Install the current stable release 0.14.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,15 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.14.0 주요 변경
+## 0.14.1 주요 변경
+
+- 전역 사용량 하한 변경 때 저장된 선택 기록의 유효성 유지와 변경 성공
+- 직접 해제한 지식 연결의 해제 유지, 동기화·재구성의 재연결 없음. 사용 전 명시적 재연결 필요
+- 갱신 뒤 현재와 직전 감시 프로그램만 보관, 오래된 사본 정리
+- `hive storage`의 저장 공간 보고, `hive prune --dry-run`의 미사용 감시 프로그램 미리보기. 삭제는 `hive prune --confirm`
+- 공개 0.14.0에서의 갱신도 전체 파일 소유 검증 유지. 연결 해제 뒤 0.14.0의 연결 목록 읽기 불가, 이전 버전 복귀 전 재연결 필요
+
+## 이전 0.14.0 변경
 
 - 모델 호출 없이 한국어·영어의 터미널 질문으로 전역 환경과 프로젝트 설정
 - 저장한 선택 재사용·한 항목 변경·중단한 질문 재개, 사용자 글·역할 보존
@@ -106,22 +114,11 @@ an optional third-party Skill.
 - 내려받기·후크·외부 알림·Windows Codex 실행 중 중단의 별도 동의 유지. 앱의 필요한 통신 기능 확인, 앱 유지·직접 재개 지원. 다른 운영체제·원격·클라우드 직접 중단 미지원
 - 기존 답안 파일 지원 유지, 직접 선택·기본값·상속·과거 출처 불명의 구분
 
-## 이전 0.13.1 변경
-
-
-- 중간 중단 감시를 켠 기존 보호 대상 대화에 설정한 잔여량 하한 적용, 소유 대화의 정책을 AI 하위 작업에 계승. 앱 유지·직접 재개·새 메시지 허용, 같은 사건의 반복 중단 방지·독립0% 보호 유지
-- 기존 조회 실패 시 새 기본 조회 프로세스로 재확인, 두 경로는 같은 제공자 사용.15초 시작 간격·경로별5초 제한·연속60초 정상 조회 부재의 한 차례 중단 유지
-- 만료된 값·재시작 전 기록의 초기화 오판 방지, 새 정상값으로 다음 기준 수립. 긴 대화의 사용량 보호 연결 유지
-- 갱신 시 지식·설정·중단 기록·감시 선택 보존. 일부 스킬 선택·Windows 경로 차이·같은 실행 파일 반복 준비 오류 수정
-- 공식 로고의 닫기 전용 창에 잔여량·적용 하한·실제 중단 확인 표시. Codex에서 직접 재개, 중간 중단 감시 해제도 Codex에 요청 가능. PowerShell 직접 입력·해제 절차 불필요
-- Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 직접 중단 지원. 일반 외부 명령의 계속 실행 가능, 별도 로컬 AI 세션·하위 에이전트는 중단 대상 유지. 다른 운영체제·원격·클라우드 직접 중단 미지원
-- `hive usage monitor preview` 확인 뒤 명시 활성화, 설치만으로 새 감시 활성화 없음·기존 선택 유지. 감지 전 새 사용량 소비 가능, 서버 처리·사용량 반영의 동시 종료 보장 제외
-
-이전 개선 사항은 [0.13.0 출시 안내](../releases/0.13.0.md)·[0.12.0 출시 안내](../releases/0.12.0.md)에 보존.
+이전 개선 사항은 [0.13.1 출시 안내](../releases/0.13.1.md)·[0.13.0 출시 안내](../releases/0.13.0.md)·[0.12.0 출시 안내](../releases/0.12.0.md)에 보존.
 
 ## 지원 target
 
-| Platform | Native target | 0.14.0 근거 |
+| Platform | Native target | 0.14.1 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -131,7 +128,7 @@ an optional third-party Skill.
 
 공개 시험의 Windows x64·Linux x64·macOS arm64 설정·취소·복구·갱신·제거·재설치 수용.
 Windows의 실제 Codex CLI 등록·대기 감시 포함, 모든 호스트의 실제 데스크톱 모델·할당량 조회 증명 제외.
-Claude Code의 실제 구독 세션 미검증. Stable `0.14.0`: macOS ad-hoc signing,
+Claude Code의 실제 구독 세션 미검증. Stable `0.14.1`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 

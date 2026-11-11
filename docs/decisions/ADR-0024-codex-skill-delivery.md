@@ -20,6 +20,6 @@
 
 ## 수용 범위
 
-- [구현 계획](../plans/active/skill-delivery-0.11.1.md)
+- [구현 계획](../archive/plans/skill-delivery-0.11.1.md)
 - 파일·명령 시험과 실제 Codex 발견 시험의 별도 근거
 - 현재 사용자 설치·안정판 게시·보호 브랜치 통합은 버전별 별도 승인

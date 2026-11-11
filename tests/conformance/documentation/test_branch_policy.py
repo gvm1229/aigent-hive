@@ -42,6 +42,35 @@ class BranchPolicyTest(unittest.TestCase):
     def refs(self):
         return self.git("for-each-ref", "--format=%(refname):%(objectname)", "refs/heads").stdout
 
+    def test_commit_check_rejects_ai_identity_coauthor_and_session_link(self):
+        human = "Hojin Jeong <hojini1229@example.invalid>"
+        self.assertEqual(POLICY.commit_violations(human, human, "fix: one\n"), [])
+        self.assertEqual(
+            POLICY.commit_violations(human, human, "docs: Claude host evidence\n"), []
+        )
+        for coauthor in ("Jane Doe <jane@example.invalid>", "Jane Doe <jane@startup.ai>",
+                         "Kim <kim@naver.ai>", "Lee <lee@openai.com>"):
+            self.assertEqual(
+                POLICY.commit_violations(human, human, f"x\n\nCo-Authored-By: {coauthor}\n"),
+                [],
+                coauthor,
+            )
+        for author, message in (
+            ("Claude <noreply@anthropic.com>", "x\n"),
+            (human, "x\n\nCo-Authored-By: Claude Opus <noreply@anthropic.com>\n"),
+            (human, "x\n\nCo-authored-by : Cursor <cursoragent@cursor.com>\n"),
+            (human, "x\n\nClaude-Session: https://claude.ai/code/session_01X\n"),
+            (human, "x\n\nSigned-off-by: Claude <noreply@anthropic.com>\n"),
+            (human, "x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\n"),
+            (human, "x\n\nCo-authored-by: dependabot[bot] <support@github.com>\n"),
+        ):
+            self.assertTrue(POLICY.commit_violations(author, human, message), message)
+        self.git("commit", "--allow-empty", "-m", "fix: human")
+        self.assertEqual(POLICY.check_commits(["HEAD~1..HEAD"], self.repo), 1)
+        self.git("commit", "--allow-empty", "-m", "fix: ai\n\nClaude-Session: https://claude.ai/code/session_01X")
+        with self.assertRaises(POLICY.PolicyError):
+            POLICY.check_commits(["HEAD~1..HEAD"], self.repo)
+
     def test_all_allowed_classes_and_nested_names(self):
         for name in (*POLICY.DEFAULTS, *(f"{kind}/topic" for kind in POLICY.CLASSES), "feature/a/b"):
             with self.subTest(name=name):
