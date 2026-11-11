@@ -172,3 +172,5 @@ Derived SQLite와 advisory lock:
 | 사용량 중단 기본 비활성화 계획 | [en](en/usage-default-off-scope.md) | [ko](ko/usage-default-off-scope.md) |
 
 | 재정비 구독자 안내 자동 승인 | [English](en/overhaul-subscriber-approval.md) | [한국어](ko/overhaul-subscriber-approval.md) |
+
+| 감시 실행 파일 보관 | [en](en/monitor-executable-retention.md) | [ko](ko/monitor-executable-retention.md) |
