@@ -3,14 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import runpy
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -19,84 +17,6 @@ import yaml
 ROOT = Path(__file__).resolve().parents[3]
 NOTIFIER = ROOT / "scripts/publish-stable-discord-update.py"
 WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
-REGISTRAR_PATH = ROOT / "scripts/register-stable-summary-approval.py"
-REGISTRAR = runpy.run_path(str(REGISTRAR_PATH))
-
-
-class StableSummaryApprovalRegistration(unittest.TestCase):
-    def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
-        self.summary = self.root / "docs/releases/0.10.0.subscriber.ko.md"
-        self.summary.parent.mkdir(parents=True)
-        self.summary.write_bytes("# Aigent Hive v0.10.0 업데이트 내역:\n\n- 승인 문구\n".encode())
-        self.digest = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
-        self.approval = self.summary.with_suffix(".sha256")
-        self.approval.write_text(f"{self.digest}  {self.summary.name}\n", encoding="utf-8")
-
-    def register(self, digest: str | None = None, version: str = "0.10.0") -> dict[str, str]:
-        return REGISTRAR["register_approval"](
-            version, self.digest if digest is None else digest, self.root
-        )
-
-    def test_registers_approved_digest_without_rewriting_or_sending(self) -> None:
-        before = (self.summary.read_bytes(), self.approval.read_bytes())
-        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as command:
-            self.assertEqual(self.register()["status"], "registered")
-        self.assertEqual(command.call_count, 1)
-        self.assertEqual(command.call_args.args[0], [
-            "gh", "secret", "set", "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST",
-            "--repo", "gvm1229/aigent-hive", "--env", "release-publication",
-        ])
-        self.assertEqual(command.call_args.kwargs["input"], self.digest)
-        self.assertEqual(before, (self.summary.read_bytes(), self.approval.read_bytes()))
-
-    def test_rewriting_both_files_cannot_replace_the_approved_digest(self) -> None:
-        self.summary.write_bytes(self.summary.read_bytes().replace("승인".encode(), "변경".encode()))
-        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
-        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
-        with patch("subprocess.run") as command:
-            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "externally approved"):
-                self.register()
-            command.assert_not_called()
-
-    def test_invalid_digest_or_version_never_contacts_github(self) -> None:
-        for digest, version in (("", "0.10.0"), ("invalid", "0.10.0"), (self.digest, "0.10.0-test.1")):
-            with self.subTest(digest=digest, version=version), patch("subprocess.run") as command:
-                with self.assertRaises(REGISTRAR["NotificationError"]):
-                    self.register(digest, version)
-                command.assert_not_called()
-
-    def test_title_must_match_version_even_if_digest_is_valid(self) -> None:
-        self.summary.write_bytes(self.summary.read_bytes().replace(b"0.10.0", b"0.9.5"))
-        changed = "sha256:" + hashlib.sha256(self.summary.read_bytes()).hexdigest()
-        self.approval.write_text(f"{changed}  {self.summary.name}\n", encoding="utf-8")
-        with patch("subprocess.run") as command:
-            with self.assertRaisesRegex(REGISTRAR["NotificationError"], "title does not match"):
-                self.register(changed)
-            command.assert_not_called()
-
-    def test_registration_failure_is_not_success_or_disclosure(self) -> None:
-        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1, stderr="private-detail")):
-            with self.assertRaises(REGISTRAR["NotificationError"]) as error:
-                self.register()
-        self.assertIn("registration failed", str(error.exception))
-        self.assertNotIn("private-detail", str(error.exception))
-
-    def test_timeout_and_missing_gh_preserve_retry_with_same_approval(self) -> None:
-        for error in (FileNotFoundError("private-detail"), subprocess.TimeoutExpired("gh", 30)):
-            with self.subTest(error=type(error).__name__), patch("subprocess.run", side_effect=error):
-                with self.assertRaisesRegex(REGISTRAR["NotificationError"], "retry the same approved digest"):
-                    self.register()
-
-    def test_cli_requires_explicit_digest(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(REGISTRAR_PATH), "--product-version", "0.10.0"],
-            capture_output=True, text=True, check=False,
-        )
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("--approved-digest", result.stderr)
 
 
 class RecordingServer(ThreadingHTTPServer):
@@ -134,7 +54,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         version: str = "0.9.5",
         summary_text: str | None = None,
         approval_text: str | None = None,
-        external_approval_digest: str | None = None,
+        approval_value: str | None = "main-pr",
         validate_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
@@ -151,17 +71,16 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 or f"sha256:{hashlib.sha256(summary.read_bytes()).hexdigest()}  summary.md\n",
                 encoding="utf-8",
             )
-            approved_digest = approval.read_text(encoding="utf-8").split("  ", 1)[0]
             banner = root / "hive-readme-banner-ko.png"
             banner.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
             environment = os.environ | {
                 "AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL": (
                     f"http://127.0.0.1:{self.server.server_port}/api/webhooks/test/token"
                 ),
-                "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST": (
-                    approved_digest if external_approval_digest is None else external_approval_digest
-                ),
             }
+            environment.pop("AIGENT_HIVE_SUBSCRIBER_APPROVAL", None)
+            if approval_value is not None:
+                environment["AIGENT_HIVE_SUBSCRIBER_APPROVAL"] = approval_value
             command = [
                 sys.executable,
                 str(NOTIFIER),
@@ -219,13 +138,19 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("approved digest", result.stderr)
         self.assertEqual(self.server.requests, [])
 
-    def test_missing_or_changed_external_approval_blocks_before_the_banner(self) -> None:
-        for external in ("", "sha256:" + "0" * 64):
-            with self.subTest(external=external):
-                result = self.run_notifier(external_approval_digest=external)
+    def test_missing_or_disabled_approval_blocks_before_the_banner(self) -> None:
+        for value in (None, "", "disabled", "MAIN-PR", " main-pr", "main-pr ", "sha256:" + "0" * 64):
+            with self.subTest(value=value):
+                result = self.run_notifier(approval_value=value)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn("externally approved digest", result.stderr)
+                self.assertIn("notification is disabled", result.stderr)
                 self.assertEqual(self.server.requests, [])
+
+    def test_multiple_digest_lines_block_before_the_banner(self) -> None:
+        result = self.run_notifier(approval_text="first\nsecond\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("one digest line", result.stderr)
+        self.assertEqual(self.server.requests, [])
 
     def test_approval_must_bind_the_selected_summary_filename(self) -> None:
         result = self.run_notifier(
@@ -355,7 +280,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertEqual(approval.read_text(encoding="utf-8"), expected)
         namespace = __import__("runpy").run_path(str(NOTIFIER))
         self.assertEqual(
-            namespace["read_summary"](summary, "0.10.0", approval, expected.split("  ", 1)[0]),
+            namespace["read_summary"](summary, "0.10.0", approval),
             summary.read_text(encoding="utf-8").strip(),
         )
 
@@ -365,7 +290,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("if: ${{ inputs.channel == 'stable' }}", workflow)
         self.assertIn("--validate-only", workflow)
         self.assertIn("--summary-approval", workflow)
-        self.assertIn("AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST", workflow)
+        self.assertIn("AIGENT_HIVE_SUBSCRIBER_APPROVAL", workflow)
         self.assertIn("scripts/publish-stable-discord-update.py", workflow)
         self.assertLess(workflow.index("--validate-only"), workflow.index("npm publish"))
         self.assertLess(workflow.index("gh release create"), workflow.index("Send stable Discord"))
@@ -424,7 +349,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         steps = job["steps"]
         approval = next(step for step in steps if step.get("name") == "Validate stable Discord subscriber update")
         self.assertEqual(approval["if"], "${{ inputs.channel == 'stable' }}")
-        self.assertIn("AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST", approval["env"])
+        self.assertIn("AIGENT_HIVE_SUBSCRIBER_APPROVAL", approval["env"])
         self.assertLess(steps.index(approval), next(i for i, step in enumerate(steps)
             if step.get("name") == "Publish npm package family through trusted publishing"))
 
@@ -438,8 +363,7 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
         contract = job["steps"][0]["run"]
         for boundary in (
-            'refs/heads/main) ;;',
-            'refs/heads/develop) test "$RESEND_APPROVED_SUMMARY" = true ;;',
+            'test "$GITHUB_REF" = refs/heads/main',
             'test "$(jq -r .isPrerelease <<<"$release")" = false',
             'test "$(jq -r .conclusion <<<"$publication")" = success',
             'test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"',
@@ -450,20 +374,29 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
         checkout = job["steps"][1]
         self.assertEqual(checkout["with"]["ref"], "${{ steps.contract.outputs.summary_source_sha }}")
 
-    def test_approved_revision_uses_dispatch_source_and_digest_scoped_duplicate_receipt(self) -> None:
+    def test_recovery_always_uses_released_source_and_version_scoped_receipt(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
         events = workflow.get("on", workflow.get(True))
-        request = events["workflow_dispatch"]["inputs"]["resend_approved_summary"]
-        self.assertEqual(request["type"], "boolean")
-        self.assertIs(request["default"], False)
+        self.assertEqual(set(events["workflow_dispatch"]["inputs"]), {"product_version", "publication_run_id"})
         steps = workflow["jobs"]["notify"]["steps"]
         contract = steps[0]["run"]
-        self.assertIn('summary_source_sha=$GITHUB_SHA', contract)
-        self.assertIn('"$original_digest" = "$APPROVED_SUMMARY_DIGEST"', contract)
-        self.assertIn('receipt_name="$receipt_name-${APPROVED_SUMMARY_DIGEST#sha256:}"', contract)
-        self.assertIn('name=$receipt_name', contract)
+        self.assertIn('summary_source_sha=$source_sha', contract)
+        self.assertNotIn('summary_source_sha=$GITHUB_SHA', contract)
+        self.assertIn('receipt_name="stable-discord-notification-$PRODUCT_VERSION"', contract)
+        self.assertIn('test "$skipped" = 1', contract)
         self.assertEqual(steps[-1]["with"]["name"], "${{ steps.contract.outputs.receipt_name }}")
         self.assertIn('test "$(git rev-parse HEAD)" = "$SUMMARY_SOURCE_SHA"', steps[2]["run"])
+
+    def test_both_workflows_use_environment_variable_for_validation_and_send(self) -> None:
+        for path, job_name in ((WORKFLOW, "publish"), (ROOT / ".github/workflows/release-discord-notification.yml", "notify")):
+            with self.subTest(path=path.name):
+                job = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"][job_name]
+                self.assertEqual(job["environment"]["name"], "release-publication")
+                notification_steps = [step for step in job["steps"] if "scripts/publish-stable-discord-update.py" in step.get("run", "")]
+                self.assertEqual(len(notification_steps), 2)
+                for step in notification_steps:
+                    self.assertEqual(step["env"]["AIGENT_HIVE_SUBSCRIBER_APPROVAL"], "${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}")
+                    self.assertEqual(step["env"]["AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL"], "${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}")
 
     def test_recovery_validates_before_sending_and_never_republishes(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
