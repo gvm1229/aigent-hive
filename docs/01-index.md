@@ -375,3 +375,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 - [0.14.2 큰 파일 정리 결정](decisions/monitor-cleanup-0.14.2.md)·[활성 항목](plans/active/overhaul-0.14.2.md)
 - [OV142-001 버전 전환 근거](research/overhaul/OV142-001.md)
+- [OV142-002 큰 파일 삭제 근거](research/overhaul/OV142-002.md)

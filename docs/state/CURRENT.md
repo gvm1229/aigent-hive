@@ -12,9 +12,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.14.2`
-- 현재 등록 항목: 1/8 완료
+- 현재 등록 항목: 2/8 완료
 
-- `agent-owned`: `OV142-002`, `OV142-003`, `OV142-004`, `OV142-005`, `OV142-006`, `OV142-007`, `OV142-008`
+- `agent-owned`: `OV142-003`, `OV142-004`, `OV142-005`, `OV142-006`, `OV142-007`, `OV142-008`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

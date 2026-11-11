@@ -15,8 +15,8 @@
   - state: complete; evidence: repo:docs/research/overhaul/OV142-001.md#sha256:a509aa6313f2ca0b8156e65e1e7d825d5f559c62745a6b6597c465569d5dfe48
   - 변경: 0.14.1 계획·상태 보관(OV141-011 미완료 유지), PLAN/CURRENT/재정비 표 전환. Cargo·템플릿·플러그인 0.14.2, 출시 자료 순번 27. 공개 v0.14.1의 이전 패치 원본 등록과 렌더러·소유권 목록 동기화
   - 확인: `python scripts/check-plan-state.py`, `bash scripts/check-release-version.sh 0.14.2`, project-base coverage와 historical 회귀. 실패 시 해당 누락만 보완
-- [ ] [OV142-002] 큰 실행 파일의 정확 삭제 수정
-  - state: agent-owned; depends: OV142-001
+- [x] [OV142-002] 큰 실행 파일의 정확 삭제 수정
+  - state: complete; depends: OV142-001; evidence: repo:docs/research/overhaul/OV142-002.md#sha256:c447ef664d558ad3a4e8bb0adeb827ad1035e4d9874f8ac5c5849fa082282401
   - 변경: `crates/hive-cli/src/run.rs::remove_parent_file`에서 격리 파일을 no-follow로 열고 64 KiB씩 비교. 예상 길이 뒤 EOF 확인. 읽기 실패·다른 바이트는 기존 restore_claim_error로 복구
   - 확인: hive-cli run 시험과 strict Clippy. 변경·추가·짧은 파일·비정상 경로 보존 확인. 예상 스냅샷의 128 MiB 한도 유지
 - [ ] [OV142-003] 자동 정리·수동 정리 큰 파일 회귀
