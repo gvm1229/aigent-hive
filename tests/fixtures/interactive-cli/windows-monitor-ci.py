@@ -30,7 +30,7 @@ if not prepare_only and not (os.name == "nt" and os.environ.get("GITHUB_ACTIONS"
 
 public_package = os.environ.get("HIVE_PUBLIC_PACKAGE_VERSION")
 if public_package:
-    assert real_codex and re.fullmatch(r"0\.14\.0-test\.[1-9][0-9]*", public_package)
+    assert real_codex and re.fullmatch(r"0\.14\.[0-9]+-test\.[1-9][0-9]*", public_package)
     candidate = Path(os.environ["HIVE_BIN"]).resolve()
     assert candidate.is_relative_to((ROOT / "tests/work").resolve()) and candidate.is_file()
 else:
@@ -341,7 +341,7 @@ def wait_for_removal_helper(path, operation):
 def uninstall_case(base, on_file, consent):
     version = subprocess.run([str(binary), "--version"], env=environment, capture_output=True, timeout=15)
     assert version.returncode == 0
-    match = re.match(r"AIgent Hive v(0\.14\.0(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
+    match = re.match(r"AIgent Hive v(0\.14\.[0-9]+(?:-test)?)(?: #(\d+))? ", version.stdout.decode("utf-8"))
     assert match, version.stdout
     package = match[1] + ("." + match[2] if match[2] else "")
     if public_package:

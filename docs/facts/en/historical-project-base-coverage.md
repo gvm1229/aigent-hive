@@ -11,7 +11,7 @@ aliases: ["Historical base parity"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:1ab23dbb5a8b60322f6c1068ba7cc09f54bc34151915068a748a1cc5a2c38018"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:f5c90bf5b90baef8d7a5ec2228d0d23338ea95aef2c8078b7656c4df7d6ff600"
-  - "repo:crates/hive-render/src/lib.rs#sha256:2e85c27d4a68f0088058c6255ba8d8508e3424fc8ca9fafa897a178b9e08f870"
+  - "repo:crates/hive-render/src/lib.rs#sha256:caf624451aee9c18bc13ca0b33b0428ff33455856d3e20d6417e1b5c2fa35943"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"

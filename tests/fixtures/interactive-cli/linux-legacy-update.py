@@ -69,9 +69,10 @@ if direct:
 else:
     assert len(sys.argv)==4 and sys.argv[1:3]==['install','-g'] and sys.argv[3].startswith('aigent-hive@'),sys.argv
     requested=sys.argv[3].removeprefix('aigent-hive@')
-assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.]0-test[.][1-9][0-9]*',requested),requested
-product=requested.split('-test.',1)[0]
-if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
+assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.][0-9]+-test[.][1-9][0-9]*',requested),requested
+if direct: assert os.environ['AIGENT_HIVE_VERSION']==requested.split('-test.',1)[0]
+# The installed bytes are the development build, so label them with its product version.
+product='0.14.1'
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
 binary=package/'bin/hive'
 if (root/'retire-package').exists():
