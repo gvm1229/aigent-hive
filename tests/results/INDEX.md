@@ -924,3 +924,17 @@
 | [passed](runs/20261111T184229-cd3a0d7334d0.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261111T184352-0a23d9bf4725.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261111T184628-7594ffe79383.md) | 0.14.2 버전 일치 확인 | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T184742-cdf59d1c01ea.md) | Python conformance: documentation | be1a9fc625b4bdb79597be8c3c081381d23e23d3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T184932-69b4b3c86ddf.md) | 개발 검증: cargo.EXE | 014090d8e3a58b1f61fa44ee02ad3363a1627c8a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T185033-1bfbf1a3a5e3.md) | 개발 검증: cargo.EXE | 014090d8e3a58b1f61fa44ee02ad3363a1627c8a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T185149-d5fa76373e3a.md) | 개발 검증: cargo.EXE | 014090d8e3a58b1f61fa44ee02ad3363a1627c8a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T185243-9b953cc408da.md) | 개발 검증: cargo.EXE | 014090d8e3a58b1f61fa44ee02ad3363a1627c8a | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T185434-4b2d45012adc.md) | Python conformance: documentation | cd38b4c24b580a8ef800837a91f88e7a0301111c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T185640-157b89d33b98.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T185738-9e51246aa2a3.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T185800-63497a9aa0f1.md) | Python conformance: documentation, security, contract, integration, release | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T190534-d1d384dc3dba.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T190622-e02155fef4a7.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T190735-7dad55146bae.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T192451-1ab5561ae246.md) | 0.14.1 공개 이전판 시험 실행 파일 확보 | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T192938-e17821feac40.md) | 출처 검증한 공개 0.14.1의 임시 프로젝트 시험 자료 생성 | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |

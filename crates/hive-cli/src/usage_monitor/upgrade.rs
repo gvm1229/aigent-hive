@@ -643,6 +643,39 @@ mod tests {
     }
 
     #[test]
+    fn large_binary_cleanup_after_upgrade_keeps_current_and_previous() {
+        let (_directory, root) = fixture(false);
+        let bin = root.requested_path().join(BASE).join("bin");
+        let bytes = vec![0x5a; 2 * 1024 * 1024 + 17];
+        std::fs::create_dir_all(&bin).unwrap();
+        for name in ["hive-a.exe", "hive-b.exe", "hive-old.exe"] {
+            std::fs::write(bin.join(name), &bytes).unwrap();
+        }
+        let result = upgrade_with(
+            &root,
+            |_, _| panic!("disabled monitor cannot change scheduler"),
+            |_, _| panic!("disabled monitor cannot inspect live health"),
+        )
+        .unwrap();
+        let cleanup = &result["binary_cleanup"];
+        assert_eq!(cleanup["removed"].as_array().unwrap().len(), 2);
+        assert!(cleanup["skipped"].as_array().unwrap().is_empty());
+        assert_eq!(binary_names(&root).len(), 2);
+        assert_eq!(std::fs::read(bin.join("hive-old.exe")).unwrap(), bytes);
+        let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        assert!(current.executable.is_file());
+        let journal: Value = load(&root, JOURNAL).unwrap().unwrap();
+        assert_eq!(journal["phase"], "complete");
+        assert_eq!(&journal["binary_cleanup"], cleanup);
+        assert!(
+            prune_unused(root.requested_path(), false).unwrap()["candidates"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn manual_prune_refuses_without_a_readable_current_record() {
         let (directory, root) = fixture(false);
         seed_binaries(&root, &["hive-a.exe", "hive-old.exe"]);
