@@ -12,6 +12,7 @@
 | --- | --- | --- |
 | [Claude 실제 호스트·사용량 검증](claude-host-acceptance.md) | 실제 실행 근거 대기 | 재정비 단계 2 `OVX-005`–`OVX-007`의 Claude Code 창 실행 근거와 미래 범위 편입 |
 | [게시자 서명](platform-signing.md) | 외부 승인 대기 | 승인된 인증서·안전한 CI 서명 환경 |
+| [미완료 감시 갱신 복구](monitor-upgrade-recovery.md) | Windows 재현 대기 | 격리 Windows 재현 또는 이 PC 갱신의 실패 단계 확인 |
 
 ## 0.11.2 편입
 
