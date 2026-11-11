@@ -11,7 +11,7 @@ aliases: ["Vector database gate"]
 sources:
   - "repo:docs/architecture/vector-search.md#sha256:78f3d2b3ca955dd6cc48f6b926b2af10d8349a243079fd4636b3718d12b22035"
   - "repo:docs/archive/plans/hybrid-vector-search-0.10.0.md#sha256:337e9c34ef9bdfd072b384dfb46affb7143c129a4f7c0083d7720e6ba7d5f4cc"
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:51b9b644b6ab76831b590a97780549e6fa994594ba637205a7ababba359246f5"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:71a8c4e0f75fdc3f99aa7f4d1c4e2ace759af640dbc4dd013174639e71a3f01b"
   - "repo:docs/guides/vector-search.md#sha256:051fd23554897a9376fe29d457d20c2de3a2e05eb2b87faeaa47a6165e3a9d03"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"

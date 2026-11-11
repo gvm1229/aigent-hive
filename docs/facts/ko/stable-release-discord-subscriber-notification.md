@@ -12,7 +12,7 @@ sources:
   - "repo:.github/workflows/release-discord-notification.yml#sha256:05cbd3bebb278b5b4fe3780f536033a896fb83212d9749e5f0005ae10afd73e6"
   - "repo:.github/workflows/release-publish.yml#sha256:241b1121f2b95690858514f9bcc8af27f6bd9084d125b14ff0e5df31cd401a3d"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
-  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:b13d2a1daa032c150155f465f06e57604bd493a2995f2590c0338e076cd72c2d"
+  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
   - "repo:scripts/publish-stable-discord-update.py#sha256:1cc98f5afa3e10399575b307a14591208b5f3ee2157192362e799cfbdd6409fd"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"

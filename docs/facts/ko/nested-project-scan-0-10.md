@@ -11,7 +11,7 @@ aliases: ["Nested Vault scan"]
 sources:
   - "repo:crates/hive-cli/src/knowledge_scan.rs#sha256:250b9f581271389c06b4740a16ccc90761faeeeeda238b901c1195205ef7d605"
   - "repo:docs/archive/plans/nested-project-knowledge-scan-0.10.0.md#sha256:09e75e39def220648906afa58722a15a1997ca9013eeeb02f579b8eb4b1aaf8f"
-  - "repo:docs/archive/plans/release-0.10.0.md#sha256:dd25843eba105668c1f07aaac450147c2ab3572a55ad2b40bf202d2b0a763a8e"
+  - "repo:docs/archive/plans/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
   - "repo:tests/conformance/integration/test_wiki_cli_e2e.py#sha256:430fb068e1e87dba1bec696bce9db71383bf0b3d40184c233d1be7a1b7629cab"

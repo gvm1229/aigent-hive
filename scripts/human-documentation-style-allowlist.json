@@ -784,11 +784,5 @@
     "line": 102,
     "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
     "text_sha256": "e2d4d101230be4674f11fa44c2e549719562ba7634e5d0dc487ed6ea62f2d85a"
-  },
-  {
-    "path": "docs/releases/0.14.1.subscriber.ko.md",
-    "line": 17,
-    "reason": "Preserve exact digest-bound subscriber draft bytes; this approval migration does not revise the release copy.",
-    "text_sha256": "b470b19a46673e2ffda98a5e405efac2736d0d90308892b5bf1c625d65713ebd"
   }
 ]

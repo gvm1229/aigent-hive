@@ -9,8 +9,8 @@
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
 - 다음 항목: `OV141-011`(정식 출시와 이 PC 갱신) ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
 - 마지막 완료: `OV141-010`(develop 병합)
-- 승인 대기: `OV141-011` — 구독자 안내 초안(`docs/releases/0.14.1.subscriber.ko.md`) 승인 또는 수정, 원문·지문 파일의 검토된 develop→main PR 반영(현재 초안 `sha256:1088be71de63a9c8bb1a5f15dd341142cd7a5d2b0327c71dfc979f429bc50c2c`)
-- 중단 메모: 2026-11-11 OV141-011: main 병합(PR #90, `ade346b2`)·정식 후보 run `43031639589` 성공 / 게시 run `43034744767`은 구독자 안내 비활성으로 거부, npm `latest`는 0.14.0 유지. 남은 단계: 안내 승인 → 안내 파일을 develop→main 병합 → 정식 후보 재빌드(`promoted_test_version=0.14.1-test.1`, `acceptance_run_id=43019363819`) → 최초 1회 `release-publication` 환경 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr` 확인 → `send_subscriber_update=true`로 게시 → 이 PC 갱신(사용자 PC 필요) / 바뀐 파일: `docs/releases/0.14.1.subscriber.ko.md`·`.sha256`, `docs/01-index.md`
+- 승인 대기: 없음. 2026-11-12 사용자 승인: 0.14.1 안내문 원문·지문, 정식 통합·게시·Discord 전송·이 PC 갱신
+- 중단 메모: 2026-11-12 OV141-011: PR #91 병합(`7edc0e3a`)·지문 등록·후보 `43062397677` 성공 / 게시 `43072572104`의 플랫폼 npm latest 확인 종료 6, GitHub 출시·Discord·PC 갱신 미실행 / 바뀐 파일: 이 문서·[실패 근거](../../research/overhaul/OV141-011.md)·문서 목록·활성 항목·현재 상태·구독자 알림 사실 쌍
 
 ## 재개 절차
 
@@ -35,6 +35,7 @@
 - 단계 작업의 모든 커밋은 단계 브랜치에. 이 문서와 단계 파일의 체크도 같은 브랜치에서 갱신
 - 병합 전 검토(2026-11-10 사용자 지시): 단계의 develop 병합 항목 직전에 Fable 5.2 advisor 하위 에이전트로 단계 전체 변경 검토, 발견한 이상은 같은 단계 브랜치에서 수정·확인 뒤 병합. 검토 결과는 병합 항목의 근거 문서에 기록
 - 다음 단계 자동 진행(2026-11-10 사용자 지시): 병합 뒤 사용자 보고를 기다리지 않고 다음 단계 브랜치 생성과 진행
+- 구독자 안내 자동 승인(2026-11-12 사용자 지시): 재정비 전체 완료까지 모든 구독자 안내는 승인된 것으로 간주. 안내 원문·지문 파일의 develop→main 검토 PR 승인과 `release-publication` 환경 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr`의 최초 1회 설정 후 `send_subscriber_update=true` 정식 게시를 사용자 확인 없이 진행
 - 단계 완료: 각 단계 파일의 "develop 병합과 단계 브랜치 종료" 항목으로 `develop`에 병합과 push. 제품 단계의 정식 출시는 병합 뒤 `develop`에서 진행(`main` PR의 head는 `develop`)
 - 단계 브랜치 삭제는 병합 뒤(제품 단계는 정식 출시 뒤)
 - 브랜치 전환 전 작업 트리는 깨끗한 상태. 미완료 일은 단계 브랜치에 커밋 뒤 전환

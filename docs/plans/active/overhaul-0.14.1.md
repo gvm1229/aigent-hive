@@ -48,7 +48,7 @@
   - 변경: 단계 브랜치 `fix/overhaul-1-0.14.1`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 정식 출시 항목은 이후 `develop`에서 진행(`main` PR의 head는 `develop`), 단계 브랜치 삭제는 정식 뒤
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치
 - [ ] [OV141-011] 정식 0.14.1 출시와 이 PC 갱신
-  - state: awaiting-user-authority; depends: OV141-010; owner: user; reason: 정식 태그와 게시와 설치 승인
+  - state: awaiting-external-evidence; depends: OV141-010; owner: npm; reason: 정식 게시의 플랫폼 latest 확인 종료 6. 사용자 지정 실패 중단, 플랫폼 5종의 0.14.1 공개 확인과 게시 복구 필요
   - 변경: 승인 범위의 main 통합·태그·게시, 이 PC 갱신 뒤 감시 실행 파일 2개·갱신 완료 상태 확인
   - 확인: 공개 패키지 버전, `~/.hive/runtime/usage-monitor/bin` 파일 수 2 이하
-  - 진행(2026-11-11): 정식 안내 5면·안정판 기준 0.14.1 준비, main 병합, 정식 후보 성공. 게시는 구독자 안내의 검토된 main PR 반영과 최초 1회 환경 변수 설정 확인 대기([재정비 현재 위치](../overhaul/README.md#현재-위치))
+  - 진행(2026-11-12): PR #91 병합·승인 지문 등록·후보 성공. 게시의 npm 태그 확인 실패로 GitHub 출시·Discord 전송·PC 갱신 미실행([재정비 현재 위치](../overhaul/README.md#현재-위치))

@@ -24,4 +24,4 @@
 
 Windows의 Codex에서 알림 동작 25개·출시 151개·문서 163개·보안 103개 검사 및 문체 검사 종료값 0 확인. actionlint는 미설치로 미실행, 두 workflow의 셸 실행 부분 21개는 Bash 구문 검사 통과. 실제 GitHub 변수 설정·workflow 실행·Discord 발송 제외. 로컬 HTTP 수신 검사로 전송 순서와 거부 조건 확인, 실제 Discord 수신자 열람 증명 제외.
 
-상세 근거·건너뛴 범위: [검증 기록](../../tests/results/subscriber-approval-via-main-2026-11-12.md). 기존 0.14.1 안내문 바이트는 보존, 문체 검사 예외는 해당 초안 17행의 정확한 지문 한 건만 허용.
+상세 근거·건너뛴 범위: [검증 기록](../../tests/results/subscriber-approval-via-main-2026-11-12.md). 0.14.1 안내문은 최신 `origin/develop`의 출시 담당 바이트 보존. 이전 초안 17행의 문체 예외 제거. 과거 기록 원본 보존과 현재 사실 문서의 출처 지문 갱신, 과거 비밀값·폐기 스크립트 참조의 검사 예외 추가 불필요.

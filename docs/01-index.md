@@ -323,6 +323,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-008 근거 — README·출시일·Claude Code 표시](research/overhaul/OV141-008.md)
 - [OV141-009 근거 — 0.14.1 번호 공개 시험 수용](research/overhaul/OV141-009.md)
 - [OV141-010 근거 — develop 병합과 단계 브랜치 종료](research/overhaul/OV141-010.md)
+- [OV141-011 근거 — 정식 게시 실패와 PC 갱신 보류](research/overhaul/OV141-011.md)
 - [단계 1 병합 전 검토 — Fable 5.2 advisor](research/overhaul/stage1-review.md)
 
 ### 점수 기반 개선 설계 초안

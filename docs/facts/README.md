@@ -170,3 +170,5 @@ Derived SQLite와 advisory lock:
 - [0.13.2 이전 사용량 보호 사실 본문 보존](../archive/facts/usage-guard-before-0.13.2.md)
 
 | 사용량 중단 기본 비활성화 계획 | [en](en/usage-default-off-scope.md) | [ko](ko/usage-default-off-scope.md) |
+
+| 재정비 구독자 안내 자동 승인 | [English](en/overhaul-subscriber-approval.md) | [한국어](ko/overhaul-subscriber-approval.md) |

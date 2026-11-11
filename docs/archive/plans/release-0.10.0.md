@@ -16,12 +16,12 @@
 ## 출시 차단
 
 - 해소: `REL10-001–007` 완료
-- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256` 승인 지문·당시 보호 환경 외부 지문 동시 대조(현재는 [main PR 승인 결정](../../decisions/subscriber-approval-via-main-2026-11-12.md)으로 대체), 불일치 시 배너·Discord 요약 전송 전 차단
+- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256` 승인 지문·보호 환경 `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST` 동시 대조, 불일치 시 배너·Discord 요약 전송 전 차단
 
 ## 구독자 안내 승인 자동화
 
 - 목표: 대화의 문구 승인 뒤 에이전트가 외부 지문 등록, 출시마다 GitHub 수동 설정 제거
-- 구현: 당시 전용 등록 도구에서 승인 지문·버전·원문·sidecar 검증 뒤 기존 `gh` 인증으로 환경 값 등록. 현재 도구 폐기, main PR 승인으로 대체
+- 구현: `register-stable-summary-approval.py`에서 승인 지문·버전·원문·sidecar 검증 뒤 기존 `gh` 인증으로 환경 값 등록
 - 검증: 원문과 sidecar 동시 변경 차단, 승인 지문 누락·버전 오류·등록 실패 처리, 실제 승인 지문 등록 확인
 - 발송 경계: 지문 갱신·문구 재작성 없음. 문구 변경은 새 승인 필요, 등록 실패는 같은 승인으로 재시도
 - 출시 권한·제품 바이트·현재 공개 시험 수용 불변
