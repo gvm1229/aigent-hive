@@ -323,6 +323,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-008 근거 — README·출시일·Claude Code 표시](research/overhaul/OV141-008.md)
 - [OV141-009 근거 — 0.14.1 번호 공개 시험 수용](research/overhaul/OV141-009.md)
 - [OV141-010 근거 — develop 병합과 단계 브랜치 종료](research/overhaul/OV141-010.md)
+- [OV141-011 근거 — 정식 출시 재개의 브랜치 검사 중단](research/overhaul/OV141-011.md)
 - [단계 1 병합 전 검토 — Fable 5.2 advisor](research/overhaul/stage1-review.md)
 
 ### 점수 기반 개선 설계 초안
@@ -368,5 +369,6 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.11.0 통합 수용과 번호 공개 시험](research/refactor-release-qualification-0.11.0.md)
 - [0.14.0 정식 출시·사용자 PC 적용](plans/0.14.0-stable-release.md)
 - [0.14.0 감시 활성화의 결합과 재개](plans/details/usage-monitor-activation-0.14.0.md)
+- [0.14.1 미발송 구독자 안내 초안](releases/0.14.1.subscriber.ko.md)
 - [Aigent Hive v0.14.0 업데이트 내역:](releases/0.14.0.subscriber.ko.md)
 - [0.14.0 정식 배포 근거](research/stable-release-0.14.0.md)
