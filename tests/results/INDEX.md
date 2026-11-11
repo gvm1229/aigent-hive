@@ -890,4 +890,3 @@
 | [passed](runs/20261111T051141-8c06a1da5dae.md) | Python conformance: release | 14f3aec58879d3ac783ce09d6321d70ca83edbf8 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T104515-d528cb5e5930.md) | 공개 정식 0.14.0 태그 빌드로 이전판 프로젝트 원본 생성 | 51fb667d4a9bbe9af8134a138bad60badf814c5f | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T105156-07f897d56461.md) | Python conformance: documentation | f75fcf52926d87ebf49c69d0a908483f3a1a970d | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
-| [running](runs/20261111T105205-05babe90fdd4.md) | Python conformance: contract | f75fcf52926d87ebf49c69d0a908483f3a1a970d | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
