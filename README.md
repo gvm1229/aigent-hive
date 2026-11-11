@@ -6,24 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.14.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.14.1-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.0 release-date=2026-10-30 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.1 release-date=2026-11-11 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.14.0` is the current public release.
+Stable `0.14.1` is the current public release.
 
 ## Install the current stable release
 
-`0.14.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.14.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.14.0
+npm install -g aigent-hive@0.14.1
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.14.0 (released 2026-10-30)
+AIgent Hive v0.14.1 (released 2026-11-11)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.14.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.14.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.14.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.14.1/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.1/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -76,7 +76,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.14.0. The stable install guidance is
+Install the current stable release 0.14.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -94,7 +94,15 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.14.0
+## What changed in 0.14.1
+
+- Changing the global usage floor keeps its saved choice record valid, so the change succeeds.
+- An explicitly detached knowledge collection stays detached. Sync and rebuild do not attach it again; attach it explicitly before use.
+- Updates keep only the current and previous usage monitor programs and remove older copies.
+- Report Hive storage use with `hive storage`. Preview unused monitor programs with `hive prune --dry-run`; removal requires `hive prune --confirm`.
+- Updates from public 0.14.0 keep complete ownership verification. Version 0.14.0 cannot read a collection list with an explicit detach; attach the collection before a downgrade.
+
+## Earlier changes in 0.14.0
 
 - Answer local CLI questions to configure user and project settings in English or Korean. Setup does not call a model.
 - Reuse saved choices, change one setting, or resume interrupted setup. User notes and role assignments remain preserved.
@@ -105,22 +113,11 @@ This option installs only the current stable release.
 - Downloads, hooks, external notifications and Windows Codex midway interruption still require their own consent. Monitoring checks the required app communication capabilities. Other operating systems and remote or cloud tasks lack direct interruption support; app survival and direct user resume remain required.
 - Existing answer files remain supported. New records distinguish explicit choices, defaults, inherited settings and unknown historical origins.
 
-## Earlier changes in 0.13.1
-
-
-- With midway monitoring enabled, existing guarded chats stop at the configured remaining-usage floor. AI children inherit their owning chat's policy. Codex stays open, and a direct resume or new message does not repeat the same floor stop. Independent zero-quota checks remain.
-- A failed persistent reading retries through a fresh native process. Both paths use the same provider. Keep 15-second start intervals, a five-second timeout per path and one stop after 60 continuous seconds without a valid reading.
-- Reset comparison ignores expired readings and a prior process baseline. A fresh reading establishes the next baseline after a restart. Long chats keep their usage-control connection.
-- Updates preserve knowledge, settings, incident history and the monitoring choice. Selected-Skill profiles and Windows path variants update correctly. Repeated updates reuse an identical staged executable.
-- The close-only notice shows the official logo, remaining usage, the applied floor and actual stop confirmation. Resume directly in Codex. Ask Codex to disable midway monitoring; no PowerShell entry or unlock procedure is required.
-- Direct interruption supports Windows 11 x64 with Codex 26.1013.4894.0 or 26.1016.6573.0. Already-started ordinary external commands may continue; separate local AI sessions and subagents remain interruption targets. Other operating systems, remote tasks and cloud tasks lack direct interruption support.
-- Monitoring requires explicit opt-in after `hive usage monitor preview`; installation does not enable a new monitor. Saved choices remain. Detection can consume some new quota and does not guarantee simultaneous server processing or billing termination.
-
-Earlier improvements remain in the [0.13.0 release notes](docs/releases/0.13.0.md) and [0.12.0 release notes](docs/releases/0.12.0.md).
+Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.md), [0.13.0 release notes](docs/releases/0.13.0.md) and [0.12.0 release notes](docs/releases/0.12.0.md).
 
 ## Supported targets
 
-| Platform | Native target | 0.14.0 evidence |
+| Platform | Native target | 0.14.1 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -131,7 +128,7 @@ Earlier improvements remain in the [0.13.0 release notes](docs/releases/0.13.0.m
 The accepted public test covers setup, cancellation, recovery, updates, removal and
 reinstallation on Windows x64, Linux x64 and macOS arm64. Windows also covers actual Codex
 CLI registration and an idle monitor. This does not prove live desktop-model or quota sensing
-on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.14.0` uses explicit macOS ad-hoc signing and publishes Windows as
+on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.14.1` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 

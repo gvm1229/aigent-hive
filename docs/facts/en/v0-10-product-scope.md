@@ -13,7 +13,7 @@ sources:
   - "repo:docs/archive/plans/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:71a8c4e0f75fdc3f99aa7f4d1c4e2ace759af640dbc4dd013174639e71a3f01b"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
-  - "repo:docs/public-stable-release.json#sha256:6f8b90c07df2fa8def62d357ff9bedd945aa1a24c3f52ea0a3590a5322e1553f"
+  - "repo:docs/public-stable-release.json#sha256:5573278b8d7e9c0b036780f1deeb13f3e28f4b58766f3f1b4673d3f711df9b3b"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
 status: active
