@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: branch-policy-${{ github.event.pull_request.number || github.ref }}
+  # Pushes get one group per commit so a queued push is never replaced by a newer one.
+  group: branch-policy-${{ github.event.pull_request.number || github.sha }}
   # Push runs must not cancel each other: each push checks only its own commit range.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 

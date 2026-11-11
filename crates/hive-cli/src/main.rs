@@ -98,6 +98,8 @@ USAGE:
     hive usage check --account-digest <sha256:...> [--threshold <0..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
     hive usage monitor preview|enable|disable|status --user-root <dir> --output json
+    hive storage [--user-root <dir>] [--output json]
+    hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json

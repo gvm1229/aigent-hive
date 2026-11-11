@@ -20,6 +20,7 @@ pub(crate) use qualification::run_qualification;
 pub(crate) use sensor::run_supervisor;
 pub(crate) use sensor::run_worker;
 pub(crate) use status::setup_status;
+pub(crate) use upgrade::prune_unused;
 pub(crate) use upgrade::resume_after_setup;
 pub(crate) use upgrade::upgrade_existing;
 

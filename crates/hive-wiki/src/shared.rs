@@ -603,10 +603,6 @@ pub fn register_project_with_shared_index_disabled(
     })
 }
 
-/// Rebuild the one user-root `SQLite` index from user Wiki plus enabled project Wikis.
-///
-/// This function never creates or mutates a project-local database.
-///
 /// Synchronize collections with the current project registry, reloading it when another
 /// registration changed it after the read. Gives up after three changed reads.
 ///
@@ -623,8 +619,7 @@ pub fn sync_current_project_registry(
         let registry = load_project_registry(user_root)?;
         match store.sync_project_registry(&registry) {
             Err(WikiError::Conflict(message))
-                if message.starts_with("project registry changed before synchronization")
-                    && attempts < 2 =>
+                if message == crate::store::STALE_PROJECT_REGISTRY && attempts < 2 =>
             {
                 attempts += 1;
             }
@@ -633,6 +628,10 @@ pub fn sync_current_project_registry(
     }
 }
 
+/// Rebuild the one user-root `SQLite` index from user Wiki plus enabled project Wikis.
+///
+/// This function never creates or mutates a project-local database.
+///
 /// # Errors
 ///
 /// Returns an error for invalid registry/source paths, malformed canonical pages, or an

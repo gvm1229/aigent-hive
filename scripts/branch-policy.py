@@ -63,25 +63,34 @@ def validate_pr(head: str, base: str, head_repo: str, base_repo: str, repo: Path
         raise PolicyError("main accepts only develop from the same repository")
 
 
-AI_NAMES = (
-    r"claude|claudecode|anthropic|codex|openai|chatgpt|gpt\d*|gemini|copilot|omx|cursor"
-    r"|cursoragent|devin|aider|windsurf|codeium|opencode|ai|agent|bot"
+AI_NAMES = re.compile(
+    r"\b(claude|claudecode|anthropic|codex|openai|chatgpt|gpt\d*|gemini|copilot|omx|cursor"
+    r"|cursoragent|devin|aider|windsurf|codeium|opencode|ai|agent|bot)\b|\[bot\]",
+    re.IGNORECASE,
 )
-AI_IDENTITY = re.compile(rf"\b({AI_NAMES})\b|\[bot\]|noreply@anthropic\.com", re.IGNORECASE)
-AI_COAUTHOR = re.compile(r"^\s*co-authored-by\s*:(.*)$", re.IGNORECASE | re.MULTILINE)
-SESSION_LINK = re.compile(r"^\s*claude-session\s*:.*$|https://claude\.ai/code/session_\S*",
-                          re.IGNORECASE | re.MULTILINE)
+AI_EMAILS = re.compile(r"noreply@anthropic\.com|cursoragent@cursor\.com|\[bot\]@", re.IGNORECASE)
+AI_TRAILER = re.compile(r"^\s*(co-authored-by|signed-off-by)\s*:(.*)$", re.IGNORECASE | re.MULTILINE)
+SESSION_LINK = re.compile(
+    r"^\s*claude-session\s*:.*$|https://claude\.ai/code/session_\S*|generated with \[claude code\]",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def ai_identity(identity: str) -> bool:
+    """Match AI words in the name part only, plus known AI addresses."""
+    name, _, email = identity.partition("<")
+    return bool(AI_NAMES.search(name) or AI_EMAILS.search(email))
 
 
 def commit_violations(author: str, committer: str, message: str) -> list[str]:
     """Return AI authorship, AI co-author and session-link findings for one commit."""
     found = []
     for role, identity in (("author", author), ("committer", committer)):
-        if AI_IDENTITY.search(identity):
+        if ai_identity(identity):
             found.append(f"AI {role}: {identity}")
-    for match in AI_COAUTHOR.finditer(message):
-        if AI_IDENTITY.search(match.group(1)):
-            found.append(f"AI co-author: {match.group(0).strip()}")
+    for match in AI_TRAILER.finditer(message):
+        if ai_identity(match.group(2)):
+            found.append(f"AI trailer: {match.group(0).strip()}")
     found.extend(f"session link: {m.group(0).strip()}" for m in SESSION_LINK.finditer(message))
     return found
 

@@ -43,6 +43,9 @@ pub const RAG_MANIFEST_RELATIVE: &str = ".hive/index/rag-generation.json";
 pub const RAG_TRUST_RELATIVE: &str = ".hive/config/rag-trust.json";
 /// Crash-recovery journal present only while canonical/derived state is dirty.
 pub const RAG_DIRTY_RELATIVE: &str = ".hive/index/rag-dirty.json";
+/// Conflict message for a project list that changed after the caller read it.
+pub const STALE_PROJECT_REGISTRY: &str =
+    "project registry changed before synchronization; reload and retry";
 
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const MAX_REGISTRY_BYTES: usize = 1024 * 1024;
@@ -541,9 +544,7 @@ impl RagStore {
             let current =
                 crate::shared::validate_project_registry_bytes(&self.root_path, &current)?;
             if current != projects {
-                return Err(WikiError::Conflict(
-                    "project registry changed before synchronization; reload and retry".to_owned(),
-                ));
+                return Err(WikiError::Conflict(STALE_PROJECT_REGISTRY.to_owned()));
             }
         }
         let prior = self.load_registry_optional()?;

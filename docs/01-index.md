@@ -321,6 +321,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-006 근거 — 미완료 감시 갱신 복구(축소 범위)](research/overhaul/OV141-006.md)
 - [OV141-007 근거 — 저장 용량 보고와 정리 미리보기](research/overhaul/OV141-007.md)
 - [OV141-008 근거 — README·출시일·Claude Code 표시](research/overhaul/OV141-008.md)
+- [단계 1 병합 전 검토 — Fable 5.2 advisor](research/overhaul/stage1-review.md)
 
 ### 점수 기반 개선 설계 초안
 

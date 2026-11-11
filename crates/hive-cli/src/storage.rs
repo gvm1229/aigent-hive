@@ -9,8 +9,6 @@ use std::process::ExitCode;
 const PREFIX: &str = "[Hades]";
 const HIVE: &str = ".hive";
 const MONITOR_BIN: &str = ".hive/runtime/usage-monitor/bin";
-const MONITOR_CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
-const MONITOR_JOURNAL: &str = ".hive/runtime/usage-monitor/upgrade.json";
 
 /// Ordered categories; the first matching prefix owns a file.
 const CATEGORIES: &[(&str, &str)] = &[
@@ -86,13 +84,19 @@ fn measure(user_root: &Path) -> Result<(Vec<CategoryRow>, u64), String> {
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(error) => return Err(format!("cannot list {}: {error}", directory.display())),
+            Err(error) => {
+                return Err(format!(
+                    "read: cannot list {}: {error}",
+                    directory.display()
+                ))
+            }
         };
         for entry in entries {
-            let entry = entry.map_err(|error| format!("cannot read directory entry: {error}"))?;
+            let entry =
+                entry.map_err(|error| format!("read: cannot read directory entry: {error}"))?;
             let path = entry.path();
             let metadata = fs::symlink_metadata(&path)
-                .map_err(|error| format!("cannot inspect {}: {error}", path.display()))?;
+                .map_err(|error| format!("read: cannot inspect {}: {error}", path.display()))?;
             if metadata.is_dir() {
                 pending.push(path);
             } else if metadata.is_file() {
@@ -114,58 +118,6 @@ fn measure(user_root: &Path) -> Result<(Vec<CategoryRow>, u64), String> {
         }
     }
     Ok((totals, total))
-}
-
-/// Executables referenced by the saved monitor configuration or its last update record.
-fn referenced_monitor_binaries(user_root: &Path) -> Vec<String> {
-    let mut names = Vec::new();
-    let read = |relative: &str| -> Option<Value> {
-        serde_json::from_slice(&fs::read(user_root.join(relative)).ok()?).ok()
-    };
-    let mut executables = Vec::new();
-    if let Some(config) = read(MONITOR_CONFIG) {
-        executables.push(config["executable"].clone());
-    }
-    if let Some(journal) = read(MONITOR_JOURNAL) {
-        executables.push(journal["to"]["executable"].clone());
-        executables.push(journal["from"]["executable"].clone());
-    }
-    for executable in executables {
-        if let Some(name) = executable.as_str().and_then(|path| {
-            Path::new(&path.replace('\\', "/"))
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-        }) {
-            names.push(name);
-        }
-    }
-    names
-}
-
-/// Monitor executables that neither the configuration nor the last update record uses.
-fn prune_candidates(user_root: &Path) -> Result<Vec<(PathBuf, u64)>, String> {
-    let keep = referenced_monitor_binaries(user_root);
-    let directory = user_root.join(MONITOR_BIN);
-    let entries = match fs::read_dir(&directory) {
-        Ok(entries) => entries,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(format!("cannot list {}: {error}", directory.display())),
-    };
-    let mut candidates = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|error| format!("cannot read directory entry: {error}"))?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        let metadata = fs::symlink_metadata(entry.path())
-            .map_err(|error| format!("cannot inspect {name}: {error}"))?;
-        let is_exe = Path::new(&name)
-            .extension()
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"));
-        if metadata.is_file() && is_exe && name.starts_with("hive-") && !keep.contains(&name) {
-            candidates.push((entry.path(), metadata.len()));
-        }
-    }
-    candidates.sort();
-    Ok(candidates)
 }
 
 fn result(
@@ -190,12 +142,22 @@ fn result(
 }
 
 fn failure(action: &'static str, message: String) -> ExitCode {
+    // Read failures are verification errors; everything else is invalid input.
+    let (status, exit_code, code, message) = match message.strip_prefix("read: ") {
+        Some(read) => (
+            "verification-failed",
+            1,
+            "hive.storage-read-failed",
+            read.to_owned(),
+        ),
+        None => ("failed", 2, "hive.storage-input-invalid", message),
+    };
     emit_action_result(&ActionResult {
         schema_version: 1,
         action,
-        status: "failed",
-        exit_code: 2,
-        code: "hive.storage-input-invalid",
+        status,
+        exit_code,
+        code,
         message,
         changed_paths: Vec::new(),
         evidence: Vec::new(),
@@ -218,7 +180,19 @@ fn human_size(bytes: u64) -> String {
     }
 }
 
+pub(crate) const STORAGE_USAGE: &str = "Usage:\n  hive storage [--user-root <path>] [--output json]\n  hive prune --dry-run|--confirm [--user-root <path>] [--output json]\n\nstorage reports Hive file bytes by category and changes nothing.\nprune lists or removes monitor executables that the saved monitor records do not use.\n";
+
+fn is_help(arguments: &[String]) -> bool {
+    arguments
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+}
+
 pub(crate) fn run_storage(arguments: &[String]) -> ExitCode {
+    if is_help(arguments) {
+        print!("{STORAGE_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let options = match parse(arguments, false) {
         Ok(options) => options,
         Err(message) => return failure("ReportStorage", message),
@@ -248,50 +222,71 @@ pub(crate) fn run_storage(arguments: &[String]) -> ExitCode {
 }
 
 pub(crate) fn run_prune(arguments: &[String]) -> ExitCode {
+    if is_help(arguments) {
+        print!("{STORAGE_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let options = match parse(arguments, true) {
         Ok(options) => options,
         Err(message) => return failure("PruneStorage", message),
     };
-    let candidates = match prune_candidates(&options.user_root) {
-        Ok(candidates) => candidates,
-        Err(message) => return failure("PruneStorage", message),
-    };
     let confirm = options.mode == Some("confirm");
-    let (mut removed, mut skipped) = (Vec::new(), Vec::new());
-    if confirm {
-        for (path, _) in &candidates {
-            match fs::remove_file(path) {
-                Ok(()) => removed.push(path.display().to_string()),
-                Err(error) => skipped.push(json!({"path":path,"reason":error.to_string()})),
-            }
+    let report = match crate::usage_monitor::prune_unused(&options.user_root, confirm) {
+        Ok(report) => report,
+        Err(error) => {
+            return emit_action_result(&ActionResult {
+                schema_version: 1,
+                action: "PruneStorage",
+                status: error.status(),
+                exit_code: error.exit_code(),
+                code: "hive.storage-prune-refused",
+                message: format!("{PREFIX} {}", error.message()),
+                changed_paths: Vec::new(),
+                evidence: Vec::new(),
+                next_action: Some("inspect hive usage monitor status; nothing was removed".into()),
+                data: None,
+            });
         }
-    }
-    let listed: Vec<Value> = candidates
-        .iter()
-        .map(|(path, bytes)| json!({"path":path,"bytes":bytes,"category":"monitor-binaries"}))
-        .collect();
-    let reclaim: u64 = candidates.iter().map(|(_, bytes)| bytes).sum();
+    };
+    let list = |key: &str| report[key].as_array().cloned().unwrap_or_default();
+    let (candidates, removed, skipped) = (list("candidates"), list("removed"), list("skipped"));
     if !options.json {
-        for (path, bytes) in &candidates {
-            let verb = if confirm { "removed" } else { "would remove" };
+        for item in &candidates {
+            let bytes = item["bytes"].as_u64().unwrap_or(0);
             println!(
-                "{PREFIX} {verb}: {} ({})",
-                path.display(),
-                human_size(*bytes)
+                "{PREFIX} would remove: {} ({})",
+                item["path"].as_str().unwrap_or("?"),
+                human_size(bytes)
             );
         }
-        println!(
-            "{PREFIX} {} candidate(s), {}{}",
-            candidates.len(),
-            human_size(reclaim),
-            if confirm {
-                ""
-            } else {
-                "; run with --confirm to delete"
-            }
-        );
+        for item in &removed {
+            println!("{PREFIX} removed: {}", item.as_str().unwrap_or("?"));
+        }
+        for item in &skipped {
+            println!(
+                "{PREFIX} skipped: {} ({})",
+                item["path"].as_str().unwrap_or("?"),
+                item["reason"].as_str().unwrap_or("unknown")
+            );
+        }
+        if confirm {
+            println!(
+                "{PREFIX} {} removed, {} skipped",
+                removed.len(),
+                skipped.len()
+            );
+        } else {
+            println!(
+                "{PREFIX} {} candidate(s); run with --confirm to delete",
+                candidates.len()
+            );
+        }
         return ExitCode::SUCCESS;
     }
+    let changed = removed
+        .iter()
+        .filter_map(|path| path.as_str().map(str::to_owned))
+        .collect();
     emit_action_result(&result(
         "PruneStorage",
         if confirm {
@@ -299,18 +294,20 @@ pub(crate) fn run_prune(arguments: &[String]) -> ExitCode {
         } else {
             "hive.storage-prune-previewed"
         },
-        format!(
-            "{PREFIX} {} unused monitor executable(s){}",
-            candidates.len(),
-            if confirm {
-                " processed"
-            } else {
-                " listed; nothing changed"
-            }
-        ),
-        removed.clone(),
-        json!({"mode":options.mode,"candidates":listed,"reclaimable_bytes":reclaim,
-            "removed":removed,"skipped":skipped}),
+        if confirm {
+            format!(
+                "{PREFIX} {} removed, {} skipped",
+                removed.len(),
+                skipped.len()
+            )
+        } else {
+            format!(
+                "{PREFIX} {} unused monitor executable(s) listed; nothing changed",
+                candidates.len()
+            )
+        },
+        changed,
+        json!({"mode":options.mode,"report":report}),
     ))
 }
 
@@ -324,113 +321,35 @@ mod tests {
         fs::write(path, bytes).unwrap();
     }
 
-    fn fixture() -> tempfile::TempDir {
+    #[test]
+    fn storage_categories_sum_to_every_regular_file_byte() {
         let root = tempfile::tempdir().unwrap();
         write(root.path(), ".hive/knowledge/Wiki/a.md", &[1; 100]);
         write(root.path(), ".hive/index/hive.sqlite3", &[2; 200]);
         write(root.path(), ".hive/index/vector/v.bin", &[3; 300]);
         write(root.path(), ".hive/backups/user-install/b.tar", &[4; 400]);
         write(root.path(), ".hive/config/user-setup.yml", &[5; 50]);
-        for name in [
-            "hive-a.exe",
-            "hive-b.exe",
-            "hive-c.exe",
-            "hive-old.exe",
-            "hive-new.exe",
-        ] {
-            write(root.path(), &format!("{MONITOR_BIN}/{name}"), &[6; 10]);
-        }
-        let bin = root.path().join(MONITOR_BIN);
         write(
             root.path(),
-            MONITOR_CONFIG,
-            serde_json::to_string(&json!({"executable":bin.join("hive-new.exe")}))
-                .unwrap()
-                .as_bytes(),
+            ".hive/runtime/usage-monitor/bin/hive-a.exe",
+            &[6; 10],
         );
-        write(
-            root.path(),
-            MONITOR_JOURNAL,
-            serde_json::to_string(&json!({"from":{"executable":bin.join("hive-old.exe")},
-                "to":{"executable":bin.join("hive-new.exe")}}))
-            .unwrap()
-            .as_bytes(),
-        );
-        root
-    }
-
-    #[test]
-    fn storage_categories_sum_to_every_regular_file_byte() {
-        let root = fixture();
         let (categories, total) = measure(root.path()).unwrap();
         let by_name = |name: &str| categories.iter().find(|row| row.0 == name).unwrap().1;
         assert_eq!(by_name("knowledge"), 100);
         assert_eq!(by_name("index"), 200);
         assert_eq!(by_name("vector"), 300);
         assert_eq!(by_name("backups"), 400);
-        assert_eq!(by_name("monitor-binaries"), 50);
+        assert_eq!(by_name("monitor-binaries"), 10);
+        assert_eq!(by_name("other"), 50);
         assert_eq!(categories.iter().map(|row| row.1).sum::<u64>(), total);
-        let expected: u64 = walk_sizes(&root.path().join(HIVE));
-        assert_eq!(total, expected);
-    }
-
-    fn walk_sizes(path: &Path) -> u64 {
-        fs::read_dir(path)
-            .unwrap()
-            .map(|entry| {
-                let path = entry.unwrap().path();
-                if path.is_dir() {
-                    walk_sizes(&path)
-                } else {
-                    fs::metadata(path).unwrap().len()
-                }
-            })
-            .sum()
-    }
-
-    #[test]
-    fn dry_run_lists_unused_executables_and_changes_nothing() {
-        let root = fixture();
-        let before = snapshot(root.path());
-        let candidates = prune_candidates(root.path()).unwrap();
-        let names: Vec<String> = candidates
-            .iter()
-            .map(|(path, _)| path.file_name().unwrap().to_string_lossy().into_owned())
-            .collect();
-        assert_eq!(names, ["hive-a.exe", "hive-b.exe", "hive-c.exe"]);
-        assert_eq!(
-            run_prune(&[
-                "--dry-run".into(),
-                "--user-root".into(),
-                root.path().display().to_string(),
-                "--output".into(),
-                "json".into(),
-            ]),
-            ExitCode::SUCCESS
-        );
-        assert_eq!(snapshot(root.path()), before);
+        assert_eq!(total, 1060);
     }
 
     #[test]
     fn prune_requires_an_explicit_mode() {
         assert!(parse(&[], true).is_err());
         assert!(parse(&["--dry-run".into(), "--confirm".into()], true).is_err());
-    }
-
-    fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
-        let mut files = Vec::new();
-        let mut pending = vec![root.to_path_buf()];
-        while let Some(directory) = pending.pop() {
-            for entry in fs::read_dir(directory).unwrap() {
-                let path = entry.unwrap().path();
-                if path.is_dir() {
-                    pending.push(path);
-                } else {
-                    files.push((path.clone(), fs::read(path).unwrap()));
-                }
-            }
-        }
-        files.sort();
-        files
+        assert!(is_help(&["--help".into()]));
     }
 }

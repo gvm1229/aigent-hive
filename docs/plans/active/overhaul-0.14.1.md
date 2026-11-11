@@ -28,15 +28,15 @@
   - 변경: `crates/hive-cli/src/usage_monitor.rs`(설치 경로 `:507-514`)에서 설치 성공 뒤 `runtime/usage-monitor/bin/hive-*.exe` 중 현재·직전 외 정리. 실행 중·잠긴 파일은 건너뛰고 기록
   - 확인: 임시 사용자 폴더의 5개 → 2개, 실행 중 파일 보존, 실패 시 기존 파일 불변 시험
 - [x] [OV141-006] 미완료 감시 갱신 복구
-  - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-006.md#sha256:2fd5604fcecb60c6b151a65616c0444912d2a69213480b64103d73c4eb5ae284
-  - 변경: `runtime/usage-monitor/upgrade.json`의 `phase: incomplete`("Windows monitor adapter failed")를 임시 사용자로 재현, 원인 기록, 재시도·복구 경로 구현
-  - 확인: 격리 Windows 재현과 복구 통과. 실제 PC 적용은 OV141-011
+  - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-006.md#sha256:023031146cfadcfa77301abc1c8d2464fbdf544f61f2e10a734192924dd40f74
+  - 변경: 2026-11-11 사용자 결정으로 축소. 감시 어댑터 실패 문구에 실패 단계 표시, 원인 조사 기록. Windows 재현·추가 복구는 [백로그](../backlog/monitor-upgrade-recovery.md)
+  - 확인: 단계 표시 단위 시험과 usage_monitor 시험 통과. Windows 재현은 백로그
 - [x] [OV141-007] 저장 용량 보고와 정리 미리보기
-  - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-007.md#sha256:9c9c1f36fd332d3158961f18b921dce868691d0dffc0e57018d12161905d608e
+  - state: complete; depends: OV141-005; evidence: repo:docs/research/overhaul/OV141-007.md#sha256:56faf08adf7339ddb074e03d4b9ec2459bd7db2868ac7f99b92b05efc9f41dc3
   - 변경: `hive storage`(지식·색인·벡터·감시 실행 파일·백업별 용량)와 `hive prune --dry-run`(삭제 후보만 표시, 실제 삭제는 `--confirm`). 출력 접두 `[Hades]`
   - 확인: 임시 폴더의 분류 합계 = `du` 합계, dry-run 전후 파일 해시 불변
 - [x] [OV141-008] README·출시일·Claude Code 표시
-  - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-008.md#sha256:09f91719f2cc30871d2980c0096b48acb56dd8aa9b41bc86851a42fce2e13bd1
+  - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-008.md#sha256:981f63ac35a108bba3230fc57fd2c2a48cb8bfbd5425bf1206237d00b556e390
   - 변경: `README.md:15`와 `Cargo.toml:23` 출시일 일치, `README.md:326-327` 문구, `README.md:134`에 Claude Code "검증 전" 표시
   - 확인: `python scripts/check-public-stable-docs.py`, `python scripts/check-human-documentation-style.py`
 - [ ] [OV141-009] 0.14.1-test.1 공개 시험

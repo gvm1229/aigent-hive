@@ -57,6 +57,7 @@
           "enum": ["user-root", "registered-project", "directory", "imported"]
         },
         "state": { "enum": ["attached", "detached"] },
+        "explicitly_detached": { "type": "boolean" },
         "aliases": {
           "type": "array",
           "maxItems": 256,
@@ -110,6 +111,13 @@
           },
           "then": { "required": ["local_locator"] },
           "else": { "not": { "required": ["local_locator"] } }
+        },
+        {
+          "if": {
+            "properties": { "explicitly_detached": { "const": true } },
+            "required": ["explicitly_detached"]
+          },
+          "then": { "properties": { "state": { "const": "detached" } } }
         }
       ]
     }
