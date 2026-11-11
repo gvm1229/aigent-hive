@@ -885,3 +885,6 @@
 | [passed](runs/20261110T181103-0190bc82858c.md) | 개발 검증: cargo | 8b54305819c6174767846a98c0aeddc3c98d64f4 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T033010-21ce904bbfa1.md) | 개발 검증: cargo | 2d102f89cbaab42572543ff451a8ced55ee33043 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T045255-1df34040592c.md) | 0.14.1 storage·prune 실제 CLI 확인 | 2915541530c88cb5caae3f452ca086170520dace | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T050006-dd32831c5f28.md) | 개발 검증: cargo | 14f3aec58879d3ac783ce09d6321d70ca83edbf8 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [failed](runs/20261111T051128-ccecdd5872df.md) | Python conformance: documentation | 14f3aec58879d3ac783ce09d6321d70ca83edbf8 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T051141-8c06a1da5dae.md) | Python conformance: release | 14f3aec58879d3ac783ce09d6321d70ca83edbf8 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |

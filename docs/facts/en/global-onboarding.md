@@ -10,7 +10,7 @@ tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:b051b103d5a37cae950fe837fe818b9e2c05e5f67e2f9d71195fb9ba32da3bbc"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:800de1795d32bd05d22a67f768913f40a0717782d5ba5bcee039245282a71ce2"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:53d45f59e894a17eb3d804249d811b832f5bc1a47f7c3405ef897fd13fb37150"
   - "repo:crates/hive-core/src/preferences.rs#sha256:838005e60b3255422c2ee143d76e66ef3ef877d7f3a8ff196eb446c0dfdc888d"
   - "repo:docs/archive/plans/foundations/native-usage-sensor.md#sha256:231e96967c32029d539eb82f245399e37156a43c2028be8a01a51215a5455807"
   - "repo:docs/archive/plans/foundations/usage-guard-policy.md#sha256:4b99d1f046ff56eeb9102b99dec4e88226ca2cdfa4947bb233c9a5c541a19172"

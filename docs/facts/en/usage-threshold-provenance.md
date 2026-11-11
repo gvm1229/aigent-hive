@@ -9,7 +9,7 @@ summary: "0.14.0 changes the threshold without reconciling its declaration recor
 tags: [preferences, setup, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:800de1795d32bd05d22a67f768913f40a0717782d5ba5bcee039245282a71ce2"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:53d45f59e894a17eb3d804249d811b832f5bc1a47f7c3405ef897fd13fb37150"
   - "repo:crates/hive-core/src/preferences.rs#sha256:838005e60b3255422c2ee143d76e66ef3ef877d7f3a8ff196eb446c0dfdc888d"
   - "repo:docs/research/usage-threshold-provenance-0.14.0/reproduce.py#sha256:5460ffb967d9381497534988fd6b20f2f89b9faff8c6fa5f2f220df8fd5128c5"
 links: [usage-guard-thresholds]

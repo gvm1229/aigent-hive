@@ -11,7 +11,7 @@ aliases: ["PUG93"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:1ab23dbb5a8b60322f6c1068ba7cc09f54bc34151915068a748a1cc5a2c38018"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:55eaf705a654fb71c981e5788610d8d88cce19b2cc4eaa511b1c8a4fa1471553"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:800de1795d32bd05d22a67f768913f40a0717782d5ba5bcee039245282a71ce2"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:53d45f59e894a17eb3d804249d811b832f5bc1a47f7c3405ef897fd13fb37150"
   - "repo:crates/hive-update/src/merge.rs#sha256:d081f88fb284963e9ae02366ae3e99f76f9e65383948660ea59f403df89d741d"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:828eb911da5e50ef6cadd88c301e07f5aa454c2bbe1c9bcd7ef460f7efae00fe"
