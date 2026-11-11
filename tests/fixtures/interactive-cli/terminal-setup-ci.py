@@ -33,7 +33,7 @@ def fake_codex(directory, environment):
                 and isinstance(n.value, str) and n.value.startswith("import json"))
     program = directory / "codex.py"
     program.write_text(body.replace("__HIVE_TEST_HOST__", repr("codex"))
-                       .replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.0")), encoding="utf-8")
+                       .replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.1")), encoding="utf-8")
     if os.name == "nt":
         (directory / "codex.cmd").write_text(f'@"{sys.executable}" "%~dp0codex.py" %*\r\n', encoding="utf-8")
     else:
