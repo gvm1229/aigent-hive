@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "product_version": "0.14.0",
+  "archive": "codex-native.zip",
+  "sha256": "6db384b89cd756343d11076a3747450926a35608cfb6e47859a74cb02aed111f",
+  "file_count": 81,
+  "generation": "Debug build of public tag v0.14.0 source (Linux); synthetic setup only; no user installation or settings changed",
+  "source_asset": "git:v0.14.0",
+  "source_binary_sha256": "457c7900eb00f755a1a77a840a8cb1ee4b8b5f4003dda74baaeefe4d9cf42bc0",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}

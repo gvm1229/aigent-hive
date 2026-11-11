@@ -2326,6 +2326,21 @@ fn historical_owner_matches_detection(
     }
 }
 
+/// Setup answers gained preference records (schema 2) in public 0.14.0. Earlier frozen
+/// releases only wrote schema 1, so schema 2 there remains an inconsistent input.
+fn historical_answers_schema_supported(version: &str, schema_version: u32) -> bool {
+    let release = version
+        .split('.')
+        .map(str::parse::<u32>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap_or_default();
+    match schema_version {
+        1 => true,
+        2 => release.as_slice() >= [0, 14, 0].as_slice(),
+        _ => false,
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8_or_0_9(
     target_dir: &Dir,
@@ -2418,7 +2433,7 @@ fn frozen_project_base_0_8_or_0_9(
         &resolution.detection,
         &resolution.resolved_owner,
     );
-    let inputs_match = answers.schema_version == 1
+    let inputs_match = historical_answers_schema_supported(version, answers.schema_version)
         && harness.schema_version == 1
         && harness.harness_version == version
         && harness.source_release_version == version
@@ -7051,6 +7066,15 @@ fn io_internal(error: io::Error) -> RenderError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn frozen_answers_accept_schema_two_only_from_0_14_0() {
+        assert!(super::historical_answers_schema_supported("0.13.1", 1));
+        assert!(!super::historical_answers_schema_supported("0.13.1", 2));
+        assert!(super::historical_answers_schema_supported("0.14.0", 1));
+        assert!(super::historical_answers_schema_supported("0.14.0", 2));
+        assert!(!super::historical_answers_schema_supported("0.14.0", 3));
+    }
+
     #[test]
     fn test_project_base_retains_exact_package_identity_in_its_digest() {
         let files = std::collections::BTreeMap::from([(
