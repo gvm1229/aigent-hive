@@ -11,8 +11,8 @@
 
 ## 항목
 
-- [ ] [OV142-001] 시작·계획 전환과 버전 동기화
-  - state: agent-owned
+- [x] [OV142-001] 시작·계획 전환과 버전 동기화
+  - state: complete; evidence: repo:docs/research/overhaul/OV142-001.md#sha256:a509aa6313f2ca0b8156e65e1e7d825d5f559c62745a6b6597c465569d5dfe48
   - 변경: 0.14.1 계획·상태 보관(OV141-011 미완료 유지), PLAN/CURRENT/재정비 표 전환. Cargo·템플릿·플러그인 0.14.2, 출시 자료 순번 27. 공개 v0.14.1의 이전 패치 원본 등록과 렌더러·소유권 목록 동기화
   - 확인: `python scripts/check-plan-state.py`, `bash scripts/check-release-version.sh 0.14.2`, project-base coverage와 historical 회귀. 실패 시 해당 누락만 보완
 - [ ] [OV142-002] 큰 실행 파일의 정확 삭제 수정
