@@ -23,7 +23,8 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 0.14.1 수정판 | 10 | 1 | 90.9% |
-| **현재 범위 합계** | **10** | **1** | **90.9%** |
+| 제품 버전과 별개인 구독자 승인 자동화 | 3 | 0 | 100.0% |
+| **현재 범위 합계** | **13** | **1** | **92.9%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -31,6 +32,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [overhaul-0.14.1.md](active/overhaul-0.14.1.md) | `OV141-001–011` | 0.14.1 수정판 |
+| [subscriber-approval-via-main.md](active/subscriber-approval-via-main.md) | `SMAIN-001–003` | 제품 버전과 별개인 구독자 승인 자동화 |
 
 ## 결정과 이전 근거
 

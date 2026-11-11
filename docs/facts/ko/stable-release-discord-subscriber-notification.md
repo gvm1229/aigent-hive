@@ -9,12 +9,12 @@ summary: "안정판 게시 전 구독자 안내문 승인 필수, 누락 공지�
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-discord-notification.yml#sha256:0f7dfee71bb06b4af4ccf2ca26122fec42e02b21d5158e939561120017da3d68"
-  - "repo:.github/workflows/release-publish.yml#sha256:240f5376bc7ea26109a1c34be965c6e74f9dc840e400af78bb1e55a2bac01263"
+  - "repo:.github/workflows/release-discord-notification.yml#sha256:05cbd3bebb278b5b4fe3780f536033a896fb83212d9749e5f0005ae10afd73e6"
+  - "repo:.github/workflows/release-publish.yml#sha256:241b1121f2b95690858514f9bcc8af27f6bd9084d125b14ff0e5df31cd401a3d"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
+  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:04e76513d36ede4c84e57d01b4a22335ac19ba0bab2bc604c9af1f7cab5f348c"
-  - "repo:scripts/register-stable-summary-approval.py#sha256:8cd05c881ecadb7324bb144b0ff20e9c1a3629e6386bcce4d31a99d86c8e6c10"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:1cc98f5afa3e10399575b307a14591208b5f3ee2157192362e799cfbdd6409fd"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [source-development, v0-9-full-release]
@@ -24,7 +24,5 @@ status: active
 
 # 안정판 Discord 구독자 알림
 
-안정판게시전 승인문구·외부지문검증필수, 전송생략/false의게시거부. GitHub정식출시 성공뒤배너·그다음안내문전송. 시험판전송·webhook값출력 제외.
-버전별원문·승인파일·외부지문대조, 전체2,000자한계·주/하위목록 보존. 기존승인목록형식과 순서맞는새기능/수정/개선의비어있지않은섹션·구분선 허용, 본문재작성 없음.
-명시적문구승인뒤 기존gh로지문등록만수행, 재작성·출시·전송 없음. 동일지문실패재시도, 변경문구는새승인필수.
-복구는 공개안정판·성공게시 확인. 새승인main/develop본문·지문별중복차단, 재게시 제외. 0.12.0의870자섹션본문·배너 수락.
+검토된 develop→main PR로 원문·한 줄 SHA-256 파일 승인. `release-publication` 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr` 필요, 누락·다른 값은 게시 전 검사·전송 거부. 출시별 설정 불필요, 옛 지문 비밀값 삭제 가능.
+출시 소스만 사용, main·후보·공개 출시 결합과 버전별 중복 차단 유지. 다른 커밋 재전송 폐기. 파일명·바이트·전체 2,000자·목록·섹션 검증 유지. Release 성공 뒤 배너→안내 전송, 시험판·webhook 노출 제외. 로컬 검사와 실제 Discord 수신 구분. 상세: 2026-11-12 결정.

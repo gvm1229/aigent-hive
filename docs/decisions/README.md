@@ -29,3 +29,4 @@ Accepted product decision과 선택 근거의 정본.
 | Codex 스킬 제공·자동 정리 | [ADR-0024](ADR-0024-codex-skill-delivery.md) |
 | 0.14.0 대화형 CLI·설정 출처 | [현재 결정](interactive-cli-0.14.0.md) |
 | 사용량 보호 날짜별 승인 | [승인 기록](usage-guard-approvals.md) |
+| 구독자 main PR 승인 | [2026-11-12 결정](subscriber-approval-via-main-2026-11-12.md) |

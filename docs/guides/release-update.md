@@ -113,6 +113,11 @@ Apply: 모든 digest 재계산. Drift 시 중단. Release-provided executable mi
 Discord 알림은 `release-publication` 환경의 `AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL` 비밀 값만 사용.
 시험판 알림 없음. 배너 전송 실패 시 요약 전송 없음.
 
+구독자 문구 승인: `docs/releases/<version>.subscriber.ko.md`와 같은 이름의 `.sha256` 파일을 일반 develop→보호된 main 검토 PR로 함께 반영. 지문 파일은 `sha256:<64자리 소문자 지문>  <version>.subscriber.ko.md` 한 줄, 원문의 실제 바이트와 일치 필수.
+최초 1회 설정: `release-publication` 환경의 **변수** `AIGENT_HIVE_SUBSCRIBER_APPROVAL`에 `main-pr` 지정. 비밀값 등록이 아닌 일반 변수 설정. 누락·다른 값은 전송과 안정판 게시 전 검사에서 거부. 출시마다 GitHub 설정 변경 불필요, 과거 출시별 지문 비밀값 삭제 가능.
+일반 게시와 누락 알림 복구 모두 공개 출시 소스 커밋의 안내문·지문만 사용. 복구는 main에서 성공한 게시 실행·공개 안정판·누락 전송·버전별 중복 수신 기록 확인 후 배너→안내 순서 전송. 다른 커밋 문구 재전송 제외.
+
+
 Publication workflow 입력 금지: 장기 npm token, signing key, certificate, provider credential
 
 Npm 인증: Trusted Publishing OIDC

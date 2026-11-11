@@ -1,5 +1,7 @@
 # 현재 상태
 
+- 별도 저장소 자동화: [구독자 승인 변경](../plans/active/subscriber-approval-via-main.md), `chore/subscriber-approval-via-main`의 구현·검증·지정 브랜치 push 완료. 후속 `599685af` 병합·과거 기록 복원·요청 로컬 검사 완료, 지정 브랜치만 전달 대상. 제품 출시·GitHub 설정 변경 제외
+
 - 제품 버전: `0.14.1`
 - 공개 안정판: `0.14.0`. 0.14.1 대표 npm 패키지의 일부 게시, GitHub 정식 출시 미완료
 - 현재: 재정비 단계 1, 브랜치 `fix/overhaul-1-0.14.1`. [활성 계획](../plans/PLAN.md)·[0.14.1 항목](../plans/active/overhaul-0.14.1.md)
@@ -13,7 +15,7 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.14.1`
-- 현재 등록 항목: 10/11 완료
+- 현재 등록 항목: 13/14 완료
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
