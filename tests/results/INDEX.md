@@ -890,3 +890,37 @@
 | [passed](runs/20261111T051141-8c06a1da5dae.md) | Python conformance: release | 14f3aec58879d3ac783ce09d6321d70ca83edbf8 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T104515-d528cb5e5930.md) | 공개 정식 0.14.0 태그 빌드로 이전판 프로젝트 원본 생성 | 51fb667d4a9bbe9af8134a138bad60badf814c5f | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
 | [passed](runs/20261111T105156-07f897d56461.md) | Python conformance: documentation | f75fcf52926d87ebf49c69d0a908483f3a1a970d | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [failed](runs/20261111T105205-05babe90fdd4.md) | Python conformance: contract | f75fcf52926d87ebf49c69d0a908483f3a1a970d | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T110222-5b9314c5d4f8.md) | Python conformance: integration | b3ce7bb4fbc9b872e56ac022cf3219b75f7f9f8c | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T123435-0e70bf69f104.md) | Python conformance: documentation | 46c6b406467919efb678223b235be8555896d011 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T130126-793d90cbf6a4.md) | Python conformance: release | 3da018161f648c921945db2aa60c89b5d304669e | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [failed](runs/20261111T130221-d1443d95f058.md) | Python conformance: documentation | 3da018161f648c921945db2aa60c89b5d304669e | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [failed](runs/20261111T131306-62f955bdf08e.md) | Python conformance: documentation | 3da018161f648c921945db2aa60c89b5d304669e | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T131325-96e1903f1500.md) | Python conformance: documentation | 3da018161f648c921945db2aa60c89b5d304669e | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T153524-6ccbf6b9becf.md) | Python conformance: documentation | 4206642a2fc084b1b1ba99a217e64d18a0598892 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T160231-69dadb089461.md) | Python conformance: documentation | b985217e926c40bd1faf841b586702953877b4b9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T160443-d38b2dcd0609.md) | Python conformance: documentation | 58838bd8672c034c47165bc96c34aa1c8a78bd61 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T160841-72bd842c9f32.md) | Python conformance: documentation | 1c9a9efeddb6cc3986cf1472aabc1f7d1f26e424 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T160959-598e59ec49c5.md) | Python conformance: documentation | 1c9a9efeddb6cc3986cf1472aabc1f7d1f26e424 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T161012-e99aa4e9690c.md) | Python conformance: release | b985217e926c40bd1faf841b586702953877b4b9 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T161347-b18113a11413.md) | Python conformance: documentation | b985217e926c40bd1faf841b586702953877b4b9 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T161538-34693b9e22bd.md) | Python conformance: release | 1570b621fbbcc029a4165280210fa8ab1335fe5c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T161540-6c5394e34c7e.md) | Python conformance: documentation | ee9610bd403d48af97668e14b4b9077be5ab17f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T161549-9213e0a18391.md) | Python conformance: documentation | 1570b621fbbcc029a4165280210fa8ab1335fe5c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T161559-9d9fbe822145.md) | Python conformance: security | 1570b621fbbcc029a4165280210fa8ab1335fe5c | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T180115-42ddcbf56642.md) | Python conformance: documentation | 095d4a7e42340f5c9c7691142baf9737f0172cc3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T180335-57a91b23e6a5.md) | Python conformance: documentation | 095d4a7e42340f5c9c7691142baf9737f0172cc3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T181508-9a56d21dc3b7.md) | Python conformance: release | 23bf4e67618ec08c3ad06d50ddf02db329cc692b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T181748-7aa94b7214c6.md) | Python conformance: documentation | 23bf4e67618ec08c3ad06d50ddf02db329cc692b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T182616-9986148148ec.md) | Python conformance: documentation | 599685afcb3f59aef56d565998ebf3baaf892dd5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T183218-19b6712f74e0.md) | Python conformance: documentation | 2d228c60284ded5dcc410a41f4efd3204ad70754 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T183321-9163e7d80f9c.md) | Python conformance: documentation | 2d228c60284ded5dcc410a41f4efd3204ad70754 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T183448-2e3c465d91fd.md) | Python conformance: documentation | cc663a35a90de7e8ba069108905c76acef0dd77a | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T183743-d529b4280c63.md) | Python conformance: documentation | 2b4428bd7cc610f62113c0b1383cf5311f47192f | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T183934-a969c20e587f.md) | Python conformance: documentation | 2b4428bd7cc610f62113c0b1383cf5311f47192f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T184051-79539f0f9be1.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T184117-577bcfe20c3e.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T184206-c7f256bb5d70.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T184229-cd3a0d7334d0.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T184352-0a23d9bf4725.md) | 개발 검증: cargo.EXE | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T184628-7594ffe79383.md) | 0.14.2 버전 일치 확인 | 0b90ce393cf91cfc7ec36b4bb9d206157f3cca55 | Windows-11-10.0.26300-SP0 |
