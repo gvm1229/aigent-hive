@@ -372,3 +372,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.14.1 미발송 구독자 안내 초안](releases/0.14.1.subscriber.ko.md)
 - [Aigent Hive v0.14.0 업데이트 내역:](releases/0.14.0.subscriber.ko.md)
 - [0.14.0 정식 배포 근거](research/stable-release-0.14.0.md)
+
+- [0.14.2 큰 파일 정리 결정](decisions/monitor-cleanup-0.14.2.md)·[활성 항목](plans/active/overhaul-0.14.2.md)

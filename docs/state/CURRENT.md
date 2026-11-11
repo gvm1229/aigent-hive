@@ -1,29 +1,25 @@
 # 현재 상태
 
-- 별도 저장소 자동화: [구독자 승인 변경](../plans/active/subscriber-approval-via-main.md), `chore/subscriber-approval-via-main`의 구현·검증·지정 브랜치 push 완료. 후속 `599685af` 병합·과거 기록 복원·요청 로컬 검사 완료, 지정 브랜치만 전달 대상. 제품 출시·GitHub 설정 변경 제외
-
-- 제품 버전: `0.14.1`
-- 공개 안정판: `0.14.1`. 복구 게시 43075315269·GitHub 정식 출시·Discord 전송 단계 성공
-- 현재: 재정비 단계 1, 브랜치 `fix/overhaul-1-0.14.1`. [활성 계획](../plans/PLAN.md)·[0.14.1 항목](../plans/active/overhaul-0.14.1.md)
-- 공개 시험: `0.14.1-test.1` 수용. 실제 사용자 설치·감시는 시험에 사용하지 않는 경계
-- 직전 정식판 0.14.0의 프로젝트·사용자 원본을 공개 태그 바이트로 등록, 0.14.0 → 0.14.1 갱신 인증 대상
-- [재정비 할 일](../plans/overhaul/README.md): 단계 0 완료·develop 병합
-
-- [OV141-011 중단 근거](../research/overhaul/OV141-011.md): 정식 게시 복구와 PC 0.14.1 설치 성공. 감시 파일 6개로 2개 이하 조건 실패. 원인: 큰 실행 파일의 제한 읽기. 사용자 승인 0.14.2 선행 단계로 수정·재검증 이관, OV141-011 미완료 유지. 출처 지문 복구와 문서 재검사 뒤 develop 통합·0.14.2 시작 예정
+- 제품 버전: `0.14.2`
+- 공개 안정판: `0.14.1`
+- 현재: 재정비 단계 1b, `fix/overhaul-1-0.14.2`. [활성 계획](../plans/PLAN.md)·[단계 항목](../plans/active/overhaul-0.14.2.md)
+- 범위: 큰 감시 실행 파일 정리·회귀·안내문·로컬 검사. 이번 실행은 Fable 검토 직전 종료
+- 공개 시험: 0.14.2-test.1 미실행, 검토·develop 병합 뒤 실행
+- OV141-011: 정식 게시·Discord 전송 단계·PC 설치 성공, 감시 파일 6개로 조건 실패. [미완료 근거](../research/overhaul/OV141-011.md) 보존, 해결 소유자 OV142-008
+- 0.14.1 중단 문서 복구와 develop 통합 완료: `ead55533`, `2b4428bd`. 기존 approval 작업 트리와 비추적 조사 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
-- 구현 목표: `0.14.1`
-- 현재 등록 항목: 13/14 완료
+- 구현 목표: `0.14.2`
+- 현재 등록 항목: 0/8 완료
 
-- `agent-owned`: 없음
+- `agent-owned`: `OV142-001`, `OV142-002`, `OV142-003`, `OV142-004`, `OV142-005`, `OV142-006`, `OV142-007`, `OV142-008`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
-- `blocked`: `OV141-011`
+- `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
-## 보관된 근거
+## 보관 근거
 
-- [0.14.0 완료 상태](../archive/state/0.14.0-complete.md)·[0.14.0 단계별 증거·한계](../archive/state/0.14.0-stable-evidence.md)
-- [0.14.0 완료 계획](../archive/plans/0.14.0-complete.md)
+- [0.14.1 상태](../archive/state/0.14.1-incomplete.md)·[재정비 할 일](../plans/overhaul/README.md)
