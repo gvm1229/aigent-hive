@@ -11,9 +11,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.14.1`
-- 현재 등록 항목: 9/11 완료
+- 현재 등록 항목: 10/11 완료
 
-- `agent-owned`: `OV141-010`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: `OV141-011`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

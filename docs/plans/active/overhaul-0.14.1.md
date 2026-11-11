@@ -43,8 +43,8 @@
   - state: complete; depends: OV141-002,OV141-004,OV141-005,OV141-006,OV141-007,OV141-008; evidence: repo:docs/research/overhaul/OV141-009.md#sha256:fc45b470b784ce0e53c4c81e4269dedb34a8b144038399981c560534556029f1
   - 변경: 03의 번호 시험판 절차
   - 확인: 세 OS 공개 시험 통과와 `tests/results/` 근거
-- [ ] [OV141-010] develop 병합과 단계 브랜치 종료
-  - state: agent-owned; depends: OV141-009
+- [x] [OV141-010] develop 병합과 단계 브랜치 종료
+  - state: complete; depends: OV141-009; evidence: repo:docs/research/overhaul/OV141-010.md#sha256:1e2c486bfdd07f4e0fe8be5b53f29988987423886969e38df6f159e6cb1e282b
   - 변경: 단계 브랜치 `fix/overhaul-1-0.14.1`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 정식 출시 항목은 이후 `develop`에서 진행(`main` PR의 head는 `develop`), 단계 브랜치 삭제는 정식 뒤
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치
 - [ ] [OV141-011] 정식 0.14.1 출시와 이 PC 갱신
