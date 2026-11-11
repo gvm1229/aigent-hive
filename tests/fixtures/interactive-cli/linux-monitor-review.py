@@ -55,7 +55,7 @@ def prepare(language="ko"):
     intent = copy.deepcopy(pending)
     intent.pop("phase")
     receipt = {"schema_version": 1, "operation_id": pending["operation_id"], "operation": "setup",
-        "product_version": "0.14.1", "binding": pending["binding"], "before_digest": pending["base_config_digest"],
+        "product_version": "0.14.2", "binding": pending["binding"], "before_digest": pending["base_config_digest"],
         "before_mode": pending["base_config_mode"], "candidate_digest": digest(pending["answers"]),
         "intent_digest": digest(intent), "after_digest": None, "question_revision": pending["question_revision"],
         "catalog_digest": pending["catalog_digest"], "phase": "applying",
