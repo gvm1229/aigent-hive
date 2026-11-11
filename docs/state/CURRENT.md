@@ -3,13 +3,13 @@
 - 별도 저장소 자동화: [구독자 승인 변경](../plans/active/subscriber-approval-via-main.md), `chore/subscriber-approval-via-main`의 구현·검증·지정 브랜치 push 완료. 후속 `599685af` 병합·과거 기록 복원·요청 로컬 검사 완료, 지정 브랜치만 전달 대상. 제품 출시·GitHub 설정 변경 제외
 
 - 제품 버전: `0.14.1`
-- 공개 안정판: `0.14.0`. 0.14.1 대표 npm 패키지의 일부 게시, GitHub 정식 출시 미완료
+- 공개 안정판: `0.14.1`. 복구 게시 43075315269·GitHub 정식 출시·Discord 전송 단계 성공
 - 현재: 재정비 단계 1, 브랜치 `fix/overhaul-1-0.14.1`. [활성 계획](../plans/PLAN.md)·[0.14.1 항목](../plans/active/overhaul-0.14.1.md)
 - 공개 시험: `0.14.1-test.1` 수용. 실제 사용자 설치·감시는 시험에 사용하지 않는 경계
 - 직전 정식판 0.14.0의 프로젝트·사용자 원본을 공개 태그 바이트로 등록, 0.14.0 → 0.14.1 갱신 인증 대상
 - [재정비 할 일](../plans/overhaul/README.md): 단계 0 완료·develop 병합
 
-- [OV141-011 중단 근거](../research/overhaul/OV141-011.md): main PR #91·후보 성공, 게시 `43072572104`의 플랫폼 latest 확인 종료 6. Discord·PC 갱신 미실행, 사용자 지정 실패 중단
+- [OV141-011 중단 근거](../research/overhaul/OV141-011.md): 정식 게시 복구와 PC 0.14.1 설치 성공. 감시 파일 6개로 2개 이하 조건 실패. 원인: 큰 실행 파일의 제한 읽기. 사용자 승인 0.14.2 선행 단계로 수정·재검증 이관, OV141-011 미완료 유지. 출처 지문 복구와 문서 재검사 뒤 develop 통합·0.14.2 시작 예정
 
 ## 생성된 구현·수용 항목
 
@@ -19,8 +19,8 @@
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `OV141-011`
-- `blocked`: 없음
+- `awaiting-external-evidence`: 없음
+- `blocked`: `OV141-011`
 <!-- HIVE:PLAN-STATE:END -->
 
 ## 보관된 근거
