@@ -10,7 +10,7 @@
 - 다음 항목: `OV141-011`(정식 출시와 이 PC 갱신) ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
 - 마지막 완료: `OV141-010`(develop 병합)
 - 승인 대기: 없음. 2026-11-12 사용자 승인: 0.14.1 안내문 원문·지문, 정식 통합·게시·Discord 전송·이 PC 갱신
-- 중단 메모: 2026-11-12 OV141-011: Codex Windows 사용량 사전 검사 허용·안내 원문 지문 일치·자동 승인 규칙 커밋(`58838bd8`)·문서 시험 종료 0 / 문체 검사 `--all` 종료 1, `docs/releases/0.14.1.subscriber.ko.md:17`의 `unapproved-korean-narrative-ending` 거부. 승인 원문 보존, 문체 거부 해결 뒤 develop→main 통합부터 재개; 비밀값 등록·새 후보·게시·이 PC 갱신 미실행 / 바뀐 파일: 이 문서·`docs/research/overhaul/OV141-011.md`·문서 시험 기록
+- 중단 메모: 2026-11-12 OV141-011: 현재 Codex 사용량 허용·자동 승인 규칙 기존 커밋 확인·문체 검사 종료 0 / 문서 시험 종료 1: OV141-011 근거의 문서 연결 누락. develop 통합·main PR·지문 등록·후보·게시·PC 갱신 미실행 / 바뀐 파일: 이 문서·[실패 근거](../../research/overhaul/OV141-011.md)·현재 문서 시험 기록
 
 ## 재개 절차
 
