@@ -9,8 +9,8 @@
 - 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
 - 다음 항목: `OV141-011`(정식 출시와 이 PC 갱신) ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
 - 마지막 완료: `OV141-010`(develop 병합)
-- 승인 대기: `OV141-011` — 구독자 안내 초안(`docs/releases/0.14.1.subscriber.ko.md`) 승인 또는 수정, 저장소 비밀값 `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST`에 승인 지문 등록(현재 초안 `sha256:1088be71de63a9c8bb1a5f15dd341142cd7a5d2b0327c71dfc979f429bc50c2c`)
-- 중단 메모: 2026-11-11 OV141-011: main 병합(PR #90, `ade346b2`)·정식 후보 run `43031639589` 성공 / 게시 run `43034744767`은 구독자 안내 비활성으로 거부, npm `latest`는 0.14.0 유지. 남은 단계: 안내 승인 → 안내 파일을 develop→main 병합 → 정식 후보 재빌드(`promoted_test_version=0.14.1-test.1`, `acceptance_run_id=43019363819`) → 비밀값 등록 → `send_subscriber_update=true`로 게시 → 이 PC 갱신(사용자 PC 필요) / 바뀐 파일: `docs/releases/0.14.1.subscriber.ko.md`·`.sha256`, `docs/01-index.md`
+- 승인 대기: 없음. 2026-11-12 사용자 승인: 0.14.1 안내문 원문·지문, 정식 통합·게시·Discord 전송·이 PC 갱신
+- 중단 메모: 2026-11-12 OV141-011: Codex Windows 사용량 사전 검사 허용·안내 원문 지문 일치·자동 승인 규칙 커밋(`58838bd8`)·문서 시험 종료 0 / 문체 검사 `--all` 종료 1, `docs/releases/0.14.1.subscriber.ko.md:17`의 `unapproved-korean-narrative-ending` 거부. 승인 원문 보존, 문체 거부 해결 뒤 develop→main 통합부터 재개; 비밀값 등록·새 후보·게시·이 PC 갱신 미실행 / 바뀐 파일: 이 문서·`docs/research/overhaul/OV141-011.md`·문서 시험 기록
 
 ## 재개 절차
 
