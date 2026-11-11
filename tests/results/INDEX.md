@@ -883,3 +883,4 @@
 | [passed](runs/20261110T174807-06a3ecc5f43a.md) | 개발 검증: cargo | bdef85297198b1bdc3895edf35936dc177186548 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T180139-9f25250ef3f1.md) | 개발 검증: cargo | 3e01cc8cf24075619b9b20140b55238d33a165c0 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
 | [passed](runs/20261110T181103-0190bc82858c.md) | 개발 검증: cargo | 8b54305819c6174767846a98c0aeddc3c98d64f4 | Linux-6.18.44-fc-v338-x86_64-with-glibc2.39 |
+| [passed](runs/20261111T033010-21ce904bbfa1.md) | 개발 검증: cargo | 2d102f89cbaab42572543ff451a8ced55ee33043 | Linux-6.18.44-fc-v378-x86_64-with-glibc2.39 |
