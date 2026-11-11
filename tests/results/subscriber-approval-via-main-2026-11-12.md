@@ -45,3 +45,29 @@
 - 구현 `1570b621`·문서 `d9259553`의 지정 원격 브랜치 push 성공
 - 보호 브랜치 통합·PR·GitHub 설정·workflow 조작 없음. 다른 출시 세션 작업 트리 접근 없음
 - 완료 후 남은 이번 범위의 에이전트 소유 작업 없음. 환경 변수 설정·실제 발송은 범위 밖
+
+## 후속 정리 검증
+
+- 요청 범위: 지정 작업 트리와 `chore/subscriber-approval-via-main`만 사용. 이전 미커밋 작업은 시작 시 `2437cd55`에 이미 저장, 이전 세션 기록 부재 확인
+- 최신 `origin/develop` 기준: `599685af`. rebase 대신 병합, 병합·복원 커밋 `13365b93`
+- 원본 복원: `docs/archive/**`, ADR-0020, 0.13.2·0.14.0 출시 계획. `git diff origin/develop -- <대상>` 출력 0행, 저장 바이트 일치
+- 출시 담당 원본 보존: `docs/plans/active/overhaul-0.14.1.md` 전체, 재정비 README의 현재 위치·OV141-011. README의 브랜치 규칙 아래 기존 승인 방식 한 줄만 교체
+- 유지: 현재 `docs/facts/**`·`docs/guides/**` 승인 안내. 원본 복원으로 바뀐 출처 지문 갱신. 새 재정비 사실 쌍도 현재 main PR·일반 변수 방식으로 정합성 유지
+- 검사 변경: 출시 담당자의 최신 안내문으로 불필요해진 옛 초안 17행 문체 예외 삭제. 과거 비밀값·폐기 스크립트 참조는 기존 검사 통과, 검사기·시험 대상 범위·예외 추가 없음
+
+| 실제 실행 명령 | Windows 11·Codex 결과 | 증명 범위·한계 |
+| --- | --- | --- |
+| `python -m unittest tests.conformance.release.test_stable_release_discord_notification -q` | 25개, 종료값 0, 건너뜀 없음 | 로컬 수신기와 workflow 계약, 실제 GitHub·Discord 제외 |
+| `python scripts/test-lanes.py --lane release` | 151개, 종료값 0, 10개 건너뜀. [실행 기록](runs/20261111T181508-9a56d21dc3b7.md) | 위 기존 운영체제·고정 실행 파일·심볼릭 링크 제약 동일. 이후 변경은 문서·문체 예외뿐, 출시 스크립트·workflow 동일 |
+| `python scripts/test-lanes.py --lane documentation` | 163개, 종료값 0, 2개 건너뜀. [실행 기록](runs/20261111T181748-7aa94b7214c6.md) | Windows 심볼릭 링크 권한 부재 반례 2건 제외, junction 검사는 실행 |
+| `python scripts/check-human-documentation-style.py --all` | 종료값 0, 지적·실패 0건 | 전체 저장소 문체 검사, 안내문 내용 승인 증명 제외 |
+| 링크·계획 상태 검사 | 각각 종료값 0 | 문서 연결·14개 계획 항목 정합성 범위 |
+| Source Wiki 색인 재생성·lint | 각각 종료값 0, 264개 문서, 경고·오류 0건 | 정본 사실 쌍과 파생 색인의 일치, 외부 서비스 동작 제외 |
+| `python scripts/branch-policy.py commits origin/develop..HEAD` | 종료값 0 | 이번 브랜치 커밋 메시지의 금지된 신원·공동 작성·세션 링크 부재 |
+
+- 문서 검사 최초 시작: 출시 검사와 시험 기록 잠금 경합으로 종료값 2. 출시 검사 종료 후 순차 실행으로 원인 제거, 최종 통과
+- 문체 검사 최초 실행: 출시 담당자가 바꾼 안내문의 옛 예외로 실패. 해당 예외 제거 후 최종 통과, 안내문 추가 수정 없음
+- actionlint: 현재 PATH에 설치된 실행 파일 부재, 미실행. Python workflow 계약 검사는 실행, actionlint 의미 검사 증명 제외
+- 원격 출시 상태: 사용자 제공 0.14.1 출시 완료 맥락 수용. 이 작업의 원격 workflow·설정 조회 금지로 독립 재확인 제외, 출시 소유 기록은 `origin/develop` 그대로 보존
+- 시험 산출물: 기존 공용 빌드와 소유 미확인 시험 자료의 삭제 제외. 이번 실행 근거는 저장소 기록으로 보존
+- 최종 전달 대상: 이 브랜치만 일반 push. PR 생성·보호 브랜치 통합·비밀값·변수·workflow 조작·실제 발송 제외
