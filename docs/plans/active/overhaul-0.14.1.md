@@ -39,8 +39,8 @@
   - state: complete; depends: OV141-001; evidence: repo:docs/research/overhaul/OV141-008.md#sha256:981f63ac35a108bba3230fc57fd2c2a48cb8bfbd5425bf1206237d00b556e390
   - 변경: `README.md:15`와 `Cargo.toml:23` 출시일 일치, `README.md:326-327` 문구, `README.md:134`에 Claude Code "검증 전" 표시
   - 확인: `python scripts/check-public-stable-docs.py`, `python scripts/check-human-documentation-style.py`
-- [ ] [OV141-009] 0.14.1-test.1 공개 시험
-  - state: agent-owned; depends: OV141-002,OV141-004,OV141-005,OV141-006,OV141-007,OV141-008
+- [x] [OV141-009] 0.14.1-test.1 공개 시험
+  - state: complete; depends: OV141-002,OV141-004,OV141-005,OV141-006,OV141-007,OV141-008; evidence: repo:docs/research/overhaul/OV141-009.md#sha256:fc45b470b784ce0e53c4c81e4269dedb34a8b144038399981c560534556029f1
   - 변경: 03의 번호 시험판 절차
   - 확인: 세 OS 공개 시험 통과와 `tests/results/` 근거
 - [ ] [OV141-010] develop 병합과 단계 브랜치 종료
