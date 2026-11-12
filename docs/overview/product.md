@@ -30,7 +30,7 @@ provider-neutral 로컬 agent harness.
 | --- | --- |
 | Operating system | macOS arm64·Intel, Windows x86_64 candidate runtime 검증; Linux musl x86_64·arm64 qualification 진행 |
 | Agent host | Codex·Claude Code·Gemini Antigravity adapter |
-| Live evidence | Codex·Antigravity actual host; Claude subscription session 미검증 |
+| Live evidence | Codex·Antigravity 실제 호스트, Windows 11·Claude Code 2.1.322·Codex 실험실 왕복 확인. Claude 제품 설치는 시험 자료 한정 |
 | Orchestration | 역할·작업 봉투 준비 제공, 자동 조율 비활성·활성화 경로 없음. 실제 작업자 실행은 호스트 소유, OMX·OMC 신규 의존성 없음 |
 | Model access | 사용자의 subscription-authenticated host session |
 | Data | Local-first tracked text, disposable SQLite |
