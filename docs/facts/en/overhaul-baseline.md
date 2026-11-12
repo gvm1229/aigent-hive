@@ -9,7 +9,7 @@ summary: "Hive 0.14.2 has a measured Windows project, retrieval and size baselin
 tags: [baseline, overhaul, retrieval]
 aliases: [overhaul-baseline]
 sources:
-  - "repo:docs/research/overhaul/OVX-001.md#sha256:8a61efd983735d9a8efe85daf7e0fbe48ac18ebe5fe4ce96df3f19306d0c9a51"
+  - "repo:docs/research/overhaul/OVX-001.md#sha256:a915958a3ba29cede7f163a2bf3b7ddb1bb4a3225e856427d67c8fe89943e55b"
   - "repo:docs/research/overhaul/OVX-002.md#sha256:9581105e5f8a69db4b40591ca3c281559fde48d30e8c262d991f077f9290233d"
   - "repo:docs/research/overhaul/OVX-004.md#sha256:d919e893c1e21d2851dee03af64731a6b4263965a2edf945294f23fb9222849d"
 links: []

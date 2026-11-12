@@ -8,7 +8,7 @@
 ## 항목
 
 - [x] [OVX-001] 프로젝트 판별 코퍼스와 현재 결과
-  - state: complete; evidence: repo:docs/research/overhaul/OVX-001.md#sha256:8a61efd983735d9a8efe85daf7e0fbe48ac18ebe5fe4ce96df3f19306d0c9a51
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-001.md#sha256:a915958a3ba29cede7f163a2bf3b7ddb1bb4a3225e856427d67c8fe89943e55b
   - 근거: [측정 결과](../../research/overhaul/OVX-001.md)
   - 변경: `tests/fixtures/project-detection/`에 표시 파일만 둔 최소 프로젝트 30종(TypeScript 웹 앱, Next.js, Vite, Python, Rust, Go, Java, .NET, 모노레포, 문서 전용, 빈 폴더 등)과 기대 결과표. 현재 `project_kind` 결과 기록
   - 확인: 30종 전부 기록, `general` 판정 비율 수치

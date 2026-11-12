@@ -1,0 +1,308 @@
+[
+  {
+    "id": "ts-web",
+    "label": "TypeScript 웹 앱",
+    "expected_kind": "web",
+    "files": {
+      "package.json": "{\"dependencies\":{\"typescript\":\"5\"}}",
+      "tsconfig.json": "{}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "next",
+    "label": "Next.js",
+    "expected_kind": "web",
+    "files": {
+      "package.json": "{\"dependencies\":{\"next\":\"16\"}}",
+      "next.config.ts": "export default {}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "vite",
+    "label": "Vite",
+    "expected_kind": "web",
+    "files": {
+      "package.json": "{\"devDependencies\":{\"vite\":\"7\"}}",
+      "vite.config.ts": "export default {}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "react",
+    "label": "React",
+    "expected_kind": "web",
+    "files": {
+      "package.json": "{\"dependencies\":{\"react\":\"19\"}}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "vue",
+    "label": "Vue",
+    "expected_kind": "web",
+    "files": {
+      "package.json": "{\"dependencies\":{\"vue\":\"3\"}}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "svelte",
+    "label": "Svelte",
+    "expected_kind": "web",
+    "files": {
+      "svelte.config.js": "export default {}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "astro",
+    "label": "Astro",
+    "expected_kind": "web",
+    "files": {
+      "astro.config.mjs": "export default {}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "angular",
+    "label": "Angular",
+    "expected_kind": "web",
+    "files": {
+      "angular.json": "{}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "express",
+    "label": "Express",
+    "expected_kind": "server",
+    "files": {
+      "package.json": "{\"dependencies\":{\"express\":\"5\"}}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "node-cli",
+    "label": "Node.js CLI",
+    "expected_kind": "cli",
+    "files": {
+      "package.json": "{\"bin\":\"cli.js\"}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "python",
+    "label": "Python",
+    "expected_kind": "python",
+    "files": {
+      "pyproject.toml": "[project]\nname=\"sample\"\nversion=\"1.0.0\""
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "django",
+    "label": "Django",
+    "expected_kind": "web",
+    "files": {
+      "manage.py": "",
+      "requirements.txt": "Django"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "fastapi",
+    "label": "FastAPI",
+    "expected_kind": "server",
+    "files": {
+      "requirements.txt": "fastapi"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "flask",
+    "label": "Flask",
+    "expected_kind": "server",
+    "files": {
+      "requirements.txt": "flask"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "poetry",
+    "label": "Poetry",
+    "expected_kind": "python",
+    "files": {
+      "poetry.lock": "",
+      "pyproject.toml": "[tool.poetry]\nname=\"sample\""
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "rust",
+    "label": "Rust",
+    "expected_kind": "rust",
+    "files": {
+      "Cargo.toml": "[package]\nname=\"sample\"\nversion=\"1.0.0\""
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "rust-workspace",
+    "label": "Rust workspace",
+    "expected_kind": "monorepo",
+    "files": {
+      "Cargo.toml": "[workspace]\nmembers=[]"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "go",
+    "label": "Go",
+    "expected_kind": "go",
+    "files": {
+      "go.mod": "module example.com/sample\ngo 1.24"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "java-maven",
+    "label": "Java Maven",
+    "expected_kind": "java",
+    "files": {
+      "pom.xml": "<project/>"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "java-gradle",
+    "label": "Java Gradle",
+    "expected_kind": "java",
+    "files": {
+      "build.gradle": "plugins {}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "dotnet",
+    "label": "C# .NET",
+    "expected_kind": "dotnet",
+    "files": {
+      "app.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"/>"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "fsharp",
+    "label": "F# .NET",
+    "expected_kind": "dotnet",
+    "files": {
+      "app.fsproj": "<Project Sdk=\"Microsoft.NET.Sdk\"/>"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "pnpm",
+    "label": "pnpm workspace",
+    "expected_kind": "monorepo",
+    "files": {
+      "pnpm-workspace.yaml": "packages: [\"apps/*\"]"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "nx",
+    "label": "Nx",
+    "expected_kind": "monorepo",
+    "files": {
+      "nx.json": "{}",
+      "package.json": "{}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "turbo",
+    "label": "Turborepo",
+    "expected_kind": "monorepo",
+    "files": {
+      "turbo.json": "{}",
+      "package.json": "{\"workspaces\":[\"apps/*\"]}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "docs",
+    "label": "문서 전용",
+    "expected_kind": "docs",
+    "files": {
+      "README.md": "# Sample"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "empty",
+    "label": "빈 폴더",
+    "expected_kind": "general",
+    "files": {},
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "static",
+    "label": "정적 HTML",
+    "expected_kind": "web",
+    "files": {
+      "index.html": "<!doctype html><title>Sample</title>"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "cpp",
+    "label": "C++ CMake",
+    "expected_kind": "native",
+    "files": {
+      "CMakeLists.txt": "cmake_minimum_required(VERSION 3.20)"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  },
+  {
+    "id": "mixed",
+    "label": "Python·TypeScript 혼합",
+    "expected_kind": "monorepo",
+    "files": {
+      "pyproject.toml": "[project]\nname=\"sample\"",
+      "package.json": "{\"dependencies\":{\"typescript\":\"5\"}}"
+    },
+    "observed_default": "general",
+    "observed_effective": null
+  }
+]
