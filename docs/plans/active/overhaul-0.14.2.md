@@ -28,7 +28,7 @@
   - 변경: `docs/releases/0.14.2.md`, `0.14.2.subscriber.ko.md`와 SHA-256 파일. 큰 감시 프로그램 정리와 현재·직전·사용 중 보존을 쉬운 한국어로 설명. 근거·사실 쌍·현재 상태 갱신
   - 확인: documentation·release 검사 묶음·`python scripts/check-human-documentation-style.py --all`·출시 설명 검사·Source Wiki index/lint. 항목별 한국어 커밋과 정확한 단계 브랜치 push, 근거 지문 기록
 - [x] [OV142-005] Fable 5.2 advisor 병합 전 검토
-  - state: complete; depends: OV142-004; evidence: repo:docs/research/overhaul/OV142-005.md#sha256:5e35cd99d983ee8b35d421f6f3411b46b28b35c0cc866a78f2f3a2bf3f7b8319
+  - state: complete; depends: OV142-004; evidence: repo:docs/research/overhaul/OV142-005.md#sha256:0c995c16b145540defbc9551b7f0db9a0cfe7c9d47bd0e25c61717945b482c7d
   - 변경: orchestrator가 Fable 5.2 advisor 하위 에이전트로 `origin/develop..fix/overhaul-1-0.14.2` 검토. 발견 사항은 같은 브랜치에서 수정·재검사
   - 확인: 검토 결과·범위·미검증 한계를 근거 문서에 기록. 전달된 Fable 5.2 일반 하위 에이전트·기본 노력 검토 기록, 추가 검토 호출 불필요
 - [x] [OV142-006] develop 병합

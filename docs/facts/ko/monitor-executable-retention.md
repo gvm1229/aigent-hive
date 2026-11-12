@@ -10,7 +10,7 @@ tags: [monitor, safety, storage]
 aliases: [monitor-executable-retention]
 sources:
   - "repo:crates/hive-cli/src/run.rs#sha256:6123c4aa36e88044434ef8bdca5ecfd8b470edcd5cfda1ea7c63171450506dfe"
-  - "repo:crates/hive-cli/src/usage_monitor/upgrade.rs#sha256:5d30e3818a7aa00b7b08510ef512e668a0e189055932b8ba8787724c2278a4dd"
+  - "repo:crates/hive-cli/src/usage_monitor/upgrade.rs#sha256:00b66cc8825ac157550b7dd280cb7599f94bb9172069866df550bb4d8ae2525b"
   - "repo:docs/research/overhaul/OV142-003.md#sha256:d47f74746c332a0ef804eb943106ecd472ed490995c924e7303587dcfd545ae9"
 links: [developer-binary-lifecycle]
 reviewed_revision: "git:88ecb7a13736634afca601fe354e53c88b0dc58e"
