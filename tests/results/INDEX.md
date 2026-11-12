@@ -1131,7 +1131,16 @@
 | [passed](runs/20261112T191216-0765371e43fc.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T191220-f19ebd35f208.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T191236-5c96615f88a3.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
-| [running](runs/20261112T191856-f544dc808737.md) | 개발 검증: uv.EXE | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
-| [running](runs/20261112T191859-678df414b9f0.md) | Python conformance: documentation, security, contract, integration, release | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191856-f544dc808737.md) | 개발 검증: uv.EXE | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191859-678df414b9f0.md) | Python conformance: documentation, security, contract, integration, release | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T192212-cc780338195c.md) | 개발 검증: cargo.EXE | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T194324-7a58dd531fe6.md) | OV150-011 공개 CLI 신 9개와 모든 별칭의 비활성 수용 | fc9c376a7979e6ad5c394446218a329181a640f8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T195852-6ecb605217fe.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T195940-a5e3f90e7219.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T200142-708e2dfa5330.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T200223-97fef6428ba8.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T200227-7c7f3601c894.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T200301-933712827af2.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T200447-959e8575665a.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T200451-72a570726e1e.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T200535-bfb9aa4743ee.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
