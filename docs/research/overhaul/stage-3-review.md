@@ -46,11 +46,11 @@
 
 ## 시험판과 정식의 경계
 
-- OV150-001 미완료 유지, OV150-011의 명시적 의존성 유지
+- OV150-001 Windows 11·Claude Code 2.1.322·Codex 실제 왕복 완료, OV150-011 의존성 충족
 - 0.15.0-test.1 수용: 세 운영체제에서 역할 구성 병합·거부, 호스트 제공 출력의 roster check, 비활성 summon 미리보기·서명 Prepare, 신 입구·별칭 9개, 0.14.2 갱신
 - 이 빌드의 조율 비활성·활성화 경로 없음
-- 실제 Claude Stop→Codex→반환·Gemini 실행·실제 호스트 취소·재점유 미검증, 이 시험의 수용 대상 밖
-- OV150-013 정식은 OV150-001·OV150-014 통과 전 금지, 이번 태그·게시·병합 없음
+- Windows 실제 Claude 왕복 확인. Gemini·다른 OS 왕복·실제 호스트 취소/재점유 미검증, 이 시험의 수용 대상 밖
+- OV150-013 정식은 OV150-001·OV150-014 통과와 공개 수용 뒤 진행, 현재 요청의 출시·게시·설치 승인
 
 ## 지정 수용 문구
 
@@ -124,3 +124,11 @@
 - [브랜치 검사 43285223978](https://github.com/gvm1229/aigent-hive/actions/runs/43285223978): 같은 지문·`success`, GitHub Actions·Ubuntu 실제 실행. 분기 이름·규칙 집합·커밋 표기 확인 범위, Linux 제품 동작·공개 수용의 증명 제외
 - 전체 CI 미실행: `ci.yml`의 PR 또는 main/develop push 조건, 현재 단계 분기 push 미선택. 이번 새 PR·태그·게시·병합·사용자 설치 없음
 - 후속 원격 확인 문서도 같은 단계 분기 반영, 제품 파일 추가 변경 없음
+
+## 현재 요청의 P1 처리와 출시 권한
+
+- 기존 Fable 5.2 단계 전체 검토의 P1 채택 구현: [OV150-014](OV150-014.md), 비배포·가짜 작업자 적합성. 제품 조율 활성화·경계 변경·새 기능 확장 없음
+- P2의 빈 응답·비동기 반환은 단계 6 OV160-002/003, P4는 단계 4 OV151-011, P3는 기존 완료 유지. 제안 누락 0건
+- 출시 승인: [2026-11-12 위임 원문](autonomy-default.md#2026-11-12-위임-확대)과 현재 0.15.0 명시 요청. 권고안에 따라 검사·수용 뒤 main PR·정식 태그·게시·구독자 안내·PC 설치, 추가 승인 대기 없음
+- 원문 승인 인용: For the duration of our overhaul plan, I grant you explicit authorization to autonomously proceed with everything including the stable version release.
+- develop→main 추가 모델 검토 없음. 기존 단계 검토와 P1 해결의 검증 근거로 단계 통합 진행
