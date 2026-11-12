@@ -1153,3 +1153,5 @@
 | [passed](runs/20261112T205143-d8181acb4373.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T205244-55853f1a4db4.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T205850-b5db9e16db91.md) | 플랫폼 파일 처리·설치·갱신 단위 시험 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
+| [passed](runs/20261112T205933-c92f0e763281.md) | 격리 운영체제의 실제 CLI 흐름: cancel-resume | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Windows-2025Server-10.0.26100-SP0 |
+| [passed](runs/20261112T210305-42dc3815d6c7.md) | 플랫폼 파일 처리·설치·갱신 단위 시험 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Windows-2025Server-10.0.26100-SP0 |
