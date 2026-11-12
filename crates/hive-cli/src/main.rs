@@ -260,6 +260,12 @@ fn main() -> ExitCode {
 }
 
 fn dispatch(arguments: Vec<String>) -> ExitCode {
+    if let Some(god) = arguments
+        .first()
+        .and_then(|name| hive_core::gods::find(name))
+    {
+        return gods::run_alias(god, &arguments[1..]);
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")

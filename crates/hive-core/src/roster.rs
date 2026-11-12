@@ -125,7 +125,10 @@ impl Roster {
                 current.effort = role.effort;
             }
         }
-        self.gods.extend(patch.gods);
+        for (name, role) in patch.gods {
+            let name = crate::gods::find(&name).map_or(name.clone(), |god| god.name.to_owned());
+            self.gods.insert(name, role);
+        }
     }
 
     fn validate(&self) -> Result<(), String> {
@@ -163,6 +166,7 @@ impl Roster {
     /// # Errors
     /// Rejects missing roles or incomplete configuration.
     pub fn resolve(&self, name: &str) -> Result<(&str, &Role), String> {
+        let name = crate::gods::find(name).map_or(name, |god| god.name);
         let name = self.gods.get(name).map_or(name, String::as_str);
         let role = self
             .roles

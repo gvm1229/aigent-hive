@@ -67,7 +67,8 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     let target =
         PinnedTarget::open(Path::new(get("--target")?)).map_err(|e| e.message().to_owned())?;
     let roster = Roster::load(Path::new(get("--user-root")?), target.requested_path())?;
-    let role = roster.gods.get(role).unwrap_or(role);
+    let role = hive_core::gods::find(role).map_or(role.as_str(), |god| god.name);
+    let role = roster.gods.get(role).map_or(role, String::as_str);
     let profile = roster.worker_profile(role)?;
     let task_arg = get("--task")?;
     let task = if let Some(path) = task_arg.strip_prefix('@') {

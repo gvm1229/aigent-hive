@@ -95,12 +95,44 @@ impl God {
 }
 #[must_use]
 pub fn find(name: &str) -> Option<&'static God> {
-    GODS.iter().find(|god| god.name == name)
+    let lower = name.to_lowercase();
+    let canonical = match lower.as_str() {
+        "minerva" | "미네르바" | "아테나" => "athena",
+        "아르테미스" => "artemis",
+        "hephaestus" | "헤파이스토스" => "hephaistos",
+        "apollo" | "아폴로" | "아폴론" => "apollon",
+        "eleuthia" | "에일레이티이아" | "에일레이티아" | "엘레이티아" | "엘레우티아" => {
+            "eileithyia"
+        }
+        "포세이돈" => "poseidon",
+        "데메테르" => "demeter",
+        "aether" | "에테르" | "아이테르" => "aither",
+        "하데스" => "hades",
+        other => other,
+    };
+    GODS.iter().find(|god| god.name == canonical)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn gods_aliases_and_korean_resolve_to_canonical_names() {
+        for (alias, canonical) in [
+            ("Minerva", "athena"),
+            ("Hephaestus", "hephaistos"),
+            ("Apollo", "apollon"),
+            ("Eleuthia", "eileithyia"),
+            ("Aether", "aither"),
+        ] {
+            assert_eq!(find(alias).unwrap().name, canonical);
+        }
+        for god in GODS {
+            assert_eq!(find(god.korean).unwrap().name, god.name);
+            assert_eq!(find(&god.name.to_uppercase()).unwrap().name, god.name);
+        }
+        assert!(find("unknown").is_none());
+    }
     #[test]
     fn gods_nine_by_two_language_display_snapshots() {
         let expected_en = [
