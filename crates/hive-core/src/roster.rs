@@ -143,7 +143,8 @@ impl Roster {
     /// # Errors
     /// Rejects missing roles or incomplete configuration.
     pub fn resolve(&self, name: &str) -> Result<(&str, Role), String> {
-        self.resolve_named(name).map(|(_, provider, role)| (provider, role))
+        self.resolve_named(name)
+            .map(|(_, provider, role)| (provider, role))
     }
 
     /// Resolve a god or role once, including the canonical role ID.
@@ -151,7 +152,9 @@ impl Roster {
     /// Rejects missing roles or incomplete configuration.
     pub fn resolve_named(&self, name: &str) -> Result<(&str, &str, Role), String> {
         let name = self.role_name(name);
-        let (name, _) = self.roles.get_key_value(name)
+        let (name, _) = self
+            .roles
+            .get_key_value(name)
             .ok_or_else(|| format!("unknown role: {name}"))?;
         let (provider, role) = self.resolve_role(name)?;
         Ok((name, provider, role))
@@ -284,19 +287,24 @@ mod tests {
             fs::write(
                 project.path().join(".hive/roster.toml"),
                 format!("[gods]\n'{name}'='hive-independent-judge'\n"),
-            ).unwrap();
+            )
+            .unwrap();
             let error = Roster::load(user.path(), project.path()).unwrap_err();
             assert_eq!(error, "god keys must use canonical names");
         }
         fs::write(
             project.path().join(".hive/roster.toml"),
             "[gods]\nathena='hive-independent-judge'\n",
-        ).unwrap();
+        )
+        .unwrap();
         let roster = Roster::load(user.path(), project.path()).unwrap();
         let (name, provider, role) = roster.resolve_named("Minerva").unwrap();
         assert_eq!(name, "hive-independent-judge");
         let profile = Roster::worker_profile_resolved(name, provider, &role).unwrap();
-        assert!(profile.argv.windows(2).any(|p| p == ["--sandbox", "read-only"]));
+        assert!(profile
+            .argv
+            .windows(2)
+            .any(|p| p == ["--sandbox", "read-only"]));
     }
 }
 
@@ -311,6 +319,21 @@ pub struct CapabilityReport {
     pub login_status_output: String,
     pub models: BTreeMap<String, Vec<String>>,
     pub project_hook_events: Vec<String>,
+}
+
+impl CapabilityReport {
+    /// Parse host observations with the same schema contract at every entry point.
+    /// # Errors
+    /// Rejects malformed JSON and reports outside the capability schema.
+    pub fn from_json_bytes(bytes: &[u8]) -> Result<Self, String> {
+        let value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        crate::validate_json_schema(
+            include_str!("../../../schemas/roster-capability-report.schema.json"),
+            &value,
+            "roster capability report",
+        )?;
+        serde_json::from_value(value).map_err(|e| e.to_string())
+    }
 }
 
 impl Roster {
@@ -583,7 +606,10 @@ mod worker_tests {
         ] {
             let profile = roster.worker_profile(name).unwrap();
             assert!(profile.argv.windows(2).any(|p| p == ["--sandbox", sandbox]));
-            assert!(profile.argv.windows(2).any(|p| p == ["-o", "{result_path}"]));
+            assert!(profile
+                .argv
+                .windows(2)
+                .any(|p| p == ["-o", "{result_path}"]));
             assert!(profile.argv.windows(2).any(|p| p == ["-C", "{target}"]));
             assert!(profile.argv.iter().any(|a| a == "--skip-git-repo-check"));
             assert!(profile.argv.iter().any(|a| a == "--ephemeral"));
@@ -591,8 +617,14 @@ mod worker_tests {
             assert!(!profile.argv.iter().any(|a| a == "--json"));
             assert_eq!(profile.argv.last().map(String::as_str), Some("-"));
         }
-        roster.gods.insert("athena".into(), "hive-independent-judge".into());
-        assert!(roster.worker_profile("Minerva").unwrap().argv.windows(2)
+        roster
+            .gods
+            .insert("athena".into(), "hive-independent-judge".into());
+        assert!(roster
+            .worker_profile("Minerva")
+            .unwrap()
+            .argv
+            .windows(2)
             .any(|p| p == ["--sandbox", "read-only"]));
     }
 

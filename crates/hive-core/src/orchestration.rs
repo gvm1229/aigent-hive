@@ -1320,6 +1320,7 @@ pub struct SummonEnvelope {
     pub profile: crate::roster::WorkerProfile,
     pub task_file: String,
     pub task_digest: String,
+    pub capability_digest: Option<String>,
     pub target_project: String,
     pub event_head: String,
     pub control_epoch: u64,
@@ -1345,6 +1346,10 @@ impl SummonEnvelope {
             || self.role.is_empty()
             || (self.event_head != "none" && !valid_head(&self.event_head))
             || !valid_digest(&self.task_digest)
+            || self
+                .capability_digest
+                .as_ref()
+                .is_some_and(|digest| !valid_digest(digest))
             || self.target_project.is_empty()
             || !self.profile.supported
             || self.profile.provider == "claude"
@@ -1391,6 +1396,7 @@ mod summon_tests {
                 .unwrap(),
             task_file: ".hive/runs/run-1/tasks/task-1.md".into(),
             task_digest: crate::sha256_digest(b"task"),
+            capability_digest: Some(crate::sha256_digest(b"capabilities")),
             target_project: "consumer".into(),
             event_head: "none".into(),
             control_epoch: 0,
@@ -1401,6 +1407,11 @@ mod summon_tests {
             enabled: false,
         };
         let digest = e.digest().unwrap();
+        let mut changed = e.clone();
+        changed.capability_digest = Some(crate::sha256_digest(b"other capabilities"));
+        assert_ne!(digest, changed.digest().unwrap());
+        changed.capability_digest = Some("not-a-digest".into());
+        assert!(changed.validate().is_err());
         for path in [
             "../escape",
             ".hive/runs/other/result.json",

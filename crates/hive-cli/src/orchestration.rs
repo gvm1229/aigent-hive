@@ -910,6 +910,7 @@ fn mutate_with_summon(
         let digest = envelope.digest().map_err(CliError::Core)?;
         let event = &payload.event;
         if event.kind != EventKind::Prepare
+            || envelope.capability_digest.is_none()
             || event.to_state != hive_core::orchestration::DispatchState::Prepared
             || envelope.run_id != event.run_id
             || envelope.action_id != event.action_id
@@ -2395,6 +2396,7 @@ mod tests {
                 .unwrap(),
             task_file: ".hive/runs/run-1/tasks/action-1.md".into(),
             task_digest: sha256_digest(task),
+            capability_digest: Some(sha256_digest(b"capabilities")),
             target_project: target.requested_path().to_string_lossy().into_owned(),
             event_head: format!("1:{}", reserve.digest().unwrap()),
             control_epoch: 0,

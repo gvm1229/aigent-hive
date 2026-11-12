@@ -67,9 +67,19 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     let target =
         PinnedTarget::open(Path::new(get("--target")?)).map_err(|e| e.message().to_owned())?;
     let roster = Roster::load(Path::new(get("--user-root")?), target.requested_path())?;
-    let role = hive_core::gods::find(role).map_or(role.as_str(), |god| god.name);
-    let role = roster.gods.get(role).map_or(role, String::as_str);
-    let profile = roster.worker_profile(role)?;
+    let (role, provider, resolved) = roster.resolve_named(role)?;
+    let profile = Roster::worker_profile_resolved(role, provider, &resolved)?;
+    let capability_digest = options
+        .iter()
+        .find(|(key, _)| *key == "--capabilities")
+        .map(|(_, path)| {
+            let bytes = read_explicit_file(Path::new(path), 1024 * 1024)
+                .map_err(|e| e.message().to_owned())?;
+            let report = CapabilityReport::from_json_bytes(&bytes)?;
+            roster.check_resolved(provider, &resolved, &report)?;
+            Ok::<_, String>(sha256_digest(&bytes))
+        })
+        .transpose()?;
     let task_arg = get("--task")?;
     let task = if let Some(path) = task_arg.strip_prefix('@') {
         target
@@ -91,6 +101,7 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
         profile,
         task_file: format!(".hive/runs/{run}/tasks/{action}.md"),
         task_digest: sha256_digest(&task),
+        capability_digest,
         target_project: target.requested_path().to_string_lossy().into_owned(),
         event_head: get("--expected-head")?.into(),
         control_epoch: get("--control-epoch")?
@@ -108,12 +119,7 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
             json!({"status":"preview","envelope":envelope,"request_digest":digest,"mutation_count":0,"enabled":false}),
         );
     }
-    let report: CapabilityReport = serde_json::from_slice(
-        &read_explicit_file(Path::new(get("--capabilities")?), 1024 * 1024)
-            .map_err(|e| e.message().to_owned())?,
-    )
-    .map_err(|e| e.to_string())?;
-    roster.check(role, &report)?;
+    get("--capabilities")?;
     if get("--request-digest")? != digest {
         return Err("request digest mismatch".into());
     }
@@ -168,6 +174,45 @@ mod tests {
         assert_eq!(first, execute(&args).unwrap());
         assert_eq!(first["mutation_count"], 0);
         assert!(!root.path().join(".hive").exists());
+        let profile = Roster::defaults()
+            .unwrap()
+            .worker_profile(&args[0])
+            .unwrap();
+        let report = CapabilityReport {
+            provider: "codex".into(),
+            version: "0.167.2".into(),
+            version_output: "codex-cli 0.167.2".into(),
+            help_output:
+                "--model --output-last-message --sandbox --skip-git-repo-check --ephemeral --cd"
+                    .into(),
+            login_status_output: "Logged in using ChatGPT".into(),
+            models: std::collections::BTreeMap::from([(profile.model, vec![profile.effort])]),
+            project_hook_events: vec!["UserPromptSubmit".into(), "Stop".into()],
+        };
+        let report_path = root.path().join("capabilities.json");
+        let bytes = serde_json::to_vec(&report).unwrap();
+        std::fs::write(&report_path, &bytes).unwrap();
+        let mut qualified = args.to_vec();
+        qualified.extend([
+            "--capabilities".into(),
+            report_path.to_str().unwrap().into(),
+        ]);
+        let bound = execute(&qualified).unwrap();
+        assert_eq!(
+            bound["envelope"]["capability_digest"],
+            sha256_digest(&bytes)
+        );
+        std::fs::write(&report_path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+        assert_ne!(
+            bound["request_digest"],
+            execute(&qualified).unwrap()["request_digest"]
+        );
+        let mut invalid = serde_json::to_value(&report).unwrap();
+        invalid["version"] = json!("");
+        std::fs::write(&report_path, invalid.to_string()).unwrap();
+        assert!(execute(&qualified)
+            .unwrap_err()
+            .contains("JSON Schema contract"));
         let mut bad = args;
         bad[2] = "@../escape".into();
         assert!(execute(&bad).is_err());

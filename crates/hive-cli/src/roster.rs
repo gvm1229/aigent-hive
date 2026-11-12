@@ -44,13 +44,7 @@ fn execute(arguments: &[String]) -> Result<Value, String> {
     let report_path = required(&options, "--capabilities").map_err(|e| e.message().to_owned())?;
     let bytes = read_explicit_file(Path::new(report_path), 1024 * 1024)
         .map_err(|e| e.message().to_owned())?;
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    hive_core::validate_json_schema(
-        include_str!("../../../schemas/roster-capability-report.schema.json"),
-        &value,
-        "roster capability report",
-    )?;
-    let report: CapabilityReport = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let report = CapabilityReport::from_json_bytes(&bytes)?;
     roster.check(role, &report)?;
     Ok(
         json!({"status":"host-reported-supported","enabled":false,"role":role,"provider":report.provider,"version":report.version,"evidence_limit":"supplied official output only; no authenticated runtime round trip"}),
