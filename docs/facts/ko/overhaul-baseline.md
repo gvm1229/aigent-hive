@@ -21,4 +21,4 @@ status: active
 
 2026-11-12 Windows의 Hive 0.14.2 측정: 최소 프로젝트 30종 모두 기본 general, 실제 선택값 없음. 고정 한·영 단어 검색의 상위 다섯 개 정답 적중 22/40, 보류 질의 3/10. 새 Codex 프로젝트 파일 81개, 정본 Skill 28개·공백 분리 14,527단어, 합성 사용자 저장량 198,235바이트. 자동 프로젝트 판별·의미 검색·다른 구성·다른 운영체제의 수용 근거와 구분.
 
-단계 2 검토 보완: `tests/fixtures/project-detection/expected.json`에 30종·정확한 표시 파일 내용 보존. 같은 Windows 호스트 재측정에서 general 기본값 30개·실제 선택값 null 30개 확인. `docs/research/overhaul/OVX-002-inputs.json`에 정답 10개·방해 원문 5개·고정 질의 40개 보존. 요청 범위: 기준선 입력 재현성 보완, 다른 운영체제 판별·검색 품질 증명 제외.
+추적 입력: `tests/fixtures/project-detection/`·근거 문서 옆 `OVX-002-inputs.json`. 재측정 general/null 각 30/30.
