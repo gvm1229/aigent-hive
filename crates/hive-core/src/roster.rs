@@ -137,8 +137,16 @@ impl Roster {
     /// # Errors
     /// Rejects missing roles or incomplete configuration.
     pub fn resolve(&self, name: &str) -> Result<(&str, Role), String> {
+        let name = self.role_name(name);
+        self.resolve_role(name)
+    }
+
+    fn role_name<'a>(&'a self, name: &'a str) -> &'a str {
         let name = crate::gods::find(name).map_or(name, |god| god.name);
-        let name = self.gods.get(name).map_or(name, String::as_str);
+        self.gods.get(name).map_or(name, String::as_str)
+    }
+
+    fn resolve_role(&self, name: &str) -> Result<(&str, Role), String> {
         let role = self
             .roles
             .get(name)
@@ -319,7 +327,14 @@ impl Roster {
         let (login, flags, events): (&str, &[&str], &[&str]) = match provider {
             "codex" => (
                 "Logged in using ChatGPT",
-                &["--model", "--output-last-message", "--json"],
+                &[
+                    "--model",
+                    "--output-last-message",
+                    "--sandbox",
+                    "--skip-git-repo-check",
+                    "--ephemeral",
+                    "--cd",
+                ],
                 &["UserPromptSubmit", "Stop"],
             ),
             "claude" => (
@@ -373,7 +388,7 @@ mod capability_tests {
             provider: "codex".into(),
             version: "0.167.2".into(),
             version_output: "codex-cli 0.167.2".into(),
-            help_output: "--model --output-last-message --json".into(),
+            help_output: "--model -o, --output-last-message --sandbox --skip-git-repo-check --ephemeral -C, --cd".into(),
             login_status_output: "Logged in using ChatGPT".into(),
             models: BTreeMap::from([(
                 role.model.clone().unwrap(),
@@ -411,6 +426,7 @@ pub struct WorkerProfile {
     pub input_mode: String,
     pub result_format: String,
     pub supported: bool,
+    pub round_trip_verified: bool,
     pub guidance: String,
 }
 
@@ -419,7 +435,8 @@ impl Roster {
     /// # Errors
     /// Rejects unknown roles, floating models and unsupported effort values.
     pub fn worker_profile(&self, name: &str) -> Result<WorkerProfile, String> {
-        let (provider, role) = self.resolve(name)?;
+        let role_name = self.role_name(name);
+        let (provider, role) = self.resolve_role(role_name)?;
         let model = role.model.clone().ok_or("missing model")?;
         let effort = role.effort.clone().ok_or("missing effort")?;
         if model.is_empty()
@@ -436,6 +453,7 @@ impl Roster {
             input_mode: "interactive-role-guidance".into(),
             result_format: "host-receipt".into(),
             supported: true,
+            round_trip_verified: false,
             guidance: String::new(),
         };
         match provider {
@@ -451,18 +469,28 @@ impl Roster {
                     "-c".into(),
                     format!("model_reasoning_effort=\"{effort}\""),
                     "-c".into(),
-                    "service_tier=\"priority\"".into(),
-                    "-c".into(),
                     "forced_login_method=\"chatgpt\"".into(),
                     "--sandbox".into(),
-                    "read-only".into(),
-                    "--json".into(),
+                    if matches!(
+                        role_name,
+                        "hive-independent-judge" | "hive-research-specialist"
+                    ) {
+                        "read-only".into()
+                    } else {
+                        "workspace-write".into()
+                    },
+                    "-o".into(),
+                    "{result_path}".into(),
+                    "--skip-git-repo-check".into(),
+                    "--ephemeral".into(),
+                    "-C".into(),
+                    "{target}".into(),
                     "-".into(),
                 ]
                 .into();
                 profile.input_mode = "stdin-task".into();
-                profile.result_format = "jsonl".into();
-                profile.guidance="Codex CLI 0.167.2: host supplies task on stdin, captures JSONL final agent message and issues a bound HostReceipt. Check exact model/effort and ChatGPT login first.".into();
+                profile.result_format = "text".into();
+                profile.guidance="Codex CLI 0.167.2: host binds {target} to the authenticated project and {result_path} to its bound result file, supplies the task on stdin, reads the final text from -o, and issues a bound HostReceipt. Check exact model/effort and ChatGPT login first. Service tier stays in the user's Codex configuration. This profile has no qualified runtime round trip.".into();
             }
             "claude" => {
                 if !matches!(effort.as_str(), "low" | "medium" | "high" | "max") {
@@ -486,6 +514,32 @@ impl Roster {
 mod worker_tests {
     use super::*;
     #[test]
+    fn codex_profile_binds_paths_and_role_sandbox_without_tier_override() {
+        let mut roster = Roster::defaults().unwrap();
+        for (name, sandbox) in [
+            ("hive-routine-implementer", "workspace-write"),
+            ("hive-complex-implementer", "workspace-write"),
+            ("hive-design-specialist", "workspace-write"),
+            ("hive-article-writer", "workspace-write"),
+            ("hive-independent-judge", "read-only"),
+            ("hive-research-specialist", "read-only"),
+        ] {
+            let profile = roster.worker_profile(name).unwrap();
+            assert!(profile.argv.windows(2).any(|p| p == ["--sandbox", sandbox]));
+            assert!(profile.argv.windows(2).any(|p| p == ["-o", "{result_path}"]));
+            assert!(profile.argv.windows(2).any(|p| p == ["-C", "{target}"]));
+            assert!(profile.argv.iter().any(|a| a == "--skip-git-repo-check"));
+            assert!(profile.argv.iter().any(|a| a == "--ephemeral"));
+            assert!(!profile.argv.iter().any(|a| a.contains("service_tier")));
+            assert!(!profile.argv.iter().any(|a| a == "--json"));
+            assert_eq!(profile.argv.last().map(String::as_str), Some("-"));
+        }
+        roster.gods.insert("athena".into(), "hive-independent-judge".into());
+        assert!(roster.worker_profile("Minerva").unwrap().argv.windows(2)
+            .any(|p| p == ["--sandbox", "read-only"]));
+    }
+
+    #[test]
     fn roster_four_role_profiles_and_provider_boundaries() {
         let mut roster = Roster::defaults().unwrap();
         for name in [
@@ -507,7 +561,8 @@ mod worker_tests {
                     role.effort.as_deref().unwrap()
                 )
             );
-            assert_eq!(p.result_format, "jsonl");
+            assert_eq!(p.result_format, "text");
+            assert!(!p.round_trip_verified);
             assert!(p.supported);
             assert_eq!(
                 serde_json::from_str::<WorkerProfile>(&serde_json::to_string(&p).unwrap()).unwrap(),
