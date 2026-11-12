@@ -13,8 +13,9 @@
 - OVX-003: 관련 사실 3/3, 범위 한정. Claims 685개 지문 보존. OVX-004: 프로젝트 파일 81개·내장 Skill 28개·14,527단어·임시 사용자 198,235바이트
 - OVX-008: 세 제공자 외부 자동 입력 허용 미확인. OVX-005 환경 부분 확인, OVX-005–007 실제 제공자 실험 blocked
 - 단계 1b 로컬·원격 브랜치 삭제 완료. [시작 근거](../research/overhaul/stage-2-start.md) · [현재 결과와 해결 경로](../research/overhaul/stage-2-closeout.md)
-- 실행 호스트 Codex·Windows 11. Windows psmux 3.3.2, WSL Ubuntu tmux·세 CLI PATH 부재, macOS 환경 없음. 모델 호출·새 pane 0개
-- 이번 요청의 Agent 소유 잔여 없음. 외부 근거: 제공자별 자동 입력·화면 회수 허용 확인. 사용자 결정: OVX-009의 프로세스 실행 경계 변경
+- 실행 호스트 Codex·Windows 11. Windows psmux 3.3.2, WSL 로그인 셸의 tmux·Windows 연결 Codex/Gemini 경로 확인, Claude 경로 결과 없음, macOS 환경 없음. 모델 호출·새 pane 0개
+- 단계 2 검토 보완: [Fable 5.2 판정·수정·확장점 조사](../research/overhaul/stage-2-review.md), 추적 코퍼스 재측정 30/30 general·null, 고정 검색 입력 JSON 보존
+- 기존 단계 2 실험 요청의 Agent 소유 잔여 없음. 외부 근거: 제공자별 자동 입력·화면 회수 허용 확인. 사용자 결정: OVX-009의 프로세스 실행 경계 변경
 - OVX-009 ADR 작성·지침 변경과 OVX-010 develop 병합은 명시적 중단 범위. 단계 브랜치 보존·push, 단계 전체 완료 주장 제외
 
 ## 생성된 구현·수용 항목

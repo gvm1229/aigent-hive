@@ -7,7 +7,7 @@
 - 환경 정정: WSL Ubuntu-24.04 로그인 셸에서 tmux와 Windows 연결 Codex·Gemini 경로 확인, Claude 경로 결과 없음. [재확인 한계](OVX-005.md) 참조. macOS 실행 환경 없음, 설치·로그인 대행 없음
 - 남은 외부 근거 담당: 각 제공자의 공식 허용 문서 또는 서면 확인. 해소 뒤 OVX-008 갱신 → 준비된 환경에서 OVX-005 → OVX-006·007만 재개
 - 사용자 결정: OVX-009, 02의 Runtime and orchestration·Skill boundary와 ADR-0019의 모델 프로세스 소유 경계 변경 여부. 오래된 계획의 78–84행 번호 대신 현재 섹션으로 식별
-- 제안할 결정 범위: 제공자별 약관 허용 확인을 전제로 Hive의 공식 CLI 대화형 psmux·tmux 실행·입력·관측·종료·재개 허용 여부. 제공자 API 직접 호출·키·인증 파일 접근 금지 유지, 헤드리스는 보조 경로. Claude 헤드리스 출력은 현재 사용자 금지 유지
+- OVX-009 후속 검토 권고: [검토 기록](stage-2-review.md)의 (b), 공식 확장점만 사용·키 입력 주입과 화면 긁어 읽기 제외·제공자 서면 확인은 비차단 별도 조사. 설계 선택·ADR 초안·승인과 구분, 현재 02 경계와 실험 차단 상태 유지
 - OVX-009 ADR 초안·지침 변경·승인 대행 없음. OVX-010 develop 병합·단계 브랜치 삭제 없음
 
 - 단계 검토: [Fable 5.2 검토 지적·권고와 보완](stage-2-review.md)
@@ -21,6 +21,6 @@
 - 최종 범위: 문서·계획·Wiki·브랜치 검사, 제품 경로 차이 없음 확인. 실제 제공자 동작·Linux·macOS 제품 수용·전체 Rust 회귀·CI 전체 대기 제외
 - 제품 검증 제외 이유: 제품 바이트 변경 없는 source 측정·문서 작업. provider 실험 제외 이유와 구분
 - 사용자 비추적 AI 학습 검토 문서 두 개의 편집·커밋·삭제 없음. Claims·전역 호스트 설정·인증 파일 수정 없음
-- 임시 입력·측정 스크립트는 `tests/work/overhaul-2-baseline/`와 `tests/work/pane-lab/`에 재현용 보존, Git 커밋 제외. 실제 Claims 검색 임시 결과는 관련 범주·지문 세 쌍만 보존
+- 추적 재현 입력: [프로젝트 30종](../../../tests/fixtures/project-detection/README.md)·[검색 입력 JSON](OVX-002-inputs.json). 기존 임시 측정 스크립트·원본 결과는 `tests/work/overhaul-2-baseline/`·`tests/work/pane-lab/`·`tests/work/overhaul-2-review/`에 보존, Git 커밋 제외. 실제 Claims 검색 임시 결과는 관련 범주·지문 세 쌍만 보존
 - 현재 프로젝트 범위의 안전한 기준선 사실만 Source Wiki에 기록. 사용자 Claims 쓰기 금지에 따라 실제 사용자 기억 저장 명령 미실행, 개인 선호·다른 프로젝트 본문 복사 없음
 - 단계 브랜치 push·정확한 HEAD 일치 확인과 세션 기록 제거 뒤 보고. develop draft-merge·정식 출시·설치 없음
