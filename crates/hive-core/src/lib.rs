@@ -18,6 +18,7 @@ pub mod orchestration;
 pub mod policy;
 pub mod preferences;
 pub mod role;
+pub mod roster;
 pub mod run;
 pub mod setup;
 pub mod token_accounting;
