@@ -19,7 +19,7 @@ fn prune(root: &Path, mode: &str) -> Value {
 #[test]
 fn prune_confirm_removes_large_unused_executables_and_preserves_recorded_files() {
     let temporary = tempfile::tempdir().unwrap();
-    let root = temporary.path().join("사용자 루트 with spaces");
+    let root = hive_core::normalize_platform_root(temporary.path()).join("사용자 루트 with spaces");
     let monitor = root.join(".hive/runtime/usage-monitor");
     let bin = monitor.join("bin");
     fs::create_dir_all(&bin).unwrap();
