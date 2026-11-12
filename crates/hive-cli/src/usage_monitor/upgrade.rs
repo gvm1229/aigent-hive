@@ -664,6 +664,9 @@ mod tests {
         assert_eq!(std::fs::read(bin.join("hive-old.exe")).unwrap(), bytes);
         let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
         assert!(current.executable.is_file());
+        assert!(binary_names(&root)
+            .iter()
+            .any(|name| Some(std::ffi::OsStr::new(name)) == current.executable.file_name()));
         let journal: Value = load(&root, JOURNAL).unwrap().unwrap();
         assert_eq!(journal["phase"], "complete");
         assert_eq!(&journal["binary_cleanup"], cleanup);
@@ -673,6 +676,76 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn running_windows_binary_is_restored_and_reported_skipped_after_delete_failure() {
+        use std::os::windows::process::CommandExt;
+        use std::process::{Child, Command, Stdio};
+
+        struct Running(Child);
+        impl Drop for Running {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+
+        let (_directory, root) = fixture(false);
+        let bin = root.requested_path().join(BASE).join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let name = std::ffi::OsStr::new("hive-running.exe");
+        let path = bin.join(name);
+        let source =
+            PathBuf::from(std::env::var_os("SystemRoot").unwrap()).join("System32/ping.exe");
+        std::fs::copy(source, &path).unwrap();
+        let expected = std::fs::read(&path).unwrap();
+        let mut running = Running(
+            Command::new(&path)
+                .args(["-t", "127.0.0.1"])
+                .creation_flags(0x0800_0000)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap(),
+        );
+        assert!(running.0.try_wait().unwrap().is_none());
+        let parent =
+            cap_std::fs::Dir::open_ambient_dir(&bin, cap_std::ambient_authority()).unwrap();
+        let failure = crate::run::remove_parent_file(&parent, name, &expected).unwrap_err();
+        let message = failure.to_string();
+        assert!(
+            message.contains("cannot remove claimed destination"),
+            "{message}"
+        );
+        assert!(message.contains("os error 5"), "{message}");
+        assert_eq!(std::fs::read(&path).unwrap(), expected);
+        let result = prune_unused(root.requested_path(), true).unwrap();
+        assert!(result["removed"].as_array().unwrap().is_empty());
+        let skipped = result["skipped"].as_array().unwrap();
+        assert_eq!(skipped.len(), 1);
+        assert_eq!(
+            skipped[0]["path"],
+            json!(Path::new(BASE).join("bin").join(name))
+        );
+        assert!(skipped[0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("os error 5"));
+        assert_eq!(std::fs::read(&path).unwrap(), expected);
+        assert_eq!(binary_names(&root), ["hive-running.exe"]);
+        assert!(running.0.try_wait().unwrap().is_none());
+        drop(running);
+        assert_eq!(
+            prune_unused(root.requested_path(), true).unwrap()["removed"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(binary_names(&root).is_empty());
     }
 
     #[test]
