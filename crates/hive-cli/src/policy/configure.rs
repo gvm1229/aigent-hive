@@ -816,9 +816,9 @@ pub(super) fn run(args: &[String]) -> ExitCode {
     let before = observe(args);
     let outcome=configure(args).unwrap_or_else(|message| {
         let after=observe(args);
-        let observed=before.as_ref().zip(after.as_ref()).map(|(before,after)| {
+        let observed=before.as_ref().zip(after.as_ref()).map_or_else(Vec::new, |(before,after)| {
             after.iter().filter(|(path,value)| before.get(*path)!=Some(*value)).map(|(path,_)|path.clone()).collect::<Vec<_>>()
-        }).unwrap_or_default();
+        });
         ActionResult {schema_version:1,action:"ConfigurePolicyHooks",status:"blocked",exit_code:3,
             code:"hive.policy-hook-config-blocked",message,changed_paths:observed,evidence:Vec::new(),
             next_action:Some("Inspect the exact project hook status and retained intent before retrying; do not overwrite foreign settings.".to_owned()),

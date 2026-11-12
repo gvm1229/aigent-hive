@@ -347,7 +347,10 @@ impl HostReceipt {
             || !valid_head(&self.event_head)
             || !valid_digest(&self.host_capability_digest)
             || !valid_digest(&self.source_digest)
-            || !matches!(self.host.as_str(), "codex" | "claude" | "antigravity")
+            || !matches!(
+                self.host.as_str(),
+                "codex" | "claude" | "gemini" | "antigravity"
+            )
             || self.source_locator.is_empty()
             || self.issued_at.is_empty()
             || self.received_at.is_empty()
@@ -1303,5 +1306,131 @@ mod tests {
             encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
         }
         encoded
+    }
+}
+
+/// Inert worker inbox request, bound by a signed orchestration prepare event.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SummonEnvelope {
+    pub schema_version: u32,
+    pub run_id: String,
+    pub action_id: String,
+    pub role: String,
+    pub profile: crate::roster::WorkerProfile,
+    pub task_file: String,
+    pub task_digest: String,
+    pub capability_digest: Option<String>,
+    pub target_digest: String,
+    pub event_head: String,
+    pub control_epoch: u64,
+    pub authority_id: String,
+    pub idempotency_key: String,
+    pub result_path: String,
+    pub state: DispatchState,
+    pub enabled: bool,
+}
+
+impl SummonEnvelope {
+    /// Check data only; a matching committed event and host qualification are still required.
+    /// # Errors
+    /// Rejects unbound, enabled, unsupported or unsafe envelope fields.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.schema_version != 1
+            || self.state != DispatchState::Prepared
+            || self.enabled
+            || !valid_id(&self.run_id)
+            || !valid_id(&self.action_id)
+            || !valid_id(&self.authority_id)
+            || !valid_id(&self.idempotency_key)
+            || self.role.is_empty()
+            || (self.event_head != "none" && !valid_head(&self.event_head))
+            || !valid_digest(&self.task_digest)
+            || self
+                .capability_digest
+                .as_ref()
+                .is_some_and(|digest| !valid_digest(digest))
+            || !valid_digest(&self.target_digest)
+            || !self.profile.supported
+            || self.profile.provider == "claude"
+        {
+            return Err("invalid or unsupported inert summon envelope".into());
+        }
+        let root = format!(".hive/runs/{}/", self.run_id);
+        for path in [&self.task_file, &self.result_path] {
+            crate::validate_project_relative(std::path::Path::new(path))
+                .map_err(|e| e.to_string())?;
+            if !path.starts_with(&root) {
+                return Err("summon path outside exact run".into());
+            }
+        }
+        if self.task_file == self.result_path {
+            return Err("task/result collision".into());
+        }
+        Ok(())
+    }
+    /// Canonical request digest for the signed single-action authority.
+    /// # Errors
+    /// Rejects invalid envelopes or serialization errors.
+    pub fn digest(&self) -> Result<String, String> {
+        self.validate()?;
+        serde_json_canonicalizer::to_vec(self)
+            .map(|b| crate::sha256_digest(&b))
+            .map_err(|e| e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod summon_tests {
+    use super::*;
+    #[test]
+    fn orchestration_summon_envelope_binds_all_fields_and_paths() {
+        let e = SummonEnvelope {
+            schema_version: 1,
+            run_id: "run-1".into(),
+            action_id: "task-1".into(),
+            role: "routine".into(),
+            profile: crate::roster::Roster::defaults()
+                .unwrap()
+                .worker_profile("hive-routine-implementer")
+                .unwrap(),
+            task_file: ".hive/runs/run-1/tasks/task-1.md".into(),
+            task_digest: crate::sha256_digest(b"task"),
+            capability_digest: Some(crate::sha256_digest(b"capabilities")),
+            target_digest: crate::sha256_digest(b"consumer"),
+            event_head: "none".into(),
+            control_epoch: 0,
+            authority_id: "auth-1".into(),
+            idempotency_key: "run-task".into(),
+            result_path: ".hive/runs/run-1/results/task-1.json".into(),
+            state: DispatchState::Prepared,
+            enabled: false,
+        };
+        let digest = e.digest().unwrap();
+        let mut changed = e.clone();
+        changed.capability_digest = Some(crate::sha256_digest(b"other capabilities"));
+        assert_ne!(digest, changed.digest().unwrap());
+        changed.capability_digest = Some("not-a-digest".into());
+        assert!(changed.validate().is_err());
+        for path in [
+            "../escape",
+            ".hive/runs/other/result.json",
+            ".claude/settings.json",
+        ] {
+            let mut bad = e.clone();
+            bad.result_path = path.into();
+            assert!(bad.validate().is_err());
+        }
+        let mut changed = e.clone();
+        changed.profile.model = "another-exact-model".into();
+        assert_ne!(digest, changed.digest().unwrap());
+        let mut changed = e.clone();
+        changed.enabled = true;
+        assert!(changed.validate().is_err());
+        let mut changed = e.clone();
+        changed.profile.provider = "gemini".into();
+        changed.profile.supported = false;
+        assert!(changed.validate().is_err());
+        assert_eq!(e.state, DispatchState::Prepared);
     }
 }

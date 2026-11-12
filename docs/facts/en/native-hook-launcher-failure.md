@@ -9,7 +9,7 @@ summary: "PreToolUse launchers deny checker execution failures; host loading and
 tags: [hooks, policy, safety]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/policy/configure.rs#sha256:bab9fc28b65e564c28630f54bbb4991dff734d0185da72b59ee9f54800163875"
+  - "repo:crates/hive-cli/src/policy/configure.rs#sha256:8044957932f9272e459bf512bd0bb5960f8f70c6c54b48bcc313fc54cf317169"
   - "repo:schemas/host-policy-intent.schema.json#sha256:0e1877e37080235b1ebc905b02ba7b6b7c245cce7c110b46cb94b6c9b8aacb4d"
   - "repo:tests/conformance/contracts/test_native_policy_hooks.py#sha256:f1365fbdc97d0b4f8e1b18b9dde043a83f609272f48edd485d598301ed04b7bb"
 links: [foundation-refactor, project-policy-enforcement]

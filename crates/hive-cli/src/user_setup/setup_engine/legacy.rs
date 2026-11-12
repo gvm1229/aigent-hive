@@ -109,9 +109,8 @@ pub(super) fn collect<R: BufRead, W: Write>(
         .questions
         .contains(&warnings.id)
         && !super::interactive::answered(progress, warnings)
-        && !ask_choice(store, progress, warnings, terminal, false)?
     {
-        return Ok(false);
+        return ask_choice(store, progress, warnings, terminal, false);
     }
     Ok(true)
 }

@@ -73,6 +73,8 @@ modules = [
   "tests.conformance.contracts.test_native_policy_hooks",
   "tests.conformance.contracts.test_directive_context",
   "tests.conformance.contracts.test_hive_skills",
+  "tests.conformance.contracts.test_roster_gods",
+  "tests.conformance.contracts.test_host_reference",
   "tests.conformance.contracts.test_host_capabilities",
   "tests.conformance.contracts.test_knowledge_schemas",
   "tests.conformance.contracts.test_knowledge_graph_contracts",

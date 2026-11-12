@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.dev/schemas/roster-capability-report.schema.json",
+  "title": "Explicit host-reported observations; never activation authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider",
+    "version",
+    "version_output",
+    "help_output",
+    "login_status_output",
+    "models",
+    "project_hook_events"
+  ],
+  "properties": {
+    "provider": {
+      "enum": [
+        "codex",
+        "claude",
+        "gemini"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_output": {
+      "type": "string",
+      "minLength": 1
+    },
+    "help_output": {
+      "type": "string",
+      "minLength": 1
+    },
+    "login_status_output": {
+      "type": "string",
+      "minLength": 1
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "project_hook_events": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

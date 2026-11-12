@@ -102,13 +102,12 @@ class V09HostNativeContractTests(unittest.TestCase):
             "logical scheduling",
             "team coordination",
             "multi-goal execution",
-            "declarative execution envelopes",
+            "declarative envelopes",
             "authenticated single-action authority",
         ):
             self.assertIn(required, text)
         for forbidden in (
-            "model-provider API",
-            "launch a model/subagent process",
+            "Never call provider APIs, request credentials, or launch model/subagent processes.",
         ):
             self.assertIn(forbidden, text)
 

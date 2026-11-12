@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 28,
-      "maxItems": 28,
+      "minItems": 37,
+      "maxItems": 37,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -141,7 +141,16 @@
         "adversarial-judge",
         "team-execution",
         "multi-goal",
-        "custom-subagent-create"
+        "custom-subagent-create",
+        "athena",
+        "artemis",
+        "hephaistos",
+        "apollon",
+        "eileithyia",
+        "poseidon",
+        "demeter",
+        "aither",
+        "hades"
       ]
     },
     "skill_dependency": {

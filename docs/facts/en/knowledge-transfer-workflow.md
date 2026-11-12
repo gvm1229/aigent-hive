@@ -9,7 +9,7 @@ summary: "Single and multi-bundle imports bind exact inputs, destination bytes, 
 tags: [knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:2786721545e082ed59be485a8ce0b21b7c9466a236c593488864725bcd8cc54f"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f7b7ae3eb3045a598684dcfac3fec94c9ce649a87d745c11a650da06e428fd2c"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
   - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:6cb9643cad5a79d590408c8f5d0953296b7b291ed726a69ef6898b1ab9ab4b5b"
   - "repo:docs/guides/knowledge-transfer.md#sha256:18fcddede882c3dbcfa642b5b6c2b6be6e4bac898532e03c3f178da56c8633af"

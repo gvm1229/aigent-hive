@@ -33,7 +33,7 @@ def fake_codex(directory, environment):
                 and isinstance(n.value, str) and n.value.startswith("import json"))
     program = directory / "codex.py"
     program.write_text(body.replace("__HIVE_TEST_HOST__", repr("codex"))
-                       .replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.2")), encoding="utf-8")
+                       .replace("__HIVE_TEST_PRODUCT_VERSION__", repr("0.15.0")), encoding="utf-8")
     if os.name == "nt":
         (directory / "codex.cmd").write_text(f'@"{sys.executable}" "%~dp0codex.py" %*\r\n', encoding="utf-8")
     else:
@@ -161,6 +161,29 @@ def posix_terminal(binary, arguments, environment, user, project=False, cancel=F
         os.close(descriptor)
     return {"terminal": "PTY", "exit_code": status, "steps": steps,
             "output_bytes": len(output), "output_sha256": hashlib.sha256(output).hexdigest()}
+
+
+def inspect_failure(binary, user, project, environment, *, is_project, phase):
+    results = {}
+    scope = ["--target", str(project)] if is_project else ["--scope", "user"]
+    probes = [("failure_inspection", ["--show"])]
+    if phase == "awaiting-answers":
+        probes.append(("failure_resume_inspection", ["--resume", "--non-interactive"]))
+    for key, options in probes:
+        try:
+            inspected = subprocess.run([str(binary), "setup", *scope, "--user-root", str(user),
+                                        *options, "--output", "json"],
+                env=environment, input=b"", capture_output=True, timeout=15)
+            state = json.loads(inspected.stdout)
+            data = state.get("data") or {}
+            results[key] = {"exit_code": inspected.returncode,
+                "code": state.get("code"), "message": state.get("message"),
+                "stored_language": (data.get("stored") or {}).get("interface_language"),
+                "details": data.get("diagnostic", data.get("details")),
+                "stderr": inspected.stderr.decode("utf-8", errors="replace")[:2000]}
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            results[key + "_error"] = str(error)[:1000]
+    return results
 
 
 def windows_terminal(binary, user, project, work, environment, mode, label, app_path=None):
@@ -327,19 +350,8 @@ def main():
         pending = journal(user, args.scenario in {"project", "windows-terminal"})
         details["pending"] = {key: pending.get(key) for key in ("phase", "step", "operation_id")}
         if "environment" in locals():
-            try:
-                scope = ["--target", str(project)] if args.scenario in {"project", "windows-terminal"} else ["--scope", "user"]
-                inspected = subprocess.run([str(binary), "setup", *scope, "--user-root", str(user), "--show", "--output", "json"],
-                    env=environment, input=b"", capture_output=True, timeout=15)
-                state = json.loads(inspected.stdout)
-                data = state.get("data") or {}
-                details["failure_inspection"] = {"exit_code": inspected.returncode,
-                    "code": state.get("code"), "message": state.get("message"),
-                    "stored_language": (data.get("stored") or {}).get("interface_language"),
-                    "details": data.get("diagnostic", data.get("details")),
-                    "stderr": inspected.stderr.decode("utf-8", errors="replace")[:2000]}
-            except (OSError, ValueError, subprocess.TimeoutExpired) as inspection_error:
-                details["failure_inspection_error"] = str(inspection_error)[:1000]
+            details.update(inspect_failure(binary, user, project, environment,
+                is_project=args.scenario in {"project", "windows-terminal"}, phase=pending.get("phase")))
         raise
     finally:
         details["events"] = events

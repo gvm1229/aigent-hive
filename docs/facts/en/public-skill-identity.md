@@ -9,10 +9,10 @@ summary: "Aigent Hive has 28 product Skills, direct rename aliases, and separate
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:6c131ba233af72d3b6aa5ea1e928b2eafde30bc928af69f401db45643a4a7c09"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:9248e3cb42168040fa5cc9ce033eeb4e5446e216c7a902f12162bc7d48fd2691"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:b1d168024659e23bc1fee30c46e2b628e607522b9b0da2f59229a277eff2a702"
-  - "repo:harness/skills/catalog.yml#sha256:5949525e029f37e08f5ef49302f698be45674b94959f4f5aa301d7138c4e1570"
+  - "repo:docs/skills.md#sha256:c0faff5fbecfd6cde693ccec60ea07412eac4502c4cb2d5d6e3ced1bf83ee746"
+  - "repo:harness/skills/catalog.yml#sha256:2598c30eb9870eba93ae14b5439c87c09d67c4a1b0cb2fabcdff8a40702871ba"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:be1a9fc625b4bdb79597be8c3c081381d23e23d3"
 status: active
@@ -20,7 +20,7 @@ status: active
 
 # Skill Identity
 
-Aigent Hive has one product-only catalog of 28 Skills. Renamed IDs retain direct migration aliases;
+Aigent Hive has one product-only catalog of 37 Skills. Renamed IDs retain direct migration aliases;
 `knowledge-scan` extracts new knowledge and `knowledge-transfer` moves existing knowledge.
 `humanize-kor` adds explicit Korean rewriting with deterministic
 preservation gates. Korean knowledge display names show only the human function, while every

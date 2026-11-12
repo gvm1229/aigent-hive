@@ -9,9 +9,9 @@ summary: "Project Skill Defaults"
 tags: [directive, project, skill]
 aliases: []
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:51ce6acb616c554de9ae60e90259c815b30ddf33608ffdec02c07d966f2b089c"
-  - "repo:harness/project-setup/skill-suites.yml#sha256:c120d17e58acb2d3731c6963ca478a281034952412cc0f3c1b2de43791db0ff5"
-  - "repo:schemas/setup-answers.schema.json#sha256:bb77a1a06c20871299ef83a384142e137e272790cc2c648628cd1098f7faeb9e"
+  - "repo:crates/hive-render/src/lib.rs#sha256:4b07b57fefd87c090dc12db47a756f0f5556545f6316c879bf8e0a67f53190b4"
+  - "repo:harness/project-setup/skill-suites.yml#sha256:7ee263e954cf1dbba42022fdbdd19f53cafd9064b2345c7c5e0cd0db36186f84"
+  - "repo:schemas/setup-answers.schema.json#sha256:c4fb1f2da1748a1e087a36d58fb4e63378b2e216e2dfad5bd283e9f711459631"
 links: [agent-directive-ownership, codex-skill-delivery]
 reviewed_revision: "git:be1a9fc625b4bdb79597be8c3c081381d23e23d3"
 status: active
@@ -19,4 +19,4 @@ status: active
 
 # Project Skill Defaults
 
-The daily-work project suite explicitly lists 23 built-ins. It excludes user-setup, project-setup, custom-subagent-create, knowledge-transfer and project-transition. Project selection can be customized or empty; user-setup remains global-only. Wiki-off removes five knowledge Skills. Policy 1 proposes the new default once for legacy installs and preserves later choices. Selected Skills support request routing without granting mutation or publication authority.
+The daily-work project suite explicitly lists 32 built-ins. It excludes user-setup, project-setup, custom-subagent-create, knowledge-transfer and project-transition. Project selection can be customized or empty; user-setup remains global-only. Wiki-off removes five knowledge Skills. Policy 1 proposes the new default once for legacy installs and preserves later choices. Selected Skills support request routing without granting mutation or publication authority.

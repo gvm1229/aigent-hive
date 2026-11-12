@@ -135,6 +135,10 @@ jobs:
       - if: matrix.lane == 'integration'
         run: python tests/fixtures/interactive-cli/native-core-removal.py npm
       - if: matrix.lane == 'integration'
+        name: Check the actually published frozen-updater target
+        id: legacy-target
+        run: python tests/fixtures/interactive-cli/legacy-target-check.py
+      - if: matrix.lane == 'integration' && steps.legacy-target.outputs.ready == 'true'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py --legacy-version 0.13.2-test.1 direct
       - name: Qualify actual setup terminals and noninteractive entrypoints
         if: matrix.lane == 'integration'
@@ -276,8 +280,12 @@ jobs:
                   "--binary", str(binary.resolve()), "--scenario", "windows-terminal", "--language", "ko",
                   "--user-root", str(fixture / "user"), "--result", str(fixture / "results.json")], check=True)
       - if: runner.os == 'macOS'
+        name: Check the actually published frozen-updater target
+        id: legacy-target
+        run: python tests/fixtures/interactive-cli/legacy-target-check.py
+      - if: runner.os == 'macOS' && steps.legacy-target.outputs.ready == 'true'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py npm-retired direct
-      - if: runner.os == 'macOS'
+      - if: runner.os == 'macOS' && steps.legacy-target.outputs.ready == 'true'
         run: python tests/fixtures/interactive-cli/posix-legacy-ci.py --legacy-version 0.13.2-test.1 direct
       - run: python tests/fixtures/interactive-cli/native-core-removal.py
       - run: python tests/fixtures/interactive-cli/native-core-removal.py npm

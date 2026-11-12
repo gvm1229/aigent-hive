@@ -1,0 +1,52 @@
+{
+  "candidate_run_id": 43305279711,
+  "source": "29875af0b36b45c4886916d04ad4dc58440bdb1a",
+  "product_version": "0.15.0",
+  "package_version": "0.15.0-test.1",
+  "channel": "test",
+  "scope": "Windows archive inspection; no execution of other-OS binaries",
+  "packages": [
+    {
+      "name": "@aigent-hive/darwin-arm64",
+      "version": "0.15.0-test.1",
+      "sha256": "79c1cbfa80209211bcfebdc55b1bbd93a8c7cfb20742e76442d5c3868c334656",
+      "integrity": "sha512-d4GJi9+9Z6J2gctjJywAwwBrShCCekMk0Qmhztkx4WU8wzsOYPSEcc66d3WSGCWcwgBdvvXv3WJNyZ9rJXKJiA==",
+      "reference_handler_shipped": false
+    },
+    {
+      "name": "@aigent-hive/linux-arm64",
+      "version": "0.15.0-test.1",
+      "sha256": "485520b7cd064f979e3b83b77c8cf921d249e4f47b508b0a0216cd1a510dcebd",
+      "integrity": "sha512-aCKFoFmtKqSUqfkhdSTbvZfI8aduzDN8FVC3emxA9c3CCy1b0KmrCUInqx5UAxMmqN7mCCMwY/WhqkIQckt/oQ==",
+      "reference_handler_shipped": false
+    },
+    {
+      "name": "aigent-hive",
+      "version": "0.15.0-test.1",
+      "sha256": "b6fc1d283fa1021104ab9d30cfc1be1df8d3944130269ff51c428836b7ddbc23",
+      "integrity": "sha512-I/F0GTdPtuTYwJyabbvXrRvBpgu+VzkInQStOazEQO2BP641Wvaxr4MBLQr7wlnjkUvIZvLU2hGMdxLMHvXneA==",
+      "reference_handler_shipped": false
+    },
+    {
+      "name": "@aigent-hive/darwin-x64",
+      "version": "0.15.0-test.1",
+      "sha256": "60fdbceb4eb6a6847e4a8fa3e6787334ca240d61b030442dad996ea3bd28ba03",
+      "integrity": "sha512-VfpZuh6MVrmBl8QCqVt/sB4hCOf4xRjbZpKsaflYUlrIKD7muMBIpbBvuS79WX3g67CpjA/lWwH+gxSdFnA6Sw==",
+      "reference_handler_shipped": false
+    },
+    {
+      "name": "@aigent-hive/win32-x64",
+      "version": "0.15.0-test.1",
+      "sha256": "26372577acf71e75500d6d7e4b1998f4507127630de5ffa62137ccd7fec50062",
+      "integrity": "sha512-WAIJBKpoj8zocaC7zm3llWd1UBTZQB0vR+ap0eHSC78HhdgCPA88Psul0UiMm4wMw2bidcZ444ZGqj/EHhxOPw==",
+      "reference_handler_shipped": false
+    },
+    {
+      "name": "@aigent-hive/linux-x64",
+      "version": "0.15.0-test.1",
+      "sha256": "d4d7e4541cf09b6d776a6a357ec650cd959c104bb889c47515fba3ec8aa0fcc6",
+      "integrity": "sha512-z7L4/ogQH3zmimXf9Xt6z9394y36hJNolgIaDnRPzAcJsFSzQk0dF7Z4jwCKKNFDnBtHiY1XPirkggLX6a2ZuQ==",
+      "reference_handler_shipped": false
+    }
+  ]
+}

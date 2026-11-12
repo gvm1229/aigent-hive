@@ -24,6 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 mod custom_agent_cli;
 mod discord;
 mod display_options;
+mod gods;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -34,10 +35,12 @@ mod policy;
 mod project_upgrade;
 mod report;
 mod role;
+mod roster;
 mod run;
 mod session;
 mod source_wiki;
 mod storage;
+mod summon;
 mod update;
 mod update_activation;
 mod update_bridge;
@@ -66,6 +69,9 @@ Aigent Hive
 
 USAGE:
     hive doctor
+    hive roster --help
+    hive summon --help
+    hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
     hive check-target <path>
@@ -256,7 +262,14 @@ fn main() -> ExitCode {
     dispatch(arguments)
 }
 
+#[allow(clippy::too_many_lines)]
 fn dispatch(arguments: Vec<String>) -> ExitCode {
+    if let Some(god) = arguments
+        .first()
+        .and_then(|name| hive_core::gods::find(name))
+    {
+        return gods::run_alias(god, &arguments[1..]);
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")
@@ -295,6 +308,8 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("usage") => run_usage(&arguments[1..]),
         Some("storage") => storage::run_storage(&arguments[1..]),
         Some("prune") => storage::run_prune(&arguments[1..]),
+        Some("summon") => summon::run(&arguments[1..]),
+        Some("roster") => roster::run(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
@@ -663,15 +678,13 @@ fn usage_unknown_result_with_next(
         code: "hive.usage-unknown",
         message: message.to_owned(),
         changed_paths: Vec::new(),
-        evidence: evidence_digest
-            .map(|digest| {
-                vec![Evidence {
-                    kind: "report",
-                    locator: "usage-snapshots:normalized".to_owned(),
-                    digest,
-                }]
-            })
-            .unwrap_or_default(),
+        evidence: evidence_digest.map_or_else(Vec::new, |digest| {
+            vec![Evidence {
+                kind: "report",
+                locator: "usage-snapshots:normalized".to_owned(),
+                digest,
+            }]
+        }),
         next_action,
         data: None,
     }

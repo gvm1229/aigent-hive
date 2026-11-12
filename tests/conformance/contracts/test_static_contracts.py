@@ -25,6 +25,16 @@ PLUGIN_SKILLS = ROOT / "harness/plugins/aigent-hive/skills"
 TEMPLATE_SKILLS = ROOT / "harness/template/.agents/skills"
 
 CURRENT = {
+    "athena",
+    "artemis",
+    "hephaistos",
+    "apollon",
+    "eileithyia",
+    "poseidon",
+    "demeter",
+    "aither",
+    "hades",
+
     "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
     "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
@@ -266,7 +276,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")
         self.assertIn("no separate tracked Skill inventory", " ".join(agents.split()))
-        self.assertIn("source-project-only", directive_text(".agents/directives/02-architecture.md"))
+        architecture=" ".join(directive_text(".agents/directives/02-architecture.md").split())
+        self.assertIn("Only source-project exceptions:",architecture)
+        self.assertIn("nonshipping, with no general source Skill inventory",architecture)
+        for name in ["update-summary","draft-devlog"]:
+            self.assertIn(f".agents/skills/{name}/",architecture)
         self.assertIn("Source 규칙", ownership)
 
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:

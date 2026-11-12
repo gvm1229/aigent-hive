@@ -18,6 +18,15 @@ SOURCE_SKILL_ROOT = ROOT / ".agents/skills"
 
 EXPECTED_SKILLS = frozenset(
     {
+        "athena",
+        "artemis",
+        "hephaistos",
+        "apollon",
+        "eileithyia",
+        "poseidon",
+        "demeter",
+        "aither",
+        "hades",
         "quick-answer",
         "project-setup",
         "code-polish",

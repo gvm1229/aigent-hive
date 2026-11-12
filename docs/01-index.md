@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -91,6 +91,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.15.0`](releases/0.15.0.md) | 신 입구 9개·역할 설정·비활성 작업 미리보기 |
 | [`0.14.2`](releases/0.14.2.md) | 큰 감시 실행 파일 정리 복구 |
 | [`0.14.1`](releases/0.14.1.md) | 임계값 기록·지식 연결 수정, 감시 실행 파일 정리, 저장 공간 보고 |
 | [`0.14.0`](releases/0.14.0.md) | 모델 없는 터미널 설정·재개·자료 보존 제거 |
@@ -389,3 +390,10 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [에이전트 작업 규칙 저장](plans/agent-orchestration-rules.md)
 
 - [OV142-008 정식 게시와 PC 갱신 근거](research/overhaul/OV142-008.md)
+
+## 재정비 단계 3 개발 근거
+
+- [기능 소속·역할 기본값 이전](architecture/god-ownership.md)
+- [OV150-002](research/overhaul/OV150-002.md) · [OV150-003](research/overhaul/OV150-003.md) · [OV150-004](research/overhaul/OV150-004.md) · [OV150-005](research/overhaul/OV150-005.md) · [OV150-006](research/overhaul/OV150-006.md) · [OV150-007](research/overhaul/OV150-007.md) · [OV150-008](research/overhaul/OV150-008.md) · [OV150-009](research/overhaul/OV150-009.md)
+- [OV150-010](research/overhaul/OV150-010.md)
+- [0.15.0 개발 초안](releases/0.15.0.md)

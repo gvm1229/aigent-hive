@@ -616,10 +616,10 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 26] = [
+    const SUPPORTED: [&str; 27] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
         "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0",
-        "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2", "0.14.0", "0.14.1",
+        "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2", "0.14.0", "0.14.1", "0.14.2",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -1253,6 +1253,12 @@ fn localized_skill_text(
     name: &str,
     language: DescriptorLanguage,
 ) -> Option<(&'static str, &'static str)> {
+    if let Some(god) = hive_core::gods::GODS.iter().find(|god| god.name == name) {
+        return Some(match language {
+            DescriptorLanguage::En => (god.display_name, god.description_en),
+            DescriptorLanguage::Ko => (god.korean, god.description_ko),
+        });
+    }
     let (en_name, en_description, ko_name, ko_description) = match name {
         "user-setup" => (
             "Set up Hive",
@@ -1531,6 +1537,7 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
+#[allow(clippy::too_many_lines)]
 fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     match name {
         "user-setup" => Some(include_bytes!(
@@ -1608,6 +1615,33 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "knowledge-transfer" => Some(include_bytes!(
             "../../../harness/skills/knowledge-transfer/agents/openai.yaml"
         )),
+        "athena" => Some(include_bytes!(
+            "../../../harness/skills/athena/agents/openai.yaml"
+        )),
+        "artemis" => Some(include_bytes!(
+            "../../../harness/skills/artemis/agents/openai.yaml"
+        )),
+        "hephaistos" => Some(include_bytes!(
+            "../../../harness/skills/hephaistos/agents/openai.yaml"
+        )),
+        "apollon" => Some(include_bytes!(
+            "../../../harness/skills/apollon/agents/openai.yaml"
+        )),
+        "eileithyia" => Some(include_bytes!(
+            "../../../harness/skills/eileithyia/agents/openai.yaml"
+        )),
+        "poseidon" => Some(include_bytes!(
+            "../../../harness/skills/poseidon/agents/openai.yaml"
+        )),
+        "demeter" => Some(include_bytes!(
+            "../../../harness/skills/demeter/agents/openai.yaml"
+        )),
+        "aither" => Some(include_bytes!(
+            "../../../harness/skills/aither/agents/openai.yaml"
+        )),
+        "hades" => Some(include_bytes!(
+            "../../../harness/skills/hades/agents/openai.yaml"
+        )),
         "ship" => Some(include_bytes!(
             "../../../harness/skills/ship/agents/openai.yaml"
         )),
@@ -1621,7 +1655,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 37] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1648,6 +1682,42 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         ("knowledge-scan", KNOWLEDGE_SCAN),
         ("knowledge-transfer", KNOWLEDGE_TRANSFER),
+        (
+            "athena",
+            include_bytes!("../../../harness/skills/athena/SKILL.md"),
+        ),
+        (
+            "artemis",
+            include_bytes!("../../../harness/skills/artemis/SKILL.md"),
+        ),
+        (
+            "hephaistos",
+            include_bytes!("../../../harness/skills/hephaistos/SKILL.md"),
+        ),
+        (
+            "apollon",
+            include_bytes!("../../../harness/skills/apollon/SKILL.md"),
+        ),
+        (
+            "eileithyia",
+            include_bytes!("../../../harness/skills/eileithyia/SKILL.md"),
+        ),
+        (
+            "poseidon",
+            include_bytes!("../../../harness/skills/poseidon/SKILL.md"),
+        ),
+        (
+            "demeter",
+            include_bytes!("../../../harness/skills/demeter/SKILL.md"),
+        ),
+        (
+            "aither",
+            include_bytes!("../../../harness/skills/aither/SKILL.md"),
+        ),
+        (
+            "hades",
+            include_bytes!("../../../harness/skills/hades/SKILL.md"),
+        ),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
         ("humanize-kor", HUMANIZE_KOR),
@@ -3020,8 +3090,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 23);
-            let expected_file_count = if host == Host::Claude { 30 } else { 53 };
+            assert_eq!(first.active_skills.skills.len(), 32);
+            let expected_file_count = if host == Host::Claude { 39 } else { 71 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -3453,7 +3523,7 @@ description: Inspect one local file without changing it.
     #[test]
     fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
         let default = super::project_default_skills().unwrap();
-        assert_eq!(default.len(), 23);
+        assert_eq!(default.len(), 32);
         let excluded = [
             "user-setup",
             "project-setup",
@@ -3518,6 +3588,7 @@ description: Inspect one local file without changing it.
             ("0.13.2", 28),
             ("0.14.0", 28),
             ("0.14.1", 28),
+            ("0.14.2", 28),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");
@@ -3718,6 +3789,34 @@ description: Inspect one local file without changing it.
         assert_eq!(result.route, Route::HiveSkill);
         assert_eq!(result.selected_skill.as_deref(), Some("knowledge-recall"));
         assert_eq!(result.load_skill_bodies.len(), 1);
+    }
+
+    #[test]
+    fn god_entries_resolve_explicit_and_automatic_normalized_candidates() {
+        for name in [
+            "athena",
+            "artemis",
+            "hephaistos",
+            "apollon",
+            "eileithyia",
+            "poseidon",
+            "demeter",
+            "aither",
+            "hades",
+        ] {
+            for explicit in [false, true] {
+                let mut request = routing_request();
+                request.active_hive_skills = vec![builtin_proof(name)];
+                if explicit {
+                    request.explicit_skill = Some(name.into());
+                } else {
+                    request.hive_candidate = Some(name.into());
+                }
+                let result = resolve_route(&request).unwrap();
+                assert_eq!(result.selected_skill.as_deref(), Some(name));
+                assert_eq!(result.load_skill_bodies.len(), 1);
+            }
+        }
     }
 
     #[test]

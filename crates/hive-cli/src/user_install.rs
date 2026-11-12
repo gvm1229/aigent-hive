@@ -3235,14 +3235,13 @@ fn validate_prior_ownership(
     };
     let authenticated_entries = authenticated
         .as_ref()
-        .map(|inventory| {
+        .map_or_else(BTreeMap::new, |inventory| {
             inventory
                 .entries
                 .iter()
                 .map(|entry| (entry.path.as_str(), entry))
                 .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
+        });
     for (relative, planned) in files {
         if read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?.is_none() {
             continue;
@@ -9919,6 +9918,7 @@ mod tests {
                 ("0.13.2", 74),
                 ("0.14.0", 77),
                 ("0.14.1", 77),
+                ("0.14.2", 77),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10087,6 +10087,7 @@ mod tests {
                         | "0.13.2"
                         | "0.14.0"
                         | "0.14.1"
+                        | "0.14.2"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")

@@ -162,6 +162,21 @@ jobs:
             --command python -m unittest -v \
             tests.conformance.contracts.test_directive_context \
             tests.conformance.contracts.test_native_policy_hooks
+      - name: Qualify inert roster, gods, and reference envelope with the public binary
+        if: inputs.product_version == '0.15.0'
+        shell: bash
+        run: |
+          python scripts/test-artifacts.py run --purpose "공개 역할과 비활성 봉투 $PLATFORM_PACKAGE" \
+            --command python -m unittest -v \
+            tests.conformance.contracts.test_roster_gods \
+            tests.conformance.contracts.test_host_reference
+      - name: Qualify signed Prepare through the exact public CLI
+        if: inputs.product_version == '0.15.0'
+        shell: bash
+        env:
+          HIVE_PUBLIC_CONFORMANCE_BIN: ${{ env.HIVE_BIN }}
+          CARGO_INCREMENTAL: '0'
+        run: cargo test --locked -p hive-cli summon_signed_prepare_writes_once_and_never_launches
       - name: Qualify public binary simple-explanation guidance
         shell: bash
         run: |

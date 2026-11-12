@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 
 hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
           and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"
@@ -21,6 +22,7 @@ assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel", "cancel-res
 if hosted:
     assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
+current_product = tomllib.loads((source / 'Cargo.toml').read_text(encoding='utf-8'))['workspace']['package']['version']
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
 root = Path(os.environ["HIVE_LEGACY_FIXTURE_ROOT"]) if hosted else Path("/tmp/hive-first-update")
@@ -69,7 +71,7 @@ if direct:
 else:
     assert len(sys.argv)==4 and sys.argv[1:3]==['install','-g'] and sys.argv[3].startswith('aigent-hive@'),sys.argv
     requested=sys.argv[3].removeprefix('aigent-hive@')
-assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.][0-9]+-test[.][1-9][0-9]*',requested),requested
+assert requested=='0.13.2-test.2' or re.fullmatch(re.escape('__CURRENT_PRODUCT__')+r'-test[.][1-9][0-9]*',requested),requested
 product=requested.split('-test.',1)[0]
 if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
@@ -101,6 +103,7 @@ digest=hashlib.sha256(binary.read_bytes()).hexdigest()
 if direct:
     (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':product,'package_version':requested,'artifact_sha256':'sha256:'+digest}))
 '''
+installer = installer.replace('__CURRENT_PRODUCT__', current_product)
 for name in ("npm", "sh"):
     (shim / name).write_text(installer)
     (shim / name).chmod(0o755)
@@ -137,7 +140,7 @@ if args==['--version']:print('codex-cli 0.145.0');raise SystemExit(0)
 if args==['plugin','marketplace','list','--json']:
     print(json.dumps({'marketplaces':[{'name':'aigent-hive','root':market}] if state['marketplace'] else []}));raise SystemExit(0)
 if args==['plugin','list','--json']:
-    entries=[{'pluginId':'aigent-hive@aigent-hive','version':'0.14.2','enabled':True,'source':{'path':market+'/plugins/aigent-hive'},'marketplaceSource':{'source':market}}] if state['plugin'] else []
+    entries=[{'pluginId':'aigent-hive@aigent-hive','version':'0.15.0','enabled':True,'source':{'path':market+'/plugins/aigent-hive'},'marketplaceSource':{'source':market}}] if state['plugin'] else []
     print(json.dumps({'installed':entries+[{'pluginId':'foreign@foreign'}],'available':[]}));raise SystemExit(0)
 if args[:3]==['plugin','marketplace','add'] and args[3:]==[market,'--json']:state['marketplace']=True
 elif args==['plugin','add','aigent-hive@aigent-hive','--json']:state['plugin']=True
@@ -169,7 +172,7 @@ environment = {"HOME": str(user), "USERPROFILE": str(user), "PATH": str(shim), "
 if mode in {"slow", "late-slow", "parent-exit-apply"}:
     environment["HIVE_TEST_SLOW_ONCE"] = "1"
 if mode == "worker-unowned":
-    request = {"schema_version": 1, "package_version": "0.14.2", "catalog_digest": "sha256:" + "0" * 64,
+    request = {"schema_version": 1, "package_version": "0.15.0", "catalog_digest": "sha256:" + "0" * 64,
         "deadline_unix_millis": int(time.time() * 1000) + 90000, "parent_process_id": os.getpid(),
         "user_root": str(user), "operation_id": "a" * 64, "answers": "e30=", "expected_config": None}
     result = subprocess.run(["/build/debug/hive", "__setup-apply-worker"], input=json.dumps(request),
@@ -574,7 +577,7 @@ if mode == "migration-review":
     migrated = [(path, record) for path, record in migrated if record.get("migration", {}).get("from_schema") == 1]
     assert len(migrated) == 1, migrated
     migration_path, record = migrated[0]
-    assert record["migration"]["to_schema"] == 2 and record["migration"]["policy_version"] == "0.14.2"
+    assert record["migration"]["to_schema"] == 2 and record["migration"]["policy_version"] == "0.15.0"
     assert record["phase"] == "complete" and record["before_digest"] != record["after_digest"]
     migration_receipt = migration_path.read_bytes()
     answers += terminal_run([str(binary), "setup", "--scope", "user", "--user-root", str(user)])
@@ -587,9 +590,9 @@ if mode == "migration-review":
     assert decision["origin"] == "explicit" and decision["input_channel"] == "terminal"
     assert settings["pending_questions"] == []
     # The frozen handshake used the registry's public test label. The following
-    # command is owned by development 0.14.2, so authenticate its private fixture as 0.14.2.
+    # command is owned by development 0.15.0, so authenticate its private fixture as 0.15.0.
     (package / "package.json").write_text(json.dumps({"name": "@aigent-hive/linux-x64",
-        "version": "0.14.2", "aigentHive": {"productVersion": "0.14.2"}}))
+        "version": "0.15.0", "aigentHive": {"productVersion": "0.15.0"}}))
     later = subprocess.run([str(binary), "update", "--channel", "test", "--confirm", "--non-interactive", "--user-root", str(user), "--output", "json"],
                            env=environment, input="", capture_output=True, text=True, timeout=30)
     assert later.returncode == 0, (later.stdout, later.stderr)
@@ -603,12 +606,12 @@ incoming = json.loads((root / "incoming.json").read_text())
 assert incoming["sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
 evidence = {"scenario": mode, "predecessor_sha256": old_digest, "incoming_source_sha256": source_digest,
     "incoming_stripped_sha256": incoming["sha256"], "installer_stub": incoming["installer"], "answers": answers,
-    "original_parent": "public " + version + " " + platform, "incoming": "development 0.14.2",
+    "original_parent": "public " + version + " " + platform, "incoming": "development 0.15.0",
     "registry_target": incoming["registry_target"], "private_user_mount": False, "terminal_runs": terminal_runs,
     "installer_invocations": int((root / "install-count").read_text()),
     "scope": ("Hosted isolated POSIX VM" if hosted else "Linux Docker") + " PTY/pipe component test; fake installer and Antigravity; no model, actual host or public14 acceptance"}
 if mode == "migration-review":
-    evidence["followup"] = {"private_package_version": "0.14.2", "initial_registry_target": incoming["registry_target"],
+    evidence["followup"] = {"private_package_version": "0.15.0", "initial_registry_target": incoming["registry_target"],
         "settings_preserved": True, "original_migration_receipt_preserved": True,
         "no_reinstall": True, "scope": "current development package reconciliation; not public 0.14 acceptance"}
 results = root / "results" if hosted else Path("/results")

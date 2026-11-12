@@ -9,14 +9,14 @@ summary: "0.10.1 authenticates historical project state before migration and rec
 tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:1ab23dbb5a8b60322f6c1068ba7cc09f54bc34151915068a748a1cc5a2c38018"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:a976082b24a1751d55d0bc81a6db1fdd29eaf689ea7d32b4c2b8929a5cdaab33"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:9b858bef8831bed659b0f977ecd9ba84111800176d9dfc048b1d46c4c6ab8115"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:d47f8ba8f5e3e88783cfc992cb88475d7cf47fa3459baecb434610e7f91c2d45"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:6c131ba233af72d3b6aa5ea1e928b2eafde30bc928af69f401db45643a4a7c09"
-  - "repo:crates/hive-render/src/lib.rs#sha256:51ce6acb616c554de9ae60e90259c815b30ddf33608ffdec02c07d966f2b089c"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2527e7ceccba9293bc6f0ca7a7ca53ae986ec82066f1f4c62abc8426e4f18ab8"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:9248e3cb42168040fa5cc9ce033eeb4e5446e216c7a902f12162bc7d48fd2691"
+  - "repo:crates/hive-render/src/lib.rs#sha256:4b07b57fefd87c090dc12db47a756f0f5556545f6316c879bf8e0a67f53190b4"
   - "repo:docs/guides/installed-usage-guard.md#sha256:0ead68f33595fcbd18d4d9c9ec38926645ca3cf22ffd895a02628c5e3c97a384"
   - "repo:docs/releases/0.10.3.md#sha256:94a75051e50352ff04de8e649b8382db81ee5b6b2ea95276203bdddeedcc2ea8"
-  - "repo:harness/project-bases/registry.yml#sha256:20b4d2b1f406e448c417841f5d71d033fb8705877314beb33ca6db241a3aed35"
+  - "repo:harness/project-bases/registry.yml#sha256:cf1394ea2e62a06a4f60113bcc1ca7d45d343803a4d7ee6103e3a6de9f3dd77f"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
 reviewed_revision: "git:be1a9fc625b4bdb79597be8c3c081381d23e23d3"
 status: active

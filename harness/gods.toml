@@ -1,0 +1,110 @@
+# Canonical god entry and ownership table. Regenerate with scripts/generate-gods.py.
+schema_version = 1
+
+[[gods]]
+name = "athena"
+korean = "아테나"
+purpose_en = "planning"
+purpose_ko = "계획"
+ownership_ko = "계획·검증"
+role = "hive-complex-implementer"
+aliases = ["Minerva", "미네르바"]
+commands = ["roster", "judge", "report", "release", "discord"]
+skills = ["athena", "verified-workflow", "multi-goal", "adversarial-judge", "judge-evidence", "run-checkpoint", "run-resume"]
+steps = ["Choose the owned planning or verification Skill for the request; save its plan and acceptance criteria before implementation."]
+
+[[gods]]
+name = "artemis"
+korean = "아르테미스"
+purpose_en = "research"
+purpose_ko = "조사"
+ownership_ko = "조사·진단"
+role = "hive-research-specialist"
+aliases = []
+commands = ["doctor", "check-target", "route"]
+skills = ["artemis", "research-best-practices", "quick-answer"]
+steps = ["Choose research-best-practices for source research or quick-answer for a bounded answer; follow that Skill without expanding into implementation."]
+
+[[gods]]
+name = "hephaistos"
+korean = "헤파이스토스"
+purpose_en = "implementation"
+purpose_ko = "구현"
+ownership_ko = "구현"
+role = "hive-routine-implementer"
+aliases = ["Hephaestus"]
+commands = ["role", "agent", "run", "loop"]
+skills = ["hephaistos", "code-polish", "custom-subagent-create", "ship"]
+steps = ["Follow the saved implementation plan and required checks. Use code-polish only for selected code review or cleanup, and ship only for verified focused commits."]
+
+[[gods]]
+name = "apollon"
+korean = "아폴론"
+purpose_en = "writing"
+purpose_ko = "글쓰기"
+ownership_ko = "글쓰기"
+role = "hive-article-writer"
+aliases = ["Apollo", "아폴로"]
+commands = ["prompt", "korean"]
+skills = ["apollon", "humanize-kor", "prompt-refine"]
+steps = ["Use humanize-kor for selected Korean prose or prompt-refine for an explicit prompt-authoring request; preserve meaning and protected literals."]
+
+[[gods]]
+name = "eileithyia"
+korean = "에일레이티이아"
+purpose_en = "setup"
+purpose_ko = "설정"
+ownership_ko = "설정·갱신"
+role = "hive-routine-implementer"
+aliases = ["Eleuthia", "에일레이티아", "엘레이티아", "엘레우티아"]
+commands = ["setup", "install", "update", "project"]
+skills = ["eileithyia", "user-setup", "project-setup", "product-update", "project-refresh", "project-transition", "amend-directive"]
+steps = ["Choose the owned setup or update Skill for the exact user or project scope; preserve user bytes and show required previews before mutation."]
+
+[[gods]]
+name = "poseidon"
+korean = "포세이돈"
+purpose_en = "coordination"
+purpose_ko = "조율"
+ownership_ko = "조율"
+role = "hive-complex-implementer"
+aliases = []
+commands = ["orchestration", "session", "hook", "policy", "summon"]
+skills = ["poseidon", "team-execution", "run-handoff"]
+steps = ["Use team-execution for bounded team coordination or run-handoff for role handoff; preserve exact run, authority, receipt and cancellation bindings."]
+
+[[gods]]
+name = "demeter"
+korean = "데메테르"
+purpose_en = "knowledge"
+purpose_ko = "지식"
+ownership_ko = "지식"
+role = "hive-research-specialist"
+aliases = []
+commands = ["knowledge", "source-wiki", "index"]
+skills = ["demeter", "knowledge-capture", "knowledge-recall", "knowledge-scan", "knowledge-maintain", "knowledge-promote", "knowledge-transfer"]
+steps = ["Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts."]
+
+[[gods]]
+name = "aither"
+korean = "아이테르"
+purpose_en = "usage controls"
+purpose_ko = "사용량 관리"
+ownership_ko = "사용량 관리"
+role = "hive-routine-implementer"
+aliases = ["Aether", "에테르"]
+commands = ["usage"]
+skills = ["aither", "usage-guard"]
+steps = ["Use usage-guard to inspect or adjust only the authorized usage scope; obey an installed halt without further work."]
+
+[[gods]]
+name = "hades"
+korean = "하데스"
+purpose_en = "cleanup"
+purpose_ko = "정리"
+ownership_ko = "정리"
+role = "hive-routine-implementer"
+aliases = []
+commands = ["storage", "prune", "uninstall"]
+skills = ["hades"]
+steps = ["Inspect exact storage, prune or uninstall candidates through existing CLI previews. Apply removal only with the required exact authority; cleanup planning grants no deletion authority."]

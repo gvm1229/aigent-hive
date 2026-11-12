@@ -19,6 +19,19 @@ KNOWLEDGE_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "knowledge.rs"
 LOOP_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "loop_engineering.rs"
 
 EXPECTED_ACTIONS = {
+    "Summon",
+    "Orchestration",
+    "OrchestrationStatus",
+    "OrchestrationPlan",
+    "OrchestrationDispatch",
+    "OrchestrationReceipt",
+    "OrchestrationCancel",
+    "OrchestrationRecover",
+    "OrchestrationAuthority",
+    "OrchestrationAuthorityIssue",
+    "OrchestrationAuthorityRevoke",
+    "OrchestrationMigrate",
+
     "EvaluatePolicy",
     "ConfigurePolicyHooks",
     "ReviewPolicyCandidate",
@@ -153,6 +166,12 @@ class ActionResultActionTests(unittest.TestCase):
         actions = schema["properties"]["action"]["enum"]
         self.assertEqual(len(actions), len(set(actions)), "duplicate action enum")
         self.assertEqual(set(actions), EXPECTED_ACTIONS)
+
+    def test_existing_orchestration_action_names_are_registered(self) -> None:
+        source=(ROOT/'crates/hive-cli/src/orchestration.rs').read_text(encoding='utf-8')
+        body=source.split('fn action_name(',1)[1].split('fn validate_head(',1)[0]
+        actual=set(re.findall(r'"(Orchestration[A-Za-z]*)"',body))
+        self.assertEqual(actual,{name for name in EXPECTED_ACTIONS if name.startswith('Orchestration')})
 
     def test_v09_source_actions_are_exactly_represented(self) -> None:
         knowledge = KNOWLEDGE_SOURCE.read_text(encoding="utf-8")

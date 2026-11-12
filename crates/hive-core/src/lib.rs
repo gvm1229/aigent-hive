@@ -9,6 +9,7 @@ use sha2::{Digest, Sha256};
 
 pub mod custom_agent;
 pub mod file_ops;
+pub mod gods;
 pub mod judge;
 pub mod judge_auth;
 pub mod korean;
@@ -18,6 +19,7 @@ pub mod orchestration;
 pub mod policy;
 pub mod preferences;
 pub mod role;
+pub mod roster;
 pub mod run;
 pub mod setup;
 pub mod token_accounting;

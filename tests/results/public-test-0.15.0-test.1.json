@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "product_version": "0.15.0",
+  "package_version": "0.15.0-test.1",
+  "source_commit": "29875af0b36b45c4886916d04ad4dc58440bdb1a",
+  "product_tree_sha256": "sha256:4e410af13fd9b735d87d1b44fa3f3d07ee996f333e8e0f5e360b0ca7c51aacdc",
+  "source_ci": {
+    "run_id": 43305152077,
+    "attempt": 1,
+    "conclusion": "success",
+    "scope": "Source and three OS platform checks; original live POSIX update deferred until matching publication, OV150-018"
+  },
+  "candidate_run_id": 43305279711,
+  "first_publication": {
+    "run_id": 43310897780,
+    "conclusion": "failure",
+    "reason": "npm test tag visibility timeout after six uploads; no GitHub release created"
+  },
+  "publication_run_id": 43312182798,
+  "publication_conclusion": "success",
+  "github_release": {
+    "tag": "v0.15.0-test.1",
+    "url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.15.0-test.1",
+    "prerelease": true,
+    "source_commit": "29875af0b36b45c4886916d04ad4dc58440bdb1a",
+    "annotated_tag_object": "993c2ee4b3c5a2d82d4f9f8dd0955f0e8d51a23c",
+    "asset_count": 25
+  },
+  "registry": {
+    "checked_at": "2026-11-12T21:41:40.727972+00:00",
+    "source": "29875af0b36b45c4886916d04ad4dc58440bdb1a",
+    "package_version": "0.15.0-test.1",
+    "packages": [
+      {
+        "name": "@aigent-hive/darwin-arm64",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      },
+      {
+        "name": "@aigent-hive/linux-arm64",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      },
+      {
+        "name": "aigent-hive",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      },
+      {
+        "name": "@aigent-hive/darwin-x64",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      },
+      {
+        "name": "@aigent-hive/win32-x64",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      },
+      {
+        "name": "@aigent-hive/linux-x64",
+        "package_version": "0.15.0-test.1",
+        "version_visible": true,
+        "integrity_matches": true,
+        "tags": {
+          "test": "0.15.0-test.1",
+          "latest": "0.14.2"
+        }
+      }
+    ]
+  },
+  "reference_handler_shipped": false,
+  "acceptance": {
+    "run_id": 43312886228,
+    "status": "completed",
+    "conclusion": "success",
+    "required_hosts": [
+      "Windows x64",
+      "macOS arm64",
+      "Linux musl x64"
+    ],
+    "source_commit": "29875af0b36b45c4886916d04ad4dc58440bdb1a",
+    "hosts": [
+      {
+        "host": "Windows x64",
+        "platform": "Windows-2025Server-10.0.26100-SP0",
+        "job_id": 131513266416,
+        "job_url": "https://github.com/gvm1229/aigent-hive/actions/runs/43312886228/job/131513266416",
+        "conclusion": "success",
+        "binary_version": "AIgent Hive v0.15.0-test #1 \u00b7 developer test build (released 2026-11-12)",
+        "expected_native_sha256": "1fb64d2b7c5f26a7310ea596c5f1bab4a32dfbd4562d38165eb5eb8e3d856379",
+        "artifact_binding": "Pinned npm platform package version and verified registry SRI; HIVE_BIN uses its fixed bin member. Expected native SHA-256 from the independently inspected candidate; no separate post-install binary hash receipt.",
+        "signed_prepare_public_cli_log_verified": true,
+        "downloaded_job_log_sha256": "bafae78b7afd0355fb269793600585a4aea24daf5cec6b3ba35f8444f7159aaa",
+        "korean_receipt_sha256": "f70b88272c44c064aaacfe7d7bc443e9b7444aa25156e7e017f0d7ada1732706",
+        "evidence": [
+          {
+            "path": "20261112T214353-217fff678042.md",
+            "sha256": "2139131903fad6e043d8301663f77ad6b95460f020a5e3415678ed00e8c7e14b",
+            "purpose": "\uacf5\uac1c \uc9c0\uce68 \ubcf5\uad6c \uacc4\uc57d win32-x64",
+            "platform": "Windows-2025Server-10.0.26100-SP0",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214414-ede18b36b17b.md",
+            "sha256": "5339950f421e1726443665784bebf85e8c363c993e87997fec0b29109eb30f28",
+            "purpose": "\uacf5\uac1c \uc5ed\ud560\uacfc \ube44\ud65c\uc131 \ubd09\ud22c win32-x64",
+            "platform": "Windows-2025Server-10.0.26100-SP0",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214704-ca19e1ffe996.md",
+            "sha256": "2e4dac0a819ab238286971876ba1b4ec6e03f1c337845fb8c9128929312f1bd5",
+            "purpose": "\uacf5\uac1c \ud611\uc5c5 \uc9c0\uce68 \uac31\uc2e0 win32-x64",
+            "platform": "Windows-2025Server-10.0.26100-SP0",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214813-d49cbee3c5ad.md",
+            "sha256": "57f029525bfc9b83c24cb9be2c238bcd628a6ccb07dc4b601316913098faf68b",
+            "purpose": "\uacf5\uac1c vector onboarding win32-x64",
+            "platform": "Windows-2025Server-10.0.26100-SP0",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214815-1dc93ed810c6.md",
+            "sha256": "99caa6dd9dccdffa6ad143fb345324ce781c992964449b20485a87af606a10af",
+            "purpose": "\uacf5\uac1c vector qualification win32-x64",
+            "platform": "Windows-2025Server-10.0.26100-SP0",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "host": "macOS arm64",
+        "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+        "job_id": 131513266799,
+        "job_url": "https://github.com/gvm1229/aigent-hive/actions/runs/43312886228/job/131513266799",
+        "conclusion": "success",
+        "binary_version": "AIgent Hive v0.15.0-test #1 \u00b7 developer test build (released 2026-11-12)",
+        "expected_native_sha256": "2526ff7fa86e55651331fe7ed2fe2458ad392bbf7a7b30c300611530959d7692",
+        "artifact_binding": "Pinned npm platform package version and verified registry SRI; HIVE_BIN uses its fixed bin member. Expected native SHA-256 from the independently inspected candidate; no separate post-install binary hash receipt.",
+        "signed_prepare_public_cli_log_verified": true,
+        "downloaded_job_log_sha256": "a267363f6e950dc7f86680322f661adba0ca0ea4ca260941c46549ae9e8675cc",
+        "korean_receipt_sha256": "eb2eb401c5bad600c987740b8c107c6f056f2b540ebcd333e3518f819855704d",
+        "evidence": [
+          {
+            "path": "20261112T214318-8e1bfeeec8a8.md",
+            "sha256": "ecdc299fd80526470d2fbdf3ca079aa1a437dce5950634d4ddfc2f4c8f8dfe64",
+            "purpose": "\uacf5\uac1c \uc9c0\uce68 \ubcf5\uad6c \uacc4\uc57d darwin-arm64",
+            "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214324-92d4f1dc59f8.md",
+            "sha256": "c1376ab003120175d6f0a9aa01f64f1caf0f6ff78f4e3163891fca4095c6e237",
+            "purpose": "\uacf5\uac1c \uc5ed\ud560\uacfc \ube44\ud65c\uc131 \ubd09\ud22c darwin-arm64",
+            "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214552-f13458ade41a.md",
+            "sha256": "4af2060f134f570db442d7e5ca293b2bce77eb0ede0903c51e67b16aa8e69418",
+            "purpose": "\uacf5\uac1c \ud611\uc5c5 \uc9c0\uce68 \uac31\uc2e0 darwin-arm64",
+            "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214631-63d6961aac9d.md",
+            "sha256": "616c0e78f9e8f67b1bed2a6401cce50e5dd0305143648fe4babf3842bfe9096d",
+            "purpose": "\uacf5\uac1c vector onboarding darwin-arm64",
+            "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214641-46e430247435.md",
+            "sha256": "7f7280df75fa65c1c257c2b5120456c7aaed28a204ba01079812ed9dbca4a2c4",
+            "purpose": "\uacf5\uac1c vector qualification darwin-arm64",
+            "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "host": "Linux musl x64",
+        "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+        "job_id": 131513266748,
+        "job_url": "https://github.com/gvm1229/aigent-hive/actions/runs/43312886228/job/131513266748",
+        "conclusion": "success",
+        "binary_version": "AIgent Hive v0.15.0-test #1 \u00b7 developer test build (released 2026-11-12)",
+        "expected_native_sha256": "f19d9e39369296cf83d9ec1c619bde215fa462c2653d1dcd27f8e5ebdaf66b3b",
+        "artifact_binding": "Pinned npm platform package version and verified registry SRI; HIVE_BIN uses its fixed bin member. Expected native SHA-256 from the independently inspected candidate; no separate post-install binary hash receipt.",
+        "signed_prepare_public_cli_log_verified": true,
+        "downloaded_job_log_sha256": "f181fad90c3028fc38909c7d564a6018273d335f1ddb433ac6bae035b7f75ada",
+        "korean_receipt_sha256": "eb2eb401c5bad600c987740b8c107c6f056f2b540ebcd333e3518f819855704d",
+        "evidence": [
+          {
+            "path": "20261112T214255-b05b8b06c68d.md",
+            "sha256": "72cebf129d99b1938bfb399347dda21e653dd69e77815bca37043dcc0a553e70",
+            "purpose": "\uacf5\uac1c \uc9c0\uce68 \ubcf5\uad6c \uacc4\uc57d linux-x64",
+            "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214258-9da40f98dec6.md",
+            "sha256": "b7171d3420bf3d4bc4e603b7535ed0b38f7e77d2d1411d096ebe8b51dc3867f1",
+            "purpose": "\uacf5\uac1c \uc5ed\ud560\uacfc \ube44\ud65c\uc131 \ubd09\ud22c linux-x64",
+            "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214426-b279e23d34db.md",
+            "sha256": "7317027117f1f92e4a913b8cee88d4d35ab4ddfd75666e641ce9ae1839c4ac84",
+            "purpose": "\uacf5\uac1c \ud611\uc5c5 \uc9c0\uce68 \uac31\uc2e0 linux-x64",
+            "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214506-51634fc34cd0.md",
+            "sha256": "f5820d94bb782816d43aeb4c1f64e2c3d0ad216daa64a9fae0c7d498eb200d18",
+            "purpose": "\uacf5\uac1c vector onboarding linux-x64",
+            "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+            "status": "passed"
+          },
+          {
+            "path": "20261112T214507-918aefbe22b9.md",
+            "sha256": "fd2fc053e7555b83baafe52484ee2d88e475a08df866e01203a12827efe0cf71",
+            "purpose": "\uacf5\uac1c vector qualification linux-x64",
+            "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "proof_limit": "Three actual public npm binary hosts passed scoped acceptance. Other two candidate architectures were built but not publicly installed here; actual provider lifecycle and original POSIX post-publication qualification are separate."
+}

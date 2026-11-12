@@ -2728,16 +2728,13 @@ fn plan_user_projection(
     }
     let retired_files = authenticated_retired_user_skill_files(root)?;
     base_files.extend(retired_files.clone());
-    let mut prior_owned_paths = prior
-        .as_ref()
-        .map(|manifest| {
-            manifest
-                .entries
-                .iter()
-                .map(|entry| PathBuf::from(&entry.path))
-                .collect::<BTreeSet<_>>()
-        })
-        .unwrap_or_default();
+    let mut prior_owned_paths = prior.as_ref().map_or_else(BTreeSet::new, |manifest| {
+        manifest
+            .entries
+            .iter()
+            .map(|entry| PathBuf::from(&entry.path))
+            .collect::<BTreeSet<_>>()
+    });
     prior_owned_paths.extend(retired_files.keys().cloned());
 
     let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
@@ -3383,15 +3380,16 @@ pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, Set
     else {
         return Ok(Vec::new());
     };
-    let mut paths = parse_projection_manifest(&bytes)
-        .map(|manifest| {
+    let mut paths = parse_projection_manifest(&bytes).map_or_else(
+        |_| Vec::new(),
+        |manifest| {
             manifest
                 .entries
                 .into_iter()
                 .map(|entry| PathBuf::from(entry.path))
                 .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+        },
+    );
     let absent_codex_metadata = paths
         .iter()
         .filter(|path| {

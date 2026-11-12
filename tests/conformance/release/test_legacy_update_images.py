@@ -55,6 +55,23 @@ def pe_image():
 
 
 class LegacyUpdateImageTests(unittest.TestCase):
+    def test_frozen_updater_gate_requires_a_published_matching_product(self):
+        spec = importlib.util.spec_from_file_location('legacy_target', ROOT / 'tests/fixtures/interactive-cli/legacy-target-check.py')
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        self.assertTrue(target.matching_target('0.15.0', '0.15.0-test.1'))
+        self.assertFalse(target.matching_target('0.15.0', '0.14.2-test.2'))
+        self.assertFalse(target.matching_target('0.15.0', '0.16.0-test.1'))
+        for package in (None, 'unknown', '0.15.0', '0.15.0-test.0'):
+            with self.assertRaises(ValueError):
+                target.matching_target('0.15.0', package)
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+        steps = [step for job in workflow['jobs'].values() for step in job.get('steps', [])
+                 if 'posix-legacy-ci.py' in step.get('run', '')]
+        self.assertEqual(len(steps), 3)
+        self.assertTrue(all("steps.legacy-target.outputs.ready == 'true'" in step['if'] for step in steps))
+
     def test_macos_kernel_reader_uses_only_bounded_read_operations(self):
         node = shutil.which("node")
         if not node:
@@ -119,9 +136,10 @@ assert.throws(()=>reader(-1,true).run(['7']));
         tree = ast.parse((ROOT / "tests/fixtures/interactive-cli/linux-legacy-update.py").read_text(encoding="utf-8"))
         installer = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
                          and any(isinstance(target, ast.Name) and target.id == "installer" for target in node.targets))
+        installer = installer.replace('__CURRENT_PRODUCT__', '0.15.0')
         validation, rest = installer.split("count=root/'install-count'", 1)
         self.assertTrue(rest)
-        for version in ["0.13.2-test.2", "0.14.0-test.1", "0.14.0-test.2", "0.14.0", "0.14.0-test.0", "0.15.0-test.1"]:
+        for version in ["0.13.2-test.2", "0.15.0-test.1", "0.15.0-test.2", "0.15.0", "0.15.0-test.0", "0.14.2-test.2", "0.16.0-test.1"]:
             for direct in [False, True]:
                 with self.subTest(version=version, direct=direct):
                     product = version.split("-test.", 1)[0]
@@ -129,7 +147,7 @@ assert.throws(()=>reader(-1,true).run(['7']));
                                    "AIGENT_HIVE_PREFIX": str(Path("/tmp/hive-first-update/package"))}
                     argv = ["sh", "install.sh"] if direct else ["npm", "install", "-g", "aigent-hive@" + version]
                     with patch.dict(os.environ, environment, clear=True), patch.object(sys, "argv", argv):
-                        if version in {"0.13.2-test.2", "0.14.0-test.1", "0.14.0-test.2"}:
+                        if version in {"0.13.2-test.2", "0.15.0-test.1", "0.15.0-test.2"}:
                             namespace = {}
                             exec(validation, namespace)
                             self.assertEqual(namespace["requested"], version)
@@ -137,13 +155,13 @@ assert.throws(()=>reader(-1,true).run(['7']));
                         else:
                             with self.assertRaises(AssertionError):
                                 exec(validation, {})
-        environment = {"AIGENT_HIVE_VERSION": "0.14.0", "AIGENT_HIVE_PACKAGE_VERSION": "0.14.0-test.2",
+        environment = {"AIGENT_HIVE_VERSION": "0.15.0", "AIGENT_HIVE_PACKAGE_VERSION": "0.15.0-test.2",
                        "AIGENT_HIVE_PREFIX": str(Path("/tmp/hive-first-update/package"))}
         for changed in [{"AIGENT_HIVE_VERSION": "0.13.2"}, {"AIGENT_HIVE_PREFIX": "/outside"}]:
             with patch.dict(os.environ, {**environment, **changed}, clear=True), patch.object(sys, "argv", ["sh", "install.sh"]):
                 with self.assertRaises(AssertionError):
                     exec(validation, {})
-        with patch.object(sys, "argv", ["npm", "install", "-g", "foreign@0.14.0-test.2"]):
+        with patch.object(sys, "argv", ["npm", "install", "-g", "foreign@0.15.0-test.2"]):
             with self.assertRaises(AssertionError):
                 exec(validation, {})
 

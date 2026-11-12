@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import ast
 import os
 from pathlib import Path
 import runpy
+import re
 import subprocess
 import tempfile
 from types import SimpleNamespace
@@ -12,6 +14,21 @@ import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+class MonitorVersionContract(unittest.TestCase):
+    def test_current_product_labels_preserve_stable_and_numbered_test_identity(self):
+        source = ROOT / "tests/fixtures/interactive-cli/windows-monitor-ci.py"
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "package_from_label")
+        namespace = {"re": re}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), "exec"), namespace)
+        parse = namespace["package_from_label"]
+        self.assertEqual(parse("AIgent Hive v0.15.0 (released 2026-11-12)\n", "0.15.0"), "0.15.0")
+        self.assertEqual(parse("AIgent Hive v0.15.0-test #1 (released 2026-11-12)\n", "0.15.0"), "0.15.0-test.1")
+        for label in ("AIgent Hive v0.14.2 (released 2026-11-12)", "AIgent Hive v0.16.0 (released 2026-11-12)", "foreign v0.15.0 label"):
+            with self.assertRaises(ValueError):
+                parse(label, "0.15.0")
 
 
 class ZeroReceiptTiming(unittest.TestCase):

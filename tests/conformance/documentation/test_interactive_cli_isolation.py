@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import ast
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import subprocess
 import sys
 import tempfile
@@ -18,6 +20,31 @@ SPEC.loader.exec_module(MODULE)
 
 
 class InteractiveCliIsolation(unittest.TestCase):
+    def test_failure_diagnostics_keep_private_scope_and_do_not_resume_apply_phases(self):
+        source = ROOT / "tests/fixtures/interactive-cli/terminal-setup-ci.py"
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "inspect_failure")
+        response = SimpleNamespace(returncode=3, stdout=b'{"data":{"diagnostic":{"original_message":"fixture conflict"}}}', stderr=b'')
+        runner = mock.Mock(return_value=response)
+        namespace = {"subprocess": SimpleNamespace(run=runner, TimeoutExpired=subprocess.TimeoutExpired), "json": json}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), "exec"), namespace)
+        environment = {"HOME": "private-user", "PATH": "private-bin"}
+        inspect = namespace["inspect_failure"]
+        result = inspect("fixture-hive", "private-user", "private-project", environment, is_project=False, phase="awaiting-answers")
+        self.assertEqual(result["failure_resume_inspection"]["details"]["original_message"], "fixture conflict")
+        self.assertEqual(runner.call_count, 2)
+        for call in runner.call_args_list:
+            self.assertIn("private-user", call.args[0])
+            self.assertEqual(call.kwargs["env"], environment)
+            self.assertEqual(call.kwargs["input"], b"")
+            self.assertEqual(call.kwargs["timeout"], 15)
+        self.assertIn("--non-interactive", runner.call_args.args[0])
+        runner.reset_mock()
+        inspect("fixture-hive", "private-user", "private-project", environment, is_project=True, phase="applying")
+        self.assertEqual(runner.call_count, 1)
+        self.assertNotIn("--resume", runner.call_args.args[0])
+        self.assertIn("private-project", runner.call_args.args[0])
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

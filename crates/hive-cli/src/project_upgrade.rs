@@ -442,16 +442,13 @@ fn prepare_candidate(
         ));
     }
     let source_snapshot_digest = base.as_ref().map(|ledger| ledger.ledger_digest.clone());
-    let base_files = base
-        .as_ref()
-        .map(|ledger| {
-            ledger
-                .files
-                .iter()
-                .map(|entry| (entry.path.clone(), entry.content.as_bytes().to_vec()))
-                .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
+    let base_files = base.as_ref().map_or_else(BTreeMap::new, |ledger| {
+        ledger
+            .files
+            .iter()
+            .map(|entry| (entry.path.clone(), entry.content.as_bytes().to_vec()))
+            .collect::<BTreeMap<_, _>>()
+    });
     let provider_bytes = read_bounded_optional(
         target,
         Path::new(hive_render::skill_delivery::PROVIDERS_PATH),
