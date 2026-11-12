@@ -9,7 +9,7 @@ summary: "실행 활성화 없는 서명 Prepare와 호스트 기능 자료의 �
 tags: [orchestration, roster]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/orchestration.rs#sha256:c5aa8621ee66d4846b9a27a1901a738035af14659a1ebbde13734e94ee7b1833"
+  - "repo:crates/hive-cli/src/orchestration.rs#sha256:5617551fbaaffc3495297108a19f05c7aae3e4b0b08b9d56578aaa06bdbcdd84"
   - "repo:crates/hive-cli/src/summon.rs#sha256:6cb0331f2e20b87233d0e8bd9ee8a4dc3f51148e8301867ed0a7333daadfadc9"
   - "repo:crates/hive-core/src/roster.rs#sha256:eaeb59413d1900bcc00ef36e40e35ddd06baff94a8ce129993d622c3991232ea"
   - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:ce73d78bda06047d4fe899e1f62f669389978675d668fe37a5a6800bfb76bd10"
