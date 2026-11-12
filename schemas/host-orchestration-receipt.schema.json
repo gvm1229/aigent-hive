@@ -20,7 +20,7 @@
     "control_epoch": { "type": "integer", "minimum": 0 },
     "idempotency_key": { "$ref": "#/$defs/id" },
     "fencing_token": { "type": "integer", "minimum": 1 },
-    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "host": { "enum": ["codex", "claude", "gemini", "antigravity"] },
     "native_task_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 256 },
     "progress_sequence": { "type": ["integer", "null"], "minimum": 0 },
     "outcome": { "type": ["string", "null"], "enum": [null, "present", "absent", "cancelled", "not-found", "too-late", "succeeded", "failed", "blocked"] },

@@ -227,6 +227,23 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     emit_action_result(&result)
 }
 
+pub(crate) fn prepare_summon(
+    arguments: &[String],
+    envelope: &hive_core::orchestration::SummonEnvelope,
+    task: &[u8],
+) -> Result<ActionResult, String> {
+    let parsed = parse_mutation(arguments, "plan").map_err(|e| e.message().to_owned())?;
+    let authority = parse_authority(
+        &read_explicit_file(&parsed.authority, MAX_INPUT_BYTES)
+            .map_err(|e| e.message().to_owned())?,
+    )
+    .map_err(|e| e.message().to_owned())?;
+    if authority.role_id != envelope.role {
+        return Err("signed role mismatch".into());
+    }
+    mutate_with_summon("plan", &parsed, Some((envelope, task))).map_err(|e| e.message().to_owned())
+}
+
 fn execute(arguments: &[String]) -> Result<ActionResult, CliError> {
     match arguments.first().map(String::as_str) {
         Some("status") => status(&arguments[1..]),
@@ -829,6 +846,14 @@ fn parse_authority_mutation(
 }
 
 fn mutate(command: &str, arguments: &MutationArguments) -> Result<ActionResult, CliError> {
+    mutate_with_summon(command, arguments, None)
+}
+
+fn mutate_with_summon(
+    command: &str,
+    arguments: &MutationArguments,
+    summon: Option<(&hive_core::orchestration::SummonEnvelope, &[u8])>,
+) -> Result<ActionResult, CliError> {
     let target = PinnedTarget::open(&arguments.target)?;
     validate_external_root(&target, &arguments.trust_root)?;
     if arguments.emergency_reason_digest.is_some() {
@@ -849,8 +874,14 @@ fn mutate(command: &str, arguments: &MutationArguments) -> Result<ActionResult, 
         .into());
     }
 
-    let payload =
-        validate_mutation_payload(command, arguments, &target, &mut loaded, &actual_head)?;
+    let payload = validate_mutation_payload(
+        command,
+        arguments,
+        &target,
+        &mut loaded,
+        &actual_head,
+        summon.is_some(),
+    )?;
     let event_digest = loaded
         .state
         .apply_event(&payload.event)
@@ -874,7 +905,42 @@ fn mutate(command: &str, arguments: &MutationArguments) -> Result<ActionResult, 
             .map(|()| artifact.relative.clone())
         })
         .transpose()?;
-    let artifact_changes = receipt_change.into_iter().chain(side_change).collect();
+    let mut artifact_changes: Vec<PathBuf> =
+        receipt_change.into_iter().chain(side_change).collect();
+    if let Some((envelope, task)) = summon {
+        let digest = envelope.digest().map_err(CliError::Core)?;
+        let event = &payload.event;
+        if event.kind != EventKind::Prepare
+            || event.to_state != hive_core::orchestration::DispatchState::Prepared
+            || envelope.run_id != event.run_id
+            || envelope.action_id != event.action_id
+            || envelope.event_head != actual_head
+            || envelope.control_epoch != event.control_epoch
+            || envelope.authority_id != event.authority_id
+            || envelope.target_project != target.requested_path().to_string_lossy()
+            || event.payload_digest != digest
+            || event.request_digest != digest
+            || envelope.task_digest != sha256_digest(task)
+        {
+            return Err(CliError::Core(
+                "summon envelope does not match signed prepare event".into(),
+            ));
+        }
+        let inbox = run_path(&envelope.run_id, "inbox")?;
+        let envelope_path = inbox.join(format!("{}.json", envelope.action_id));
+        let bytes =
+            serde_json::to_vec_pretty(envelope).map_err(|e| CliError::Core(e.to_string()))?;
+        let task_path = PathBuf::from(&envelope.task_file);
+        publish_immutable(
+            &target,
+            &run_path(&envelope.run_id, "tasks")?,
+            &task_path,
+            task,
+            "summon task",
+        )?;
+        publish_immutable(&target, &inbox, &envelope_path, &bytes, "summon envelope")?;
+        artifact_changes.extend([task_path, envelope_path]);
+    }
     commit_event(
         command,
         arguments,
@@ -892,6 +958,7 @@ fn validate_mutation_payload(
     target: &PinnedTarget,
     loaded: &mut LoadedChain,
     actual_head: &str,
+    inert_summon: bool,
 ) -> Result<ValidatedPayload, CliError> {
     let event = parse_event(&read_explicit_file(&arguments.event, MAX_INPUT_BYTES)?)?;
     validate_command_event(command, &event)?;
@@ -934,11 +1001,21 @@ fn validate_mutation_payload(
         return Err(AdapterError::Verification("event authority id mismatch".to_owned()).into());
     }
     if !(matches!(command, "authority-issue" | "authority-revoke")
-        || command == "plan" && event.kind == EventKind::Reserve)
+        || command == "plan" && event.kind == EventKind::Reserve
+        || inert_summon && command == "plan" && event.kind == EventKind::Prepare)
     {
         ensure_authority_usable(target, &event.run_id, &authority, &loaded.events)?;
     }
 
+    if inert_summon
+        && loaded.events.iter().any(|prior| {
+            prior.kind == EventKind::RevokeAuthority && prior.action_id == authority.authority_id
+        })
+    {
+        return Err(CliError::Core(
+            "summon preparation authority revoked".into(),
+        ));
+    }
     let mut receipt_payload = None;
     if let Some(path) = arguments.receipt.as_deref() {
         let bytes = read_explicit_file(path, MAX_INPUT_BYTES)?;
@@ -1479,6 +1556,7 @@ fn emergency_cancel(
         target,
         &mut loaded,
         &arguments.expected_head,
+        false,
     )?;
     if payload.receipt.is_some() || payload.side_artifact.is_some() {
         return Err(AdapterError::Verification(
@@ -2177,6 +2255,186 @@ mod tests {
         let mut encoded = toml::to_string(&marker).expect("marker");
         encoded.push_str("unknown = true\n");
         assert!(toml::from_str::<EmergencyCancel>(&encoded).is_err());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn summon_signed_prepare_writes_once_and_never_launches() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target_path = temporary.path().join("consumer");
+        std::fs::create_dir_all(target_path.join(".hive/runs/run-1")).expect("run directory");
+        let target = PinnedTarget::open(&target_path).expect("target");
+        let signing_key = SigningKey::from_bytes(&[7_u8; 32]);
+        let all_actions = [
+            AuthorityAction::Plan,
+            AuthorityAction::Dispatch,
+            AuthorityAction::Receipt,
+            AuthorityAction::Cancel,
+            AuthorityAction::Recover,
+            AuthorityAction::Migrate,
+            AuthorityAction::IssueAuthority,
+            AuthorityAction::RevokeAuthority,
+        ]
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+        let mut root = OrchestrationTrustRoot {
+            schema_version: 1,
+            trust_root_id: "root-1".to_owned(),
+            revision: 1,
+            issued_at: "2026-08-12T00:00:00Z".to_owned(),
+            keys: vec![TrustedAuthorityKey {
+                key_id: "key-1".to_owned(),
+                principal_id: "principal-1".to_owned(),
+                algorithm: "ed25519".to_owned(),
+                public_key: format!(
+                    "ed25519:{}",
+                    hex_bytes(signing_key.verifying_key().as_bytes())
+                ),
+                status: AuthorityKeyStatus::Active,
+                valid_from: "2026-08-12T00:00:00Z".to_owned(),
+                valid_until: "2026-08-13T00:00:00Z".to_owned(),
+                allowed_actions: all_actions,
+            }],
+            root_digest: String::new(),
+        };
+        root.root_digest = root.computed_digest().expect("root digest");
+        let root_path = temporary.path().join("root.toml");
+        std::fs::write(&root_path, toml::to_string(&root).expect("root")).expect("write root");
+        let mut permissions = std::fs::metadata(&root_path)
+            .expect("root metadata")
+            .permissions();
+        permissions.set_readonly(true);
+        std::fs::set_permissions(&root_path, permissions).expect("readonly root");
+
+        let request_digest = format!("sha256:{}", "1".repeat(64));
+        let reserve_authority = signed_authority(
+            &signing_key,
+            "reserve-authority",
+            AuthorityAction::Plan,
+            target_digest(&target),
+            "none",
+            0,
+            &request_digest,
+        );
+        let reserve_authority_path = temporary.path().join("reserve.toml");
+        std::fs::write(
+            &reserve_authority_path,
+            toml::to_string(&reserve_authority).expect("reserve authority"),
+        )
+        .expect("write authority");
+        let reserve = OrchestrationEvent {
+            schema_version: 1,
+            event_id: "event-reserve".to_owned(),
+            run_id: "run-1".to_owned(),
+            action_id: "action-1".to_owned(),
+            sequence: 1,
+            predecessor_digest: None,
+            control_epoch: 0,
+            kind: EventKind::Reserve,
+            from_state: None,
+            to_state: DispatchState::Reserved,
+            authority_id: reserve_authority.authority_id.clone(),
+            request_digest: request_digest.clone(),
+            payload_digest: format!("sha256:{}", "2".repeat(64)),
+            occurred_at: "2026-08-12T00:00:01Z".to_owned(),
+        };
+        let reserve_path = temporary.path().join("reserve-event.toml");
+        std::fs::write(
+            &reserve_path,
+            toml::to_string(&reserve).expect("reserve event"),
+        )
+        .expect("write reserve");
+        let reserve_arguments = MutationArguments {
+            target: target_path.clone(),
+            run_id: "run-1".to_owned(),
+            event: reserve_path,
+            expected_head: "none".to_owned(),
+            control_epoch: 0,
+            authority: reserve_authority_path,
+            trust_root: root_path.clone(),
+            request_digest: request_digest.clone(),
+            now: "2026-08-12T00:00:02Z".to_owned(),
+            receipt: None,
+            grant: None,
+            subject_authority: None,
+            emergency_reason_digest: None,
+        };
+        assert_eq!(
+            mutate("plan", &reserve_arguments).expect("reserve").status,
+            "success"
+        );
+
+        let task = b"bounded task";
+        let envelope = hive_core::orchestration::SummonEnvelope {
+            schema_version: 1,
+            run_id: "run-1".into(),
+            action_id: "action-1".into(),
+            role: "role-1".into(),
+            profile: hive_core::roster::Roster::defaults()
+                .unwrap()
+                .worker_profile("hive-routine-implementer")
+                .unwrap(),
+            task_file: ".hive/runs/run-1/tasks/action-1.md".into(),
+            task_digest: sha256_digest(task),
+            target_project: target.requested_path().to_string_lossy().into_owned(),
+            event_head: format!("1:{}", reserve.digest().unwrap()),
+            control_epoch: 0,
+            authority_id: "prepare-1".into(),
+            idempotency_key: "run-1-action-1".into(),
+            result_path: ".hive/runs/run-1/results/action-1.json".into(),
+            state: DispatchState::Prepared,
+            enabled: false,
+        };
+        let digest = envelope.digest().unwrap();
+        let authority = signed_authority(
+            &signing_key,
+            "prepare-1",
+            AuthorityAction::Plan,
+            target_digest(&target),
+            &envelope.event_head,
+            0,
+            &digest,
+        );
+        let auth_path = temporary.path().join("prepare-auth.toml");
+        std::fs::write(&auth_path, toml::to_string(&authority).unwrap()).unwrap();
+        let event = OrchestrationEvent {
+            event_id: "prepare-event".into(),
+            sequence: 2,
+            predecessor_digest: Some(reserve.digest().unwrap()),
+            kind: EventKind::Prepare,
+            from_state: Some(DispatchState::Reserved),
+            to_state: DispatchState::Prepared,
+            authority_id: "prepare-1".into(),
+            request_digest: digest.clone(),
+            payload_digest: digest.clone(),
+            ..reserve
+        };
+        let event_path = temporary.path().join("prepare-event.toml");
+        std::fs::write(&event_path, toml::to_string(&event).unwrap()).unwrap();
+        let args = MutationArguments {
+            event: event_path,
+            expected_head: envelope.event_head.clone(),
+            authority: auth_path,
+            request_digest: digest,
+            ..reserve_arguments
+        };
+        assert!(mutate_with_summon("plan", &args, Some((&envelope, b"tampered"))).is_err());
+        assert!(!target_path
+            .join(".hive/runs/run-1/inbox/action-1.json")
+            .exists());
+        let result = mutate_with_summon("plan", &args, Some((&envelope, task))).unwrap();
+        assert_eq!(result.data.unwrap()["state"], "prepared");
+        assert!(target_path
+            .join(".hive/runs/run-1/inbox/action-1.json")
+            .is_file());
+        assert_eq!(
+            std::fs::read(target_path.join(&envelope.task_file)).unwrap(),
+            task
+        );
+        assert!(mutate_with_summon("plan", &args, Some((&envelope, task))).is_err());
+        assert!(!target_path.join(&envelope.result_path).exists());
+        let loaded = load_chain(&target, "run-1").unwrap();
+        assert_eq!(loaded.state.state, Some(DispatchState::Prepared));
     }
 
     #[test]
