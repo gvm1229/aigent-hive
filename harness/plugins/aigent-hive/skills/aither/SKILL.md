@@ -7,6 +7,8 @@ description: "(aither) usage controls; 사용량 관리. Names: aither, 아이�
 
 Use this entry when the user names aither, 아이테르, or Aether, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
 
+At entry, announce in the user-selected response language: English `Calling upon Aither — usage controls`; Korean `아이테르 호출 — 사용량 관리`. CLI display prefix: `[Aither]`. Preserve JSON stdout; display notices on stderr.
+
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open [the existing usage-guard Skill](../usage-guard/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
 3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.

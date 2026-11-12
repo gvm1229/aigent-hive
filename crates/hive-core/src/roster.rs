@@ -92,6 +92,9 @@ impl Roster {
                 },
             );
         }
+        for god in crate::gods::GODS {
+            roster.gods.insert(god.name.into(), god.role.into());
+        }
         for provider in ["codex", "claude", "gemini"] {
             roster
                 .providers

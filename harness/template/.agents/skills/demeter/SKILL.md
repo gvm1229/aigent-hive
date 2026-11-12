@@ -7,6 +7,8 @@ description: "(demeter) knowledge; 지식. Names: demeter, 데메테르, demeter
 
 Use this entry when the user names demeter, 데메테르, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
 
+At entry, announce in the user-selected response language: English `Calling upon Demeter — knowledge`; Korean `데메테르 호출 — 지식`. CLI display prefix: `[Demeter]`. Preserve JSON stdout; display notices on stderr.
+
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open [the existing knowledge-recall Skill](../knowledge-recall/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
 3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.

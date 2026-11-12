@@ -7,6 +7,8 @@ description: "(poseidon) coordination; 조율. Names: poseidon, 포세이돈, po
 
 Use this entry when the user names poseidon, 포세이돈, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
 
+At entry, announce in the user-selected response language: English `Calling upon Poseidon — coordination`; Korean `포세이돈 호출 — 조율`. CLI display prefix: `[Poseidon]`. Preserve JSON stdout; display notices on stderr.
+
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open [the existing team-execution Skill](../team-execution/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
 3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.

@@ -7,6 +7,8 @@ description: "(eileithyia) setup; 설정. Names: eileithyia, 에일레이티이�
 
 Use this entry when the user names eileithyia, 에일레이티이아, or Eleuthia, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
 
+At entry, announce in the user-selected response language: English `Calling upon Eileithyia — setup`; Korean `에일레이티이아 호출 — 설정`. CLI display prefix: `[Eileithyia]`. Preserve JSON stdout; display notices on stderr.
+
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open [the existing project-setup Skill](../project-setup/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
 3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.

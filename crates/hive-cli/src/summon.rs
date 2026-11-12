@@ -16,7 +16,19 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     match execute(args) {
-        Ok(value) => {
+        Ok(mut value) => {
+            if let Some(god) = args.first().and_then(|name| hive_core::gods::find(name)) {
+                if let Some(user) = args
+                    .windows(2)
+                    .find(|pair| pair[0] == "--user-root")
+                    .map(|pair| Path::new(&pair[1]))
+                {
+                    if let Err(error) = crate::gods::decorate(&mut value, god, user) {
+                        eprintln!("{error}");
+                        return ExitCode::from(2);
+                    }
+                }
+            }
             println!("{value}");
             ExitCode::SUCCESS
         }

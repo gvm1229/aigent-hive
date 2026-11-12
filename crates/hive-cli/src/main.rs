@@ -24,6 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 mod custom_agent_cli;
 mod discord;
 mod display_options;
+mod gods;
 mod judge;
 mod knowledge;
 mod knowledge_scan;

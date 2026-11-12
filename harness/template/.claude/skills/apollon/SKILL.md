@@ -7,6 +7,8 @@ description: "(apollon) writing; 글쓰기. Names: apollon, 아폴론, Apollo. U
 
 Use this entry when the user names apollon, 아폴론, or Apollo, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
 
+At entry, announce in the user-selected response language: English `Calling upon Apollon — writing`; Korean `아폴론 호출 — 글쓰기`. CLI display prefix: `[Apollon]`. Preserve JSON stdout; display notices on stderr.
+
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open [the existing humanize-kor Skill](../humanize-kor/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
 3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.
