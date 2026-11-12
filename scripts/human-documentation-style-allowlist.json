@@ -784,5 +784,65 @@
     "line": 102,
     "reason": "Merged proposal body preserved from the reviewed conversation answer; rewriting would alter the reviewed record.",
     "text_sha256": "e2d4d101230be4674f11fa44c2e549719562ba7634e5d0dc487ed6ea62f2d85a"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 18,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "3d3224a6c4ab792b8241118c218ab14d14eef8817e20affdef894de4e96ef6f3"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 19,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "321f385aeff6160ed7385e6e91b10ca6583d96aa75646cacf6b974ceda1e9abb"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 20,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "746327a961be31dfe72c76d0fbd59ebe9011b1de82a1d7442acbbbfdefef1654"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 21,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "3f5482739c3d0fce7e853ee410b265e98700d2f0450715929ba810bebe6b6711"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 22,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "3f8113ed735b93c89e83e27e2ee9b61d8277b29f5fc25053f94e4505e60d0daf"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 23,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "e32e846af94ea8dce1f2033d4741d6d81868a7ac29dbc836ac6c41a041ed8366"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 24,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "79580ec2055a8035378af562eb4bbb75d901f9f2c5498ab0f56ea4b165e2ed04"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 25,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "f82893c2da0b92f86f913123e045a9afe5e9a35100ef5417e25a793583d8b7a5"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 26,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "0c97409880eeaa17175e5622180e2ff4fb17ba2ccc55791645e538b4afe0d51e"
+  },
+  {
+    "path": "docs/research/overhaul/OVX-002.md",
+    "line": 27,
+    "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",
+    "text_sha256": "a48081678530506280328d32f1344b58a0b45aa5d4d607ed20fe361a57700029"
   }
 ]
