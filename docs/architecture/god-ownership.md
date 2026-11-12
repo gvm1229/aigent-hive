@@ -3,7 +3,8 @@
 - 범위: 0.15.0 개발 소스의 공개 최상위 명령과 내장 Skill 전수. 신은 기능 입구의 이름표, 실행 권한이나 새 제품명 아님
 - 명령 열의 기존 하위 명령도 같은 소속. 모든 신의 `summon`은 공통 봉투 입구, `hive hades plan`은 삭제 없는 prune 미리보기
 - 표시 공통: `--help`·`--version`. 내부 `__*` 명령은 사용자 입구 밖
-- 자동 Skill 선택: 호스트가 설명으로 판단, 정규화 후보와 명시 이름의 결정적 선택 검사. 실제 모델의 자연어 선택 성공률 미검증
+- 정본: `harness/gods.toml`의 자료형 표, `python scripts/generate-gods.py`로 Rust·Skill·표 생성, `--check`로 일치 확인
+- 신 입구: 정본 이름·별칭 명시 요청 전용, 일반 작업 문장은 기존 기능별 Skill 사용. 실제 호스트 선택 성공률 미검증
 
 | 정본 | 맡는 일 | CLI 명령 | Skill |
 | --- | --- | --- | --- |
@@ -33,7 +34,7 @@ model = "gpt-6.1-sol"
 effort = "low"
 
 [gods]
-Hades = "hive-routine-implementer"
+hades = "hive-routine-implementer"
 ```
 
 - 위 예시는 명시적 사용자 선택 형식, 계정의 해당 모델 지원 증명 아님. `hive roster check`의 공식 호스트 자료 검사와 실제 왕복 수용 필요

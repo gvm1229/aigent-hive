@@ -1,16 +1,16 @@
 ---
 name: eileithyia
-description: "(eileithyia) setup; 설정. Names: eileithyia, 에일레이티이아, Eleuthia. Use for set up a project; configure Hive; refresh project guidance; 프로젝트 설정; Hive 구성; 프로젝트 지침 갱신."
+description: "(eileithyia) Use only when the user names eileithyia, 에일레이티이아, Eleuthia, 에일레이티아, 엘레이티아, 엘레우티아."
 ---
 
 # Eileithyia
 
-Use this entry when the user names eileithyia, 에일레이티이아, or Eleuthia, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
+<!-- Generated from harness/gods.toml by scripts/generate-gods.py. -->
+
+Use this entry only when the user names eileithyia, 에일레이티이아, Eleuthia, 에일레이티아, 엘레이티아, 엘레우티아. Generic task requests use the existing task-specific Skills.
 
 At entry, announce in the user-selected response language: English `Calling upon Eileithyia — setup`; Korean `에일레이티이아 호출 — 설정`. CLI display prefix: `[Eileithyia]`. Preserve JSON stdout; display notices on stderr.
 
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
-2. Open [the existing project-setup Skill](../project-setup/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
-3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.
-4. For implementation requests, follow the repository's saved implementation plan and checks. Do not treat a code-polish connection as permission for unrelated edits.
-5. Keep model calls and process launch host-owned. New orchestration stays default-off until qualified host receipts, cancellation and reclaim exist.
+2. Open only the relevant owned Skill: [user-setup](../user-setup/SKILL.md), [project-setup](../project-setup/SKILL.md), [product-update](../product-update/SKILL.md), [project-refresh](../project-refresh/SKILL.md), [project-transition](../project-transition/SKILL.md), [amend-directive](../amend-directive/SKILL.md). Follow its procedure; this entry grants no additional authority.
+3. Choose the owned setup or update Skill for the exact user or project scope; preserve user bytes and show required previews before mutation.

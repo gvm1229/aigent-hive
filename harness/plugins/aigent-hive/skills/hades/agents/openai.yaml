@@ -1,6 +1,6 @@
 interface:
   display_name: "Hades"
-  short_description: "(hades) cleanup; 정리. Names: hades, 하데스, hades. Use for clean completed artifacts; inspect cleanup candidates; prepare focused commits; 완료 산출물 정리; 정리 후보 확인; 작은 단위 커밋 준비."
-  default_prompt: "Use $aigent-hive:hades for this cleanup task."
+  short_description: "(hades) Use only when the user names hades, 하데스."
+  default_prompt: "Use $aigent-hive:hades as explicitly requested."
 policy:
   allow_implicit_invocation: true

@@ -1,16 +1,16 @@
 ---
 name: demeter
-description: "(demeter) knowledge; 지식. Names: demeter, 데메테르, demeter. Use for recall project knowledge; find a saved fact; search reviewed knowledge; 프로젝트 지식 조회; 저장된 사실 찾기; 검토 지식 검색."
+description: "(demeter) Use only when the user names demeter, 데메테르."
 ---
 
 # Demeter
 
-Use this entry when the user names demeter, 데메테르, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
+<!-- Generated from harness/gods.toml by scripts/generate-gods.py. -->
+
+Use this entry only when the user names demeter, 데메테르. Generic task requests use the existing task-specific Skills.
 
 At entry, announce in the user-selected response language: English `Calling upon Demeter — knowledge`; Korean `데메테르 호출 — 지식`. CLI display prefix: `[Demeter]`. Preserve JSON stdout; display notices on stderr.
 
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
-2. Open [the existing knowledge-recall Skill](../knowledge-recall/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
-3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.
-4. For implementation requests, follow the repository's saved implementation plan and checks. Do not treat a code-polish connection as permission for unrelated edits.
-5. Keep model calls and process launch host-owned. New orchestration stays default-off until qualified host receipts, cancellation and reclaim exist.
+2. Open only the relevant owned Skill: [knowledge-capture](../knowledge-capture/SKILL.md), [knowledge-recall](../knowledge-recall/SKILL.md), [knowledge-scan](../knowledge-scan/SKILL.md), [knowledge-maintain](../knowledge-maintain/SKILL.md), [knowledge-promote](../knowledge-promote/SKILL.md), [knowledge-transfer](../knowledge-transfer/SKILL.md). Follow its procedure; this entry grants no additional authority.
+3. Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts.

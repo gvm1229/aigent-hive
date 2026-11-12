@@ -1,7 +1,7 @@
 //! Display notices without changing machine-readable stdout or authority.
 use crate::run::PinnedTarget;
 use crate::user_setup::{load_operational_config, InterfaceLanguage};
-use hive_core::gods::God;
+use hive_core::gods::{command_owner, God};
 use std::path::Path;
 pub(crate) fn decorate(
     value: &mut serde_json::Value,
@@ -74,20 +74,6 @@ fn alias_arguments(god: &God, args: &[String]) -> Result<Vec<String>, String> {
     };
     expanded.extend_from_slice(&args[1..]);
     Ok(expanded)
-}
-fn command_owner(command: &str) -> Option<&'static str> {
-    match command {
-        "run" | "loop" | "role" | "agent" => Some("hephaistos"),
-        "route" | "doctor" | "check-target" => Some("artemis"),
-        "prompt" | "korean" => Some("apollon"),
-        "setup" | "install" | "update" | "project" => Some("eileithyia"),
-        "orchestration" | "session" | "hook" | "policy" => Some("poseidon"),
-        "knowledge" | "source-wiki" | "index" => Some("demeter"),
-        "usage" => Some("aither"),
-        "storage" | "prune" | "uninstall" => Some("hades"),
-        "roster" | "judge" | "report" | "release" | "discord" => Some("athena"),
-        _ => None,
-    }
 }
 #[cfg(test)]
 mod alias_tests {

@@ -6,79 +6,19 @@ pub struct God {
     pub purpose_en: &'static str,
     pub purpose_ko: &'static str,
     pub role: &'static str,
+    pub display_name: &'static str,
+    pub description_en: &'static str,
+    pub description_ko: &'static str,
+    pub aliases: &'static [&'static str],
+    pub commands: &'static [&'static str],
 }
 
-pub const GODS: &[God] = &[
-    God {
-        name: "athena",
-        korean: "아테나",
-        purpose_en: "planning",
-        purpose_ko: "계획",
-        role: "hive-complex-implementer",
-    },
-    God {
-        name: "artemis",
-        korean: "아르테미스",
-        purpose_en: "research",
-        purpose_ko: "조사",
-        role: "hive-research-specialist",
-    },
-    God {
-        name: "hephaistos",
-        korean: "헤파이스토스",
-        purpose_en: "implementation",
-        purpose_ko: "구현",
-        role: "hive-routine-implementer",
-    },
-    God {
-        name: "apollon",
-        korean: "아폴론",
-        purpose_en: "writing",
-        purpose_ko: "글쓰기",
-        role: "hive-article-writer",
-    },
-    God {
-        name: "eileithyia",
-        korean: "에일레이티이아",
-        purpose_en: "setup",
-        purpose_ko: "설정",
-        role: "hive-routine-implementer",
-    },
-    God {
-        name: "poseidon",
-        korean: "포세이돈",
-        purpose_en: "coordination",
-        purpose_ko: "조율",
-        role: "hive-complex-implementer",
-    },
-    God {
-        name: "demeter",
-        korean: "데메테르",
-        purpose_en: "knowledge",
-        purpose_ko: "지식",
-        role: "hive-research-specialist",
-    },
-    God {
-        name: "aither",
-        korean: "아이테르",
-        purpose_en: "usage controls",
-        purpose_ko: "사용량 관리",
-        role: "hive-routine-implementer",
-    },
-    God {
-        name: "hades",
-        korean: "하데스",
-        purpose_en: "cleanup",
-        purpose_ko: "정리",
-        role: "hive-routine-implementer",
-    },
-];
+include!("gods_generated.rs");
+
 impl God {
     #[must_use]
     pub fn display_name(&self) -> String {
-        let mut name = self.name.to_owned();
-        name[0..1].make_ascii_uppercase();
-        name
+        self.display_name.to_owned()
     }
     #[must_use]
     pub fn prefix(&self) -> String {
@@ -95,22 +35,21 @@ impl God {
 }
 #[must_use]
 pub fn find(name: &str) -> Option<&'static God> {
-    let lower = name.to_lowercase();
-    let canonical = match lower.as_str() {
-        "minerva" | "미네르바" | "아테나" => "athena",
-        "아르테미스" => "artemis",
-        "hephaestus" | "헤파이스토스" => "hephaistos",
-        "apollo" | "아폴로" | "아폴론" => "apollon",
-        "eleuthia" | "에일레이티이아" | "에일레이티아" | "엘레이티아" | "엘레우티아" => {
-            "eileithyia"
-        }
-        "포세이돈" => "poseidon",
-        "데메테르" => "demeter",
-        "aether" | "에테르" | "아이테르" => "aither",
-        "하데스" => "hades",
-        other => other,
-    };
-    GODS.iter().find(|god| god.name == canonical)
+    GODS.iter().find(|god| {
+        god.name.eq_ignore_ascii_case(name)
+            || god.korean == name
+            || god
+                .aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(name))
+    })
+}
+
+#[must_use]
+pub fn command_owner(command: &str) -> Option<&'static str> {
+    GODS.iter()
+        .find(|god| god.commands.contains(&command))
+        .map(|god| god.name)
 }
 
 #[cfg(test)]
@@ -130,8 +69,23 @@ mod tests {
         for god in GODS {
             assert_eq!(find(god.korean).unwrap().name, god.name);
             assert_eq!(find(&god.name.to_uppercase()).unwrap().name, god.name);
+            for alias in god.aliases {
+                assert_eq!(find(alias).unwrap().name, god.name);
+            }
         }
         assert!(find("unknown").is_none());
+    }
+    #[test]
+    fn gods_commands_have_one_owner_from_the_same_table() {
+        let mut commands = std::collections::BTreeSet::new();
+        for god in GODS {
+            for command in god.commands {
+                assert!(commands.insert(command), "duplicate command: {command}");
+                assert_eq!(command_owner(command), Some(god.name));
+            }
+        }
+        assert_eq!(command_owner("summon"), Some("poseidon"));
+        assert_eq!(command_owner("unknown"), None);
     }
     #[test]
     fn gods_nine_by_two_language_display_snapshots() {

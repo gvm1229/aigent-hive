@@ -1,6 +1,6 @@
 interface:
   display_name: "Hephaistos"
-  short_description: "(hephaistos) implementation; 구현. Names: hephaistos, 헤파이스토스, Hephaestus. Use for implement a change; review generated code; polish selected code; 변경 구현; 생성 코드 검토; 선택 코드 정리."
-  default_prompt: "Use $aigent-hive:hephaistos for this implementation task."
+  short_description: "(hephaistos) Use only when the user names hephaistos, 헤파이스토스, Hephaestus."
+  default_prompt: "Use $aigent-hive:hephaistos as explicitly requested."
 policy:
   allow_implicit_invocation: true

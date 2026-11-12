@@ -45,4 +45,4 @@ skill_dependencies:
   - { skill: poseidon, requires: [team-execution] }
   - { skill: demeter, requires: [knowledge-recall] }
   - { skill: aither, requires: [usage-guard] }
-  - { skill: hades, requires: [code-polish] }
+  - { skill: hades, requires: [] }

@@ -1,6 +1,6 @@
 interface:
   display_name: "Aither"
-  short_description: "(aither) usage controls; 사용량 관리. Names: aither, 아이테르, Aether. Use for check usage controls; inspect remaining usage; review usage policy; 사용량 보호 확인; 남은 사용량 조회; 사용량 정책 검토."
-  default_prompt: "Use $aigent-hive:aither for this usage controls task."
+  short_description: "(aither) Use only when the user names aither, 아이테르, Aether, 에테르."
+  default_prompt: "Use $aigent-hive:aither as explicitly requested."
 policy:
   allow_implicit_invocation: true

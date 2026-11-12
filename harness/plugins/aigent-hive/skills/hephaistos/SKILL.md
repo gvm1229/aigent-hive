@@ -1,16 +1,16 @@
 ---
 name: hephaistos
-description: "(hephaistos) implementation; 구현. Names: hephaistos, 헤파이스토스, Hephaestus. Use for implement a change; review generated code; polish selected code; 변경 구현; 생성 코드 검토; 선택 코드 정리."
+description: "(hephaistos) Use only when the user names hephaistos, 헤파이스토스, Hephaestus."
 ---
 
 # Hephaistos
 
-Use this entry when the user names hephaistos, 헤파이스토스, or Hephaestus, or when the task matches the description. Host-native Skill selection may select it implicitly; no classifier hook.
+<!-- Generated from harness/gods.toml by scripts/generate-gods.py. -->
+
+Use this entry only when the user names hephaistos, 헤파이스토스, Hephaestus. Generic task requests use the existing task-specific Skills.
 
 At entry, announce in the user-selected response language: English `Calling upon Hephaistos — implementation`; Korean `헤파이스토스 호출 — 구현`. CLI display prefix: `[Hephaistos]`. Preserve JSON stdout; display notices on stderr.
 
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
-2. Open [the existing code-polish Skill](../code-polish/SKILL.md) and follow its procedure. This entry grants no additional mutation, delegation or publication authority.
-3. For cleanup requests, inspect exact candidates first and follow the existing storage/prune preview and explicit removal approval rules. A request to plan cleanup grants no deletion authority.
-4. For implementation requests, follow the repository's saved implementation plan and checks. Do not treat a code-polish connection as permission for unrelated edits.
-5. Keep model calls and process launch host-owned. New orchestration stays default-off until qualified host receipts, cancellation and reclaim exist.
+2. Open only the relevant owned Skill: [code-polish](../code-polish/SKILL.md), [custom-subagent-create](../custom-subagent-create/SKILL.md), [ship](../ship/SKILL.md). Follow its procedure; this entry grants no additional authority.
+3. Follow the saved implementation plan and required checks. Use code-polish only for selected code review or cleanup, and ship only for verified focused commits.
