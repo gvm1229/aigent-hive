@@ -35,9 +35,9 @@
   - state: complete; depends: OV142-005; evidence: repo:docs/research/overhaul/OV142-006.md#sha256:93466ed41a4a7e58e90041b31a1d2581cf4a61e835081e029e34c3a2f5c5cf64
   - 변경: 검토된 단계 브랜치를 최신 develop에 병합·push
   - 확인: 단계 브랜치의 develop 포함과 원격 일치
-- [ ] [OV142-007] develop에서 0.14.2-test.1 공개 시험
+- [ ] [OV142-007] develop의 번호 공개 시험과 최종 수용
   - state: agent-owned; depends: OV142-006
-  - 변경: 03의 공개 시험 절차와 OV141-009 근거를 따라 정확한 develop SHA의 후보·게시·공개 수용
+  - 변경: 03의 공개 시험 절차와 OV141-009 근거를 따라 test.1 후보·게시. macOS 임시 경로 보완 뒤 test.2 후보·게시·공개 수용, 최종 수용 번호만 정식에 승격
   - 확인: Windows x64·macOS arm64·Linux x64 공개 설치 수용 실행 ID와 제품 지문. 실행 ID·소스 SHA·제품 지문 결합
 - [ ] [OV142-008] 정식 0.14.2 출시와 이 PC 갱신
   - state: agent-owned; depends: OV142-007
@@ -56,3 +56,5 @@ OV142-001–004 완료 뒤 005→006→007→008. 종료 경계는 단계 1b 완
 - F7: README 이전 인계 항목을 OV142-004로 수정
 - 적용 제외 결정: F2의 2 MiB 시험 자료 유지, 실제 크기는 OV142-008에서 검증. F5·F6 표현 보완 제외
 - 별도 후속 과제: hive-wiki knowledge_lock의 Windows 간헐 실패. 변경하지 않은 코드, 이번 수정 범위 제외
+
+- 공개 시험 보완 순서: test.1 후보의 npm 전파·게시 복구 유지 → 정식 문서 준비 일시 되돌림 → prune 시험의 macOS `/var` 경로 정규화 → 대상 시험·1.99 Clippy → test.2 제품 지문 지정·develop 후보 → 세 운영체제 공개 수용. 정식 안내 재적용은 최종 수용 뒤
