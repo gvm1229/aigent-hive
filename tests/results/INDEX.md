@@ -1144,3 +1144,7 @@
 | [passed](runs/20261112T200447-959e8575665a.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T200451-72a570726e1e.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T200535-bfb9aa4743ee.md) | 개발 검증: cargo.EXE | 2ec693a25399dc576d8db676be0b2db151d21d91 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T201806-f3f925f3364b.md) | 격리 운영체제의 실제 CLI 흐름: cancel-resume | 8a4d1cd005ef47679265a4ca42070c596bd4c3f5 | Windows-2025Server-10.0.26100-SP0 |
+| [passed](runs/20261112T202334-ddda87c4048d.md) | OV150-016 현재 제품 버전과 감시 시험의 버전 결합 | 8a4d1cd005ef47679265a4ca42070c596bd4c3f5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T202513-7d87e8b7e8b5.md) | OV150-017 제한된 재개 진단과 개인 경로 격리 | 676e574e27d3b7cb2d73f3eb8577d0b3d7d6ece1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T203029-cb625b0fedda.md) | OV150-018 공개 대상 일치와 고정 원본 설치기의 버전 계약 | 6f3a970fe9cb982f5bd14e4c823ce556f096d2bc | Windows-11-10.0.26300-SP0 |
