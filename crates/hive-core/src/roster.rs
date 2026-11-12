@@ -230,3 +230,151 @@ mod tests {
         assert!(roster.validate().is_err());
     }
 }
+
+/// Host-supplied official output, not an execution or activation authority.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CapabilityReport {
+    pub provider: String,
+    pub version: String,
+    pub version_output: String,
+    pub help_output: String,
+    pub login_status_output: String,
+    pub models: BTreeMap<String, Vec<String>>,
+    pub project_hook_events: Vec<String>,
+}
+
+impl Roster {
+    /// Check exact role support from explicit host observations. Never launches a process.
+    /// # Errors
+    /// Rejects unknown versions, models, efforts, login states or missing official hooks.
+    pub fn check(&self, name: &str, report: &CapabilityReport) -> Result<(), String> {
+        let (provider, role) = self.resolve(name)?;
+        if report.provider != provider
+            || !report
+                .version_output
+                .split_whitespace()
+                .any(|v| v == report.version)
+        {
+            return Err("provider/version output mismatch".into());
+        }
+        let version = version_tuple(&report.version).ok_or("unknown installed version")?;
+        let minimum = self.providers[provider]
+            .minimum_version
+            .as_deref()
+            .unwrap_or(match provider {
+                "codex" => "0.167.2",
+                "claude" => "2.1.163",
+                "gemini" => "0.35.3",
+                _ => return Err("unknown provider".into()),
+            });
+        if version < version_tuple(minimum).ok_or("invalid minimum version")? {
+            return Err("unsupported installed version".into());
+        }
+        let model = role.model.as_ref().ok_or("missing model")?;
+        let effort = role.effort.as_ref().ok_or("missing effort")?;
+        if !report
+            .models
+            .get(model)
+            .is_some_and(|efforts| efforts.contains(effort))
+        {
+            return Err("unsupported exact model/effort; no fallback".into());
+        }
+        if provider == "gemini" {
+            return Err(
+                "Gemini subscription status and exact effort control unverified for 0.35.3".into(),
+            );
+        }
+        if provider == "claude" {
+            let status: serde_json::Value = serde_json::from_str(&report.login_status_output)
+                .map_err(|_| "invalid official Claude auth status JSON")?;
+            if status["loggedIn"] != true
+                || status["authMethod"] != "claude.ai"
+                || !status["subscriptionType"].is_string()
+            {
+                return Err("Claude subscription login unverified".into());
+            }
+        }
+        let (login, flags, events): (&str, &[&str], &[&str]) = match provider {
+            "codex" => (
+                "Logged in using ChatGPT",
+                &["--model", "--output-last-message", "--json"],
+                &["UserPromptSubmit", "Stop"],
+            ),
+            "claude" => (
+                "\"subscriptionType\"",
+                &["--model"],
+                &["UserPromptSubmit", "Stop"],
+            ),
+            "gemini" => (
+                "Logged in with Google",
+                &["--model", "--output-format", "--prompt"],
+                &["BeforeAgent", "AfterAgent"],
+            ),
+            _ => return Err("unknown provider".into()),
+        };
+        if !report.login_status_output.contains(login)
+            || report.login_status_output.contains("Not logged in")
+        {
+            return Err("subscription login unverified from official status output".into());
+        }
+        if flags.iter().any(|flag| !report.help_output.contains(flag))
+            || events
+                .iter()
+                .any(|event| !report.project_hook_events.iter().any(|e| e == event))
+        {
+            return Err("official command or project hook support unverified".into());
+        }
+        Ok(())
+    }
+}
+
+fn version_tuple(text: &str) -> Option<(u32, u32, u32)> {
+    let parts = text
+        .split('.')
+        .map(str::parse)
+        .collect::<Result<Vec<u32>, _>>()
+        .ok()?;
+    match parts.as_slice() {
+        [major, minor, patch] => Some((*major, *minor, *patch)),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod capability_tests {
+    use super::*;
+    #[test]
+    fn roster_official_output_checks_fail_closed() {
+        let roster = Roster::defaults().unwrap();
+        let role = &roster.roles["hive-routine-implementer"];
+        let report = CapabilityReport {
+            provider: "codex".into(),
+            version: "0.167.2".into(),
+            version_output: "codex-cli 0.167.2".into(),
+            help_output: "--model --output-last-message --json".into(),
+            login_status_output: "Logged in using ChatGPT".into(),
+            models: BTreeMap::from([(
+                role.model.clone().unwrap(),
+                vec![role.effort.clone().unwrap()],
+            )]),
+            project_hook_events: vec!["Stop".into(), "UserPromptSubmit".into()],
+        };
+        roster.check("hive-routine-implementer", &report).unwrap();
+        let mut bad = report.clone();
+        bad.models.clear();
+        assert!(roster.check("hive-routine-implementer", &bad).is_err());
+        let mut bad = report.clone();
+        bad.models.values_mut().next().unwrap().clear();
+        assert!(roster.check("hive-routine-implementer", &bad).is_err());
+        let mut bad = report.clone();
+        bad.project_hook_events.clear();
+        assert!(roster.check("hive-routine-implementer", &bad).is_err());
+        let mut bad = report.clone();
+        bad.login_status_output = "Not logged in".into();
+        assert!(roster.check("hive-routine-implementer", &bad).is_err());
+        let mut bad = report;
+        bad.version = "0.100.0".into();
+        assert!(roster.check("hive-routine-implementer", &bad).is_err());
+    }
+}

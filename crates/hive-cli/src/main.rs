@@ -34,6 +34,7 @@ mod policy;
 mod project_upgrade;
 mod report;
 mod role;
+mod roster;
 mod run;
 mod session;
 mod source_wiki;
@@ -295,6 +296,7 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("usage") => run_usage(&arguments[1..]),
         Some("storage") => storage::run_storage(&arguments[1..]),
         Some("prune") => storage::run_prune(&arguments[1..]),
+        Some("roster") => roster::run(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
