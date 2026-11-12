@@ -1,0 +1,82 @@
+{
+  "checked_at": "2026-11-12T05:51:05.344143+00:00",
+  "package_version": "0.14.2-test.1",
+  "source_commit": "e032bd9f8a1e404cf473dfd78982c9f7780abb13",
+  "channel": "test",
+  "registry": {
+    "aigent-hive": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-WrPaxTcBMltSFkeNCrONuXyeIrzVm6jpirtw6v7n2Vb3tqsmtFUb4lDiHKCGjVSxX9QurZ8Qfibm9tOPjywRhg==",
+      "shasum": "f4708d703f11e548cfd2ce9f7a98394c7fe72a06"
+    },
+    "@aigent-hive/darwin-arm64": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-t3tp83+hd9iAl+f7XGAQ85vyPV2I5w2vyClSh6I6Q8jNdRv9R3/w3MESs4pNdDsLXyLeq8Wwb7XTRjo0wJutoA==",
+      "shasum": "2c6c948b2b95b139c8ebc95a8feed2746a61ed8f"
+    },
+    "@aigent-hive/darwin-x64": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-kelDHfLXF1s1yI1WZCvjDjl0z9zaUeafsKHsIetZ1nJa9kFP9ptIOvbBWiQIDJAbW17B1F+X3HRKVCgFsZ0VbA==",
+      "shasum": "b8f009750356b825cd45947bc69d2f4e3965666d"
+    },
+    "@aigent-hive/linux-arm64": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-ebvK4L0aXEznfJ/B7T46W5iRn1e3CdJVQXQhmBP1IVsBbHrkRbCRWgKJu6bGxXYCywuG+LpciL9Rvw/3B7o4mg==",
+      "shasum": "019c5656d4fe6370c75bd6fddc51b390bae75e10"
+    },
+    "@aigent-hive/linux-x64": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-/U20q6eNoKxs+MjahqSari+ScocDDpvORQ/PHvRnCL0pY5Tuln4a5o9wSquDc4uXNRumcdHB3f7vxi1k8PTyuQ==",
+      "shasum": "b73630bbb16b614ab1d63e6170c094ada2a2d690"
+    },
+    "@aigent-hive/win32-x64": {
+      "version": "0.14.2-test.1",
+      "dist_tags": {
+        "test": "0.14.2-test.1",
+        "latest": "0.14.1"
+      },
+      "integrity": "sha512-cZ+oyZdwWZaT/QNxxnsUYXrlYgClB1v3teRMNybKcZm8dGDUnEPaKJVKzp36kGt14DK/ufSCWzjoLi7xStli7g==",
+      "shasum": "9980b05f5ffeece975ec9be64aaa26fb52e6778b"
+    }
+  },
+  "scope": "Public metadata and integrity declarations; executed artifact acceptance belongs to the bound workflow receipts.",
+  "github_release": {
+    "tagName": "v0.14.2-test.1",
+    "isDraft": false,
+    "isPrerelease": true,
+    "targetCommitish": "e032bd9f8a1e404cf473dfd78982c9f7780abb13",
+    "url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.14.2-test.1",
+    "asset_count": 25
+  },
+  "product_version": "0.14.2",
+  "product_tree_sha256": "sha256:68f5e979493b747e26fc74189e0f3d125ae64fbd33af43f7f7f713b056a2a3d4",
+  "candidate_run_id": 43155047577,
+  "publication_failed_run_ids": [
+    43157146415,
+    43157641579
+  ],
+  "publication_recovery_run_id": 43163666537,
+  "final_acceptance": false,
+  "acceptance_status": "superseded by test.2 after the macOS source integration fixture path correction",
+  "verification_host": "Codex on Windows 11; independent public metadata reads"
+}
