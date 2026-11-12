@@ -849,6 +849,7 @@ fn mutate(command: &str, arguments: &MutationArguments) -> Result<ActionResult, 
     mutate_with_summon(command, arguments, None)
 }
 
+#[allow(clippy::too_many_lines)] // Keep validation, commit and publication ordering in one transaction.
 fn mutate_with_summon(
     command: &str,
     arguments: &MutationArguments,
