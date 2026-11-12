@@ -4394,7 +4394,11 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         render_harness_toml(answers, resolution, effective_preferences).into_bytes(),
     );
     let marker = render_agents_marker(answers, resolution, effective_preferences);
-    let merged = merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?;
+    let merged = if read_target_optional(target, Path::new("AGENTS.md"))?.is_none() {
+        format!("# Project rules\n\nUser-editable rules and conventions belong here, outside the Hive markers.\n\n{marker}").into_bytes()
+    } else {
+        merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?
+    };
     files.insert(PathBuf::from("AGENTS.md"), merged);
     for adapter in ["CLAUDE.md", "GEMINI.md"] {
         let marker = format!("{MARKER_START}\n@AGENTS.md\n{MARKER_END}\n");
@@ -4755,6 +4759,50 @@ fn render_harness_toml(
     output
 }
 
+fn project_profile_markdown(answers: &SetupAnswers) -> String {
+    let Some(profile) = &answers.project_profile else {
+        return String::new();
+    };
+    let clean = |text: &str| {
+        text.chars()
+            .filter(|c| !c.is_control() && !matches!(c, '<' | '>' | '`'))
+            .collect::<String>()
+    };
+    let mut lines = Vec::new();
+    for (label, facts) in [
+        ("Languages", &profile.languages),
+        ("Frameworks", &profile.frameworks),
+        ("Package managers", &profile.package_managers),
+        ("Test tools", &profile.test_tools),
+        ("Structure", &profile.structure),
+    ] {
+        if !facts.is_empty() {
+            lines.push(format!(
+                "- {label}: {}",
+                facts
+                    .iter()
+                    .map(|f| clean(&f.name))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+    for (key, fact) in &profile.commands {
+        lines.push(format!(
+            "- {}: `{}` (source: {})",
+            clean(key),
+            clean(&fact.name),
+            fact.evidence
+                .iter()
+                .map(|p| clean(p))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    lines.push(String::new());
+    lines.join("\n")
+}
+
 fn render_agents_marker(
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
@@ -4797,6 +4845,10 @@ fn render_agents_marker(
     let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
         .replace("{{ project_name }}", &answers.project_name)
         .replace("{{ project_kind }}", &answers.project_kind)
+        .replace(
+            "{{ project_profile_markdown }}",
+            &project_profile_markdown(answers),
+        )
         .replace("{{ setup_mode }}", &answers.setup_mode)
         .replace("{{ preference_provenance }}", preference_provenance)
         .replace("{{ interface_language }}", interface_language)
@@ -7306,6 +7358,41 @@ mod tests {
     }
 
     #[test]
+    fn stage_two_corpus_agents_snapshots_and_user_rules() {
+        let root =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/project-detection");
+        let cases: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("expected.json")).unwrap()).unwrap();
+        let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json")).unwrap();
+        let mut snapshots = BTreeMap::new();
+        for case in cases.as_array().unwrap() {
+            let id = case["id"].as_str().unwrap();
+            let profile = hive_core::project_profile::ProjectProfile::detect(&root.join(id));
+            answers.project_kind = profile.project_kind().into();
+            answers.project_profile = Some(profile);
+            let marker = render_agents_marker(&answers, &resolution, None);
+            assert!(marker.split("## Hive\n").nth(1).unwrap().lines().count() <= 15);
+            let target = tempfile::tempdir().unwrap();
+            let foreign = "# My rules\nKeep this exact text.\n\n";
+            fs::write(
+                target.path().join("AGENTS.md"),
+                format!("{foreign}{marker}"),
+            )
+            .unwrap();
+            let merged =
+                merge_shared_marker(target.path(), Path::new("AGENTS.md"), marker.as_bytes())
+                    .unwrap();
+            assert_eq!(merged, format!("{foreign}{marker}").as_bytes());
+            snapshots.insert(id.to_owned(), marker);
+        }
+        let path = root.join("../project-detection-agents.json");
+        let expected: BTreeMap<String, String> =
+            serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(snapshots, expected);
+    }
+
+    #[test]
     fn four_kinds_and_profile_round_trip_with_legacy_answers() {
         let (legacy, _) = load_answers(&fixture("answers-base.yml")).unwrap();
         assert!(legacy.project_profile.is_none());
@@ -8715,6 +8802,10 @@ mod tests {
         let expected = include_str!("../../../harness/template/AGENTS.md.jinja")
             .replace("{{ project_name }}", &answers.project_name)
             .replace("{{ project_kind }}", &answers.project_kind)
+            .replace(
+                "{{ project_profile_markdown }}",
+                &super::project_profile_markdown(&answers),
+            )
             .replace("{{ setup_mode }}", &answers.setup_mode)
             .replace("{{ preference_provenance }}", effective.provenance)
             .replace("{{ interface_language }}", &effective.interface_language)

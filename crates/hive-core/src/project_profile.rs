@@ -183,7 +183,9 @@ impl ProjectProfile {
             add(&mut result.languages, "TypeScript", "tsconfig.json");
             categories.push("web");
         }
-        if let Some(cargo) = text(&dir, "Cargo.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok()) {
+        if let Some(cargo) =
+            text(&dir, "Cargo.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
+        {
             add(&mut result.languages, "Rust", "Cargo.toml");
             add(&mut result.package_managers, "cargo", "Cargo.toml");
             categories.push("rust");
@@ -206,7 +208,9 @@ impl ProjectProfile {
             }
             add(&mut result.test_tools, "cargo test", "Cargo.toml");
         }
-        if let Some(py) = text(&dir, "pyproject.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok()) {
+        if let Some(py) =
+            text(&dir, "pyproject.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
+        {
             add(&mut result.languages, "Python", "pyproject.toml");
             categories.push("python");
             if py.get("tool").and_then(|t| t.get("poetry")).is_some() {
