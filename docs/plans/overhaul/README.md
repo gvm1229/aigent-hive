@@ -1,6 +1,6 @@
 # Hive 재정비 할 일
 
-> 기준일: 2026-11-12
+> 기준일: 2026-11-13
 > 원본: Claude "aigent-hive 개편 계획" 초안. 실행 기준: 이 폴더
 > 범위: 재정비 지정 요청. 활성 버전: PLAN.md
 
@@ -8,7 +8,7 @@
 
 - 단계 1b: 8/8·0.14.2 정식·병합·분기 삭제
 - 단계 2: 10/10(확인 7·대체 종료 3), `develop@24057f36` 병합·분기 삭제
-- 단계 3: 18/19·`feature/overhaul-3-0.15.0-orchestrator`. [OV150-001](../../research/overhaul/OV150-001.md): Windows 실제 Claude 왕복 완료·공개 시험 준비
+- 단계 3: 19/19·0.15.0 정식·구독자 전송·PC 설치·단계 브랜치 원격/로컬 삭제 완료. [정식 근거](../../research/overhaul/OV150-013.md)·[Windows 실제 Claude 왕복](../../research/overhaul/OV150-001.md), 다음 단계 구현 미시작
 - Fable (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 폐기로 대체 종료, 성공 없음·근거 보존. 대체 왕복: OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
@@ -87,7 +87,7 @@
 | 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 병합·2026-11-12 승인 | 8/8 |
 | 2 기준선·공식 확장점 결정 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 | 10/10 처리 |
 | 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](../active/0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 6/6 |
-| 3 0.15.0 하위 기능 | [0.15.0-gods.md](../active/0.15.0-gods.md) | 있음 | OV150-002 | 6/7 |
+| 3 0.15.0 하위 기능 | [0.15.0-gods.md](../active/0.15.0-gods.md) | 있음 | OV150-002 | 7/7 |
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |

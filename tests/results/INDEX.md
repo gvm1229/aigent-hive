@@ -1161,3 +1161,5 @@
 | [passed](runs/20261112T214633-91858dcb32b5.md) | 격리 POSIX VM의 공개0.13.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
 | [passed](runs/20261112T214703-e87c56a74d58.md) | 격리 POSIX VM의 공개0.13.2-test.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
 | [passed](runs/20261112T215933-7630bf113891.md) | 격리 POSIX VM의 공개0.13.2-test.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 |
+| [passed](runs/20261112T233523-0f342d1fab15.md) | 0.15.0 정식 종료 문서 검증 | 0d8338ab1186df0af9a3da445629652b105b2d91 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T233525-9921b969c250.md) | Python conformance: documentation | 0d8338ab1186df0af9a3da445629652b105b2d91 | Windows-11-10.0.26300-SP0 |
