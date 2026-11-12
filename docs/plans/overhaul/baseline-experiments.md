@@ -39,7 +39,8 @@
   - 변경: Claude Code `Stop`·`Notification` 훅, Codex `notify`, Gemini CLI 훅으로 대기 신호 파일 기록. 대기 창에만 알림 한 줄 입력
   - 확인: 작업 중 창 입력 0건, 대기 → 알림 → 메시지 상자 읽기 왕복 3회 성공
 - [ ] [OVX-007] 창 실험 3 — 종료·재개·한도·추론 수준
-  - state: agent-owned; depends: OVX-005
+  - state: blocked; depends: OVX-005; owner: provider; reason: OVX-005 실제 창 미수용과 OVX-008 자동 입력 허용 미확인
+  - 근거: [재개·사용량·수준 미실행과 해결 경로](../../research/overhaul/OVX-007.md)
   - 변경: 창 강제 종료 뒤 `claude -r`·`codex resume`·`gemini -r` 재개, 인증 만료·한도 도달 화면 문구 수집, 같은 계정 동시 창 3개의 사용량 소모 관찰, Gemini `modelConfigs.customAliases`의 `thinkingLevel` 효과
   - 확인: 재개 결과·감지 문구·소모량 표, Gemini 별칭 형식 확정
 - [x] [OVX-008] 제공자 약관 원문 재확인
