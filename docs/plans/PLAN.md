@@ -25,8 +25,9 @@
 | 작업 전달 | 6 | 0 | 100.0% |
 | 신 입구와 수용 | 4 | 3 | 57.1% |
 | 호스트 참조 처리기 | 1 | 0 | 100.0% |
-| 컴파일러 호환 | 0 | 1 | 0.0% |
-| **현재 범위 합계** | **11** | **4** | **73.3%** |
+| 컴파일러 호환 | 1 | 0 | 100.0% |
+| 운영체제 시험 보완 | 1 | 2 | 33.3% |
+| **현재 범위 합계** | **13** | **5** | **72.2%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -39,6 +40,8 @@
 | [0.15.0-host-reference.md](active/0.15.0-host-reference.md) | OV150-014 | 호스트 참조 처리기 |
 
 | [0.15.0-qualification.md](active/0.15.0-qualification.md) | OV150-015 | 컴파일러 호환 |
+
+| [0.15.0-windows-qualification.md](active/0.15.0-windows-qualification.md) | OV150-016–018 | 운영체제 시험 보완 |
 
 ## 이전 근거
 

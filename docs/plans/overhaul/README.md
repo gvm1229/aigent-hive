@@ -8,7 +8,7 @@
 
 - 단계 1b: 8/8·0.14.2 정식·병합·분기 삭제
 - 단계 2: 10/10(확인 7·대체 종료 3), `develop@24057f36` 병합·분기 삭제
-- 단계 3: 11/15·`feature/overhaul-3-0.15.0-orchestrator`. [OV150-001](../../research/overhaul/OV150-001.md): Windows 실제 Claude 왕복 완료·공개 시험 준비
+- 단계 3: 13/18·`feature/overhaul-3-0.15.0-orchestrator`. [OV150-001](../../research/overhaul/OV150-001.md): Windows 실제 Claude 왕복 완료·공개 시험 준비
 - Fable (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 폐기로 대체 종료, 성공 없음·근거 보존. 대체 왕복: OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
@@ -89,7 +89,8 @@
 | 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](../active/0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 6/6 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](../active/0.15.0-gods.md) | 있음 | OV150-002 | 4/7 |
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
-| 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 0/1 |
+| 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
+| 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 1/3 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/11 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
