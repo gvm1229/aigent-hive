@@ -8,7 +8,9 @@
 - 선택 질문 usage-enforcement·usage-warnings 2개 보류, 기존 보호 선택·사용자 내용·프로젝트 파일 보존. 이 요청의 완료 조건 밖, 답변 대행 없음
 - OV141-011 후속 조건 해결: [보관 기록](../research/overhaul/OV141-011.md), 0.14.1 당시 6개 실패 이력 보존
 - 후속 조사: 기존 Windows knowledge_lock 간헐 실패, PR의 예약 작업 조회 시간초과·활성 state.lock 읽기 경합. 코드 변경·원인 해결 주장 없음, 현재 main의 기본 Windows 검사 통과
-- 다음: 단계 2 `test/overhaul-2-baseline`, [baseline-experiments.md](../plans/overhaul/baseline-experiments.md)의 OVX-001. 이번 실행 미시작, 단계 브랜치 보존
+- 현재: 단계 2 `test/overhaul-2-baseline`, [baseline-experiments.md](../plans/overhaul/baseline-experiments.md)의 OVX-001 시작. 제품 0.14.2 유지
+- 단계 1b 로컬·원격 브랜치 삭제 완료. [단계 시작 근거](../research/overhaul/stage-2-start.md)
+- 단계 2 실험은 2026-11-12 명시 승인 범위. OVX-009 구조 결정과 OVX-010 병합은 이번 작업 제외
 
 ## 생성된 구현·수용 항목
 
