@@ -5,7 +5,7 @@ and credentials: `05-security-safety.md`.
 
 ## Artifact boundary
 
-Keep separate:
+Separate:
 
 1. Hive source workspace: source, tests, directives, and docs
 2. Release bundle: reproducible binaries and versioned projections
