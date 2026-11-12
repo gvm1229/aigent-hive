@@ -679,7 +679,16 @@
         "ship",
         "team-execution",
         "usage-guard",
-        "verified-workflow"
+        "verified-workflow",
+        "athena",
+        "artemis",
+        "hephaistos",
+        "apollon",
+        "eileithyia",
+        "poseidon",
+        "demeter",
+        "aither",
+        "hades"
       ]
     },
     "skill_selection": {

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hades"
+  short_description: "(hades) cleanup"
+  default_prompt: "Use $aigent-hive:hades for this cleanup task."
+policy:
+  allow_implicit_invocation: true

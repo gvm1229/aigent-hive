@@ -1,0 +1,6 @@
+interface:
+  display_name: "Eileithyia"
+  short_description: "(eileithyia) setup"
+  default_prompt: "Use $aigent-hive:eileithyia for this setup task."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Apollon"
+  short_description: "(apollon) writing"
+  default_prompt: "Use $aigent-hive:apollon for this writing task."
+policy:
+  allow_implicit_invocation: true

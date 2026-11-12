@@ -1,0 +1,6 @@
+interface:
+  display_name: "Demeter"
+  short_description: "(demeter) knowledge"
+  default_prompt: "Use $aigent-hive:demeter for this knowledge task."
+policy:
+  allow_implicit_invocation: true

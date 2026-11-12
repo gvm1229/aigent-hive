@@ -1,0 +1,6 @@
+interface:
+  display_name: "Athena"
+  short_description: "(athena) planning"
+  default_prompt: "Use $aigent-hive:athena for this planning task."
+policy:
+  allow_implicit_invocation: true

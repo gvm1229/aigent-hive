@@ -1386,6 +1386,15 @@ fn localized_skill_text(
             "관행 조사",
             "신뢰할 수 있는 최신 자료를 바탕으로 구현 관행을 조사합니다.",
         ),
+        "athena" => ("Athena", "(athena) planning; 계획. Names: athena, 아테나, Minerva. Use for plan the work; design a workflow; review the strategy; 작업 계획; 흐름 설계; 전략 검토.", "아테나", "계획 입구 Skill"),
+        "artemis" => ("Artemis", "(artemis) research; 조사. Names: artemis, 아르테미스, artemis. Use for research best practices; find official sources; compare approaches; 구현 관행 조사; 공식 자료 찾기; 방법 비교.", "아르테미스", "조사 입구 Skill"),
+        "hephaistos" => ("Hephaistos", "(hephaistos) implementation; 구현. Names: hephaistos, 헤파이스토스, Hephaestus. Use for implement a change; review generated code; polish selected code; 변경 구현; 생성 코드 검토; 선택 코드 정리.", "헤파이스토스", "구현 입구 Skill"),
+        "apollon" => ("Apollon", "(apollon) writing; 글쓰기. Names: apollon, 아폴론, Apollo. Use for rewrite selected Korean; improve this writing; preserve meaning while editing; 선택한 한국어 윤문; 글 표현 개선; 뜻을 지키며 편집.", "아폴론", "글쓰기 입구 Skill"),
+        "eileithyia" => ("Eileithyia", "(eileithyia) setup; 설정. Names: eileithyia, 에일레이티이아, Eleuthia. Use for set up a project; configure Hive; refresh project guidance; 프로젝트 설정; Hive 구성; 프로젝트 지침 갱신.", "에일레이티이아", "설정 입구 Skill"),
+        "poseidon" => ("Poseidon", "(poseidon) coordination; 조율. Names: poseidon, 포세이돈, poseidon. Use for coordinate a team; run bounded lanes; organize parallel work; 팀 조율; 제한된 작업 분담; 병렬 작업 정리.", "포세이돈", "조율 입구 Skill"),
+        "demeter" => ("Demeter", "(demeter) knowledge; 지식. Names: demeter, 데메테르, demeter. Use for recall project knowledge; find a saved fact; search reviewed knowledge; 프로젝트 지식 조회; 저장된 사실 찾기; 검토 지식 검색.", "데메테르", "지식 입구 Skill"),
+        "aither" => ("Aither", "(aither) usage controls; 사용량 관리. Names: aither, 아이테르, Aether. Use for check usage controls; inspect remaining usage; review usage policy; 사용량 보호 확인; 남은 사용량 조회; 사용량 정책 검토.", "아이테르", "사용량 관리 입구 Skill"),
+        "hades" => ("Hades", "(hades) cleanup; 정리. Names: hades, 하데스, hades. Use for clean completed artifacts; inspect cleanup candidates; prepare focused commits; 완료 산출물 정리; 정리 후보 확인; 작은 단위 커밋 준비.", "하데스", "정리 입구 Skill"),
         "ship" => (
             "Ship changes",
             "Create focused verified commits using this repository's rules.",
@@ -1608,6 +1617,33 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "knowledge-transfer" => Some(include_bytes!(
             "../../../harness/skills/knowledge-transfer/agents/openai.yaml"
         )),
+        "athena" => Some(include_bytes!(
+            "../../../harness/skills/athena/agents/openai.yaml"
+        )),
+        "artemis" => Some(include_bytes!(
+            "../../../harness/skills/artemis/agents/openai.yaml"
+        )),
+        "hephaistos" => Some(include_bytes!(
+            "../../../harness/skills/hephaistos/agents/openai.yaml"
+        )),
+        "apollon" => Some(include_bytes!(
+            "../../../harness/skills/apollon/agents/openai.yaml"
+        )),
+        "eileithyia" => Some(include_bytes!(
+            "../../../harness/skills/eileithyia/agents/openai.yaml"
+        )),
+        "poseidon" => Some(include_bytes!(
+            "../../../harness/skills/poseidon/agents/openai.yaml"
+        )),
+        "demeter" => Some(include_bytes!(
+            "../../../harness/skills/demeter/agents/openai.yaml"
+        )),
+        "aither" => Some(include_bytes!(
+            "../../../harness/skills/aither/agents/openai.yaml"
+        )),
+        "hades" => Some(include_bytes!(
+            "../../../harness/skills/hades/agents/openai.yaml"
+        )),
         "ship" => Some(include_bytes!(
             "../../../harness/skills/ship/agents/openai.yaml"
         )),
@@ -1621,7 +1657,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 37] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1648,6 +1684,42 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 28] {
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         ("knowledge-scan", KNOWLEDGE_SCAN),
         ("knowledge-transfer", KNOWLEDGE_TRANSFER),
+        (
+            "athena",
+            include_bytes!("../../../harness/skills/athena/SKILL.md"),
+        ),
+        (
+            "artemis",
+            include_bytes!("../../../harness/skills/artemis/SKILL.md"),
+        ),
+        (
+            "hephaistos",
+            include_bytes!("../../../harness/skills/hephaistos/SKILL.md"),
+        ),
+        (
+            "apollon",
+            include_bytes!("../../../harness/skills/apollon/SKILL.md"),
+        ),
+        (
+            "eileithyia",
+            include_bytes!("../../../harness/skills/eileithyia/SKILL.md"),
+        ),
+        (
+            "poseidon",
+            include_bytes!("../../../harness/skills/poseidon/SKILL.md"),
+        ),
+        (
+            "demeter",
+            include_bytes!("../../../harness/skills/demeter/SKILL.md"),
+        ),
+        (
+            "aither",
+            include_bytes!("../../../harness/skills/aither/SKILL.md"),
+        ),
+        (
+            "hades",
+            include_bytes!("../../../harness/skills/hades/SKILL.md"),
+        ),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
         ("humanize-kor", HUMANIZE_KOR),
@@ -3020,8 +3092,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 23);
-            let expected_file_count = if host == Host::Claude { 30 } else { 53 };
+            assert_eq!(first.active_skills.skills.len(), 32);
+            let expected_file_count = if host == Host::Claude { 39 } else { 71 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -3453,7 +3525,7 @@ description: Inspect one local file without changing it.
     #[test]
     fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
         let default = super::project_default_skills().unwrap();
-        assert_eq!(default.len(), 23);
+        assert_eq!(default.len(), 32);
         let excluded = [
             "user-setup",
             "project-setup",
@@ -3718,6 +3790,34 @@ description: Inspect one local file without changing it.
         assert_eq!(result.route, Route::HiveSkill);
         assert_eq!(result.selected_skill.as_deref(), Some("knowledge-recall"));
         assert_eq!(result.load_skill_bodies.len(), 1);
+    }
+
+    #[test]
+    fn god_entries_resolve_explicit_and_automatic_normalized_candidates() {
+        for name in [
+            "athena",
+            "artemis",
+            "hephaistos",
+            "apollon",
+            "eileithyia",
+            "poseidon",
+            "demeter",
+            "aither",
+            "hades",
+        ] {
+            for explicit in [false, true] {
+                let mut request = routing_request();
+                request.active_hive_skills = vec![builtin_proof(name)];
+                if explicit {
+                    request.explicit_skill = Some(name.into());
+                } else {
+                    request.hive_candidate = Some(name.into());
+                }
+                let result = resolve_route(&request).unwrap();
+                assert_eq!(result.selected_skill.as_deref(), Some(name));
+                assert_eq!(result.load_skill_bodies.len(), 1);
+            }
+        }
     }
 
     #[test]

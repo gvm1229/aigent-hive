@@ -197,7 +197,16 @@
         "adversarial-judge",
         "team-execution",
         "multi-goal",
-        "custom-subagent-create"
+        "custom-subagent-create",
+        "athena",
+        "artemis",
+        "hephaistos",
+        "apollon",
+        "eileithyia",
+        "poseidon",
+        "demeter",
+        "aither",
+        "hades"
       ]
     },
     "skill_selection": {

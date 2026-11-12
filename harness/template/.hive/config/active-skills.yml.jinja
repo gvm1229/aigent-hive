@@ -310,4 +310,85 @@ skills:
   - subagents
   consent_digest: null
 {% endif -%}
+{% if 'athena' in selected_project_skills -%}
+- name: athena
+  source_type: built-in
+  content_digest: sha256:dc246c09147cc05d9764aad0f9b8300f269df5acf7f8b2d5b06f6f4fd4c8acbf
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'artemis' in selected_project_skills -%}
+- name: artemis
+  source_type: built-in
+  content_digest: sha256:54d45e4ead189fa8845bc25bbc2dd7067371c892a9b737c2f659bda10d238d68
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'hephaistos' in selected_project_skills -%}
+- name: hephaistos
+  source_type: built-in
+  content_digest: sha256:25a6a387d0be9ae48d4013395b458c870429e342f558342e03a8b22f5f100d2a
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'apollon' in selected_project_skills -%}
+- name: apollon
+  source_type: built-in
+  content_digest: sha256:b86ecb9e1c8e67d5584adeb145cff86234722494d36d87974d97c24b86fd2b83
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'eileithyia' in selected_project_skills -%}
+- name: eileithyia
+  source_type: built-in
+  content_digest: sha256:a9009445060b20475cce92c58ab01b654b44eadda705f27bd717fe60137e4399
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'poseidon' in selected_project_skills -%}
+- name: poseidon
+  source_type: built-in
+  content_digest: sha256:df2ce6025df5a0a402750a3aea0b3016dfa4efa96ba70218012b8793bd51e07c
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'demeter' in selected_project_skills -%}
+- name: demeter
+  source_type: built-in
+  content_digest: sha256:c5d1f6b6edac301e61d6c3091f96892085fb8c661b5f9e11abcc9f23fa6edc4e
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'aither' in selected_project_skills -%}
+- name: aither
+  source_type: built-in
+  content_digest: sha256:ef77d74092f5a57a0ad6063060dcfc1fee723ace5ee7e9c960389f805c921d72
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'hades' in selected_project_skills -%}
+- name: hades
+  source_type: built-in
+  content_digest: sha256:5de489af2ded50a8a2f503cc3d088a8707383774a7823a6d50b6d852a9f7f7d8
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
 {% endif -%}

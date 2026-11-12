@@ -1,0 +1,6 @@
+interface:
+  display_name: "Aither"
+  short_description: "(aither) usage controls"
+  default_prompt: "Use $aigent-hive:aither for this usage controls task."
+policy:
+  allow_implicit_invocation: true

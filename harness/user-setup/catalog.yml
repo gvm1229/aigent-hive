@@ -85,5 +85,15 @@ skill_dependencies:
   - { skill: multi-goal, requires: [verified-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }
 
+  - { skill: athena, requires: [verified-workflow] }
+  - { skill: artemis, requires: [research-best-practices] }
+  - { skill: hephaistos, requires: [code-polish] }
+  - { skill: apollon, requires: [humanize-kor] }
+  - { skill: eileithyia, requires: [project-setup] }
+  - { skill: poseidon, requires: [team-execution] }
+  - { skill: demeter, requires: [knowledge-recall] }
+  - { skill: aither, requires: [usage-guard] }
+  - { skill: hades, requires: [code-polish] }
+
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []
