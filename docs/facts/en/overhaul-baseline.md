@@ -13,10 +13,12 @@ sources:
   - "repo:docs/research/overhaul/OVX-002.md#sha256:9d142f8151f828020262bfad89a34f41e989435ec7c3e60ef26e16be1c4681a7"
   - "repo:docs/research/overhaul/OVX-004.md#sha256:32b2ddcd2538fb0beae217e5ff27d94fe450abf26f27153d94447b796a19b821"
 links: []
-reviewed_revision: "git:a0fa76c563d17083640e9ee32cc199fcbd4f4b7e"
+reviewed_revision: "git:52a1aec50a92ea4a4647871304487a5c9ba2f3b4"
 status: active
 ---
 
 # Overhaul baseline
 
 On 2026-11-12, Hive 0.14.2 on Windows showed a general default in all 30 minimal project fixtures; no effective kind was selected. Fixed bilingual FTS queries returned the expected fact in the top five for 22/40 queries and 3/10 held-out queries. One new Codex project had 81 files. The 28 canonical Skills had 14,527 whitespace-separated words. Its synthetic user store used 198,235 bytes. These results do not qualify automatic project detection, semantic retrieval, other setups or other operating systems.
+
+The stage-2 review correction preserves all 30 detection inputs and their exact marker contents in tests/fixtures/project-detection/expected.json. Re-measurement on the same Windows host returned 30 general defaults and 30 null effective kinds. docs/research/overhaul/OVX-002-inputs.json preserves all ten answer facts, five verbatim distractors and forty fixed queries. This improves input reproducibility; it does not establish cross-platform detection or retrieval quality.
