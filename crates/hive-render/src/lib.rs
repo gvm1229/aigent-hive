@@ -4395,7 +4395,7 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
     );
     let marker = render_agents_marker(answers, resolution, effective_preferences);
     let merged = if read_target_optional(target, Path::new("AGENTS.md"))?.is_none() {
-        format!("# Project rules\n\nUser-editable rules and conventions belong here, outside the Hive markers.\n\n{marker}").into_bytes()
+        format!("{PROJECT_RULES_SEED}{marker}").into_bytes()
     } else {
         merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?
     };
@@ -4758,6 +4758,8 @@ fn render_harness_toml(
     );
     output
 }
+
+const PROJECT_RULES_SEED: &str = "# Project rules\n\nUser-editable rules and conventions belong here, outside the Hive markers.\n\n";
 
 fn project_profile_markdown(answers: &SetupAnswers) -> String {
     let Some(profile) = &answers.project_profile else {

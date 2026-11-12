@@ -44,6 +44,13 @@ pub fn setup_recovery_change_is_owned(
             return Ok(false);
         };
         let marker = super::extract_exact_marker(&change.path, after)?;
+        if change.before.is_none() && change.path == Path::new("AGENTS.md") {
+            let mut initial = super::PROJECT_RULES_SEED.as_bytes().to_vec();
+            initial.extend_from_slice(&marker);
+            if initial == after {
+                return Ok(true);
+            }
+        }
         return Ok(
             super::merge_shared_marker_bytes(change.before.clone(), &change.path, &marker)?
                 == after,

@@ -46,6 +46,16 @@ The CLI owns the canonical question catalog. For an explicit question explanatio
 --output json`. This is a localized, bounded question and source view, not approval to change it.
 A full section/schema is an explicit diagnostic, not a normal setup prerequisite.
 
+## Detected project and user rules
+
+- For project-kind, inspect the CLI's detected languages, frameworks, package managers, commands,
+  confidence, and evidence paths. Offer the detected choice once; do not replace it with general.
+  Without evidence, use the four-kind choice list. A rejection or cancellation preserves saved choices.
+- The CLI only extracts local facts and runs no model. If the user requests a code-rule draft,
+  write it in the current host session from the shown project facts. Show the exact draft and
+  obtain confirmation before inserting it into the user-editable area outside Hive markers.
+  Preserve all existing user text; never invoke a provider API or a separate model process.
+
 ## Preserve authority
 
 - Preserve user/third-party bytes, role bodies, assignments, handoffs and reviewed local overrides.

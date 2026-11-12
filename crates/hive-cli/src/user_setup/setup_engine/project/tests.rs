@@ -992,3 +992,68 @@ fn assert_changed_role_needs_approval(
         .contains("Approve definition changes"));
     *snapshot = store.save(snapshot, original).unwrap();
 }
+#[test]
+fn detected_project_confirmation_accepts_rejects_and_cancels() {
+    for (input, expected, completed) in [
+        ("\nNamed\nyes\n\n", "coding", true),
+        ("\nNamed\nno\ndocs\n\n", "docs", true),
+        ("\nNamed\nno\n:cancel\n", "coding", false),
+        ("\nNamed\n:cancel\n", "coding", false),
+    ] {
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
+        std::fs::write(
+            target.path().join("package.json"),
+            r#"{"dependencies":{"next":"16"},"packageManager":"pnpm@10"}"#,
+        )
+        .unwrap();
+        let global = global(root.path());
+        let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+        let mut snapshot = store.load().unwrap();
+        let mut progress = store
+            .new_progress(
+                "project-mode".into(),
+                questions::defaults(target.path(), &global, "codex"),
+            )
+            .unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(input.as_bytes()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        assert_eq!(
+            questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal)
+                .unwrap(),
+            completed
+        );
+        assert_eq!(progress.answers["project_kind"], expected);
+        let shown = String::from_utf8(terminal.writer).unwrap();
+        assert_eq!(shown.matches("맞습니까?").count(), 1);
+        assert!(shown.contains("Next.js, pnpm"));
+        if !completed {
+            assert!(!progress.answered_questions.contains_key("project-kind"));
+        }
+        validate_answers(&progress.answers);
+    }
+}
+
+#[test]
+fn described_project_kind_uses_evidence_without_accepting_it() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    std::fs::write(
+        target.path().join("Cargo.toml"),
+        "[package]\nname=\"sample\"\nversion=\"1.0.0\"\n",
+    )
+    .unwrap();
+    let mut opts = options(root.path(), target.path());
+    opts.describe = true;
+    opts.question = Some("project-kind".into());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let result = preferences::inspect(&opts, &store, None, InterfaceLanguage::Ko).unwrap();
+    let data = result.data.unwrap();
+    assert_eq!(data["questions"][0]["question"]["default"], "coding");
+    assert!(data["questions"][0]["effective"].is_null());
+    assert_eq!(data["project_profile"]["languages"][0]["name"], "Rust");
+    assert!(!target.path().join(".hive").exists());
+}

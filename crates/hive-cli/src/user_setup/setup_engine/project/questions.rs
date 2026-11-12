@@ -196,7 +196,47 @@ fn ask<R: BufRead, W: Write>(
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
     *snapshot = store.save(snapshot, progress)?;
+    let mut detected = None;
+    if question.id == "project-kind" && progress.answers["setup_mode"] == "expedited" {
+        if let Ok(profile) = serde_json::from_value::<hive_core::project_profile::ProjectProfile>(
+            progress.answers["project_profile"].clone(),
+        ) {
+            if profile.project_kind() != "general" {
+                let names = profile
+                    .languages
+                    .iter()
+                    .chain(&profile.frameworks)
+                    .chain(&profile.package_managers)
+                    .map(|f| f.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let mut confirmation = question.clone();
+                confirmation.input = hive_core::setup::InputKind::Boolean;
+                confirmation.options.clear();
+                confirmation.default = Some(json!(true));
+                confirmation.prompt.ko =
+                    format!("감지 결과: {names} ({}). 맞습니까?", profile.project_kind());
+                confirmation.prompt.en = format!(
+                    "Detected: {names} ({}). Is this correct?",
+                    profile.project_kind()
+                );
+                match terminal.ask(&confirmation, None)? {
+                    AnswerInput::Answered { value, .. } if value == json!(true) => {
+                        detected = Some((
+                            json!(profile.project_kind()),
+                            hive_core::preferences::DecisionOrigin::AcceptedDefault,
+                        ));
+                    }
+                    AnswerInput::Answered { .. } => {}
+                    _ => return Ok(false),
+                }
+            }
+        }
+    }
     let (value, origin) = loop {
+        if let Some(choice) = detected.take() {
+            break choice;
+        }
         let fallback = super::input::fallback(question, global);
         let current = progress
             .answers
