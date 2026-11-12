@@ -592,6 +592,22 @@ fn read_open_file(file: &mut impl Read, max_bytes: usize) -> io::Result<Vec<u8>>
     Ok(bytes)
 }
 
+fn parent_file_matches(parent: &Dir, name: &OsStr, expected: &[u8]) -> io::Result<bool> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    options.follow(FollowSymlinks::No);
+    let mut file = parent.open_with(name, &options)?;
+    let mut buffer = vec![0_u8; 64 * 1024];
+    for chunk in expected.chunks(buffer.len()) {
+        file.read_exact(&mut buffer[..chunk.len()])?;
+        if &buffer[..chunk.len()] != chunk {
+            return Ok(false);
+        }
+    }
+    // A matching prefix is insufficient: appended bytes must also prevent removal.
+    Ok(file.read(&mut buffer[..1])? == 0)
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct FileIdentity {
     device: u64,
@@ -722,8 +738,8 @@ pub(crate) fn remove_parent_file(
             "claimed destination is not a regular file",
         ));
     }
-    let bytes = match read_parent_file(&quarantine, claimed_name, MAX_EXPLICIT_FILE_BYTES) {
-        Ok(bytes) => bytes,
+    let matches = match parent_file_matches(&quarantine, claimed_name, expected) {
+        Ok(matches) => matches,
         Err(error) => {
             return Err(restore_claim_error(
                 parent,
@@ -734,7 +750,7 @@ pub(crate) fn remove_parent_file(
             ));
         }
     };
-    if bytes != expected {
+    if !matches {
         return Err(restore_claim_error(
             parent,
             destination,
@@ -3309,6 +3325,57 @@ mod tests {
         include_bytes!("../../../tests/fixtures/setup/capabilities-codex-omx.json");
     const ABSENT_CAPABILITY: &[u8] =
         include_bytes!("../../../tests/fixtures/setup/capabilities-absent.json");
+
+    #[test]
+    fn exact_removal_streams_large_files_and_restores_changed_bytes() {
+        let directory = crate::test_tempdir();
+        let parent = Dir::open_ambient_dir(directory.path(), ambient_authority()).unwrap();
+        let name = OsStr::new("hive-old.exe");
+        let path = directory.path().join(name);
+        for length in [0, super::MAX_EXPLICIT_FILE_BYTES, 51 * 1024 * 1024 + 17] {
+            let expected = vec![0x5a; length];
+            fs::write(&path, &expected).unwrap();
+            assert!(super::remove_parent_file(&parent, name, &expected).unwrap());
+            assert!(!path.exists());
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 0);
+        }
+        let expected = vec![0x5a; super::MAX_EXPLICIT_FILE_BYTES + 17];
+        for change in [0, 1, 2] {
+            let mut actual = expected.clone();
+            match change {
+                0 => *actual.last_mut().unwrap() ^= 1,
+                1 => actual.push(0),
+                _ => {
+                    actual.pop();
+                }
+            }
+            fs::write(&path, &actual).unwrap();
+            assert!(super::remove_parent_file(&parent, name, &expected).is_err());
+            assert_eq!(fs::read(&path).unwrap(), actual);
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn exact_removal_preserves_a_large_windows_file_without_delete_sharing() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let directory = crate::test_tempdir();
+        let parent = Dir::open_ambient_dir(directory.path(), ambient_authority()).unwrap();
+        let name = OsStr::new("hive-in-use.exe");
+        let path = directory.path().join(name);
+        let expected = vec![0x5a; super::MAX_EXPLICIT_FILE_BYTES + 17];
+        fs::write(&path, &expected).unwrap();
+        let held = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .open(&path)
+            .unwrap();
+        assert!(super::remove_parent_file(&parent, name, &expected).is_err());
+        assert_eq!(fs::read(&path).unwrap(), expected);
+        drop(held);
+        assert!(super::remove_parent_file(&parent, name, &expected).unwrap());
+    }
 
     #[test]
     fn continuation_adapter_maps_three_host_native_owners_without_mutation() {

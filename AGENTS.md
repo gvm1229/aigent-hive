@@ -36,6 +36,7 @@ unchanged files with instructions still present in context. Bare directive filen
 | Code/docs restructuring | [00](.agents/directives/00-editing-discipline.md) |
 | Architecture/Skill boundaries | [02](.agents/directives/02-architecture.md) |
 | Git/check selection | [03](.agents/directives/03-workflow.md) |
+| Delegating to another host/agent | [Delegation](.agents/directives/references/agent-delegation.md) |
 | Plan/state/knowledge/closure | [04](.agents/directives/04-documentation-state.md) |
 | Filesystem/external tools | [05](.agents/directives/05-security-safety.md) |
 | Edit reservations/concurrency | [06](.agents/directives/06-session-coordination.md) |

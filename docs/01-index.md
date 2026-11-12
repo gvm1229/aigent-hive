@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.1 release-date=2026-11-11 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -91,6 +91,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.14.2`](releases/0.14.2.md) | 큰 감시 실행 파일 정리 복구 |
 | [`0.14.1`](releases/0.14.1.md) | 임계값 기록·지식 연결 수정, 감시 실행 파일 정리, 저장 공간 보고 |
 | [`0.14.0`](releases/0.14.0.md) | 모델 없는 터미널 설정·재개·자료 보존 제거 |
 | [`0.13.2`](releases/0.13.2.md) | 정식 게시 보류·기능 호환/소진 보호 개발 기록 |
@@ -323,7 +324,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [OV141-008 근거 — README·출시일·Claude Code 표시](research/overhaul/OV141-008.md)
 - [OV141-009 근거 — 0.14.1 번호 공개 시험 수용](research/overhaul/OV141-009.md)
 - [OV141-010 근거 — develop 병합과 단계 브랜치 종료](research/overhaul/OV141-010.md)
-- [OV141-011 근거 — 정식 출시 재개의 브랜치 검사 중단](research/overhaul/OV141-011.md)
+- [OV141-011 근거 — 정식 게시 완료와 PC 파일 수 검증 실패](research/overhaul/OV141-011.md)
 - [단계 1 병합 전 검토 — Fable 5.2 advisor](research/overhaul/stage1-review.md)
 
 ### 점수 기반 개선 설계 초안
@@ -372,3 +373,19 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [0.14.1 미발송 구독자 안내 초안](releases/0.14.1.subscriber.ko.md)
 - [Aigent Hive v0.14.0 업데이트 내역:](releases/0.14.0.subscriber.ko.md)
 - [0.14.0 정식 배포 근거](research/stable-release-0.14.0.md)
+
+- [0.14.2 큰 파일 정리 결정](decisions/monitor-cleanup-0.14.2.md)·[활성 항목](plans/active/overhaul-0.14.2.md)
+- [OV142-001 버전 전환 근거](research/overhaul/OV142-001.md)
+- [OV142-002 큰 파일 삭제 근거](research/overhaul/OV142-002.md)
+- [OV142-003 정리 회귀와 이전판 자료 근거](research/overhaul/OV142-003.md)
+
+- [0.14.2 출시 설명](releases/0.14.2.md)·[구독자 안내 문안](releases/0.14.2.subscriber.ko.md)
+- [OV142-004 출시 문안과 검토 전 인계](research/overhaul/OV142-004.md)
+
+- [OV142-005 병합 전 검토 보완](research/overhaul/OV142-005.md)
+- [OV142-006 develop 병합 확인](research/overhaul/OV142-006.md)
+
+- [OV142-007 공개 시험 근거](research/overhaul/OV142-007.md)
+- [에이전트 작업 규칙 저장](plans/agent-orchestration-rules.md)
+
+- [OV142-008 정식 게시와 PC 갱신 근거](research/overhaul/OV142-008.md)

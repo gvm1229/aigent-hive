@@ -320,7 +320,7 @@ jobs:
         if: ${{ inputs.channel == 'stable' }}
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
-          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
+          AIGENT_HIVE_SUBSCRIBER_APPROVAL: ${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}
         run: |
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
@@ -512,7 +512,7 @@ jobs:
         if: ${{ inputs.channel == 'stable' && inputs.send_subscriber_update == true }}
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
-          AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST: ${{ secrets.AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST }}
+          AIGENT_HIVE_SUBSCRIBER_APPROVAL: ${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}
         run: |
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \

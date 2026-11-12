@@ -643,6 +643,110 @@ mod tests {
     }
 
     #[test]
+    fn large_binary_cleanup_after_upgrade_keeps_current_and_previous() {
+        let (_directory, root) = fixture(false);
+        let bin = root.requested_path().join(BASE).join("bin");
+        let bytes = vec![0x5a; 2 * 1024 * 1024 + 17];
+        std::fs::create_dir_all(&bin).unwrap();
+        for name in ["hive-a.exe", "hive-b.exe", "hive-old.exe"] {
+            std::fs::write(bin.join(name), &bytes).unwrap();
+        }
+        let result = upgrade_with(
+            &root,
+            |_, _| panic!("disabled monitor cannot change scheduler"),
+            |_, _| panic!("disabled monitor cannot inspect live health"),
+        )
+        .unwrap();
+        let cleanup = &result["binary_cleanup"];
+        assert_eq!(cleanup["removed"].as_array().unwrap().len(), 2);
+        assert_eq!(cleanup["skipped"], json!([]));
+        assert_eq!(binary_names(&root).len(), 2);
+        assert_eq!(std::fs::read(bin.join("hive-old.exe")).unwrap(), bytes);
+        let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
+        assert!(current.executable.is_file());
+        assert!(binary_names(&root)
+            .iter()
+            .any(|name| Some(std::ffi::OsStr::new(name)) == current.executable.file_name()));
+        let journal: Value = load(&root, JOURNAL).unwrap().unwrap();
+        assert_eq!(journal["phase"], "complete");
+        assert_eq!(&journal["binary_cleanup"], cleanup);
+        assert_eq!(
+            prune_unused(root.requested_path(), false).unwrap()["candidates"],
+            json!([])
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn running_windows_binary_is_restored_and_reported_skipped_after_delete_failure() {
+        use std::os::windows::process::CommandExt;
+        use std::process::{Child, Command, Stdio};
+
+        struct Running(Child);
+        impl Drop for Running {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+
+        let (_directory, root) = fixture(false);
+        let bin = root.requested_path().join(BASE).join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let name = std::ffi::OsStr::new("hive-running.exe");
+        let path = bin.join(name);
+        let source =
+            PathBuf::from(std::env::var_os("SystemRoot").unwrap()).join("System32/ping.exe");
+        std::fs::copy(source, &path).unwrap();
+        let expected = std::fs::read(&path).unwrap();
+        let mut running = Running(
+            Command::new(&path)
+                .args(["-t", "127.0.0.1"])
+                .creation_flags(0x0800_0000)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap(),
+        );
+        assert!(running.0.try_wait().unwrap().is_none());
+        let parent =
+            cap_std::fs::Dir::open_ambient_dir(&bin, cap_std::ambient_authority()).unwrap();
+        let failure = crate::run::remove_parent_file(&parent, name, &expected).unwrap_err();
+        let message = failure.to_string();
+        assert!(
+            message.contains("cannot remove claimed destination"),
+            "{message}"
+        );
+        assert!(message.contains("os error 5"), "{message}");
+        assert_eq!(std::fs::read(&path).unwrap(), expected);
+        let result = prune_unused(root.requested_path(), true).unwrap();
+        assert_eq!(result["removed"], json!([]));
+        let skipped = result["skipped"].as_array().unwrap();
+        assert_eq!(skipped.len(), 1);
+        assert_eq!(
+            skipped[0]["path"],
+            json!(Path::new(BASE).join("bin").join(name))
+        );
+        assert!(skipped[0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("os error 5"));
+        assert_eq!(std::fs::read(&path).unwrap(), expected);
+        assert_eq!(binary_names(&root), ["hive-running.exe"]);
+        assert!(running.0.try_wait().unwrap().is_none());
+        drop(running);
+        assert_eq!(
+            prune_unused(root.requested_path(), true).unwrap()["removed"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(binary_names(&root), Vec::<String>::new());
+    }
+
+    #[test]
     fn manual_prune_refuses_without_a_readable_current_record() {
         let (directory, root) = fixture(false);
         seed_binaries(&root, &["hive-a.exe", "hive-old.exe"]);

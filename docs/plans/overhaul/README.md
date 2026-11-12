@@ -2,15 +2,14 @@
 
 > 기준일: 2026-11-10
 > 설계 원본: Claude 문서 "aigent-hive 개편 계획"(검토용 초안). 실행 기준은 이 폴더
-> 범위: 사용자가 "재정비 계속"처럼 이 작업을 지정할 때의 실행 기준. 0.14.0 활성 계획은 그대로 유지
+> 범위: 사용자가 "재정비 계속"처럼 이 작업을 지정할 때의 실행 기준. 현재 활성 버전은 PLAN.md 기준
 
 ## 현재 위치
 
-- 현재 단계 브랜치: `fix/overhaul-1-0.14.1`
-- 다음 항목: `OV141-011`(정식 출시와 이 PC 갱신) ([overhaul-0.14.1.md](../active/overhaul-0.14.1.md))
-- 마지막 완료: `OV141-010`(develop 병합)
-- 승인 대기: 없음. 2026-11-12 사용자 승인: 0.14.1 안내문 원문·지문, 정식 통합·게시·Discord 전송·이 PC 갱신
-- 중단 메모: 2026-11-12 OV141-011: develop 통합·push(`ee9610bd`)·PR #91 생성 / 기존 `1c9a9efe`의 AI 공동 작성자 표기로 Branch policy 종료 1, main 병합·지문 등록·후보·게시·PC 갱신 미실행 / 바뀐 파일: 이 문서·[실패 근거](../../research/overhaul/OV141-011.md)·문서 목록·활성 항목
+- 단계 1b: 7/8 완료
+- 다음: [OV142-008 정식·PC 갱신](../../research/overhaul/OV142-008.md)
+- [test.2 수용](../../research/overhaul/OV142-007.md) 완료
+- 승인 대기 없음. 단계 2 시작·단계 브랜치 삭제 제외
 
 ## 재개 절차
 
@@ -33,9 +32,9 @@
 - 단계마다 전용 브랜치 하나. 다른 단계의 일은 그 브랜치에 커밋 금지
 - 새 단계 시작: 이전 단계의 develop 병합 확인 → `git switch develop` → `git pull --ff-only` → `python scripts/branch-policy.py create <단계 브랜치>` → 이 문서 "현재 위치"의 브랜치 갱신
 - 단계 작업의 모든 커밋은 단계 브랜치에. 이 문서와 단계 파일의 체크도 같은 브랜치에서 갱신
-- 병합 전 검토(2026-11-10 사용자 지시): 단계의 develop 병합 항목 직전에 Fable 5.2 advisor 하위 에이전트로 단계 전체 변경 검토, 발견한 이상은 같은 단계 브랜치에서 수정·확인 뒤 병합. 검토 결과는 병합 항목의 근거 문서에 기록
+- 병합 전 검토(2026-11-10 사용자 지시): 단계의 develop 병합 항목 직전에 Fable 5.2 advisor 하위 에이전트로 단계 전체 변경 검토, 발견한 이상은 같은 단계 브랜치에서 수정·확인 뒤 병합. 검토 결과는 병합 항목의 근거 문서에 기록. 모든 검토 요청에 [검토자 소유권 지침](../../../.agents/directives/references/agent-delegation.md#stage-review-and-release)의 관리자 원문 포함. 읽기 전용 검토자의 제품 목적·구조 판단과 큰 변경·위임 제안도 근거에 기록, 수용한 제안은 소유 계획 또는 새 단계 항목에 연결
 - 다음 단계 자동 진행(2026-11-10 사용자 지시): 병합 뒤 사용자 보고를 기다리지 않고 다음 단계 브랜치 생성과 진행
-- 구독자 안내 자동 승인(2026-11-12 사용자 지시): 재정비 전체 완료까지 모든 구독자 안내는 승인된 것으로 간주. 지문 비밀값 등록(`scripts/register-stable-summary-approval.py`)과 `send_subscriber_update=true` 정식 게시를 사용자 확인 없이 진행
+- 구독자 안내 자동 승인(2026-11-12 사용자 지시): 재정비 전체 완료까지 모든 구독자 안내는 승인된 것으로 간주. 안내 원문·지문 파일의 develop→main 검토 PR 승인과 `release-publication` 환경 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr`의 최초 1회 설정 후 `send_subscriber_update=true` 정식 게시를 사용자 확인 없이 진행
 - 단계 완료: 각 단계 파일의 "develop 병합과 단계 브랜치 종료" 항목으로 `develop`에 병합과 push. 제품 단계의 정식 출시는 병합 뒤 `develop`에서 진행(`main` PR의 head는 `develop`)
 - 단계 브랜치 삭제는 병합 뒤(제품 단계는 정식 출시 뒤)
 - 브랜치 전환 전 작업 트리는 깨끗한 상태. 미완료 일은 단계 브랜치에 커밋 뒤 전환
@@ -44,6 +43,7 @@
 | --- | --- |
 | 0 | `chore/overhaul-0-repo-cleanup` |
 | 1 | `fix/overhaul-1-0.14.1` |
+| 1b | `fix/overhaul-1-0.14.2` |
 | 2 | `test/overhaul-2-baseline` |
 | 3 | `feature/overhaul-3-0.15.0-orchestrator` |
 | 4 | `feature/overhaul-4-0.15.1-detection` |
@@ -77,8 +77,9 @@
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
-| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../active/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 10/11 |
-| 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.1 정식 | 0/10 |
+| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 10/11 |
+| 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 develop 병합, 2026-11-12 버전 승인 | 7/8 |
+| 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 확인 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-001 | 0/7 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/10 |

@@ -46,15 +46,15 @@ receipt = prefix / "share/aigent-hive/install-receipt.json"
 if owner == "direct":
     receipt.parent.mkdir(parents=True)
     receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.1", "package_version": "0.14.1", "artifact_sha256": "sha256:" + binary_hash}))
+        "version": "0.14.2", "package_version": "0.14.2", "artifact_sha256": "sha256:" + binary_hash}))
 else:
     (binary.parent.parent / "package.json").write_text(json.dumps({"name": native_package,
-        "version": "0.14.1", "aigentHive": {"productVersion": "0.14.1"}}))
+        "version": "0.14.2", "aigentHive": {"productVersion": "0.14.2"}}))
     (staging / "bin").mkdir()
     shutil.copyfile(ROOT / "packaging/npm/bin/hive.cjs", staging / "bin/hive.cjs")
-    (staging / "package.json").write_text(json.dumps({"name": "aigent-hive", "version": "0.14.1",
-        "aigentHive": {"productVersion": "0.14.1"}, "bin": {"hive": "bin/hive.cjs"},
-        "dependencies": {native_package: "0.14.1"}, "bundleDependencies": [native_package]}))
+    (staging / "package.json").write_text(json.dumps({"name": "aigent-hive", "version": "0.14.2",
+        "aigentHive": {"productVersion": "0.14.2"}, "bin": {"hive": "bin/hive.cjs"},
+        "dependencies": {native_package: "0.14.2"}, "bundleDependencies": [native_package]}))
 
 settings = {"schema_version": 1, "interface_language": "en",
     "wiki": {"enabled": True, "language": "both"}, "profile": {"contexts": ["web-developer"]},
@@ -151,7 +151,7 @@ try:
         entry = [str(node), str(npm_root / "aigent-hive/bin/hive.cjs")]
         version = subprocess.run([*entry, "--version"], env=environment,
                                  capture_output=True, text=True, timeout=15)
-        assert version.returncode == 0 and "0.14.1" in version.stdout, (version.stdout, version.stderr)
+        assert version.returncode == 0 and "0.14.2" in version.stdout, (version.stdout, version.stderr)
         for relative in ["hive-test-foreign/package.json", "hive-test-foreign/README.md"]:
             path = npm_root / relative
             preserved[path] = path.read_bytes()

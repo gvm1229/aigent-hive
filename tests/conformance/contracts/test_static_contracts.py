@@ -165,17 +165,24 @@ class Phase3SkillSourceContract(unittest.TestCase):
             for root in [PLUGIN_SKILLS, TEMPLATE_SKILLS, ROOT / "harness/template/.claude/skills"]:
                 self.assertEqual((root / name / "SKILL.md").read_bytes(), canonical, (root, name))
 
-    def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
+    def test_source_worktree_lifecycle_keeps_creation_and_cleanup_boundaries(self) -> None:
         workflow = directive_text(".agents/directives/03-workflow.md")
         coordination = directive_text(".agents/directives/06-session-coordination.md")
         normalized = " ".join(workflow.split())
-        self.assertIn("one primary worktree", normalized)
-        self.assertIn("convenience", normalized)
-        self.assertIn("parallel independent changes", normalized)
+        self.assertIn("as many temporary worktrees as the job needs", normalized)
+        self.assertIn("grant branch authority", normalized)
+        self.assertIn("record exact absolute path", normalized)
+        self.assertIn("verify reachability and required pushes", normalized)
+        self.assertIn("git worktree remove <exact-path>", normalized)
+        self.assertIn("delete its merged branch locally and on origin", normalized)
+        self.assertIn("Do not use `--force`", normalized)
         self.assertIn("immediately after", normalized)
         self.assertIn("uncommitted", normalized)
         self.assertIn("unpushed", normalized)
-        self.assertIn("worktree lifecycle rules belong to `03-workflow.md`", coordination)
+        self.assertIn(
+            "Worktree authority, lifecycle, cleanup and commit sequencing: `03-workflow.md`",
+            " ".join(coordination.split()),
+        )
         self.assertIn("## Temporary Worktrees", coordination)
 
     def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:

@@ -6,23 +6,23 @@
 
 > Codex, Claude Code(검증 전), Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.14.1-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.14.2-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.1 release-date=2026-11-11 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.14.1`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.14.2`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.14.1|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.14.2|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.14.1
+npm install -g aigent-hive@0.14.2
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.14.1 (released 2026-11-11)
+AIgent Hive v0.14.2 (released 2026-11-12)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.14.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.14.2/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.14.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.14.2/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.2/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.14.1. The stable install guidance is
+Install the current stable release 0.14.2. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,13 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.14.1 주요 변경
+## 0.14.2 주요 변경
+
+- 갱신 뒤와 `hive prune --confirm`에서 1 MiB 초과·128 MiB 이하인 오래된 감시 프로그램 사본 정리 복구
+- 현재·직전 사본 보관, Windows 잠금 파일과 정확한 바이트 검증 실패 파일 보존
+- 감시 프로그램 사본의 기존 128 MiB 입력 한도 유지
+
+## 이전 0.14.1 변경
 
 - 전역 사용량 하한 변경 때 저장된 선택 기록의 유효성 유지와 변경 성공
 - 직접 해제한 지식 연결의 해제 유지, 동기화·재구성의 재연결 없음. 사용 전 명시적 재연결 필요
@@ -118,7 +124,7 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.14.1 근거 |
+| Platform | Native target | 0.14.2 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -128,7 +134,7 @@ an optional third-party Skill.
 
 공개 시험의 Windows x64·Linux x64·macOS arm64 설정·취소·복구·갱신·제거·재설치 수용.
 Windows의 실제 Codex CLI 등록·대기 감시 포함, 모든 호스트의 실제 데스크톱 모델·할당량 조회 증명 제외.
-Claude Code의 실제 구독 세션 미검증. Stable `0.14.1`: macOS ad-hoc signing,
+Claude Code의 실제 구독 세션 미검증. Stable `0.14.2`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 

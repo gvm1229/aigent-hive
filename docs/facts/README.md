@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| Fable 검토 소유권 | [en](en/fable-advisor-ownership.md) | [ko](ko/fable-advisor-ownership.md) · [근거](../research/fable-advisor-ownership.md) |
 | 임계값 확인 기록의 일치 | [en](en/usage-threshold-provenance.md) | [ko](ko/usage-threshold-provenance.md) |
 | 프로젝트 지식 저장과 접근 | [en](en/project-knowledge-storage-policy.md) | [ko](ko/project-knowledge-storage-policy.md) |
 | Windows 실행 파일의 버전 문자 해석 | [en](en/windows-native-version-output.md) | [ko](ko/windows-native-version-output.md) |
@@ -170,3 +171,7 @@ Derived SQLite와 advisory lock:
 - [0.13.2 이전 사용량 보호 사실 본문 보존](../archive/facts/usage-guard-before-0.13.2.md)
 
 | 사용량 중단 기본 비활성화 계획 | [en](en/usage-default-off-scope.md) | [ko](ko/usage-default-off-scope.md) |
+
+| 재정비 구독자 안내 자동 승인 | [English](en/overhaul-subscriber-approval.md) | [한국어](ko/overhaul-subscriber-approval.md) |
+
+| 감시 실행 파일 보관 | [en](en/monitor-executable-retention.md) | [ko](ko/monitor-executable-retention.md) |
