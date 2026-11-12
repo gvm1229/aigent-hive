@@ -9,7 +9,7 @@ summary: "Signed Prepare binds host capabilities without enabling worker executi
 tags: [orchestration, roster]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/orchestration.rs#sha256:1a25eb0b8b4d3c44169b0156e2001c7591f5657f8a947e0dfc1f0f476251b044"
+  - "repo:crates/hive-cli/src/orchestration.rs#sha256:c5aa8621ee66d4846b9a27a1901a738035af14659a1ebbde13734e94ee7b1833"
   - "repo:crates/hive-cli/src/summon.rs#sha256:6cb0331f2e20b87233d0e8bd9ee8a4dc3f51148e8301867ed0a7333daadfadc9"
   - "repo:crates/hive-core/src/roster.rs#sha256:eaeb59413d1900bcc00ef36e40e35ddd06baff94a8ce129993d622c3991232ea"
   - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:ce73d78bda06047d4fe899e1f62f669389978675d668fe37a5a6800bfb76bd10"

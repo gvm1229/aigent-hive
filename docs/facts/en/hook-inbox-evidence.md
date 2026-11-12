@@ -17,6 +17,6 @@ status: active
 
 # Hook inbox evidence boundary
 
-For OV150-001, a Windows host handler can consume a file envelope and call subscription-authenticated Codex. Synthetic hook input proves only the handler leg. Completion also needs an interactive Claude session that receives the official hook feedback and reports the matching result and receipt. Never replace this proof with headless Claude, a stored return JSON, or a worker exit code.
+Windows 11 with interactive Claude Code 2.1.322 and subscription-authenticated Codex completed OV150-001: Stop, one worker call, result and receipt, then matching Claude feedback. Replay caused no extra call but returned no receipt; OV160-002/003 own that gap. Gemini, other OSes and real-host cancellation/reclaim remain unverified.
 
-UserPromptSubmit can fire without an assistant turn. Its queue files alone prove neither Stop nor worker dispatch. An output-free Stop must retain a recoverable pending request without claiming execution.
+Synthetic hook inputs alone prove only the handler leg. Queue files do not prove Stop or dispatch. Output-free Stop must keep pending work recoverable. The 0.15.0 product stays disabled with no activation path.
