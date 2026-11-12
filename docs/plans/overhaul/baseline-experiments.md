@@ -44,7 +44,7 @@
   - 변경: 창 강제 종료 뒤 `claude -r`·`codex resume`·`gemini -r` 재개, 인증 만료·한도 도달 화면 문구 수집, 같은 계정 동시 창 3개의 사용량 소모 관찰, Gemini `modelConfigs.customAliases`의 `thinkingLevel` 효과
   - 확인: 재개 결과·감지 문구·소모량 표, Gemini 별칭 형식 확정
 - [x] [OVX-008] 제공자 약관 원문 재확인
-  - state: complete; evidence: repo:docs/research/overhaul/OVX-008.md#sha256:7e3b077e54987b5cc0d835bc06daa59cafe04948460963dd6d0fc25d3e263c8b
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-008.md#sha256:67722d841b3fa50ad242ea8c715ff98893cf200a2994ca6a50d8acf132ce5bb2
   - 근거: [공식 약관과 판정](../../research/overhaul/OVX-008.md)
   - 변경: Anthropic·OpenAI·Google의 현재 약관·정책에서 대화형 CLI의 자동 입력·병렬 사용 조건 확인. 조항 요약·출처·마지막 확인일 기록
   - 확인: 세 제공자 표 완성, 확인일 90일 이내
