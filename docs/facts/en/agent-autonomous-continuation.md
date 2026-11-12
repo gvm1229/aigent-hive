@@ -18,7 +18,7 @@ sources:
   - "repo:harness/directives/00-project-harness.md#sha256:5d4e8b3c34a968b86735f59d449b194021c16ff8e9b4741b4c3ccaf130aa94b6"
   - "repo:harness/skills/usage-guard/references/control.md#sha256:4c71dbbc592620844bff81765151014d4a657924d03aea602c08bc517e1c8727"
   - "repo:harness/template/AGENTS.md.jinja#sha256:ab0902d90e75ac32219217b3617c46008f3a906a84a68453bf389fd69e9ec529"
-  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:f55b00d6b7a34433fe32eb03d0914cc3e8726c879591a46b4c09fb70b4686b82"
+  - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:b53ec86c9ad9e878ea0792b85145b9ba7db212242059a881b7c5c3218e1b14b9"
 links: [automated-user-handoff, source-development, steering-preservation]
 reviewed_revision: "git:be1a9fc625b4bdb79597be8c3c081381d23e23d3"
 status: active
