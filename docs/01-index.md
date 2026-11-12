@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.1 release-date=2026-11-11 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -91,7 +91,6 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
-| [`0.14.2`](releases/0.14.2.md) | 큰 감시 실행 파일 정리 복구 |
 | [`0.14.1`](releases/0.14.1.md) | 임계값 기록·지식 연결 수정, 감시 실행 파일 정리, 저장 공간 보고 |
 | [`0.14.0`](releases/0.14.0.md) | 모델 없는 터미널 설정·재개·자료 보존 제거 |
 | [`0.13.2`](releases/0.13.2.md) | 정식 게시 보류·기능 호환/소진 보호 개발 기록 |
