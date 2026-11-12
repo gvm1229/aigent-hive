@@ -103,6 +103,7 @@
         "LintSourceWiki",
         "QuerySourceWiki",
         "RebuildSourceWikiIndex",
+        "Summon",
         "Orchestration",
         "OrchestrationStatus",
         "OrchestrationPlan",

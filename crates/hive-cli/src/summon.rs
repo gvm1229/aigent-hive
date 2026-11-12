@@ -1,5 +1,6 @@
 //! Inert inbox preparation through the existing signed orchestration transaction.
 use crate::run::{parse_options, read_explicit_file, required, PinnedTarget};
+use crate::ActionResult;
 use hive_core::{
     orchestration::{DispatchState, SummonEnvelope},
     roster::{CapabilityReport, Roster},
@@ -35,10 +36,24 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         Err(error) => {
             println!(
                 "{}",
-                json!({"status":"refused","enabled":false,"message":error})
+                serde_json::to_value(refusal(error)).expect("serializable action result")
             );
             ExitCode::from(2)
         }
+    }
+}
+fn refusal(error: String) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "Summon",
+        status: "error",
+        exit_code: 2,
+        code: "hive.summon-refused",
+        message: error,
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({"enabled":false})),
     }
 }
 fn execute(args: &[String]) -> Result<serde_json::Value, String> {
@@ -116,7 +131,12 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     let digest = envelope.digest()?;
     if !options.iter().any(|(k, _)| *k == "--event") {
         return Ok(
-            json!({"status":"preview","envelope":envelope,"request_digest":digest,"mutation_count":0,"enabled":false}),
+            serde_json::to_value(ActionResult {
+                schema_version: 1, action: "Summon", status: "success", exit_code: 0,
+                code: "hive.summon-preview", message: "inert summon preview".into(),
+                changed_paths: Vec::new(), evidence: Vec::new(), next_action: None,
+                data: Some(json!({"preview":true,"envelope":envelope,"request_digest":digest,"mutation_count":0,"enabled":false})),
+            }).map_err(|e| e.to_string())?,
         );
     }
     get("--capabilities")?;
@@ -137,7 +157,8 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
         })
         .flat_map(|(k, v)| [(*k).to_owned(), (*v).to_owned()])
         .collect();
-    let result = crate::orchestration::prepare_summon(&mutation, &envelope, &task)?;
+    let mut result = crate::orchestration::prepare_summon(&mutation, &envelope, &task)?;
+    result.action = "Summon";
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
@@ -172,9 +193,24 @@ mod tests {
         .map(str::to_owned);
         let first = execute(&args).unwrap();
         assert_eq!(first, execute(&args).unwrap());
-        assert_eq!(first["mutation_count"], 0);
-        assert_eq!(first["envelope"]["target_digest"], sha256_digest(path.as_bytes()));
-        assert!(first["envelope"].get("target_project").is_none());
+        for value in [
+            &first,
+            &serde_json::to_value(refusal("test refusal".into())).unwrap(),
+        ] {
+            hive_core::validate_json_schema(
+                include_str!("../../../schemas/action-result.schema.json"),
+                value,
+                "summon action result",
+            )
+            .unwrap();
+            assert_eq!(value["action"], "Summon");
+        }
+        assert_eq!(first["data"]["mutation_count"], 0);
+        assert_eq!(
+            first["data"]["envelope"]["target_digest"],
+            sha256_digest(path.as_bytes())
+        );
+        assert!(first["data"]["envelope"].get("target_project").is_none());
         assert!(!first.to_string().contains(path));
         assert!(!root.path().join(".hive").exists());
         let profile = Roster::defaults()
@@ -202,13 +238,13 @@ mod tests {
         ]);
         let bound = execute(&qualified).unwrap();
         assert_eq!(
-            bound["envelope"]["capability_digest"],
+            bound["data"]["envelope"]["capability_digest"],
             sha256_digest(&bytes)
         );
         std::fs::write(&report_path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
         assert_ne!(
-            bound["request_digest"],
-            execute(&qualified).unwrap()["request_digest"]
+            bound["data"]["request_digest"],
+            execute(&qualified).unwrap()["data"]["request_digest"]
         );
         let mut invalid = serde_json::to_value(&report).unwrap();
         invalid["version"] = json!("");

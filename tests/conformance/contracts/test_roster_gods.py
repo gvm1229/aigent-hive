@@ -57,7 +57,7 @@ class GodCliTests(Phase1CliTestCase):
             config=read_yaml(config_path);config['interface_language']=language;write_yaml(config_path,config)
             result=self.call('summon','하데스','--task','bounded task','--target',project,'--user-root',self.setup_user_root,'--run','run-1','--action','task-1','--expected-head','none','--control-epoch','0','--authority-id','auth-1','--output','json')
             self.assertEqual(result.returncode,0,result.stderr)
-            payload=json.loads(result.stdout);self.assertEqual(payload['announcement'],expected)
+            action=json.loads(result.stdout);self.assertEqual(action['action'],'Summon');payload=action['data'];self.assertEqual(payload['announcement'],expected)
             self.assertIn('[Hades]',result.stderr);self.assertFalse(payload['enabled']);self.assertEqual(payload['mutation_count'],0)
             digests.append(payload['request_digest']);self.assertFalse((project/'.hive').exists())
         self.assertEqual(digests[0],digests[1])
