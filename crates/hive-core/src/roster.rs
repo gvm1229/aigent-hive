@@ -343,12 +343,7 @@ impl Roster {
         let minimum = self.providers[provider]
             .minimum_version
             .as_deref()
-            .unwrap_or(match provider {
-                "codex" => "0.167.2",
-                "claude" => "2.1.163",
-                "gemini" => "0.35.3",
-                _ => return Err("unknown provider".into()),
-            });
+            .ok_or("missing minimum version in provider configuration")?;
         if version < version_tuple(minimum).ok_or("invalid minimum version")? {
             return Err("unsupported installed version".into());
         }
