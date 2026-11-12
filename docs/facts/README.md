@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 재정비 기준선 | [en](en/overhaul-baseline.md) | [ko](ko/overhaul-baseline.md) |
 | Fable 검토 소유권 | [en](en/fable-advisor-ownership.md) | [ko](ko/fable-advisor-ownership.md) · [근거](../research/fable-advisor-ownership.md) |
 | 임계값 확인 기록의 일치 | [en](en/usage-threshold-provenance.md) | [ko](ko/usage-threshold-provenance.md) |
 | 프로젝트 지식 저장과 접근 | [en](en/project-knowledge-storage-policy.md) | [ko](ko/project-knowledge-storage-policy.md) |
