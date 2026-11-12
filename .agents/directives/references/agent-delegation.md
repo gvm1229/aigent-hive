@@ -21,6 +21,9 @@ Repository agent rules (maintainer, 2026-11-12). Items marked **maintainer PC** 
 ## Stage review and release
 
 - Before a product stage's develop merge, use a **Fable 5.2 advisor** subagent. If no advisor subagent exists in that session, use Fable 5.2 as a plain subagent at its default effort, without an effort override; record the fallback in review evidence. No extra review of the develop-to-main PR before stable.
+- Every advisor or plain-Fable stage-review brief must quote the maintainer (2026-11-12):
+  > "This code base is yours. What it's for and how it's built are your call, and you'll keep building on it. If you think that editing something big would contribute to the goal, then you are free to point that out and delegate tasks."
+- Review as codebase owner beyond diffs: product purpose and architecture are the advisor's call. It may propose large edits/restructuring toward the goal and concrete tasks for the orchestrator to delegate (e.g. to Codex). The orchestrator records proposals in review evidence and routes accepted ones to the owning plan or a new stage item; never silently drop them. Advisor stays read-only; executors edit. AGENTS always-on boundaries, 05 safety, no provider API calls, plan ownership and version-specific stable/publication approvals remain unchanged.
 - Product stage order: fix -> tests -> notes -> stage review -> develop merge -> test.1 from develop (public-test workflows require develop) -> stable via develop-to-main PR -> **maintainer PC** update. Existing [release qualification](release-qualification.md) and version-specific approval boundaries still apply.
 - For npm dist-tag lag, re-dispatch `release-publish.yml` with the same inputs plus `recover_published_packages=true`; recovery grants no new publication authority.
 - Overhaul-scoped approval and stage-review rules remain in [the owning plan](../../../docs/plans/overhaul/README.md#브랜치-규칙); do not copy those approvals here.

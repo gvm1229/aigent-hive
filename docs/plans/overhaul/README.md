@@ -33,7 +33,7 @@
 - 단계마다 전용 브랜치 하나. 다른 단계의 일은 그 브랜치에 커밋 금지
 - 새 단계 시작: 이전 단계의 develop 병합 확인 → `git switch develop` → `git pull --ff-only` → `python scripts/branch-policy.py create <단계 브랜치>` → 이 문서 "현재 위치"의 브랜치 갱신
 - 단계 작업의 모든 커밋은 단계 브랜치에. 이 문서와 단계 파일의 체크도 같은 브랜치에서 갱신
-- 병합 전 검토(2026-11-10 사용자 지시): 단계의 develop 병합 항목 직전에 Fable 5.2 advisor 하위 에이전트로 단계 전체 변경 검토, 발견한 이상은 같은 단계 브랜치에서 수정·확인 뒤 병합. 검토 결과는 병합 항목의 근거 문서에 기록
+- 병합 전 검토(2026-11-10 사용자 지시): 단계의 develop 병합 항목 직전에 Fable 5.2 advisor 하위 에이전트로 단계 전체 변경 검토, 발견한 이상은 같은 단계 브랜치에서 수정·확인 뒤 병합. 검토 결과는 병합 항목의 근거 문서에 기록. 모든 검토 요청에 [검토자 소유권 지침](../../../.agents/directives/references/agent-delegation.md#stage-review-and-release)의 관리자 원문 포함. 읽기 전용 검토자의 제품 목적·구조 판단과 큰 변경·위임 제안도 근거에 기록, 수용한 제안은 소유 계획 또는 새 단계 항목에 연결
 - 다음 단계 자동 진행(2026-11-10 사용자 지시): 병합 뒤 사용자 보고를 기다리지 않고 다음 단계 브랜치 생성과 진행
 - 구독자 안내 자동 승인(2026-11-12 사용자 지시): 재정비 전체 완료까지 모든 구독자 안내는 승인된 것으로 간주. 안내 원문·지문 파일의 develop→main 검토 PR 승인과 `release-publication` 환경 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr`의 최초 1회 설정 후 `send_subscriber_update=true` 정식 게시를 사용자 확인 없이 진행
 - 단계 완료: 각 단계 파일의 "develop 병합과 단계 브랜치 종료" 항목으로 `develop`에 병합과 push. 제품 단계의 정식 출시는 병합 뒤 `develop`에서 진행(`main` PR의 head는 `develop`)
