@@ -98,7 +98,7 @@
 ## 불변 조건
 
 - 모델·제공자 API 직접 호출, API 키·자격 증명 파일 읽기·복사 금지
-- 공식 CLI(`claude`·`codex`·`gemini`)는 다중화 창(tmux·psmux·cmux) 안의 대화형 세션으로만 실행. 헤드리스는 보조 경로
+- OVX-009 승인 대기 제안: 공식 CLI(`claude`·`codex`·`gemini`)의 다중화 창(tmux·psmux·cmux) 대화형 실행 우선, 헤드리스는 보조 경로. 확정 설계·현재 실행 권한과 구분. 승인 전 02의 Runtime and orchestration·Skill boundary 경계 유지
 - 정본은 Markdown·YAML·TOML, SQLite는 재생성 가능한 파생물
 - 사용자 바이트·과거 기준본 보존, 적용은 미리보기·확인 뒤
 - 정식 이후 새 제품 바이트는 새 버전과 test.1. 재정비 범위의 정식 태그·게시·설치는 위 상시 승인 조건 적용
