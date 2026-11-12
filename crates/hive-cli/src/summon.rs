@@ -102,14 +102,14 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
         task_file: format!(".hive/runs/{run}/tasks/{action}.md"),
         task_digest: sha256_digest(&task),
         capability_digest,
-        target_project: target.requested_path().to_string_lossy().into_owned(),
+        target_digest: sha256_digest(target.requested_path().to_string_lossy().as_bytes()),
         event_head: get("--expected-head")?.into(),
         control_epoch: get("--control-epoch")?
             .parse()
             .map_err(|_| "invalid control epoch")?,
         authority_id: get("--authority-id")?.into(),
         idempotency_key: format!("{run}-{action}"),
-        result_path: format!(".hive/runs/{run}/results/{action}.json"),
+        result_path: format!(".hive/runs/{run}/results/{action}.txt"),
         state: DispatchState::Prepared,
         enabled: false,
     };
@@ -173,6 +173,9 @@ mod tests {
         let first = execute(&args).unwrap();
         assert_eq!(first, execute(&args).unwrap());
         assert_eq!(first["mutation_count"], 0);
+        assert_eq!(first["envelope"]["target_digest"], sha256_digest(path.as_bytes()));
+        assert!(first["envelope"].get("target_project").is_none());
+        assert!(!first.to_string().contains(path));
         assert!(!root.path().join(".hive").exists());
         let profile = Roster::defaults()
             .unwrap()

@@ -1321,7 +1321,7 @@ pub struct SummonEnvelope {
     pub task_file: String,
     pub task_digest: String,
     pub capability_digest: Option<String>,
-    pub target_project: String,
+    pub target_digest: String,
     pub event_head: String,
     pub control_epoch: u64,
     pub authority_id: String,
@@ -1350,7 +1350,7 @@ impl SummonEnvelope {
                 .capability_digest
                 .as_ref()
                 .is_some_and(|digest| !valid_digest(digest))
-            || self.target_project.is_empty()
+            || !valid_digest(&self.target_digest)
             || !self.profile.supported
             || self.profile.provider == "claude"
         {
@@ -1397,7 +1397,7 @@ mod summon_tests {
             task_file: ".hive/runs/run-1/tasks/task-1.md".into(),
             task_digest: crate::sha256_digest(b"task"),
             capability_digest: Some(crate::sha256_digest(b"capabilities")),
-            target_project: "consumer".into(),
+            target_digest: crate::sha256_digest(b"consumer"),
             event_head: "none".into(),
             control_epoch: 0,
             authority_id: "auth-1".into(),

@@ -917,7 +917,7 @@ fn mutate_with_summon(
             || envelope.event_head != actual_head
             || envelope.control_epoch != event.control_epoch
             || envelope.authority_id != event.authority_id
-            || envelope.target_project != target.requested_path().to_string_lossy()
+            || envelope.target_digest != target_digest(&target)
             || event.payload_digest != digest
             || event.request_digest != digest
             || envelope.task_digest != sha256_digest(task)
@@ -2397,7 +2397,7 @@ mod tests {
             task_file: ".hive/runs/run-1/tasks/action-1.md".into(),
             task_digest: sha256_digest(task),
             capability_digest: Some(sha256_digest(b"capabilities")),
-            target_project: target.requested_path().to_string_lossy().into_owned(),
+            target_digest: target_digest(&target),
             event_head: format!("1:{}", reserve.digest().unwrap()),
             control_epoch: 0,
             authority_id: "prepare-1".into(),
