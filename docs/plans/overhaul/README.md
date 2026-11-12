@@ -86,8 +86,8 @@
 | 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합·버전 승인 | 11/11 |
 | 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 병합·2026-11-12 승인 | 8/8 |
 | 2 기준선·공식 확장점 결정 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 | 10/10 처리 |
-| 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 0/6 |
-| 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-002 | 0/7 |
+| 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](../active/0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 0/6 |
+| 3 0.15.0 하위 기능 | [0.15.0-gods.md](../active/0.15.0-gods.md) | 있음 | OV150-002 | 0/7 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/10 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |

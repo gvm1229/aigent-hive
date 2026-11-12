@@ -37,7 +37,7 @@
   - state: complete; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
   - 근거 보존: [환경·차단 기록](../../research/overhaul/OVX-005.md)
   - 종료 이유: ADR-0026의 공식 확장점 한정으로 창 열기·자동 입력·화면 회수 실험 폐기. 실제 제공자 실행 성공과 구분
-  - 대체: 단계 3 [OV150-001](0.15.0-orchestrator.md)의 프로젝트 한정 훅·파일 봉투·Codex 왕복, 후속 작업자 프로필·복구 검증
+  - 대체: 단계 3 [OV150-001](../active/0.15.0-orchestrator.md)의 프로젝트 한정 훅·파일 봉투·Codex 왕복, 후속 작업자 프로필·복구 검증
 - [x] [OVX-006] 창 실험 2 — 새 설계로 대체 종료
   - state: complete; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
   - 근거 보존: [알림 왕복 미실행](../../research/overhaul/OVX-006.md)
