@@ -2386,29 +2386,39 @@ mod tests {
         );
 
         let task = b"bounded task";
+        let capability_bytes = serde_json::to_vec(&json!({
+            "provider": "codex", "version": "0.167.2",
+            "version_output": "codex-cli 0.167.2",
+            "help_output": "--model -o --output-last-message --sandbox --skip-git-repo-check --ephemeral -C --cd",
+            "login_status_output": "Logged in using ChatGPT",
+            "models": {"gpt-5.6-luna": ["max"]},
+            "project_hook_events": ["Stop", "UserPromptSubmit"]
+        })).unwrap();
+        let capability_path = temporary.path().join("capabilities.json");
+        std::fs::write(&capability_path, &capability_bytes).unwrap();
         let mut envelope = hive_core::orchestration::SummonEnvelope {
             schema_version: 1,
             run_id: "run-1".into(),
             action_id: "action-1".into(),
-            role: "role-1".into(),
+            role: "hive-routine-implementer".into(),
             profile: hive_core::roster::Roster::defaults()
                 .unwrap()
                 .worker_profile("hive-routine-implementer")
                 .unwrap(),
             task_file: ".hive/runs/run-1/tasks/action-1.md".into(),
             task_digest: sha256_digest(task),
-            capability_digest: Some(sha256_digest(b"capabilities")),
+            capability_digest: Some(sha256_digest(&capability_bytes)),
             target_digest: target_digest(&target),
             event_head: format!("1:{}", reserve.digest().unwrap()),
             control_epoch: 0,
             authority_id: "prepare-1".into(),
             idempotency_key: "run-1-action-1".into(),
-            result_path: ".hive/runs/run-1/results/action-1.json".into(),
+            result_path: ".hive/runs/run-1/results/action-1.txt".into(),
             state: DispatchState::Prepared,
             enabled: false,
         };
         let digest = envelope.digest().unwrap();
-        let authority = signed_authority(
+        let mut authority = signed_authority(
             &signing_key,
             "prepare-1",
             AuthorityAction::Plan,
@@ -2416,6 +2426,15 @@ mod tests {
             &envelope.event_head,
             0,
             &digest,
+        );
+        authority.role_id.clone_from(&envelope.role);
+        authority.signature = format!(
+            "ed25519:{}",
+            hex_bytes(
+                &signing_key
+                    .sign(&authority.signing_message().unwrap())
+                    .to_bytes()
+            )
         );
         let auth_path = temporary.path().join("prepare-auth.toml");
         std::fs::write(&auth_path, toml::to_string(&authority).unwrap()).unwrap();
@@ -2486,7 +2505,7 @@ mod tests {
             envelope.event_head = format!("2:{competing_digest}");
             envelope.authority_id = "prepare-after-crash".into();
             let digest = envelope.digest().unwrap();
-            let authority = signed_authority(
+            let mut authority = signed_authority(
                 &signing_key,
                 &envelope.authority_id,
                 AuthorityAction::Plan,
@@ -2494,6 +2513,15 @@ mod tests {
                 &envelope.event_head,
                 0,
                 &digest,
+            );
+            authority.role_id.clone_from(&envelope.role);
+            authority.signature = format!(
+                "ed25519:{}",
+                hex_bytes(
+                    &signing_key
+                        .sign(&authority.signing_message().unwrap())
+                        .to_bytes()
+                )
             );
             std::fs::write(&args.authority, toml::to_string(&authority).unwrap()).unwrap();
             event.sequence = 3;
@@ -2505,8 +2533,54 @@ mod tests {
             args.expected_head.clone_from(&envelope.event_head);
             args.request_digest = digest;
         }
-        let result = mutate_with_summon("plan", &args, Some((&envelope, task))).unwrap();
-        assert_eq!(result.data.unwrap()["state"], "prepared");
+        if let Ok(binary) = std::env::var("HIVE_PUBLIC_CONFORMANCE_BIN") {
+            let user_root = temporary.path().join("fixture-home");
+            std::fs::create_dir(&user_root).unwrap();
+            let output = std::process::Command::new(binary)
+                .args([
+                    "summon",
+                    "hive-routine-implementer",
+                    "--task",
+                    "bounded task",
+                ])
+                .arg("--target")
+                .arg(&target_path)
+                .arg("--user-root")
+                .arg(user_root)
+                .args([
+                    "--run",
+                    "run-1",
+                    "--action",
+                    "action-1",
+                    "--expected-head",
+                    &args.expected_head,
+                    "--control-epoch",
+                    "0",
+                    "--authority-id",
+                    &envelope.authority_id,
+                ])
+                .arg("--event")
+                .arg(&args.event)
+                .arg("--authority")
+                .arg(&args.authority)
+                .arg("--trust-root")
+                .arg(&args.trust_root)
+                .args(["--request-digest", &args.request_digest, "--now", &args.now])
+                .arg("--capabilities")
+                .arg(&capability_path)
+                .args(["--output", "json"])
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        } else {
+            let result = mutate_with_summon("plan", &args, Some((&envelope, task))).unwrap();
+            assert_eq!(result.data.unwrap()["state"], "prepared");
+        }
         assert!(target_path
             .join(".hive/runs/run-1/inbox/action-1.json")
             .is_file());
@@ -2518,6 +2592,38 @@ mod tests {
         assert!(!target_path.join(&envelope.result_path).exists());
         let loaded = load_chain(&target, "run-1").unwrap();
         assert_eq!(loaded.state.state, Some(DispatchState::Prepared));
+        // Nonshipping conformance consumes the actual signed-Prepare publication.
+        let context_path = temporary.path().join("host-context.json");
+        std::fs::write(
+            &context_path,
+            serde_json::to_vec(&json!({
+                "request_digest": envelope.digest().unwrap(),
+                "event_head": envelope.event_head,
+                "control_epoch": envelope.control_epoch,
+                "authority_id": envelope.authority_id,
+                "idempotency_key": envelope.idempotency_key,
+                "fencing_token": 1,
+                "capability_file": capability_path,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let script = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/host-handler/consume_fixture.py");
+        let output = std::process::Command::new(if cfg!(windows) { "python" } else { "python3" })
+            .arg(script)
+            .arg(&target_path)
+            .arg(context_path)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let receipt = HostReceipt::parse_json(&output.stdout).unwrap();
+        assert_eq!(receipt.source_digest, envelope.digest().unwrap());
+        assert_eq!(receipt.outcome.as_deref(), Some("succeeded"));
     }
 
     #[test]
