@@ -34,7 +34,8 @@
   - 변경: `tests/work/pane-lab/` 스크립트. Windows psmux와 WSL·macOS tmux에서 3창 열기, `claude --model --effort`·`codex -m -c model_reasoning_effort=`·`gemini -m` 대화형 실행, `send-keys -l`로 한글·긴 문장 입력, `capture-pane`으로 상태 읽기
   - 확인: 각 창의 지정 모델·수준 표시, 입력 손실 0건, 자격 증명 파일 접근 0건
 - [ ] [OVX-006] 창 실험 2 — 입력 대기 감지와 알림 왕복
-  - state: agent-owned; depends: OVX-005
+  - state: blocked; depends: OVX-005; owner: provider; reason: OVX-005 실제 창 미수용과 OVX-008 자동 입력 허용 미확인
+  - 근거: [훅·왕복 미실행과 해결 경로](../../research/overhaul/OVX-006.md)
   - 변경: Claude Code `Stop`·`Notification` 훅, Codex `notify`, Gemini CLI 훅으로 대기 신호 파일 기록. 대기 창에만 알림 한 줄 입력
   - 확인: 작업 중 창 입력 0건, 대기 → 알림 → 메시지 상자 읽기 왕복 3회 성공
 - [ ] [OVX-007] 창 실험 3 — 종료·재개·한도·추론 수준
