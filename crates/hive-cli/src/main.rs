@@ -678,15 +678,13 @@ fn usage_unknown_result_with_next(
         code: "hive.usage-unknown",
         message: message.to_owned(),
         changed_paths: Vec::new(),
-        evidence: evidence_digest
-            .map(|digest| {
-                vec![Evidence {
-                    kind: "report",
-                    locator: "usage-snapshots:normalized".to_owned(),
-                    digest,
-                }]
-            })
-            .unwrap_or_default(),
+        evidence: evidence_digest.map_or_else(Vec::new, |digest| {
+            vec![Evidence {
+                kind: "report",
+                locator: "usage-snapshots:normalized".to_owned(),
+                digest,
+            }]
+        }),
         next_action,
         data: None,
     }

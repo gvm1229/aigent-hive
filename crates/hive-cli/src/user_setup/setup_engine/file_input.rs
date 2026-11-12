@@ -175,8 +175,9 @@ pub(in crate::user_setup) fn execute(
         // Validation is not a new answer and must not invent provenance for an old file.
         config.preference_decisions = current
             .as_ref()
-            .map(|config| config.preference_decisions.clone())
-            .unwrap_or_default();
+            .map_or_else(std::collections::BTreeMap::new, |config| {
+                config.preference_decisions.clone()
+            });
     } else {
         annotate(
             &mut config,

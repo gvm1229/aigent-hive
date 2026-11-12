@@ -3235,14 +3235,13 @@ fn validate_prior_ownership(
     };
     let authenticated_entries = authenticated
         .as_ref()
-        .map(|inventory| {
+        .map_or_else(BTreeMap::new, |inventory| {
             inventory
                 .entries
                 .iter()
                 .map(|entry| (entry.path.as_str(), entry))
                 .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
+        });
     for (relative, planned) in files {
         if read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?.is_none() {
             continue;

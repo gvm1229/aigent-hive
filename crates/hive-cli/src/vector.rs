@@ -209,14 +209,13 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
             let changed_paths = data
                 .get("changed_paths")
                 .and_then(Value::as_array)
-                .map(|paths| {
+                .map_or_else(Vec::new, |paths| {
                     paths
                         .iter()
                         .filter_map(Value::as_str)
                         .map(str::to_owned)
                         .collect()
-                })
-                .unwrap_or_default();
+                });
             let incomplete = data.get("complete").and_then(Value::as_bool) == Some(false);
             let new_approval = data.get("requires_new_authorization").and_then(Value::as_bool) == Some(true);
             let batch_failed = data.get("failed").and_then(Value::as_bool) == Some(true);

@@ -352,8 +352,7 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
     }
     let root_options = root
         .as_deref()
-        .map(|value| vec![("--user-root", value)])
-        .unwrap_or_default();
+        .map_or_else(Vec::new, |value| vec![("--user-root", value)]);
     let user_root = resolve_transfer_root(&root_options)?;
     let merge = preview_bundle_merge(&bundles, BundleLimits::default())?;
     let merge_digest = merge.merge_digest();
@@ -889,12 +888,9 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 "knowledge graph query requires --node-id or --text".to_owned(),
             ));
         }
-        let mut graph_matches = node_id
-            .map(|id| query_generation(&graph, id, 50))
-            .unwrap_or_default();
-        let mut metadata = node_id
-            .map(|id| query_node_metadata(&graph, id, 10))
-            .unwrap_or_default();
+        let mut graph_matches =
+            node_id.map_or_else(Vec::new, |id| query_generation(&graph, id, 50));
+        let mut metadata = node_id.map_or_else(Vec::new, |id| query_node_metadata(&graph, id, 10));
         let fts = if let Some(query) = text {
             let planned = relation_question_subject(query).unwrap_or(query);
             if scope == "source" {

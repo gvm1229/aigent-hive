@@ -208,7 +208,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         print!("{ORCHESTRATION_USAGE}");
         return ExitCode::SUCCESS;
     }
-    let action = action_name(arguments.first().map(String::as_str).unwrap_or_default());
+    let action = action_name(arguments.first().map_or("", String::as_str));
     let result = match execute(arguments) {
         Ok(result) => result,
         Err(error) => ActionResult {

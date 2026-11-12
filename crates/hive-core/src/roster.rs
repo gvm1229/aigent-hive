@@ -661,7 +661,7 @@ mod worker_tests {
         let role = roster.roles.get_mut("hive-routine-implementer").unwrap();
         role.provider = Some("claude".into());
         let p = roster.worker_profile("hive-routine-implementer").unwrap();
-        assert!(p.argv.is_empty());
+        assert_eq!(p.argv, Vec::<String>::new());
         assert_eq!(p.input_mode, "interactive-role-guidance");
         roster
             .roles
@@ -680,7 +680,7 @@ mod worker_tests {
             .effort = Some("high".into());
         let p = roster.worker_profile("hive-routine-implementer").unwrap();
         assert!(!p.supported);
-        assert!(p.argv.is_empty());
+        assert_eq!(p.argv, Vec::<String>::new());
         roster
             .roles
             .get_mut("hive-routine-implementer")

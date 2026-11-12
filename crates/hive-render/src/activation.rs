@@ -1369,10 +1369,10 @@ pub(super) fn rollback_replaced_projection(
             })
         }
         Ok(MutationOutcome::AppliedWithCleanupError(error)) => {
-            let recovery_cleanup = cleanup_projection_recovery(recovery)
-                .err()
-                .map(|cleanup| format!("; rollback recovery cleanup also failed: {cleanup}"))
-                .unwrap_or_default();
+            let recovery_cleanup = match cleanup_projection_recovery(recovery) {
+                Ok(()) => String::new(),
+                Err(cleanup) => format!("; rollback recovery cleanup also failed: {cleanup}"),
+            };
             Err(RenderError::Rollback(format!(
                 "{}: prior bytes were restored, but reverse projection cleanup remains incomplete: {error}{recovery_cleanup}",
                 relative.display()

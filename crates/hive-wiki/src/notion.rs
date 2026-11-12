@@ -381,24 +381,20 @@ pub fn sync_snapshot_for_generation(
         ));
     }
 
-    let prior_revisions = previous
-        .map(|value| {
-            value
-                .revisions
-                .iter()
-                .map(|entry| (entry.page_id.as_str(), entry.revision.as_str()))
-                .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
-    let prior_documents = previous
-        .map(|value| {
-            value
-                .documents
-                .iter()
-                .map(|document| (page_id_from_locator(&document.locator), document.clone()))
-                .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
+    let prior_revisions = previous.map_or_else(BTreeMap::new, |value| {
+        value
+            .revisions
+            .iter()
+            .map(|entry| (entry.page_id.as_str(), entry.revision.as_str()))
+            .collect::<BTreeMap<_, _>>()
+    });
+    let prior_documents = previous.map_or_else(BTreeMap::new, |value| {
+        value
+            .documents
+            .iter()
+            .map(|document| (page_id_from_locator(&document.locator), document.clone()))
+            .collect::<BTreeMap<_, _>>()
+    });
 
     let mut inventory = BTreeMap::new();
     for entry in &request.inventory {

@@ -1081,15 +1081,13 @@ fn inspect_settings<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
     json_output: bool,
 ) -> Result<crate::ActionResult, SetupError> {
-    let manual_commands = config
-        .map(|config| {
-            config
-                .selected_hosts
-                .iter()
-                .map(|host| crate::usage_control::manual_usage_command(root, host.as_str()))
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let manual_commands = config.map_or_else(Vec::new, |config| {
+        config
+            .selected_hosts
+            .iter()
+            .map(|host| crate::usage_control::manual_usage_command(root, host.as_str()))
+            .collect::<Vec<_>>()
+    });
     let migration = config
         .map(|config| user_setup::migration::inspect(root, config))
         .transpose()?
@@ -1141,7 +1139,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
             "feature_preferences":feature_preferences,"vector_runtime_verification":"not-performed",
             "manual_usage_commands":manual_commands,
-            "migration_preview":migration,"pending_questions":config.map(user_setup::migration::pending_questions).unwrap_or_default()}),
+            "migration_preview":migration,"pending_questions":config.map_or_else(Vec::new, user_setup::migration::pending_questions)}),
         ),
         None,
     ))

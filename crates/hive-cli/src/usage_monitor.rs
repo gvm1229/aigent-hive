@@ -346,17 +346,14 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             .data
             .as_ref()
             .and_then(|v| v["changed_paths"].as_array())
-            .map(|paths| {
+            .map_or_else(Vec::new, |paths| {
                 paths
                     .iter()
                     .filter_map(|p| p.as_str().map(str::to_owned))
                     .collect()
-            })
-            .unwrap_or_default();
+            });
     }
-    let exit = result.exit_code;
-    emit_action_result(&result);
-    ExitCode::from(exit)
+    emit_action_result(&result)
 }
 
 fn response(
@@ -381,7 +378,7 @@ fn response(
 }
 
 fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
-    let action = args.first().map(String::as_str).unwrap_or_default();
+    let action = args.first().map_or("", String::as_str);
     if !matches!(action, "preview" | "enable" | "disable" | "status" | "run") {
         return Err(AdapterError::Input(HELP.into()));
     }
