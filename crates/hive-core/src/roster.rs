@@ -378,3 +378,139 @@ mod capability_tests {
         assert!(roster.check("hive-routine-implementer", &bad).is_err());
     }
 }
+
+/// Declarative host instructions. Hive never executes these arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerProfile {
+    pub provider: String,
+    pub model: String,
+    pub effort: String,
+    pub argv: Vec<String>,
+    pub input_mode: String,
+    pub result_format: String,
+    pub supported: bool,
+    pub guidance: String,
+}
+
+impl Roster {
+    /// Prepare a profile without a model call or implicit fallback.
+    /// # Errors
+    /// Rejects unknown roles, floating models and unsupported effort values.
+    pub fn worker_profile(&self, name: &str) -> Result<WorkerProfile, String> {
+        let (provider, role) = self.resolve(name)?;
+        let model = role.model.clone().ok_or("missing model")?;
+        let effort = role.effort.clone().ok_or("missing effort")?;
+        if model.is_empty()
+            || matches!(model.as_str(), "auto" | "default" | "latest")
+            || model.chars().any(char::is_control)
+        {
+            return Err("exact model required".into());
+        }
+        let mut profile = WorkerProfile {
+            provider: provider.into(),
+            model: model.clone(),
+            effort: effort.clone(),
+            argv: Vec::new(),
+            input_mode: "interactive-role-guidance".into(),
+            result_format: "host-receipt".into(),
+            supported: true,
+            guidance: String::new(),
+        };
+        match provider {
+            "codex" => {
+                if !matches!(effort.as_str(), "low" | "medium" | "high" | "xhigh" | "max") {
+                    return Err("unsupported Codex effort".into());
+                }
+                profile.argv = [
+                    "codex".into(),
+                    "exec".into(),
+                    "--model".into(),
+                    model,
+                    "-c".into(),
+                    format!("model_reasoning_effort=\"{effort}\""),
+                    "-c".into(),
+                    "service_tier=\"priority\"".into(),
+                    "-c".into(),
+                    "forced_login_method=\"chatgpt\"".into(),
+                    "--sandbox".into(),
+                    "read-only".into(),
+                    "--json".into(),
+                    "-".into(),
+                ]
+                .into();
+                profile.input_mode = "stdin-task".into();
+                profile.result_format = "jsonl".into();
+                profile.guidance="Codex CLI 0.167.2: host supplies task on stdin, captures JSONL final agent message and issues a bound HostReceipt. Check exact model/effort and ChatGPT login first.".into();
+            }
+            "claude" => {
+                if !matches!(effort.as_str(), "low" | "medium" | "high" | "max") {
+                    return Err("unsupported Claude effort".into());
+                }
+                profile.guidance=format!("Use the subscribed interactive Claude host. Select model {model} and effort {effort} in that host. Follow its official hooks and issue bound receipts; no non-interactive Claude invocation.");
+            }
+            "gemini" => {
+                profile.supported = false;
+                profile.input_mode = "stdin-task".into();
+                profile.result_format = "json".into();
+                profile.guidance=format!("Gemini CLI 0.35.3 documents --model {model}, --prompt and --output-format json (response field). Exact effort {effort} and official subscription status are unverified; no executable profile or fallback. Host qualification required.");
+            }
+            _ => return Err("unknown provider".into()),
+        }
+        Ok(profile)
+    }
+}
+
+#[cfg(test)]
+mod worker_tests {
+    use super::*;
+    #[test]
+    fn roster_four_role_profiles_and_provider_boundaries() {
+        let mut roster = Roster::defaults().unwrap();
+        for name in [
+            "hive-routine-implementer",
+            "hive-complex-implementer",
+            "hive-design-specialist",
+            "hive-independent-judge",
+        ] {
+            let p = roster.worker_profile(name).unwrap();
+            let role = &roster.roles[name];
+            assert_eq!(
+                p.argv[0..4],
+                ["codex", "exec", "--model", role.model.as_deref().unwrap()]
+            );
+            assert_eq!(
+                p.argv[5],
+                format!(
+                    "model_reasoning_effort=\"{}\"",
+                    role.effort.as_deref().unwrap()
+                )
+            );
+            assert_eq!(p.result_format, "jsonl");
+            assert!(p.supported);
+            assert_eq!(
+                serde_json::from_str::<WorkerProfile>(&serde_json::to_string(&p).unwrap()).unwrap(),
+                p
+            );
+        }
+        let role = roster.roles.get_mut("hive-routine-implementer").unwrap();
+        role.provider = Some("claude".into());
+        let p = roster.worker_profile("hive-routine-implementer").unwrap();
+        assert!(p.argv.is_empty());
+        assert_eq!(p.input_mode, "interactive-role-guidance");
+        roster
+            .roles
+            .get_mut("hive-routine-implementer")
+            .unwrap()
+            .provider = Some("gemini".into());
+        let p = roster.worker_profile("hive-routine-implementer").unwrap();
+        assert!(!p.supported);
+        assert!(p.argv.is_empty());
+        roster
+            .roles
+            .get_mut("hive-routine-implementer")
+            .unwrap()
+            .model = Some("auto".into());
+        assert!(roster.worker_profile("hive-routine-implementer").is_err());
+    }
+}
