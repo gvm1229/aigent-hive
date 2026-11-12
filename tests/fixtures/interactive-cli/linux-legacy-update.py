@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 
 hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
           and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"
@@ -21,6 +22,7 @@ assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel", "cancel-res
 if hosted:
     assert mode in {"npm", "npm-retired", "direct", "confirm", "cancel-resume", "deadline", "slow", "late-slow", "parent-exit", "parent-exit-apply"}
 source = Path(__file__).resolve().parents[3] if hosted else Path("/source")
+current_product = tomllib.loads((source / 'Cargo.toml').read_text(encoding='utf-8'))['workspace']['package']['version']
 platform = "darwin-arm64" if sys.platform == "darwin" else "linux-x64"
 candidate = source / "target/debug/hive" if hosted else Path("/build/debug/hive")
 root = Path(os.environ["HIVE_LEGACY_FIXTURE_ROOT"]) if hosted else Path("/tmp/hive-first-update")
@@ -69,7 +71,7 @@ if direct:
 else:
     assert len(sys.argv)==4 and sys.argv[1:3]==['install','-g'] and sys.argv[3].startswith('aigent-hive@'),sys.argv
     requested=sys.argv[3].removeprefix('aigent-hive@')
-assert requested=='0.13.2-test.2' or re.fullmatch(r'0[.]14[.][0-9]+-test[.][1-9][0-9]*',requested),requested
+assert requested=='0.13.2-test.2' or re.fullmatch(re.escape('__CURRENT_PRODUCT__')+r'-test[.][1-9][0-9]*',requested),requested
 product=requested.split('-test.',1)[0]
 if direct: assert os.environ['AIGENT_HIVE_VERSION']==product
 count=root/'install-count';count.write_text(str(int(count.read_text())+1) if count.exists() else '1')
@@ -101,6 +103,7 @@ digest=hashlib.sha256(binary.read_bytes()).hexdigest()
 if direct:
     (package/'share/aigent-hive/install-receipt.json').write_text(json.dumps({'schema_version':1,'owner':'direct','product':'aigent-hive','version':product,'package_version':requested,'artifact_sha256':'sha256:'+digest}))
 '''
+installer = installer.replace('__CURRENT_PRODUCT__', current_product)
 for name in ("npm", "sh"):
     (shim / name).write_text(installer)
     (shim / name).chmod(0o755)
