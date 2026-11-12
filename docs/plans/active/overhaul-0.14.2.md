@@ -35,8 +35,8 @@
   - state: complete; depends: OV142-005; evidence: repo:docs/research/overhaul/OV142-006.md#sha256:93466ed41a4a7e58e90041b31a1d2581cf4a61e835081e029e34c3a2f5c5cf64
   - 변경: 검토된 단계 브랜치를 최신 develop에 병합·push
   - 확인: 단계 브랜치의 develop 포함과 원격 일치
-- [ ] [OV142-007] develop의 번호 공개 시험과 최종 수용
-  - state: agent-owned; depends: OV142-006
+- [x] [OV142-007] develop의 번호 공개 시험과 최종 수용
+  - state: complete; depends: OV142-006; evidence: repo:docs/research/overhaul/OV142-007.md#sha256:ecc9f4a9649f697881f8059db876225ecab98ab14831ea748da1f07153e05b77
   - 변경: 03의 공개 시험 절차와 OV141-009 근거를 따라 test.1 후보·게시. macOS 임시 경로 보완 뒤 test.2 후보·게시·공개 수용, 최종 수용 번호만 정식에 승격
   - 확인: Windows x64·macOS arm64·Linux x64 공개 설치 수용 실행 ID와 제품 지문. 실행 ID·소스 SHA·제품 지문 결합
 - [ ] [OV142-008] 정식 0.14.2 출시와 이 PC 갱신

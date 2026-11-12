@@ -1,0 +1,649 @@
+{
+  "checked_at": "2026-11-12T06:44:12.723767+00:00",
+  "package_version": "0.14.2-test.2",
+  "source_commit": "23107415bcc1287ae88d92fdee2d303e732ef0a6",
+  "channel": "test",
+  "registry": {
+    "aigent-hive": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-bSv/XJjO3ubvVYswUaUcOExg7m//GmvKnlW+XeIJVtZEXBDYxWwBQjFhjVsZQRP5/egj/NPhm9zDzcqQ47nvDg==",
+      "shasum": "377f0700f5aa18a83b66c34901ec9249a56b4142"
+    },
+    "@aigent-hive/darwin-arm64": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-kA21iUWhwL6p+hrbuA/+MSTWm97UgrK+4fAlVwv+dELJ3XTuy8cLp9XPt7bz7KNHoHCnGi+x3uTVVHszcFCz2Q==",
+      "shasum": "257210f4313669ae7c845455b5e8098e0a4f4875"
+    },
+    "@aigent-hive/darwin-x64": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-dV5VbpTDvqsF2joqqclOxqZAcikkhueWkNaOYgIGkvt1Wa1aB2lcnd2MUODxt8iEVmWB08lNJg2PEftkoY2Zrw==",
+      "shasum": "56a891758b5b7bcffe95eb2999a9c74df27389d7"
+    },
+    "@aigent-hive/linux-arm64": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-tYpj29xKFfT/Tbj60ybdYsIA5IqwQmdSZoK701TTB4ZqPQDYiXjSdnXMmqG6GRcoSmf8kz0UsGChojDmMPF9fg==",
+      "shasum": "5a4db8a2ca22bffd5155f9e9e2f7f6749c836e13"
+    },
+    "@aigent-hive/linux-x64": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-NwKZeXNaa7sk3j4sZWb2rYLMUHKUjczTmGax18mNpQmmu/BLH8oZ/m+29uLgH0J6ki8Sipa4s54TTnJ8OjUZYQ==",
+      "shasum": "30b20f01353d266c080e556ce05b0cd1d608d2cd"
+    },
+    "@aigent-hive/win32-x64": {
+      "version": "0.14.2-test.2",
+      "dist_tags": {
+        "latest": "0.14.1",
+        "test": "0.14.2-test.2"
+      },
+      "integrity": "sha512-SYimGHvCBcDkriJctJpL/dvbNzYyrt1ypBOrOZfw0v/HOG9sbIqakBrJwqMbdwGpjEzm4Sbyvsf2xt3cerX/AQ==",
+      "shasum": "7d4c1bfb8e7d4fd758fa0f9a9680c8cd70d21236"
+    }
+  },
+  "scope": "Published npm test.2 executed on Windows x64, macOS arm64 and Linux musl x64 in GitHub Actions. Source test counts apply only to targets compiled on their host; listed exclusions were not executed. Personal PC installation belongs to OV142-008.",
+  "github_release": {
+    "tagName": "v0.14.2-test.2",
+    "isDraft": false,
+    "isPrerelease": true,
+    "targetCommitish": "23107415bcc1287ae88d92fdee2d303e732ef0a6",
+    "url": "https://github.com/gvm1229/aigent-hive/releases/tag/v0.14.2-test.2",
+    "asset_count": 25
+  },
+  "product_version": "0.14.2",
+  "product_tree_sha256": "sha256:d79caba5acbb1a60480da74d484f2b8456e9fd25c65f4066b88822324bc0453b",
+  "candidate_run_id": 43162328466,
+  "publication_failed_run_ids": [
+    43167923085
+  ],
+  "publication_recovery_run_id": 43169735204,
+  "acceptance_run_id": 43170228400,
+  "acceptance_source_commit": "23107415bcc1287ae88d92fdee2d303e732ef0a6",
+  "final_acceptance": true,
+  "acceptance_platforms": {
+    "Korean public test (macOS arm64)": {
+      "job_id": 131021489523,
+      "conclusion": "success"
+    },
+    "Korean public test (Windows x64)": {
+      "job_id": 131021489822,
+      "conclusion": "success"
+    },
+    "Korean public test (Linux musl x64)": {
+      "job_id": 131021489833,
+      "conclusion": "success"
+    }
+  },
+  "acceptance_artifacts": [
+    {
+      "name": "korean-public-test-win32-x64",
+      "id": 13922326894,
+      "digest": "sha256:52b671d3131c30ea555eca278569d0242f4180580a17e820e099e66df4e6fa26",
+      "expired": false,
+      "size_in_bytes": 1649274
+    },
+    {
+      "name": "korean-public-test-linux-x64",
+      "id": 13922116734,
+      "digest": "sha256:f493eda3a94ee4237f779c5475972b6fdb2d2848f8f5b9eee78846820347700d",
+      "expired": false,
+      "size_in_bytes": 1630126
+    },
+    {
+      "name": "korean-public-test-darwin-arm64",
+      "id": 13921632484,
+      "digest": "sha256:6c6336848f65286972359dcf344b1a72bb414d1657c63008574f50fc4ae61eec",
+      "expired": false,
+      "size_in_bytes": 1630359
+    }
+  ],
+  "source_ci": {
+    "run_id": 43162324016,
+    "source_commit": "23107415bcc1287ae88d92fdee2d303e732ef0a6",
+    "conclusion": "success",
+    "jobs": {
+      "Classify tracked change risk": {
+        "job_id": 130996388676,
+        "conclusion": "success"
+      },
+      "Platform smoke (macos-latest)": {
+        "job_id": 130996441017,
+        "conclusion": "success"
+      },
+      "Contract and Copier conformance": {
+        "job_id": 130996441026,
+        "conclusion": "success"
+      },
+      "Transfer producer (macos-latest)": {
+        "job_id": 130996441089,
+        "conclusion": "success"
+      },
+      "Platform smoke (windows-latest)": {
+        "job_id": 130996441121,
+        "conclusion": "success"
+      },
+      "Transfer producer (windows-latest)": {
+        "job_id": 130996441130,
+        "conclusion": "success"
+      },
+      "Conformance (Linux · integration)": {
+        "job_id": 130996441137,
+        "conclusion": "success"
+      },
+      "Conformance (Linux · contract)": {
+        "job_id": 130996441138,
+        "conclusion": "success"
+      },
+      "Rust (Linux full)": {
+        "job_id": 130996441143,
+        "conclusion": "success"
+      },
+      "Conformance (Linux · documentation)": {
+        "job_id": 130996441198,
+        "conclusion": "success"
+      },
+      "Conformance (Linux · release)": {
+        "job_id": 130996441199,
+        "conclusion": "success"
+      },
+      "Conformance (Linux · security)": {
+        "job_id": 130996441232,
+        "conclusion": "success"
+      },
+      "Documentation-only conformance": {
+        "job_id": 130996443154,
+        "conclusion": "skipped",
+        "reason": "Product scope selected; the full Linux documentation conformance job passed instead"
+      },
+      "Transfer macos-latest to windows-latest": {
+        "job_id": 130997420287,
+        "conclusion": "success"
+      },
+      "Transfer windows-latest to macos-latest": {
+        "job_id": 130997420359,
+        "conclusion": "success"
+      },
+      "Transfer windows-latest to ubuntu-latest": {
+        "job_id": 130997420372,
+        "conclusion": "success"
+      },
+      "Develop push gate": {
+        "job_id": 131013123012,
+        "conclusion": "success"
+      }
+    },
+    "linux_rust": {
+      "passed": 1445,
+      "failed": 0,
+      "ignored": 4,
+      "suite_count": 12,
+      "running_exe_regression_passed": null,
+      "prune_integration_passed": true,
+      "running_exe_regression_scope": "Windows-only test; not compiled on Linux",
+      "ignored_cases": [
+        "test knowledge::vector::query::tests::real_source_query_uses_vector_candidates ... ignored, manual qualification: requires a consented runtime and synthetic source under tests/work",
+        "test store::tests::confidential_oversized_corpus_does_not_disclose_limits_before_authorization ... ignored, scale qualification: constructs more than 50,000 confidential chunks",
+        "test qualification_100_collections_50k_chunks_meets_bundle_p95_thresholds ... ignored, qualification: run this test with --release --ignored --nocapture on a local SSD",
+        "test qualification_50k_chunks_meets_warm_and_fresh_load_p95_thresholds ... ignored, qualification: run this test with --release --ignored --nocapture on a local SSD"
+      ]
+    },
+    "windows_rust": {
+      "passed": 1150,
+      "failed": 0,
+      "ignored": 2,
+      "suite_count": 10,
+      "running_exe_regression_passed": true,
+      "prune_integration_passed": true,
+      "ignored_cases": [
+        "test knowledge::vector::query::tests::real_source_query_uses_vector_candidates ... ignored, manual qualification: requires a consented runtime and synthetic source under tests/work",
+        "test usage_monitor::tests::live_monitor_sensor_sustains_four_fresh_observations ... ignored, four real native observations, fifteen seconds between starts"
+      ]
+    },
+    "python_conformance": {
+      "Conformance (Linux · integration)": {
+        "host": "GitHub Actions Linux",
+        "conclusion": "success",
+        "reported_test_count": 104,
+        "skipped_cases": [
+          {
+            "test": "tests.conformance.integration.test_connected_setup_lifecycle.AntigravityConnectedSetupLifecycleConformance.test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall.test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall",
+            "reason": "the v0.9 release default profile is the authenticated Codex acceptance path"
+          }
+        ]
+      },
+      "Conformance (Linux · contract)": {
+        "host": "GitHub Actions Linux",
+        "conclusion": "success",
+        "reported_test_count": 654,
+        "skipped_cases": [
+          {
+            "test": "tests.conformance.contracts.test_legacy_bridge_transport.LegacyBridgeTransportTests.test_a_different_caller_cannot_select_an_arbitrary_parent.test_a_different_caller_cannot_select_an_arbitrary_parent",
+            "reason": "requires Windows PowerShell and native console APIs"
+          },
+          {
+            "test": "tests.conformance.contracts.test_legacy_bridge_transport.LegacyBridgeTransportTests.test_embedded_registry_keeps_its_exact_digest_and_rejects_changed_bytes.test_embedded_registry_keeps_its_exact_digest_and_rejects_changed_bytes",
+            "reason": "requires Windows PowerShell and native console APIs"
+          },
+          {
+            "test": "tests.conformance.contracts.test_legacy_bridge_transport.LegacyBridgeTransportTests.test_native_command_line_parser_preserves_quoted_paths_and_rejects_invalid_counts.test_native_command_line_parser_preserves_quoted_paths_and_rejects_invalid_counts",
+            "reason": "requires Windows PowerShell and native console APIs"
+          },
+          {
+            "test": "tests.conformance.contracts.test_legacy_bridge_transport.LegacyBridgeTransportTests.test_non_hive_parent_does_not_open_a_console_or_wait_for_input.test_non_hive_parent_does_not_open_a_console_or_wait_for_input",
+            "reason": "requires Windows PowerShell and native console APIs"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_connection_loss.SetupConnectionLossConformance.test_loss_before_questions_during_questions_and_after_apply_never_reapplies.test_loss_before_questions_during_questions_and_after_apply_never_reapplies",
+            "reason": "this fixture needs an independently owned Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume.test_ctrl_c_is_not_a_negative_answer_and_saved_choices_resume",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_ctrl_c_remains_deliverable_after_an_ignoring_native_launcher.test_ctrl_c_remains_deliverable_after_an_ignoring_native_launcher",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_eof_is_not_a_negative_answer_and_saved_choices_resume.test_eof_is_not_a_negative_answer_and_saved_choices_resume",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_full_review_in_both_languages_keeps_choices_and_validates_file_results.test_full_review_in_both_languages_keeps_choices_and_validates_file_results",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_multiple_manifests_and_absent_host_complete_without_claiming_runtime_support.test_multiple_manifests_and_absent_host_complete_without_claiming_runtime_support",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_same_file_after_ctrl_c_keeps_the_recorded_terminal_language.test_same_file_after_ctrl_c_keeps_the_recorded_terminal_language",
+            "reason": "native Ctrl-C regression requires a private Windows console"
+          },
+          {
+            "test": "tests.conformance.contracts.test_windows_update_console.WindowsUpdateConsoleTests.test_short_empty_and_korean_answers_use_only_the_returned_character_count.test_short_empty_and_korean_answers_use_only_the_returned_character_count",
+            "reason": "Windows console API regression requires Windows"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_acceptance_failure_is_a_nonzero_command_result.test_acceptance_failure_is_a_nonzero_command_result",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_all_stop_requests_precede_snapshots_without_waiting_for_activity.test_all_stop_requests_precede_snapshots_without_waiting_for_activity",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_background_catalog_rejects_duplicate_and_invalid_identifiers.test_background_catalog_rejects_duplicate_and_invalid_identifiers",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_background_catalog_requires_owner_confirmation.test_background_catalog_requires_owner_confirmation",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_background_snapshot_identifies_active_turn_before_any_stop_event.test_background_snapshot_identifies_active_turn_before_any_stop_event",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_cold_adapter_rejects_unknown_operation_within_native_deadline.test_cold_adapter_rejects_unknown_operation_within_native_deadline",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_compact_response_preserves_interrupt_confirmation_and_rejects_bad_input.test_compact_response_preserves_interrupt_confirmation_and_rejects_bad_input",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_confirmed_absent_owner_is_not_a_new_unknown_during_refresh.test_confirmed_absent_owner_is_not_a_new_unknown_during_refresh",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_deployment_cannot_run_after_a_failed_app_stop.test_deployment_cannot_run_after_a_failed_app_stop",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_deployment_cli_forwards_the_complete_argument_array.test_deployment_cli_forwards_the_complete_argument_array",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_deployment_preservation_hashes_cover_nested_canonical_knowledge.test_deployment_preservation_hashes_cover_nested_canonical_knowledge",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_desktop_pipe_handles_split_frames_and_rejects_oversized_frames.test_desktop_pipe_handles_split_frames_and_rejects_oversized_frames",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_desktop_snapshot_extracts_current_turn_without_retaining_history.test_desktop_snapshot_extracts_current_turn_without_retaining_history",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_discovered_current_app_identities_round_trip_to_exact_handle_time.test_discovered_current_app_identities_round_trip_to_exact_handle_time",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_exact_scheduler_replay_does_not_repeat_registration_or_running_start.test_exact_scheduler_replay_does_not_repeat_registration_or_running_start",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_expired_event_never_extends_its_deadline_or_requests_new_stops.test_expired_event_never_extends_its_deadline_or_requests_new_stops",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_former_app_termination_operation_is_rejected.test_former_app_termination_operation_is_rejected",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_fresh_native_interruption_is_confirmation_even_without_response.test_fresh_native_interruption_is_confirmation_even_without_response",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_goal_pause_failure_preserves_the_actual_interrupted_turn.test_goal_pause_failure_preserves_the_actual_interrupted_turn",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_idle_and_duplicate_stop_replies_do_not_invalidate_confirmed_state.test_idle_and_duplicate_stop_replies_do_not_invalidate_confirmed_state",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_invalid_qualification_scope_is_rejected_before_native_pipe_code.test_invalid_qualification_scope_is_rejected_before_native_pipe_code",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_large_stream_keeps_only_turn_metadata_before_powershell_json.test_large_stream_keeps_only_turn_metadata_before_powershell_json",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_legacy_partial_pass_cannot_authorize_current_installation.test_legacy_partial_pass_cannot_authorize_current_installation",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_legacy_powershell_passes_spaced_paths_without_nested_shell_code.test_legacy_powershell_passes_spaced_paths_without_nested_shell_code",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_new_chat_after_detection_is_not_in_the_stop_scope.test_new_chat_after_detection_is_not_in_the_stop_scope",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_owner_known_at_detection_is_stopped_when_discovery_finishes.test_owner_known_at_detection_is_stopped_when_discovery_finishes",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_pending_large_snapshot_is_not_requested_again_or_fanned_out.test_pending_large_snapshot_is_not_requested_again_or_fanned_out",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_protocol_shape_and_qualification_scope_replace_version_gate.test_protocol_shape_and_qualification_scope_replace_version_gate",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_reasoning_text_deltas_do_not_trigger_full_history_resubscription.test_reasoning_text_deltas_do_not_trigger_full_history_resubscription",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_register_collision_and_foreign_task_removal_are_refused.test_register_collision_and_foreign_task_removal_are_refused",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_response_target_is_bound_to_incident_and_requires_fresh_completion.test_response_target_is_bound_to_incident_and_requires_fresh_completion",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_scheduler_replay_preserves_disabled_foreign_owner_and_elevated_tasks.test_scheduler_replay_preserves_disabled_foreign_owner_and_elevated_tasks",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_stream_delta_keeps_paths_and_discards_values.test_stream_delta_keeps_paths_and_discards_values",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_threshold_scope_does_not_interrupt_or_wait_for_other_conversations.test_threshold_scope_does_not_interrupt_or_wait_for_other_conversations",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_tracking_primitive_has_no_history_subscriptions_or_stop_requests.test_tracking_primitive_has_no_history_subscriptions_or_stop_requests",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_turn_store_orphans_and_old_progress_do_not_become_current_runs.test_turn_store_orphans_and_old_progress_do_not_become_current_runs",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_unread_session_is_checked_before_refreshing_an_earlier_session.test_unread_session_is_checked_before_refreshing_an_earlier_session",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_unresponsive_pipe_writer_times_out_without_contacting_the_app.test_unresponsive_pipe_writer_times_out_without_contacting_the_app",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_user_resumed_run_is_not_interrupted_again_for_the_same_event.test_user_resumed_run_is_not_interrupted_again_for_the_same_event",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_verification_unsubscribes_at_deadline_and_does_not_loop_history.test_verification_unsubscribes_at_deadline_and_does_not_loop_history",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_monitor.WindowsUsageMonitor.test_wrong_desktop_snapshot_cannot_confirm_a_different_session.test_wrong_desktop_snapshot_cannot_confirm_a_different_session",
+            "reason": "Windows process handles and Task Scheduler adapter"
+          },
+          {
+            "test": "tests.conformance.contracts.test_developer_digest.DeveloperDigest.test_legacy_escape_is_accepted_but_damaged_records_are_refused.test_legacy_escape_is_accepted_but_damaged_records_are_refused",
+            "reason": "Windows native paths and PowerShell"
+          },
+          {
+            "test": "tests.conformance.contracts.test_developer_digest.DeveloperDigest.test_managed_rollback_accepts_an_exact_legacy_digest_without_editing_it.test_managed_rollback_accepts_an_exact_legacy_digest_without_editing_it",
+            "reason": "Windows native paths and PowerShell"
+          },
+          {
+            "test": "tests.conformance.contracts.test_developer_digest.DeveloperDigest.test_native_windows_path_digest_has_no_filename_escape_prefix.test_native_windows_path_digest_has_no_filename_escape_prefix",
+            "reason": "Windows native paths and PowerShell"
+          },
+          {
+            "test": "tests.conformance.contracts.test_dev_install_recovery.DeveloperRecovery.test_legacy_deployment_stops_before_reading_or_changing_installation.test_legacy_deployment_stops_before_reading_or_changing_installation",
+            "reason": "Windows deployment entrypoint"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_a_missing_fourth_confirmation_cannot_be_hidden.test_a_missing_fourth_confirmation_cannot_be_hidden",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_a_resume_lock_cannot_be_reintroduced.test_a_resume_lock_cannot_be_reintroduced",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_additional_notice_buttons_are_rejected.test_additional_notice_buttons_are_rejected",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_complete_bound_component_evidence_is_accepted.test_complete_bound_component_evidence_is_accepted",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_evidence_file_digest_cannot_be_replaced.test_evidence_file_digest_cannot_be_replaced",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_historical_approval_does_not_cover_current_release_sources.test_historical_approval_does_not_cover_current_release_sources",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_live_scope_failure_is_not_relabelled_as_passed.test_live_scope_failure_is_not_relabelled_as_passed",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_source_change_requires_requalification.test_source_change_requires_requalification",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.QualificationEvidence.test_unknown_qualification_method_is_rejected.test_unknown_qualification_method_is_rejected",
+            "reason": "Windows PowerShell installation evidence gate"
+          },
+          {
+            "test": "tests.conformance.contracts.test_monitor_qualification.ThresholdCollectorReads.test_observer_permits_atomic_state_replacement_while_reading.test_observer_permits_atomic_state_replacement_while_reading",
+            "reason": "Windows shared-delete observer handles"
+          },
+          {
+            "test": "tests.conformance.contracts.test_session_events.SessionEvents.test_native_verbatim_prefix_keeps_the_same_owned_path.test_native_verbatim_prefix_keeps_the_same_owned_path",
+            "reason": "Windows native path spellings"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_empty_work_is_distinct_from_confirmed_interruption.test_empty_work_is_distinct_from_confirmed_interruption",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_fault_without_persisted_incident_keeps_reason_time_and_uncertainty.test_fault_without_persisted_incident_keeps_reason_time_and_uncertainty",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_missing_app_never_claims_preservation_or_confirmed_stop.test_missing_app_never_claims_preservation_or_confirmed_stop",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_missing_record_does_not_claim_unlock_or_change_the_original_cause.test_missing_record_does_not_claim_unlock_or_change_the_original_cause",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_missing_threshold_details_do_not_invent_zero_usage_or_floor.test_missing_threshold_details_do_not_invent_zero_usage_or_floor",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_new_incident_does_not_reuse_old_confirmation.test_new_incident_does_not_reuse_old_confirmation",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_notice_has_only_close_and_no_resume_mutation_or_command.test_notice_has_only_close_and_no_resume_mutation_or_command",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_official_logo_is_shared_by_the_title_and_body.test_official_logo_is_shared_by_the_title_and_body",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_other_guard_errors_do_not_invent_a_sixty_second_gap.test_other_guard_errors_do_not_invent_a_sixty_second_gap",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_partial_confirmation_is_not_success.test_partial_confirmation_is_not_success",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_preview_and_synthetic_reset_are_distinct.test_preview_and_synthetic_reset_are_distinct",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_production_reset_names_hive_and_omits_test_and_shell_details.test_production_reset_names_hive_and_omits_test_and_shell_details",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_read_failure_does_not_look_like_acknowledgement.test_read_failure_does_not_look_like_acknowledgement",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_sensor_failure_is_not_presented_as_a_reset.test_sensor_failure_is_not_presented_as_a_reset",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_sensor_notice_keeps_the_specific_original_failure_after_recovery.test_sensor_notice_keeps_the_specific_original_failure_after_recovery",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_separate_visible_controls_form_the_notice_confirmation.test_separate_visible_controls_form_the_notice_confirmation",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_threshold_notice_names_the_actual_floor_window_and_stop_confirmation.test_threshold_notice_names_the_actual_floor_window_and_stop_confirmation",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_threshold_request_does_not_claim_an_unconfirmed_stop.test_threshold_request_does_not_claim_an_unconfirmed_stop",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_usage_notice.UsageNotice.test_windows_powershell_reads_verbatim_paths_with_atomic_replacement_sharing.test_windows_powershell_reads_verbatim_paths_with_atomic_replacement_sharing",
+            "reason": "Windows PowerShell notice state"
+          },
+          {
+            "test": "tests.conformance.contracts.test_vector_runtime.VectorRuntimeContract.test_windows_cpu_profile_changes_only_its_child_process.test_windows_cpu_profile_changes_only_its_child_process",
+            "reason": "actual Windows worker affinity; other hosts retain their policy"
+          }
+        ]
+      },
+      "Conformance (Linux · documentation)": {
+        "host": "GitHub Actions Linux",
+        "conclusion": "success",
+        "reported_test_count": 163,
+        "skipped_cases": [
+          {
+            "test": "scripts.test_artifacts_checks.ArtifactTests.test_junction_descendant_refused.test_junction_descendant_refused",
+            "reason": "Windows junction contract"
+          },
+          {
+            "test": "scripts.test_artifacts_checks.ArtifactTests.test_real_locked_file_retained_and_retry_possible.test_real_locked_file_retained_and_retry_possible",
+            "reason": "Windows file sharing contract"
+          }
+        ]
+      },
+      "Conformance (Linux · release)": {
+        "host": "GitHub Actions Linux",
+        "conclusion": "success",
+        "reported_test_count": 151,
+        "skipped_cases": [
+          {
+            "test": "tests.conformance.release.test_historical_project_bases.Public132ProjectUpgradeConformance.test_public_test2_project_upgrades_and_recovers_without_losing_user_bytes.test_public_test2_project_upgrades_and_recovers_without_losing_user_bytes",
+            "reason": "requires the explicitly selected, pinned public 0.13.2-test.2 Windows binary"
+          },
+          {
+            "test": "tests.conformance.release.test_update_migration.Phase6StaticContracts.test_cmd_delegation_preserves_special_prefix_and_child_exit.test_cmd_delegation_preserves_special_prefix_and_child_exit",
+            "reason": "cmd.exe delegation qualification requires Windows"
+          },
+          {
+            "test": "tests.conformance.release.test_update_migration.Phase6StaticContracts.test_windows_installer_decodes_native_version_and_restores_encoding.test_windows_installer_decodes_native_version_and_restores_encoding",
+            "reason": "native version decoding requires Windows PowerShell"
+          },
+          {
+            "test": "tests.conformance.release.test_update_migration.Phase6StaticContracts.test_windows_ownership_functions_match_powershell_5_and_7.test_windows_ownership_functions_match_powershell_5_and_7",
+            "reason": "Windows PowerShell qualification requires Windows"
+          },
+          {
+            "test": "tests.conformance.release.test_update_migration.Phase6StaticContracts.test_windows_source_dependency_preview_is_non_mutating.test_windows_source_dependency_preview_is_non_mutating",
+            "reason": "Windows dependency setup qualification requires Windows"
+          },
+          {
+            "test": "tests.conformance.release.test_update_migration.Phase6StaticContracts.test_windows_source_dependency_requires_consent_and_requalifies.test_windows_source_dependency_requires_consent_and_requalifies",
+            "reason": "Windows dependency setup qualification requires Windows"
+          },
+          {
+            "test": "tests.conformance.release.test_vector_runtime_acceptance.VectorRuntimeAcceptance.test_native_observer_reads_its_own_process_without_spawning_a_shell.test_native_observer_reads_its_own_process_without_spawning_a_shell",
+            "reason": "native Windows process metadata"
+          }
+        ]
+      },
+      "Conformance (Linux · security)": {
+        "host": "GitHub Actions Linux",
+        "conclusion": "success",
+        "reported_test_count": 103,
+        "skipped_cases": []
+      }
+    }
+  }
+}
