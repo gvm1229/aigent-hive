@@ -144,6 +144,14 @@ def outputs(gods: list[God]) -> dict[Path, str]:
     for god in gods:
         table += f"| {god.name} | {god.ownership_ko} | " + ", ".join(f"`{s}`" for s in god.commands) + " | " + ", ".join(f"`{s}`" for s in god.skills) + " |\n"
     result[doc] = text[:start] + table + text[end:]
+    guide = ROOT / "docs/skills.md"
+    text = guide.read_text(encoding="utf-8")
+    for god in gods:
+        row = f"| `{god.name}` | 기존 {god.purpose_ko} 기능의 신 이름 입구 | {god.korean} 호출 |"
+        text, count = re.subn(rf"(?m)^\| `{re.escape(god.name)}` \|[^\n]*$", row, text)
+        if count != 1:
+            raise ValueError(f"expected one god guide row: {god.name}")
+    result[guide] = text
     ledger = ROOT / "harness/template/.hive/config/active-skills.yml.jinja"
     text = ledger.read_text(encoding="utf-8")
     for god in gods:

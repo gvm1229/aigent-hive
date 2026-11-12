@@ -21,7 +21,11 @@ CASES = {god.name: god for god in GODS}
 
 class GodEntryTests(unittest.TestCase):
     def test_descriptions_trigger_only_explicit_god_names(self):
+        guide = (ROOT / "docs/skills.md").read_text(encoding="utf-8")
         for god in GODS:
+            rows = [line for line in guide.splitlines() if line.startswith(f"| `{god.name}` |")]
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].split("|")[-2].strip(), f"{god.korean} 호출")
             text = (ROOT / f"harness/skills/{god.name}/SKILL.md").read_text(encoding="utf-8")
             header = yaml.safe_load(text.split("---", 2)[1])
             self.assertEqual(header["description"], god.description_en)
