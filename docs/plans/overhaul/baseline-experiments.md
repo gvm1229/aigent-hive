@@ -13,7 +13,7 @@
   - 변경: `tests/fixtures/project-detection/`에 표시 파일만 둔 최소 프로젝트 30종(TypeScript 웹 앱, Next.js, Vite, Python, Rust, Go, Java, .NET, 모노레포, 문서 전용, 빈 폴더 등)과 기대 결과표. 현재 `project_kind` 결과 기록
   - 확인: 30종 전부 기록, `general` 판정 비율 수치
 - [x] [OVX-002] 지식 회수 정답 질의집과 현재 회수율
-  - state: complete; evidence: repo:docs/research/overhaul/OVX-002.md#sha256:9581105e5f8a69db4b40591ca3c281559fde48d30e8c262d991f077f9290233d
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-002.md#sha256:9d142f8151f828020262bfad89a34f41e989435ec7c3e60ef26e16be1c4681a7
   - 근거: [측정 결과](../../research/overhaul/OVX-002.md)
   - 변경: 한·영 질의 40개 이상(HTML 디자인 선호 사례, "색"·"글꼴" 같은 짧은 한국어 질의 포함)과 합성 지식 저장소, 과적합 방지용 보류 묶음 분리
   - 확인: 질의별 기대 사실과 현재 적중 표, 전체 회수율 수치
