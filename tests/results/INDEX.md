@@ -1158,3 +1158,6 @@
 | [passed](runs/20261112T214258-9da40f98dec6.md) | 공개 역할과 비활성 봉투 linux-x64 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Linux-7.0.0-1017-azure-x86_64-with-glibc2.39 |
 | [passed](runs/20261112T214324-92d4f1dc59f8.md) | 공개 역할과 비활성 봉투 darwin-arm64 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-15.8.2-arm64-arm-64bit-Mach-O |
 | [passed](runs/20261112T214414-ede18b36b17b.md) | 공개 역할과 비활성 봉투 win32-x64 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Windows-2025Server-10.0.26100-SP0 |
+| [passed](runs/20261112T214633-91858dcb32b5.md) | 격리 POSIX VM의 공개0.13.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
+| [passed](runs/20261112T214703-e87c56a74d58.md) | 격리 POSIX VM의 공개0.13.2-test.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
+| [passed](runs/20261112T215933-7630bf113891.md) | 격리 POSIX VM의 공개0.13.2-test.1 첫 갱신 연결 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 |
