@@ -2612,7 +2612,7 @@ mod tests {
             .join("../../tests/fixtures/host-handler/consume_fixture.py");
         let output = std::process::Command::new(if cfg!(windows) { "python" } else { "python3" })
             .arg(script)
-            .arg(&target_path)
+            .arg(target.requested_path())
             .arg(context_path)
             .output()
             .unwrap();
