@@ -46,6 +46,17 @@
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
 | `judge-evidence` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
 | `adversarial-judge` | 제한된 clean-context 독립 Judge 요청 준비 | 명시적 반례·권한·복구 결손 검토 |
+| `athena` | 기존 계획 기능의 신 이름 입구 | 작업 계획 |
+| `artemis` | 기존 조사 기능의 신 이름 입구 | 구현 관행 조사 |
+| `hephaistos` | 기존 구현 기능의 신 이름 입구 | 변경 구현 |
+| `apollon` | 기존 글쓰기 기능의 신 이름 입구 | 선택한 한국어 윤문 |
+| `eileithyia` | 기존 설정 기능의 신 이름 입구 | 프로젝트 설정 |
+| `poseidon` | 기존 조율 기능의 신 이름 입구 | 팀 조율 |
+| `demeter` | 기존 지식 기능의 신 이름 입구 | 프로젝트 지식 조회 |
+| `aither` | 기존 사용량 관리 기능의 신 이름 입구 | 사용량 보호 확인 |
+| `hades` | 기존 정리 기능의 신 이름 입구 | 완료 산출물 정리 |
+
+9신 입구: 소스 개발 브랜치의 추가 항목, 기존 기능·승인 경계 유지. 공개 안정판의 설치 범위는 README 안내 기준. [기능 소속·역할 이전](architecture/god-ownership.md) 참조.
 
 ## Source Skill 폐기 경로
 

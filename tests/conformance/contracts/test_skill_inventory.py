@@ -142,6 +142,15 @@ OMC_MERGE = frozenset(
 CURRENT_SOURCE_SKILLS = frozenset({"draft-devlog", "update-summary"})
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
+        "athena",
+        "artemis",
+        "hephaistos",
+        "apollon",
+        "eileithyia",
+        "poseidon",
+        "demeter",
+        "aither",
+        "hades",
         "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
         "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
         "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
@@ -473,7 +482,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
         self.assertEqual(len(CURRENT_SOURCE_SKILLS), 2)
-        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 28)
+        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 37)
         self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
         catalog_text = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")
