@@ -31,10 +31,17 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.0`
-- 현재 등록 항목: 9/13 완료
+- 현재 등록 항목: 9/14 완료
 
-- `agent-owned`: `OV150-012`, `OV150-013`
+- `agent-owned`: `OV150-012`, `OV150-013`, `OV150-014`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: `OV150-001`, `OV150-011`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
+
+## 단계 3 검토 후 수정
+
+- [Fable 5.2 검토](../research/overhaul/stage-3-review.md): COMMENT·경계 위반 0·높은 위험 0, 일반 Fable 기본 수준 대체
+- M1–M4·L5–L11 수정·검증 진행, P3 이번 적용·P1 OV150-014·P2 OV160-002·P4 OV151-011 배치
+- 0.15.0-test.1 수용: 세 운영체제의 역할 구성 병합·거부, 호스트 제공 출력의 `roster check`, 비활성 summon 미리보기·서명 Prepare, 신 입구·별칭 9개, 0.14.2 갱신. 이 빌드의 조율 비활성·활성화 경로 없음. 실제 Claude Stop→Codex→반환·Gemini 실행·실제 호스트 취소·재점유 미검증, 이 시험의 수용 대상 밖
+- OV150-001 미완료·OV150-011 의존성 유지, 정식 OV150-013은 OV150-001·OV150-014 통과 필요. 이번 태그·게시·병합 제외
