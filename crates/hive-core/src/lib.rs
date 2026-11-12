@@ -18,6 +18,7 @@ pub mod native_workflow;
 pub mod orchestration;
 pub mod policy;
 pub mod preferences;
+pub mod project_profile;
 pub mod role;
 pub mod roster;
 pub mod run;
