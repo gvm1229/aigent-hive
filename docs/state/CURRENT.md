@@ -1,5 +1,9 @@
 # 현재 상태
 
+- 2026-11-13 현재 요청: OV150-001 Windows 11·Claude Code 2.1.322·Codex 실제 왕복 완료. OV150-014·공개 시험·정식 출시·설치 진행, 조율 비활성·활성화 경로 없음 유지
+- 아래 선행 구현·검토 기록의 당시 011 전 종료·반환 미검증 경계는 현재 요청과 실증으로 대체
+
+
 - 제품 버전: `0.15.0`
 - 공개 안정판: `0.14.2`, [정식 릴리스](https://github.com/gvm1229/aigent-hive/releases/tag/v0.14.2)
 - 재정비 단계 1b 완료, [활성 항목](../plans/active/overhaul-0.14.2.md) 8/8. [완료 근거](../research/overhaul/OV142-008.md)
@@ -31,11 +35,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.0`
-- 현재 등록 항목: 9/14 완료
+- 현재 등록 항목: 10/14 완료
 
-- `agent-owned`: `OV150-012`, `OV150-013`, `OV150-014`
+- `agent-owned`: `OV150-011`, `OV150-012`, `OV150-013`, `OV150-014`
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `OV150-001`, `OV150-011`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
@@ -47,5 +51,5 @@
 - 최종 fmt·workspace/all-targets/all-features clippy·문서 묶음 통과, Source Wiki 정본·파생 색인 274쪽 확인. [정확한 근거·한계](../research/overhaul/stage-3-review.md#최종-수정과-검증)
 - 산출물 관리: 검토 대기 470·실험실 보존 1. 검토 완료한 이전 버전 재현 폴더 99개 파일 정리, 기록 보존. 일일 점검은 최소 20.306GiB·미측정 21개로 주의 필요, 공유 빌드·다른 작업 원본의 전체 정리 완료 주장 없음
 - 원격 검증: 단계 분기 `75dc4c16`·[브랜치 검사 43285223978](https://github.com/gvm1229/aigent-hive/actions/runs/43285223978) success·로컬/원격 일치. Ubuntu 분기·커밋 규칙만 확인, 제품 전체 CI는 PR/main/develop 조건으로 미실행
-- 0.15.0-test.1 수용: 세 운영체제의 역할 구성 병합·거부, 호스트 제공 출력의 `roster check`, 비활성 summon 미리보기·서명 Prepare, 신 입구·별칭 9개, 0.14.2 갱신. 이 빌드의 조율 비활성·활성화 경로 없음. 실제 Claude Stop→Codex→반환·Gemini 실행·실제 호스트 취소·재점유 미검증, 이 시험의 수용 대상 밖
-- OV150-001 미완료·OV150-011 의존성 유지, 정식 OV150-013은 OV150-001·OV150-014 통과 필요. 이번 태그·게시·병합 제외
+- 0.15.0-test.1 수용: 세 운영체제의 역할 구성 병합·거부, 호스트 제공 출력의 `roster check`, 비활성 summon 미리보기·서명 Prepare, 신 입구·별칭 9개, 0.14.2 갱신. 이 빌드의 조율 비활성·활성화 경로 없음. Windows 11·Claude Code 2.1.322·Codex의 실제 왕복 확인. Gemini·다른 OS 왕복·실제 호스트 취소·재점유 미검증, 이 시험의 수용 대상 밖
+- OV150-001 완료, 정식 OV150-013의 OV150-014 통과 필요. 현재 요청의 태그·게시·병합·설치 승인

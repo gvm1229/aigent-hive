@@ -9,7 +9,7 @@ summary: "작업자 실행과 대화형 Claude 결과 수신의 별도 근거 �
 tags: [evidence, hooks, orchestration]
 aliases: [hook-inbox-evidence]
 sources:
-  - "repo:docs/research/overhaul/OV150-001.md#sha256:7386967ec5249ecdb61460a251877f514a597a1fa6e997950f7112362844f8bb"
+  - "repo:docs/research/overhaul/OV150-001.md#sha256:feaf7d18aa48c26b31ac5210cac88b3a916ea80ff29106de97b3ab55d65329e6"
 links: [orchestration-ownership]
 reviewed_revision: "git:eb988a3637ec5ce3035de4cd758b133828d3c5c0"
 status: active
