@@ -1115,3 +1115,23 @@
 | [passed](runs/20261112T184401-fe88954efb09.md) | 개발 검증: uv.EXE | 58faab62eb1caa6d5420c7f3b841347a5d0b6a12 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T184421-b3100cc67b4e.md) | Python conformance: release | 09a702aeb345a3e5de44302ba9aa471b3d15e455 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T184718-556d7ee88bea.md) | 개발 검증: uv.EXE | 09a702aeb345a3e5de44302ba9aa471b3d15e455 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T190505-783e1bf5cd6b.md) | Python conformance: documentation | 8722c92485ca63c38f4350e464dc602ffefadc04 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T190754-fc6e40c9bea2.md) | OV150-014 제품 봉투 참조 처리기 적합성 | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T190800-c0a7fa7dc795.md) | OV150-014 제품 봉투 참조 처리기 적합성 | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T190837-37db001255c5.md) | OV150-014 Windows 대상 경로 결합 보완 | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T190903-47d373cc4d97.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T190912-dccd2b8e75fc.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T190952-0ebc615f0edf.md) | OV150-014 최종 가짜 호스트 적합성 | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T190956-5ec688fd13e1.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191033-11dca81b4ed6.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T191037-604bfa442dbe.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191100-d43283354702.md) | OV150-014 공개 수용 역할 병합과 기능 자료 거부 | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191123-a48b531ca497.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191127-e850a637041e.md) | 개발 검증: cargo.EXE | 8534e0e7a10af9b734c493d228dc68c934e07e4d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191216-0765371e43fc.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191220-f19ebd35f208.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T191236-5c96615f88a3.md) | 개발 검증: cargo.EXE | 050853205575a2c3ebab06af2e3c686e7e2966df | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261112T191856-f544dc808737.md) | 개발 검증: uv.EXE | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261112T191859-678df414b9f0.md) | Python conformance: documentation, security, contract, integration, release | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T192212-cc780338195c.md) | 개발 검증: cargo.EXE | 45d2acf27e5039a35b0981b25860972375f2de9b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T194324-7a58dd531fe6.md) | OV150-011 공개 CLI 신 9개와 모든 별칭의 비활성 수용 | fc9c376a7979e6ad5c394446218a329181a640f8 | Windows-11-10.0.26300-SP0 |
