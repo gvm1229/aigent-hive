@@ -102,7 +102,6 @@ impl Roster {
             }
         }
         for (name, role) in patch.gods {
-            let name = crate::gods::find(&name).map_or(name.clone(), |god| god.name.to_owned());
             self.gods.insert(name, role);
         }
     }
@@ -125,6 +124,13 @@ impl Roster {
         }
         if self
             .gods
+            .keys()
+            .any(|name| !crate::gods::GODS.iter().any(|god| god.name == name))
+        {
+            return Err("god keys must use canonical names".into());
+        }
+        if self
+            .gods
             .values()
             .any(|role| !self.roles.contains_key(role))
         {
@@ -137,8 +143,18 @@ impl Roster {
     /// # Errors
     /// Rejects missing roles or incomplete configuration.
     pub fn resolve(&self, name: &str) -> Result<(&str, Role), String> {
+        self.resolve_named(name).map(|(_, provider, role)| (provider, role))
+    }
+
+    /// Resolve a god or role once, including the canonical role ID.
+    /// # Errors
+    /// Rejects missing roles or incomplete configuration.
+    pub fn resolve_named(&self, name: &str) -> Result<(&str, &str, Role), String> {
         let name = self.role_name(name);
-        self.resolve_role(name)
+        let (name, _) = self.roles.get_key_value(name)
+            .ok_or_else(|| format!("unknown role: {name}"))?;
+        let (provider, role) = self.resolve_role(name)?;
+        Ok((name, provider, role))
     }
 
     fn role_name<'a>(&'a self, name: &'a str) -> &'a str {
@@ -258,6 +274,30 @@ mod tests {
         roster.gods.insert("hades".into(), "missing".into());
         assert!(roster.validate().is_err());
     }
+
+    #[test]
+    fn roster_rejects_noncanonical_god_keys_after_merge() {
+        let user = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        fs::create_dir(project.path().join(".hive")).unwrap();
+        for name in ["invented", "Minerva", "아테나", "Athena"] {
+            fs::write(
+                project.path().join(".hive/roster.toml"),
+                format!("[gods]\n'{name}'='hive-independent-judge'\n"),
+            ).unwrap();
+            let error = Roster::load(user.path(), project.path()).unwrap_err();
+            assert_eq!(error, "god keys must use canonical names");
+        }
+        fs::write(
+            project.path().join(".hive/roster.toml"),
+            "[gods]\nathena='hive-independent-judge'\n",
+        ).unwrap();
+        let roster = Roster::load(user.path(), project.path()).unwrap();
+        let (name, provider, role) = roster.resolve_named("Minerva").unwrap();
+        assert_eq!(name, "hive-independent-judge");
+        let profile = Roster::worker_profile_resolved(name, provider, &role).unwrap();
+        assert!(profile.argv.windows(2).any(|p| p == ["--sandbox", "read-only"]));
+    }
 }
 
 /// Host-supplied official output, not an execution or activation authority.
@@ -279,6 +319,18 @@ impl Roster {
     /// Rejects unknown versions, models, efforts, login states or missing official hooks.
     pub fn check(&self, name: &str, report: &CapabilityReport) -> Result<(), String> {
         let (provider, role) = self.resolve(name)?;
+        self.check_resolved(provider, &role, report)
+    }
+
+    /// Check host observations against an already resolved role.
+    /// # Errors
+    /// Rejects unsupported versions, models, efforts, login states or official hooks.
+    pub fn check_resolved(
+        &self,
+        provider: &str,
+        role: &Role,
+        report: &CapabilityReport,
+    ) -> Result<(), String> {
         if report.provider != provider
             || !report
                 .version_output
@@ -435,8 +487,18 @@ impl Roster {
     /// # Errors
     /// Rejects unknown roles, floating models and unsupported effort values.
     pub fn worker_profile(&self, name: &str) -> Result<WorkerProfile, String> {
-        let role_name = self.role_name(name);
-        let (provider, role) = self.resolve_role(role_name)?;
+        let (role_name, provider, role) = self.resolve_named(name)?;
+        Self::worker_profile_resolved(role_name, provider, &role)
+    }
+
+    /// Convert an already resolved role without resolving a god mapping again.
+    /// # Errors
+    /// Rejects missing or floating models and unsupported providers or efforts.
+    pub fn worker_profile_resolved(
+        role_name: &str,
+        provider: &str,
+        role: &Role,
+    ) -> Result<WorkerProfile, String> {
         let model = role.model.clone().ok_or("missing model")?;
         let effort = role.effort.clone().ok_or("missing effort")?;
         if model.is_empty()
