@@ -938,3 +938,31 @@
 | [passed](runs/20261111T190735-7dad55146bae.md) | 개발 검증: cargo.EXE | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261111T192451-1ab5561ae246.md) | 0.14.1 공개 이전판 시험 실행 파일 확보 | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261111T192938-e17821feac40.md) | 출처 검증한 공개 0.14.1의 임시 프로젝트 시험 자료 생성 | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T193014-2c16bfebe662.md) | Python conformance: integration | 871ad1d5e22525dc191db255f3f9a52ba6639668 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T194501-0756f602456d.md) | Python conformance: documentation | b105cd41e3addd642eb1cce6250e5e402499679f | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T194638-3d35a5f465b5.md) | Python conformance: release | 88dec11c7596d7f4168f12fc5344bd24ebf21038 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T194900-9f7ad76a6ccb.md) | Python conformance: release | 88dec11c7596d7f4168f12fc5344bd24ebf21038 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T195052-b2add5ff689b.md) | Python conformance: documentation | 429bec0bebe5462312e7eabb3333eae5e53e53a8 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261111T195349-1dc4291355ac.md) | Python conformance: documentation | 88ecb7a13736634afca601fe354e53c88b0dc58e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T195552-3b416ad97074.md) | Python conformance: documentation | 88ecb7a13736634afca601fe354e53c88b0dc58e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261111T195803-53d0d19c2c56.md) | Python conformance: documentation | 88ecb7a13736634afca601fe354e53c88b0dc58e | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T041443-870346a1f84b.md) | 개발 검증: cargo.EXE | 1a7a7f00ff45917c99f8d24b580a551539b16ef7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T041452-34707139acaa.md) | 개발 검증: cargo.EXE | 1a7a7f00ff45917c99f8d24b580a551539b16ef7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T041548-4d9e2f4bf3ef.md) | 개발 검증: cargo.EXE | 1a7a7f00ff45917c99f8d24b580a551539b16ef7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T041643-273413a51426.md) | Python conformance: documentation | e6186031516b90d119b9c0dbfe64119b270e4396 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T041733-a05cc641940e.md) | Python conformance: documentation | e6186031516b90d119b9c0dbfe64119b270e4396 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T041826-57f105013a97.md) | Python conformance: documentation | e6186031516b90d119b9c0dbfe64119b270e4396 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T042338-89ba49858626.md) | 개발 검증: cargo.EXE | 175fd7f66e86ac6092668a5b5f422654766f9bfa | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T042404-8b96aa12b687.md) | 개발 검증: cargo.EXE | 175fd7f66e86ac6092668a5b5f422654766f9bfa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T042518-82f6718e79e4.md) | 개발 검증: cargo.EXE | 175fd7f66e86ac6092668a5b5f422654766f9bfa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T042544-3ac6309623f0.md) | 개발 검증: cargo.EXE | 175fd7f66e86ac6092668a5b5f422654766f9bfa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T042647-05c0a55c516a.md) | 개발 검증: cargo.EXE | 175fd7f66e86ac6092668a5b5f422654766f9bfa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T042730-4da88eaffed0.md) | Python conformance: documentation | 522d9ed50b34f7497bc4db9b0e5907db3c067df2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T042909-5fe1ac42f3ba.md) | Python conformance: documentation | e032bd9f8a1e404cf473dfd78982c9f7780abb13 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T050821-dd9f6912c20f.md) | Python conformance: documentation | e032bd9f8a1e404cf473dfd78982c9f7780abb13 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T050936-f83033806258.md) | 개발 검증: cargo.EXE | 12b6045f068b089f10bd695f27f0f48ba7053ee5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T051029-be260b5a8a91.md) | 개발 검증: cargo.EXE | 12b6045f068b089f10bd695f27f0f48ba7053ee5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T051133-92b38dd09249.md) | Python conformance: documentation | 311e4f52f2970d01c225b7629d60580fadb0d0b8 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T051332-ded1dfeedb76.md) | Python conformance: documentation | 27bec578914cd07dd6d47b4570da279eeddea4c1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T051645-a394546f5904.md) | Python conformance: documentation | 0ff46572468a0557d6393423df4518977832c0b7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T052809-485701e4f33f.md) | 변경된 소스 작업 폴더 규칙의 정적 검사 정합성 | 14e29d80e5bb286d661c2ee9e51b157e53f76ea9 | Windows-11-10.0.26300-SP0 |
