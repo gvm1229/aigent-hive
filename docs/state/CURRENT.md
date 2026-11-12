@@ -46,5 +46,6 @@
 - Codex·Windows: Rust 1434개 통과·수동 제외 5, Python 81개 모듈·1140개 통과·조건부 제외 45. 후속 관련 시험으로 최초 목록 누락 보완, 중복 합산 없음
 - 최종 fmt·workspace/all-targets/all-features clippy·문서 묶음 통과, Source Wiki 정본·파생 색인 274쪽 확인. [정확한 근거·한계](../research/overhaul/stage-3-review.md#최종-수정과-검증)
 - 산출물 관리: 검토 대기 470·실험실 보존 1. 검토 완료한 이전 버전 재현 폴더 99개 파일 정리, 기록 보존. 일일 점검은 최소 20.306GiB·미측정 21개로 주의 필요, 공유 빌드·다른 작업 원본의 전체 정리 완료 주장 없음
+- 원격 검증: 단계 분기 `75dc4c16`·[브랜치 검사 43285223978](https://github.com/gvm1229/aigent-hive/actions/runs/43285223978) success·로컬/원격 일치. Ubuntu 분기·커밋 규칙만 확인, 제품 전체 CI는 PR/main/develop 조건으로 미실행
 - 0.15.0-test.1 수용: 세 운영체제의 역할 구성 병합·거부, 호스트 제공 출력의 `roster check`, 비활성 summon 미리보기·서명 Prepare, 신 입구·별칭 9개, 0.14.2 갱신. 이 빌드의 조율 비활성·활성화 경로 없음. 실제 Claude Stop→Codex→반환·Gemini 실행·실제 호스트 취소·재점유 미검증, 이 시험의 수용 대상 밖
 - OV150-001 미완료·OV150-011 의존성 유지, 정식 OV150-013은 OV150-001·OV150-014 통과 필요. 이번 태그·게시·병합 제외
