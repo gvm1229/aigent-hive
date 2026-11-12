@@ -16,7 +16,7 @@
   - 변경: 한·영 질의 40개 이상(HTML 디자인 선호 사례, "색"·"글꼴" 같은 짧은 한국어 질의 포함)과 합성 지식 저장소, 과적합 방지용 보류 묶음 분리
   - 확인: 질의별 기대 사실과 현재 적중 표, 전체 회수율 수치
 - [ ] [OVX-003] 실제 기억 저장소의 세 사실 존재 확인
-  - state: awaiting-user-authority; owner: user; reason: 사용자 개인 지식 폴더의 읽기 동의
+  - state: agent-owned
   - 변경: `~/.hive/knowledge/Claims`에서 미니멀 스타일·색·피할 디자인 사실 검색, 읽기 전용
   - 확인: 3개 각각 존재/부재 기록. 부재면 원인은 기록 규칙, 0.15.2의 OV152-002 우선
 - [ ] [OVX-004] 크기 기준선
@@ -24,15 +24,16 @@
   - 변경: 새 프로젝트당 Hive 파일 수, 내장 Skill 수·단어 수, 임시 사용자 기준 `hive storage` 분류별 용량
   - 확인: 세 수치와 측정 명령 기록
 - [ ] [OVX-005] 창 실험 1 — 다중화 도구와 대화형 실행
-  - state: awaiting-user-authority; owner: user; reason: 실제 로그인 CLI 사용과 구독 사용량 소모 동의
+  - state: agent-owned; depends: OVX-008
+  - 실행 조건: OVX-008에서 제공자별 현재 약관의 대화형 자동 입력 허용 확인 뒤에만 실행. 불허·허용 미확인 제공자 부분은 `blocked`와 이유·해결 경로 기록
   - 변경: `tests/work/pane-lab/` 스크립트. Windows psmux와 WSL·macOS tmux에서 3창 열기, `claude --model --effort`·`codex -m -c model_reasoning_effort=`·`gemini -m` 대화형 실행, `send-keys -l`로 한글·긴 문장 입력, `capture-pane`으로 상태 읽기
   - 확인: 각 창의 지정 모델·수준 표시, 입력 손실 0건, 자격 증명 파일 접근 0건
 - [ ] [OVX-006] 창 실험 2 — 입력 대기 감지와 알림 왕복
-  - state: awaiting-user-authority; depends: OVX-005; owner: user; reason: OVX-005와 같은 실제 CLI 사용 동의
+  - state: agent-owned; depends: OVX-005
   - 변경: Claude Code `Stop`·`Notification` 훅, Codex `notify`, Gemini CLI 훅으로 대기 신호 파일 기록. 대기 창에만 알림 한 줄 입력
   - 확인: 작업 중 창 입력 0건, 대기 → 알림 → 메시지 상자 읽기 왕복 3회 성공
 - [ ] [OVX-007] 창 실험 3 — 종료·재개·한도·추론 수준
-  - state: awaiting-user-authority; depends: OVX-005; owner: user; reason: OVX-005와 같은 실제 CLI 사용 동의
+  - state: agent-owned; depends: OVX-005
   - 변경: 창 강제 종료 뒤 `claude -r`·`codex resume`·`gemini -r` 재개, 인증 만료·한도 도달 화면 문구 수집, 같은 계정 동시 창 3개의 사용량 소모 관찰, Gemini `modelConfigs.customAliases`의 `thinkingLevel` 효과
   - 확인: 재개 결과·감지 문구·소모량 표, Gemini 별칭 형식 확정
 - [ ] [OVX-008] 제공자 약관 원문 재확인
