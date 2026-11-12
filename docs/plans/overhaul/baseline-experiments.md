@@ -1,9 +1,9 @@
 # 단계 2 — 기준선과 창 실험
 
-> Plan version: 0.14.1
+> Plan version: 0.14.2
 > Scope: source
 
-브랜치: `test/overhaul-2-baseline`([브랜치 규칙](README.md)). 진입: 0.14.1 정식. 제품 바이트 변경 없음. 실험 코드는 `tests/work/`의 일회성 스크립트, 결과는 `docs/research/overhaul/<ID>.md`
+브랜치: `test/overhaul-2-baseline`([브랜치 규칙](README.md)). 진입: 0.14.2 정식·정리 확인. 제품 바이트 변경 없음. 실험 코드는 `tests/work/`의 일회성 스크립트, 결과는 `docs/research/overhaul/<ID>.md`
 
 ## 항목
 

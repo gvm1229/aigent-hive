@@ -39,8 +39,8 @@
   - state: complete; depends: OV142-006; evidence: repo:docs/research/overhaul/OV142-007.md#sha256:ecc9f4a9649f697881f8059db876225ecab98ab14831ea748da1f07153e05b77
   - 변경: 03의 공개 시험 절차와 OV141-009 근거를 따라 test.1 후보·게시. macOS 임시 경로 보완 뒤 test.2 후보·게시·공개 수용, 최종 수용 번호만 정식에 승격
   - 확인: Windows x64·macOS arm64·Linux x64 공개 설치 수용 실행 ID와 제품 지문. 실행 ID·소스 SHA·제품 지문 결합
-- [ ] [OV142-008] 정식 0.14.2 출시와 이 PC 갱신
-  - state: agent-owned; depends: OV142-007
+- [x] [OV142-008] 정식 0.14.2 출시와 이 PC 갱신
+  - state: complete; depends: OV142-007; evidence: repo:docs/research/overhaul/OV142-008.md#sha256:c95277586522b5b471f3e2e4968999bda076573c5dd68dbaf16919f30dded9d0
   - 변경: 버전별 사전 승인 범위의 develop→main·정식 게시·구독자 안내·이 PC 갱신
   - 확인: 공개 버전·감시 bin 파일 수 2 이하·`hive prune --dry-run` 후보 0. OV141-011 실패 조건의 해결 증거 연결. 실제 관측 전 완료 금지
 
@@ -58,3 +58,5 @@ OV142-001–004 완료 뒤 005→006→007→008. 종료 경계는 단계 1b 완
 - 별도 후속 과제: hive-wiki knowledge_lock의 Windows 간헐 실패. 변경하지 않은 코드, 이번 수정 범위 제외
 
 - 공개 시험 보완 순서: test.1 후보의 npm 전파·게시 복구 유지 → 정식 문서 준비 일시 되돌림 → prune 시험의 macOS `/var` 경로 정규화 → 대상 시험·1.99 Clippy → test.2 제품 지문 지정·develop 후보 → 세 운영체제 공개 수용. 정식 안내 재적용은 최종 수용 뒤
+
+- 최종 완료: 정식·구독자 전송 단계 성공, 실제 Windows CLI 0.14.2·bin 파일 2개·prune 후보 0. 선택 질문 2개는 기존 보호를 보존한 범위 밖의 사용자 선택, 단계 2 미시작

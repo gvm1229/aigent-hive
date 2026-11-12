@@ -47,8 +47,10 @@
   - state: complete; depends: OV141-009; evidence: repo:docs/research/overhaul/OV141-010.md#sha256:1e2c486bfdd07f4e0fe8be5b53f29988987423886969e38df6f159e6cb1e282b
   - 변경: 단계 브랜치 `fix/overhaul-1-0.14.1`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 정식 출시 항목은 이후 `develop`에서 진행(`main` PR의 head는 `develop`), 단계 브랜치 삭제는 정식 뒤
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치
-- [ ] [OV141-011] 정식 0.14.1 출시와 이 PC 갱신
-  - state: blocked; depends: OV141-010; owner: 0.14.2 단계; reason: 정식 게시·Discord 전송 단계·PC 0.14.1 설치 성공. 큰 실행 파일의 제한 읽기 실패로 2개 이하 조건 미충족. 0.14.2 수정·정식 갱신 항목으로 해결 경로 이관
+- [x] [OV141-011] 정식 0.14.1 출시와 이 PC 갱신
+  - state: complete; depends: OV141-010; evidence: repo:docs/research/overhaul/OV141-011.md#sha256:a450d9c6eb99355f0ccae672c36928c4d048af7e5e1da8593f1afbe2bb80d120
   - 변경: 승인 범위의 main 통합·태그·게시, 이 PC 갱신 뒤 감시 실행 파일 2개·갱신 완료 상태 확인
   - 확인: 공개 패키지 버전, `~/.hive/runtime/usage-monitor/bin` 파일 수 2 이하
-  - 진행(2026-11-12): 복구 게시 43075315269·GitHub 정식 출시·Discord 단계·PC 0.14.1 설치 성공. 감시 파일 6개로 조건 실패. 2026-11-12 사용자 결정: 0.14.2 선행 수정 단계로 이관, 이 항목의 완료 처리 제외([재정비 현재 위치](../../plans/overhaul/README.md#현재-위치))
+  - 당시 진행(0.14.2 갱신 전): 복구 게시 43075315269·GitHub 정식 출시·Discord 단계·PC 0.14.1 설치 성공. 감시 파일 6개로 조건 실패. 2026-11-12 사용자 결정: 0.14.2 선행 수정 단계로 이관, 이 항목의 완료 처리 제외([재정비 현재 위치](../../plans/overhaul/README.md#현재-위치))
+
+  - 후속 해결: 0.14.2 정식 갱신에서 파일 2개·prune 후보 0 실측. 2026-11-12 사용자 지정 OV142-008로 완료, 과거 0.14.1 실패 이력 보존

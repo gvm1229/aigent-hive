@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 495
+> Revision: 496
 > 기준일: 2026-11-12
 > Product version: `0.14.2`
-> 공개 Stable: `0.14.1`
-> 현재 단계: 재정비 단계 1b, 큰 감시 실행 파일 정리
+> 공개 Stable: `0.14.2`
+> 현재 단계: 재정비 단계 1b 완료, 단계 2 미시작
 > 공개 시험: `0.14.2-test.1` 게시, 최종 `0.14.2-test.2` 세 운영체제 수용 완료
 > 작업 브랜치: `fix/overhaul-1-0.14.2`
 
@@ -19,8 +19,8 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 0.14.2 수정판 | 7 | 1 | 87.5% |
-| **현재 범위 합계** | **7** | **1** | **87.5%** |
+| 0.14.2 수정판 | 8 | 0 | 100.0% |
+| **현재 범위 합계** | **8** | **0** | **100.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -32,7 +32,7 @@
 ## 이전 근거
 
 - [재정비 순서](overhaul/README.md)
-- [0.14.1 보관 계획](../archive/plans/0.14.1-closeout.md)·[미완료 상태](../archive/state/0.14.1-incomplete.md)·[항목](../archive/plans/overhaul-0.14.1.md): OV141-011 미완료, OV142-008에서 해결 확인
+- [0.14.1 보관 계획](../archive/plans/0.14.1-closeout.md)·[미완료 상태](../archive/state/0.14.1-incomplete.md)·[항목](../archive/plans/overhaul-0.14.1.md): OV141-011의 당시 미완료 기록, OV142-008에서 후속 해결 완료
 - [완료된 구독자 승인 작업](../archive/plans/subscriber-approval-via-main.md)
 
-- 정식 준비: OV142-001–007 검증 완료. OV142-008은 승인된 배포·이 PC 설치 실행, 실측 전 완료 처리 제외
+- 완료: OV142-001–008 검증·정식·PC 실측 완료. 다음 단계 2의 OVX-001은 이번 실행에서 시작하지 않는 범위
