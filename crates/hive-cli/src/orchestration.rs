@@ -905,9 +905,8 @@ fn mutate_with_summon(
             .map(|()| artifact.relative.clone())
         })
         .transpose()?;
-    let mut artifact_changes: Vec<PathBuf> =
-        receipt_change.into_iter().chain(side_change).collect();
-    if let Some((envelope, task)) = summon {
+    let artifact_changes: Vec<PathBuf> = receipt_change.into_iter().chain(side_change).collect();
+    let summon_files = if let Some((envelope, task)) = summon {
         let digest = envelope.digest().map_err(CliError::Core)?;
         let event = &payload.event;
         if event.kind != EventKind::Prepare
@@ -931,17 +930,11 @@ fn mutate_with_summon(
         let bytes =
             serde_json::to_vec_pretty(envelope).map_err(|e| CliError::Core(e.to_string()))?;
         let task_path = PathBuf::from(&envelope.task_file);
-        publish_immutable(
-            &target,
-            &run_path(&envelope.run_id, "tasks")?,
-            &task_path,
-            task,
-            "summon task",
-        )?;
-        publish_immutable(&target, &inbox, &envelope_path, &bytes, "summon envelope")?;
-        artifact_changes.extend([task_path, envelope_path]);
-    }
-    commit_event(
+        Some((inbox, envelope_path, bytes, task_path, task))
+    } else {
+        None
+    };
+    let mut result = commit_event(
         command,
         arguments,
         &target,
@@ -949,7 +942,23 @@ fn mutate_with_summon(
         &payload.event,
         event_digest,
         artifact_changes,
-    )
+    )?;
+    if let Some((inbox, envelope_path, bytes, task_path, task)) = summon_files {
+        publish_immutable(
+            &target,
+            &run_path(&arguments.run_id, "tasks")?,
+            &task_path,
+            task,
+            "summon task",
+        )?;
+        publish_immutable(&target, &inbox, &envelope_path, &bytes, "summon envelope")?;
+        result.changed_paths.extend(
+            [task_path, envelope_path]
+                .iter()
+                .map(|path| portable_relative_path(path)),
+        );
+    }
+    Ok(result)
 }
 
 fn validate_mutation_payload(
@@ -1000,6 +1009,7 @@ fn validate_mutation_payload(
     if event.authority_id != authority.authority_id {
         return Err(AdapterError::Verification("event authority id mismatch".to_owned()).into());
     }
+    // shortcut: Prepare cannot lead to execution; require the issued-authority ledger before enabling it.
     if !(matches!(command, "authority-issue" | "authority-revoke")
         || command == "plan" && event.kind == EventKind::Reserve
         || inert_summon && command == "plan" && event.kind == EventKind::Prepare)
@@ -2258,8 +2268,17 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn summon_signed_prepare_writes_once_and_never_launches() {
+        assert_summon_signed_prepare(false);
+    }
+
+    #[test]
+    fn summon_commit_crash_then_head_advance_does_not_wedge_action() {
+        assert_summon_signed_prepare(true);
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn assert_summon_signed_prepare(crash_then_head_advance: bool) {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target_path = temporary.path().join("consumer");
         std::fs::create_dir_all(target_path.join(".hive/runs/run-1")).expect("run directory");
@@ -2365,7 +2384,7 @@ mod tests {
         );
 
         let task = b"bounded task";
-        let envelope = hive_core::orchestration::SummonEnvelope {
+        let mut envelope = hive_core::orchestration::SummonEnvelope {
             schema_version: 1,
             run_id: "run-1".into(),
             action_id: "action-1".into(),
@@ -2397,7 +2416,7 @@ mod tests {
         );
         let auth_path = temporary.path().join("prepare-auth.toml");
         std::fs::write(&auth_path, toml::to_string(&authority).unwrap()).unwrap();
-        let event = OrchestrationEvent {
+        let mut event = OrchestrationEvent {
             event_id: "prepare-event".into(),
             sequence: 2,
             predecessor_digest: Some(reserve.digest().unwrap()),
@@ -2411,7 +2430,7 @@ mod tests {
         };
         let event_path = temporary.path().join("prepare-event.toml");
         std::fs::write(&event_path, toml::to_string(&event).unwrap()).unwrap();
-        let args = MutationArguments {
+        let mut args = MutationArguments {
             event: event_path,
             expected_head: envelope.event_head.clone(),
             authority: auth_path,
@@ -2422,6 +2441,67 @@ mod tests {
         assert!(!target_path
             .join(".hive/runs/run-1/inbox/action-1.json")
             .exists());
+        if crash_then_head_advance {
+            // Persist a competing event revision, as after a crash before its head CAS.
+            let competing_event = OrchestrationEvent {
+                event_id: "competing-event".into(),
+                action_id: "projection-action".into(),
+                kind: EventKind::RebuildProjection,
+                to_state: DispatchState::Reserved,
+                ..event.clone()
+            };
+            let (relative, bytes) = render_event(&competing_event).unwrap();
+            publish_immutable(
+                &target,
+                &run_path("run-1", "events").unwrap(),
+                &relative,
+                &bytes,
+                "competing event revision",
+            )
+            .unwrap();
+            let error = mutate_with_summon("plan", &args, Some((&envelope, task)))
+                .err()
+                .expect("competing immutable revision prevents prepare commit");
+            assert!(error.message().contains("different bytes"));
+            assert!(!target_path.join(&envelope.task_file).exists());
+            assert!(!target_path
+                .join(".hive/runs/run-1/inbox/action-1.json")
+                .exists());
+
+            let mut loaded = load_chain(&target, "run-1").unwrap();
+            let competing_digest = loaded.state.apply_event(&competing_event).unwrap();
+            commit_event(
+                "recover",
+                &args,
+                &target,
+                loaded,
+                &competing_event,
+                competing_digest.clone(),
+                Vec::new(),
+            )
+            .unwrap();
+            envelope.event_head = format!("2:{competing_digest}");
+            envelope.authority_id = "prepare-after-crash".into();
+            let digest = envelope.digest().unwrap();
+            let authority = signed_authority(
+                &signing_key,
+                &envelope.authority_id,
+                AuthorityAction::Plan,
+                target_digest(&target),
+                &envelope.event_head,
+                0,
+                &digest,
+            );
+            std::fs::write(&args.authority, toml::to_string(&authority).unwrap()).unwrap();
+            event.sequence = 3;
+            event.predecessor_digest = Some(competing_digest);
+            event.authority_id.clone_from(&envelope.authority_id);
+            event.request_digest.clone_from(&digest);
+            event.payload_digest.clone_from(&digest);
+            std::fs::write(&args.event, toml::to_string(&event).unwrap()).unwrap();
+            args.expected_head.clone_from(&envelope.event_head);
+            args.request_digest = digest;
+        }
         let result = mutate_with_summon("plan", &args, Some((&envelope, task))).unwrap();
         assert_eq!(result.data.unwrap()["state"], "prepared");
         assert!(target_path
