@@ -39,8 +39,9 @@
   - state: agent-owned; depends: OVX-005
   - 변경: 창 강제 종료 뒤 `claude -r`·`codex resume`·`gemini -r` 재개, 인증 만료·한도 도달 화면 문구 수집, 같은 계정 동시 창 3개의 사용량 소모 관찰, Gemini `modelConfigs.customAliases`의 `thinkingLevel` 효과
   - 확인: 재개 결과·감지 문구·소모량 표, Gemini 별칭 형식 확정
-- [ ] [OVX-008] 제공자 약관 원문 재확인
-  - state: agent-owned
+- [x] [OVX-008] 제공자 약관 원문 재확인
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-008.md#sha256:be476982054148e3252fc12da824f35cea1bb27a8190bae689fe3494bdc64e10
+  - 근거: [공식 약관과 판정](../../research/overhaul/OVX-008.md)
   - 변경: Anthropic·OpenAI·Google의 현재 약관·정책에서 대화형 CLI의 자동 입력·병렬 사용 조건 확인. 조항 요약·출처·마지막 확인일 기록
   - 확인: 세 제공자 표 완성, 확인일 90일 이내
 - [ ] [OVX-009] 창 실행 허용 ADR 초안과 승인

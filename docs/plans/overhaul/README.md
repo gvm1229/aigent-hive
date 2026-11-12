@@ -7,7 +7,7 @@
 ## 현재 위치
 
 - 단계 1b 8/8 완료, 0.14.2 정식·병합 확인. 로컬·원격 단계 1b 브랜치 삭제 완료
-- 단계 2 `test/overhaul-2-baseline`: 3/10 완료. 다음 OVX-008 제공자 약관 확인
+- 단계 2 `test/overhaul-2-baseline`: 4/10 완료. 다음 OVX-003 읽기 전용 실제 사실 확인
 - 실행 순서: OVX-001 → 002 → 004 → 008 → 003 → 005 → 006 → 007. OVX-009·010 전 중단, develop 병합 제외
 - 2026-11-12 단계 2 실험 명시 승인. OVX-003 읽기 전용 Claims 검색, OVX-005–007 약관 허용 제공자만 실행
 - [시작·정리 근거](../../research/overhaul/stage-2-start.md)
@@ -87,7 +87,7 @@
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
 | 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 11/11 |
 | 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 develop 병합, 2026-11-12 버전 승인 | 8/8 |
-| 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 확인 | 3/10 |
+| 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 확인 | 4/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-001 | 0/7 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/10 |
