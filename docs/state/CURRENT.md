@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 현재: test.1 소스 29875af0·CI 43305152077·후보 43305279711·복구 게시 43312182798 success. 공개 수용 43312886228·게시 뒤 POSIX 검증 진행, 조율 비활성·활성화 경로 없음. 원본·범위: [OV150-011](../research/overhaul/OV150-011.md)
+- 현재: test.1 소스 29875af0·후보 43305279711·복구 게시 43312182798·세 OS 수용 43312886228 success. CI 43305152077 게시 뒤 POSIX attempts 2·3 success, 정식 main PR 준비. 조율 비활성·활성화 경로 없음. [근거](../research/overhaul/OV150-011.md)
 - 아래 선행 구현·검토 기록의 당시 011 전 종료·반환 미검증 경계는 현재 요청과 실증으로 대체
 
 
@@ -35,9 +35,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.0`
-- 현재 등록 항목: 17/19 완료
+- 현재 등록 항목: 18/19 완료
 
-- `agent-owned`: `OV150-012`, `OV150-013`
+- `agent-owned`: `OV150-013`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
