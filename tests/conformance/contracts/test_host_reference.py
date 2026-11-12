@@ -8,6 +8,7 @@ import unittest
 
 from jsonschema import Draft202012Validator, FormatChecker
 from tests.conformance.support.harness import Phase1CliTestCase, REPOSITORY_ROOT
+from tests.conformance.contracts.test_roster_gods import GODS
 
 SPEC = importlib.util.spec_from_file_location('host_reference', REPOSITORY_ROOT / 'tests/fixtures/host-handler/handler.py')
 HANDLER = importlib.util.module_from_spec(SPEC)
@@ -15,6 +16,27 @@ SPEC.loader.exec_module(HANDLER)
 
 
 class HostReferenceTests(Phase1CliTestCase):
+    def test_public_cli_resolves_all_nine_gods_and_their_aliases(self):
+        root = (self.work_root / 'god-consumer').resolve()
+        root.mkdir()
+        for god in GODS:
+            digests = set()
+            for name in (god.name, god.korean, *god.aliases):
+                output = subprocess.run([
+                    str(self.hive_binary), 'summon', name, '--task', 'bounded task',
+                    '--target', str(root), '--user-root', str(self.setup_user_root),
+                    '--run', 'run-1', '--action', 'action-1', '--expected-head', 'none',
+                    '--control-epoch', '0', '--authority-id', 'prepare-1', '--output', 'json',
+                ], capture_output=True, text=True, encoding='utf-8')
+                self.assertEqual(output.returncode, 0, output.stdout + output.stderr)
+                data = json.loads(output.stdout)['data']
+                self.assertFalse(data['enabled'])
+                self.assertEqual(data['envelope']['role'], god.role)
+                self.assertEqual(data['mutation_count'], 0)
+                digests.add(data['request_digest'])
+            self.assertEqual(len(digests), 1, god.name)
+        self.assertFalse((root / '.hive').exists())
+
     def test_roster_merge_reload_rejection_and_host_report(self):
         root, path, envelope, context = self.prepare()
         def call(*args):
