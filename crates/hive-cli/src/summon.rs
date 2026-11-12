@@ -106,8 +106,7 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     if task.is_empty() || task.len() > 256 * 1024 {
         return Err("task must contain 1..262144 bytes".into());
     }
-    let run = get("--run")?;
-    let action = get("--action")?;
+    let (run, action) = (get("--run")?, get("--action")?);
     let envelope = SummonEnvelope {
         schema_version: 1,
         run_id: run.into(),
@@ -130,14 +129,12 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     };
     let digest = envelope.digest()?;
     if !options.iter().any(|(k, _)| *k == "--event") {
-        return Ok(
-            serde_json::to_value(ActionResult {
+        return serde_json::to_value(ActionResult {
                 schema_version: 1, action: "Summon", status: "success", exit_code: 0,
                 code: "hive.summon-preview", message: "inert summon preview".into(),
                 changed_paths: Vec::new(), evidence: Vec::new(), next_action: None,
                 data: Some(json!({"preview":true,"envelope":envelope,"request_digest":digest,"mutation_count":0,"enabled":false})),
-            }).map_err(|e| e.to_string())?,
-        );
+            }).map_err(|e| e.to_string());
     }
     get("--capabilities")?;
     if get("--request-digest")? != digest {
