@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Aigent Hive stable 버전을 설치하고 host와 project를 설정하는 간단한 한국어 안내">
-  <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
+  <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
   <title>Aigent Hive 간단 설치 안내</title>
   <style>
     :root {
@@ -324,8 +324,8 @@
 
   <div class="glance">
     <table aria-label="설치 안내 한눈에 보기">
-      <tr><th>권장 release</th><td>Stable <code>0.14.2</code> · npm <code>latest</code></td></tr>
-      <tr><th>0.14.2 수정</th><td>1 MiB 초과·128 MiB 이하인 오래된 감시 프로그램 정리 복구, 현재·직전·Windows 잠금 파일 보존</td></tr>
+      <tr><th>권장 release</th><td>Stable <code>0.15.0</code> · npm <code>latest</code></td></tr>
+      <tr><th>0.15.0 변경</th><td>신 입구 9개·역할별 모델 설정·작업 요청 미리보기 추가, 기존 명령 보존. 자동 조율 비활성·활성화 경로 없음</td></tr>
       <tr><th>새 설정 방식</th><td>모델 호출 없는 터미널 질문, 저장한 선택 재사용·취소 후 재개 지원</td></tr>
       <tr><th>기본 설치</th><td>Node.js와 npm을 사용하는 전역 package 설치</td></tr>
       <tr><th>지원 host</th><td>Codex · Claude Code · Gemini Antigravity</td></tr>
@@ -376,7 +376,7 @@ npm --version</code></pre>
         <article class="step">
           <div>
             <h3>Version 확인</h3>
-            <p>명령 인식과 stable version label 확인. 현재 예상값: <code>AIgent Hive v0.14.2 (released 2026-11-12)</code></p>
+            <p>명령 인식과 stable version label 확인. 현재 예상값: <code>AIgent Hive v0.15.0 (released 2026-11-12)</code></p>
             <div class="code">
               <span class="label">TERMINAL</span>
               <pre><code>hive --version</code></pre>
@@ -439,7 +439,7 @@ npm --version</code></pre>
           <div class="code">
             <span class="label">SHELL</span>
             <pre><code>curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.14.2/install.sh | sh</code></pre>
+  https://unpkg.com/aigent-hive@0.15.0/install.sh | sh</code></pre>
           </div>
         </div>
       </details>
@@ -449,7 +449,7 @@ npm --version</code></pre>
         <div class="detail-body">
           <div class="code">
             <span class="label">POWERSHELL</span>
-            <pre><code>irm https://unpkg.com/aigent-hive@0.14.2/install.ps1 | iex</code></pre>
+            <pre><code>irm https://unpkg.com/aigent-hive@0.15.0/install.ps1 | iex</code></pre>
           </div>
         </div>
       </details>
@@ -459,7 +459,7 @@ npm --version</code></pre>
         <div class="detail-body">
           <div class="code">
             <span class="label">CMD</span>
-            <pre><code>curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.2/install.cmd &amp;&amp; install-aigent-hive.cmd</code></pre>
+            <pre><code>curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.0/install.cmd &amp;&amp; install-aigent-hive.cmd</code></pre>
           </div>
         </div>
       </details>
@@ -552,7 +552,7 @@ hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --out
 
     <footer>
       <span>Aigent Hive · Quick Install</span>
-      <span>Stable 0.14.2 · npm latest</span>
+      <span>Stable 0.15.0 · npm latest</span>
     </footer>
   </main>
 </body>

@@ -6,33 +6,30 @@
 
 > A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.14.2-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.15.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.14.2` is the current public release.
+Stable `0.15.0` is the current public release.
 
-## 개발 자료: 역할과 기능 입구
+## Roles and named feature entries
 
-소스 개발 브랜치의 9신은 계획·조사·구현·글쓰기·설정·조율·지식·사용량·정리의 입구 이름표.
-기존 명령과 Skill 유지, 역할 기본값은 TOML 구성으로 관리.
-`hive roster`로 구성 확인, `hive summon`으로 작업 봉투 준비.
-실제 Claude 왕복 미검증으로 새 조율 기능의 기본 비활성 유지.
-[기능 소속·역할 이전](docs/architecture/god-ownership.md) 참조.
-
+Nine named entries group existing features. Use `hive roster` to inspect role settings and
+`hive summon` to preview a task request. Automatic worker execution remains disabled;
+this release has no enablement path. See [feature ownership and role migration](docs/architecture/god-ownership.md).
 
 ## Install the current stable release
 
-`0.14.2` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.15.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -41,7 +38,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.14.2
+npm install -g aigent-hive@0.15.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -50,26 +47,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.14.2 (released 2026-11-12)
+AIgent Hive v0.15.0 (released 2026-11-12)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.14.2/install.sh | sh
+  https://unpkg.com/aigent-hive@0.15.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.14.2/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.15.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.14.2/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -85,7 +82,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.14.2. The stable install guidance is
+Install the current stable release 0.15.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -103,11 +100,19 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.14.2
+## What changed in 0.15.0
+
+- Choose among nine named entries for planning, research, implementation, writing, setup, coordination, knowledge, usage and cleanup. Existing commands and Skill paths remain available.
+- Set role models and effort globally or per project. Inspect the merged configuration with `hive roster`; fixed-model user profiles remain preserved.
+- Preview a task request with `hive summon`, or prepare a signed inbox request. Hive does not launch workers. Orchestration is disabled with no enablement path in this release.
+- Upgrade from 0.14.2 with its authenticated historical project and user sources.
+
+## Earlier changes in 0.14.2
 
 - Updates and `hive prune --confirm` now remove old monitor copies larger than 1 MiB and no larger than 128 MiB.
 - Keep current and previous copies. Preserve files locked by Windows and copies that fail exact-byte verification.
 - The monitor copy input limit remains 128 MiB.
+
 
 ## Earlier changes in 0.14.1
 
@@ -132,7 +137,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 
 ## Supported targets
 
-| Platform | Native target | 0.14.2 evidence |
+| Platform | Native target | 0.15.0 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -143,7 +148,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 The accepted public test covers setup, cancellation, recovery, updates, removal and
 reinstallation on Windows x64, Linux x64 and macOS arm64. Windows also covers actual Codex
 CLI registration and an idle monitor. This does not prove live desktop-model or quota sensing
-on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.14.2` uses explicit macOS ad-hoc signing and publishes Windows as
+on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.0` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 

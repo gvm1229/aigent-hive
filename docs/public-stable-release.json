@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stable_version": "0.14.2",
+  "stable_version": "0.15.0",
   "release_date": "2026-11-12",
-  "previous_stable_version": "0.14.1",
-  "release_notes": "docs/releases/0.14.2.md",
+  "previous_stable_version": "0.14.2",
+  "release_notes": "docs/releases/0.15.0.md",
   "public_surfaces": [
     "README.md",
     "docs/readme/README.ko.md",
@@ -15,17 +15,32 @@
     "SCOPE-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0142"
+      "anchor": "what-changed-in-0150"
+    },
+    "SCOPE-02": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0150"
+    },
+    "SCOPE-03": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0150"
     },
     "COMPAT-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0142"
+      "anchor": "what-changed-in-0150"
     },
     "COMPAT-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0142"
+      "anchor": "what-changed-in-0150"
+    },
+    "COMPAT-03": {
+      "status": "documented",
+      "path": "README.md",
+      "anchor": "what-changed-in-0150"
     }
   }
 }

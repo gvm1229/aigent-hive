@@ -9,7 +9,7 @@ summary: "신규0.14.0 자동 중단 비활성과 기존 선택 재검토, 사�
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:dadb0f1c7cf2873f3af9365c5764def23c0b259f6f3bede16e5d9ee7eb49a637"
+  - "repo:README.md#sha256:0e303b7666f0c9bee980f31a42532f692a7370a6a6b6a14c9d9edb285a6e71b6"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:c1b10c7785570de5b92f85ef3a2b6a9f43efe12e03e008cc0950bbf156f00819"
   - "repo:crates/hive-core/src/preferences.rs#sha256:838005e60b3255422c2ee143d76e66ef3ef877d7f3a8ff196eb446c0dfdc888d"
   - "repo:docs/archive/plans/foundations/native-usage-sensor.md#sha256:231e96967c32029d539eb82f245399e37156a43c2028be8a01a51215a5455807"

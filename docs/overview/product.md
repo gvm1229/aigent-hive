@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.14.2 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
 
 ## 목적
 
@@ -31,7 +31,7 @@ provider-neutral 로컬 agent harness.
 | Operating system | macOS arm64·Intel, Windows x86_64 candidate runtime 검증; Linux musl x86_64·arm64 qualification 진행 |
 | Agent host | Codex·Claude Code·Gemini Antigravity adapter |
 | Live evidence | Codex·Antigravity actual host; Claude subscription session 미검증 |
-| Orchestration | 현재 제품 범위 밖, Hive-native 오케스트레이터의 0.15.0 계획 승인 대기([재정비 단계 3](../plans/overhaul/README.md)); host가 declarative envelope 실행, OMX·OMC 신규 dependency 없음 |
+| Orchestration | 역할·작업 봉투 준비 제공, 자동 조율 비활성·활성화 경로 없음. 실제 작업자 실행은 호스트 소유, OMX·OMC 신규 의존성 없음 |
 | Model access | 사용자의 subscription-authenticated host session |
 | Data | Local-first tracked text, disposable SQLite |
 | Consumer shell | Unix shell, Windows PowerShell 5.1, `cmd.exe`; PowerShell 7 불필요 |
@@ -65,7 +65,7 @@ provider-neutral 로컬 agent harness.
 | 실행 중 중단·알림 | 선택형 Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 하한·실제 초기화·60초 조회 공백 중단, 앱 유지·직접 재개·이유 안내 | [0.13.1 안내](../releases/0.13.1.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.14.2` release](../releases/0.14.2.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.15.0` release](../releases/0.15.0.md) |
 
 ## Artifact 흐름
 
@@ -83,7 +83,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.14.2` (released 2026-11-12)
+- Current public stable version: `0.15.0` (released 2026-11-12)
+- `0.15.0`: 신 입구 9개·역할별 모델 설정·비활성 작업 봉투 미리보기, 기존 명령·고정 역할 보존
 - `0.14.2`: 1 MiB 초과·128 MiB 이하인 오래된 감시 프로그램 정리 복구, 현재·직전·Windows 잠금 파일 보존
 - `0.14.0`: 모델 없는 터미널 설정·저장 선택 재사용·취소 후 재개·자료 보존 제거·보호 설정 선택
 - `0.13.1`: 기존 하한의 실행 중 중단·조회 회복·초기화 비교·보존 갱신 보정
