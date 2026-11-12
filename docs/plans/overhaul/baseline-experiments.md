@@ -57,7 +57,8 @@
   - 결정: 2026-11-12 사용자 승인으로 Fable 권고 (b) 채택. 공식 확장점만 사용, 외부 키 주입·화면 캡처·Claude 비대화형 금지. Codex·Gemini 구독 비대화형 작업자, 호스트 실행 소유권 유지
   - 반영: 02의 Runtime and orchestration·Skill boundary, 단계 3·6·7과 README. ADR-0019 수정·대체 없음
   - 확인: 승인 원문·날짜 보존, 지침 읽기 예산·문서·계획 검사. 실제 제공자 CLI·모델 실행 없음
-- [ ] [OVX-010] develop 병합과 단계 브랜치 종료
-  - state: agent-owned; depends: OVX-001,OVX-002,OVX-004,OVX-008,OVX-009
+- [x] [OVX-010] develop 병합과 단계 브랜치 종료
+  - state: complete; depends: OVX-001,OVX-002,OVX-004,OVX-008,OVX-009; evidence: repo:docs/research/overhaul/stage-2-review.md#sha256:b2c0e536cad2a7ef61114d1524f96594aac1c24acc4deab4f3a5957a3f08ef02
+  - 결과: Fable 단계 검토(COMMENT) 지적 반영 뒤 `develop`에 fast-forward 병합, 단계 브랜치 로컬·원격 삭제
   - 변경: 단계 브랜치 `test/overhaul-2-baseline`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 병합 뒤 단계 브랜치 삭제
   - 확인: `git branch --merged develop`에 단계 브랜치 포함, `develop`과 `origin/develop` 일치

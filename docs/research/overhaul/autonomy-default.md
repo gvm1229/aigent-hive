@@ -19,3 +19,15 @@
 
 - 실행 환경: Codex 초안 뒤 orchestrator가 일반 지침 변경을 되돌리고 재정비 범위로 축소·검사
 - 실험·출시·설치 실행 없음. 문서 정합성 검사는 실제 제품 동작·제공자 약관 허용의 증명 범위 밖
+
+## 2026-11-12 위임 확대
+
+사용자 원문:
+
+> For the duration of our overhaul plan, I grant you explicit authorization to autonomously proceed with everything including the stable version release.
+
+> I don't want to wake up in the morning and see that there's a question from you that's been standing for multiple hours.
+
+- 범위: 재정비 완료까지. 정식 배포 포함 모든 `awaiting-user-authority` 항목 사전 승인
+- 구조 선택: 권고안으로 결정, 선택·이유를 근거 파일에 기록 뒤 진행
+- 유지 경계: 금지 명령, 자격 증명, 제공자 API, 전역 호스트 설정 변경 금지

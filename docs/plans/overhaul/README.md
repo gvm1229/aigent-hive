@@ -7,7 +7,7 @@
 ## 현재 위치
 
 - 단계 1b 8/8 완료, 0.14.2 정식·병합·단계 브랜치 삭제 확인
-- 단계 2 `test/overhaul-2-baseline`: 9/10 처리 완료(확인 6·대체 종료 3). OVX-009 승인 반영, OVX-010은 현재 사용자 지시로 실행 제외
+- 단계 2 10/10 처리 완료(확인 7·대체 종료 3). `develop` 병합·단계 브랜치 삭제
 - 2026-11-12 결정: Fable 권고 (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 설계 폐기에 따른 대체 종료, 성공 없음·근거 보존. 대체 왕복은 단계 3 OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
@@ -33,7 +33,7 @@
 
 2026-11-10 승인: 단계 브랜치·push·원격 삭제·버전 시작·정식 출시, 재승인 제외. [브랜치 규칙](../../guides/branching-rules.md)의 명시 승인 예외. 현재 OVX-010 제외·제공자 실행 금지 우선.
 
-2026-11-12 재정비 한정 상시 승인: 명확한 권고는 자율 실행·이유 기록. 비슷한 구조 선택지·상시 경계 변경만 질문. 검사·수용·계획 순서 통과 시 정식·main·게시·설치 승인 기록. 재정비 밖은 AGENTS·01 그대로. [승인 반영·검증](../../research/overhaul/autonomy-default.md)
+2026-11-12 재정비 한정 상시 승인: 정식 배포 포함 전 항목 사전 승인. 구조 선택도 권고안으로 진행·이유 기록, 응답 대기 없음. 검사·수용·계획 순서 통과 시 정식·main·게시·설치 승인 기록. 재정비 밖은 AGENTS·01 그대로. [승인 반영·검증](../../research/overhaul/autonomy-default.md)
 
 - 단계별 전용 브랜치, 타 단계 제품 구현 금지. 이번 미래 계획 수정은 단계 2 문서 변경
 - 새 단계: 이전 develop 병합 확인 → `git switch develop` → `git pull --ff-only` → `python scripts/branch-policy.py create <단계 브랜치>` → 현재 위치 갱신
@@ -84,7 +84,7 @@
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
 | 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합·버전 승인 | 11/11 |
 | 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 병합·2026-11-12 승인 | 8/8 |
-| 2 기준선·공식 확장점 결정 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 | 9/10 처리 |
+| 2 기준선·공식 확장점 결정 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 | 10/10 처리 |
 | 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 0/6 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-002 | 0/7 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/10 |
