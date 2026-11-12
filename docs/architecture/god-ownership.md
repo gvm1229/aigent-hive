@@ -41,5 +41,5 @@ hades = "hive-routine-implementer"
 - `hive roster --target <프로젝트> --user-root <홈> --output json`: 병합된 구성. `check --role <역할> --capabilities <자료.json>`: 호스트가 전달한 버전·도움말·로그인 상태·모델/수준·훅 자료의 일치 검사
 - 호스트 자료의 출처 인증·실제 모델 실행 증명 제외, 검사만으로 활성화 불가. Gemini 0.35.3의 정확한 수준과 공식 구독 상태 미검증 조합 거부
 - `hive summon <역할|신> --task <내용|@프로젝트파일> ...`: 기본 미리보기·지문, 외부 서명 Plan 권한과 Prepare 사건을 전달한 경우만 비활성 봉투 게시. 전체 인자는 `hive summon --help` 참조
-- task·inbox 게시 뒤 사건 head 결합, 중간 중단의 같은 바이트 재게시 가능. 호스트의 head 확인·별도 실행 권한·typed receipt 확인 전 모델 호출 불가
+- 사건·head 확정 뒤 task·inbox 게시, 확정 실패 시 미참조 봉투 게시 없음. 호스트의 head 확인·별도 실행 권한·typed receipt 확인 전 모델 호출 불가
 - 현재 기본 비활성. [OV150-001](../research/overhaul/OV150-001.md)의 실제 Claude Stop→Codex→반환 미검증, OV150-011 왕복 수용 미완료

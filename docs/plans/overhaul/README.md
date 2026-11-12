@@ -8,7 +8,7 @@
 
 - 단계 1b: 8/8·0.14.2 정식·병합·분기 삭제
 - 단계 2: 10/10(확인 7·대체 종료 3), `develop@24057f36` 병합·분기 삭제
-- 단계 3: 9/13·`feature/overhaul-3-0.15.0-orchestrator`. [OV150-001](../../research/overhaul/OV150-001.md): 입력 훅 확인·Claude 반환 대기
+- 단계 3: 9/14·`feature/overhaul-3-0.15.0-orchestrator`. [OV150-001](../../research/overhaul/OV150-001.md): 입력 훅 확인·Claude 반환 대기
 - Fable (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 폐기로 대체 종료, 성공 없음·근거 보존. 대체 왕복: OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
@@ -88,7 +88,8 @@
 | 2 기준선·공식 확장점 결정 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 | 10/10 처리 |
 | 3 0.15.0 작업 전달 | [0.15.0-orchestrator.md](../active/0.15.0-orchestrator.md) | 있음 | 단계 2 병합·OVX-009 결정, 첫 검증 OV150-001 | 5/6 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](../active/0.15.0-gods.md) | 있음 | OV150-002 | 4/7 |
-| 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/10 |
+| 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 0/1 |
+| 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/11 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |
