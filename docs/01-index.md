@@ -387,3 +387,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 - [OV142-007 공개 시험 근거](research/overhaul/OV142-007.md)
 - [에이전트 작업 규칙 저장](plans/agent-orchestration-rules.md)
+
+- [OV142-008 정식 게시와 PC 갱신 근거](research/overhaul/OV142-008.md)
