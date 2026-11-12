@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 비활성 소환 계약 | [en](en/inert-summon-contract.md) | [ko](ko/inert-summon-contract.md) |
 | 훅 수신 상자 검증 경계 | [en](en/hook-inbox-evidence.md) | [ko](ko/hook-inbox-evidence.md) |
 | 재정비 기준선 | [en](en/overhaul-baseline.md) | [ko](ko/overhaul-baseline.md) |
 | Fable 검토 소유권 | [en](en/fable-advisor-ownership.md) | [ko](ko/fable-advisor-ownership.md) · [근거](../research/fable-advisor-ownership.md) |
