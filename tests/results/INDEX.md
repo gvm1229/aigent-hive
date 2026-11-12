@@ -1148,3 +1148,7 @@
 | [passed](runs/20261112T202334-ddda87c4048d.md) | OV150-016 현재 제품 버전과 감시 시험의 버전 결합 | 8a4d1cd005ef47679265a4ca42070c596bd4c3f5 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T202513-7d87e8b7e8b5.md) | OV150-017 제한된 재개 진단과 개인 경로 격리 | 676e574e27d3b7cb2d73f3eb8577d0b3d7d6ece1 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T203029-cb625b0fedda.md) | OV150-018 공개 대상 일치와 고정 원본 설치기의 버전 계약 | 6f3a970fe9cb982f5bd14e4c823ce556f096d2bc | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261112T204153-20009665ea54.md) | 플랫폼 파일 처리·설치·갱신 단위 시험 | 412b3d0e01a78965d367f582e657e3a427579d4f | macOS-26.7.2-arm64-arm-64bit-Mach-O |
+| [passed](runs/20261112T205139-7f404d9b5db7.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T205143-d8181acb4373.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T205244-55853f1a4db4.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
