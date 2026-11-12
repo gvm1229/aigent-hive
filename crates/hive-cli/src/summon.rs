@@ -25,21 +25,14 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                     .map(|pair| Path::new(&pair[1]))
                 {
                     if let Err(error) = crate::gods::decorate(&mut value, god, user) {
-                        eprintln!("{error}");
-                        return ExitCode::from(2);
+                        return crate::emit_action_result(&refusal(error));
                     }
                 }
             }
             println!("{value}");
             ExitCode::SUCCESS
         }
-        Err(error) => {
-            println!(
-                "{}",
-                serde_json::to_value(refusal(error)).expect("serializable action result")
-            );
-            ExitCode::from(2)
-        }
+        Err(error) => crate::emit_action_result(&refusal(error)),
     }
 }
 fn refusal(error: String) -> ActionResult {

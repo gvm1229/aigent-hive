@@ -83,6 +83,21 @@ from tests.conformance.support.harness import Phase1CliTestCase, read_yaml, writ
 class GodCliTests(Phase1CliTestCase):
     def call(self,*args):
         return subprocess.run([str(self.hive_binary),*map(str,args)],capture_output=True,text=True,encoding='utf-8',cwd=ROOT)
+    def test_summon_notice_failure_still_emits_action_result(self):
+        project = self.work_root / 'consumer'
+        project.mkdir()
+        missing_home = self.work_root / 'missing-home'
+        result = self.call('summon', 'athena', '--task', 'bounded task', '--target', project,
+                           '--user-root', missing_home, '--run', 'run-1', '--action', 'task-1',
+                           '--expected-head', 'none', '--control-epoch', '0', '--authority-id',
+                           'auth-1', '--output', 'json')
+        self.assertEqual(result.returncode, 2, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['action'], 'Summon')
+        self.assertEqual(payload['status'], 'error')
+        self.assertEqual(payload['exit_code'], 2)
+        self.assertFalse(payload['data']['enabled'])
+        self.assertFalse((project / '.hive').exists())
     def test_roster_and_korean_alias_summon_are_inert_in_both_languages(self):
         project=self.work_root/'consumer';project.mkdir()
         result=self.call('roster','--target',project,'--user-root',self.setup_user_root,'--output','json')
