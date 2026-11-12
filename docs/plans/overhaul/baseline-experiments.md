@@ -23,7 +23,7 @@
   - 변경: `~/.hive/knowledge/Claims`에서 미니멀 스타일·색·피할 디자인 사실 검색, 읽기 전용
   - 확인: 3개 각각 존재/부재 기록. 부재면 원인은 기록 규칙, 0.15.2의 OV152-002 우선
 - [x] [OVX-004] 크기 기준선
-  - state: complete; evidence: repo:docs/research/overhaul/OVX-004.md#sha256:d919e893c1e21d2851dee03af64731a6b4263965a2edf945294f23fb9222849d
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-004.md#sha256:32b2ddcd2538fb0beae217e5ff27d94fe450abf26f27153d94447b796a19b821
   - 근거: [크기 측정](../../research/overhaul/OVX-004.md)
   - 변경: 새 프로젝트당 Hive 파일 수, 내장 Skill 수·단어 수, 임시 사용자 기준 `hive storage` 분류별 용량
   - 확인: 세 수치와 측정 명령 기록

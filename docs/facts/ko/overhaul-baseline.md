@@ -11,7 +11,7 @@ aliases: [overhaul-baseline]
 sources:
   - "repo:docs/research/overhaul/OVX-001.md#sha256:a915958a3ba29cede7f163a2bf3b7ddb1bb4a3225e856427d67c8fe89943e55b"
   - "repo:docs/research/overhaul/OVX-002.md#sha256:9d142f8151f828020262bfad89a34f41e989435ec7c3e60ef26e16be1c4681a7"
-  - "repo:docs/research/overhaul/OVX-004.md#sha256:d919e893c1e21d2851dee03af64731a6b4263965a2edf945294f23fb9222849d"
+  - "repo:docs/research/overhaul/OVX-004.md#sha256:32b2ddcd2538fb0beae217e5ff27d94fe450abf26f27153d94447b796a19b821"
 links: []
 reviewed_revision: "git:a0fa76c563d17083640e9ee32cc199fcbd4f4b7e"
 status: active
