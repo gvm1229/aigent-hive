@@ -198,7 +198,11 @@ mod tests {
         assert_eq!(first["data"]["mutation_count"], 0);
         assert_eq!(
             first["data"]["envelope"]["target_digest"],
-            sha256_digest(path.as_bytes())
+            sha256_digest(
+                hive_core::normalize_platform_root(root.path())
+                    .to_string_lossy()
+                    .as_bytes()
+            )
         );
         assert!(first["data"]["envelope"].get("target_project").is_none());
         assert!(!first.to_string().contains(path));
