@@ -1,14 +1,16 @@
 # 04. Plans, knowledge and closure
 
-One canonical active plan set: docs/plans/PLAN.md (goals, completion index, links/order; no checkboxes),
-concern-owned active fragments (unique criterion IDs), docs/state/CURRENT.md (current evidence,
-blockers, unrun checks, next work). Each stays below 8KiB. Archive chronology; backlog/archive do
-not count toward completion. Never count the same acceptance assertion twice.
+Canonical active plans: docs/plans/PLAN.md (goals, completion index, links/order; no checkboxes),
+concern-owned fragments (unique criterion IDs), docs/state/CURRENT.md (evidence, blockers, unrun
+checks, next work). Each stays below 8KiB. Archive chronology; backlog/archive do not count toward
+completion. Count each acceptance assertion once.
 
-Persist plans before execution unless explicitly waived and no independent rule requires one.
-Update the completion index at each transition; only fresh evidence permits completion. Preserve
-unsupported acceptance as explicitly deferred. Material plan changes update CURRENT and owning ADR.
-An implementer follows the saved owning step/dependencies/evidence, not the planner's private reasoning.
+Durable maintainer rules for repo agent behavior belong in `.agents/directives/`, or the owning plan for plan-scoped rules; never only in host-private memory (maintainer, 2026-11-12).
+
+Save plans before execution unless explicitly waived and no other rule requires one. Update the
+completion index at each transition; completion needs fresh evidence. Mark unsupported acceptance
+deferred. Material plan changes update CURRENT and owning ADR. Implementers follow saved owning
+steps/dependencies/evidence, not private planner reasoning.
 
 | When | Required reference |
 | --- | --- |
@@ -21,7 +23,7 @@ An implementer follows the saved owning step/dependencies/evidence, not the plan
 Load only the applicable procedure. Runtime scratch, chat and summaries never replace canonical state.
 Continuation/status semantics: 01; release execution: 03; human document style: 08.
 
-At task closure reconcile request, owning criteria, worktree, evidence and authorized remote actions.
-Record remaining work/owner/reason in the session manifest and a material handoff in CURRENT.
-A completed subtask does not close its unfinished parent. Without a Hive run binding, use this
-plan/session procedure; never create consumer state here or claim verified runtime activation.
+At closure reconcile request, criteria, worktree, evidence and authorized remote actions. Record
+remaining work/owner/reason in the manifest and material handoffs in CURRENT. Completed subtasks
+do not close unfinished parents. Without a Hive run binding, use this plan/session procedure;
+never create consumer state here or claim verified runtime activation.

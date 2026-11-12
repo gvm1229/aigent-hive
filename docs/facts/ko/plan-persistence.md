@@ -9,7 +9,7 @@ summary: "계획 기본값은 canonical Markdown, session 참조는 간결한 �
 tags: [documentation, plan, state]
 aliases: ["Markdown plan authority"]
 sources:
-  - "repo:.agents/directives/04-documentation-state.md#sha256:fd3eb4aff8ba3451a3e7e19b2582dc4a84a6888e1e57dcae5bed2f53a58e2a2e"
+  - "repo:.agents/directives/04-documentation-state.md#sha256:8125c0cdce9daeffb4f2c2b4ad258d4b63a0ff363429bfebb4f4d5852532ff91"
   - "repo:.agents/directives/references/planning-contract.md#sha256:4136a403ed93af42bed844f30e7ed48309ab9ed535c3deb91b1d264dab2fda33"
   - "repo:docs/plans/README.md#sha256:c546623067ecf99a30b8e7aedd1b421487e7bd321f71b41f8ad3b4ef7b2e8851"
   - "repo:harness/template/AGENTS.md.jinja#sha256:ab0902d90e75ac32219217b3617c46008f3a906a84a68453bf389fd69e9ec529"

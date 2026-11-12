@@ -1,16 +1,14 @@
 # 06. Session Coordination Directive
 
-Owns active-session manifests, edit-path reservations, and concurrent-agent conflict checks. Git,
-commit, and worktree lifecycle rules belong to `03-workflow.md`.
+Owns session manifests, edit-path reservations and concurrent-agent conflict checks. Git, commit
+and worktree lifecycle: `03-workflow.md`.
 
 ## Manifest
 
-Before editing tracked files, create or resume `.agents/work/active-sessions/<session-id>.md` with:
+Before tracked edits, create/resume `.agents/work/active-sessions/<session-id>.md` with
+[manifest fields](references/session-manifest.md). Load the template at creation; reuse for updates.
 
-[the manifest fields](references/session-manifest.md). Load the template when creating a manifest;
-reuse the existing record for updates.
-
-The manifest is ignored runtime state, never canonical knowledge or a commit.
+Ignored runtime state; never canonical knowledge or committed.
 
 ## Conflict check
 
@@ -25,14 +23,13 @@ The manifest is ignored runtime state, never canonical knowledge or a commit.
 5. Assign each edited path to exactly one commit concern.
 6. Serialize a shared foundational file; do not let agents edit it concurrently.
 
-Use one primary worktree. Additional worktree authority, lifecycle, cleanup, and commit sequencing
-come only from `03-workflow.md`; record any authorized temporary worktree here.
+Worktree authority, lifecycle, cleanup and commit sequencing: `03-workflow.md` and its Worktrees
+reference; record temporary worktrees here.
 
 ## Closure record
 
 - Keep status `active` while `01-behavior.md` classifies any scoped action as agent-owned.
-- Before a final response, refresh remaining actions and closure evidence. An active manifest
-  prohibits a completion claim.
-- `awaiting-user-authority` and `awaiting-external-evidence` require exact owner and expected proof.
-- `blocked` requires the run-wide repeated condition and recovery path defined by `01-behavior.md`.
-- Resolve every temporary-worktree entry as removed or retained with an exact reason before closure.
+- Before final response, refresh actions and closure evidence; an active manifest prohibits completion claims.
+- `awaiting-user-authority`/`awaiting-external-evidence`: exact owner and expected proof.
+- `blocked`: 01's run-wide repeated condition and recovery path.
+- Before closure, resolve each temporary worktree as removed or retained with an exact reason.

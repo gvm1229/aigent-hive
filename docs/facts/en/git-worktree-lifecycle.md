@@ -5,20 +5,21 @@ topic_slug: git-worktree-lifecycle
 language: en
 counterpart: ../ko/git-worktree-lifecycle.md
 title: "Temporary Git Worktree Lifecycle"
-summary: "Ordinary work uses one primary worktree; authorized temporary worktrees require immediate verified cleanup."
+summary: "Maintainer sessions may create needed temporary worktrees; owned worktrees and merged branches require verified cleanup."
 tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
-  - "repo:.agents/directives/06-session-coordination.md#sha256:c0659539029a3cdaf36241b2f67c6aefebba5757745f69996cf72e2b52aa0791"
-  - "repo:.agents/directives/references/git-worktrees.md#sha256:c005aaa111e2ec2376f9cdd914fa1b215163f9f5f5a0ef0313f0709a69c24252"
+  - "repo:.agents/directives/06-session-coordination.md#sha256:8c889202b65d024691c567253833d3d57f621800c0802ab83d1bdf0df1c0cd20"
+  - "repo:.agents/directives/references/git-worktrees.md#sha256:74afce43b00e5e72b0342020cc4022446aee632b0d10f615a5509e31ed41ea7f"
 links: [source-development]
-reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
+reviewed_revision: "git:e032bd9f8a1e404cf473dfd78982c9f7780abb13"
 status: active
 ---
 
 # Temporary Git Worktree Lifecycle
 
-Ordinary work uses one primary worktree. Create another only for a workload that needs parallel
-independent changes and cannot safely run in sequence. Record its ownership and removal boundary.
-Remove it immediately after its commits are reachable, verification passes, and no uncommitted or
-unpushed required work remains. Force removal and primary-worktree removal are prohibited.
+Maintainer sessions may create as many temporary worktrees as parallel or isolated work needs
+(maintainer, 2026-11-12). Record ownership and removal boundaries. After work merges or ends,
+verify reachability and required pushes, remove owned temporary worktrees, delete merged branches
+locally and on origin, then prune. Leave no owned temporary worktree at closure. Preserve dirty
+or unmerged work safely; force removal and primary-worktree removal remain prohibited.

@@ -383,3 +383,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 
 - [OV142-005 병합 전 검토 보완](research/overhaul/OV142-005.md)
 - [OV142-006 develop 병합 확인](research/overhaul/OV142-006.md)
+
+- [에이전트 작업 규칙 저장](plans/agent-orchestration-rules.md)

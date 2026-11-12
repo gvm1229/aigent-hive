@@ -10,22 +10,22 @@ tags: [directives, routing, v0-10]
 aliases: ["Directive 최적화"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
-  - "repo:AGENTS.md#sha256:8b785024ed26e2d916e39dc4b96c90c64171c8eb28f671c4c7f8af1de77d0a68"
+  - "repo:.agents/directives/04-documentation-state.md#sha256:8125c0cdce9daeffb4f2c2b4ad258d4b63a0ff363429bfebb4f4d5852532ff91"
+  - "repo:AGENTS.md#sha256:0588c67a687a50d00387ab18e2dda2d79a8bcf3344b67f63849cd5f8cab0dabb"
   - "repo:docs/architecture/agent-directive-ownership.md#sha256:db0d5c52f75c5ce82354cde25673a5ff701bf99b3458f4f311b7844555b0df05"
   - "repo:harness/template/AGENTS.md.jinja#sha256:ab0902d90e75ac32219217b3617c46008f3a906a84a68453bf389fd69e9ec529"
   - "repo:scripts/check-agent-directives.py#sha256:d0520ff0a53524541cff7965258c89e2a2a2d03df1066312d854ac1ced41e5f9"
 links: [agent-autonomous-continuation, artifact-boundaries, historical-project-base-coverage]
-reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
+reviewed_revision: "git:e032bd9f8a1e404cf473dfd78982c9f7780abb13"
 status: active
 ---
 
 # Agent 지침 단일 소유권
 
-- Source `AGENTS.md`와 소비자 `AGENTS.md` 투영: 짧은 경로 안내자
-- 세부 규칙군: 각각 하나의 정본 지침이 소유
-- 생성 진입점: ownership 대장에서 허용한 요약만 유지
-- 정적 gate: byte 예산·대상 경로·현재 투영 일치·비허용 정규화 규칙 중복 검사
-- 과거 project·user base: byte 불변
+- 소스·소비자 `AGENTS.md`: 짧은 경로 안내, 세부 규칙군별 정본 하나
+- 생성 진입점: 허용된 요약만 유지
+- 정적 검사: 바이트 예산·대상 경로·현재 투영 일치·비허용 정규화 중복
+- 과거 프로젝트·사용자 기준본: 바이트 불변
 - 안정판 게시: 버전명을 포함한 명시 승인 필수
-- 새 version 미지정 개발 요청: 활성 계획의 product version·다음 번호 시험판에 귀속
-- 임의의 미래 version 제안·이전 금지
+- 새 버전 미지정 개발: 활성 계획의 제품 버전·다음 번호 시험판 사용, 임의의 미래 버전 금지
+- 지속할 저장소 에이전트 규칙: `.agents/directives/`, 계획 한정 규칙은 소유 계획에 기록. 호스트 개인 메모리에만 보관 금지(관리자, 2026-11-12)
