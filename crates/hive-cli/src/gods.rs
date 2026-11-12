@@ -9,8 +9,8 @@ pub(crate) fn decorate(
     user_root: &Path,
 ) -> Result<(), String> {
     let root = PinnedTarget::open_usage(user_root).map_err(|e| e.message().to_owned())?;
-    let config = load_operational_config(root.target_dir())
-        .map_err(|e| format!("invalid Hive language setting: {e:?}"))?;
+    // A display preference must not prevent an otherwise valid command.
+    let config = load_operational_config(root.target_dir()).unwrap_or_default();
     let korean = config.is_some_and(|c| c.interface_language == InterfaceLanguage::Ko);
     let announcement = god.announcement(korean);
     let prefix = god.prefix();
@@ -92,6 +92,26 @@ fn command_owner(command: &str) -> Option<&'static str> {
 #[cfg(test)]
 mod alias_tests {
     use super::*;
+    #[test]
+    fn gods_invalid_language_config_uses_english_without_blocking_aliases() {
+        let root = tempfile::tempdir().unwrap();
+        let config = root.path().join(".hive/config");
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::write(
+            config.join("user-setup.yml"),
+            b"interface_language: [broken",
+        )
+        .unwrap();
+        let god = hive_core::gods::find("hades").unwrap();
+        let mut value = serde_json::json!({"data":{}});
+        decorate(&mut value, god, root.path()).unwrap();
+        assert_eq!(value["announcement"], "Calling upon Hades — cleanup");
+        assert_eq!(
+            alias_arguments(god, &["plan".into()]).unwrap(),
+            ["prune", "--dry-run"]
+        );
+    }
+
     #[test]
     fn gods_prepared_notice_keeps_the_existing_action_result_schema() {
         let root = tempfile::tempdir().unwrap();
