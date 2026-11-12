@@ -51,7 +51,7 @@ class GodEntryTests(unittest.TestCase):
 
     def test_typed_table_rejects_unknown_fields_wrong_types_and_duplicate_ownership(self):
         original = (ROOT / "harness/gods.toml").read_text(encoding="utf-8")
-        for changed in [original.replace('name = "athena"', 'name = 3', 1), original.replace('name = "athena"', 'unknown = "athena"', 1), original.replace('commands = ["doctor", "check-target", "route"]', 'commands = ["roster"]', 1)]:
+        for changed in [original.replace('name = "athena"', 'name = 3', 1), original.replace('name = "athena"', 'unknown = "athena"', 1), original.replace('commands = ["doctor", "check-target", "route"]', 'commands = ["roster"]', 1), original.replace('"athena"', '"../escape"')]:
             with tempfile.TemporaryDirectory() as temporary:
                 path = Path(temporary) / "gods.toml"
                 path.write_text(changed, encoding="utf-8")

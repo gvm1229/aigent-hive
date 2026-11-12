@@ -64,6 +64,8 @@ def load_table(path: Path = TABLE) -> list[God]:
             if not valid:
                 raise ValueError(f"invalid god field type: {key}")
         result.append(God(**row))
+    if any(not re.fullmatch(r"[a-z][a-z0-9-]*", god.name) for god in result):
+        raise ValueError("god name must be a safe relative directory slug")
     for field in ("name", "commands", "skills"):
         values = [value for god in result for value in ([god.name] if field == "name" else getattr(god, field))]
         if len(values) != len(set(values)):
