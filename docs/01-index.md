@@ -395,3 +395,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [기능 소속·역할 기본값 이전](architecture/god-ownership.md)
 - [OV150-002](research/overhaul/OV150-002.md) · [OV150-003](research/overhaul/OV150-003.md) · [OV150-004](research/overhaul/OV150-004.md) · [OV150-005](research/overhaul/OV150-005.md) · [OV150-006](research/overhaul/OV150-006.md) · [OV150-007](research/overhaul/OV150-007.md) · [OV150-008](research/overhaul/OV150-008.md) · [OV150-009](research/overhaul/OV150-009.md)
 - [OV150-010](research/overhaul/OV150-010.md)
+- [0.15.0 개발 초안](releases/0.15.0.md)
