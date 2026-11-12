@@ -7,7 +7,9 @@
 ## 현재 위치
 
 - 단계 1b 8/8 완료, 0.14.2 정식·병합·단계 브랜치 삭제 확인
-- 단계 2 10/10 처리 완료(확인 7·대체 종료 3). `develop` 병합·단계 브랜치 삭제
+- 단계 2 10/10 처리 완료(확인 7·대체 종료 3). `develop@24057f36` 병합·단계 브랜치 삭제
+- 단계 3 시작: `feature/overhaul-3-0.15.0-orchestrator`, OV150-001 처리기 검증 완료·Claude 대화형 왕복 대기. [근거·첫 입력](../../research/overhaul/OV150-001.md)
+- 2026-11-13 OV150-001: 실제 Codex 1회·재생 추가 호출 0회 / 조율자의 Claude 대화형 시험 잔여 / 제품 0.14.2 유지
 - 2026-11-12 결정: Fable 권고 (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 설계 폐기에 따른 대체 종료, 성공 없음·근거 보존. 대체 왕복은 단계 3 OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
@@ -15,7 +17,7 @@
 
 ## 승인
 
-- 추가 승인 대기 없음. 실제 실험·버전 시작·병합은 요청 밖
+- 추가 승인 대기 없음. 현재 요청: 단계 3 시작·OV150-001 처리기 실험·push. Claude 대화형 실행은 조율자 담당, 제품 전환·OV150-003 이후 구현 제외
 
 ## 재개 절차
 
@@ -31,11 +33,11 @@
 
 ## 브랜치 규칙
 
-2026-11-10 승인: 단계 브랜치·push·원격 삭제·버전 시작·정식 출시, 재승인 제외. [브랜치 규칙](../../guides/branching-rules.md)의 명시 승인 예외. 현재 OVX-010 제외·제공자 실행 금지 우선.
+2026-11-10 승인: 단계 브랜치·push·원격 삭제·버전 시작·정식 출시, 재승인 제외. [브랜치 규칙](../../guides/branching-rules.md)의 명시 승인 예외. 제공자 실행 경계는 ADR-0026 적용.
 
 2026-11-12 재정비 한정 상시 승인: 정식 배포 포함 전 항목 사전 승인. 구조 선택도 권고안으로 진행·이유 기록, 응답 대기 없음. 검사·수용·계획 순서 통과 시 정식·main·게시·설치 승인 기록. 재정비 밖은 AGENTS·01 그대로. [승인 반영·검증](../../research/overhaul/autonomy-default.md)
 
-- 단계별 전용 브랜치, 타 단계 제품 구현 금지. 이번 미래 계획 수정은 단계 2 문서 변경
+- 단계별 전용 브랜치, 타 단계 제품 구현 금지. 현재 단계 3 실험, 제품 구현 전 첫 왕복 검증
 - 새 단계: 이전 develop 병합 확인 → `git switch develop` → `git pull --ff-only` → `python scripts/branch-policy.py create <단계 브랜치>` → 현재 위치 갱신
 - 작업·체크는 같은 브랜치. 전환 전 미완료 작업 커밋·깨끗한 작업 트리
 - 병합 직전 Fable 5.2 advisor의 단계 전체 읽기 전용 검토. 부재 시 일반 Fable 기본 수준 대체, 이상 수정·확인 후 병합. [검토자 소유권 지침](../../../.agents/directives/references/agent-delegation.md#stage-review-and-release)의 관리자 원문을 모든 검토 요청에 포함
