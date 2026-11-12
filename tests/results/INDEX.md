@@ -1152,3 +1152,4 @@
 | [passed](runs/20261112T205139-7f404d9b5db7.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T205143-d8181acb4373.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261112T205244-55853f1a4db4.md) | 개발 검증: cargo.EXE | 4308a1b7a27939596f48dec355199908f51886ff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261112T205850-b5db9e16db91.md) | 플랫폼 파일 처리·설치·갱신 단위 시험 | 29875af0b36b45c4886916d04ad4dc58440bdb1a | macOS-26.7.2-arm64-arm-64bit-Mach-O |
