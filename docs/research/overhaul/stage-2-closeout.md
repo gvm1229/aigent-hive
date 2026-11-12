@@ -10,6 +10,8 @@
 - 제안할 결정 범위: 제공자별 약관 허용 확인을 전제로 Hive의 공식 CLI 대화형 psmux·tmux 실행·입력·관측·종료·재개 허용 여부. 제공자 API 직접 호출·키·인증 파일 접근 금지 유지, 헤드리스는 보조 경로. Claude 헤드리스 출력은 현재 사용자 금지 유지
 - OVX-009 ADR 초안·지침 변경·승인 대행 없음. OVX-010 develop 병합·단계 브랜치 삭제 없음
 
+- 단계 검토: [Fable 5.2 검토 지적·권고와 보완](stage-2-review.md)
+
 ## 검증과 한계
 
 - 항목별 실제 실행: `python scripts/test-lanes.py --lane documentation`, `python scripts/check-human-documentation-style.py --all`, `python scripts/check-plan-state.py`, `hive source-wiki index/lint`, `python scripts/branch-policy.py check test/overhaul-2-baseline`
