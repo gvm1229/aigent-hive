@@ -50,7 +50,7 @@
   - 확인: 세 제공자 표 완성, 확인일 90일 이내
 - [ ] [OVX-009] 창 실행 허용 ADR 초안과 승인
   - state: awaiting-user-authority; depends: OVX-005,OVX-006,OVX-007,OVX-008; owner: user; reason: 02 지침의 프로세스 실행 금지 변경 승인
-  - 변경: `docs/decisions/`에 ADR 초안(대화형 창 실행 허용, 토큰·API 키 금지 유지, 헤드리스는 보조), `.agents/directives/02-architecture.md:78-84` 변경안, `ADR-0019`와의 관계
+  - 변경: `docs/decisions/`에 ADR 초안(대화형 창 실행 허용, 토큰·API 키 금지 유지, 헤드리스는 보조), `.agents/directives/02-architecture.md:20-21,53-54`(Runtime and orchestration·Skill boundary) 변경안, `ADR-0019`와의 관계
   - 확인: 사용자 승인 기록, `python scripts/check-agent-directives.py`
 - [ ] [OVX-010] develop 병합과 단계 브랜치 종료
   - state: agent-owned; depends: OVX-001,OVX-002,OVX-004,OVX-008,OVX-009
