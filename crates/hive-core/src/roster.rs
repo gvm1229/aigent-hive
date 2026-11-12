@@ -14,6 +14,7 @@ pub struct Workspace {
 #[serde(default, deny_unknown_fields)]
 pub struct Provider {
     pub minimum_version: Option<String>,
+    pub roles: BTreeMap<String, Role>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -33,15 +34,6 @@ pub struct Roster {
     pub gods: BTreeMap<String, String>,
 }
 
-const BUILTINS: &[&str] = &[
-    include_str!("../../../harness/roles/hive-article-writer.json"),
-    include_str!("../../../harness/roles/hive-complex-implementer.json"),
-    include_str!("../../../harness/roles/hive-design-specialist.json"),
-    include_str!("../../../harness/roles/hive-independent-judge.json"),
-    include_str!("../../../harness/roles/hive-research-specialist.json"),
-    include_str!("../../../harness/roles/hive-routine-implementer.json"),
-];
-
 impl Roster {
     /// Read defaults, then user and project overrides, for every invocation.
     /// # Errors
@@ -53,7 +45,7 @@ impl Roster {
             crate::ensure_no_symlink_ancestors(root, relative).map_err(|e| e.to_string())?;
             match fs::read_to_string(root.join(relative)) {
                 Ok(text) => {
-                    roster.merge(toml::from_str(&text).map_err(|e| format!("roster: {e}"))?)
+                    roster.merge(toml::from_str(&text).map_err(|e| format!("roster: {e}"))?);
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => return Err(e.to_string()),
@@ -67,38 +59,10 @@ impl Roster {
     /// # Errors
     /// Returns an error for an invalid embedded profile.
     pub fn defaults() -> Result<Self, String> {
-        let mut roster = Self {
-            workspace: Workspace {
-                provider: Some("codex".into()),
-            },
-            ..Self::default()
-        };
-        for text in BUILTINS {
-            let profile: crate::custom_agent::CustomAgentProfile =
-                serde_json::from_str(text).map_err(|e| e.to_string())?;
-            let mapping = &profile.host_mappings["codex"];
-            roster.roles.insert(
-                profile.role_id,
-                Role {
-                    provider: None,
-                    model: Some(mapping.model.clone()),
-                    effort: Some(
-                        serde_json::to_value(&mapping.effort)
-                            .map_err(|e| e.to_string())?
-                            .as_str()
-                            .ok_or("invalid effort")?
-                            .to_owned(),
-                    ),
-                },
-            );
-        }
+        let mut roster: Self = toml::from_str(include_str!("../../../harness/roles/defaults.toml"))
+            .map_err(|e| e.to_string())?;
         for god in crate::gods::GODS {
             roster.gods.insert(god.name.into(), god.role.into());
-        }
-        for provider in ["codex", "claude", "gemini"] {
-            roster
-                .providers
-                .insert(provider.into(), Provider::default());
         }
         Ok(roster)
     }
@@ -109,6 +73,18 @@ impl Roster {
         }
         for (name, provider) in patch.providers {
             let current = self.providers.entry(name).or_default();
+            for (role, patch) in provider.roles {
+                let role = current.roles.entry(role).or_default();
+                if patch.provider.is_some() {
+                    role.provider = patch.provider;
+                }
+                if patch.model.is_some() {
+                    role.model = patch.model;
+                }
+                if patch.effort.is_some() {
+                    role.effort = patch.effort;
+                }
+            }
             if provider.minimum_version.is_some() {
                 current.minimum_version = provider.minimum_version;
             }
@@ -139,17 +115,12 @@ impl Roster {
         {
             return Err("unknown provider".into());
         }
-        for role in self.roles.values() {
-            let provider = role
-                .provider
-                .as_ref()
-                .or(self.workspace.provider.as_ref())
-                .ok_or("missing provider")?;
-            if !self.providers.contains_key(provider)
-                || role.model.as_deref().is_none_or(str::is_empty)
-                || role.effort.as_deref().is_none_or(str::is_empty)
-            {
-                return Err("role requires a known provider, exact model and effort".into());
+        for name in self.roles.keys() {
+            self.resolve(name)?;
+        }
+        for provider in self.providers.values() {
+            if provider.roles.values().any(|role| role.provider.is_some()) {
+                return Err("provider role default cannot select another provider".into());
             }
         }
         if self
@@ -165,7 +136,7 @@ impl Roster {
     /// Resolve a role or configured god without selecting a replacement model.
     /// # Errors
     /// Rejects missing roles or incomplete configuration.
-    pub fn resolve(&self, name: &str) -> Result<(&str, &Role), String> {
+    pub fn resolve(&self, name: &str) -> Result<(&str, Role), String> {
         let name = crate::gods::find(name).map_or(name, |god| god.name);
         let name = self.gods.get(name).map_or(name, String::as_str);
         let role = self
@@ -177,7 +148,29 @@ impl Roster {
             .as_deref()
             .or(self.workspace.provider.as_deref())
             .ok_or("missing provider")?;
-        Ok((provider, role))
+        let defaults = self
+            .providers
+            .get(provider)
+            .ok_or("unknown provider")?
+            .roles
+            .get(name);
+        let resolved = Role {
+            provider: Some(provider.into()),
+            model: role
+                .model
+                .clone()
+                .or_else(|| defaults.and_then(|d| d.model.clone())),
+            effort: role
+                .effort
+                .clone()
+                .or_else(|| defaults.and_then(|d| d.effort.clone())),
+        };
+        if resolved.model.as_deref().is_none_or(str::is_empty)
+            || resolved.effort.as_deref().is_none_or(str::is_empty)
+        {
+            return Err("role requires exact model and effort for its provider".into());
+        }
+        Ok((provider, resolved))
     }
 }
 
@@ -220,6 +213,27 @@ mod tests {
                 .effort
                 .as_deref(),
             Some("low")
+        );
+    }
+    #[test]
+    fn roster_provider_defaults_do_not_cross_providers() {
+        let mut roster = Roster::defaults().unwrap();
+        roster.workspace.provider = Some("claude".into());
+        assert_eq!(
+            roster
+                .resolve("hive-routine-implementer")
+                .unwrap()
+                .1
+                .model
+                .as_deref(),
+            Some("claude-sonnet-5")
+        );
+        roster.workspace.provider = Some("gemini".into());
+        assert!(roster.resolve("hive-routine-implementer").is_err());
+        roster.workspace.provider = Some("codex".into());
+        assert_eq!(
+            roster.resolve("Minerva").unwrap().1.model.as_deref(),
+            Some("gpt-5.6-terra")
         );
     }
     #[test]
@@ -354,7 +368,7 @@ mod capability_tests {
     #[test]
     fn roster_official_output_checks_fail_closed() {
         let roster = Roster::defaults().unwrap();
-        let role = &roster.roles["hive-routine-implementer"];
+        let (_, role) = roster.resolve("hive-routine-implementer").unwrap();
         let report = CapabilityReport {
             provider: "codex".into(),
             version: "0.167.2".into(),
@@ -481,7 +495,7 @@ mod worker_tests {
             "hive-independent-judge",
         ] {
             let p = roster.worker_profile(name).unwrap();
-            let role = &roster.roles[name];
+            let (_, role) = roster.resolve(name).unwrap();
             assert_eq!(
                 p.argv[0..4],
                 ["codex", "exec", "--model", role.model.as_deref().unwrap()]
@@ -510,6 +524,16 @@ mod worker_tests {
             .get_mut("hive-routine-implementer")
             .unwrap()
             .provider = Some("gemini".into());
+        roster
+            .roles
+            .get_mut("hive-routine-implementer")
+            .unwrap()
+            .model = Some("gemini-3-pro-preview".into());
+        roster
+            .roles
+            .get_mut("hive-routine-implementer")
+            .unwrap()
+            .effort = Some("high".into());
         let p = roster.worker_profile("hive-routine-implementer").unwrap();
         assert!(!p.supported);
         assert!(p.argv.is_empty());

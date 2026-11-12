@@ -389,3 +389,9 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 - [에이전트 작업 규칙 저장](plans/agent-orchestration-rules.md)
 
 - [OV142-008 정식 게시와 PC 갱신 근거](research/overhaul/OV142-008.md)
+
+## 재정비 단계 3 개발 근거
+
+- [기능 소속·역할 기본값 이전](architecture/god-ownership.md)
+- [OV150-002](research/overhaul/OV150-002.md) · [OV150-003](research/overhaul/OV150-003.md) · [OV150-004](research/overhaul/OV150-004.md) · [OV150-005](research/overhaul/OV150-005.md) · [OV150-006](research/overhaul/OV150-006.md) · [OV150-007](research/overhaul/OV150-007.md) · [OV150-008](research/overhaul/OV150-008.md) · [OV150-009](research/overhaul/OV150-009.md)
+- [OV150-010](research/overhaul/OV150-010.md)

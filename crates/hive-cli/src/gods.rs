@@ -38,8 +38,7 @@ pub(crate) fn run_alias(god: &God, args: &[String]) -> std::process::ExitCode {
         .windows(2)
         .find(|pair| pair[0] == "--user-root")
         .map(|pair| std::path::PathBuf::from(&pair[1]))
-        .map(Ok)
-        .unwrap_or_else(crate::user_install::resolve_user_root_path);
+        .map_or_else(crate::user_install::resolve_user_root_path, Ok);
     match user.and_then(|user| decorate(&mut serde_json::json!({}), god, &user)) {
         Ok(()) => crate::dispatch(expanded),
         Err(error) => {
@@ -49,7 +48,7 @@ pub(crate) fn run_alias(god: &God, args: &[String]) -> std::process::ExitCode {
     }
 }
 fn alias_arguments(god: &God, args: &[String]) -> Result<Vec<String>, String> {
-    let action = args.first().map(String::as_str).unwrap_or("--help");
+    let action = args.first().map_or("--help", String::as_str);
     if action == "--help" {
         return Ok(vec!["summon".into(), god.name.into(), "--help".into()]);
     }
@@ -74,14 +73,14 @@ fn alias_arguments(god: &God, args: &[String]) -> Result<Vec<String>, String> {
 fn command_owner(command: &str) -> Option<&'static str> {
     match command {
         "run" | "loop" | "role" | "agent" => Some("hephaistos"),
-        "route" | "doctor" => Some("artemis"),
+        "route" | "doctor" | "check-target" => Some("artemis"),
         "prompt" | "korean" => Some("apollon"),
         "setup" | "install" | "update" | "project" => Some("eileithyia"),
         "orchestration" | "session" | "hook" | "policy" => Some("poseidon"),
         "knowledge" | "source-wiki" | "index" => Some("demeter"),
         "usage" => Some("aither"),
         "storage" | "prune" | "uninstall" => Some("hades"),
-        "judge" | "report" | "release" | "discord" => Some("athena"),
+        "roster" | "judge" | "report" | "release" | "discord" => Some("athena"),
         _ => None,
     }
 }

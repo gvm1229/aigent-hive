@@ -11,8 +11,8 @@
 - 후속 조사: 기존 Windows knowledge_lock 간헐 실패, PR의 예약 작업 조회 시간초과·활성 state.lock 읽기 경합. 코드 변경·원인 해결 주장 없음, 현재 main의 기본 Windows 검사 통과
 - 현재: 단계 3 `feature/overhaul-3-0.15.0-orchestrator`, [계획](../plans/active/0.15.0-orchestrator.md). 단계 2 10/10 처리 완료·develop@24057f36 병합·분기 삭제
 - [OV150-001](../research/overhaul/OV150-001.md): 합성 Claude 사건 → 호스트 처리기 → 실제 Codex `gpt-6.1-sol`·low·priority 1회, 종료 0·결과·확인증 확인. 같은 사건 재생 추가 호출 0회
-- 실행: Codex 0.167.2·Windows 11 Pro 10.0.26300. 경계 자체 시험 8개 통과, 실제 Claude 입력 훅 확인·Stop 반환 미검증. Gemini·다른 운영체제 성공 근거 없음
-- 잔여 `awaiting-external-evidence`: 조율자의 실험실 폴더 내 대화형 Claude Code 2.1.163 실행과 훅 반환 관측. [정확한 첫 입력·성공 파일](../research/overhaul/OV150-001.md#claude-첫-입력)
+- 실행: Codex 0.167.2·Windows 11 Pro 10.0.26300. 경계 자체 시험 10개 통과, 실제 Claude 입력 훅 확인·Stop 반환 미검증. Gemini·다른 운영체제 성공 근거 없음
+- 잔여 `awaiting-external-evidence`: 사용자의 실험실 내 구독 인증 Claude Code 데스크톱 세션에서 첫 입력과 Stop 반환 관측. [정확한 첫 입력·성공 파일](../research/overhaul/OV150-001.md#claude-첫-입력)
 - OV150-001 미완료·기본 비활성 유지. 현재 요청의 OV150-002–010 구현 선행, OV150-011 전 종료
 - 파일 봉투·프로젝트 한정 훅·호스트 소유 처리기: [ADR-0026](../decisions/ADR-0026-official-cli-extension-points.md). 전역 설정·훅·인증 접근·수정 없음, CLI 키 주입·화면 회수·Claude 비대화형 실행 없음
 - 전면 위임 승인 적용: 추가 승인 대기 없음. 남은 조율자 대화형 시험의 실제 근거 대기와 권한 대기 구분
@@ -21,10 +21,10 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.0`
-- 현재 등록 항목: 8/13 완료
+- 현재 등록 항목: 9/13 완료
 
-- `agent-owned`: `OV150-010`, `OV150-011`, `OV150-012`
-- `awaiting-user-authority`: `OV150-013`
-- `awaiting-external-evidence`: `OV150-001`
+- `agent-owned`: `OV150-012`, `OV150-013`
+- `awaiting-user-authority`: 없음
+- `awaiting-external-evidence`: `OV150-001`, `OV150-011`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->

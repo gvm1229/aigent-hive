@@ -87,8 +87,30 @@ impl CustomAgentProfile {
             .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
         validate_json_schema(PROFILE_SCHEMA, &value, "custom subagent profile")
             .map_err(CustomAgentError::Schema)?;
-        let profile: Self = serde_json::from_value(value)
+        let mut profile: Self = serde_json::from_value(value)
             .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
+        if profile.computed_digest()? != profile.definition_digest {
+            return Err(CustomAgentError::Schema("profile digest mismatch".into()));
+        }
+        let mut resolved = false;
+        for (host, mapping) in &mut profile.host_mappings {
+            if mapping.model == "roster-default" {
+                let defaults =
+                    crate::roster::Roster::defaults().map_err(CustomAgentError::Schema)?;
+                mapping.model = defaults
+                    .providers
+                    .get(host)
+                    .and_then(|p| p.roles.get(&profile.role_id))
+                    .and_then(|r| r.model.clone())
+                    .ok_or_else(|| {
+                        CustomAgentError::Schema("unknown canonical role model default".into())
+                    })?;
+                resolved = true;
+            }
+        }
+        if resolved {
+            profile.definition_digest = profile.computed_digest()?;
+        }
         profile.validate()?;
         Ok(profile)
     }
@@ -531,7 +553,11 @@ fn has_trigger_collision(positive: &[String], negative: &[String]) -> bool {
 }
 
 fn floating_alias(model: &str) -> bool {
-    model.ends_with("-latest") || model == "sonnet" || model == "opus" || model == "default"
+    model.ends_with("-latest")
+        || model == "sonnet"
+        || model == "opus"
+        || model == "default"
+        || model == "roster-default"
 }
 
 fn version_at_least(observed: &str, minimum: &str) -> bool {
@@ -817,6 +843,28 @@ mod tests {
                 "{required_capability} must block activation"
             );
         }
+    }
+
+    #[test]
+    fn roster_migration_preserves_legacy_fixed_model_profiles_and_host_bytes() {
+        let legacy=br#"{"schema_version":1,"role_id":"hive-article-writer","display_name":"Article writer","description":"Write a structured article or long-form human guide.","scope":"project","reserved":false,"permission":"bounded-write","positive_triggers":["write article","long-form guide"],"negative_triggers":["code implementation","simple question"],"host_mappings":{"codex":{"model":"gpt-5.6-sol","effort":"high","minimum_version":"0.147.0"},"claude":{"model":"claude-sonnet-5","effort":"high","minimum_version":"2.1.163"}},"definition_digest":"sha256:83ef657a664bf1b5a220e71490b0c24e68591a6e7f5b8eeadd0483c45a1987aa"}"#;
+        let saved = legacy.to_vec();
+        let old = CustomAgentProfile::parse_json(legacy).unwrap();
+        let new = CustomAgentProfile::parse_json(include_bytes!(
+            "../../../harness/roles/hive-article-writer.json"
+        ))
+        .unwrap();
+        assert_eq!(old, new);
+        for host in ["codex", "claude"] {
+            assert_eq!(old.render(host).unwrap(), new.render(host).unwrap());
+        }
+        assert_eq!(legacy.as_slice(), saved.as_slice());
+        let mut tampered: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../harness/roles/hive-article-writer.json"
+        ))
+        .unwrap();
+        tampered["definition_digest"] = format!("sha256:{}", "0".repeat(64)).into();
+        assert!(CustomAgentProfile::parse_json(&serde_json::to_vec(&tampered).unwrap()).is_err());
     }
 
     #[test]

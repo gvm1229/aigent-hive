@@ -71,7 +71,7 @@ method = next(n for n in fixture_class.body if isinstance(n, ast.FunctionDef)
 program = next(n.value for n in ast.walk(method) if isinstance(n, ast.Constant)
                and isinstance(n.value, str) and n.value.startswith("import json"))
 program = program.replace("__HIVE_TEST_HOST__", repr("codex")).replace(
-    "__HIVE_TEST_PRODUCT_VERSION__", repr("0.14.2"))
+    "__HIVE_TEST_PRODUCT_VERSION__", repr("0.15.0"))
 if not real_codex:
     (fake_bin / "codex.py").write_text(program, encoding="utf-8")
     (fake_bin / "codex.cmd").write_text(
@@ -174,7 +174,7 @@ def current_direct_update():
     receipt = work / "prefix/share/aigent-hive/install-receipt.json"
     receipt.parent.mkdir(parents=True)
     receipt.write_text(json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.2", "package_version": "0.14.2", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
+        "version": "0.15.0", "package_version": "0.15.0", "artifact_sha256": "sha256:" + sha(binary.read_bytes())}))
     with urllib.request.urlopen("https://registry.npmjs.org/aigent-hive", timeout=15) as response:
         metadata = response.read(1024 * 1024 + 1)
     assert len(metadata) <= 1024 * 1024
@@ -349,7 +349,7 @@ def uninstall_case(base, on_file, consent):
     receipt = work / "prefix/share/aigent-hive/install-receipt.json"
     receipt.parent.mkdir(parents=True)
     receipt_bytes = json.dumps({"schema_version": 1, "owner": "direct", "product": "aigent-hive",
-        "version": "0.14.2", "package_version": package, "artifact_sha256": "sha256:" + sha(binary.read_bytes())}).encode()
+        "version": "0.15.0", "package_version": package, "artifact_sha256": "sha256:" + sha(binary.read_bytes())}).encode()
     receipt.write_bytes(receipt_bytes)
     invoke(*base, "--answers", on_file, "--monitor-confirm", consent, "--apply")
     assert_idle()

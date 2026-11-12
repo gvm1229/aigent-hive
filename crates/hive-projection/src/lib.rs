@@ -1540,6 +1540,7 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
+#[allow(clippy::too_many_lines)]
 fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     match name {
         "user-setup" => Some(include_bytes!(

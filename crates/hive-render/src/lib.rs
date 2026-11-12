@@ -7883,6 +7883,15 @@ mod tests {
 
     fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
         let new_body_skills = [
+            "athena",
+            "artemis",
+            "hephaistos",
+            "apollon",
+            "eileithyia",
+            "poseidon",
+            "demeter",
+            "aither",
+            "hades",
             "quick-answer",
             "code-polish",
             "humanize-kor",
@@ -10005,7 +10014,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 29);
+        assert_eq!(deletions.len(), 38);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -10819,7 +10828,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 config["selected_project_skills"].as_array().unwrap().len(),
-                if wiki_enabled { 23 } else { 18 }
+                if wiki_enabled { 32 } else { 27 }
             );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));

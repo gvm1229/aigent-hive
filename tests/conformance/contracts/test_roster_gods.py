@@ -1,6 +1,7 @@
 """God entry discovery metadata and unchanged delegation targets."""
 import unittest
 import json
+import re
 from pathlib import Path
 import yaml
 ROOT=Path(__file__).resolve().parents[3]
@@ -21,9 +22,51 @@ class GodEntryTests(unittest.TestCase):
         for path in ['user-setup.schema.json','user-setup-catalog.schema.json','setup-answers.schema.json']:
             schema=json.loads((ROOT/'schemas'/path).read_text(encoding='utf-8'))
             self.assertTrue(set(CASES).issubset(schema['$defs']['skill_name']['enum']))
+    def test_ownership_table_covers_every_public_command_and_skill_once(self):
+        text=(ROOT/'docs/architecture/god-ownership.md').read_text(encoding='utf-8')
+        rows=[line.split('|') for line in text.splitlines() if line.startswith('| ') and line.split('|')[1].strip() in CASES]
+        self.assertEqual(len(rows),9)
+        commands=[name for row in rows for name in re.findall(r'`([^`]+)`',row[3])]
+        skills=[name for row in rows for name in re.findall(r'`([^`]+)`',row[4])]
+        catalog=yaml.safe_load((ROOT/'harness/skills/catalog.yml').read_text(encoding='utf-8'))
+        self.assertEqual(set(skills),{entry['name'] for entry in catalog['skills']})
+        self.assertEqual(len(skills),len(set(skills)))
+        main=(ROOT/'crates/hive-cli/src/main.rs').read_text(encoding='utf-8')
+        dispatch=main.split('fn dispatch(',1)[1].split('struct UsageArguments',1)[0]
+        public=set(re.findall(r'^        Some\("([a-z][a-z-]+)"',dispatch,re.M))|{'doctor','check-target'}
+        self.assertEqual(set(commands),public)
+        self.assertEqual(len(commands),len(set(commands)))
     def test_new_entries_have_exact_projections(self):
         for name in CASES:
             canonical=(ROOT/f'harness/skills/{name}/SKILL.md').read_bytes()
             for base in ['harness/plugins/aigent-hive/skills','harness/template/.agents/skills','harness/template/.claude/skills']:
                 self.assertEqual(canonical,(ROOT/base/name/'SKILL.md').read_bytes())
+import subprocess
+from tests.conformance.support.harness import Phase1CliTestCase, read_yaml, write_yaml, snapshot_tree
+class GodCliTests(Phase1CliTestCase):
+    def call(self,*args):
+        return subprocess.run([str(self.hive_binary),*map(str,args)],capture_output=True,text=True,encoding='utf-8',cwd=ROOT)
+    def test_roster_and_korean_alias_summon_are_inert_in_both_languages(self):
+        project=self.work_root/'consumer';project.mkdir()
+        result=self.call('roster','--target',project,'--user-root',self.setup_user_root,'--output','json')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(len(json.loads(result.stdout)['roster']['roles']),6)
+        digests=[]
+        for language,expected in [('en','Calling upon Hades — cleanup'),('ko','하데스 호출 — 정리')]:
+            config_path=self.setup_user_root/'.hive/config/user-setup.yml'
+            config=read_yaml(config_path);config['interface_language']=language;write_yaml(config_path,config)
+            result=self.call('summon','하데스','--task','bounded task','--target',project,'--user-root',self.setup_user_root,'--run','run-1','--action','task-1','--expected-head','none','--control-epoch','0','--authority-id','auth-1','--output','json')
+            self.assertEqual(result.returncode,0,result.stderr)
+            payload=json.loads(result.stdout);self.assertEqual(payload['announcement'],expected)
+            self.assertIn('[Hades]',result.stderr);self.assertFalse(payload['enabled']);self.assertEqual(payload['mutation_count'],0)
+            digests.append(payload['request_digest']);self.assertFalse((project/'.hive').exists())
+        self.assertEqual(digests[0],digests[1])
+    def test_hades_plan_preserves_files_and_rejects_confirm(self):
+        before=snapshot_tree(self.setup_user_root)
+        result=self.call('hades','plan','--user-root',self.setup_user_root,'--output','json')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(json.loads(result.stdout)['changed_paths'],[])
+        rejected=self.call('하데스','plan','--user-root',self.setup_user_root,'--confirm','--output','json')
+        self.assertNotEqual(rejected.returncode,0)
+        self.assertEqual(snapshot_tree(self.setup_user_root),before)
 if __name__=='__main__': unittest.main()

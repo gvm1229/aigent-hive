@@ -1,0 +1,72 @@
+# Canonical exact role models; no host execution or automatic fallback.
+[workspace]
+provider = "codex"
+
+[providers.codex]
+minimum_version = "0.167.2"
+
+[providers.codex.roles.hive-article-writer]
+model = "gpt-5.6-sol"
+effort = "high"
+
+[providers.codex.roles.hive-complex-implementer]
+model = "gpt-5.6-terra"
+effort = "max"
+
+[providers.codex.roles.hive-design-specialist]
+model = "gpt-5.6-sol"
+effort = "max"
+
+[providers.codex.roles.hive-independent-judge]
+model = "gpt-5.6-sol"
+effort = "high"
+
+[providers.codex.roles.hive-research-specialist]
+model = "gpt-5.6-terra"
+effort = "high"
+
+[providers.codex.roles.hive-routine-implementer]
+model = "gpt-5.6-luna"
+effort = "max"
+
+[providers.claude]
+minimum_version = "2.1.163"
+
+[providers.claude.roles.hive-article-writer]
+model = "claude-sonnet-5"
+effort = "high"
+
+[providers.claude.roles.hive-complex-implementer]
+model = "claude-opus-4-8"
+effort = "max"
+
+[providers.claude.roles.hive-design-specialist]
+model = "claude-opus-4-8"
+effort = "max"
+
+[providers.claude.roles.hive-independent-judge]
+model = "claude-opus-4-8"
+effort = "max"
+
+[providers.claude.roles.hive-research-specialist]
+model = "claude-sonnet-5"
+effort = "high"
+
+[providers.claude.roles.hive-routine-implementer]
+model = "claude-sonnet-5"
+effort = "high"
+
+[providers.gemini]
+minimum_version = "0.35.3"
+
+[roles.hive-article-writer]
+
+[roles.hive-complex-implementer]
+
+[roles.hive-design-specialist]
+
+[roles.hive-independent-judge]
+
+[roles.hive-research-specialist]
+
+[roles.hive-routine-implementer]

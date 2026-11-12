@@ -69,6 +69,9 @@ Aigent Hive
 
 USAGE:
     hive doctor
+    hive roster --help
+    hive summon --help
+    hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
     hive check-target <path>
@@ -259,6 +262,7 @@ fn main() -> ExitCode {
     dispatch(arguments)
 }
 
+#[allow(clippy::too_many_lines)]
 fn dispatch(arguments: Vec<String>) -> ExitCode {
     if let Some(god) = arguments
         .first()

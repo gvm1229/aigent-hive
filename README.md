@@ -21,6 +21,15 @@ host's own model runtime.
 
 Stable `0.14.2` is the current public release.
 
+## 개발 자료: 역할과 기능 입구
+
+소스 개발 브랜치의 9신은 계획·조사·구현·글쓰기·설정·조율·지식·사용량·정리의 입구 이름표.
+기존 명령과 Skill 유지, 역할 기본값은 TOML 구성으로 관리.
+`hive roster`로 구성 확인, `hive summon`으로 작업 봉투 준비.
+실제 Claude 왕복 미검증으로 새 조율 기능의 기본 비활성 유지.
+[기능 소속·역할 이전](docs/architecture/god-ownership.md) 참조.
+
+
 ## Install the current stable release
 
 `0.14.2` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
