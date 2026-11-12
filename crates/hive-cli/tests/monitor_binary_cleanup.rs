@@ -60,7 +60,7 @@ fn prune_confirm_removes_large_unused_executables_and_preserves_recorded_files()
     }
     let removed = prune(&root, "--confirm");
     assert_eq!(removed["removed"].as_array().unwrap().len(), 2);
-    assert!(removed["skipped"].as_array().unwrap().is_empty());
+    assert_eq!(removed["skipped"], json!([]));
     assert!(!bin.join("hive-old-a.exe").exists());
     assert!(!bin.join("hive-old-b.exe").exists());
     for name in ["hive-current.exe", "hive-previous.exe"] {
@@ -69,8 +69,5 @@ fn prune_confirm_removes_large_unused_executables_and_preserves_recorded_files()
     assert_eq!(fs::read(bin.join("foreign.txt")).unwrap(), b"foreign bytes");
     assert_eq!(fs::read(monitor.join("config.json")).unwrap(), config);
     assert_eq!(fs::read(monitor.join("upgrade.json")).unwrap(), journal);
-    assert!(prune(&root, "--dry-run")["candidates"]
-        .as_array()
-        .unwrap()
-        .is_empty());
+    assert_eq!(prune(&root, "--dry-run")["candidates"], json!([]));
 }

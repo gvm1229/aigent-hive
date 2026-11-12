@@ -659,7 +659,7 @@ mod tests {
         .unwrap();
         let cleanup = &result["binary_cleanup"];
         assert_eq!(cleanup["removed"].as_array().unwrap().len(), 2);
-        assert!(cleanup["skipped"].as_array().unwrap().is_empty());
+        assert_eq!(cleanup["skipped"], json!([]));
         assert_eq!(binary_names(&root).len(), 2);
         assert_eq!(std::fs::read(bin.join("hive-old.exe")).unwrap(), bytes);
         let current: Configuration = load(&root, CONFIG).unwrap().unwrap();
@@ -670,11 +670,9 @@ mod tests {
         let journal: Value = load(&root, JOURNAL).unwrap().unwrap();
         assert_eq!(journal["phase"], "complete");
         assert_eq!(&journal["binary_cleanup"], cleanup);
-        assert!(
-            prune_unused(root.requested_path(), false).unwrap()["candidates"]
-                .as_array()
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            prune_unused(root.requested_path(), false).unwrap()["candidates"],
+            json!([])
         );
     }
 
@@ -723,7 +721,7 @@ mod tests {
         assert!(message.contains("os error 5"), "{message}");
         assert_eq!(std::fs::read(&path).unwrap(), expected);
         let result = prune_unused(root.requested_path(), true).unwrap();
-        assert!(result["removed"].as_array().unwrap().is_empty());
+        assert_eq!(result["removed"], json!([]));
         let skipped = result["skipped"].as_array().unwrap();
         assert_eq!(skipped.len(), 1);
         assert_eq!(
@@ -745,7 +743,7 @@ mod tests {
                 .len(),
             1
         );
-        assert!(binary_names(&root).is_empty());
+        assert_eq!(binary_names(&root), Vec::<String>::new());
     }
 
     #[test]
