@@ -101,7 +101,7 @@ def qualify(hive: Path, work: Path, target_version: str, failure_tests: bool) ->
                             "knowledge-capture", "knowledge-recall", "knowledge-promote",
                             "knowledge-maintain", "knowledge-scan",
                         }]
-                    assert len(expected) == (23 if preferences["wiki_enabled"] else 18)
+                    assert len(expected) == (32 if preferences["wiki_enabled"] else 27)
                 else:
                     ledger = yaml.safe_load((ROOT / "harness/skills/retired-names.yml").read_text(encoding="utf-8"))
                     expected = list({ledger["retired_names"].get(name, name) for name in value})
