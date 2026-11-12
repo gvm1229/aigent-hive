@@ -1,6 +1,6 @@
 interface:
   display_name: "Apollon"
-  short_description: "(apollon) writing"
+  short_description: "(apollon) writing; 글쓰기. Names: apollon, 아폴론, Apollo. Use for rewrite selected Korean; improve this writing; preserve meaning while editing; 선택한 한국어 윤문; 글 표현 개선; 뜻을 지키며 편집."
   default_prompt: "Use $aigent-hive:apollon for this writing task."
 policy:
   allow_implicit_invocation: true

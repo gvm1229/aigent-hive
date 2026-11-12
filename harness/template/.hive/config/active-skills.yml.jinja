@@ -14,6 +14,15 @@ skills:
   - subagents
   consent_digest: null
 {% endif -%}
+{% if 'aither' in selected_project_skills -%}
+- name: aither
+  source_type: built-in
+  content_digest: sha256:63940a300ce3218cca1d91eeebd55feef7526864847f1ff86dfd9acef9dd4dc5
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
 {% if 'amend-directive' in selected_project_skills -%}
 - name: amend-directive
   source_type: built-in
@@ -23,6 +32,33 @@ skills:
   - filesystem-read
   - filesystem-write
   - shell
+  consent_digest: null
+{% endif -%}
+{% if 'apollon' in selected_project_skills -%}
+- name: apollon
+  source_type: built-in
+  content_digest: sha256:096a9338009c21ab4a1311262a6c343016aa65c58618ccb1ce6d2e52a2eb9f20
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'artemis' in selected_project_skills -%}
+- name: artemis
+  source_type: built-in
+  content_digest: sha256:a9a062718f1de46f3552d5e869a2683448f5fdc6cc5a0d1389eb1c3591f8f79f
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'athena' in selected_project_skills -%}
+- name: athena
+  source_type: built-in
+  content_digest: sha256:5b3cacf4dc9d3a9123db69435af1cf31ebcfd093bca0d81f74e02eab3bae0a92
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
   consent_digest: null
 {% endif -%}
 {% if 'code-polish' in selected_project_skills -%}
@@ -47,6 +83,42 @@ skills:
   - run-state
   - shell
   - subagents
+  consent_digest: null
+{% endif -%}
+{% if 'demeter' in selected_project_skills -%}
+- name: demeter
+  source_type: built-in
+  content_digest: sha256:0cde7c1677bc86868822e7280c78301315cea7178b62cee993aa226a2f401895
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'eileithyia' in selected_project_skills -%}
+- name: eileithyia
+  source_type: built-in
+  content_digest: sha256:8d207373ea1a5172dad497ca84228c28982f550cd2d32f4eae93a1c2e06647c6
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'hades' in selected_project_skills -%}
+- name: hades
+  source_type: built-in
+  content_digest: sha256:5187b6c630d7ba86d90d31086d344ded0389da919ad266503e597dc6418e4724
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'hephaistos' in selected_project_skills -%}
+- name: hephaistos
+  source_type: built-in
+  content_digest: sha256:3ab60a7009e1f2176221f3b62e002e10fd870e411ad209612bd634a55e137dd4
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
   consent_digest: null
 {% endif -%}
 {% if 'humanize-kor' in selected_project_skills -%}
@@ -156,6 +228,15 @@ skills:
   - run-state
   - shell
   - subagents
+  consent_digest: null
+{% endif -%}
+{% if 'poseidon' in selected_project_skills -%}
+- name: poseidon
+  source_type: built-in
+  content_digest: sha256:227810605c17b1f9e3db7bfbfbd3e1d2bc4f263ee646b2c0f52a5a97f7007953
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
   consent_digest: null
 {% endif -%}
 {% if 'product-update' in selected_project_skills -%}
@@ -308,87 +389,6 @@ skills:
   - run-state
   - shell
   - subagents
-  consent_digest: null
-{% endif -%}
-{% if 'athena' in selected_project_skills -%}
-- name: athena
-  source_type: built-in
-  content_digest: sha256:5b3cacf4dc9d3a9123db69435af1cf31ebcfd093bca0d81f74e02eab3bae0a92
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'artemis' in selected_project_skills -%}
-- name: artemis
-  source_type: built-in
-  content_digest: sha256:a9a062718f1de46f3552d5e869a2683448f5fdc6cc5a0d1389eb1c3591f8f79f
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'hephaistos' in selected_project_skills -%}
-- name: hephaistos
-  source_type: built-in
-  content_digest: sha256:3ab60a7009e1f2176221f3b62e002e10fd870e411ad209612bd634a55e137dd4
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'apollon' in selected_project_skills -%}
-- name: apollon
-  source_type: built-in
-  content_digest: sha256:096a9338009c21ab4a1311262a6c343016aa65c58618ccb1ce6d2e52a2eb9f20
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'eileithyia' in selected_project_skills -%}
-- name: eileithyia
-  source_type: built-in
-  content_digest: sha256:8d207373ea1a5172dad497ca84228c28982f550cd2d32f4eae93a1c2e06647c6
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'poseidon' in selected_project_skills -%}
-- name: poseidon
-  source_type: built-in
-  content_digest: sha256:227810605c17b1f9e3db7bfbfbd3e1d2bc4f263ee646b2c0f52a5a97f7007953
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'demeter' in selected_project_skills -%}
-- name: demeter
-  source_type: built-in
-  content_digest: sha256:0cde7c1677bc86868822e7280c78301315cea7178b62cee993aa226a2f401895
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'aither' in selected_project_skills -%}
-- name: aither
-  source_type: built-in
-  content_digest: sha256:63940a300ce3218cca1d91eeebd55feef7526864847f1ff86dfd9acef9dd4dc5
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  consent_digest: null
-{% endif -%}
-{% if 'hades' in selected_project_skills -%}
-- name: hades
-  source_type: built-in
-  content_digest: sha256:5187b6c630d7ba86d90d31086d344ded0389da919ad266503e597dc6418e4724
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
   consent_digest: null
 {% endif -%}
 {% endif -%}

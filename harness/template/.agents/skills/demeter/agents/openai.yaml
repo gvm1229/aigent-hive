@@ -1,6 +1,6 @@
 interface:
   display_name: "Demeter"
-  short_description: "(demeter) knowledge"
+  short_description: "(demeter) knowledge; 지식. Names: demeter, 데메테르, demeter. Use for recall project knowledge; find a saved fact; search reviewed knowledge; 프로젝트 지식 조회; 저장된 사실 찾기; 검토 지식 검색."
   default_prompt: "Use $aigent-hive:demeter for this knowledge task."
 policy:
   allow_implicit_invocation: true
