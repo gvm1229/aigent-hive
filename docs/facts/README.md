@@ -21,6 +21,7 @@
 
 | Fact | English | 한국어 |
 | --- | --- | --- |
+| 훅 수신 상자 검증 경계 | [en](en/hook-inbox-evidence.md) | [ko](ko/hook-inbox-evidence.md) |
 | 재정비 기준선 | [en](en/overhaul-baseline.md) | [ko](ko/overhaul-baseline.md) |
 | Fable 검토 소유권 | [en](en/fable-advisor-ownership.md) | [ko](ko/fable-advisor-ownership.md) · [근거](../research/fable-advisor-ownership.md) |
 | 임계값 확인 기록의 일치 | [en](en/usage-threshold-provenance.md) | [ko](ko/usage-threshold-provenance.md) |
