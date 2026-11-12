@@ -6,10 +6,8 @@
 
 ## 현재 위치
 
-- 단계 1b: 7/8 완료
-- 다음: [OV142-008 정식·PC 갱신](../../research/overhaul/OV142-008.md)
-- [test.2 수용](../../research/overhaul/OV142-007.md) 완료
-- 승인 대기 없음. 단계 2 시작·단계 브랜치 삭제 제외
+- 단계 1b 8/8 완료, OV141-011 해결. 단계 브랜치 보존
+- 다음: 단계 2 `test/overhaul-2-baseline`의 [OVX-001](baseline-experiments.md). 이번 실행 미시작
 
 ## 재개 절차
 
@@ -77,8 +75,8 @@
 | 단계 | 파일 | 제품 변경 | 진입 조건 | 완료 |
 | --- | --- | --- | --- | ---: |
 | 0 저장소 정리 | [repo-cleanup.md](repo-cleanup.md) | 없음 | 없음 | 10/10 |
-| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 10/11 |
-| 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 develop 병합, 2026-11-12 버전 승인 | 7/8 |
+| 1 0.14.1 수정판 | [overhaul-0.14.1.md](../../archive/plans/overhaul-0.14.1.md) | 있음 | 단계 0 develop 병합, 버전 승인 | 11/11 |
+| 1b 0.14.2 수정판 | [overhaul-0.14.2.md](../active/overhaul-0.14.2.md) | 있음 | 단계 1 develop 병합, 2026-11-12 버전 승인 | 8/8 |
 | 2 기준선·창 실험 | [baseline-experiments.md](baseline-experiments.md) | 없음 | 0.14.2 정식·정리 확인 | 0/10 |
 | 3 0.15.0 오케스트레이터 | [0.15.0-orchestrator.md](0.15.0-orchestrator.md) | 있음 | 단계 2 develop 병합, OVX-009 승인 | 0/7 |
 | 3 0.15.0 하위 기능 | [0.15.0-gods.md](0.15.0-gods.md) | 있음 | OV150-001 | 0/7 |
