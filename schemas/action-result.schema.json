@@ -103,6 +103,17 @@
         "LintSourceWiki",
         "QuerySourceWiki",
         "RebuildSourceWikiIndex",
+        "Orchestration",
+        "OrchestrationStatus",
+        "OrchestrationPlan",
+        "OrchestrationDispatch",
+        "OrchestrationReceipt",
+        "OrchestrationCancel",
+        "OrchestrationRecover",
+        "OrchestrationAuthority",
+        "OrchestrationAuthorityIssue",
+        "OrchestrationAuthorityRevoke",
+        "OrchestrationMigrate",
         "UpdateHarness"
       ]
     },
