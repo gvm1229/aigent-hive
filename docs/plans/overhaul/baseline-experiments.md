@@ -1,9 +1,15 @@
-# 단계 2 — 기준선과 창 실험
+# 단계 2 — 기준선과 공식 확장점 결정
 
 > Plan version: 0.14.2
 > Scope: source
 
 브랜치: `test/overhaul-2-baseline`([브랜치 규칙](README.md)). 진입: 0.14.2 정식·정리 확인. 제품 바이트 변경 없음. 실험 코드는 `tests/work/`의 일회성 스크립트, 결과는 `docs/research/overhaul/<ID>.md`
+
+## 집계 기준
+
+- 9/10 처리 완료: 기준선·조사·결정 확인 6개, 창 실험 대체 종료 3개. 실험 성공 9개라는 뜻과 구분
+- OVX-005–007 기존 근거 파일 변경 없음. 실제 대체 왕복은 단계 3 첫 항목으로 이동, 이번 요청에서 미실행
+- OVX-010은 현재 사용자 지시로 실행 제외. 제공자 창 제어 서면 확인은 비차단 별도 조사, 단계 3 진입의 조건 아님
 
 ## 항목
 
@@ -27,31 +33,30 @@
   - 근거: [크기 측정](../../research/overhaul/OVX-004.md)
   - 변경: 새 프로젝트당 Hive 파일 수, 내장 Skill 수·단어 수, 임시 사용자 기준 `hive storage` 분류별 용량
   - 확인: 세 수치와 측정 명령 기록
-- [ ] [OVX-005] 창 실험 1 — 다중화 도구와 대화형 실행
-  - state: blocked; depends: OVX-008; owner: provider; reason: OVX-008의 세 제공자 자동 입력 허용 미확인
-  - 근거: [환경·차단·해결 경로](../../research/overhaul/OVX-005.md)
-  - 실행 조건: OVX-008에서 제공자별 현재 약관의 대화형 자동 입력 허용 확인 뒤에만 실행. 불허·허용 미확인 제공자 부분은 `blocked`와 이유·해결 경로 기록
-  - 변경: `tests/work/pane-lab/` 스크립트. Windows psmux와 WSL·macOS tmux에서 3창 열기, `claude --model --effort`·`codex -m -c model_reasoning_effort=`·`gemini -m` 대화형 실행, `send-keys -l`로 한글·긴 문장 입력, `capture-pane`으로 상태 읽기
-  - 확인: 각 창의 지정 모델·수준 표시, 입력 손실 0건, 자격 증명 파일 접근 0건
-- [ ] [OVX-006] 창 실험 2 — 입력 대기 감지와 알림 왕복
-  - state: blocked; depends: OVX-005; owner: provider; reason: OVX-005 실제 창 미수용과 OVX-008 자동 입력 허용 미확인
-  - 근거: [훅·왕복 미실행과 해결 경로](../../research/overhaul/OVX-006.md)
-  - 변경: Claude Code `Stop`·`Notification` 훅, Codex `notify`, Gemini CLI 훅으로 대기 신호 파일 기록. 대기 창에만 알림 한 줄 입력
-  - 확인: 작업 중 창 입력 0건, 대기 → 알림 → 메시지 상자 읽기 왕복 3회 성공
-- [ ] [OVX-007] 창 실험 3 — 종료·재개·한도·추론 수준
-  - state: blocked; depends: OVX-005; owner: provider; reason: OVX-005 실제 창 미수용과 OVX-008 자동 입력 허용 미확인
-  - 근거: [재개·사용량·수준 미실행과 해결 경로](../../research/overhaul/OVX-007.md)
-  - 변경: 창 강제 종료 뒤 `claude -r`·`codex resume`·`gemini -r` 재개, 인증 만료·한도 도달 화면 문구 수집, 같은 계정 동시 창 3개의 사용량 소모 관찰, Gemini `modelConfigs.customAliases`의 `thinkingLevel` 효과
-  - 확인: 재개 결과·감지 문구·소모량 표, Gemini 별칭 형식 확정
+- [x] [OVX-005] 창 실험 1 — 새 설계로 대체 종료
+  - state: complete; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
+  - 근거 보존: [환경·차단 기록](../../research/overhaul/OVX-005.md)
+  - 종료 이유: ADR-0026의 공식 확장점 한정으로 창 열기·자동 입력·화면 회수 실험 폐기. 실제 제공자 실행 성공과 구분
+  - 대체: 단계 3 [OV150-001](0.15.0-orchestrator.md)의 프로젝트 한정 훅·파일 봉투·Codex 왕복, 후속 작업자 프로필·복구 검증
+- [x] [OVX-006] 창 실험 2 — 새 설계로 대체 종료
+  - state: complete; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
+  - 근거 보존: [알림 왕복 미실행](../../research/overhaul/OVX-006.md)
+  - 종료 이유: 대기 창 키 입력 경로 제거. 실제 왕복 성공 없음. 대체는 단계 3 OV150-001, 정식 중재는 단계 6 OV160-002·003
+- [x] [OVX-007] 창 실험 3 — 새 설계로 대체 종료
+  - state: complete; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
+  - 근거 보존: [재개·사용량·수준 미실행](../../research/overhaul/OVX-007.md)
+  - 종료 이유: 화면 문구 수집·외부 창 재개 경로 제거. 대체는 단계 3 OV150-001·005·006의 공식 프로필·확인증·중복 방지, 실제 재개·취소는 단계 6·7 수용. 기존 미실행을 성공으로 변경하지 않는 종료
 - [x] [OVX-008] 제공자 약관 원문 재확인
   - state: complete; evidence: repo:docs/research/overhaul/OVX-008.md#sha256:67722d841b3fa50ad242ea8c715ff98893cf200a2994ca6a50d8acf132ce5bb2
   - 근거: [공식 약관과 판정](../../research/overhaul/OVX-008.md)
   - 변경: Anthropic·OpenAI·Google의 현재 약관·정책에서 대화형 CLI의 자동 입력·병렬 사용 조건 확인. 조항 요약·출처·마지막 확인일 기록
   - 확인: 세 제공자 표 완성, 확인일 90일 이내
-- [ ] [OVX-009] 창 실행 허용 ADR 초안과 승인
-  - state: awaiting-user-authority; depends: OVX-005,OVX-006,OVX-007,OVX-008; owner: user; reason: 02 지침의 프로세스 실행 금지 변경 승인
-  - 변경: `docs/decisions/`에 ADR 초안(대화형 창 실행 허용, 토큰·API 키 금지 유지, 헤드리스는 보조), `.agents/directives/02-architecture.md:20-21,53-54`(Runtime and orchestration·Skill boundary) 변경안, `ADR-0019`와의 관계
-  - 확인: 사용자 승인 기록, `python scripts/check-agent-directives.py`
+- [x] [OVX-009] 공식 확장점 결정과 승인 반영
+  - state: complete; depends: OVX-008; evidence: repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66
+  - 근거: [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md), [반영 계획·검증](../../research/overhaul/OVX-009.md)
+  - 결정: 2026-11-12 사용자 승인으로 Fable 권고 (b) 채택. 공식 확장점만 사용, 외부 키 주입·화면 캡처·Claude 비대화형 금지. Codex·Gemini 구독 비대화형 작업자, 호스트 실행 소유권 유지
+  - 반영: 02의 Runtime and orchestration·Skill boundary, 단계 3·6·7과 README. ADR-0019 수정·대체 없음
+  - 확인: 승인 원문·날짜 보존, 지침 읽기 예산·문서·계획 검사. 실제 제공자 CLI·모델 실행 없음
 - [ ] [OVX-010] develop 병합과 단계 브랜치 종료
   - state: agent-owned; depends: OVX-001,OVX-002,OVX-004,OVX-008,OVX-009
   - 변경: 단계 브랜치 `test/overhaul-2-baseline`를 최신 `develop`에 병합(fast-forward 우선, 아니면 merge 커밋), `develop` push. 병합 뒤 단계 브랜치 삭제
