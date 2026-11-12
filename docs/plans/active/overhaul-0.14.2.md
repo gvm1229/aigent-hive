@@ -31,8 +31,8 @@
   - state: complete; depends: OV142-004; evidence: repo:docs/research/overhaul/OV142-005.md#sha256:5e35cd99d983ee8b35d421f6f3411b46b28b35c0cc866a78f2f3a2bf3f7b8319
   - 변경: orchestrator가 Fable 5.2 advisor 하위 에이전트로 `origin/develop..fix/overhaul-1-0.14.2` 검토. 발견 사항은 같은 브랜치에서 수정·재검사
   - 확인: 검토 결과·범위·미검증 한계를 근거 문서에 기록. 전달된 Fable 5.2 일반 하위 에이전트·기본 노력 검토 기록, 추가 검토 호출 불필요
-- [ ] [OV142-006] develop 병합
-  - state: agent-owned; depends: OV142-005
+- [x] [OV142-006] develop 병합
+  - state: complete; depends: OV142-005; evidence: repo:docs/research/overhaul/OV142-006.md#sha256:93466ed41a4a7e58e90041b31a1d2581cf4a61e835081e029e34c3a2f5c5cf64
   - 변경: 검토된 단계 브랜치를 최신 develop에 병합·push
   - 확인: 단계 브랜치의 develop 포함과 원격 일치
 - [ ] [OV142-007] develop에서 0.14.2-test.1 공개 시험
