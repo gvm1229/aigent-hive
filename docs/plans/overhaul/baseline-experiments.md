@@ -7,8 +7,8 @@
 
 ## 항목
 
-- [ ] [OVX-001] 프로젝트 판별 코퍼스와 현재 결과
-  - state: agent-owned
+- [x] [OVX-001] 프로젝트 판별 코퍼스와 현재 결과
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-001.md#sha256:8a61efd983735d9a8efe85daf7e0fbe48ac18ebe5fe4ce96df3f19306d0c9a51
   - 변경: `tests/fixtures/project-detection/`에 표시 파일만 둔 최소 프로젝트 30종(TypeScript 웹 앱, Next.js, Vite, Python, Rust, Go, Java, .NET, 모노레포, 문서 전용, 빈 폴더 등)과 기대 결과표. 현재 `project_kind` 결과 기록
   - 확인: 30종 전부 기록, `general` 판정 비율 수치
 - [ ] [OVX-002] 지식 회수 정답 질의집과 현재 회수율
