@@ -117,6 +117,8 @@ project_kind:
   type: str
   help: 적용할 domain profile
   choices:
+    Coding: coding
+    Documents: docs
     General: general
     Custom: custom
   default: general

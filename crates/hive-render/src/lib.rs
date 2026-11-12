@@ -391,6 +391,8 @@ struct SetupAnswers {
     setup_mode: String,
     project_kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    project_profile: Option<hive_core::project_profile::ProjectProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     interface_language: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     wiki: Option<ProjectWikiPreferences>,
@@ -2592,7 +2594,10 @@ fn frozen_project_base_0_8_or_0_9(
         && resolution.resolved_owner == harness.resolved_owner
         && resolution.evidence_digest == harness.resolution_evidence_digest
         && !harness.project_name.trim().is_empty()
-        && matches!(harness.project_kind.as_str(), "general" | "custom")
+        && matches!(
+            harness.project_kind.as_str(),
+            "coding" | "docs" | "general" | "custom"
+        )
         && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
         && preference_provenance_matches
         && matches!(harness.interface_language.as_str(), "en" | "ko")
@@ -3396,7 +3401,10 @@ fn validate_answers(answers: &SetupAnswers) -> Result<(), RenderError> {
     if !matches!(answers.schema_version, 1 | 2)
         || answers.project_name.trim().is_empty()
         || !matches!(answers.setup_mode.as_str(), "expedited" | "custom")
-        || !matches!(answers.project_kind.as_str(), "general" | "custom")
+        || !matches!(
+            answers.project_kind.as_str(),
+            "coding" | "docs" | "general" | "custom"
+        )
         || !matches!(
             answers.primary_host.as_str(),
             "codex" | "claude" | "antigravity"
@@ -6803,6 +6811,9 @@ critical_judge_quorum: {}\n",
         quote(&answers.elevated_judge_quorum),
         quote(&answers.critical_judge_quorum),
     );
+    if let Some(profile) = &answers.project_profile {
+        append_yaml_key(&mut output, "project_profile", profile)?;
+    }
     append_custom_setup_preferences(&mut output, answers)?;
     append_yaml_key(&mut output, "persistent_roles", &answers.persistent_roles)?;
     append_yaml_key(
@@ -7292,6 +7303,25 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/setup")
             .join(name)
+    }
+
+    #[test]
+    fn four_kinds_and_profile_round_trip_with_legacy_answers() {
+        let (legacy, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+        assert!(legacy.project_profile.is_none());
+        for kind in ["coding", "docs", "general", "custom"] {
+            let mut answers = legacy.clone();
+            answers.project_kind = kind.into();
+            answers.project_profile = Some(hive_core::project_profile::ProjectProfile::detect(
+                &fixture("missing"),
+            ));
+            super::validate_answers(&answers).unwrap();
+            let bytes = render_setup_answers(&answers).unwrap();
+            let value: serde_json::Value = serde_yaml::from_slice(&bytes).unwrap();
+            super::validate_schema_instance(super::SETUP_SCHEMA, &value, "answers").unwrap();
+            let restored: SetupAnswers = serde_yaml::from_slice(&bytes).unwrap();
+            assert_eq!(restored, answers);
+        }
     }
 
     #[test]

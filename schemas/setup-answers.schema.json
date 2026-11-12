@@ -44,6 +44,8 @@
     },
     "project_kind": {
       "enum": [
+        "coding",
+        "docs",
         "general",
         "custom"
       ]
@@ -537,6 +539,79 @@
     },
     "preference_decisions": {
       "$ref": "#/$defs/preference_decisions"
+    },
+    "project_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "languages",
+        "frameworks",
+        "package_managers",
+        "test_tools",
+        "commands",
+        "structure",
+        "category"
+      ],
+      "properties": {
+        "languages": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "frameworks": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "package_managers": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "test_tools": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "structure": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "commands": {
+          "type": "object",
+          "maxProperties": 16,
+          "additionalProperties": {
+            "$ref": "#/$defs/project_fact"
+          }
+        },
+        "category": {
+          "enum": [
+            "web",
+            "server",
+            "cli",
+            "python",
+            "rust",
+            "monorepo",
+            "go",
+            "java",
+            "dotnet",
+            "native",
+            "docs",
+            "general"
+          ]
+        }
+      }
     }
   },
   "allOf": [
@@ -869,6 +944,35 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/preference_decision"
+      }
+    },
+    "project_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "low"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        }
       }
     }
   }

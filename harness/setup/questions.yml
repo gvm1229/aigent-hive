@@ -443,7 +443,7 @@ questions:
     minimum: 1
     maximum: 160
   - id: project-kind
-    revision: 1
+    revision: 2
     scope: "project"
     section: "identity"
     key: "/project_kind"
@@ -451,7 +451,7 @@ questions:
     prompt: {"ko":"프로젝트 설정 종류를 골라 주세요.","en":"Choose the project configuration kind."}
     help: {"ko":"","en":""}
     default: "general"
-    options: [{"value":"general","label":{"ko":"일반","en":"General"}},{"value":"custom","label":{"ko":"직접 설정","en":"Custom"}}]
+    options: [{"value":"coding","label":{"ko":"코드","en":"Coding"}},{"value":"docs","label":{"ko":"문서","en":"Documents"}},{"value":"general","label":{"ko":"일반","en":"General"}},{"value":"custom","label":{"ko":"직접 설정","en":"Custom"}}]
   - id: project-host
     revision: 1
     scope: "project"

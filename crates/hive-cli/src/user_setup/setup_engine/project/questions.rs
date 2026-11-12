@@ -16,8 +16,9 @@ pub(super) fn defaults(
         .and_then(|name| name.to_str())
         .filter(|name| !name.chars().any(char::is_control))
         .unwrap_or("project");
+    let profile = hive_core::project_profile::ProjectProfile::detect(target);
     json!({"schema_version":2,"project_name":name,"project_identity":"","setup_mode":"expedited",
-        "project_kind":"general","primary_host":host,"usage_stop_remaining_percent":global.usage_stop_remaining_percent,
+        "project_kind":profile.project_kind(),"project_profile":profile,"primary_host":host,"usage_stop_remaining_percent":global.usage_stop_remaining_percent,
         "elevated_judge_quorum":"2/3","critical_judge_quorum":"3/3+human","persistent_roles":[],
         "knowledge_include_paths":[],"knowledge_exclude_paths":[".env","**/.env","**/.env.*","**/credentials*","**/secrets/**"],
         "root_knowledge_promotion_categories":[],"confidential_knowledge_categories":[],
