@@ -13,7 +13,7 @@ sources:
   - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0400842448b5e73cedabe1d2eb941abf343a0e1564b2e161c8e54d6677af017e"
   - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:c122052f10778e4c0e3c56c9511c2fdb6fc48528ba3d0dba599f91d3be77a5b5"
   - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:3bdc09d7cc02ced6cf4eb2a4dc4fa5e734653581144d8ab4e57914e21f4bb612"
-  - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:de58ee344cdb4f4b933a1ba490da5eea13bc076fbdb38c532d1f66bae16e7c66"
+  - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:d96b5712a19a96cc443a4c350b6e9184a730cc620fc69a94a2c149b3329c9257"
 links: [judge-verification, model-routed-custom-subagents, product-non-goals, skill-routing, v0-9-skill-suite-plan]
 reviewed_revision: "git:3313076aab5bcc9c162b9e9beabc48a777aa5627"
 status: active
