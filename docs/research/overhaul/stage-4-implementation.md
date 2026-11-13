@@ -1,6 +1,8 @@
-# 단계 4 구현 검증과 인계
+# 단계 4 검토 전 구현 검증과 인계
 
-- 범위: 현재 요청의 OV151-001–007·011 구현 8/8. 전체 계획 8/11, Fable 검토·develop 통합·공개 test.1·정식·설치의 현재 범위 밖 처리
+- 후속: [Fable 검토 수정과 최신 검증](stage-4-review.md). 아래 수치는 검토 전 구현 시점의 근거, 최신 종료 판정과 구분
+
+- 범위: 검토 전 요청의 OV151-001–007·011 구현 8/8. 전체 계획 8/11, Fable 검토·develop 통합·공개 test.1·정식·설치의 현재 범위 밖 처리
 - 실행: Codex·Windows 11 10.0.26300, Rust/cargo 1.97.1·Python 3.13 격리 환경. 새 버전 Linux/macOS 실행·실제 앱의 Skill 발견·공개 설치 수용·모델 준수 증명 제외
 - 브랜치: feature/overhaul-4-0.15.1-detection. main·develop의 시작점 498d674d 유지, 원격 전체 CI는 main/develop push 또는 PR 대상. 이번 단계 브랜치의 원격 검사는 브랜치 정책 범위, Fable 검토 뒤의 통합·전체 CI와 구분
 
