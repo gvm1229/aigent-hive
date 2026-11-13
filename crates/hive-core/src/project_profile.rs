@@ -65,17 +65,26 @@ impl ProjectProfile {
 
     /// Infer facts without running tools, reading nested source, or modifying the target.
     #[must_use]
-    #[allow(clippy::too_many_lines)]
     pub fn detect(target: &Path) -> Self {
+        let Ok(dir) = Dir::open_ambient_dir(target, ambient_authority()) else {
+            return Self {
+                category: "general".into(),
+                ..Self::default()
+            };
+        };
+        Self::detect_in(&dir)
+    }
+
+    /// Read facts through the caller's pinned project capability.
+    #[must_use]
+    #[allow(clippy::too_many_lines)]
+    pub fn detect_in(dir: &Dir) -> Self {
         let mut result = Self {
             category: "general".into(),
             ..Self::default()
         };
-        let Ok(dir) = Dir::open_ambient_dir(target, ambient_authority()) else {
-            return result;
-        };
         let mut categories = Vec::new();
-        if let Some(package) = text(&dir, "package.json")
+        if let Some(package) = text(dir, "package.json")
             .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
             .filter(serde_json::Value::is_object)
         {
@@ -174,17 +183,17 @@ impl ProjectProfile {
             ("astro.config.mjs", "Astro"),
             ("angular.json", "Angular"),
         ] {
-            if text(&dir, file).is_some() {
+            if text(dir, file).is_some() {
                 add(&mut result.frameworks, framework, file);
                 categories.push("web");
             }
         }
-        if text(&dir, "tsconfig.json").is_some() {
+        if text(dir, "tsconfig.json").is_some() {
             add(&mut result.languages, "TypeScript", "tsconfig.json");
             categories.push("web");
         }
         if let Some(cargo) =
-            text(&dir, "Cargo.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
+            text(dir, "Cargo.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
         {
             add(&mut result.languages, "Rust", "Cargo.toml");
             add(&mut result.package_managers, "cargo", "Cargo.toml");
@@ -209,7 +218,7 @@ impl ProjectProfile {
             add(&mut result.test_tools, "cargo test", "Cargo.toml");
         }
         if let Some(py) =
-            text(&dir, "pyproject.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
+            text(dir, "pyproject.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
         {
             add(&mut result.languages, "Python", "pyproject.toml");
             categories.push("python");
@@ -236,11 +245,11 @@ impl ProjectProfile {
             }
         }
         for (file, manager) in [("poetry.lock", "poetry"), ("uv.lock", "uv")] {
-            if text(&dir, file).is_some() {
+            if text(dir, file).is_some() {
                 add(&mut result.package_managers, manager, file);
             }
         }
-        if let Some(requirements) = text(&dir, "requirements.txt") {
+        if let Some(requirements) = text(dir, "requirements.txt") {
             add(&mut result.languages, "Python", "requirements.txt");
             categories.push("python");
             for (name, display, category) in [
@@ -267,7 +276,7 @@ impl ProjectProfile {
             ("build.gradle.kts", "Kotlin", "java", "gradle"),
             ("CMakeLists.txt", "C++", "native", "cmake"),
         ] {
-            if text(&dir, file).is_some() {
+            if text(dir, file).is_some() {
                 add(&mut result.languages, language, file);
                 add(&mut result.package_managers, manager, file);
                 categories.push(category);
@@ -283,7 +292,7 @@ impl ProjectProfile {
                 } else {
                     None
                 };
-                if let Some(language) = language.filter(|_| text(&dir, &path).is_some()) {
+                if let Some(language) = language.filter(|_| text(dir, &path).is_some()) {
                     add(&mut result.languages, language, &path);
                     add(&mut result.package_managers, "dotnet", &path);
                     categories.push("dotnet");
@@ -295,7 +304,7 @@ impl ProjectProfile {
             ("nx.json", "Nx"),
             ("turbo.json", "Turborepo"),
         ] {
-            if text(&dir, file).is_some() {
+            if text(dir, file).is_some() {
                 add(&mut result.structure, "monorepo", file);
                 if name == "pnpm" {
                     add(&mut result.package_managers, name, file);
@@ -305,7 +314,7 @@ impl ProjectProfile {
                 categories.push("monorepo");
             }
         }
-        if text(&dir, "index.html").is_some() {
+        if text(dir, "index.html").is_some() {
             add(&mut result.languages, "HTML", "index.html");
             categories.push("web");
         }
@@ -324,7 +333,7 @@ impl ProjectProfile {
             "monorepo"
         } else if let Some(category) = categories.last() {
             category
-        } else if text(&dir, "README.md").is_some() || dir.is_dir("docs") {
+        } else if text(dir, "README.md").is_some() || dir.is_dir("docs") {
             "docs"
         } else {
             "general"

@@ -1057,3 +1057,59 @@ fn described_project_kind_uses_evidence_without_accepting_it() {
     assert_eq!(data["project_profile"]["languages"][0]["name"], "Rust");
     assert!(!target.path().join(".hive").exists());
 }
+#[test]
+fn compact_project_creates_knowledge_only_when_first_used() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    let mut preferences = global(root.path());
+    preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
+    preferences.codex_plugin_files = hive_projection::compile_user_projection(
+        hive_projection::Host::Codex,
+        &preferences.selected_project_skills,
+        &[],
+    )
+    .unwrap()
+    .files;
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
+    hive_render::execute_setup(&hive_render::SetupRequest {
+        target: target.path(),
+        answers: &fixtures.join("setup/answers-no-role-no-hook.yml"),
+        capabilities: &fixtures.join("setup/capabilities-codex-host-native.json"),
+        mode: hive_render::SetupMode::Apply,
+        reconfigure_roles: BTreeSet::new(),
+        global_preferences: Some(preferences),
+    })
+    .unwrap();
+    assert!(!target.path().join(".hive/knowledge").exists());
+    let draft = root.path().join("draft.md");
+    let content = std::fs::read_to_string(fixtures.join("knowledge/wiki/alpha.md"))
+        .unwrap()
+        .replace("links: [beta]", "links: []")
+        .replace(" See [[beta]].", "");
+    std::fs::write(&draft, content).unwrap();
+    let outcome = hive_wiki::ingest(
+        target.path(),
+        &fixtures.join("knowledge/raw/alpha.md"),
+        &draft,
+    )
+    .unwrap();
+    assert!(outcome
+        .changed_paths
+        .contains(&".hive/knowledge/suppression.yml".to_owned()));
+    assert!(target
+        .path()
+        .join(".hive/knowledge/Wiki/alpha.md")
+        .is_file());
+    assert_eq!(
+        hive_wiki::query(target.path(), Some("canonical"), None, 5)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(hive_wiki::lint(target.path())
+        .unwrap()
+        .iter()
+        .all(|issue| issue.severity != hive_wiki::LintSeverity::Error));
+    std::fs::remove_file(target.path().join(".hive/knowledge/suppression.yml")).unwrap();
+    assert!(hive_wiki::rebuild_index(target.path()).is_err());
+}

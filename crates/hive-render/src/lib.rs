@@ -917,7 +917,7 @@ pub fn execute_setup_with_post_apply(
 pub fn project_upgrade_candidate_in(
     target_dir: &Dir,
 ) -> Result<ProjectUpgradeCandidate, RenderError> {
-    project_upgrade_candidate_with_plugin_in(target_dir, &BTreeMap::new())
+    project_upgrade_candidate_impl(target_dir, &BTreeMap::new(), false)
 }
 
 /// Read the typed provider proof from either supported project layout.
@@ -943,6 +943,14 @@ pub fn project_upgrade_candidate_with_plugin_in(
     target_dir: &Dir,
     plugin: &skill_delivery::PluginSkillFiles,
 ) -> Result<ProjectUpgradeCandidate, RenderError> {
+    project_upgrade_candidate_impl(target_dir, plugin, true)
+}
+
+fn project_upgrade_candidate_impl(
+    target_dir: &Dir,
+    plugin: &skill_delivery::PluginSkillFiles,
+    redetect: bool,
+) -> Result<ProjectUpgradeCandidate, RenderError> {
     let mut answers = read_installed_answers(target_dir)?;
     let answers_value =
         serde_json::to_value(&answers).map_err(|error| RenderError::Internal(error.to_string()))?;
@@ -954,6 +962,31 @@ pub fn project_upgrade_candidate_with_plugin_in(
     let source_version = harness.harness_version.clone();
     let mut effective_preferences = effective_preferences_from_harness(&harness)?;
     let mut normalized_fields = Vec::new();
+    if redetect {
+        let profile = hive_core::project_profile::ProjectProfile::detect_in(target_dir);
+        if answers.project_profile.as_ref() != Some(&profile) {
+            answers.preference_decisions.remove("/project_profile");
+            if answers.project_kind == "general" && profile.project_kind() != "general" {
+                let kind = profile.project_kind().to_owned();
+                normalized_fields.push(format!("project_kind:general->{kind}"));
+                answers.project_kind = kind;
+                let decision = hive_core::preferences::PreferenceDecision::new(
+                    &serde_json::json!(answers.project_kind),
+                    hive_core::preferences::DecisionOrigin::Default,
+                    hive_core::preferences::PreferenceInput::Migration,
+                    hive_core::preferences::PreferenceScope::Project,
+                    env!("CARGO_PKG_VERSION"),
+                    None,
+                )
+                .map_err(RenderError::Input)?;
+                answers
+                    .preference_decisions
+                    .insert("/project_kind".into(), decision);
+            }
+            answers.project_profile = Some(profile);
+            normalized_fields.push("project_profile".into());
+        }
+    }
     let skill_merges = normalize_project_skill_policy(
         &harness,
         &mut answers,
@@ -2467,6 +2500,86 @@ fn frozen_project_base_0_14_2(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
             if host == "claude" {
                 files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec());
             }
+        }
+    }
+    Ok(files)
+}
+
+// Exact public stable v0.15.0 baseline.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_15_0_without_resources,
+    "0.15.0",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "aither",
+        "amend-directive",
+        "apollon",
+        "artemis",
+        "athena",
+        "code-polish",
+        "custom-subagent-create",
+        "demeter",
+        "eileithyia",
+        "hades",
+        "hephaistos",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "poseidon",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_15_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_15_0_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" { files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec()); }
         }
     }
     Ok(files)
@@ -4416,7 +4529,7 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
     );
     let marker = render_agents_marker(answers, resolution, effective_preferences);
     let merged = if read_target_optional(target, Path::new("AGENTS.md"))?.is_none() {
-        format!("{PROJECT_RULES_SEED}{marker}").into_bytes()
+        format!("{}{marker}", project_rules_seed()).into_bytes()
     } else {
         merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?
     };
@@ -4842,7 +4955,12 @@ fn render_harness_toml(
     output
 }
 
-const PROJECT_RULES_SEED: &str = "# Project rules\n\nUser-editable rules and conventions belong here, outside the Hive markers.\n\n";
+fn project_rules_seed() -> &'static str {
+    include_str!("../../../harness/template/AGENTS.md.jinja")
+        .split_once(MARKER_START)
+        .expect("template marker")
+        .0
+}
 
 fn project_profile_markdown(answers: &SetupAnswers) -> String {
     let Some(profile) = &answers.project_profile else {
@@ -4928,6 +5046,8 @@ fn render_agents_marker(
         },
     );
     let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
+        .strip_prefix(project_rules_seed())
+        .expect("project rules seed")
         .replace("{{ project_name }}", &answers.project_name)
         .replace("{{ project_kind }}", &answers.project_kind)
         .replace(
@@ -8925,6 +9045,8 @@ mod tests {
             .expect("preferences should resolve")
             .expect("global preferences should produce an effective projection");
         let expected = include_str!("../../../harness/template/AGENTS.md.jinja")
+            .strip_prefix(super::project_rules_seed())
+            .expect("project rules seed")
             .replace("{{ project_name }}", &answers.project_name)
             .replace("{{ project_kind }}", &answers.project_kind)
             .replace(

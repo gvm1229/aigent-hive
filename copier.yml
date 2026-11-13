@@ -123,6 +123,11 @@ project_kind:
     Custom: custom
   default: general
 
+project_profile_markdown:
+  type: str
+  default: ""
+  when: false
+
 primary_host:
   type: str
   help: 주로 사용할 agent host

@@ -45,7 +45,7 @@ pub fn setup_recovery_change_is_owned(
         };
         let marker = super::extract_exact_marker(&change.path, after)?;
         if change.before.is_none() && change.path == Path::new("AGENTS.md") {
-            let mut initial = super::PROJECT_RULES_SEED.as_bytes().to_vec();
+            let mut initial = super::project_rules_seed().as_bytes().to_vec();
             initial.extend_from_slice(&marker);
             if initial == after {
                 return Ok(true);

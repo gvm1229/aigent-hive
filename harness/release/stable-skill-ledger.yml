@@ -20,5 +20,7 @@ stable_releases:
   - { version: 0.14.1, compatibility_epoch: 0.14.0, transition_proof: no-change }
   - { version: 0.14.2, compatibility_epoch: 0.14.0, transition_proof: no-change }
 
-  # Planned current target only; this entry does not publish a release.
   - { version: 0.15.0, compatibility_epoch: 0.15.0, transition_proof: changed }
+
+  # Planned current target only; this entry does not publish a release.
+  - { version: 0.15.1, compatibility_epoch: 0.15.1, transition_proof: changed }

@@ -334,7 +334,11 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
         );
         assert_eq!(
             result["data"]["normalized_fields"],
-            json!(["selected_project_skills", "project_skill_policy_version"])
+            json!([
+                "project_profile",
+                "selected_project_skills",
+                "project_skill_policy_version"
+            ])
         );
         assert_eq!(
             result["data"]["skill_merges"][0],
@@ -423,4 +427,66 @@ fn compiled_cli_converges_after_one_apply_with_a_conflicting_092_projection() {
         fs::read(&projection).expect("local projection after upgrade"),
         b"local project harness precedence\n"
     );
+}
+
+#[test]
+fn refresh_previews_detection_and_rolls_back_before_confirmed_migration() {
+    for version in ["0.14.0", "0.14.1", "0.14.2", "0.15.0"] {
+        let temporary = secure_tempdir();
+        let target = temporary.path().join("consumer");
+        fs::create_dir(&target).unwrap();
+        seed_historical_project(&target, version);
+        fs::write(
+            target.join("package.json"),
+            r#"{"dependencies":{"next":"16"},"packageManager":"pnpm@10"}"#,
+        )
+        .unwrap();
+        let answers_path = target.join(".hive/setup-answers.yml");
+        let original = fs::read(&answers_path).unwrap();
+        let marker_path = target.join("AGENTS.md");
+        let original_marker = fs::read(&marker_path).unwrap();
+        let arguments = |mode| {
+            vec![
+                "project",
+                "refresh",
+                "--target",
+                target.to_str().unwrap(),
+                mode,
+                "--output",
+                "json",
+            ]
+        };
+        let preview = run_hive(&arguments("--dry-run"));
+        require_success(&preview, "refresh preview");
+        let result: Value = serde_json::from_slice(&preview.stdout).unwrap();
+        assert!(
+            result["data"]["normalized_fields"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("project_kind:general->coding")),
+            "{version}: {result}"
+        );
+        assert_eq!(fs::read(&answers_path).unwrap(), original);
+        assert_eq!(fs::read(&marker_path).unwrap(), original_marker);
+        let failure = run_hive_with_environment(
+            &arguments("--apply"),
+            "HIVE_PROJECT_UPGRADE_FAIL_AFTER",
+            "1",
+        );
+        assert!(!failure.status.success());
+        assert_eq!(fs::read(&answers_path).unwrap(), original);
+        assert_eq!(fs::read(&marker_path).unwrap(), original_marker);
+        require_success(&run_hive(&arguments("--apply")), "refresh apply");
+        let answers: Value = serde_yaml::from_slice(&fs::read(&answers_path).unwrap()).unwrap();
+        assert_eq!(answers["project_kind"], "coding");
+        assert_eq!(
+            answers["project_profile"]["frameworks"][0]["name"],
+            "Next.js"
+        );
+        require_success(&run_hive(&arguments("--validate")), "refresh validate");
+        assert_eq!(
+            fs::read_to_string(target.join("package.json")).unwrap(),
+            r#"{"dependencies":{"next":"16"},"packageManager":"pnpm@10"}"#
+        );
+    }
 }

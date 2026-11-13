@@ -174,6 +174,21 @@ fn three_way_merge_with_policy(
     }
     if policy == MergePolicy::HiveDirective {
         if let (Some(local), Some(incoming)) = (local, incoming) {
+            let local_text = std::str::from_utf8(local).expect("validated UTF-8");
+            let base_text = std::str::from_utf8(base).expect("validated UTF-8");
+            if !local_text.lines().any(is_hive_rule_line)
+                && !local_text
+                    .lines()
+                    .filter(|line| !line.trim().is_empty())
+                    .any(|line| base_text.lines().any(|original| original == line))
+            {
+                return Ok(MergeOutcome {
+                    bytes: Some(local.to_vec()),
+                    disposition: MergeDisposition::LocalPreserved,
+                    omitted_incoming_hunks: 1,
+                    local_priority: true,
+                });
+            }
             if same_text_line_endings(base, local) {
                 return Ok(MergeOutcome {
                     bytes: Some(incoming.to_vec()),
@@ -958,6 +973,15 @@ mod tests {
             Some(b"a\nlocal-one\nmiddle\nupstream-two\nz\n".as_slice())
         );
         assert_eq!(result.omitted_incoming_hunks, 1);
+        assert!(result.local_priority);
+    }
+
+    #[test]
+    fn entire_user_document_replacement_is_preserved_when_hive_rules_move() {
+        let result = three_way_merge_hive_directive(Path::new(".agents/directives/00-project-harness.md"),
+            Some(b"# Hive\n- Keep foreign bytes.\n"), Some(b"local project harness precedence\n"),
+            Some(b"# New Hive entry\n- Never replace foreign bytes.\n\n## Moved rules\n- Require path checks.\n")).unwrap();
+        assert_eq!(result.bytes.unwrap(), b"local project harness precedence\n");
         assert!(result.local_priority);
     }
 

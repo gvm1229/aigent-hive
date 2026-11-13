@@ -533,6 +533,14 @@ fn ingest_with_projection(
 ) -> Result<KnowledgeOutcome, WikiError> {
     validate_target(target)?;
     let lock = KnowledgeLock::acquire(target)?;
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|error| WikiError::Io(error.to_string()))?;
+    let initialized_ledger = fresh_compact_knowledge(&root)?;
+    if initialized_ledger {
+        let (parent, name) = capability_parent(&root, Path::new(SUPPRESSION_RELATIVE), true)?
+            .expect("created knowledge parent");
+        create_capability_file(&parent, &name, b"schema_version: 1\nentries: []\n")?;
+    }
     let source_bytes = prepared.source_bytes.clone();
     let fingerprint = sha256_digest(&source_bytes);
     let ledger = read_suppression(target)?;
@@ -640,6 +648,9 @@ fn ingest_with_projection(
             return Err(error);
         }
         let mut changed_paths = Vec::new();
+        if initialized_ledger {
+            changed_paths.push(SUPPRESSION_RELATIVE.to_owned());
+        }
         if raw_changed {
             changed_paths.push(raw_path);
         }
@@ -661,6 +672,9 @@ fn ingest_with_projection(
         &canonical_bytes,
     )?;
     let mut changed_paths = Vec::new();
+    if initialized_ledger {
+        changed_paths.push(SUPPRESSION_RELATIVE.to_owned());
+    }
     if raw_changed {
         changed_paths.push(raw_path);
     }
@@ -2814,25 +2828,9 @@ fn validate_nonempty(name: &str, value: &str) -> Result<(), WikiError> {
 }
 
 fn read_suppression(target: &Path) -> Result<SuppressionLedger, WikiError> {
-    let path = target.join(SUPPRESSION_RELATIVE);
-    let bytes = fs::read(&path).map_err(|error| {
-        WikiError::Verification(format!(
-            "cannot read suppression ledger {}: {error}",
-            path.display()
-        ))
-    })?;
-    let ledger: SuppressionLedger = serde_yaml::from_slice(&bytes)
-        .map_err(|error| WikiError::Verification(format!("invalid suppression ledger: {error}")))?;
-    if ledger.schema_version != 1 {
-        return Err(WikiError::Verification(
-            "suppression schema_version must be 1".to_owned(),
-        ));
-    }
-    for entry in &ledger.entries {
-        validate_suppression_entry(entry)
-            .map_err(|error| WikiError::Verification(error.to_string()))?;
-    }
-    Ok(ledger)
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|error| WikiError::Io(error.to_string()))?;
+    read_suppression_capability(&root)
 }
 
 fn raw_revision_path(source: &Path, fingerprint: &str) -> Result<String, WikiError> {
@@ -3831,8 +3829,38 @@ fn scan_raw_capability_directory(
     Ok(())
 }
 
+fn fresh_compact_knowledge(root: &Dir) -> Result<bool, WikiError> {
+    match root.symlink_metadata(".hive/knowledge") {
+        Ok(_) => return Ok(false),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(WikiError::Io(error.to_string())),
+    }
+    let Some(bytes) = read_capability_optional(root, Path::new(".hive/setup-answers.yml"))? else {
+        return Ok(false);
+    };
+    let value: serde_yaml::Value = serde_yaml::from_slice(&bytes)
+        .map_err(|error| WikiError::Verification(error.to_string()))?;
+    Ok(value
+        .get("compact_layout")
+        .and_then(serde_yaml::Value::as_bool)
+        == Some(true))
+}
+
 fn read_suppression_capability(root: &Dir) -> Result<SuppressionLedger, WikiError> {
-    let bytes = read_capability_required(root, Path::new(SUPPRESSION_RELATIVE))?;
+    let bytes = match read_capability_optional(root, Path::new(SUPPRESSION_RELATIVE))? {
+        Some(bytes) => bytes,
+        None if fresh_compact_knowledge(root)? => {
+            return Ok(SuppressionLedger {
+                schema_version: 1,
+                entries: Vec::new(),
+            })
+        }
+        None => {
+            return Err(WikiError::Verification(
+                "suppression ledger is missing".into(),
+            ))
+        }
+    };
     let ledger: SuppressionLedger = serde_yaml::from_slice(&bytes)
         .map_err(|error| WikiError::Verification(format!("invalid suppression ledger: {error}")))?;
     if ledger.schema_version != 1 {

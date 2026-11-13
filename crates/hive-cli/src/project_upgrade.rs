@@ -267,7 +267,10 @@ type UpgradeArguments = (
 );
 
 fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
-    if arguments.first().map(String::as_str) != Some("upgrade") {
+    if !matches!(
+        arguments.first().map(String::as_str),
+        Some("upgrade" | "refresh")
+    ) {
         return Err(UpdateError::Input(
             "project requires the upgrade action".to_owned(),
         ));
