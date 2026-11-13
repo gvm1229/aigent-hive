@@ -306,7 +306,7 @@ impl ProjectProfile {
         }
     }
 
-    /// Infer facts without running tools, reading nested source, or modifying the target.
+    /// Infer facts from root and one-level marker files without commands or writes.
     #[must_use]
     pub fn detect(target: &Path) -> Self {
         let Ok(dir) = Dir::open_ambient_dir(target, ambient_authority()) else {
@@ -358,7 +358,7 @@ impl ProjectProfile {
                         if let Some(added) =
                             destination.iter_mut().find(|item| item.name == fact.name)
                         {
-                            added.confidence = fact.confidence.clone();
+                            added.confidence.clone_from(&fact.confidence);
                         }
                     }
                 }
@@ -583,15 +583,19 @@ impl ProjectProfile {
             }
         }
         for path in entries(dir) {
-            let (language, manager, category) = if path.ends_with(".csproj") {
+            let extension = Path::new(&path)
+                .extension()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap_or("");
+            let (language, manager, category) = if extension.eq_ignore_ascii_case("csproj") {
                 ("C#", "dotnet", "dotnet")
-            } else if path.ends_with(".fsproj") {
+            } else if extension.eq_ignore_ascii_case("fsproj") {
                 ("F#", "dotnet", "dotnet")
-            } else if path.ends_with(".sln") {
+            } else if extension.eq_ignore_ascii_case("sln") {
                 ("", "dotnet", "dotnet")
-            } else if path.ends_with(".tf") {
+            } else if extension.eq_ignore_ascii_case("tf") {
                 ("HCL", "terraform", "coding")
-            } else if path.ends_with(".c") && dir.metadata("Makefile").is_ok_and(|m| m.is_file()) {
+            } else if extension == "c" && dir.metadata("Makefile").is_ok_and(|m| m.is_file()) {
                 ("C", "make", "native")
             } else {
                 continue;
