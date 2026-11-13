@@ -266,11 +266,22 @@ type UpgradeArguments = (
     Option<String>,
 );
 
+fn parse_command_mode(option: &str) -> CommandMode {
+    match option {
+        "--scan" => CommandMode::Scan,
+        "--dry-run" => CommandMode::DryRun,
+        "--apply" => CommandMode::Apply,
+        "--validate" => CommandMode::Validate,
+        "--recover" => CommandMode::Recover,
+        _ => unreachable!(),
+    }
+}
+
 fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
-    if !matches!(
-        arguments.first().map(String::as_str),
-        Some("upgrade" | "refresh")
-    ) {
+    if arguments
+        .first()
+        .is_none_or(|action| action != "upgrade" && action != "refresh")
+    {
         return Err(UpdateError::Input(
             "project requires the upgrade action".to_owned(),
         ));
@@ -286,14 +297,7 @@ fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
         let option = arguments[index].as_str();
         match option {
             "--scan" | "--dry-run" | "--apply" | "--validate" | "--recover" => {
-                let candidate = match option {
-                    "--scan" => CommandMode::Scan,
-                    "--dry-run" => CommandMode::DryRun,
-                    "--apply" => CommandMode::Apply,
-                    "--validate" => CommandMode::Validate,
-                    "--recover" => CommandMode::Recover,
-                    _ => unreachable!(),
-                };
+                let candidate = parse_command_mode(option);
                 if mode.replace(candidate).is_some() {
                     return Err(UpdateError::Input(
                         "project upgrade requires exactly one mode".to_owned(),

@@ -221,14 +221,17 @@ fn ask<R: BufRead, W: Write>(
                     profile.project_kind()
                 );
                 match terminal.ask(&confirmation, None)? {
-                    AnswerInput::Answered { value, .. } if value == json!(true) => {
+                    AnswerInput::Answered {
+                        value: Value::Bool(true),
+                        ..
+                    } => {
                         detected = Some((
                             json!(profile.project_kind()),
                             hive_core::preferences::DecisionOrigin::AcceptedDefault,
                         ));
                     }
                     AnswerInput::Answered { .. } => {}
-                    _ => return Ok(false),
+                    AnswerInput::Interrupted => return Ok(false),
                 }
             }
         }

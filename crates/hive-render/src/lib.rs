@@ -946,6 +946,37 @@ pub fn project_upgrade_candidate_with_plugin_in(
     project_upgrade_candidate_impl(target_dir, plugin, true)
 }
 
+fn refresh_project_profile(
+    target_dir: &Dir,
+    answers: &mut SetupAnswers,
+    normalized_fields: &mut Vec<String>,
+) -> Result<(), RenderError> {
+    let profile = hive_core::project_profile::ProjectProfile::detect_in(target_dir);
+    if answers.project_profile.as_ref() != Some(&profile) {
+        answers.preference_decisions.remove("/project_profile");
+        if answers.project_kind == "general" && profile.project_kind() != "general" {
+            let kind = profile.project_kind().to_owned();
+            normalized_fields.push(format!("project_kind:general->{kind}"));
+            answers.project_kind = kind;
+            let decision = hive_core::preferences::PreferenceDecision::new(
+                &serde_json::json!(answers.project_kind),
+                hive_core::preferences::DecisionOrigin::Default,
+                hive_core::preferences::PreferenceInput::Migration,
+                hive_core::preferences::PreferenceScope::Project,
+                env!("CARGO_PKG_VERSION"),
+                None,
+            )
+            .map_err(RenderError::Input)?;
+            answers
+                .preference_decisions
+                .insert("/project_kind".into(), decision);
+        }
+        answers.project_profile = Some(profile);
+        normalized_fields.push("project_profile".into());
+    }
+    Ok(())
+}
+
 fn project_upgrade_candidate_impl(
     target_dir: &Dir,
     plugin: &skill_delivery::PluginSkillFiles,
@@ -963,29 +994,7 @@ fn project_upgrade_candidate_impl(
     let mut effective_preferences = effective_preferences_from_harness(&harness)?;
     let mut normalized_fields = Vec::new();
     if redetect {
-        let profile = hive_core::project_profile::ProjectProfile::detect_in(target_dir);
-        if answers.project_profile.as_ref() != Some(&profile) {
-            answers.preference_decisions.remove("/project_profile");
-            if answers.project_kind == "general" && profile.project_kind() != "general" {
-                let kind = profile.project_kind().to_owned();
-                normalized_fields.push(format!("project_kind:general->{kind}"));
-                answers.project_kind = kind;
-                let decision = hive_core::preferences::PreferenceDecision::new(
-                    &serde_json::json!(answers.project_kind),
-                    hive_core::preferences::DecisionOrigin::Default,
-                    hive_core::preferences::PreferenceInput::Migration,
-                    hive_core::preferences::PreferenceScope::Project,
-                    env!("CARGO_PKG_VERSION"),
-                    None,
-                )
-                .map_err(RenderError::Input)?;
-                answers
-                    .preference_decisions
-                    .insert("/project_kind".into(), decision);
-            }
-            answers.project_profile = Some(profile);
-            normalized_fields.push("project_profile".into());
-        }
+        refresh_project_profile(target_dir, &mut answers, &mut normalized_fields)?;
     }
     let skill_merges = normalize_project_skill_policy(
         &harness,
@@ -4527,6 +4536,34 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         PathBuf::from(".hive/config/harness.toml"),
         render_harness_toml(answers, resolution, effective_preferences).into_bytes(),
     );
+    render_shared_entrypoints(
+        target,
+        answers,
+        resolution,
+        effective_preferences,
+        &mut files,
+    )?;
+    render_roles(target, answers, reconfigure_roles, &mut files)?;
+    let base = render_project_base(&files)?;
+    files.insert(PathBuf::from(".hive/config/project-base.json"), base);
+    let projection_base_files = files.clone();
+    if matches!(answers.primary_host.as_str(), "codex" | "claude") {
+        let empty = BTreeMap::new();
+        let plugin =
+            effective_preferences.map_or(&empty, |preferences| &preferences.codex_plugin_files);
+        skill_delivery::apply(target, &mut files, plugin, &answers.primary_host)?;
+    }
+    apply_compact_project_layout(target, answers, &mut files, projection_base_files)?;
+    Ok(files)
+}
+
+fn render_shared_entrypoints<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    resolution: &CapabilityResolution,
+    effective_preferences: Option<&EffectiveProjectPreferences>,
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
     let marker = render_agents_marker(answers, resolution, effective_preferences);
     let merged = if read_target_optional(target, Path::new("AGENTS.md"))?.is_none() {
         format!("{}{marker}", project_rules_seed()).into_bytes()
@@ -4545,16 +4582,15 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         FORMATTER_IGNORE.as_bytes(),
     )?;
     files.insert(PathBuf::from(".prettierignore"), formatter);
-    render_roles(target, answers, reconfigure_roles, &mut files)?;
-    let base = render_project_base(&files)?;
-    files.insert(PathBuf::from(".hive/config/project-base.json"), base);
-    let projection_base_files = files.clone();
-    if matches!(answers.primary_host.as_str(), "codex" | "claude") {
-        let empty = BTreeMap::new();
-        let plugin =
-            effective_preferences.map_or(&empty, |preferences| &preferences.codex_plugin_files);
-        skill_delivery::apply(target, &mut files, plugin, &answers.primary_host)?;
-    }
+    Ok(())
+}
+
+fn apply_compact_project_layout<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+    projection_base_files: BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
     let eligible = answers.persistent_roles.is_empty()
         && answers.approved_optional_skills.is_empty()
         && answers.approved_fallback_hooks.is_empty();
@@ -4605,7 +4641,7 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         let base = render_project_base(&compact_base)?;
         files.insert(PathBuf::from(".hive/config/project-base.json"), base);
     }
-    Ok(files)
+    Ok(())
 }
 
 const COMPACT_LAZY_SEEDS: &[&str] = &[
@@ -6471,29 +6507,7 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     validate_resolution(&installed_answers, &resolution).map_err(as_verification)?;
     validate_harness_cross_file(&harness, &installed_answers, &resolution)?;
 
-    let skills_relative = Path::new(".hive/config/approved-skills.yml");
-    let bytes = match read_target_optional(target, skills_relative).map_err(as_verification)? {
-        Some(bytes) => bytes,
-        None if installed_answers.compact_layout
-            && installed_answers.approved_optional_skills.is_empty() =>
-        {
-            render_yaml_projection(None, "skills", &Vec::<SkillApproval>::new())?
-        }
-        None => {
-            return Err(RenderError::Verification(
-                "Skill approval ledger is missing".into(),
-            ))
-        }
-    };
-    let ledger: SkillLedger = serde_yaml::from_slice(&bytes).map_err(|error| {
-        RenderError::Verification(format!("invalid installed Skill ledger: {error}"))
-    })?;
-    validate_skill_approvals(&ledger.skills).map_err(as_verification)?;
-    if ledger.skills != installed_answers.approved_optional_skills {
-        return Err(RenderError::Verification(
-            "installed Skill ledger does not match setup approvals".to_owned(),
-        ));
-    }
+    validate_installed_skill_approvals(target, &installed_answers)?;
     validate_projection_ownership(target, &installed_answers).map_err(as_verification)?;
 
     let hooks_relative = Path::new(".hive/config/approved-hooks.yml");
@@ -6551,6 +6565,34 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     )?;
     validate_editing_discipline(target)?;
     validate_installed_marker(target, &installed_answers, &resolution)?;
+    Ok(())
+}
+
+fn validate_installed_skill_approvals(
+    target: &Path,
+    answers: &SetupAnswers,
+) -> Result<(), RenderError> {
+    let skills_relative = Path::new(".hive/config/approved-skills.yml");
+    let bytes = match read_target_optional(target, skills_relative).map_err(as_verification)? {
+        Some(bytes) => bytes,
+        None if answers.compact_layout && answers.approved_optional_skills.is_empty() => {
+            render_yaml_projection(None, "skills", &Vec::<SkillApproval>::new())?
+        }
+        None => {
+            return Err(RenderError::Verification(
+                "Skill approval ledger is missing".into(),
+            ))
+        }
+    };
+    let ledger: SkillLedger = serde_yaml::from_slice(&bytes).map_err(|error| {
+        RenderError::Verification(format!("invalid installed Skill ledger: {error}"))
+    })?;
+    validate_skill_approvals(&ledger.skills).map_err(as_verification)?;
+    if ledger.skills != answers.approved_optional_skills {
+        return Err(RenderError::Verification(
+            "installed Skill ledger does not match setup approvals".to_owned(),
+        ));
+    }
     Ok(())
 }
 

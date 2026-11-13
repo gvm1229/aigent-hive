@@ -141,43 +141,7 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
                 .insert(name, "unowned-resource".to_owned());
             continue;
         }
-        let mut changed = false;
-        let original = read_target_optional(target, Path::new(".hive/config/project-base.json"))?
-            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
-        for (suffix, bytes) in &expected {
-            let path = prefix.join(suffix);
-            let prior = original
-                .as_ref()
-                .and_then(|value| value.get("files"))
-                .and_then(serde_json::Value::as_array)
-                .and_then(|files| {
-                    files.iter().find(|entry| {
-                        entry.get("path").and_then(serde_json::Value::as_str)
-                            == Some(path.to_string_lossy().replace('\\', "/").as_str())
-                    })
-                })
-                .and_then(|entry| entry.get("content"))
-                .and_then(serde_json::Value::as_str);
-            if read_target_optional(target, &path)?.is_some_and(|local| {
-                local != *bytes && prior.map(str::as_bytes) != Some(local.as_slice())
-            }) {
-                changed = true;
-                break;
-            }
-        }
-        if host == "claude" && !changed {
-            for (suffix, bytes) in &expected {
-                let path = PathBuf::from(format!(".claude/skills/{name}/{suffix}"));
-                if hive_core::validate_hive_skill_projection_relative(&path).is_err() {
-                    continue;
-                }
-                if read_target_optional(target, &path)?.is_some_and(|local| local != *bytes) {
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        if changed {
+        if project_skill_has_changes(target, &prefix, &name, &expected, host)? {
             ledger
                 .local_skills
                 .insert(name, "modified-resource".to_owned());
@@ -195,6 +159,52 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
     }
     files.insert(PathBuf::from(PROVIDERS_PATH), encode(&ledger)?);
     Ok(())
+}
+
+fn project_skill_has_changes<T: TargetRead + ?Sized>(
+    target: &T,
+    prefix: &Path,
+    name: &str,
+    expected: &BTreeMap<String, Vec<u8>>,
+    host: &str,
+) -> Result<bool, RenderError> {
+    let mut changed = false;
+    let original = read_target_optional(target, Path::new(".hive/config/project-base.json"))?
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    for (suffix, bytes) in expected {
+        let path = prefix.join(suffix);
+        let prior = original
+            .as_ref()
+            .and_then(|value| value.get("files"))
+            .and_then(serde_json::Value::as_array)
+            .and_then(|files| {
+                files.iter().find(|entry| {
+                    entry.get("path").and_then(serde_json::Value::as_str)
+                        == Some(path.to_string_lossy().replace('\\', "/").as_str())
+                })
+            })
+            .and_then(|entry| entry.get("content"))
+            .and_then(serde_json::Value::as_str);
+        if read_target_optional(target, &path)?.is_some_and(|local| {
+            local != *bytes && prior.map(str::as_bytes) != Some(local.as_slice())
+        }) {
+            changed = true;
+            break;
+        }
+    }
+    if host == "claude" && !changed {
+        for (suffix, bytes) in expected {
+            let path = PathBuf::from(format!(".claude/skills/{name}/{suffix}"));
+            if hive_core::validate_hive_skill_projection_relative(&path).is_err() {
+                continue;
+            }
+            if read_target_optional(target, &path)?.is_some_and(|local| local != *bytes) {
+                changed = true;
+                break;
+            }
+        }
+    }
+    Ok(changed)
 }
 
 pub(crate) fn encode(ledger: &SkillProviders) -> Result<Vec<u8>, RenderError> {
