@@ -489,7 +489,7 @@ fn prepare_candidate(
         let effective_base = if base.is_none() { incoming } else { base_bytes };
         let restore_plugin_file = local.is_none()
             && incoming.is_some()
-            && Path::new(&path).starts_with(".agents/skills/")
+            && is_hive_skill_projection_path(Path::new(&path))
             && Path::new(&path).components().nth(2).is_some_and(|name| {
                 previous_plugin_skills.contains(&name.as_os_str().to_string_lossy().into_owned())
             });
@@ -4420,6 +4420,14 @@ mod tests {
         path: &Path,
         selected: Vec<String>,
     ) -> hive_render::skill_delivery::PluginSkillFiles {
+        project_fixture_for_host(path, selected, "codex")
+    }
+
+    fn project_fixture_for_host(
+        path: &Path,
+        selected: Vec<String>,
+        host: &str,
+    ) -> hive_render::skill_delivery::PluginSkillFiles {
         let preferences = hive_render::GlobalProjectPreferences {
             codex_plugin_files: BTreeMap::new(),
             interface_language: "en".to_owned(),
@@ -4437,22 +4445,36 @@ mod tests {
             usage_stop_remaining_percent: 20,
         };
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+        let mut answers: Value =
+            serde_yaml::from_slice(&fs::read(fixture.join("answers-base.yml")).unwrap()).unwrap();
+        answers["primary_host"] = json!(host);
+        let input = tempfile::NamedTempFile::new().unwrap();
+        fs::write(input.path(), serde_json::to_vec(&answers).unwrap()).unwrap();
+        let capabilities = fixture.join(if host == "codex" {
+            "capabilities-codex-omx.json"
+        } else {
+            "capabilities-claude-host-native.json"
+        });
         hive_render::execute_setup(&hive_render::SetupRequest {
             target: path,
-            answers: &fixture.join("answers-base.yml"),
-            capabilities: &fixture.join("capabilities-codex-omx.json"),
+            answers: input.path(),
+            capabilities: &capabilities,
             mode: hive_render::SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(preferences),
         })
         .unwrap();
-        hive_projection::compile_user_projection(
+        let mut plugin = hive_projection::compile_user_projection(
             hive_projection::Host::Codex,
             &["prompt-refine".to_owned()],
             &[],
         )
         .unwrap()
-        .files
+        .files;
+        if host == "claude" {
+            plugin.insert("@verified-host/claude".into(), Vec::new());
+        }
+        plugin
     }
 
     #[test]
@@ -4482,6 +4504,38 @@ mod tests {
                 .len(),
             0
         );
+    }
+
+    #[test]
+    fn project_upgrade_restores_the_active_host_skill_when_its_plugin_is_missing() {
+        for host in ["codex", "claude"] {
+            let temporary = tempdir().unwrap();
+            let root = temporary.path().canonicalize().unwrap();
+            let plugin = project_fixture_for_host(
+                &root,
+                vec!["prompt-refine".into(), "project-setup".into()],
+                host,
+            );
+            let cap = target_dir(&root);
+            let plan = prepare_with_plugin(&cap, &plugin).unwrap();
+            apply(&cap, &plan).unwrap();
+            let portable = root.join(".agents/skills/prompt-refine/SKILL.md");
+            let primary = root.join(if host == "claude" {
+                ".claude/skills/prompt-refine/SKILL.md"
+            } else {
+                ".agents/skills/prompt-refine/SKILL.md"
+            });
+            assert!(!portable.exists());
+            assert!(!primary.exists());
+            let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
+            apply(&cap, &restore).unwrap();
+            assert!(portable.is_file());
+            assert!(primary.is_file(), "{host}");
+            assert!(prepare_with_plugin(&cap, &BTreeMap::new())
+                .unwrap()
+                .changed_paths
+                .is_empty());
+        }
     }
 
     #[test]
