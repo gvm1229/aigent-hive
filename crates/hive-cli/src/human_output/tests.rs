@@ -207,3 +207,41 @@ fn graph_and_search_candidates_are_visible_without_implying_file_removal() {
         assert!(!text.contains("removal"));
     }
 }
+
+#[test]
+fn scans_and_validations_list_planned_not_changed_files() {
+    for (action, code) in [
+        ("ScanProjectUpgrade", "hive.project-upgrade-available"),
+        ("ValidateProjectUpgrade", "hive.project-upgrade-planned"),
+        ("UpdateProjectHarness", "hive.project-upgrade-planned"),
+    ] {
+        let value = json!({"action":action,"status":"success","exit_code":0,"code":code,
+            "changed_paths":[".hive/config/project-overrides.json"]});
+        for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+            let text = render(&value, language, "project");
+            assert!(
+                !text.contains("바뀐 파일") && !text.contains("Changed files"),
+                "{text}"
+            );
+            assert!(text.contains("변경 예정 파일") || text.contains("Planned file changes"));
+        }
+    }
+    let applied = json!({"action":"UpdateProjectHarness","status":"success","exit_code":0,
+        "code":"hive.project-upgrade-complete","changed_paths":["AGENTS.md"]});
+    assert!(render(&applied, InterfaceLanguage::En, "project").contains("Changed files"));
+}
+
+#[test]
+fn host_protocol_commands_are_always_machine_output() {
+    let previous = OPTIONS.with(|options| options.borrow().clone());
+    for command in [
+        &["hook", "--event", "Stop"][..],
+        &["policy", "hook", "--event", "Stop"],
+        &["usage", "capture", "--host", "claude"],
+        &["discord", "inbound"],
+    ] {
+        configure(&command.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>());
+        assert!(machine(), "{command:?}");
+    }
+    OPTIONS.with(|options| *options.borrow_mut() = previous);
+}

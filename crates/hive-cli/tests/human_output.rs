@@ -47,7 +47,6 @@ fn every_command_family_defaults_to_human_errors_in_both_languages() {
         vec!["korean", "inspect"],
         vec!["release", "verify"],
         vec!["update", "--check"],
-        vec!["discord", "inbound"],
     ] {
         for language in ["ko", "en"] {
             let output = run(&arguments, language);
@@ -136,22 +135,94 @@ fn successful_storage_results_use_the_same_localized_renderer() {
 }
 
 #[test]
-fn inactive_hook_has_readable_default_and_the_identical_explicit_wire_result() {
+fn host_protocol_commands_keep_the_wire_result_without_the_output_option() {
     for language in ["ko", "en"] {
-        let output = run(&["hook", "--event", "Stop"], language);
+        for arguments in [
+            vec!["hook", "--event", "Stop"],
+            vec!["hook", "--event", "Stop", "--output", "json"],
+        ] {
+            let output = run(&arguments, language);
+            assert!(output.status.success());
+            assert_eq!(
+                output.stdout,
+                b"{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}
+"
+            );
+        }
+        let output = run(&["discord", "inbound"], language);
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(value["action"], "InspectDiscordInbound");
+    }
+}
+
+#[test]
+fn usage_help_lists_the_usage_commands() {
+    for arguments in [vec!["usage", "--help"], vec!["usage"]] {
+        let output = run(&arguments, "en");
         assert!(output.status.success());
         let text = String::from_utf8(output.stdout).unwrap();
-        assert!(text.contains(if language == "ko" {
-            "실제 동작 여부: 아니요"
-        } else {
-            "Active: no"
-        }));
-        assert!(!text.trim().starts_with('{'));
-        let output = run(&["hook", "--event", "Stop", "--output", "json"], language);
-        assert!(output.status.success());
-        assert_eq!(
-            output.stdout,
-            b"{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}\n"
-        );
+        for command in [
+            "hive usage threshold",
+            "hive usage monitor",
+            "hive usage status",
+        ] {
+            assert!(text.contains(command), "{text}");
+        }
+        assert!(!text.contains("Failed."));
+    }
+}
+
+#[test]
+fn project_setup_description_works_without_the_output_option() {
+    for language in ["ko", "en"] {
+        let root = tempfile::tempdir().unwrap();
+        let config = root.path().join(".hive/config");
+        fs::create_dir_all(&config).unwrap();
+        fs::write(
+            config.join("user-setup.yml"),
+            format!(
+                "schema_version: 1
+interface_language: {language}
+wiki:
+  enabled: true
+  language: both
+profile:
+  contexts:
+  - web-developer
+persona:
+  id: balanced
+selected_hosts:
+- codex
+skills:
+  mode: individual
+  selected:
+  - user-setup
+usage_guard:
+  enabled: false
+  stop_remaining_percent: 20
+  codexbar_fallback_enabled: false
+"
+            ),
+        )
+        .unwrap();
+        let target = root.path().join("project");
+        fs::create_dir_all(&target).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_hive"))
+            .args([
+                "setup",
+                "--target",
+                target.to_str().unwrap(),
+                "--describe",
+                "--section",
+                "hosts",
+            ])
+            .env("USERPROFILE", root.path())
+            .env("HOME", root.path())
+            .output()
+            .unwrap();
+        let text = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success(), "{text}");
+        assert!(!text.trim().starts_with('{'), "{text}");
+        assert!(!text.contains("diagnostic"), "{text}");
     }
 }

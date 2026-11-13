@@ -105,7 +105,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         .map_err(SetupError::Input)?;
     if options.target.as_os_str().is_empty()
         || (options.show && (options.resume || options.dry_run || options.describe))
-        || (options.describe && (options.resume || options.dry_run || !options.interaction.json))
+        || (options.describe && (options.resume || options.dry_run))
         || (options.section.is_some() && !options.describe)
         || (options.question.is_some() && (!options.describe || options.section.is_some()))
     {

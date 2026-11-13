@@ -22,10 +22,8 @@ pub(crate) fn configure(arguments: &[String]) {
     let json = arguments.windows(2).any(|pair| pair == ["--output", "json"])
         // Private worker names explicitly select an internal wire protocol, not a user command.
         || arguments.first().is_some_and(|argument| argument.starts_with("__"))
-        // Native hooks opt into their host's protocol with --stdin-json.
-        || (arguments.first().is_some_and(|arg| arg == "policy")
-            && arguments.get(1).is_some_and(|arg| arg == "hook")
-            && arguments.iter().any(|arg| arg == "--stdin-json"));
+        // Hook, capture and inbound commands are read by hosts and scripts, never by a person.
+        || machine_protocol(arguments);
     OPTIONS.with(|options| {
         *options.borrow_mut() = Options {
             json,
@@ -33,6 +31,32 @@ pub(crate) fn configure(arguments: &[String]) {
             family: arguments.first().cloned().unwrap_or_default(),
         }
     });
+}
+
+fn machine_protocol(arguments: &[String]) -> bool {
+    let first = arguments.first().map(String::as_str);
+    let second = arguments.get(1).map(String::as_str);
+    matches!(
+        (first, second),
+        (Some("hook"), _)
+            | (Some("policy"), Some("hook"))
+            | (Some("usage"), Some("capture"))
+            | (Some("discord"), Some("inbound"))
+    )
+}
+
+/// Scans, validations, previews and dry runs list paths that would change, not paths that did.
+fn planned_only(value: &Value, data: &Value) -> bool {
+    let action = value["action"].as_str().unwrap_or("");
+    let code = value["code"].as_str().unwrap_or("");
+    action.starts_with("Scan")
+        || action.starts_with("Validate")
+        || action.starts_with("Preview")
+        || code.ends_with("-available")
+        || code.ends_with("-planned")
+        || code.contains("preview")
+        || code.contains("dry-run")
+        || data["mode"] == "dry-run"
 }
 
 pub(crate) fn emit_if_human(result: &impl Serialize) -> bool {
@@ -104,11 +128,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         format!("Success. {}", sentence(message))
     };
     if !value["changed_paths"].as_array().is_none_or(Vec::is_empty) {
-        let preview = value["code"]
-            .as_str()
-            .is_some_and(|code| code.contains("preview") || code.contains("dry-run"))
-            || data["mode"] == "dry-run";
-        output.push_str(&if preview {
+        output.push_str(&if planned_only(value, data) {
             choose(language, "\n변경 예정 파일:", "\nPlanned file changes:")
         } else {
             choose(language, "\n바뀐 파일:", "\nChanged files:")

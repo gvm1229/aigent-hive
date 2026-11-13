@@ -390,6 +390,16 @@ enum ParsedUsageArguments {
 }
 
 fn run_usage(arguments: &[String]) -> ExitCode {
+    if arguments.is_empty() || is_help_request(arguments) {
+        println!("Aigent Hive usage protection\n\nUSAGE:");
+        for line in USAGE
+            .lines()
+            .filter(|line| line.trim_start().starts_with("hive usage "))
+        {
+            println!("{line}");
+        }
+        return ExitCode::SUCCESS;
+    }
     if arguments.first().map(String::as_str) == Some("monitor") {
         return usage_monitor::run(&arguments[1..]);
     }
