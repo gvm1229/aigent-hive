@@ -9,15 +9,18 @@
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
 - [이전 정식 근거와 한계](../research/overhaul/OV150-013.md) 보존
 
-- [검토 전 구현 근거](../research/overhaul/stage-4-implementation.md)와 [현재 검토 수정](../research/overhaul/stage-4-review.md) 구분. 현재 Rust 1,198개·Python 통과 집계 1,152개, 제외 2·45. 보류 종류 19/20·출력 사실 53/53, 문서 최종 162개 통과·2개 제외. 영어 콘솔 최초 실패의 원인 미규명과 재검증 통과 구분
+- [최종 CLI·안내 검증](../research/overhaul/stage-4-human-output.md): Rust 1,475개 통과·5개 수동 제외, Python 1,211개 중 1,167개 통과·44개 제외. fmt·clippy·문서·문체·지침·계획·Source Wiki 통과, Windows 밖 실행·실제 설치·Discord 전송 미검증
+- [이전 판별 검토·측정](../research/overhaul/stage-4-review.md): 보류 종류 19/20·출력 사실 53/53, 고정 검색 22/40의 당시 근거 보존. 감지기·검색 구현·동결 정답 변경 없음
+- 이번 고정 실행 파일 사본 3개·184,858,624바이트 정리, 공유 빌드·기존 미검토 산출물의 임의 삭제 없음
+
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.1`
-- 현재 등록 항목: 9/17 완료
+- 현재 등록 항목: 13/17 완료
 
-- `agent-owned`: `OV151-013`, `OV151-014`, `OV151-015`, `OV151-016`, `OV151-017`
+- `agent-owned`: `OV151-017`
 - `awaiting-user-authority`: `OV151-008`, `OV151-009`, `OV151-010`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
