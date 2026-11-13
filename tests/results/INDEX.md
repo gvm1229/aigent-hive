@@ -1348,3 +1348,50 @@
 | [passed](runs/20261113T044303-4223afd93f70.md) | 출력 스냅샷 마지막 빈 줄 정리 확인 | e0a6cf88113aa4979deef3bfacd3baca008169ea | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T044514-a0cdf9af578d.md) | 도움말의 JSON 선택 표시 검사 | dddb56411def4aa23d73d75ddf1822c8bbe7ca4b | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T044552-a0b1bc645f64.md) | 사람용 다음 명령과 기계 계약 분리 확인 | dddb56411def4aa23d73d75ddf1822c8bbe7ca4b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044707-400adcd50c5e.md) | 최종 Rust workspace 전체 회귀 검사 | 03fdbebc1e227c50c93465dabaeb364a42a79c2e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T045429-1835858a646c.md) | 최종 workspace 정적 검사 | c153d7a7337d2a9f9dcd1c2acb9e1063699eb3ec | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T045540-9a40c40ddeda.md) | Python 검사 고정 실행 파일 준비 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T045546-5e50409aadc5.md) | Python conformance: documentation | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T045624-1f5f40c5496e.md) | Python conformance: security | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T045903-fd4d41f4a7a2.md) | Python conformance: contract | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T050959-36b3ff9f5e6d.md) | 마지막 출력 경로와 질문·요약 보완 검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051104-a2a4c89f592a.md) | 設定 질문 선택지와 출력 경계 재검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051133-b76c0b1be5f6.md) | 設定 질문 선택지와 출력 경계 재검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051226-8425753d2885.md) | 사람용 성공 출력과 정적 검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T051250-7339de6b8aaa.md) | 사람용 성공 출력과 정적 검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051350-7bd24aa3081b.md) | 공통 출력 함수와 기준값 문구 분리 검사 | 92702f88ea5572517da8437c3cebdc24b520caff | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051547-706dee8b2613.md) | 최종 소스의 Rust 전체·문서 예제·정적 검사 | 02f16c9652a58c8b35dd552ff88966a7c0902d31 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T051917-537c81a8fa38.md) | Python conformance: integration | 02f16c9652a58c8b35dd552ff88966a7c0902d31 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052234-acc859a6a5fc.md) | 최종 소스의 Rust 전체·문서 예제·정적 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052242-8ccb5f97f7a6.md) | 최종 소스의 Rust 전체·문서 예제·정적 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052353-49672326742b.md) | 내부 작업자의 JSON 응답 보존 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052422-638478002219.md) | 내부 작업자의 JSON 응답 보존 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052444-925232a8683c.md) | 최종 계약 검사 고정 실행 파일 준비 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052710-331697a84d82.md) | 내부 JSON 계약과 쉬운 오류 안내 최종 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052739-ac54a6e0e9a1.md) | 내부 JSON 계약과 쉬운 오류 안내 최종 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052756-4a2c8f31cf1a.md) | 내부 JSON 계약과 쉬운 오류 안내 최종 검사 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052818-c8f1ea82a448.md) | 최종 계약 검사 고정 실행 파일 갱신 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052949-49c528d14951.md) | 제품 이름을 유지한 최종 실행 파일 준비 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T052951-db875de91a2c.md) | 내부 JSON 응답·설치 동의·중단 후 언어의 실제 회귀 | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T053235-e2252efa6f93.md) | Python conformance: release | d06783663f4ef2649d37c36e67860aca4c633eb1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T053852-092135459abd.md) | 훅 기본 안내와 기존 JSON 바이트 보존 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T053917-dd4b75371581.md) | 훅 기본 안내와 기존 JSON 바이트 보존 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T053935-a2a39a7d77c8.md) | 최종 검증 실행 파일 고정 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054106-f7671af7304a.md) | 기존 JSON 미지원 범위와 훅 바이트 보존 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054133-72a82ede6a26.md) | 기존 JSON 미지원 범위와 훅 바이트 보존 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054151-2a5bae5203a4.md) | 최종 전체 검사 실행 파일 고정 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T054526-54a31ac2a740.md) | 최종 명령·버전의 두 언어 및 JSON 호환 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054555-7c99330c5762.md) | 최종 명령·버전의 두 언어 및 JSON 호환 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054624-b0d37a56b453.md) | 최종 명령·버전의 두 언어 및 JSON 호환 검사 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T054643-1f7db339961a.md) | 최종 전체 검사 실행 파일 고정 | 84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T055151-477f414ae4d9.md) | 기준 변경의 전역·프로젝트 범위와 상한 설명 확인 | 43dad991f214a9afdc50524cf2b7f32c22ae46a1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T055222-ee08a92f7086.md) | 기준 변경의 전역·프로젝트 범위와 상한 설명 확인 | 43dad991f214a9afdc50524cf2b7f32c22ae46a1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T055241-b9f66c5e1978.md) | 기준 변경의 전역·프로젝트 범위와 상한 설명 확인 | 43dad991f214a9afdc50524cf2b7f32c22ae46a1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T055305-5afe4785bd90.md) | 전체 검증의 최종 실행 파일 고정 | 43dad991f214a9afdc50524cf2b7f32c22ae46a1 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060210-6c54e2f88be8.md) | 검색·그래프 결과의 의미 보존 최종 검사 | e53fba319240a14b773e96292a96478d6d042998 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060240-7aaf66449ea2.md) | 검색·그래프 결과의 의미 보존 최종 검사 | e53fba319240a14b773e96292a96478d6d042998 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060257-8367b5c7b73e.md) | 검색·그래프 결과의 의미 보존 최종 검사 | e53fba319240a14b773e96292a96478d6d042998 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060320-6922322d8a86.md) | 전체 검증 실행 파일 고정 | e53fba319240a14b773e96292a96478d6d042998 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060829-de00e8f80801.md) | 사용량 기준 설명의 보호 활성 조건 보존 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060902-2437121ad8b4.md) | 사용량 기준 설명의 보호 활성 조건 보존 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T060927-d3a2fe149c01.md) | 최종 전체 검증 실행 파일 확정 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
