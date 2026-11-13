@@ -164,20 +164,15 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
                 ".agents"
             }
         ));
-        let owned = expected
-            .keys()
-            .map(|suffix| prefix.join(suffix))
-            .collect::<BTreeSet<_>>();
-        if has_extra_files(&target.open_target_dir()?, &prefix, &owned)? {
-            ledger
-                .local_skills
-                .insert(name, "unowned-resource".to_owned());
-            continue;
+        let mut reason = local_skill_reason(target, &prefix, &name, &expected, host)?;
+        if reason.is_none() && host == "claude" {
+            if let Some(portable) = groups(files, "codex").get(&name) {
+                let portable_prefix = PathBuf::from(format!(".agents/skills/{name}"));
+                reason = local_skill_reason(target, &portable_prefix, &name, portable, "codex")?;
+            }
         }
-        if project_skill_has_changes(target, &prefix, &name, &expected, host)? {
-            ledger
-                .local_skills
-                .insert(name, "modified-resource".to_owned());
+        if let Some(reason) = reason {
+            ledger.local_skills.insert(name, reason.to_owned());
             continue;
         }
         ledger.skills.insert(name.clone(), digest(&expected));
@@ -191,6 +186,23 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
     }
     files.insert(PathBuf::from(PROVIDERS_PATH), encode(&ledger)?);
     Ok(())
+}
+
+fn local_skill_reason<T: TargetRead + ?Sized>(
+    target: &T,
+    prefix: &Path,
+    name: &str,
+    expected: &BTreeMap<String, Vec<u8>>,
+    host: &str,
+) -> Result<Option<&'static str>, RenderError> {
+    let owned = expected.keys().map(|suffix| prefix.join(suffix)).collect();
+    if has_extra_files(&target.open_target_dir()?, prefix, &owned)? {
+        return Ok(Some("unowned-resource"));
+    }
+    if project_skill_has_changes(target, prefix, name, expected, host)? {
+        return Ok(Some("modified-resource"));
+    }
+    Ok(None)
 }
 
 fn project_skill_has_changes<T: TargetRead + ?Sized>(
@@ -385,6 +397,45 @@ mod tests {
                 files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md")),
                 host == "claude"
             );
+        }
+    }
+
+    #[test]
+    fn claude_plugin_preserves_modified_portable_or_primary_resources() {
+        for root in [".agents", ".claude"] {
+            let temporary = tempfile::tempdir().unwrap();
+            let target = crate::open_target_capability(temporary.path()).unwrap();
+            let selected = ["prompt-refine".to_owned()];
+            let portable = hive_projection::compile_project_projection(
+                hive_projection::Host::Codex,
+                &selected,
+                &[],
+            )
+            .unwrap();
+            let primary = hive_projection::compile_project_projection(
+                hive_projection::Host::Claude,
+                &selected,
+                &[],
+            )
+            .unwrap();
+            let mut files = portable
+                .files
+                .iter()
+                .chain(&primary.files)
+                .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
+                .collect::<BTreeMap<_, _>>();
+            let path = format!("{root}/skills/prompt-refine/SKILL.md");
+            let mut local = files[Path::new(&path)].clone();
+            local.extend_from_slice(b"\nTeam-owned additional rule.\n");
+            std::fs::create_dir_all(temporary.path().join(&path).parent().unwrap()).unwrap();
+            std::fs::write(temporary.path().join(&path), &local).unwrap();
+            let plugin = VerifiedPlugins::for_host("claude", primary.files);
+            apply(&target, &mut files, &plugin, "claude").unwrap();
+            let ledger: SkillProviders =
+                serde_json::from_slice(&files[Path::new(PROVIDERS_PATH)]).unwrap();
+            assert!(ledger.skills.is_empty(), "{root}");
+            assert_eq!(ledger.local_skills["prompt-refine"], "modified-resource");
+            assert_eq!(std::fs::read(temporary.path().join(path)).unwrap(), local);
         }
     }
 
