@@ -11,7 +11,7 @@
       "sha256": "d1f542ed23b6e84816f766ef84438c07821ba41a741736f941dc272478931002"
     }
   ],
-  "classification": "feature",
+  "classification": "bugfix",
   "license": "Apache-2.0",
   "migration_table_digest": "sha256:8a02b355824c1c8b03208496da240e85bc5acef9b69c752d1c89e057eb15985c",
   "minimum_supported_harness_version": "0.8.0",
