@@ -21,23 +21,22 @@
 
 ## 실행 순서
 
-1. 이번 변경의 Fable 추가 검토와 수정
-2. 별도 허용된 단계의 develop 통합·0.15.1-test.1 수용
-3. 승인된 develop→main PR에 0.15.0 정정 글·0.15.1 안내·지문·워크플로 포함, 별도 정정용 main PR 없음
-4. 0.15.1 정식 게시: `release-publish.yml`의 `send_subscriber_update=false`. Discord 전송 단계 건너뜀
-5. 0.15.0 정정 수동 실행
-6. 정정 수신 기록 확인 뒤 0.15.1 안내를 기존 `recover` 경로로 전송
+2026-11-14 유지관리자 선택 "Send it early": 0.15.1 정식 전 조기 정정. 원래 메시지 ID `1570581574905499885` 제공, 제자리 수정 우선
 
-- 순서 근거: 2026-11-14 유지관리자 지시. "the 0.15.0 update note on discord must be either edited or sent again BEFORE the 0.15.1 update note hits. To keep the version update note ordered." 0.15.1 정식의 동시 전송 금지
-- `recover`는 게시 실행의 Discord 단계 건너뜀과 0.15.1 수신 기록 부재를 확인한 뒤 같은 승인 원문·지문으로 전송. 새 워크플로 코드 불필요
+1. 문서·워크플로만의 `fix/discord-0.15.0-correction`을 develop에서 분기. 정정 워크플로·전송 도구·시험·0.15.0 안내와 지문·정정 대기 목록·업데이트 안내 Skill, 제품 바이트 없음
+2. develop 병합 뒤 develop→main PR. 기존 `main-pr` 승인 경로
+3. main에서 0.15.0 정정 수동 실행. `correct`는 원래 게시 실행과 main의 검토된 원문을 사용, 수신 기록 이름은 버전 단위
+4. 정정 수신 확인 뒤 정정 대기 목록 비우기
+5. 0.15.1 정식은 그 뒤 일반 경로. 목록이 남아 있으면 게시의 안내 동시 전송 거부, `recover`는 정정 수신 기록 확인
+
+- 순서 근거: 2026-11-14 유지관리자 지시. "the 0.15.0 update note on discord must be either edited or sent again BEFORE the 0.15.1 update note hits. To keep the version update note ordered."
 
 ```powershell
-gh workflow run release-discord-notification.yml --ref main -f operation=correct -f product_version=0.15.0 -f publication_run_id=43329036663
-gh workflow run release-discord-notification.yml --ref main -f operation=recover -f product_version=0.15.1 -f publication_run_id=<0.15.1 정식 게시 실행 ID>
+gh workflow run release-discord-notification.yml --ref main -f operation=correct -f product_version=0.15.0 -f publication_run_id=43329036663 -f message_id=1570581574905499885
 ```
 
-- 나중에 원래 ID 확보 시 `-f message_id=<원래 메시지 ID>` 추가, 웹훅 주소·토큰 입력 금지
-- ID 부재 경로의 후속 소유자: 유지관리자. 새 정정 글 확인 뒤 Discord에서 이전 0.15.0 안내만 수동 삭제, 새 수신 기록으로 중복 전송 방지
+- ID로 원래 글을 읽고 버전 제목이 같을 때만 PATCH. 수정 불가 응답이면 삭제 뒤 정정 글, 삭제도 불가하면 정정 글과 유지관리자 수동 삭제 기록
+- 웹훅 주소·토큰 입력 금지, 비밀은 GitHub 환경 안에서만 사용
 
 ## 증명 범위와 한계
 
