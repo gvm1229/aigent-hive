@@ -1896,7 +1896,7 @@ pub(crate) fn parse_options<'a>(
         options.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&options, "--output") != Some("json") {
+    if optional(&options, "--output").is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "role and run commands require --output json".to_owned(),
         ));

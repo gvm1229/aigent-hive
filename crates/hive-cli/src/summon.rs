@@ -29,7 +29,9 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                     }
                 }
             }
-            println!("{value}");
+            if !crate::human_output::emit_if_human(&value) {
+                println!("{value}");
+            }
             ExitCode::SUCCESS
         }
         Err(error) => crate::emit_action_result(&refusal(error)),

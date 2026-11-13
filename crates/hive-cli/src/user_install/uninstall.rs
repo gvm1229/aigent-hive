@@ -127,22 +127,13 @@ fn parse(arguments: &[String]) -> Result<Request, InstallError> {
 }
 
 pub(super) fn run(arguments: &[String]) -> ExitCode {
-    let machine = arguments.windows(2).any(|p| p == ["--output", "json"]);
     let mut reader = io::stdin().lock();
     let mut writer = io::stderr().lock();
     let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
     let result = parse(arguments)
         .and_then(|request| execute(&request, interactive, &mut reader, &mut writer))
         .unwrap_or_else(|error| failure("UninstallHiveUser", &error));
-    if machine {
-        emit_action_result(&result)
-    } else {
-        eprintln!("{}", result.message);
-        if let Some(next) = &result.next_action {
-            eprintln!("{next}");
-        }
-        ExitCode::from(result.exit_code)
-    }
+    emit_action_result(&result)
 }
 
 fn root_identity(root: &Dir) -> Result<(u64, u64), InstallError> {

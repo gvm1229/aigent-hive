@@ -681,7 +681,9 @@ fn parse_feature(arguments: &[String]) -> Result<FeatureArguments, SetupError> {
         }
         index += 2;
     }
-    if id.as_deref() != Some("vector-search") || output.as_deref() != Some("json") {
+    if id.as_deref() != Some("vector-search")
+        || output.as_deref().is_some_and(|value| value != "json")
+    {
         return Err(SetupError::Input(
             "setup feature requires --id vector-search and --output json".to_owned(),
         ));
@@ -1114,7 +1116,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
         index += 2;
     }
     if !matches!(scope.as_deref(), Some("user" | "project"))
-        || output.as_deref() != Some("json")
+        || output.as_deref().is_some_and(|value| value != "json")
         || (scope.as_deref() == Some("project")) != target.is_some()
     {
         return Err(SetupError::Input(
@@ -1421,7 +1423,7 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
             "user setup requires --scope user".to_owned(),
         ));
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(SetupError::Input(
             "user setup requires --output json".to_owned(),
         ));
@@ -3917,6 +3919,11 @@ fn failure(error: &SetupError) -> ActionResult {
         next_action: None,
         data: None,
     }
+}
+
+/// Resolve the existing display preference without changing saved settings.
+pub(crate) fn output_language(arguments: &[String]) -> InterfaceLanguage {
+    setup_engine::messages::language(arguments)
 }
 
 #[cfg(test)]

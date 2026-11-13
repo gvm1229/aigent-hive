@@ -138,7 +138,6 @@ fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
     let mut webhook_env = None;
     let mut language = "en".to_owned();
     let mut fields = default_message_fields();
-    let mut output_json = false;
     let mut index = 0;
     while index < arguments.len() {
         let value = arguments
@@ -148,7 +147,7 @@ fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
             "--webhook-env" => webhook_env = Some(value.clone()),
             "--language" if matches!(value.as_str(), "en" | "ko") => language.clone_from(value),
             "--fields" => fields = value.split(',').map(str::to_owned).collect(),
-            "--output" if value == "json" => output_json = true,
+            "--output" if value == "json" => {},
             _ => {
                 return Err(
                     "Discord test requires --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json".to_owned(),
@@ -160,7 +159,7 @@ fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
     let webhook_env = webhook_env.ok_or_else(|| {
         "Discord test requires --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json".to_owned()
     })?;
-    if !output_json || !valid_environment_name(&webhook_env) || !valid_message_fields(&fields) {
+    if !valid_environment_name(&webhook_env) || !valid_message_fields(&fields) {
         return Err(
             "Discord test requires a valid environment name, language, non-empty unique fields, and --output json".to_owned(),
         );
@@ -232,10 +231,11 @@ fn test_result(arguments: &TestArguments) -> ActionResult {
 }
 
 fn parse_inbound(arguments: &[String]) -> Result<&str, String> {
-    if arguments.len() != 4
+    if !matches!(arguments.len(), 2 | 4)
         || arguments.first().map(String::as_str) != Some("--host")
-        || arguments.get(2).map(String::as_str) != Some("--output")
-        || arguments.get(3).map(String::as_str) != Some("json")
+        || (arguments.len() == 4
+            && (arguments.get(2).map(String::as_str) != Some("--output")
+                || arguments.get(3).map(String::as_str) != Some("json")))
     {
         return Err("Discord inbound requires --host <host> --output json".to_owned());
     }

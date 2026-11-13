@@ -137,14 +137,12 @@ pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCod
             execute(&options, mode, &mut terminal)
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
-    if json_output {
-        return crate::emit_action_result(&super::compact_result(result, summary));
-    }
-    eprintln!("{}", result.message);
-    if let Some(next) = &result.next_action {
-        eprintln!("{next}");
-    }
-    ExitCode::from(result.exit_code)
+    let result = if json_output {
+        super::compact_result(result, summary)
+    } else {
+        result
+    };
+    crate::emit_action_result(&result)
 }
 
 pub(in crate::user_setup) fn resume_pending_update(

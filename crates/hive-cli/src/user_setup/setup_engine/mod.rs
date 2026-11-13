@@ -108,7 +108,7 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
         }
         index += 2;
     }
-    if !describe || output.as_deref() != Some("json") {
+    if !describe || output.as_deref().is_some_and(|value| value != "json") {
         return Err(SetupError::Input(
             "section description requires --describe --output json".to_owned(),
         ));

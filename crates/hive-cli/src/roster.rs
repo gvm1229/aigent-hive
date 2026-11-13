@@ -14,14 +14,16 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     match execute(arguments) {
         Ok(value) => {
-            println!("{value}");
+            if !crate::human_output::emit_if_human(&value) {
+                println!("{value}");
+            }
             ExitCode::SUCCESS
         }
         Err(error) => {
-            println!(
-                "{}",
-                json!({"status":"unsupported","code":"hive.roster-unsupported","message":error,"enabled":false})
-            );
+            let value = json!({"status":"unsupported","code":"hive.roster-unsupported","message":error,"enabled":false});
+            if !crate::human_output::emit_if_human(&value) {
+                println!("{value}");
+            }
             ExitCode::from(2)
         }
     }

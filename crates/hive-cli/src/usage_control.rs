@@ -721,7 +721,7 @@ fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError>
             "usage capture requires --host claude|antigravity".to_owned(),
         ));
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "usage capture requires --output json".to_owned(),
         ));
@@ -1183,7 +1183,7 @@ fn parse_key_value_options<'a>(
         options.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&options, "--output") != Some("json") {
+    if optional(&options, "--output").is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "usage control commands require --output json".to_owned(),
         ));

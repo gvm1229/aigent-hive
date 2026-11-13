@@ -25,11 +25,6 @@ pub(super) fn run(arguments: &[String]) -> Result<ActionResult, AdapterError> {
             }
         }
     }
-    if !output {
-        return Err(AdapterError::Input(
-            "token summary requires --output json".to_owned(),
-        ));
-    }
     let path = Path::new(
         input.ok_or_else(|| AdapterError::Input("token summary requires --request".to_owned()))?,
     );

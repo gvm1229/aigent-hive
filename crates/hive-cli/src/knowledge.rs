@@ -345,9 +345,9 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
         }
         index += 2;
     }
-    if !output || bundles.len() < 2 {
+    if bundles.len() < 2 {
         return Err(WikiError::InvalidInput(
-            "merge requires JSON output and at least two --bundle values".to_owned(),
+            "merge requires at least two --bundle values".to_owned(),
         ));
     }
     let root_options = root
@@ -1803,7 +1803,11 @@ fn parse_scan_arguments(arguments: &[String]) -> Result<ScanArguments, WikiError
             }
         }
     }
-    if output.as_deref().and_then(|path| path.to_str()) != Some("json") {
+    if output
+        .as_deref()
+        .and_then(|path| path.to_str())
+        .is_some_and(|value| value != "json")
+    {
         return Err(WikiError::InvalidInput(
             "knowledge scan requires --output json".to_owned(),
         ));
@@ -3776,7 +3780,7 @@ fn parse_scan_promotion_options(
     let mode = mode.ok_or_else(|| {
         WikiError::InvalidInput("promotion requires --dry-run or --apply".to_owned())
     })?;
-    if optional(&valued, "--output") != Some("json") {
+    if optional(&valued, "--output").is_some_and(|value| value != "json") {
         return Err(WikiError::InvalidInput(
             "knowledge commands require --output json".to_owned(),
         ));
@@ -3923,7 +3927,7 @@ fn parse_promotion_options_allowed<'a>(
         valued.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&valued, "--output") != Some("json") {
+    if optional(&valued, "--output").is_some_and(|value| value != "json") {
         return Err(WikiError::InvalidInput(
             "knowledge commands require --output json".to_owned(),
         ));
@@ -4387,7 +4391,7 @@ fn parse_options<'a>(
         output.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&output, "--output") != Some("json") {
+    if optional(&output, "--output").is_some_and(|value| value != "json") {
         return Err(WikiError::InvalidInput(
             "knowledge commands require --output json".to_owned(),
         ));
@@ -4451,6 +4455,9 @@ fn failure(action: &'static str, error: &WikiError) -> KnowledgeResult {
 }
 
 fn emit(result: &KnowledgeResult) {
+    if crate::human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(json) => println!("{json}"),
         Err(error) => {
@@ -4459,7 +4466,7 @@ fn emit(result: &KnowledgeResult) {
         }
     }
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
 }
 

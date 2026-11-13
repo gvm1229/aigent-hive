@@ -158,14 +158,12 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "SetupHarness";
-    if json_output {
-        return crate::emit_action_result(&super::compact_result(result, summary));
-    }
-    let _ = writeln!(terminal.writer, "{}", result.message);
-    if let Some(next) = result.next_action {
-        let _ = writeln!(terminal.writer, "{next}");
-    }
-    ExitCode::from(result.exit_code)
+    let result = if json_output {
+        super::compact_result(result, summary)
+    } else {
+        result
+    };
+    crate::emit_action_result(&result)
 }
 
 fn resume_command(options: &Options) -> String {

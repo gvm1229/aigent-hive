@@ -25,6 +25,7 @@ mod custom_agent_cli;
 mod discord;
 mod display_options;
 mod gods;
+mod human_output;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -236,6 +237,7 @@ fn main() -> ExitCode {
     update_bridge::mark_process_start();
     let mut arguments: Vec<String> = env::args().skip(1).collect();
     display_options::configure(&mut arguments);
+    human_output::configure(&arguments);
     if arguments == ["__setup-apply-worker"] {
         return user_setup::run_apply_worker();
     }
@@ -343,6 +345,19 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
             update_discovery::run(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
+        Some("doctor" | "check-target") => {
+            let mut human_arguments = arguments.clone();
+            if let Some(index) = human_arguments
+                .windows(2)
+                .position(|pair| pair == ["--output", "json"])
+            {
+                human_arguments.drain(index..index + 2);
+            }
+            match run_human(human_arguments.into_iter()) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => human_output::error(&message),
+            }
+        }
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {
@@ -358,15 +373,12 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
                 data: None,
             };
             emit_json_result(&result);
-            eprintln!("error: {}", result.message);
+            crate::human_output::diagnostic(&result.message);
             ExitCode::from(2)
         }
         _ => match run_human(arguments.into_iter()) {
             Ok(()) => ExitCode::SUCCESS,
-            Err(message) => {
-                eprintln!("error: {message}");
-                ExitCode::from(2)
-            }
+            Err(message) => human_output::error(&message),
         },
     }
 }
@@ -420,7 +432,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     };
     emit_json_result(&result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -445,7 +457,7 @@ fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
             }
             index += 2;
         }
-        if output.as_deref() != Some("json") {
+        if output.as_deref().is_some_and(|value| value != "json") {
             return Err("usage probe-native requires --output json".to_owned());
         }
         let host = match host.as_deref() {
@@ -495,7 +507,7 @@ fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("usage check requires --output json".to_owned());
     }
     let account_digest =
@@ -756,7 +768,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let result = user_setup::setup_summary(result, summary);
     emit_json_result(&result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -984,7 +996,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(RenderError::Input(
             "setup requires --output json".to_owned(),
         ));
@@ -1053,6 +1065,9 @@ fn failure_result_for(
 }
 
 fn emit_json_result(result: &ActionResult) {
+    if human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(json) => println!("{json}"),
         Err(error) => {
@@ -1151,7 +1166,7 @@ fn parse_route(arguments: &[String]) -> Result<RouteArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("route requires --output json".to_owned());
     }
     Ok(RouteArguments {
@@ -1251,7 +1266,7 @@ fn parse_prompt_validate(arguments: &[String]) -> Result<PromptArguments, String
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("prompt validate requires --output json".to_owned());
     }
     Ok(PromptArguments {
@@ -1392,7 +1407,7 @@ fn parse_prompt_approval(arguments: &[String]) -> Result<PromptApprovalArguments
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("prompt approve requires --output json".to_owned());
     }
     Ok(PromptApprovalArguments {
@@ -1623,7 +1638,7 @@ fn logical_action_name(action: LogicalAction) -> &'static str {
 fn emit_action_result(result: &ActionResult) -> ExitCode {
     emit_json_result(result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -1638,20 +1653,20 @@ fn run_hook(arguments: &[String]) -> ExitCode {
             )
         })
     {
-        println!("{}", neutral_stop_hook_payload());
+        emit_hook_literal(neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
     }
     match parse_hook(arguments) {
         Ok(arguments) => {
             let Some(fresh_capabilities) = arguments.capabilities.as_deref() else {
-                println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                emit_hook_literal(neutral_stop_hook_payload());
                 return ExitCode::SUCCESS;
             };
             let target = match env::current_dir() {
                 Ok(target) => target,
                 Err(error) => {
                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     return ExitCode::SUCCESS;
                 }
             };
@@ -1673,38 +1688,41 @@ fn run_hook(arguments: &[String]) -> ExitCode {
                                 }
                                 Err(error) => {
                                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                                    println!(
-                                "{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}"
-                            );
+                                    emit_hook_literal(neutral_stop_hook_payload());
                                     ExitCode::SUCCESS
                                 }
                             }
                         }
                         Err(error) => {
                             eprintln!("diagnostic: inactive fallback hook: {error}");
-                            println!(
-                                "{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}"
-                            );
+                            emit_hook_literal(neutral_stop_hook_payload());
                             ExitCode::SUCCESS
                         }
                     }
                 }
                 Ok(HookAuthorization::Inert) => {
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     ExitCode::SUCCESS
                 }
                 Err(error) => {
                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     ExitCode::SUCCESS
                 }
             }
         }
         Err(message) => {
             eprintln!("diagnostic: inactive fallback hook: {message}");
-            println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+            emit_hook_literal(neutral_stop_hook_payload());
             ExitCode::SUCCESS
         }
+    }
+}
+
+fn emit_hook_literal(text: &str) {
+    let value: serde_json::Value = serde_json::from_str(text).expect("static hook payload");
+    if !human_output::emit_if_human(&value) {
+        println!("{text}");
     }
 }
 
@@ -2161,11 +2179,14 @@ fn checkpoint_reminder(target: &Path, input: &HookInput) -> Result<HookResult, R
 }
 
 fn emit_hook_result(result: &HookResult) {
+    if human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(json) => println!("{json}"),
         Err(error) => {
             eprintln!("diagnostic: inactive fallback hook: {error}");
-            println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+            emit_hook_literal(neutral_stop_hook_payload());
         }
     }
 }
@@ -2213,7 +2234,7 @@ fn parse_hook(arguments: &[String]) -> Result<HookArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("hook requires --output json".to_owned());
     }
     Ok(HookArguments {
@@ -2286,20 +2307,38 @@ fn doctor() -> Result<(), String> {
         env::current_dir().map_err(|error| format!("cannot read current directory: {error}"))?;
     let marker = source_marker_path(&current_directory);
 
-    println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
-    println!("workspace: {}", current_directory.display());
-    println!(
-        "source workspace: {}",
-        if marker.is_file() { "yes" } else { "no" }
-    );
-    println!("model API client: disabled by architecture");
-    println!("setup renderer: available");
+    emit_json_result(&ActionResult {
+        schema_version: 1,
+        action: "InspectInstallation",
+        status: "success",
+        exit_code: 0,
+        code: "hive.doctor-complete",
+        message: "Hive installation inspected".into(),
+        changed_paths: vec![],
+        evidence: vec![],
+        next_action: None,
+        data: Some(
+            serde_json::json!({"version":env!("CARGO_PKG_VERSION"),"path":current_directory,
+            "source_workspace":marker.is_file(),"model_api_client":false,"setup_renderer":true}),
+        ),
+    });
     Ok(())
 }
 
 fn check_target(target: &Path) -> Result<(), String> {
     ensure_consumer_target(target).map_err(|error| error.to_string())?;
-    println!("target accepted: {}", target.display());
+    emit_json_result(&ActionResult {
+        schema_version: 1,
+        action: "CheckTarget",
+        status: "success",
+        exit_code: 0,
+        code: "hive.target-accepted",
+        message: "Target folder accepted".into(),
+        changed_paths: vec![],
+        evidence: vec![],
+        next_action: None,
+        data: Some(serde_json::json!({"path":target})),
+    });
     Ok(())
 }
 

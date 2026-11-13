@@ -166,14 +166,6 @@ fn parse_options<'a>(
         options.push((key, value.as_str()));
         index += 2;
     }
-    if !arguments
-        .windows(2)
-        .any(|pair| pair == ["--output", "json"])
-    {
-        return Err(AdapterError::Input(
-            "report requires --output json".to_owned(),
-        ));
-    }
     Ok(options)
 }
 

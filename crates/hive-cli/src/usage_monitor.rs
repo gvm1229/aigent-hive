@@ -412,9 +412,6 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
         }
         index += 2;
     }
-    if !output {
-        return Err(AdapterError::Input("--output json is required".into()));
-    }
     if (action == "enable") != (confirm.is_some() && terminate)
         || (action != "enable" && (confirm.is_some() || terminate))
     {

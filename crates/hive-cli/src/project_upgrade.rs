@@ -355,7 +355,7 @@ fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
             }
         }
     }
-    if output != Some("json") {
+    if output.is_some_and(|value| value != "json") {
         return Err(UpdateError::Input(
             "project upgrade requires --output json".to_owned(),
         ));
@@ -2803,6 +2803,9 @@ fn failure(error: &UpdateError) -> ProjectResult {
 }
 
 fn emit(result: &ProjectResult) {
+    if crate::human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(value) => println!("{value}"),
         Err(error) => {
@@ -2811,7 +2814,7 @@ fn emit(result: &ProjectResult) {
         }
     }
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
 }
 

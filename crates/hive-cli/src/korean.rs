@@ -806,7 +806,7 @@ fn optional<'a>(options: &'a Options<'a>, name: &str) -> Option<&'a str> {
 }
 
 fn require_json(options: &Options<'_>) -> Result<(), String> {
-    if optional(options, "--output") == Some("json") {
+    if optional(options, "--output").is_none_or(|value| value == "json") {
         Ok(())
     } else {
         Err("Korean command requires --output json".to_owned())

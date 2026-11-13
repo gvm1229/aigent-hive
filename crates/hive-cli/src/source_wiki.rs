@@ -240,7 +240,7 @@ fn parse_options<'a>(arguments: &'a [String], allowed: &[&str]) -> Result<Option
         options.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&options, "--output") != Some("json") {
+    if optional(&options, "--output").is_some_and(|value| value != "json") {
         return Err(WikiError::InvalidInput(
             "source-wiki commands require --output json".to_owned(),
         ));

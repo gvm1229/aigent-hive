@@ -138,7 +138,7 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
         }
         index += 2;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("session requires --output json".to_owned());
     }
     let target = target.ok_or_else(|| "missing required option --target".to_owned())?;
@@ -859,9 +859,12 @@ fn failure(
 }
 
 fn emit(result: &SessionResult) {
+    if crate::human_output::emit_if_human(result) {
+        return;
+    }
     println!("{}", serde_json::to_string(result).unwrap_or_else(|_| "{\"schema_version\":1,\"action\":\"CoordinateSession\",\"status\":\"error\",\"exit_code\":10,\"code\":\"hive.internal-error\",\"message\":\"JSON serialization failed\",\"changed_paths\":[],\"evidence\":[],\"next_action\":null}".to_owned()));
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
 }
 

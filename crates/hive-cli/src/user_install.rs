@@ -1689,7 +1689,7 @@ fn parse(arguments: &[String]) -> Result<UserCommandArguments, InstallError> {
             "user installation requires --scope user".to_owned(),
         ));
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(InstallError::Input(
             "user installation requires --output json".to_owned(),
         ));

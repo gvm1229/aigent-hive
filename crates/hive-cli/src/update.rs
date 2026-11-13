@@ -104,7 +104,7 @@ fn parse_release_arguments(arguments: &[String]) -> Result<PathBuf, AdapterError
             )));
         }
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "release verify requires --output json".to_owned(),
         ));
@@ -192,7 +192,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
             }
         }
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "update requires --output json".to_owned(),
         ));

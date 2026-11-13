@@ -1,0 +1,512 @@
+CheckRunClosure
+ko: 완료. 작업 종료 조건 확인 완료.
+en: Success. Work completion conditions checked.
+
+CheckRunContinuation
+ko: 완료. 작업 계속 조건 확인 완료.
+en: Success. Work continuation conditions checked.
+
+CheckpointRun
+ko: 완료. 작업 진행 저장 완료.
+en: Success. Work progress saved.
+
+ProbeNativeUsage
+ko: 완료. 앱의 사용량 조회 처리 완료.
+en: Success. Host usage inspected.
+
+RecoverHiveUser
+ko: 완료. 사용자 설정 복구 처리 완료.
+en: Success. User setup recovery processed.
+
+RecoverProjectUpgrade
+ko: 완료. 프로젝트 갱신 복구 처리 완료.
+en: Success. Project update recovery processed.
+
+RefinePrompt
+ko: 완료. 요청 다듬기 처리 완료.
+en: Success. Request refinement processed.
+
+ResumeWork
+ko: 완료. 저장된 작업 재개 처리 완료.
+en: Success. Saved work resume processed.
+
+UnknownAction
+ko: 완료. 명령 처리.
+en: Success. Command processing.
+
+ValidateHiveUser
+ko: 완료. 사용자 설치 확인 완료.
+en: Success. User installation checked.
+
+InspectInstallation
+ko: 완료. Hive 설치 상태 확인 완료.
+en: Success. Hive installation inspected.
+
+CheckTarget
+ko: 완료. 대상 폴더 확인 완료.
+en: Success. Target folder checked.
+
+SetupHarness
+ko: 완료. 프로젝트 설정 처리 완료.
+en: Success. Project setup processed.
+
+SetupHiveUser
+ko: 완료. 사용자 설정 처리 완료.
+en: Success. User setup processed.
+
+DescribeHiveUserSetup
+ko: 완료. 설정 질문과 선택지 확인 완료.
+en: Success. Setup choices inspected.
+
+ManageHiveUserFeature
+ko: 완료. 선택 기능 설정 처리 완료.
+en: Success. Optional feature settings processed.
+
+InstallHiveUser
+ko: 완료. 사용자 환경 설치 처리 완료.
+en: Success. User installation processed.
+
+UninstallHiveUser
+ko: 완료. Hive 제거 처리 완료.
+en: Success. Hive removal processed.
+
+UpdateHiveUser
+ko: 완료. 사용자 환경 갱신 처리 완료.
+en: Success. User update processed.
+
+UpdateHarness
+ko: 완료. Hive 갱신 처리 완료.
+en: Success. Hive update processed.
+
+UpdateProjectHarness
+ko: 완료. 프로젝트 갱신 처리 완료.
+en: Success. Project update processed.
+
+CheckHiveUpdate
+ko: 완료. 새 버전 확인 완료.
+en: Success. New version checked.
+
+VerifyRelease
+ko: 완료. 배포 파일 확인 완료.
+en: Success. Release files checked.
+
+RouteAgent
+ko: 완료. 요청에 맞는 작업 경로 선택 완료.
+en: Success. Work route selected.
+
+ValidatePrompt
+ko: 완료. 다듬은 요청 확인 완료.
+en: Success. Refined request checked.
+
+ApprovePrompt
+ko: 완료. 다듬은 요청 승인 처리 완료.
+en: Success. Refined request approval processed.
+
+EvaluateHook
+ko: 완료. 연결된 작업의 허용 여부 확인 완료.
+en: Success. Hook request checked.
+
+EvaluatePolicy
+ko: 완료. 안전 규칙 확인 완료.
+en: Success. Safety policy checked.
+
+ConfigurePolicyHooks
+ko: 완료. 안전 규칙 연결 설정 처리 완료.
+en: Success. Safety hook settings processed.
+
+ReviewPolicyCandidate
+ko: 완료. 안전 규칙 검토 처리 완료.
+en: Success. Policy review processed.
+
+CheckUsage
+ko: 완료. 사용량 보호 확인 완료.
+en: Success. Usage protection checked.
+
+ShowUsageStatus
+ko: 완료. 사용량과 보호 상태 확인 완료.
+en: Success. Usage and protection inspected.
+
+CaptureUsage
+ko: 완료. 사용량 관측 처리 완료.
+en: Success. Usage observation processed.
+
+SetUsageThreshold
+ko: 완료. 사용량 보호 기준 변경 완료.
+en: Success. Usage protection threshold changed.
+
+ControlUsageSession
+ko: 완료. 현재 세션의 사용량 보호 설정 처리 완료.
+en: Success. Session usage protection processed.
+
+ManageUsageMonitor
+ko: 완료. 상시 사용량 감시 설정 확인 완료.
+en: Success. Background usage monitoring inspected.
+
+InstallUsageFallback
+ko: 완료. 대체 사용량 확인 도구 설치 처리 완료.
+en: Success. Fallback usage tool installation processed.
+
+SummarizeTokens
+ko: 완료. 토큰 사용량 합산 완료.
+en: Success. Token usage summarized.
+
+ReportStorage
+ko: 완료. 저장 공간 사용량 확인 완료.
+en: Success. Storage use inspected.
+
+PruneStorage
+ko: 완료. 정리 대상 처리 완료.
+en: Success. Storage cleanup processed.
+
+CoordinateSession
+ko: 완료. 파일 수정 예약 처리 완료.
+en: Success. File edit reservation processed.
+
+BeginSession
+ko: 완료. 세션 시작과 파일 예약 처리 완료.
+en: Success. Session and file reservation started.
+
+CheckSession
+ko: 완료. 세션과 파일 예약 확인 완료.
+en: Success. Session reservations checked.
+
+UpdateSession
+ko: 완료. 세션 파일 예약 갱신 완료.
+en: Success. Session reservations updated.
+
+CloseSession
+ko: 완료. 세션 파일 예약 해제 완료.
+en: Success. Session reservations closed.
+
+RecoverSession
+ko: 완료. 끝난 세션의 파일 예약 복구 완료.
+en: Success. Ended session reservations recovered.
+
+ValidateRole
+ko: 완료. 역할 설정 확인 완료.
+en: Success. Role settings checked.
+
+RecordRoleHandoff
+ko: 완료. 역할 인계 기록 완료.
+en: Success. Role handoff recorded.
+
+VerifyWork
+ko: 완료. 작업 결과 확인 완료.
+en: Success. Work result checked.
+
+InitializeLoop
+ko: 완료. 반복 작업 초기화 완료.
+en: Success. Repeated work initialized.
+
+ValidateLoop
+ko: 완료. 반복 작업 상태 확인 완료.
+en: Success. Repeated work state checked.
+
+CheckpointLoop
+ko: 완료. 반복 작업 진행 저장 완료.
+en: Success. Repeated work progress saved.
+
+SteerLoop
+ko: 완료. 반복 작업 방향 변경 처리 완료.
+en: Success. Repeated work direction processed.
+
+PrepareLoopDispatch
+ko: 완료. 반복 작업의 전달 준비 완료.
+en: Success. Repeated work delivery prepared.
+
+RecoverLoop
+ko: 완료. 반복 작업 복구 처리 완료.
+en: Success. Repeated work recovery processed.
+
+OrchestrationStatus
+ko: 완료. 작업 조율 상태 확인 완료.
+en: Success. Coordination state inspected.
+
+OrchestrationPlan
+ko: 완료. 작업 조율 계획 처리 완료.
+en: Success. Coordination plan processed.
+
+OrchestrationDispatch
+ko: 완료. 작업 전달 준비 처리 완료.
+en: Success. Work delivery preparation processed.
+
+OrchestrationReceipt
+ko: 완료. 작업 수신 기록 처리 완료.
+en: Success. Work receipt processed.
+
+OrchestrationCancel
+ko: 완료. 작업 취소 처리 완료.
+en: Success. Work cancellation processed.
+
+OrchestrationRecover
+ko: 완료. 작업 조율 복구 처리 완료.
+en: Success. Coordination recovery processed.
+
+OrchestrationAuthority
+ko: 완료. 작업 승인 정보 처리 완료.
+en: Success. Work approval processed.
+
+OrchestrationAuthorityIssue
+ko: 완료. 작업 승인 발급 처리 완료.
+en: Success. Work approval issued.
+
+OrchestrationAuthorityRevoke
+ko: 완료. 작업 승인 철회 처리 완료.
+en: Success. Work approval revoked.
+
+OrchestrationMigrate
+ko: 완료. 작업 기록 이전 처리 완료.
+en: Success. Work records migrated.
+
+PackageJudge
+ko: 완료. 독립 검토 자료 준비 완료.
+en: Success. Independent review material prepared.
+
+RecordJudgeReceipt
+ko: 완료. 독립 검토 결과 기록 완료.
+en: Success. Independent review result recorded.
+
+EvaluateJudgeQuorum
+ko: 완료. 독립 검토의 동의 수 확인 완료.
+en: Success. Independent review agreement checked.
+
+KoreanLanguage
+ko: 완료. 한국어 문장 처리 완료.
+en: Success. Korean text processed.
+
+InspectKorean
+ko: 완료. 한국어 문장 검사 완료.
+en: Success. Korean text inspected.
+
+VerifyKorean
+ko: 완료. 문장 의미와 보존 조건 확인 완료.
+en: Success. Text preservation checked.
+
+SanitizeKorean
+ko: 완료. 한국어 문장 정리 완료.
+en: Success. Korean text cleaned.
+
+PreviewKoreanPack
+ko: 완료. 한국어 규칙 미리보기 완료.
+en: Success. Korean rules previewed.
+
+ActivateKoreanPack
+ko: 완료. 한국어 규칙 적용 완료.
+en: Success. Korean rules activated.
+
+CheckKoreanPack
+ko: 완료. 한국어 규칙 확인 완료.
+en: Success. Korean rules checked.
+
+StatusKoreanPack
+ko: 완료. 한국어 규칙 상태 확인 완료.
+en: Success. Korean rules status inspected.
+
+RollbackKoreanPack
+ko: 완료. 한국어 규칙 되돌림 완료.
+en: Success. Korean rules rolled back.
+
+InspectDiscordInbound
+ko: 완료. Discord 요청 수신 설정 확인 완료.
+en: Success. Discord inbound settings inspected.
+
+TestDiscordWebhook
+ko: 완료. Discord 알림 시험 처리 완료.
+en: Success. Discord notification test processed.
+
+DeveloperReport
+ko: 완료. 문제 보고 자료 처리 완료.
+en: Success. Problem report processed.
+
+PreviewDeveloperReport
+ko: 완료. 문제 보고 자료 미리보기 완료.
+en: Success. Problem report previewed.
+
+CollectDeveloperReport
+ko: 완료. 문제 보고 자료 수집 완료.
+en: Success. Problem report collected.
+
+ExportDeveloperReport
+ko: 완료. 문제 보고 자료 내보내기 완료.
+en: Success. Problem report exported.
+
+RecommendAgent
+ko: 완료. 작업자 추천 완료.
+en: Success. Worker recommendation prepared.
+
+CreateAgent
+ko: 완료. 맞춤 작업자 생성 완료.
+en: Success. Custom worker created.
+
+PreviewAgent
+ko: 완료. 맞춤 작업자 미리보기 완료.
+en: Success. Custom worker previewed.
+
+ValidateAgent
+ko: 완료. 맞춤 작업자 확인 완료.
+en: Success. Custom worker checked.
+
+PreflightAgent
+ko: 완료. 맞춤 작업자 실행 전 확인 완료.
+en: Success. Custom worker preflight checked.
+
+ApplyAgent
+ko: 완료. 맞춤 작업자 적용 완료.
+en: Success. Custom worker applied.
+
+AttestAgent
+ko: 완료. 맞춤 작업자 증명 확인 완료.
+en: Success. Custom worker evidence checked.
+
+DisableAgent
+ko: 완료. 맞춤 작업자 비활성 처리 완료.
+en: Success. Custom worker disabled.
+
+RemoveAgent
+ko: 완료. 맞춤 작업자 제거 처리 완료.
+en: Success. Custom worker removed.
+
+Summon
+ko: 완료. 역할별 작업 준비 완료, 자동 실행 없음.
+en: Success. Role work prepared; automatic execution remains disabled.
+
+roster
+ko: 완료. 역할별 모델과 설정 확인 완료.
+en: Success. Role models and settings inspected.
+
+summon
+ko: 완료. 역할별 작업 준비 완료, 자동 실행 없음.
+en: Success. Role work prepared; automatic execution remains disabled.
+
+AddKnowledge
+ko: 완료. 지식 추가 처리 완료.
+en: Success. Knowledge add processed.
+
+AuthorizeConfidentialKnowledge
+ko: 완료. 지식 기밀 사용 승인 처리 완료.
+en: Success. Knowledge authorizeconfidential processed.
+
+DeleteKnowledge
+ko: 완료. 지식 삭제 처리 완료.
+en: Success. Knowledge delete processed.
+
+ExportKnowledge
+ko: 완료. 지식 내보내기 처리 완료.
+en: Success. Knowledge export processed.
+
+ImportKnowledge
+ko: 완료. 지식 가져오기 처리 완료.
+en: Success. Knowledge import processed.
+
+IngestKnowledge
+ko: 완료. 지식 원문 반영 처리 완료.
+en: Success. Knowledge ingest processed.
+
+LintKnowledge
+ko: 완료. 지식 검사 처리 완료.
+en: Success. Knowledge lint processed.
+
+ListKnowledge
+ko: 완료. 지식 목록 조회 처리 완료.
+en: Success. Knowledge list processed.
+
+MapKnowledge
+ko: 완료. 지식 연결 처리 완료.
+en: Success. Knowledge map processed.
+
+PromoteKnowledge
+ko: 완료. 지식 공유 처리 완료.
+en: Success. Knowledge promote processed.
+
+QueryKnowledge
+ko: 완료. 지식 검색 처리 완료.
+en: Success. Knowledge query processed.
+
+ReadKnowledge
+ko: 완료. 지식 읽기 처리 완료.
+en: Success. Knowledge read processed.
+
+RebuildKnowledge
+ko: 완료. 지식 색인 재생성 처리 완료.
+en: Success. Knowledge rebuild processed.
+
+RefreshKnowledge
+ko: 완료. 지식 갱신 처리 완료.
+en: Success. Knowledge refresh processed.
+
+RememberKnowledge
+ko: 완료. 지식 기록 처리 완료.
+en: Success. Knowledge remember processed.
+
+RetrieveKnowledge
+ko: 완료. 지식 관련 자료 검색 처리 완료.
+en: Success. Knowledge retrieve processed.
+
+ScanKnowledge
+ko: 완료. 지식 폴더 조사 처리 완료.
+en: Success. Knowledge scan processed.
+
+SuppressKnowledge
+ko: 완료. 지식 검색 제외 처리 완료.
+en: Success. Knowledge suppress processed.
+
+TransferKnowledge
+ko: 완료. 지식 이전 처리 완료.
+en: Success. Knowledge transfer processed.
+
+SyncNotionKnowledge
+ko: 완료. 지식 Notion 동기화 처리 완료.
+en: Success. Knowledge syncnotion processed.
+
+RetrieveNotionKnowledge
+ko: 완료. 지식 Notion 검색 처리 완료.
+en: Success. Knowledge retrievenotion processed.
+
+WriteThroughNotionKnowledge
+ko: 완료. 지식 Notion 기록 처리 완료.
+en: Success. Knowledge writethroughnotion processed.
+
+MapKnowledgeCollection
+ko: 완료. 지식 모음 연결 처리 완료.
+en: Success. Knowledge collection mapped.
+
+RebuildKnowledgeIndex
+ko: 완료. 지식 검색 색인 재생성 완료.
+en: Success. Knowledge search index rebuilt.
+
+LintSourceWiki
+ko: 완료. 소스 위키 검사 완료.
+en: Success. Source Wiki checked.
+
+QuerySourceWiki
+ko: 완료. 소스 위키 검색 완료.
+en: Success. Source Wiki searched.
+
+RebuildSourceWikiIndex
+ko: 완료. 소스 위키 색인 재생성 완료.
+en: Success. Source Wiki index rebuilt.
+
+InspectUserSetupProgress
+ko: 완료. 사용자 설정 진행 확인 완료.
+en: Success. User setup progress inspect processed.
+
+SaveUserSetupProgress
+ko: 완료. 사용자 설정 진행 저장 완료.
+en: Success. User setup progress save processed.
+
+ClearUserSetupProgress
+ko: 완료. 사용자 설정 진행 초기화 완료.
+en: Success. User setup progress clear processed.
+
+InspectProjectSetupProgress
+ko: 완료. 프로젝트 설정 진행 확인 완료.
+en: Success. Project setup progress inspect processed.
+
+SaveProjectSetupProgress
+ko: 완료. 프로젝트 설정 진행 저장 완료.
+en: Success. Project setup progress save processed.
+
+ClearProjectSetupProgress
+ko: 완료. 프로젝트 설정 진행 초기화 완료.
+en: Success. Project setup progress clear processed.
+
