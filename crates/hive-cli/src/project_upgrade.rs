@@ -2713,6 +2713,15 @@ fn plan_changes(
 }
 
 fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
+    let omitted_guidance_paths = plan
+        .reports
+        .iter()
+        .filter(|report| {
+            report.omitted_incoming_hunks > 0
+                && is_hive_directive_projection_path(Path::new(&report.path))
+        })
+        .map(|report| report.path.as_str())
+        .collect::<Vec<_>>();
     let action = match mode {
         CommandMode::Scan => "ScanProjectUpgrade",
         CommandMode::DryRun | CommandMode::Apply => "UpdateProjectHarness",
@@ -2733,10 +2742,19 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
         } else {
             "hive.project-upgrade-planned"
         },
-        message: if plan.changed_paths.is_empty() {
-            "project harness is current".to_owned()
-        } else {
-            "project harness upgrade plan validated".to_owned()
+        message: {
+            let mut message = if plan.changed_paths.is_empty() {
+                "project harness is current".to_owned()
+            } else {
+                "project harness upgrade plan validated".to_owned()
+            };
+            if !omitted_guidance_paths.is_empty() {
+                message.push_str(&format!(
+                    "; incoming guidance omitted to preserve user replacements: {}",
+                    omitted_guidance_paths.join(", ")
+                ));
+            }
+            message
         },
         changed_paths: plan.changed_paths.clone(),
         evidence: vec![ProjectEvidence {
@@ -2753,7 +2771,8 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
             "normalized_fields": plan.normalized_fields,
             "skill_merges": plan.skill_merges,
             "plan_digest": plan.plan_digest,
-            "reports": plan.reports
+            "reports": plan.reports,
+            "omitted_guidance_paths": omitted_guidance_paths
         })),
     }
 }
@@ -4218,6 +4237,46 @@ mod tests {
 
         assert_eq!(merged.bytes.as_deref(), Some(current.as_ref()));
         assert_eq!(merged.disposition, MergeDisposition::IncomingReplace);
+    }
+
+    #[test]
+    fn replaced_harness_omission_is_visible_in_upgrade_summary() {
+        let path = ".agents/directives/00-project-harness.md";
+        let base = b"# Hive harness\n- Preserve owner boundaries.\n";
+        let local = b"# My entirely independent project notes\nUse the team workflow.\n";
+        let incoming = b"# Hive harness\n- Preserve owner boundaries and new checks.\n";
+        let merged = three_way_merge_hive_directive(
+            Path::new(path),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(merged.bytes.as_deref(), Some(local.as_slice()));
+        assert!(merged.omitted_incoming_hunks > 0);
+        let mut plan = one_file_plan(path, Some(local), Some(local));
+        plan.reports.push(PathReport {
+            path: path.into(),
+            base_digest: Some(sha256_digest(base)),
+            local_digest: Some(sha256_digest(local)),
+            incoming_digest: Some(sha256_digest(incoming)),
+            final_digest: Some(sha256_digest(local)),
+            disposition: merged.disposition,
+            omitted_incoming_hunks: merged.omitted_incoming_hunks,
+            local_priority: merged.local_priority,
+        });
+        for mode in [
+            CommandMode::DryRun,
+            CommandMode::Apply,
+            CommandMode::Validate,
+        ] {
+            let result = plan_result(&plan, mode);
+            assert!(result.message.contains(path));
+            assert_eq!(
+                result.data.unwrap()["omitted_guidance_paths"],
+                json!([path])
+            );
+        }
     }
 
     #[test]
