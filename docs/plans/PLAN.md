@@ -21,7 +21,8 @@
 | --- | ---: | ---: | ---: |
 | 프로젝트 판별 | 9 | 3 | 75.0% |
 | 최우선 CLI·업데이트 설명·Discord 정정 | 6 | 0 | 100.0% |
-| **현재 범위 합계** | **15** | **3** | **83.3%** |
+| 단계 4 재검토 수정 | 0 | 7 | 0.0% |
+| **현재 범위 합계** | **15** | **10** | **60.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -30,7 +31,9 @@
 | --- | --- | --- |
 | [0.15.1-detection.md](active/0.15.1-detection.md) | `OV151-001–011` | 프로젝트 판별 |
 
-| [0.15.1-human-output.md](active/0.15.1-human-output.md) | `OV151-013–017` | 최우선 CLI·업데이트 설명·Discord 정정 |
+| [0.15.1-human-output.md](active/0.15.1-human-output.md) | `OV151-013–018` | 최우선 CLI·업데이트 설명·Discord 정정 |
+
+| [0.15.1-review-fixes.md](active/0.15.1-review-fixes.md) | `OV151-019–025` | 단계 4 재검토 수정 |
 
 ## 이전 근거
 
