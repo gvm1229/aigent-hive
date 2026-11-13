@@ -1333,3 +1333,18 @@
 | [passed](runs/20261113T033030-cf6dea1a7692.md) | 개발 검증: uv.EXE | ae3db3f1359833adec7c443401bb2c2085005b7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T033312-e3d004e326c3.md) | 개발 검증: cargo.EXE | ae3db3f1359833adec7c443401bb2c2085005b7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T033822-0e12aef12c22.md) | Python conformance: documentation | 48f74fb33ff2939a39a60cab6009cd6f681747ab | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T043054-277e718274bd.md) | CLI 사람용 출력 컴파일과 가까운 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261113T043143-295fb2a9c649.md) | CLI 전체 회귀 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T043439-43586e19f17e.md) | 명령 계열별 사람용 출력 실제 실행 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T043553-35343f415a93.md) | 명령 계열 출력 경계 누락 수정 재검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T043727-0f92f566d57a.md) | 출력기와 별칭 수정의 가까운 단위 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T043809-c8a42113aabf.md) | 명령 계열별 출력 최종 가까운 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T043857-88cbde240cb8.md) | 공통 출력기의 정적 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044005-83815b7cdb31.md) | CLI 공통 출력 최종 가까운 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044040-a4b8bbcb49d1.md) | CLI 공통 출력 최종 가까운 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T044107-7a7216bb0168.md) | CLI 공통 출력 최종 가까운 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261113T044138-c58addfe8e5f.md) | 공통 출력기의 정적 검사 수정 확인 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044223-ff816eed22cc.md) | 출력기의 경고 오류화 검사 | 95154fdc773eeb7e9974d467c2b1a437d637ff1b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044303-4223afd93f70.md) | 출력 스냅샷 마지막 빈 줄 정리 확인 | e0a6cf88113aa4979deef3bfacd3baca008169ea | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044514-a0cdf9af578d.md) | 도움말의 JSON 선택 표시 검사 | dddb56411def4aa23d73d75ddf1822c8bbe7ca4b | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T044552-a0b1bc645f64.md) | 사람용 다음 명령과 기계 계약 분리 확인 | dddb56411def4aa23d73d75ddf1822c8bbe7ca4b | Windows-11-10.0.26300-SP0 |
