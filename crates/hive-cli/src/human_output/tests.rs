@@ -120,3 +120,44 @@ fn storage_preview_and_session_changes_report_outcomes_without_rewriting_user_te
     let page = json!({"action":"ReadKnowledge","status":"success","exit_code":0,"data":{"body":"prepared"}});
     assert!(render(&page, InterfaceLanguage::Ko, "knowledge").contains("내용: prepared"));
 }
+
+#[test]
+fn private_worker_wire_protocol_is_not_changed_by_the_user_display_default() {
+    let previous = OPTIONS.with(|options| options.borrow().clone());
+    let root = crate::test_tempdir();
+    let path = root.path().to_str().unwrap();
+    for command in [
+        "__setup-apply-worker",
+        "__complete-user-update",
+        "__direct-install-scope",
+    ] {
+        configure(&[command, "--user-root", path].map(str::to_owned));
+        assert!(machine());
+    }
+    configure(&["usage", "show", "--user-root", path].map(str::to_owned));
+    assert!(!machine());
+    configure(&["usage", "show", "--user-root", path, "--output", "json"].map(str::to_owned));
+    assert!(machine());
+    OPTIONS.with(|options| *options.borrow_mut() = previous);
+}
+
+#[test]
+fn common_safety_errors_explain_the_actual_cause_and_recovery() {
+    for (message, expected) in [
+        (
+            "consumer target is a Hive source workspace",
+            "다른 프로젝트 폴더",
+        ),
+        ("usage check requires --output json", "--output 옵션을 빼고"),
+        ("symlink target refused", "실제 폴더의 전체 경로"),
+        (
+            "orchestration is disabled in this build",
+            "켜는 경로가 없습니다",
+        ),
+    ] {
+        let value =
+            json!({"action":"UnknownAction","status":"error","exit_code":2,"message":message});
+        assert!(render(&value, InterfaceLanguage::Ko, "example").contains(expected));
+        assert_eq!(value["message"], message);
+    }
+}

@@ -20,6 +20,8 @@ thread_local! {
 
 pub(crate) fn configure(arguments: &[String]) {
     let json = arguments.windows(2).any(|pair| pair == ["--output", "json"])
+        // Private worker names explicitly select an internal wire protocol, not a user command.
+        || arguments.first().is_some_and(|argument| argument.starts_with("__"))
         // Native hooks opt into their host's protocol with --stdin-json.
         || (arguments.first().is_some_and(|arg| arg == "policy")
             && arguments.get(1).is_some_and(|arg| arg == "hook")
@@ -206,9 +208,65 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> St
             sentence(message)
         );
     }
-    let cause = if message.chars().any(|c| ('가'..='힣').contains(&c)) {
-        message.to_owned()
-    } else if message.contains("duplicate") {
+    let cause = korean_cause(message);
+    let mut output = format!(
+        "처리 실패: {}. {cause}",
+        ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료")
+    );
+    output.push_str("\n다음 단계: ");
+    output.push_str(&value["next_action"].as_str().map_or_else(
+        || "--help로 입력 방법을 확인하세요. 자세한 원인은 같은 명령의 --output json에서 확인할 수 있습니다.".into(), next_ko));
+    output
+}
+
+fn korean_cause(message: &str) -> String {
+    if message.chars().any(|c| ('가'..='힣').contains(&c)) {
+        return message.into();
+    }
+    let lower = message.to_ascii_lowercase();
+    let plain = if (lower.contains("source workspace") || lower.contains("source root"))
+        && lower.contains("consumer")
+    {
+        Some("Hive 자체 코드를 고치는 폴더에서는 사용자·프로젝트 설정을 적용할 수 없습니다. Hive를 사용할 다른 프로젝트 폴더를 대상으로 골라 주세요.")
+    } else if lower.contains("symlink")
+        || lower.contains("reparse")
+        || lower.contains("symbolic link")
+    {
+        Some("다른 위치로 연결된 경로라서 안전하게 처리할 수 없습니다. 연결 경로 대신 실제 폴더의 전체 경로를 선택하세요.")
+    } else if lower.contains("orchestration") && lower.contains("disabled") {
+        Some("이번 버전의 작업자 자동 실행은 꺼져 있으며 켜는 경로가 없습니다. 작업 내용의 미리보기와 전달 준비만 사용할 수 있습니다.")
+    } else if lower.contains("--summary") && lower.contains("preview") {
+        Some("변경 승인용 미리보기와 질문 설명에는 요약 옵션을 함께 쓸 수 없습니다. --summary를 빼고 확인하세요.")
+    } else if lower.contains("output") && lower.contains("json") {
+        Some("직접 지정할 수 있는 기계 출력 형식은 JSON입니다. 사람이 읽는 결과는 --output 옵션을 빼고 실행하세요.")
+    } else if lower.contains("usable terminal") {
+        Some("대화형 실행에는 직접 입력할 수 있는 터미널이 필요합니다. 터미널에서 다시 실행하거나 --interactive를 빼고 필요한 입력을 지정하세요.")
+    } else if lower.contains("software update approval") {
+        Some("프로그램 업데이트 설치를 승인하지 않아 설치하지 않았습니다. 설치를 원할 때 터미널에서 내용을 확인하고 승인하세요.")
+    } else if lower.contains("integer") && lower.contains("99") {
+        Some(
+            "사용량 기준은 0부터 99까지의 정수여야 합니다. 소수점이나 범위를 벗어난 값을 고치세요.",
+        )
+    } else if lower.contains("credential") || lower.contains("secret") {
+        Some("비밀 정보가 포함되어 이 작업을 진행할 수 없습니다. 비밀 값을 제외한 자료만 선택하세요.")
+    } else if lower.contains("signature") || lower.contains("digest") || lower.contains("checksum")
+    {
+        Some("현재 파일과 승인한 내용이 같은지 확인하지 못했습니다. 신뢰할 수 있는 원본과 변경 미리보기를 확인한 뒤 다시 승인하세요.")
+    } else if lower.contains("manifest") || lower.contains("ownership") {
+        Some("설치 기록과 파일의 소유를 확인하지 못했습니다. 원래 파일을 보존하고 설치 기록과 변경 미리보기를 먼저 확인하세요.")
+    } else if lower.contains("absolute") {
+        Some("대상 폴더의 전체 경로가 필요합니다. 현재 폴더에서 시작하는 짧은 경로 대신 전체 경로를 지정하세요.")
+    } else if lower.contains("schema") {
+        Some("입력 파일의 형식이나 버전을 확인하지 못했습니다. 해당 명령의 --help에서 필요한 파일 형식을 확인하세요.")
+    } else if lower.contains("conflict") && message.contains("--") {
+        Some("함께 사용할 수 없는 옵션을 선택했습니다. --help에서 한 가지 실행 방식만 골라 다시 실행하세요.")
+    } else {
+        None
+    };
+    if let Some(plain) = plain {
+        return plain.into();
+    }
+    if message.contains("duplicate") {
         "같은 입력을 두 번 지정했습니다. 중복된 옵션을 지우세요.".into()
     } else if message.contains("missing")
         || message.contains("requires")
@@ -235,15 +293,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> St
         "사용량을 확인하지 못했거나 보호 기준에 도달했습니다. 사용량과 다음 초기화 시간을 확인하세요.".into()
     } else {
         "입력이나 현재 상태를 확인하지 못했습니다. 대상 파일과 저장된 설정을 확인하세요.".into()
-    };
-    let mut output = format!(
-        "처리 실패: {}. {cause}",
-        ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료")
-    );
-    output.push_str("\n다음 단계: ");
-    output.push_str(&value["next_action"].as_str().map_or_else(
-        || "--help로 입력 방법을 확인하세요. 자세한 원인은 같은 명령의 --output json에서 확인할 수 있습니다.".into(), next_ko));
-    output
+    }
 }
 
 fn next_ko(next: &str) -> String {

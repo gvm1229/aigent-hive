@@ -45,7 +45,7 @@ No consumer state in source, source directives in releases, or user data in rele
 
 - Human CLI defaults use one shared ActionResult renderer in the configured language: result,
   before/after, recovery and next step. No raw JSON. JSON is opt-in (`--output json`); preserve exact
-  machine contracts and explicit native hook protocols. Match human help/examples.
+  machine contracts and explicit worker/hook protocols. Match human help/examples.
 
 ## Skill boundary
 
