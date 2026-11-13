@@ -78,10 +78,10 @@ class UpdateDiscoveryConformance(Phase1CliTestCase):
 
             self.assertEqual(process.returncode, 2)
             self.assertIn("Software update approval is required", process.stdout)
-        self.assertFalse(process.stdout.lstrip().startswith("{"))
-        self.assertIn("Next:", process.stdout)
-            self.assertIn("no update was installed", process.stderr)
-            self.assertEqual(process.stdout, "")
+            self.assertFalse(process.stdout.lstrip().startswith("{"))
+            self.assertIn("Next:", process.stdout)
+            self.assertIn("no update was installed", process.stdout)
+            self.assertTrue(process.stdout.strip())
             self.assertEqual(snapshot_tree(user_root), before)
             self.assertEqual(
                 {
