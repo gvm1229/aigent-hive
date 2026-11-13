@@ -11,7 +11,7 @@ pub const PROVIDERS_PATH: &str = ".hive/config/skill-providers.json";
 /// Verified plugin files keyed by the compiler's portable project-relative path.
 pub type PluginSkillFiles = BTreeMap<String, Vec<u8>>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct SkillProviders {
     pub schema_version: u32,
@@ -78,7 +78,19 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
     target: &T,
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
     plugin: &PluginSkillFiles,
+    host: &str,
 ) -> Result<(), RenderError> {
+    let empty = PluginSkillFiles::new();
+    let scoped = plugin
+        .keys()
+        .any(|path| path.starts_with("@verified-host/"));
+    let plugin = if (scoped && !plugin.contains_key(&format!("@verified-host/{host}")))
+        || (!scoped && host != "codex")
+    {
+        &empty
+    } else {
+        plugin
+    };
     let plugin_files = plugin
         .iter()
         .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
@@ -87,7 +99,7 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
     let mut ledger = SkillProviders {
         schema_version: 1,
         product_version: env!("CARGO_PKG_VERSION").to_owned(),
-        provider: "aigent-hive:codex".to_owned(),
+        provider: format!("aigent-hive:{host}"),
         skills: BTreeMap::new(),
         local_skills: BTreeMap::new(),
     };
@@ -153,6 +165,18 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
                 break;
             }
         }
+        if host == "claude" && !changed {
+            for (suffix, bytes) in &expected {
+                let path = PathBuf::from(format!(".claude/skills/{name}/{suffix}"));
+                if hive_core::validate_hive_skill_projection_relative(&path).is_err() {
+                    continue;
+                }
+                if read_target_optional(target, &path)?.is_some_and(|local| local != *bytes) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
         if changed {
             ledger
                 .local_skills
@@ -162,6 +186,11 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
         ledger.skills.insert(name, digest(&expected));
         for path in owned {
             files.remove(&path);
+            if host == "claude" {
+                files.remove(&PathBuf::from(
+                    path.to_string_lossy().replacen(".agents/", ".claude/", 1),
+                ));
+            }
         }
     }
     files.insert(PathBuf::from(PROVIDERS_PATH), encode(&ledger)?);
@@ -192,7 +221,10 @@ pub fn covered(
     })?;
     if ledger.schema_version != 1
         || ledger.product_version != version
-        || ledger.provider != "aigent-hive:codex"
+        || !matches!(
+            ledger.provider.as_str(),
+            "aigent-hive:codex" | "aigent-hive:claude"
+        )
         || encode(&ledger)? != bytes
     {
         return Err(RenderError::Verification(
@@ -220,6 +252,7 @@ pub fn covered(
                     | "content-different"
                     | "unowned-resource"
                     | "modified-resource"
+                    | "invocation-policy-different"
             )
         {
             return Err(RenderError::Verification(format!(
@@ -282,6 +315,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn verified_plugin_is_bound_to_its_host() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = crate::open_target_capability(temporary.path()).unwrap();
+        let projection = hive_projection::compile_project_projection(
+            hive_projection::Host::Codex,
+            &["prompt-refine".into()],
+            &[],
+        )
+        .unwrap();
+        let mut plugin = projection.files.clone();
+        plugin.insert("@verified-host/codex".into(), Vec::new());
+        for host in ["codex", "claude"] {
+            let mut files = projection
+                .files
+                .iter()
+                .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
+                .collect();
+            apply(&target, &mut files, &plugin, host).unwrap();
+            assert_eq!(
+                files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md")),
+                host == "claude"
+            );
+        }
+    }
+
+    #[test]
     fn matching_body_requires_matching_verified_invocation_policy() {
         let temporary = tempfile::tempdir().unwrap();
         let target = crate::open_target_capability(temporary.path()).unwrap();
@@ -315,7 +374,7 @@ mod tests {
             } else if policy.is_none() {
                 plugin.remove(metadata);
             }
-            apply(&target, &mut files, &plugin).unwrap();
+            apply(&target, &mut files, &plugin, "codex").unwrap();
             let ledger: SkillProviders =
                 serde_json::from_slice(&files[Path::new(PROVIDERS_PATH)]).unwrap();
             let local = files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md"));

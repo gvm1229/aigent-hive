@@ -1134,22 +1134,40 @@ pub(crate) fn validate_configured_host(
 pub(crate) fn validated_codex_plugin_files(
     user_root: &Path,
 ) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
+    validated_plugin_files_for_host(user_root, crate::user_setup::SelectedHost::Codex)
+}
+
+pub(crate) fn validated_project_plugin_files(
+    user_root: &Path,
+) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
+    let mut files = hive_render::skill_delivery::PluginSkillFiles::new();
+    for (host, selected) in [
+        ("codex", crate::user_setup::SelectedHost::Codex),
+        ("claude", crate::user_setup::SelectedHost::Claude),
+    ] {
+        if let Ok(projection) = validated_plugin_files_for_host(user_root, selected) {
+            files.extend(projection);
+            files.insert(format!("@verified-host/{host}"), Vec::new());
+        }
+    }
+    if files.is_empty() {
+        return Err("no supported user plugin is verified".into());
+    }
+    Ok(files)
+}
+
+fn validated_plugin_files_for_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
     let root = open_user_root_for_setup(user_root)?;
     let (config, skills) = crate::user_setup::resolved_operational_skills(&root)
         .map_err(|error| error.message().to_owned())?
         .ok_or_else(|| "global Hive setup is missing".to_owned())?;
-    if !config
-        .selected_hosts
-        .contains(&crate::user_setup::SelectedHost::Codex)
-    {
-        return Err("Codex is not a selected Hive host".to_owned());
+    if !config.selected_hosts.contains(&selected_host) {
+        return Err("plugin host is not selected".to_owned());
     }
-    validate_configured_host(
-        user_root,
-        crate::user_setup::SelectedHost::Codex,
-        &config,
-        &skills,
-    )?;
+    validate_configured_host(user_root, selected_host, &config, &skills)?;
     let language = match config.interface_language {
         crate::user_setup::InterfaceLanguage::Ko => DescriptorLanguage::Ko,
         crate::user_setup::InterfaceLanguage::En => DescriptorLanguage::En,

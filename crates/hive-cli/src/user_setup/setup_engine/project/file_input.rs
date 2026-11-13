@@ -209,7 +209,7 @@ fn file_scope(
         .0;
     let mut global = user_setup::project_preferences(&root).map_err(RenderError::Input)?;
     global.codex_plugin_files =
-        crate::user_install::validated_codex_plugin_files(&root).unwrap_or_default();
+        crate::user_install::validated_project_plugin_files(&root).unwrap_or_default();
     let options = Options {
         target,
         root,

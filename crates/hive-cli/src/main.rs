@@ -803,7 +803,7 @@ fn execute_setup_and_registry(
             .map(|preferences| &preferences.codex_plugin_files)
             .filter(|files| !files.is_empty())
         {
-            let current = user_install::validated_codex_plugin_files(user_root)
+            let current = user_install::validated_project_plugin_files(user_root)
                 .map_err(RenderError::Verification)?;
             if &current != expected {
                 return Err(RenderError::Verification(

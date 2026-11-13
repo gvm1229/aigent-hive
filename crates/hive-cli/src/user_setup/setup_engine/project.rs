@@ -363,7 +363,7 @@ fn resume_without_input(
 fn global_preferences(root: &Path) -> Result<hive_render::GlobalProjectPreferences, SetupError> {
     let mut global = user_setup::project_preferences(root).map_err(SetupError::Conflict)?;
     global.codex_plugin_files =
-        crate::user_install::validated_codex_plugin_files(root).unwrap_or_default();
+        crate::user_install::validated_project_plugin_files(root).unwrap_or_default();
     Ok(global)
 }
 

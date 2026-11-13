@@ -612,6 +612,9 @@
           ]
         }
       }
+    },
+    "compact_layout": {
+      "type": "boolean"
     }
   },
   "allOf": [

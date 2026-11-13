@@ -185,7 +185,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 ));
             }
             let plugin = user_root.as_deref()
-                .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                .and_then(|root| crate::user_install::validated_project_plugin_files(root).ok())
                 .unwrap_or_default();
             if let Some(SkillReview::Inputs(name)) = skill_merges.as_ref() {
                 if mode != CommandMode::Scan || approval.is_some() {
@@ -211,7 +211,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             if mode == CommandMode::Apply {
                 if !plugin.is_empty() {
                     let refreshed = user_root.as_deref()
-                        .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                        .and_then(|root| crate::user_install::validated_project_plugin_files(root).ok())
                         .unwrap_or_default();
                     if refreshed != plugin {
                         return Err(UpdateError::Conflict("Codex plugin changed after the project cleanup preview; no project files changed".to_owned()));
@@ -449,11 +449,8 @@ fn prepare_candidate(
             .map(|entry| (entry.path.clone(), entry.content.as_bytes().to_vec()))
             .collect::<BTreeMap<_, _>>()
     });
-    let provider_bytes = read_bounded_optional(
-        target,
-        Path::new(hive_render::skill_delivery::PROVIDERS_PATH),
-        MAX_LEDGER_BYTES,
-    )?;
+    let provider_bytes =
+        hive_render::project_skill_provider_bytes_in(target).map_err(render_error)?;
     let provider_base = base_files
         .iter()
         .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
