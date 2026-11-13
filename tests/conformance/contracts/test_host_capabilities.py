@@ -110,7 +110,7 @@ class V09HostNativeContractTests(unittest.TestCase):
         ):
             self.assertIn(required, text)
         for forbidden in (
-            "Never call provider APIs, request credentials, or launch model/subagent processes.",
+            "No provider APIs, credential requests or model/subagent process launch.",
         ):
             self.assertIn(forbidden, text)
 

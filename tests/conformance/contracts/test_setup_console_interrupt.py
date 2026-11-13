@@ -449,7 +449,9 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
             capture_output=True, text=True, timeout=45,
             creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup,
         )
-        self.assertEqual(result.returncode, 0, result.stderr)
+        error_path = Path(str(result_path) + ".error.txt")
+        detail = error_path.read_text(encoding="utf-8", errors="replace") if error_path.exists() else ""
+        self.assertEqual(result.returncode, 0, result.stderr + "\n" + detail)
         self.assertNotEqual(json.loads(result_path.read_text())["exit_code"], 0)
         if kind == "eof":
             self.assertEqual(json.loads(result_path.read_text())["exit_code"], 2)
