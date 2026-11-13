@@ -145,6 +145,7 @@ fn topic(action: &str, family: &str) -> (String, String) {
         return ((*ko).into(), (*en).into());
     }
     let (ko, en) = match family {
+        "hook" => ("연결 작업 확인 완료", "Hook request checked"),
         "source-wiki" => ("소스 위키 요청 처리 완료", "Source Wiki request processed"),
         "knowledge" => ("지식 요청 처리 완료", "Knowledge request processed"),
         "run" => ("작업 기록 처리 완료", "Work records processed"),

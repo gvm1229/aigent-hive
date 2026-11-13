@@ -348,15 +348,8 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
             update_discovery::run(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
-        Some("doctor" | "check-target") => {
-            let mut human_arguments = arguments.clone();
-            if let Some(index) = human_arguments
-                .windows(2)
-                .position(|pair| pair == ["--output", "json"])
-            {
-                human_arguments.drain(index..index + 2);
-            }
-            match run_human(human_arguments.into_iter()) {
+        Some("doctor" | "check-target") if !wants_json(&arguments) => {
+            match run_human(arguments.into_iter()) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(message) => human_output::error(&message),
             }
@@ -2262,7 +2255,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             check_target(Path::new(&target))
         }
         Some("-v" | "-V" | "--version") => {
-            println!("{}", version_output());
+            human_output::emit_version(&version_output());
             Ok(())
         }
         Some("-h" | "--help") | None => {

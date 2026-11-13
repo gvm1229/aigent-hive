@@ -327,6 +327,7 @@ fn next_ko(next: &str) -> String {
 fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
     let (ko, en) = match key {
         "enabled" => ("사용 여부", "Enabled"),
+        "active" => ("실제 동작 여부", "Active"),
         "guard_enabled" | "enforcement_enabled" => ("일반 사용량 보호", "General usage protection"),
         "quota_reset_guard_enabled" => ("사용량 초기화 보호", "Usage reset protection"),
         "zero_quota_guard_enabled" => ("사용량 소진 보호", "Zero-quota protection"),
@@ -484,6 +485,8 @@ fn scalar(value: &Value, language: InterfaceLanguage) -> String {
             "success" | "complete" | "completed" => choose(language, "완료", text),
             "disabled" | "inactive" => choose(language, "꺼짐", text),
             "enabled" | "active" => choose(language, "켜짐", text),
+            "allow" => choose(language, "허용", text),
+            "block" | "deny" => choose(language, "차단", text),
             "running" => choose(language, "실행 중", text),
             "stopped" => choose(language, "종료 확인", text),
             "verified" => choose(language, "확인됨", text),
@@ -536,6 +539,20 @@ pub(crate) fn guidance(lines: &[String]) {
 
 pub(crate) fn machine() -> bool {
     OPTIONS.with(|options| options.borrow().json)
+}
+
+pub(crate) fn emit_version(text: &str) {
+    OPTIONS.with(|options| {
+        let display = if options.borrow().language == InterfaceLanguage::Ko {
+            text.replace("local developer build", "로컬 개발판")
+                .replace("developer test build", "개발 시험판")
+                .replace("released ", "출시 ")
+                .replace("built ", "만든 날짜 ")
+        } else {
+            text.to_owned()
+        };
+        println!("{display}");
+    });
 }
 
 #[cfg(test)]

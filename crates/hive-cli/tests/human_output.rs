@@ -92,7 +92,7 @@ fn every_command_family_defaults_to_human_errors_in_both_languages() {
 }
 
 #[test]
-fn doctor_and_target_are_readable_and_json_is_explicit() {
+fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
     let root = tempfile::tempdir().unwrap();
     let target = root.path().to_str().unwrap();
     for args in [vec!["doctor"], vec!["check-target", target]] {
@@ -102,9 +102,10 @@ fn doctor_and_target_are_readable_and_json_is_explicit() {
         let mut args = args;
         args.extend(["--output", "json"]);
         let output = run(&args, "ko");
-        assert!(output.status.success());
+        assert_eq!(output.status.code(), Some(2));
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(value["status"], "success");
+        assert_eq!(value["action"], "UnknownAction");
+        assert_eq!(value["code"], "hive.unknown-action");
     }
 }
 
@@ -125,5 +126,26 @@ fn successful_storage_results_use_the_same_localized_renderer() {
             "Size (bytes)"
         }));
         assert!(!text.trim().starts_with('{'));
+    }
+}
+
+#[test]
+fn inactive_hook_has_readable_default_and_the_identical_explicit_wire_result() {
+    for language in ["ko", "en"] {
+        let output = run(&["hook", "--event", "Stop"], language);
+        assert!(output.status.success());
+        let text = String::from_utf8(output.stdout).unwrap();
+        assert!(text.contains(if language == "ko" {
+            "실제 동작 여부: 아니요"
+        } else {
+            "Active: no"
+        }));
+        assert!(!text.trim().starts_with('{'));
+        let output = run(&["hook", "--event", "Stop", "--output", "json"], language);
+        assert!(output.status.success());
+        assert_eq!(
+            output.stdout,
+            b"{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}\n"
+        );
     }
 }
