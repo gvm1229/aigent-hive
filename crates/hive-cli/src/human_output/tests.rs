@@ -32,7 +32,7 @@ fn threshold_shows_before_after_direction_and_recheck_without_changing_receipt()
             evidence: vec![],
             next_action: None,
             data: Some(
-                json!({"previous_remaining_percent":before,"threshold_remaining_percent":after,
+                json!({"scope":"global","previous_remaining_percent":before,"threshold_remaining_percent":after,
                 "session_recheck_required":before!=after}),
             ),
         };
@@ -42,6 +42,8 @@ fn threshold_shows_before_after_direction_and_recheck_without_changing_receipt()
         let ko = render(&value, InterfaceLanguage::Ko, "usage");
         assert!(en.contains(verb));
         assert!(ko.contains(&format!("{after}%")));
+        assert!(ko.contains("대상: 전역 설정"));
+        assert!(en.contains("higher of the global and project thresholds"));
         if before == after {
             assert!(!en.contains("Next:"));
         } else {

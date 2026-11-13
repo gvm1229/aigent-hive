@@ -172,6 +172,26 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
             &format!("Success. Hive usage guard threshold {direction} from {before}% to {after}%."),
         )
     };
+    if let Some(scope) = data["scope"]
+        .as_str()
+        .filter(|scope| matches!(*scope, "global" | "project"))
+    {
+        let (ko, en) = if scope == "global" {
+            ("전역 설정", "global settings")
+        } else {
+            ("현재 프로젝트 설정", "current project settings")
+        };
+        text.push_str(&choose(
+            language,
+            &format!("\n대상: {ko}"),
+            &format!("\nScope: {en}"),
+        ));
+        text.push_str(&choose(
+            language,
+            "\n전역과 프로젝트 기준 중 더 높은 값으로 보호합니다.",
+            "\nProtection uses the higher of the global and project thresholds.",
+        ));
+    }
     if data["session_recheck_required"] == true {
         text.push_str(&choose(
             language,
