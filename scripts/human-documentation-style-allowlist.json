@@ -874,5 +874,17 @@
     "line": 82,
     "reason": "Exact synthetic distractor fixture payload; preserve measured OVX-002 input bytes.",
     "text_sha256": "146e0c5aebc38e35cea3fc8ef2cac68a157875ace08013aefddaa86d84875538"
+  },
+  {
+    "path": "docs/research/overhaul/stage-4-command-coverage.md",
+    "line": 29,
+    "reason": "Exact CLI UI output literal required by the maintainer bilingual coverage table; not authored narrative.",
+    "text_sha256": "aa7380e641dca524fe745ffb4f5d52b8361d5721d38e270cfa591796494789b1"
+  },
+  {
+    "path": "docs/research/overhaul/stage-4-command-coverage.md",
+    "line": 54,
+    "reason": "Exact CLI UI output literal required by the maintainer bilingual coverage table; not authored narrative.",
+    "text_sha256": "630f073940f8c56d5c3bd276d592cf440b4624835e69d8ae0f94ba76046cbdfa"
   }
 ]
