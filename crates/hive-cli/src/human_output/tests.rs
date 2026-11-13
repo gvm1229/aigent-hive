@@ -163,3 +163,17 @@ fn common_safety_errors_explain_the_actual_cause_and_recovery() {
         assert_eq!(value["message"], message);
     }
 }
+
+#[test]
+fn graph_and_search_candidates_are_visible_without_implying_file_removal() {
+    let value = json!({"action":"QueryKnowledge","status":"success","exit_code":0,
+        "data":{"fts":{"hits":[{"title":"A graph hit","path":"facts/active.md"}]},
+            "candidates":[{"title":"A semantic candidate"}]}});
+    for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+        let text = render(&value, language, "knowledge");
+        assert!(text.contains("A graph hit"));
+        assert!(text.contains("A semantic candidate"));
+        assert!(!text.contains("삭제"));
+        assert!(!text.contains("removal"));
+    }
+}
