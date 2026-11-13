@@ -3,6 +3,19 @@ name: Recover stable Discord notification
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Recover a skipped original notice or correct the approved 0.15.0 notice after 0.15.1 stable
+        required: false
+        default: recover
+        type: choice
+        options:
+          - recover
+          - correct
+      message_id:
+        description: Optional known original Discord message ID; no webhook token
+        required: false
+        default: ""
+        type: string
       product_version:
         description: Published stable version whose approved notification was skipped
         required: true
@@ -22,6 +35,7 @@ concurrency:
 
 jobs:
   notify:
+    if: ${{ inputs.operation != 'correct' }}
     name: Verify and send skipped stable notification
     runs-on: ubuntu-24.04
     environment:
@@ -123,4 +137,109 @@ jobs:
         with:
           name: ${{ steps.contract.outputs.receipt_name }}
           path: notification-receipt.json
+          if-no-files-found: error
+
+  correct:
+    if: ${{ inputs.operation == 'correct' }}
+    name: Correct the reviewed 0.15.0 subscriber notice after 0.15.1 stable
+    runs-on: ubuntu-24.04
+    environment:
+      name: release-publication
+      deployment: false
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+      MESSAGE_ID: ${{ inputs.message_id }}
+    steps:
+      - name: Bind correction to the original publication and later reviewed stable source
+        id: contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF" = refs/heads/main
+          test "$PRODUCT_VERSION" = 0.15.0
+          [[ "$PUBLICATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          if [ -n "$MESSAGE_ID" ]; then [[ "$MESSAGE_ID" =~ ^[1-9][0-9]{16,21}$ ]]; fi
+          release=$(gh release view "v$PRODUCT_VERSION" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,targetCommitish)
+          test "$(jq -r .isDraft <<<"$release")" = false
+          test "$(jq -r .isPrerelease <<<"$release")" = false
+          source_sha=$(jq -r .targetCommitish <<<"$release")
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          publication=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID")
+          test "$(jq -r .name <<<"$publication")" = 'Publish npm distribution'
+          test "$(jq -r .event <<<"$publication")" = workflow_dispatch
+          test "$(jq -r .head_branch <<<"$publication")" = main
+          test "$(jq -r .conclusion <<<"$publication")" = success
+          test "$(jq -r .head_sha <<<"$publication")" = "$source_sha"
+          jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID/jobs?per_page=100")
+          sent=$(jq '[.jobs[].steps[] | select(.name == "Send stable Discord banner and subscriber update" and .conclusion == "success")] | length' <<<"$jobs")
+          test "$sent" = 1
+          later=$(gh release view v0.15.1 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,targetCommitish)
+          test "$(jq -r .isDraft <<<"$later")" = false
+          test "$(jq -r .isPrerelease <<<"$later")" = false
+          summary_source_sha=$(jq -r .targetCommitish <<<"$later")
+          [[ "$summary_source_sha" =~ ^[0-9a-f]{40}$ ]]
+          receipt_name="stable-discord-correction-$PRODUCT_VERSION-$summary_source_sha"
+          delivered=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$receipt_name&per_page=1")
+          if [ "$(jq -r .total_count <<<"$delivered")" != 0 ]; then
+            echo 'This reviewed correction already has a receipt; duplicate send refused.' >&2
+            exit 3
+          fi
+          printf 'source_sha=%s\n' "$source_sha" >>"$GITHUB_OUTPUT"
+          printf 'summary_source_sha=%s\n' "$summary_source_sha" >>"$GITHUB_OUTPUT"
+          printf 'receipt_name=%s\n' "$receipt_name" >>"$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.contract.outputs.summary_source_sha }}
+          persist-credentials: false
+      - name: Validate the reviewed correction without sending
+        env:
+          SUMMARY_SOURCE_SHA: ${{ steps.contract.outputs.summary_source_sha }}
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_APPROVAL: ${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SUMMARY_SOURCE_SHA"
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
+            --banner docs/assets/branding/hive-readme-banner-ko.png \
+            --correction --message-id "$MESSAGE_ID" --receipt correction-receipt.json --validate-only
+      - name: Edit or replace the approved notice and retain a safe receipt
+        env:
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+          AIGENT_HIVE_SUBSCRIBER_APPROVAL: ${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}
+        run: |
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --summary-approval "docs/releases/$PRODUCT_VERSION.subscriber.ko.sha256" \
+            --banner docs/assets/branding/hive-readme-banner-ko.png \
+            --correction --message-id "$MESSAGE_ID" --receipt correction-receipt.json
+      - name: Bind the delivery receipt to the exact sources
+        if: ${{ always() }}
+        env:
+          RELEASE_SOURCE_SHA: ${{ steps.contract.outputs.source_sha }}
+          SUMMARY_SOURCE_SHA: ${{ steps.contract.outputs.summary_source_sha }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path('correction-receipt.json')
+          if path.is_file():
+              receipt = json.loads(path.read_text())
+              receipt.update({
+                  'release_source_sha': os.environ['RELEASE_SOURCE_SHA'],
+                  'summary_source_sha': os.environ['SUMMARY_SOURCE_SHA'],
+                  'publication_run_id': os.environ['PUBLICATION_RUN_ID'],
+                  'notification_run_id': os.environ['GITHUB_RUN_ID'],
+              })
+              path.write_text(json.dumps(receipt, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: ${{ always() && steps.contract.outcome == 'success' }}
+        with:
+          name: ${{ steps.contract.outputs.receipt_name }}
+          path: correction-receipt.json
           if-no-files-found: error
