@@ -1404,3 +1404,4 @@
 | [passed](runs/20261113T062343-6af5a0b74806.md) | 확정 소스 Rust 전체·fmt·문서 예제·clippy 검증 | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T064157-a4b7edc85cb8.md) | Python conformance: integration | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T065503-1b3f7f292fc7.md) | Python conformance: release | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T070715-79357959c673.md) | Python conformance: documentation | 82aab2a0caf184224484e20abdae32075f627f22 | Windows-11-10.0.26300-SP0 |

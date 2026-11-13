@@ -14,7 +14,7 @@
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
-- 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 13/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
+- 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
 
 ## 승인
 
@@ -94,7 +94,7 @@
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 9/12 |
-| 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청 | 4/5 |
+| 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청 | 5/5 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |

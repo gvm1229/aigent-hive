@@ -1,16 +1,16 @@
 # Aigent Hive 활성 계획
 
-> Revision: 510
+> Revision: 511
 > 기준일: 2026-11-13
 > Product version: `0.15.1`
 > 공개 Stable: `0.15.0`
-> 현재 단계: 단계 4 최우선 CLI·안내 수정 검증 통과, push·종료 정리
+> 현재 단계: 단계 4 최우선 수정·검증·push 완료, Fable 추가 검토 대기
 > 공개 시험: `0.15.1-test.1` 미실행, 현재 요청 제외
 > 작업 브랜치: `feature/overhaul-4-0.15.1-detection`
 
 ## 목표와 결정
 
-- [기존 계획](active/0.15.1-detection.md)·[최우선 013–017](active/0.15.1-human-output.md): 전체 검사 통과, 커밋·push·종료 정리. Fable 추가 검토 전 태그·게시·병합 제외
+- [기존 계획](active/0.15.1-detection.md)·[최우선 013–017](active/0.15.1-human-output.md): 전체 검사·커밋·push 완료. Fable 추가 검토 전 태그·게시·병합 제외
 - [전면 위임](../research/overhaul/autonomy-default.md#2026-11-12-위임-확대): 버전 시작 사전 승인
 - 기존 감지 30종·검색 40개 고정 입력 유지, 모델 호출 0회
 
@@ -20,8 +20,8 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 프로젝트 판별 | 9 | 3 | 75.0% |
-| 최우선 CLI·업데이트 설명·Discord 정정 | 4 | 1 | 80.0% |
-| **현재 범위 합계** | **13** | **4** | **76.5%** |
+| 최우선 CLI·업데이트 설명·Discord 정정 | 5 | 0 | 100.0% |
+| **현재 범위 합계** | **14** | **3** | **82.4%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
