@@ -20,9 +20,9 @@ const REPORT_USAGE: &str = "\
 Create a local, sanitized report for an Aigent Hive developer.
 
 USAGE:
-    hive report preview --target <dir> --output json
-    hive report collect --target <dir> --issue-code <safe-id> [--summary <manual-summary>] --output json
-    hive report export --target <dir> --report <report-id> --destination <absolute-new-file> --output json
+    hive report preview --target <dir> [--output json]
+    hive report collect --target <dir> --issue-code <safe-id> [--summary <manual-summary>] [--output json]
+    hive report export --target <dir> --report <report-id> --destination <absolute-new-file> [--output json]
 
 Reports exclude raw prompts and transcripts, redact likely credentials in an
 optional manual summary, and never upload automatically.

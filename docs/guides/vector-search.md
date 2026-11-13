@@ -50,14 +50,14 @@ Windows 혼합 CPU에서는 보조 계산만 같은 성능 등급의 코어로 �
 먼저 정확한 범위와 다운로드 내역 확인:
 
 ```text
-hive knowledge vector preview --user-root <user-root> --target <project-root> --collection user-root --visibility shared --python <absolute-python-executable> --output json
+hive knowledge vector preview --user-root <user-root> --target <project-root> --collection user-root --visibility shared --python <absolute-python-executable>
 ```
 
 미리보기의 패키지·모델·용량·저장 경로를 승인한 뒤, 반환된 동의 지문을 그대로 사용:
 
 ```text
-hive knowledge vector enable --user-root <user-root> --target <project-root> --collection user-root --visibility shared --python <absolute-python-executable> --consent-digest <consent-digest> --output json
-hive knowledge vector rebuild --user-root <user-root> --target <project-root> --collection user-root --visibility shared --max-seconds 30 --output json
+hive knowledge vector enable --user-root <user-root> --target <project-root> --collection user-root --visibility shared --python <absolute-python-executable> --consent-digest <consent-digest>
+hive knowledge vector rebuild --user-root <user-root> --target <project-root> --collection user-root --visibility shared --max-seconds 30
 ```
 
 `complete=false`이면 같은 범위의 `rebuild`를 이어서 실행. 검증된 중간 복사본에서 재개하며,
@@ -66,7 +66,7 @@ hive knowledge vector rebuild --user-root <user-root> --target <project-root> --
 ## 검색과 결과 확인
 
 ```text
-hive knowledge retrieve --user-root <user-root> --target <project-root> --scope auto --query "지운 자료를 되찾는 방법" --mode semantic --top-k 5 --byte-budget 16384 --output json
+hive knowledge retrieve --user-root <user-root> --target <project-root> --scope auto --query "지운 자료를 되찾는 방법" --mode semantic --top-k 5 --byte-budget 16384
 ```
 
 `--mode`를 생략하면 기존 FTS. 의미 검색도 같은 프로젝트·공개 범위 권한을 사용하며,
@@ -91,9 +91,9 @@ hive knowledge retrieve --user-root <user-root> --target <project-root> --scope 
 외부 편집 감시용 상시 프로세스·원본 Markdown 자동 변환 없음.
 
 ```text
-hive knowledge refresh --user-root <user-root> --output json
-hive knowledge vector status --user-root <user-root> --target <project-root> --collection user-root --visibility shared --output json
-hive knowledge vector disable --user-root <user-root> --target <project-root> --collection user-root --visibility shared --output json
+hive knowledge refresh --user-root <user-root>
+hive knowledge vector status --user-root <user-root> --target <project-root> --collection user-root --visibility shared
+hive knowledge vector disable --user-root <user-root> --target <project-root> --collection user-root --visibility shared
 ```
 
 `disable`은 벡터 사용 중지이며 원본 지식 삭제가 아님. `rollback`은 현재 정본과 호환되는
@@ -106,7 +106,7 @@ hive knowledge vector disable --user-root <user-root> --target <project-root> --
 예시는 `user-root`와 `shared-notes`라는 기존 모음 두 개를 선택한 경우:
 
 ```text
-hive knowledge vector rebuild --user-root <user-root> --target <project-root> --visibility shared --collections '["user-root","shared-notes"]' --max-seconds 60 --workers 12 --output json
+hive knowledge vector rebuild --user-root <user-root> --target <project-root> --visibility shared --collections '["user-root","shared-notes"]' --max-seconds 60 --workers 12
 ```
 
 - 최대 100개를 지정하고 16개씩 처리. 모델·색인 읽기는 구간 안에서 공유, 모음별 저장소·권한은 분리
@@ -131,8 +131,8 @@ hive knowledge vector rebuild --user-root <user-root> --target <project-root> --
 소스 저장소에서는 소비자 경로 대신 다음 명령 사용:
 
 ```text
-hive source-wiki vector status --target <source-root> --language ko --output json
-hive source-wiki vector query --target <source-root> --language ko --query "중단된 작업을 복구하는 방법" --output json
+hive source-wiki vector status --target <source-root> --language ko
+hive source-wiki vector query --target <source-root> --language ko --query "중단된 작업을 복구하는 방법"
 ```
 
 소스의 설치·재생성도 같은 `source-wiki vector` 경로 사용.

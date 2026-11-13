@@ -1,26 +1,20 @@
 # 02. Architecture Directive
 
-Owns runtime, orchestration, artifact, Skill, and canonical-data boundaries. Filesystem mutation
-and credentials: `05-security-safety.md`.
+Runtime, orchestration, artifacts, Skills and data. Filesystem/credentials: `05-security-safety.md`.
 
 ## Artifact boundary
 
-Separate:
-
-1. Hive source workspace: source, tests, directives, and docs
-2. Release bundle: reproducible binaries and versioned projections
-3. Installed harness: generated files in an independent consumer project
-
-Never import consumer state into source, ship source directives, or store user data in a release
-or plugin cache. `harness/` is the only canonical consumer template and
-Skill source; host-specific files remain thin projections.
+Keep source (code/tests/directives/docs), release bundles (reproducible binaries/versioned
+projections), and installed harnesses (generated files in independent consumer projects) separate.
+No consumer state in source, source directives in releases, or user data in releases/plugin caches.
+`harness/` alone owns consumer templates/Skills; host files are thin projections.
 
 ## Runtime and orchestration
 
-- Hive uses authenticated subscription hosts and only officially documented provider CLI extension
-  points. Never call provider APIs, request credentials, or launch model/subagent processes.
-- Never inject keystrokes into or capture screens of provider CLIs, including tmux/psmux
-  send-keys/capture-pane and cmux. Claude stays interactive; no headless Claude.
+- Use subscription-authenticated hosts and official provider CLI extensions only. No provider APIs,
+  credential requests or model/subagent process launch.
+- No provider CLI key injection/screenshots, including tmux/psmux send-keys/capture-pane or cmux.
+  Claude stays interactive; no headless Claude.
 - The active vector plan permits a separately consented, non-generative local embedding indexer,
   not prompts, text generation, or agent execution.
 - Hosts own model calls/processes. Hive owns deterministic setup, canonical state, projection,
@@ -28,10 +22,9 @@ Skill source; host-specific files remain thin projections.
   contracts, and rollback.
 - Implement Hive-native iterative planning, bounded retry, logical scheduling, team coordination, and
   multi-goal execution with provider-neutral state machines, Skills, and declarative envelopes.
-- Keep new orchestration default-off until the host proves envelope consumption,
-  typed receipts, cancellation, and safe reclaim. Report unsupported or unverified capability
-  truthfully; uncertain launch remains `dispatch-uncertain`.
-- Never claim exactly-once dispatch without a qualified receipt and idempotency contract.
+- New orchestration stays off until hosts prove envelope consumption, typed receipts, cancellation
+  and safe reclaim. State unsupported/unverified capabilities; uncertain launch stays `dispatch-uncertain`.
+- Exactly-once dispatch claims require a qualified receipt and idempotency contract.
 - Bind mutation to exact target, event head, control epoch, request digest, and authenticated
   single-action authority. Ambient session pointers are selectors, never authority.
 - Keep status, cancellation, recovery, and usage control addressable by exact ID without scheduler
@@ -48,26 +41,31 @@ Skill source; host-specific files remain thin projections.
   identity and leaves the old owner and bytes unchanged.
 - Never switch an existing run owner or silently substitute another runtime.
 
+## CLI display
+
+- Human CLI defaults use one shared ActionResult renderer in the configured language: result,
+  before/after, recovery and next step. No raw JSON. JSON is opt-in (`--output json`); preserve exact
+  machine contracts and explicit native hook protocols. Match human help/examples.
+
 ## Skill boundary
 
 - Use narrow descriptions and host-native discovery; do not add a duplicate prompt-classifier hook.
 - Keep execution Skills declarative: validate state and prepare envelopes for official host
   extensions only. No provider calls, process launch, CLI key injection, or screen capture.
-- Keep reusable product Skills under `harness/skills/<name>/`. Only source-project exceptions: `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/`; both are
-  nonshipping, with no general source Skill inventory.
+- Product Skills: `harness/skills/<name>/`. Source exceptions: `.agents/skills/update-summary/`
+  and `.agents/skills/draft-devlog/`; neither ships. No general source Skill inventory.
 - Reuse a consumer workflow in source only after scope, consent, safety, and conformance review.
   Never copy installed project state or weaken source-root, usage, or mutation boundaries.
 - Apply a Skill rename through the complete current inventory and transitive rename ledger in one
   reviewed migration. Historical release bases remain immutable.
-- Load the smallest relevant approved Skill set. Simple questions load no unrelated Skill.
+- Load only relevant approved Skills; none unrelated for simple questions.
 
 ## Canonical data
 
 - Markdown owns knowledge, roles, plans, run status, and evidence.
 - Tracked typed YAML/TOML owns setup, approval, and suppression authority.
-- SQLite is disposable and rebuildable without model or network access; no fact may exist only in
-  SQLite.
+- SQLite is disposable, rebuilt without models/network; facts cannot live there alone.
   Canonical FTS follows this rule. Optional derived vectors may use the approved local embedding
   indexer; its absence must not affect FTS or canonical knowledge.
-- Source facts live as exact bilingual pairs under `docs/facts/en/` and `docs/facts/ko/`.
+- Exact bilingual source fact pairs: `docs/facts/en/` and `docs/facts/ko/`.
 - Never use OMX Wiki or consumer `.hive/knowledge/` as source knowledge.

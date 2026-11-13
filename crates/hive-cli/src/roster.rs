@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::process::ExitCode;
 
-const USAGE: &str = "hive roster [check --role <name> --capabilities <host-report.json>] --target <dir> --user-root <home> --output json\n";
+const USAGE: &str = "hive roster [check --role <name> --capabilities <host-report.json>] --target <dir> --user-root <home> [--output json]\n";
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments.iter().any(|s| s == "--help") {

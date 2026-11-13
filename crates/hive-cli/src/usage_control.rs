@@ -33,13 +33,13 @@ const USAGE_CONTROL: &str = "\
 Inspect or change the installed usage safeguard.
 
 USAGE:
-    hive usage show --host codex|claude|antigravity --user-root <dir> [--account-digest <sha256:...>] --output json
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
-    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] --output json
-    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
-    hive usage summarize-tokens --request <normalized-events.json> --output json
+    hive usage show --host codex|claude|antigravity --user-root <dir> [--account-digest <sha256:...>] [--output json]
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> [--output json]
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] [--output json]
+    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json [--output json]
+    hive usage summarize-tokens --request <normalized-events.json> [--output json]
 ";
 
 #[derive(Debug)]

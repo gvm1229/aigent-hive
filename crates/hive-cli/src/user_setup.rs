@@ -106,15 +106,15 @@ const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
 
 USAGE:
-    hive setup --scope user --describe --output json
-    hive setup --scope user --user-root <dir> --show --summary --output json
-    hive setup --scope user --user-root <dir> --describe --question <question-id> --output json
-    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] --output json
-    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
-    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
-    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
-    hive setup --progress status|clear --scope user [--user-root <dir>] --output json
-    hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] --output json
+    hive setup --scope user --describe [--output json]
+    hive setup --scope user --user-root <dir> --show --summary [--output json]
+    hive setup --scope user --user-root <dir> --describe --question <question-id> [--output json]
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] [--output json]
+    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] [--output json]
+    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] [--output json]
+    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] [--output json]
+    hive setup --progress status|clear --scope user [--user-root <dir>] [--output json]
+    hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] [--output json]
 
 MODES:
     --summary    Bound JSON status/completion output; not an approval preview

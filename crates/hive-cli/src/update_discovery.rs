@@ -19,7 +19,7 @@ const UPDATE_CHECK_USAGE: &str = "\
 Check the fixed npm registry metadata endpoint for a newer Aigent Hive version.
 
 USAGE:
-    hive update --check --user-root <absolute-dir> --output json
+    hive update --check --user-root <absolute-dir> [--output json]
 
 The check never installs or activates an update.
 ";

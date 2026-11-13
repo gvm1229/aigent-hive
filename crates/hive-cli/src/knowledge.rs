@@ -65,45 +65,45 @@ const KNOWLEDGE_USAGE: &str = "\
 Canonical Markdown knowledge and disposable SQLite index.
 
 USAGE:
-    hive knowledge ingest --target <dir> --source <file> --wiki <draft.md> [--user-root <dir>] --output json
-    hive knowledge add --target <dir> --source <file> --wiki <draft.md> [--quick] [--user-root <dir>] --output json
-    hive knowledge query --target <dir> (--text <query>|--tag <tag>|--category <category>) [--limit <1..100>] [--user-root <dir>] --output json
-    hive knowledge list --target <dir> [--tag <tag>] [--category <category>] [--limit <1..100>] [--user-root <dir>] --output json
-    hive knowledge read --target <dir> --page-id <id> [--user-root <dir>] --output json
-    hive knowledge promote --target <project> --user-root <dir> --page-id <id> --category fact|preference|workflow (--dry-run|--apply) --output json
-    hive knowledge promote --user-root <dir> --collection <id-or-alias> [--review-id <id>] --dry-run --output json
-    hive knowledge promote --user-root <dir> --collection <id-or-alias> --review-id <id> --expected-source-digest <sha256:...> --confirm-global-promotion --apply --output json
-    hive knowledge lint --target <dir> [--user-root <dir>] --output json
-    hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
-    hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
-    hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) --output json
-    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
-    hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
-    hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
-    hive knowledge collection attach|map --user-root <dir> --collection <id-or-alias> --target <dir> --authorization-id <id> --authorization-token <token> --output json
-    hive knowledge collection detach --user-root <dir> --collection <id-or-alias> --authorization-id <id> --authorization-token <token> --output json
-    hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
-    hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
-    hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
-    hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
-    hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
-    hive knowledge transfer merge preview --bundle <path>.hivekb --bundle <path>.hivekb [--user-root <dir>] --output json
-    hive knowledge transfer merge review|apply --bundle <path>.hivekb --bundle <path>.hivekb --preview-digest <sha256:...> --review <review.json> [--review-digest <sha256:...>] [--user-root <dir>] --output json
-    hive knowledge transfer status --id <transfer-id> [--user-root <dir>] --output json
-    hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
-    hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
-    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
+    hive knowledge ingest --target <dir> --source <file> --wiki <draft.md> [--user-root <dir>] [--output json]
+    hive knowledge add --target <dir> --source <file> --wiki <draft.md> [--quick] [--user-root <dir>] [--output json]
+    hive knowledge query --target <dir> (--text <query>|--tag <tag>|--category <category>) [--limit <1..100>] [--user-root <dir>] [--output json]
+    hive knowledge list --target <dir> [--tag <tag>] [--category <category>] [--limit <1..100>] [--user-root <dir>] [--output json]
+    hive knowledge read --target <dir> --page-id <id> [--user-root <dir>] [--output json]
+    hive knowledge promote --target <project> --user-root <dir> --page-id <id> --category fact|preference|workflow (--dry-run|--apply) [--output json]
+    hive knowledge promote --user-root <dir> --collection <id-or-alias> [--review-id <id>] --dry-run [--output json]
+    hive knowledge promote --user-root <dir> --collection <id-or-alias> --review-id <id> --expected-source-digest <sha256:...> --confirm-global-promotion --apply [--output json]
+    hive knowledge lint --target <dir> [--user-root <dir>] [--output json]
+    hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
+    hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
+    hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) [--output json]
+    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
+    hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--output json]
+    hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--output json]
+    hive knowledge collection attach|map --user-root <dir> --collection <id-or-alias> --target <dir> --authorization-id <id> --authorization-token <token> [--output json]
+    hive knowledge collection detach --user-root <dir> --collection <id-or-alias> --authorization-id <id> --authorization-token <token> [--output json]
+    hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] [--output json]
+    hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] [--output json]
+    hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) [--output json]
+    hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] [--output json]
+    hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb [--output json]
+    hive knowledge transfer merge preview --bundle <path>.hivekb --bundle <path>.hivekb [--user-root <dir>] [--output json]
+    hive knowledge transfer merge review|apply --bundle <path>.hivekb --bundle <path>.hivekb --preview-digest <sha256:...> --review <review.json> [--review-digest <sha256:...>] [--user-root <dir>] [--output json]
+    hive knowledge transfer status --id <transfer-id> [--user-root <dir>] [--output json]
+    hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] [--output json]
+    hive knowledge refresh (--target <legacy-project>|--user-root <dir>) [--output json]
+    hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] [--output json]
+    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive knowledge vector --help
-    hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
+    hive index rebuild (--target <legacy-project>|--user-root <dir>) [--output json]
 ";
 
 #[cfg(feature = "notion-preview")]
 const NOTION_KNOWLEDGE_USAGE: &str = "\
-    hive knowledge notion sync --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
-    hive knowledge notion rebuild --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
-    hive knowledge notion retrieve --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> (--request <request.json>|--query <text> [--scope global] [--top-k <1..100>] [--byte-budget <bytes>]) --output json
-    hive knowledge notion write-through --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --write-receipt <confirmed-write.json> --output json
+    hive knowledge notion sync --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> [--output json]
+    hive knowledge notion rebuild --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> [--output json]
+    hive knowledge notion retrieve --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> (--request <request.json>|--query <text> [--scope global] [--top-k <1..100>] [--byte-budget <bytes>]) [--output json]
+    hive knowledge notion write-through --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --write-receipt <confirmed-write.json> [--output json]
 ";
 
 const LEGACY_DERIVED_RELATIVES: [&str; 4] = [

@@ -1121,6 +1121,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             terminal.say("경고는 이미 확인한 사용량을 이용하며 추가로 조회하지 않습니다. 보호를 바꾸지 않고 사용량을 직접 확인하려면 다음 명령을 실행하세요.",
                 "Warnings reuse existing measurements without extra queries. To read usage without changing protection, run one of these commands:")?;
             for command in &manual_commands {
+                let command = command.strip_suffix(" --output json").unwrap_or(command);
                 terminal.say(command, command)?;
             }
         }

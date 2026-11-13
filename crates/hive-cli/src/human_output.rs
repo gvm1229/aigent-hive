@@ -138,7 +138,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         if language == InterfaceLanguage::Ko {
             output.push_str(&next_ko(next));
         } else {
-            output.push_str(next);
+            output.push_str(&next.replace(" --output json", ""));
         }
     }
     output
@@ -210,6 +210,8 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> St
 }
 
 fn next_ko(next: &str) -> String {
+    let readable = next.replace(" --output json", "");
+    let next = readable.as_str();
     if next.starts_with("hive ") {
         return format!("다음 명령으로 이어가세요: {next}");
     }

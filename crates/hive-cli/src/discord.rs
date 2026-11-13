@@ -18,8 +18,8 @@ const DISCORD_USAGE: &str = "\
 Inspect the host-owned Discord inbound continuation boundary.
 
 USAGE:
-    hive discord inbound --host codex|claude|antigravity --output json
-    hive discord test --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json
+    hive discord inbound --host codex|claude|antigravity [--output json]
+    hive discord test --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] [--output json]
 
 Discord notification delivery remains outbound-only. Claude inbound handling is
 delegated to the official Claude Discord Channel plugin. Codex continuation is

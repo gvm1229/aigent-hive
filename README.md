@@ -242,7 +242,7 @@ Export the global bundle:
 
 ```sh
 bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle" --output json
+hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle"
 shasum -a 256 "$bundle"
 ```
 
@@ -253,9 +253,9 @@ matches, and the dry run reports no conflict or validation error.
 ```sh
 bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 shasum -a 256 "$bundle"
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run --output json
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply --output json
-hive knowledge lint --target "$HOME" --user-root "$HOME" --output json
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply
+hive knowledge lint --target "$HOME" --user-root "$HOME"
 ```
 
 ### Windows PowerShell
@@ -264,7 +264,7 @@ Export the global bundle:
 
 ```powershell
 $bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle --output json
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle
 Get-FileHash -Algorithm SHA256 $bundle
 ```
 
@@ -275,9 +275,9 @@ conflict or validation error.
 ```powershell
 $bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 Get-FileHash -Algorithm SHA256 $bundle
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run --output json
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply --output json
-hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --output json
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply
+hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE
 ```
 
 ## Automatic dispatch safeguard
@@ -287,7 +287,7 @@ dispatch:
 
 ```console
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
-hive run resume --dispatch-intent automatic --target <project> --run <run-id> --capabilities <json> --output json
+hive run resume --dispatch-intent automatic --target <project> --run <run-id> --capabilities <json>
 ```
 
 The first command is only a preflight; it never authorizes dispatch by itself. External

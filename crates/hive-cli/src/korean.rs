@@ -20,14 +20,14 @@ const USAGE: &str = "\
 Inspect and verify Korean text without calling a model provider.
 
 USAGE:
-    hive korean inspect --profile response|release-note|documentation|technical|verbatim --input <file> [--target <consumer>] --output json
-    hive korean verify --profile response|release-note|documentation|technical|verbatim --before <file> --after <file> [--target <consumer>] --output json
-    hive korean sanitize --input <file> --output-file <file> --output json
-    hive korean pack check --output json
-    hive korean pack status --target <consumer> --output json
-    hive korean pack preview --target <consumer> --candidate <pack-dir> --output json
-    hive korean pack activate --target <consumer> --candidate <pack-dir> --consent-digest <sha256:...> --confirm-pack --output json
-    hive korean pack rollback --target <consumer> --output json
+    hive korean inspect --profile response|release-note|documentation|technical|verbatim --input <file> [--target <consumer>] [--output json]
+    hive korean verify --profile response|release-note|documentation|technical|verbatim --before <file> --after <file> [--target <consumer>] [--output json]
+    hive korean sanitize --input <file> --output-file <file> [--output json]
+    hive korean pack check [--output json]
+    hive korean pack status --target <consumer> [--output json]
+    hive korean pack preview --target <consumer> --candidate <pack-dir> [--output json]
+    hive korean pack activate --target <consumer> --candidate <pack-dir> --consent-digest <sha256:...> --confirm-pack [--output json]
+    hive korean pack rollback --target <consumer> [--output json]
 ";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

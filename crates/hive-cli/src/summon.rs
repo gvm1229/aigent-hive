@@ -10,7 +10,7 @@ use serde_json::json;
 use std::path::Path;
 use std::process::ExitCode;
 
-const USAGE:&str="hive summon <role|god> --task <text|@project-file> --target <dir> --user-root <home> --run <id> --action <id> --expected-head <head> --control-epoch <n> --authority-id <id> --output json\nWithout --event: inert preview and request digest, no writes.\nWith --event: also require --authority --trust-root --request-digest --now --capabilities; write prepared inbox only. Host execution remains disabled.\n";
+const USAGE:&str="hive summon <role|god> --task <text|@project-file> --target <dir> --user-root <home> --run <id> --action <id> --expected-head <head> --control-epoch <n> --authority-id <id> [--output json]\nWithout --event: inert preview and request digest, no writes.\nWith --event: also require --authority --trust-root --request-digest --now --capabilities; write prepared inbox only. Host execution remains disabled.\n";
 pub(crate) fn run(args: &[String]) -> ExitCode {
     if args.iter().any(|a| a == "--help") {
         print!("{USAGE}");

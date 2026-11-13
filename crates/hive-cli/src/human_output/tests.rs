@@ -67,7 +67,7 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
 
 #[test]
 fn human_search_and_preview_show_content_and_preserve_safety_state() {
-    let value = json!({"action":"QueryKnowledge","status":"success","exit_code":0,
+    let value = json!({"action":"QueryKnowledge","status":"success","exit_code":0,"next_action":"hive knowledge read --target . --page-id example --output json",
         "data":{"count":1,"hits":[{"title":"A useful fact","path":"facts/a.md","snippet":"Keep the original file."}],
         "enabled":false,"state":"prepared","internal_digest":"sha256:private"}});
     for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
@@ -76,6 +76,7 @@ fn human_search_and_preview_show_content_and_preserve_safety_state() {
         assert!(output.contains("facts/a.md"));
         assert!(output.contains("Keep the original file."));
         assert!(!output.contains("private"));
+        assert!(!output.contains(" --output json"));
         assert!(!output.contains('{'));
     }
 }

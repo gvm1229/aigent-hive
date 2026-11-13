@@ -68,65 +68,68 @@ mod user_setup;
 const USAGE: &str = "\
 Aigent Hive
 
+OUTPUT:
+    Readable results use your saved language. Add --output json for machine output.
+
 USAGE:
     hive doctor
     hive roster --help
     hive summon --help
     hive <god> <command> [options]
-    hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
-    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
-    hive setup --target <dir> --user-root <dir> --show --summary --output json
-    hive setup --target <dir> --user-root <dir> --describe --question <question-id> --output json
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] --output json
-    hive source-wiki lint --target <source-root> --output json
-    hive source-wiki index --target <source-root> --output json
-    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
-    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] --output json
-    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
+    hive setup --target <dir> --user-root <dir> --show --summary [--output json]
+    hive setup --target <dir> --user-root <dir> --describe --question <question-id> [--output json]
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
+    hive source-wiki lint --target <source-root> [--output json]
+    hive source-wiki index --target <source-root> [--output json]
+    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
+    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] [--output json]
+    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm] [--interactive|--non-interactive] [--output json]
-    hive update --check --user-root <absolute-dir> --output json
+    hive update --check --user-root <absolute-dir> [--output json]
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
-    hive discord inbound --host codex|claude|antigravity --output json
+    hive discord inbound --host codex|claude|antigravity [--output json]
     hive report preview|collect|export --help
-    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] --output json
-    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
-    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
-    hive session recover --target <dir> --output json
-    hive index rebuild --target <dir> --output json
-    hive route --request <json> --output json
-    hive prompt validate --request <input.json> --result <result.json> --output json
-    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
-    hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
-    hive policy evaluate --input <json> --output json
-    hive usage check --account-digest <sha256:...> [--threshold <0..99>] --output json
-    hive usage probe-native --host codex|claude|antigravity --output json
-    hive usage monitor preview|enable|disable|status --user-root <dir> --output json
+    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] [--output json]
+    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... [--output json]
+    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> [--output json]
+    hive session recover --target <dir> [--output json]
+    hive index rebuild --target <dir> [--output json]
+    hive route --request <json> [--output json]
+    hive prompt validate --request <input.json> --result <result.json> [--output json]
+    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
+    hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] [--output json]
+    hive policy evaluate --input <json> [--output json]
+    hive usage check --account-digest <sha256:...> [--threshold <0..99>] [--output json]
+    hive usage probe-native --host codex|claude|antigravity [--output json]
+    hive usage monitor preview|enable|disable|status --user-root <dir> [--output json]
     hive storage [--user-root <dir>] [--output json]
     hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
-    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
-    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
-    hive usage summarize-tokens --request <normalized-events.json> --output json
-    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] --output json
-    hive role validate --target <dir> --role <role-id> --output json
-    hive role handoff --target <dir> --request <request.json> --output json
-    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] --output json
-    hive run closure --target <dir> --run <run-id> --output json
-    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> [--output json]
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] [--output json]
+    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json [--output json]
+    hive usage summarize-tokens --request <normalized-events.json> [--output json]
+    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] [--output json]
+    hive role validate --target <dir> --role <role-id> [--output json]
+    hive role handoff --target <dir> --request <request.json> [--output json]
+    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> [--output json]
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] [--output json]
+    hive run closure --target <dir> --run <run-id> [--output json]
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> [--output json]
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive orchestration status|plan|dispatch|receipt|cancel|recover|authority|migrate --help
-    hive judge package --target <dir> --request <json> --output json
-    hive judge receipt --target <dir> --request <json> --package <json> --assignment <json> --output json
-    hive judge quorum --target <dir> --request <json> --output json
+    hive judge package --target <dir> --request <json> [--output json]
+    hive judge receipt --target <dir> --request <json> --package <json> --assignment <json> [--output json]
+    hive judge quorum --target <dir> --request <json> [--output json]
     hive korean inspect|verify|sanitize|pack --help
-    hive release verify --bundle <release-dir> --output json
+    hive release verify --bundle <release-dir> [--output json]
     hive update --help
 ";
 
@@ -135,8 +138,8 @@ Create or validate an installed Aigent Hive consumer harness.
 
 USAGE:
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
-    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--output json]
 
 MODES:
     --summary    Bound JSON status/completion output; not an approval preview
