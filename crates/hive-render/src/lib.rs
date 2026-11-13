@@ -4601,7 +4601,9 @@ fn apply_compact_project_layout<T: TargetRead + ?Sized>(
         .get(Path::new(skill_delivery::PROVIDERS_PATH))
         .and_then(|bytes| serde_json::from_slice::<skill_delivery::SkillProviders>(bytes).ok())
         .is_some_and(|ledger| !ledger.skills.is_empty() && ledger.local_skills.is_empty());
-    if eligible && (answers.compact_layout || plugin_covers_all) {
+    let first_creation =
+        read_target_optional(target, Path::new(".hive/setup-answers.yml"))?.is_none();
+    if eligible && (answers.compact_layout || (first_creation && plugin_covers_all)) {
         let mut compact = answers.clone();
         compact.compact_layout = true;
         files.insert(
