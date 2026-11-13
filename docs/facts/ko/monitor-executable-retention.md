@@ -9,7 +9,7 @@ summary: "격리한 감시 파일의 전체 바이트와 끝을 대조하는 정
 tags: [monitor, safety, storage]
 aliases: [monitor-executable-retention]
 sources:
-  - "repo:crates/hive-cli/src/run.rs#sha256:6123c4aa36e88044434ef8bdca5ecfd8b470edcd5cfda1ea7c63171450506dfe"
+  - "repo:crates/hive-cli/src/run.rs#sha256:4fdb81d3893e68681945090bedccfaa3b4a74f88593ec169a4ec0ef10c19fbc9"
   - "repo:crates/hive-cli/src/usage_monitor/upgrade.rs#sha256:00b66cc8825ac157550b7dd280cb7599f94bb9172069866df550bb4d8ae2525b"
   - "repo:docs/research/overhaul/OV142-003.md#sha256:d47f74746c332a0ef804eb943106ecd472ed490995c924e7303587dcfd545ae9"
   - "repo:docs/research/overhaul/OV142-008.md#sha256:c95277586522b5b471f3e2e4968999bda076573c5dd68dbaf16919f30dded9d0"

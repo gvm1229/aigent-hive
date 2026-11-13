@@ -9,7 +9,7 @@ summary: "A declared project upgrade source range requires exact authenticable f
 tags: [migration, project-upgrade, regression, release]
 aliases: ["Historical base parity"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:945222ab2da1310babab674c81b28304d03015271720795afde44abd2324e0e1"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:e9c2466a9f85fbb0f2d0f8653eb264608b1ad5ed284b93722ac7db9390bb97de"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:70713e7d4c2de637a09b089dbd64716330e3e1e4859161e3f868c5f260d0960c"
   - "repo:crates/hive-render/src/lib.rs#sha256:334534e638f8266e8f4aa3b98e1092dd657bbe47f0d7c8ae40b932a64d5b1df9"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"

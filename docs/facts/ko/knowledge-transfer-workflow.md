@@ -9,10 +9,10 @@ summary: "단일·여러 묶음의 입력·대상·검토 지문과 벡터 지�
 tags: [knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f7b7ae3eb3045a598684dcfac3fec94c9ce649a87d745c11a650da06e428fd2c"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:83139680efc6f06e7accaec5c445d8c8a9481af51b6550ffe7cd6f9c81f38bfa"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
   - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:6cb9643cad5a79d590408c8f5d0953296b7b291ed726a69ef6898b1ab9ab4b5b"
-  - "repo:docs/guides/knowledge-transfer.md#sha256:18fcddede882c3dbcfa642b5b6c2b6be6e4bac898532e03c3f178da56c8633af"
+  - "repo:docs/guides/knowledge-transfer.md#sha256:ca83f47aee9746c7d73acaae8d9bb316a1d625036a859db4dc00833e42fdf263"
   - "repo:harness/skills/knowledge-transfer/SKILL.md#sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188"
 links: [global-knowledge-bundle-transfer, knowledge-storage]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"

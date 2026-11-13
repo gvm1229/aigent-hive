@@ -10,8 +10,8 @@ tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
   - "repo:crates/hive-cli/build.rs#sha256:c7738445caec1081e42e203eb5568eae0d997a0009037a1d74c8c4804e3de8b7"
-  - "repo:crates/hive-cli/src/main.rs#sha256:9641350d449be3ff7cd44237710209314775a9a4e0b716fe6a35a8635b2957f0"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:193eb021ec2fc367176127ae05ab9dc2baea6097819ddd63de43d9a79ee7cc9a"
+  - "repo:crates/hive-cli/src/main.rs#sha256:3d1ea658e591f1b311e578d6f4f0d2fcc03de28361abf14cbd3dafc2c4e0151c"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:9903f35f13ae28c9853cdf99ab17c42876e8a5b12c91100e7f4c51cc04147c09"
   - "repo:docs/research/developer-install-recovery.md#sha256:552390190deb914cf2dfd84106461b994b7ee3587a5ce954102cfa62f74d9925"
   - "repo:scripts/dev-install.sh#sha256:49d7e923900b37bf30b8678e150bfb7f21ad4427876da5031b46aac04df8560e"
   - "repo:scripts/recover-dev-install.py#sha256:128ee7d1aa5dbd883f963df2ec9eb1449771d4343bda1deef1e94161d7bf964b"

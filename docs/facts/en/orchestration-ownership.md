@@ -9,7 +9,7 @@ summary: "Hive owns provider-neutral iterative control while hosts own model and
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
-  - "repo:.agents/directives/02-architecture.md#sha256:7b46f6ff26fb81023263a33df7f4363d6fb63a2ac4712e418b86ff36e869247d"
+  - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
   - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0400842448b5e73cedabe1d2eb941abf343a0e1564b2e161c8e54d6677af017e"
   - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:c122052f10778e4c0e3c56c9511c2fdb6fc48528ba3d0dba599f91d3be77a5b5"
   - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:3bdc09d7cc02ced6cf4eb2a4dc4fa5e734653581144d8ab4e57914e21f4bb612"

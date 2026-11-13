@@ -9,7 +9,7 @@ summary: "Host 소유 Goal·task의 전체 차단 전 모든 미통과 criterion
 tags: [hooks, orchestration, v0-10]
 aliases: ["Continuation closure gate"]
 sources:
-  - "repo:crates/hive-cli/src/run.rs#sha256:6123c4aa36e88044434ef8bdca5ecfd8b470edcd5cfda1ea7c63171450506dfe"
+  - "repo:crates/hive-cli/src/run.rs#sha256:4fdb81d3893e68681945090bedccfaa3b4a74f88593ec169a4ec0ef10c19fbc9"
   - "repo:crates/hive-core/src/run.rs#sha256:f9f45d8c48283ce08dbe900387493e268143f6f3b1280dcab7c8e3c358b80103"
   - "repo:harness/skills/verified-workflow/SKILL.md#sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf"
   - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:aadd1bc3e37924cf0869cb520cbf4401583682c3b005d19a4f119d3b381b6524"

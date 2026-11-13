@@ -9,7 +9,7 @@ summary: "0.10.0 adds an explicit adversarial-judge step that prepares a clean-c
 tags: [judge, skills, v0-10]
 aliases: ["Adversarial review"]
 sources:
-  - "repo:crates/hive-cli/src/judge.rs#sha256:20dcfd35707b7571014ddc463601074179b42558e531c728d1c04bc634744ed0"
+  - "repo:crates/hive-cli/src/judge.rs#sha256:a898af10d7f16f2839ab9a709d2b698ba699aa8d7e7ad0e025fbb429291d5eea"
   - "repo:docs/archive/plans/adversarial-judge-0.10.0.md#sha256:952b369d86a293d96c61f200379fac63590d70e66600bb6d43aea65bf4a130b8"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:71a8c4e0f75fdc3f99aa7f4d1c4e2ace759af640dbc4dd013174639e71a3f01b"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
