@@ -9,14 +9,14 @@ summary: "전역 개발 덮어쓰기 차단과 실제 Windows 공개판 전환�
 tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
-  - "repo:crates/hive-cli/build.rs#sha256:f9822e0ea1df62db697998969f7bc4b7fdbaf0e3b5d8f25b420dbf9445a5cd54"
-  - "repo:crates/hive-cli/src/main.rs#sha256:1d46b78a26fa47029bed9767f6b0dadec283970d422220c150cf3a326175b0b5"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2527e7ceccba9293bc6f0ca7a7ca53ae986ec82066f1f4c62abc8426e4f18ab8"
+  - "repo:crates/hive-cli/build.rs#sha256:c7738445caec1081e42e203eb5568eae0d997a0009037a1d74c8c4804e3de8b7"
+  - "repo:crates/hive-cli/src/main.rs#sha256:9641350d449be3ff7cd44237710209314775a9a4e0b716fe6a35a8635b2957f0"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:fd31dc7ed677491fbe6409429dcaec1b210f6856fd006edb11a4d15cedb1cdf2"
   - "repo:docs/research/developer-install-recovery.md#sha256:552390190deb914cf2dfd84106461b994b7ee3587a5ce954102cfa62f74d9925"
   - "repo:scripts/dev-install.sh#sha256:49d7e923900b37bf30b8678e150bfb7f21ad4427876da5031b46aac04df8560e"
   - "repo:scripts/recover-dev-install.py#sha256:128ee7d1aa5dbd883f963df2ec9eb1449771d4343bda1deef1e94161d7bf964b"
 links: [interactive-binary-update, source-development, version-policy]
-reviewed_revision: "git:be1a9fc625b4bdb79597be8c3c081381d23e23d3"
+reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active
 ---
 

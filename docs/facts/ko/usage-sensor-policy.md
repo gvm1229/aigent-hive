@@ -9,7 +9,7 @@ summary: "검증된 기본 조회·동의한 보조 조회와 v2 비활성 보�
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:1d46b78a26fa47029bed9767f6b0dadec283970d422220c150cf3a326175b0b5"
+  - "repo:crates/hive-cli/src/main.rs#sha256:9641350d449be3ff7cd44237710209314775a9a4e0b716fe6a35a8635b2957f0"
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:9b858bef8831bed659b0f977ecd9ba84111800176d9dfc048b1d46c4c6ab8115"
   - "repo:crates/hive-cli/src/usage_control/manual.rs#sha256:86b216d3850bd88b428d1d9ea6407c11c6287f5c3e401926882e8d9e9d48d54d"
@@ -22,7 +22,7 @@ sources:
   - "repo:tests/results/usage-current-app-0.13.1.json#sha256:107a03e8a27f3c3a64de9c34a9b74de7d83f8ced835b318a547d04914c9476c9"
   - "repo:tests/results/usage-sensor-soak-0.13.1.json#sha256:0765e3e50a78ec7b1d58be1fc030a0641ea82413ec1c43b46ddb335fe7079df7"
 links: [automatic-dispatch-guard, supported-hosts]
-reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
+reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active
 ---
 
