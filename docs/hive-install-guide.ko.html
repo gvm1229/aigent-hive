@@ -500,7 +500,7 @@ npm --version</code></pre>
           <div class="code">
             <span class="label">SHELL</span>
             <pre><code>bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle" --output json
+hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle"
 shasum -a 256 "$bundle"</code></pre>
           </div>
           <p>대상 컴퓨터: bundle 경로와 기대 SHA-256 값 교체 후 dry-run 우선 실행. 파일 존재·SHA-256 일치·충돌과 검증 오류 0건 뒤에만 apply.</p>
@@ -508,9 +508,9 @@ shasum -a 256 "$bundle"</code></pre>
             <span class="label">SHELL</span>
             <pre><code>bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 shasum -a 256 "$bundle"
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run --output json
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply --output json
-hive knowledge lint --target "$HOME" --user-root "$HOME" --output json</code></pre>
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply
+hive knowledge lint --target "$HOME" --user-root "$HOME"</code></pre>
           </div>
         </div>
       </details>
@@ -521,7 +521,7 @@ hive knowledge lint --target "$HOME" --user-root "$HOME" --output json</code></p
           <div class="code">
             <span class="label">POWERSHELL</span>
             <pre><code>$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle --output json
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle
 Get-FileHash -Algorithm SHA256 $bundle</code></pre>
           </div>
           <p>대상 컴퓨터: <code>Hash</code> 값과 bundle 검증 뒤 dry-run 우선 실행. 충돌과 검증 오류 0건 뒤에만 apply.</p>
@@ -529,9 +529,9 @@ Get-FileHash -Algorithm SHA256 $bundle</code></pre>
             <span class="label">POWERSHELL</span>
             <pre><code>$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 Get-FileHash -Algorithm SHA256 $bundle
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run --output json
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply --output json
-hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --output json</code></pre>
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply
+hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE</code></pre>
           </div>
         </div>
       </details>
@@ -555,5 +555,6 @@ hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --out
       <span>Stable 0.15.0 · npm latest</span>
     </footer>
   </main>
+<p class="caption">0.15.1 개발판부터 사람용 명령의 JSON 인자 생략, 설정한 한국어·영어로 결과 표시. 기계 판독에는 <code>--output json</code> 선택, 공개 0.15.0에서는 이 인자 유지.</p>
 </body>
 </html>

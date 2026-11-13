@@ -226,6 +226,11 @@ Antigravity session retries it.
 
 Hive never installs an update silently.
 
+## CLI output
+
+Human command examples use unreleased 0.15.1 behavior. Public 0.15.0 still needs `--output json`.
+In 0.15.1, omit it for readable Korean or English results; keep it for machine callers.
+
 ## Move global knowledge to another computer
 
 Use a `.hivekb` bundle to move global knowledge between computers. `--user-root` is the
