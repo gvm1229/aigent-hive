@@ -935,6 +935,44 @@
         "--check"
       ],
       "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T033822-0e12aef12c22.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmpbGMinp\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--lane",
+        "documentation"
+      ],
+      "source_changed_during_run": false
     }
-  ]
+  ],
+  "artifacts": {
+    "own_removed_roots": 3,
+    "own_removed_files": 70,
+    "own_removed_bytes": 60918305,
+    "global_check_exit": 1,
+    "preexisting_review_required": 463,
+    "daily_exit": 1,
+    "min_storage_bytes": 31596963361,
+    "max_storage_bytes": 21474836480,
+    "unmeasured_paths": 21,
+    "policy_unchanged": true
+  },
+  "source_gates": {
+    "human_style_files": 4021,
+    "human_style_findings": 0,
+    "markdown_links": 5137,
+    "markdown_link_failures": 0,
+    "directive_failures": 0,
+    "plan_criteria": 12,
+    "plan_complete": 9,
+    "plan_excluded_by_current_authority": 3,
+    "source_wiki_pages": 274,
+    "source_wiki_errors": 0,
+    "source_wiki_warnings": 0,
+    "branch_policy_failures": 0
+  }
 }

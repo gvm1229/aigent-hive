@@ -1332,3 +1332,4 @@
 | [passed](runs/20261113T032138-f92e0d860636.md) | 개발 검증: uv.EXE | ae3db3f1359833adec7c443401bb2c2085005b7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T033030-cf6dea1a7692.md) | 개발 검증: uv.EXE | ae3db3f1359833adec7c443401bb2c2085005b7d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T033312-e3d004e326c3.md) | 개발 검증: cargo.EXE | ae3db3f1359833adec7c443401bb2c2085005b7d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T033822-0e12aef12c22.md) | Python conformance: documentation | 48f74fb33ff2939a39a60cab6009cd6f681747ab | Windows-11-10.0.26300-SP0 |
