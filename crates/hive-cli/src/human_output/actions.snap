@@ -1,3 +1,39 @@
+AnswerSimpleQuestion
+ko: 완료. 간단한 질문 처리 완료.
+en: Success. Question processed.
+
+DescribeHiveSetupQuestion
+ko: 완료. 설정 질문 확인 완료.
+en: Success. Setup question inspected.
+
+DescribeHiveSetupSection
+ko: 완료. 설정 항목 확인 완료.
+en: Success. Setup section inspected.
+
+NotionKnowledge
+ko: 완료. Notion 지식 요청 처리 완료.
+en: Success. Notion knowledge request processed.
+
+RoleWork
+ko: 완료. 역할 작업 처리 완료.
+en: Success. Role work processed.
+
+RunWork
+ko: 완료. 작업 기록 처리 완료.
+en: Success. Work record processed.
+
+ScanProjectUpgrade
+ko: 완료. 프로젝트 갱신 대상 확인 완료.
+en: Success. Project update targets inspected.
+
+ValidateProjectUpgrade
+ko: 완료. 프로젝트 갱신 확인 완료.
+en: Success. Project update checked.
+
+VectorKnowledge
+ko: 완료. 의미 기반 지식 검색 처리 완료.
+en: Success. Meaning-based knowledge search processed.
+
 CheckRunClosure
 ko: 완료. 작업 종료 조건 확인 완료.
 en: Success. Work completion conditions checked.

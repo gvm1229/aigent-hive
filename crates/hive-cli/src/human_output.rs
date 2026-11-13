@@ -84,25 +84,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         return failure(value, language, &ko, &en);
     }
     if action == "SetUsageThreshold" {
-        if let (Some(before), Some(after)) = (
-            data["previous_remaining_percent"].as_u64(),
-            data["threshold_remaining_percent"].as_u64(),
-        ) {
-            let mut text = if before == after {
-                choose(language, &format!("확인 완료. 사용량 보호 기준은 이미 {after}%입니다. 변경한 설정이 없습니다."),
-                    &format!("Success. Hive usage guard threshold is already {after}%. No settings changed."))
-            } else {
-                let direction = if before > after { "lowered" } else { "raised" };
-                choose(language, &format!("변경 완료. 사용량 보호 기준을 {before}%에서 {after}%로 바꿨습니다."),
-                    &format!("Success. Hive usage guard threshold {direction} from {before}% to {after}%."))
-            };
-            if data["session_recheck_required"] == true {
-                text.push_str(&choose(
-                    language,
-                    "\n다음 단계: 현재 세션의 사용량 사전 확인을 다시 실행하세요.",
-                    "\nNext: run the usage preflight again for the current session.",
-                ));
-            }
+        if let Some(text) = threshold_message(data, language) {
             return text;
         }
     }
@@ -119,7 +101,15 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         format!("Success. {}", sentence(message))
     };
     if !value["changed_paths"].as_array().is_none_or(Vec::is_empty) {
-        output.push_str(&choose(language, "\n바뀐 파일:", "\nChanged files:"));
+        let preview = value["code"]
+            .as_str()
+            .is_some_and(|code| code.contains("preview") || code.contains("dry-run"))
+            || data["mode"] == "dry-run";
+        output.push_str(&if preview {
+            choose(language, "\n변경 예정 파일:", "\nPlanned file changes:")
+        } else {
+            choose(language, "\n바뀐 파일:", "\nChanged files:")
+        });
         for path in value["changed_paths"]
             .as_array()
             .into_iter()
@@ -141,7 +131,53 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             output.push_str(&next.replace(" --output json", ""));
         }
     }
+    if data["session_recheck_required"] == true {
+        output.push_str(&choose(
+            language,
+            "\n다음 단계: 현재 세션의 사용량 사전 확인을 다시 실행하세요.",
+            "\nNext: run the usage preflight again for the current session.",
+        ));
+    }
+    if action == "PruneStorage"
+        && data["mode"] == "dry-run"
+        && data["report"]["candidates"]
+            .as_array()
+            .is_some_and(|items| !items.is_empty())
+    {
+        output.push_str(&choose(language,
+            "\n다음 단계: 삭제 예정 파일을 확인하고, 삭제를 원할 때 --dry-run을 --confirm으로 바꾸세요.",
+            "\nNext: inspect the proposed files. To approve removal, replace --dry-run with --confirm."));
+    }
     output
+}
+
+fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String> {
+    let before = data["previous_remaining_percent"].as_u64()?;
+    let after = data["threshold_remaining_percent"].as_u64()?;
+    let mut text = if before == after {
+        choose(
+            language,
+            &format!("확인 완료. 사용량 보호 기준은 이미 {after}%입니다. 변경한 설정이 없습니다."),
+            &format!(
+                "Success. Hive usage guard threshold is already {after}%. No settings changed."
+            ),
+        )
+    } else {
+        let direction = if before > after { "lowered" } else { "raised" };
+        choose(
+            language,
+            &format!("변경 완료. 사용량 보호 기준을 {before}%에서 {after}%로 바꿨습니다."),
+            &format!("Success. Hive usage guard threshold {direction} from {before}% to {after}%."),
+        )
+    };
+    if data["session_recheck_required"] == true {
+        text.push_str(&choose(
+            language,
+            "\n다음 단계: 현재 세션의 사용량 사전 확인을 다시 실행하세요.",
+            "\nNext: run the usage preflight again for the current session.",
+        ));
+    }
+    Some(text)
 }
 
 fn sentence(message: &str) -> String {
@@ -160,6 +196,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> St
     let message = value["message"]
         .as_str()
         .unwrap_or("The request could not be completed.");
+    let message = message.lines().next().unwrap_or(message);
     if language == InterfaceLanguage::En {
         let remedy = value["next_action"].as_str().unwrap_or(
             "Check the command options with --help. Correct the named input or file, then retry.",
@@ -240,6 +277,13 @@ fn next_ko(next: &str) -> String {
 fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
     let (ko, en) = match key {
         "enabled" => ("사용 여부", "Enabled"),
+        "guard_enabled" | "enforcement_enabled" => ("일반 사용량 보호", "General usage protection"),
+        "quota_reset_guard_enabled" => ("사용량 초기화 보호", "Usage reset protection"),
+        "zero_quota_guard_enabled" => ("사용량 소진 보호", "Zero-quota protection"),
+        "mode" => ("동작", "Mode"),
+        "candidates" => ("삭제 예정 파일", "Files proposed for removal"),
+        "removed" => ("삭제한 파일", "Removed files"),
+        "skipped" | "preserved" => ("보존한 파일", "Preserved files"),
         "state" | "status" => ("상태", "State"),
         "count" => ("항목 수", "Items"),
         "remaining_percent" => ("남은 사용량(%)", "Remaining usage (%)"),
@@ -272,6 +316,11 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
         "effort" => ("작업 수준", "Work effort"),
         "category" => ("종류", "Category"),
         "description" => ("설명", "Description"),
+        "label" => ("선택지", "Choice"),
+        "prompt" => ("질문", "Question"),
+        "question" | "questions" | "sections" | "options" | "choices" => {
+            ("설정 내용", "Setup details")
+        }
         "markdown" => ("본문", "Text"),
         "source_workspace" => ("Hive 소스 폴더", "Hive source workspace"),
         "model_api_client" => ("모델 API 호출", "Model API client"),
@@ -289,11 +338,20 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
 }
 
 fn details(value: &Value, language: InterfaceLanguage, output: &mut String, depth: usize) {
-    if depth > 5 {
+    if depth > 8 {
         return;
     }
     match value {
         Value::Object(fields) => {
+            let language_key = if language == InterfaceLanguage::Ko {
+                "ko"
+            } else {
+                "en"
+            };
+            if let Some(text) = fields.get(language_key).and_then(Value::as_str) {
+                write!(output, "\n{text}").expect("formatting a String");
+                return;
+            }
             for (key, value) in fields {
                 if matches!(key.as_str(), "roles" | "providers" | "gods") {
                     if let Some(entries) = value.as_object() {
@@ -320,7 +378,7 @@ fn details(value: &Value, language: InterfaceLanguage, output: &mut String, dept
                         }
                     }
                     _ => {
-                        write!(output, "\n{label}: {}", scalar(value, language))
+                        write!(output, "\n{label}: {}", field_value(key, value, language))
                             .expect("formatting a String");
                     }
                 }
@@ -331,12 +389,43 @@ fn details(value: &Value, language: InterfaceLanguage, output: &mut String, dept
                 if item.is_object() || item.is_array() {
                     details(item, language, output, depth + 1);
                 } else {
-                    write!(output, "\n- {}", scalar(item, language)).expect("formatting a String");
+                    write!(
+                        output,
+                        "\n- {}",
+                        item.as_str()
+                            .map_or_else(|| scalar(item, language), str::to_owned)
+                    )
+                    .expect("formatting a String");
                 }
             }
         }
         _ => {}
     }
+}
+
+fn field_value(key: &str, value: &Value, language: InterfaceLanguage) -> String {
+    if matches!(
+        key,
+        "text"
+            | "content"
+            | "body"
+            | "excerpt"
+            | "snippet"
+            | "markdown"
+            | "name"
+            | "title"
+            | "path"
+            | "relative_path"
+            | "locator"
+            | "description"
+            | "prompt"
+            | "label"
+    ) {
+        if let Some(text) = value.as_str() {
+            return text.into();
+        }
+    }
+    scalar(value, language)
 }
 
 fn scalar(value: &Value, language: InterfaceLanguage) -> String {
@@ -350,6 +439,8 @@ fn scalar(value: &Value, language: InterfaceLanguage) -> String {
             "verified" => choose(language, "확인됨", text),
             "unverified" => choose(language, "확인하지 못함", text),
             "not-configured" | "absent" => choose(language, "설정 없음", text),
+            "dry-run" => choose(language, "미리보기, 실제 적용 없음", "preview, not applied"),
+            "confirm" => choose(language, "확인 후 적용", "confirmed application"),
             "prepared" => choose(language, "준비됨, 실행하지 않음", "prepared, not executed"),
             _ => text.clone(),
         },

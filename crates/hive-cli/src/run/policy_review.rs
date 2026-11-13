@@ -190,7 +190,7 @@ impl ReviewBook {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive run policy-review preview|add|list|accept|revise|reject|cancel --target <dir> --run <id> --output json\npreview/add: --evaluation <run-relative-file> --rule <registered-rule> --class <failure-class>\nadd: --confirm <preview-digest>\naccept/revise/reject/cancel: --candidate <digest> --confirm <book-digest> [--class <revised-class>]\nExplicit bounded review only; acceptance never grants file mutation authority.");
+        println!("hive run policy-review preview|add|list|accept|revise|reject|cancel --target <dir> --run <id> [--output json]\npreview/add: --evaluation <run-relative-file> --rule <registered-rule> --class <failure-class>\nadd: --confirm <preview-digest>\naccept/revise/reject/cancel: --candidate <digest> --confirm <book-digest> [--class <revised-class>]\nExplicit bounded review only; acceptance never grants file mutation authority.");
         return ExitCode::SUCCESS;
     }
     let result = execute(args)

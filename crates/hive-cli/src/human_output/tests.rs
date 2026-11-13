@@ -63,6 +63,13 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
     let english = render(&value, InterfaceLanguage::En, "knowledge");
     assert!(english.contains("requires --target"));
     assert!(english.contains("Next:"));
+    let unknown = json!({"action":"UnknownAction","status":"error","exit_code":2,
+        "message":"unknown command: example\n\nAigent Hive\nUSAGE: many commands"});
+    let output = render(&unknown, InterfaceLanguage::En, "example");
+    assert!(!output.contains("USAGE:"));
+    assert!(
+        output.contains("unknown command: example") || output.contains("Unknown command: example")
+    );
 }
 
 #[test]
@@ -79,4 +86,37 @@ fn human_search_and_preview_show_content_and_preserve_safety_state() {
         assert!(!output.contains(" --output json"));
         assert!(!output.contains('{'));
     }
+}
+
+#[test]
+fn question_descriptions_show_the_selected_language_and_choices() {
+    let value = json!({"action":"DescribeHiveSetupQuestion","status":"success","exit_code":0,
+        "data":{"questions":[{"question":{"prompt":{"en":"Choose your language", "ko":"사용할 언어 선택"},
+            "options":[{"label":{"en":"Korean", "ko":"한국어"}},{"label":{"en":"English", "ko":"영어"}}]}}]}});
+    let korean = render(&value, InterfaceLanguage::Ko, "setup");
+    let english = render(&value, InterfaceLanguage::En, "setup");
+    assert!(korean.contains("사용할 언어 선택"));
+    assert!(korean.contains("한국어"));
+    assert!(!korean.contains("Choose your language"));
+    assert!(english.contains("Choose your language"));
+    assert!(english.contains("Korean"));
+    assert!(!english.contains("사용할 언어 선택"));
+}
+
+#[test]
+fn storage_preview_and_session_changes_report_outcomes_without_rewriting_user_text() {
+    let preview = json!({"action":"PruneStorage","status":"success","exit_code":0,
+        "data":{"mode":"dry-run","report":{"candidates":[{"path":"active","bytes":12}],"removed":[],"skipped":[]}}});
+    let output = render(&preview, InterfaceLanguage::Ko, "prune");
+    assert!(output.contains("삭제 예정 파일"));
+    assert!(output.contains("위치: active"));
+    assert!(output.contains("--confirm"));
+    let session = json!({"action":"ControlUsageSession","status":"success","exit_code":0,
+        "data":{"guard_enabled":false,"quota_reset_guard_enabled":true,"session_recheck_required":true}});
+    let output = render(&session, InterfaceLanguage::Ko, "usage");
+    assert!(output.contains("일반 사용량 보호: 아니요"));
+    assert!(output.contains("사용량 초기화 보호: 예"));
+    assert!(output.contains("다음 단계:"));
+    let page = json!({"action":"ReadKnowledge","status":"success","exit_code":0,"data":{"body":"prepared"}});
+    assert!(render(&page, InterfaceLanguage::Ko, "knowledge").contains("내용: prepared"));
 }

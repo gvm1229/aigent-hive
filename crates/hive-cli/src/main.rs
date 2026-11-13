@@ -142,7 +142,7 @@ USAGE:
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--output json]
 
 MODES:
-    --summary    Bound JSON status/completion output; not an approval preview
+    --summary    Compact status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target

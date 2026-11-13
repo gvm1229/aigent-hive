@@ -107,3 +107,23 @@ fn doctor_and_target_are_readable_and_json_is_explicit() {
         assert_eq!(value["status"], "success");
     }
 }
+
+#[test]
+fn successful_storage_results_use_the_same_localized_renderer() {
+    for language in ["ko", "en"] {
+        let output = run(&["storage"], language);
+        assert!(output.status.success());
+        let text = String::from_utf8(output.stdout).unwrap();
+        assert!(text.starts_with(if language == "ko" {
+            "완료."
+        } else {
+            "Success."
+        }));
+        assert!(text.contains(if language == "ko" {
+            "크기(바이트)"
+        } else {
+            "Size (bytes)"
+        }));
+        assert!(!text.trim().starts_with('{'));
+    }
+}

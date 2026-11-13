@@ -1,4 +1,14 @@
 pub(super) const ACTIONS: &[(&str, &str, &str)] = &[
+    ("AnswerSimpleQuestion", "간단한 질문 처리 완료", "Question processed"),
+    ("DescribeHiveSetupQuestion", "설정 질문 확인 완료", "Setup question inspected"),
+    ("DescribeHiveSetupSection", "설정 항목 확인 완료", "Setup section inspected"),
+    ("NotionKnowledge", "Notion 지식 요청 처리 완료", "Notion knowledge request processed"),
+    ("RoleWork", "역할 작업 처리 완료", "Role work processed"),
+    ("RunWork", "작업 기록 처리 완료", "Work record processed"),
+    ("ScanProjectUpgrade", "프로젝트 갱신 대상 확인 완료", "Project update targets inspected"),
+    ("ValidateProjectUpgrade", "프로젝트 갱신 확인 완료", "Project update checked"),
+    ("VectorKnowledge", "의미 기반 지식 검색 처리 완료", "Meaning-based knowledge search processed"),
+
     ("CheckRunClosure", "작업 종료 조건 확인 완료", "Work completion conditions checked"),
     ("CheckRunContinuation", "작업 계속 조건 확인 완료", "Work continuation conditions checked"),
     ("CheckpointRun", "작업 진행 저장 완료", "Work progress saved"),

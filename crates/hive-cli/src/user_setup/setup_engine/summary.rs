@@ -9,13 +9,12 @@ pub(crate) fn arguments(input: &[String]) -> Result<(Vec<String>, bool), SetupEr
         .count();
     if count > 1
         || (count == 1
-            && (!input.windows(2).any(|pair| pair == ["--output", "json"])
-                || input.iter().any(|arg| {
-                    matches!(
-                        arg.as_str(),
-                        "--dry-run" | "--describe" | "--progress" | "feature"
-                    )
-                })))
+            && input.iter().any(|arg| {
+                matches!(
+                    arg.as_str(),
+                    "--dry-run" | "--describe" | "--progress" | "feature"
+                )
+            }))
     {
         return Err(SetupError::Input("--summary requires JSON setup status, apply, validation or resume; approval previews and describe remain separate".into()));
     }
@@ -372,7 +371,7 @@ mod tests {
 
     #[test]
     fn summary_cannot_hide_an_approval_preview_or_change_the_input_mode() {
-        assert!(arguments(&["--summary".into()]).is_err());
+        assert!(arguments(&["--summary".into()]).unwrap().1);
         assert!(arguments(&[
             "--summary".into(),
             "--output".into(),
