@@ -1,0 +1,940 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows 11 10.0.26300",
+  "rust": {
+    "distinct_passed": 1198,
+    "ignored": 2,
+    "scope": [
+      "hive-cli",
+      "hive-core",
+      "hive-render",
+      "hive-update"
+    ],
+    "basis": "all-targets/all-features/locked full run: 1197 passed; final render 90 replaces render 89 and adds one test; no duplicate counting"
+  },
+  "python": {
+    "basis": "final per-lane execution plus passing reruns of failed owners; original all-lane command did not pass; skipped includes subcases",
+    "lanes": [
+      {
+        "name": "documentation",
+        "tests": 164,
+        "passed_accounting": 162,
+        "skipped_entries": 2
+      },
+      {
+        "name": "security",
+        "tests": 103,
+        "passed_accounting": 98,
+        "skipped_entries": 5
+      },
+      {
+        "name": "contract",
+        "tests": 673,
+        "passed_accounting": 658,
+        "skipped_entries": 15
+      },
+      {
+        "name": "integration",
+        "tests": 105,
+        "passed_accounting": 93,
+        "skipped_entries": 12
+      },
+      {
+        "name": "release",
+        "tests": 152,
+        "passed_accounting": 141,
+        "skipped_entries": 11
+      }
+    ],
+    "passed_accounting": 1152,
+    "skipped_entries": 45
+  },
+  "limitations": [
+    "English full-review initial failure: settings/progress expected-state drift; later ko/en full-review rerun passed; initial cause not established",
+    "Concurrent Windows cargo builds failed to replace running hive.exe; remaining lanes and missing owner rerun with fixed HIVE_BIN copy",
+    "Release note acceptance text repaired to the existing fact-ID and 25-word contract; release-note module 9 passed",
+    "Full Rust source_changed receipt includes generated tests/results/INDEX.md updates during measurements; product source files were unchanged during that run",
+    "Public three-OS test.1, real host Skill discovery, and real other-PC absence remain unverified"
+  ],
+  "records": [
+    {
+      "path": "tests/results/runs/20261113T023549-13b50926d299.md",
+      "status": "failed",
+      "exit_code": 1,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "-m",
+        "unittest",
+        "tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0150_default_upgrade_with_verified_plugin_preserves_layout"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T023617-a73dbccfd985.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "-m",
+        "unittest",
+        "tests.conformance.integration.test_project_lifecycle.ProjectLifecycleConformance.test_public_0150_default_upgrade_with_verified_plugin_preserves_layout"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T023734-85b620640b7a.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T023739-d6b39d96d56e.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "refresh_preserves_kind",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T023844-f140efad1ef3.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T023848-2c3ef9f709e2.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-core",
+        "project_profile",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T023940-6c884c321b2e.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T023944-8c6463cd33c1.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-core",
+        "project_profile",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T023949-e5943db1a5a2.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "stage_two_corpus",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024019-bf831c32f136.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024023-c9ece6bf2071.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-core",
+        "project_profile",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024032-15b08dcb6bbb.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "stage_two_corpus",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024154-184f1ef9a4ef.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "check",
+        "-p",
+        "hive-cli",
+        "--tests",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024221-24d7b2547a66.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024225-b939c235c997.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "check",
+        "-p",
+        "hive-cli",
+        "-p",
+        "hive-render",
+        "--tests",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024236-6ce3cf4279f5.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "check",
+        "-p",
+        "hive-cli",
+        "-p",
+        "hive-render",
+        "--tests",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024256-ddbcbaba1c20.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "plugin",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024307-27d460cbc077.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-cli",
+        "project_upgrade",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024410-b78a5e87d329.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024414-5df38f3274a8.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "plugin",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024506-59175f02af13.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024510-648f150a6fb0.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "compact_suppression",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024541-7773817c2ec4.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024545-7b6e47785912.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-cli",
+        "replaced_harness_omission",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024637-fb3872a6c1e3.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024641-4bf8d7ed9810.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-cli",
+        "refresh_is_an_exact",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024735-dc109376fbfa.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T024740-4d2f78e01cb8.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-cli",
+        "readme_only_uses",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024826-c94e7b2ba2b8.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-cli",
+        "readme_only_uses",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024950-5274222fbb8e.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all",
+        "--check"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T024954-1f89683de71c.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025024-000897d85626.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T025028-257a2df7f510.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025047-8a316a79cff6.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025117-2f61ee8a6ecb.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025121-03eb66c6fbba.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025133-1a9e0ab31305.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T025137-55c2c1e66650.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025152-8e2a34c169f2.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025225-a9525eef56a4.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025228-0a9ace73530d.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025258-aeaf8851cb04.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-core",
+        "-p",
+        "hive-render",
+        "-p",
+        "hive-cli",
+        "-p",
+        "hive-update",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T025819-3df1c977916b.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "python",
+        "scripts/qualify-project-detection-holdout.py",
+        "--hive",
+        "target/debug/hive.exe",
+        "--work",
+        "tests/work/stage4-review-holdout"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T025830-d57740ce0430.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "python",
+        "scripts/qualify-project-detection.py",
+        "--hive",
+        "target/debug/hive.exe",
+        "--work",
+        "tests/work/stage4-review-corpus"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030012-ad8bce48698e.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "claude_plugin_preserves",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030047-74f0676c7277.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T030051-acaf47468a1f.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030118-3a8e8b4deaec.md",
+      "status": "failed",
+      "exit_code": 101,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "-p",
+        "hive-render",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030149-5696ee1366bd.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030153-7e206f090523.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "test",
+        "-p",
+        "hive-render",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030217-a7e82dcaeac0.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T030537-fe9663ec466b.md",
+      "status": "failed",
+      "exit_code": 2,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "<repository>\\scripts\\test-lanes.py",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T030541-6ca02841f8a6.md",
+      "status": "failed",
+      "exit_code": 2,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmpFMkpV6\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--all"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T031503-677769abe4f9.md",
+      "status": "failed",
+      "exit_code": 2,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmppWPDTM\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--lane",
+        "integration"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T031523-1bf0aaa76137.md",
+      "status": "failed",
+      "exit_code": 2,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmpGpfw9K\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--lane",
+        "release"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T031901-844a0821ddc1.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "python",
+        "-c",
+        "from pathlib import Path; import shutil,hashlib; p=Path('tests/work/stage4-review-cli'); p.mkdir(); a=Path('target/debug/hive.exe'); b=p/'hive.exe'; shutil.copyfile(a,b); assert a.read_bytes()==b.read_bytes(); print(hashlib.sha256(b.read_bytes()).hexdigest())"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T031905-bf25730d6a1e.md",
+      "status": "failed",
+      "exit_code": 2,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmpPZVtEo\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--lane",
+        "release"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T032012-672908253fef.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\uv\\cache\\builds-v0\\.tmpOvuvnj\\Scripts\\python.exe",
+        "<repository>\\scripts\\test-lanes.py",
+        "--lane",
+        "integration"
+      ],
+      "source_changed_during_run": true
+    },
+    {
+      "path": "tests/results/runs/20261113T032041-aea72d661525.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "-m",
+        "unittest",
+        "tests.conformance.contracts.test_setup_console_interrupt.SetupConsoleInterruptConformance.test_full_review_in_both_languages_keeps_choices_and_validates_file_results"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T032138-f92e0d860636.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "-m",
+        "unittest",
+        "tests.conformance.release.test_release_notes"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T033030-cf6dea1a7692.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uv.EXE",
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        "<repository>\\requirements-conformance.txt",
+        "python",
+        "-m",
+        "unittest",
+        "tests.conformance.contracts.test_setup_regressions.Phase1NoFollowReadBoundary"
+      ],
+      "source_changed_during_run": false
+    },
+    {
+      "path": "tests/results/runs/20261113T033312-e3d004e326c3.md",
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "<user>\\.cargo\\bin\\cargo.EXE",
+        "fmt",
+        "--all",
+        "--check"
+      ],
+      "source_changed_during_run": false
+    }
+  ]
+}
