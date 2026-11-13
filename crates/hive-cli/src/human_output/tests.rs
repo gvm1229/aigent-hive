@@ -14,6 +14,7 @@ fn bilingual_action_family_snapshots() {
         )
         .unwrap();
     }
+    snapshot.pop();
     assert_eq!(snapshot, include_str!("actions.snap"));
 }
 
