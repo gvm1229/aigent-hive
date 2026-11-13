@@ -1395,3 +1395,12 @@
 | [passed](runs/20261113T060829-de00e8f80801.md) | 사용량 기준 설명의 보호 활성 조건 보존 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T060902-2437121ad8b4.md) | 사용량 기준 설명의 보호 활성 조건 보존 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T060927-d3a2fe149c01.md) | 최종 전체 검증 실행 파일 확정 | d5e085b331238b312b703595809d1d9aa59b4a0c | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T061642-4366aee08e3b.md) | Python conformance: documentation | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T061650-2a22dcfe7c2b.md) | 확정 소스 Rust 전체·fmt·문서 예제·clippy 검증 | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T061656-fc7d89a19506.md) | 확정 소스 Rust 전체·fmt·문서 예제·clippy 검증 | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T061846-0c7320862721.md) | Python conformance: security | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T062124-1faa5fd97486.md) | Python conformance: contract | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T062336-0aff5e2e1c7c.md) | 확정 소스 Rust 전체·fmt·문서 예제·clippy 검증 | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T062343-6af5a0b74806.md) | 확정 소스 Rust 전체·fmt·문서 예제·clippy 검증 | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T064157-a4b7edc85cb8.md) | Python conformance: integration | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261113T065503-1b3f7f292fc7.md) | Python conformance: release | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
