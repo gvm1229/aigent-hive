@@ -14,9 +14,9 @@
 - 구현 목표: `0.15.1`
 - 현재 등록 항목: 8/11 완료
 
-- `agent-owned`: `OV151-008`, `OV151-009`, `OV151-010`
+- `agent-owned`: `OV151-008`, `OV151-010`
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: 없음
+- `awaiting-external-evidence`: `OV151-009`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 

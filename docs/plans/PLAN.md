@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 506
+> Revision: 507
 > 기준일: 2026-11-13
 > Product version: `0.15.1`
 > 공개 Stable: `0.15.0`
