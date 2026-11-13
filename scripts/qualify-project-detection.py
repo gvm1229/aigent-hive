@@ -45,7 +45,7 @@ def main() -> None:
         profile = value['project_profile']
         question = value['questions'][0]
         detection.append({'id': case['id'], 'expected_category': case['expected_kind'], 'category': profile['category'], 'default': question['question']['default'], 'effective': question['effective']})
-        assert profile['category'] == case['expected_kind'], case['id']
+        assert profile['category'] == case.get('reviewed_expected_category', case['expected_kind']), case['id']
     fixed = json.loads((ROOT / 'docs/research/overhaul/OVX-002-inputs.json').read_text(encoding='utf-8'))
     user = work / 'retrieval-user'
     (user / '.hive/config').mkdir(parents=True)

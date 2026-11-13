@@ -51,12 +51,255 @@ fn text(dir: &Dir, path: &str) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
+struct Marker {
+    file: &'static str,
+    language: &'static str,
+    framework: &'static str,
+    manager: &'static str,
+    category: &'static str,
+    confidence: &'static str,
+}
+
+// Specific frameworks outrank generic language/configuration markers.
+const CATEGORY_PRECEDENCE: &[&str] = &[
+    "monorepo", "docs", "desktop", "server", "cli", "web", "dotnet", "java", "native", "rust",
+    "go", "python", "coding",
+];
+const MARKERS: &[Marker] = &[
+    Marker {
+        file: "next.config.ts",
+        language: "",
+        framework: "Next.js",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "next.config.js",
+        language: "",
+        framework: "Next.js",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "next.config.mjs",
+        language: "",
+        framework: "Next.js",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "vite.config.ts",
+        language: "",
+        framework: "Vite",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "vite.config.js",
+        language: "",
+        framework: "Vite",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "svelte.config.js",
+        language: "",
+        framework: "Svelte",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "astro.config.mjs",
+        language: "",
+        framework: "Astro",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "angular.json",
+        language: "",
+        framework: "Angular",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+    Marker {
+        file: "tsconfig.json",
+        language: "TypeScript",
+        framework: "",
+        manager: "",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "go.mod",
+        language: "Go",
+        framework: "",
+        manager: "go",
+        category: "go",
+        confidence: "high",
+    },
+    Marker {
+        file: "pom.xml",
+        language: "Java",
+        framework: "",
+        manager: "maven",
+        category: "java",
+        confidence: "high",
+    },
+    Marker {
+        file: "build.gradle",
+        language: "Java",
+        framework: "",
+        manager: "gradle",
+        category: "java",
+        confidence: "high",
+    },
+    Marker {
+        file: "build.gradle.kts",
+        language: "Kotlin",
+        framework: "",
+        manager: "gradle",
+        category: "java",
+        confidence: "high",
+    },
+    Marker {
+        file: "CMakeLists.txt",
+        language: "C++",
+        framework: "",
+        manager: "cmake",
+        category: "native",
+        confidence: "high",
+    },
+    Marker {
+        file: "Gemfile",
+        language: "Ruby",
+        framework: "",
+        manager: "bundler",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "composer.json",
+        language: "PHP",
+        framework: "",
+        manager: "composer",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "Package.swift",
+        language: "Swift",
+        framework: "",
+        manager: "swift",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "pubspec.yaml",
+        language: "Dart",
+        framework: "",
+        manager: "pub",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "deno.json",
+        language: "TypeScript",
+        framework: "",
+        manager: "deno",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "deno.jsonc",
+        language: "TypeScript",
+        framework: "",
+        manager: "deno",
+        category: "coding",
+        confidence: "high",
+    },
+    Marker {
+        file: "mkdocs.yml",
+        language: "",
+        framework: "MkDocs",
+        manager: "",
+        category: "docs",
+        confidence: "high",
+    },
+    Marker {
+        file: "mkdocs.yaml",
+        language: "",
+        framework: "MkDocs",
+        manager: "",
+        category: "docs",
+        confidence: "high",
+    },
+    Marker {
+        file: "docusaurus.config.ts",
+        language: "",
+        framework: "Docusaurus",
+        manager: "",
+        category: "docs",
+        confidence: "high",
+    },
+    Marker {
+        file: "docusaurus.config.js",
+        language: "",
+        framework: "Docusaurus",
+        manager: "",
+        category: "docs",
+        confidence: "high",
+    },
+    Marker {
+        file: "tauri.conf.json",
+        language: "",
+        framework: "Tauri",
+        manager: "",
+        category: "desktop",
+        confidence: "high",
+    },
+    Marker {
+        file: "index.html",
+        language: "HTML",
+        framework: "",
+        manager: "",
+        category: "web",
+        confidence: "high",
+    },
+];
+
+fn entries(dir: &Dir) -> Vec<String> {
+    let mut names = dir
+        .entries()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    names.truncate(512);
+    names
+}
+
 impl ProjectProfile {
     #[must_use]
     pub fn project_kind(&self) -> &str {
-        if self.category == "docs" {
+        if self.category == "docs"
+            && self
+                .frameworks
+                .iter()
+                .any(|fact| matches!(fact.name.as_str(), "MkDocs" | "Docusaurus"))
+        {
             "docs"
-        } else if self.category == "general" || self.category.is_empty() {
+        } else if matches!(self.category.as_str(), "general" | "docs" | "") {
             "general"
         } else {
             "coding"
@@ -79,6 +322,58 @@ impl ProjectProfile {
     #[must_use]
     #[allow(clippy::too_many_lines)]
     pub fn detect_in(dir: &Dir) -> Self {
+        let mut result = Self::detect_root(dir);
+        let mut categories = if result.project_kind() == "general" {
+            Vec::new()
+        } else {
+            vec![result.category.clone()]
+        };
+        for name in entries(dir) {
+            if name.starts_with('.')
+                || matches!(name.as_str(), "node_modules" | "target" | "vendor")
+            {
+                continue;
+            }
+            let Ok(child) = dir.open_dir(&name) else {
+                continue;
+            };
+            let nested = Self::detect_root(&child);
+            if nested.project_kind() == "general" {
+                continue;
+            }
+            categories.push(nested.category);
+            for (destination, source) in [
+                (&mut result.languages, nested.languages),
+                (&mut result.frameworks, nested.frameworks),
+                (&mut result.package_managers, nested.package_managers),
+                (&mut result.test_tools, nested.test_tools),
+                (&mut result.structure, nested.structure),
+            ] {
+                for fact in source {
+                    let existed = destination.iter().any(|item| item.name == fact.name);
+                    for evidence in fact.evidence {
+                        add(destination, &fact.name, &format!("{name}/{evidence}"));
+                    }
+                    if !existed {
+                        if let Some(added) =
+                            destination.iter_mut().find(|item| item.name == fact.name)
+                        {
+                            added.confidence = fact.confidence.clone();
+                        }
+                    }
+                }
+                destination.sort_by(|a, b| a.name.cmp(&b.name));
+            }
+        }
+        result.category = CATEGORY_PRECEDENCE
+            .iter()
+            .find(|category| categories.iter().any(|value| value == **category))
+            .map_or(result.category, |category| (*category).to_owned());
+        result
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn detect_root(dir: &Dir) -> Self {
         let mut result = Self {
             category: "general".into(),
             ..Self::default()
@@ -92,7 +387,7 @@ impl ProjectProfile {
             categories.push(if package.get("bin").is_some() {
                 "cli"
             } else {
-                "web"
+                "coding"
             });
             if package.get("workspaces").is_some() {
                 add(&mut result.structure, "monorepo", "package.json");
@@ -113,6 +408,7 @@ impl ProjectProfile {
                         ("astro", "Astro"),
                         ("@angular/core", "Angular"),
                         ("express", "Express"),
+                        ("@docusaurus/core", "Docusaurus"),
                     ] {
                         if deps.contains_key(dependency) {
                             add(&mut result.frameworks, name, "package.json");
@@ -122,6 +418,24 @@ impl ProjectProfile {
                         if deps.contains_key(name) {
                             add(&mut result.test_tools, name, "package.json");
                         }
+                    }
+                    if deps.contains_key("@docusaurus/core") {
+                        categories.push("docs");
+                    }
+                    if [
+                        "next",
+                        "vite",
+                        "react",
+                        "vue",
+                        "svelte",
+                        "astro",
+                        "@angular/core",
+                        "typescript",
+                    ]
+                    .iter()
+                    .any(|name| deps.contains_key(*name))
+                    {
+                        categories.push("web");
                     }
                     if deps.contains_key("express") {
                         categories.push("server");
@@ -162,10 +476,10 @@ impl ProjectProfile {
                         .is_some()
                     {
                         result.commands.insert(
-                            name.into(),
+                            format!("js:{name}"),
                             Fact {
                                 name: format!("{manager} run {name}"),
-                                confidence: "high".into(),
+                                confidence: result.package_managers[0].confidence.clone(),
                                 evidence: vec!["package.json".into()],
                             },
                         );
@@ -173,24 +487,23 @@ impl ProjectProfile {
                 }
             }
         }
-        for (file, framework) in [
-            ("next.config.ts", "Next.js"),
-            ("next.config.js", "Next.js"),
-            ("next.config.mjs", "Next.js"),
-            ("vite.config.ts", "Vite"),
-            ("vite.config.js", "Vite"),
-            ("svelte.config.js", "Svelte"),
-            ("astro.config.mjs", "Astro"),
-            ("angular.json", "Angular"),
-        ] {
-            if text(dir, file).is_some() {
-                add(&mut result.frameworks, framework, file);
-                categories.push("web");
+        for marker in MARKERS {
+            if text(dir, marker.file).is_none() {
+                continue;
             }
-        }
-        if text(dir, "tsconfig.json").is_some() {
-            add(&mut result.languages, "TypeScript", "tsconfig.json");
-            categories.push("web");
+            for (facts, name) in [
+                (&mut result.languages, marker.language),
+                (&mut result.frameworks, marker.framework),
+                (&mut result.package_managers, marker.manager),
+            ] {
+                if !name.is_empty() {
+                    add(facts, name, marker.file);
+                    if let Some(fact) = facts.iter_mut().find(|fact| fact.name == name) {
+                        fact.confidence = marker.confidence.into();
+                    }
+                }
+            }
+            categories.push(marker.category);
         }
         if let Some(cargo) =
             text(dir, "Cargo.toml").and_then(|s| toml::from_str::<toml::Value>(&s).ok())
@@ -207,7 +520,7 @@ impl ProjectProfile {
                 ("lint", "cargo clippy"),
             ] {
                 result.commands.insert(
-                    key.into(),
+                    format!("cargo:{key}"),
                     Fact {
                         name: command.into(),
                         confidence: "high".into(),
@@ -230,7 +543,7 @@ impl ProjectProfile {
                     add(&mut result.test_tools, tool, "pyproject.toml");
                     let key = if tool == "pytest" { "test" } else { "lint" };
                     result.commands.insert(
-                        key.into(),
+                        format!("python:{key}"),
                         Fact {
                             name: if tool == "ruff" {
                                 "ruff check .".into()
@@ -245,7 +558,7 @@ impl ProjectProfile {
             }
         }
         for (file, manager) in [("poetry.lock", "poetry"), ("uv.lock", "uv")] {
-            if text(dir, file).is_some() {
+            if dir.metadata(file).is_ok_and(|metadata| metadata.is_file()) {
                 add(&mut result.package_managers, manager, file);
             }
         }
@@ -269,34 +582,26 @@ impl ProjectProfile {
                 }
             }
         }
-        for (file, language, category, manager) in [
-            ("go.mod", "Go", "go", "go"),
-            ("pom.xml", "Java", "java", "maven"),
-            ("build.gradle", "Java", "java", "gradle"),
-            ("build.gradle.kts", "Kotlin", "java", "gradle"),
-            ("CMakeLists.txt", "C++", "native", "cmake"),
-        ] {
-            if text(dir, file).is_some() {
-                add(&mut result.languages, language, file);
-                add(&mut result.package_managers, manager, file);
-                categories.push(category);
-            }
-        }
-        if let Ok(entries) = dir.entries() {
-            for entry in entries.take(512).flatten() {
-                let path = entry.file_name().to_string_lossy().into_owned();
-                let language = if path.ends_with(".csproj") {
-                    Some("C#")
-                } else if path.ends_with(".fsproj") {
-                    Some("F#")
-                } else {
-                    None
-                };
-                if let Some(language) = language.filter(|_| text(dir, &path).is_some()) {
+        for path in entries(dir) {
+            let (language, manager, category) = if path.ends_with(".csproj") {
+                ("C#", "dotnet", "dotnet")
+            } else if path.ends_with(".fsproj") {
+                ("F#", "dotnet", "dotnet")
+            } else if path.ends_with(".sln") {
+                ("", "dotnet", "dotnet")
+            } else if path.ends_with(".tf") {
+                ("HCL", "terraform", "coding")
+            } else if path.ends_with(".c") && dir.metadata("Makefile").is_ok_and(|m| m.is_file()) {
+                ("C", "make", "native")
+            } else {
+                continue;
+            };
+            if text(dir, &path).is_some() {
+                if !language.is_empty() {
                     add(&mut result.languages, language, &path);
-                    add(&mut result.package_managers, "dotnet", &path);
-                    categories.push("dotnet");
                 }
+                add(&mut result.package_managers, manager, &path);
+                categories.push(category);
             }
         }
         for (file, name) in [
@@ -314,27 +619,27 @@ impl ProjectProfile {
                 categories.push("monorepo");
             }
         }
-        if text(dir, "index.html").is_some() {
-            add(&mut result.languages, "HTML", "index.html");
-            categories.push("web");
-        }
-        let ecosystems = result
-            .languages
-            .iter()
-            .map(|f| match f.name.as_str() {
-                "JavaScript" | "TypeScript" => "js",
-                other => other,
-            })
-            .collect::<std::collections::BTreeSet<_>>();
-        if ecosystems.len() > 1 && ecosystems.contains("Python") {
-            add(&mut result.structure, "monorepo", "pyproject.toml");
+        if let Some(py) =
+            text(dir, "pyproject.toml").and_then(|value| toml::from_str::<toml::Value>(&value).ok())
+        {
+            if py
+                .get("tool")
+                .and_then(|tool| tool.get("uv"))
+                .and_then(|uv| uv.get("workspace"))
+                .is_some()
+            {
+                add(&mut result.structure, "monorepo", "pyproject.toml");
+            }
         }
         result.category = if !result.structure.is_empty() {
             "monorepo"
-        } else if let Some(category) = categories.last() {
+        } else if let Some(category) = CATEGORY_PRECEDENCE
+            .iter()
+            .find(|category| categories.contains(category))
+        {
             category
         } else if text(dir, "README.md").is_some() || dir.is_dir("docs") {
-            "docs"
+            "docs" // Low-confidence documentation hint: project_kind still requires a list choice.
         } else {
             "general"
         }
@@ -364,7 +669,14 @@ mod tests {
         for case in cases.as_array().unwrap() {
             let id = case["id"].as_str().unwrap();
             let profile = ProjectProfile::detect(&root.join(id));
-            assert_eq!(profile.category, case["expected_kind"], "{id}");
+            assert_eq!(
+                profile.category,
+                case.get("reviewed_expected_category")
+                    .unwrap_or(&case["expected_kind"])
+                    .as_str()
+                    .unwrap(),
+                "{id}"
+            );
             for (file, content) in case["files"].as_object().unwrap() {
                 assert_eq!(
                     std::fs::read_to_string(root.join(id).join(file)).unwrap(),
@@ -375,12 +687,72 @@ mod tests {
         }
     }
     #[test]
+    fn weak_readme_requires_choice_and_nested_markers_supply_real_evidence() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("README.md"), "# Notes").unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).project_kind(), "general");
+        std::fs::create_dir(dir.path().join("backend")).unwrap();
+        std::fs::write(
+            dir.path().join("backend/Cargo.toml"),
+            "[package]\nname='server'\n",
+        )
+        .unwrap();
+        let profile = ProjectProfile::detect(dir.path());
+        assert_eq!(profile.project_kind(), "coding");
+        assert_eq!(profile.languages[0].evidence, ["backend/Cargo.toml"]);
+        assert!(profile.commands.is_empty()); // Nested commands require a different working directory.
+    }
+
+    #[test]
+    fn precedence_commands_and_mixed_projects_do_not_invent_structure() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("package.json"), r#"{"dependencies":{"express":"5"},"scripts":{"test":"node test"},"packageManager":"pnpm@10"}"#).unwrap();
+        std::fs::write(dir.path().join("tsconfig.json"), "{}").unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).category, "server");
+        std::fs::write(dir.path().join("Cargo.toml"), "[package]\nname='native'\n").unwrap();
+        std::fs::write(dir.path().join("requirements.txt"), "Django==5").unwrap();
+        let profile = ProjectProfile::detect(dir.path());
+        assert!(profile.structure.is_empty());
+        assert_eq!(profile.commands["js:test"].name, "pnpm run test");
+        assert_eq!(profile.commands["cargo:test"].name, "cargo test");
+        for fact in profile.languages.iter().chain(&profile.structure) {
+            assert!(fact
+                .evidence
+                .iter()
+                .all(|path| dir.path().join(path).exists()));
+        }
+    }
+
+    #[test]
+    fn large_python_locks_and_sorted_entry_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["poetry.lock", "uv.lock"] {
+            std::fs::write(dir.path().join(name), vec![0xff; 1_048_577]).unwrap();
+        }
+        // Reverse creation order must not affect the deterministic first 512 paths.
+        for n in (0..520).rev() {
+            std::fs::write(dir.path().join(format!("z{n:04}.txt")), "").unwrap();
+        }
+        std::fs::write(dir.path().join("a.csproj"), "<Project/>").unwrap();
+        let profile = ProjectProfile::detect(dir.path());
+        assert!(profile.languages.iter().any(|fact| fact.name == "C#"));
+        assert!(profile
+            .package_managers
+            .iter()
+            .any(|fact| fact.name == "uv"));
+        assert!(profile
+            .package_managers
+            .iter()
+            .any(|fact| fact.name == "poetry"));
+    }
+
+    #[test]
     fn scripts_locks_and_tools_are_facts_only() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("package.json"),r#"{"dependencies":{"next":"16"},"devDependencies":{"vitest":"1"},"scripts":{"test":"touch forbidden","build":"next build"}}"#).unwrap();
         std::fs::write(dir.path().join("pnpm-lock.yaml"), "").unwrap();
         let profile = ProjectProfile::detect(dir.path());
-        assert_eq!(profile.commands["test"].name, "pnpm run test");
+        assert_eq!(profile.commands["js:test"].name, "pnpm run test");
         assert_eq!(profile.test_tools[0].name, "vitest");
         assert!(!dir.path().join("forbidden").exists());
         assert_eq!(profile.project_kind(), "coding");

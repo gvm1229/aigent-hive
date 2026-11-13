@@ -303,6 +303,8 @@
       "package.json": "{\"dependencies\":{\"typescript\":\"5\"}}"
     },
     "observed_default": "general",
-    "observed_effective": null
+    "observed_effective": null,
+    "reviewed_expected_category": "web",
+    "review_reason": "M2: Python and TypeScript alone do not prove multiple packages; original expected_kind preserved for baseline comparison."
   }
 ]

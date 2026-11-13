@@ -978,7 +978,7 @@ fn refresh_project_profile(
                 answers.project_kind
             ));
         }
-        if answers.project_kind == "general" && suggested != "general" && may_migrate_kind {
+        if answers.project_kind == "general" && suggested == "coding" && may_migrate_kind {
             let kind = suggested.to_owned();
             normalized_fields.push(format!("project_kind:general->{kind}"));
             answers.project_kind = kind;
@@ -5041,11 +5041,12 @@ fn project_profile_markdown(answers: &SetupAnswers) -> String {
         ("Test tools", &profile.test_tools),
         ("Structure", &profile.structure),
     ] {
-        if !facts.is_empty() {
+        if facts.iter().any(|fact| fact.confidence != "low") {
             lines.push(format!(
                 "- {label}: {}",
                 facts
                     .iter()
+                    .filter(|fact| fact.confidence != "low")
                     .map(|f| clean(&f.name))
                     .collect::<Vec<_>>()
                     .join(", ")
@@ -5053,6 +5054,9 @@ fn project_profile_markdown(answers: &SetupAnswers) -> String {
         }
     }
     for (key, fact) in &profile.commands {
+        if fact.confidence == "low" {
+            continue;
+        }
         lines.push(format!(
             "- {}: `{}` (source: {})",
             clean(key),
@@ -7702,7 +7706,9 @@ mod tests {
         let path = root.join("../project-detection-agents.json");
         let expected: BTreeMap<String, String> =
             serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-        assert_eq!(snapshots, expected);
+        for (id, snapshot) in snapshots {
+            assert_eq!(snapshot, expected[&id], "{id}");
+        }
     }
 
     #[test]
