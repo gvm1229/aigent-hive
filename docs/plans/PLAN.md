@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 508
+> Revision: 509
 > 기준일: 2026-11-13
 > Product version: `0.15.1`
 > 공개 Stable: `0.15.0`
@@ -20,7 +20,8 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 프로젝트 판별 | 9 | 3 | 75.0% |
-| **현재 범위 합계** | **9** | **3** | **75.0%** |
+| 최우선 CLI·업데이트 설명·Discord 정정 | 0 | 5 | 0.0% |
+| **현재 범위 합계** | **9** | **8** | **52.9%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -28,6 +29,8 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [0.15.1-detection.md](active/0.15.1-detection.md) | `OV151-001–011` | 프로젝트 판별 |
+
+| [0.15.1-human-output.md](active/0.15.1-human-output.md) | `OV151-013–017` | 최우선 CLI·업데이트 설명·Discord 정정 |
 
 ## 이전 근거
 
