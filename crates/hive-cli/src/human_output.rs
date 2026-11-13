@@ -188,8 +188,8 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
         ));
         text.push_str(&choose(
             language,
-            "\n전역과 프로젝트 기준 중 더 높은 값으로 보호합니다.",
-            "\nProtection uses the higher of the global and project thresholds.",
+            "\n기준 보호가 켜져 있을 때 전역과 프로젝트 중 더 높은 기준을 적용합니다.",
+            "\nWhen threshold protection is enabled, it uses the higher of the global and project thresholds.",
         ));
     }
     if data["session_recheck_required"] == true {
