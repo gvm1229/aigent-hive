@@ -9,7 +9,7 @@ summary: "A manifest and release gates keep ordinary user documentation on the c
 tags: [documentation, release, stable]
 aliases: ["public stable docs"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:241b1121f2b95690858514f9bcc8af27f6bd9084d125b14ff0e5df31cd401a3d"
+  - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:.github/workflows/release.yml#sha256:fe8bb871aaa0710a655f41521b7fe7960c63ff5c660795a2ee09aed29cb92631"
   - "repo:README.md#sha256:3b55baecb873847eac673618eecade0be3533170b01cdf8b8a9f3f939a2e5369"
   - "repo:docs/public-stable-release.json#sha256:f212c4bf4c1c81e049c0103da39e69f0ac52f7b1a76ae2001d4af078f8de3992"

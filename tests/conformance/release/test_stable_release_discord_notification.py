@@ -127,7 +127,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 command.extend(["--correction", "--message-id", message_id, "--receipt", str(root / "receipt.json")])
             if validate_only:
                 command.append("--validate-only")
-            return subprocess.run(
+            result = subprocess.run(
                 command,
                 cwd=ROOT,
                 check=False,
@@ -135,6 +135,9 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 text=True,
                 env=environment,
             )
+            receipt = root / "receipt.json"
+            self.last_receipt = json.loads(receipt.read_text(encoding="utf-8")) if receipt.is_file() else None
+            return result
 
     def test_sends_banner_before_the_korean_subscriber_summary(self) -> None:
         result = self.run_notifier()
@@ -580,6 +583,28 @@ class StableNotificationCorrection(unittest.TestCase):
         self.assertIn("inspect delivery before retrying", result.stderr)
         self.assertEqual(len(self.server.correction_requests), 1)
 
+    def test_uncertain_write_leaves_an_unknown_receipt_that_blocks_a_blind_rerun(self) -> None:
+        for responses in ([(302, {})], [(200, {"id": "invalid"})]):
+            with self.subTest(responses=responses):
+                self.server.correction_requests = []
+                result = self.run_correction(responses)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNotNone(self.last_receipt)
+                self.assertEqual(self.last_receipt["status"], "unknown")
+                self.assertEqual(self.last_receipt["attempts"][-1]["method"], "POST")
+                self.assertIn("Inspect Discord before any retry", self.last_receipt["manual_action"])
+                text = json.dumps(self.last_receipt)
+                for secret in ("/api/webhooks", "127.0.0.1", self.summary):
+                    self.assertNotIn(secret, text)
+
+    def test_refused_write_or_lookup_failure_leaves_no_receipt(self) -> None:
+        for responses in ([(200, self.original()), (429, {})], [(500, {})]):
+            with self.subTest(responses=responses):
+                self.server.correction_requests = []
+                result = self.run_correction(responses, message_id=self.OLD_ID)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNone(self.last_receipt)
+
     def test_validation_approval_digest_marker_and_id_fail_before_network(self) -> None:
         self.assertEqual(self.run_correction([], validate_only=True).returncode, 0)
         for options in ({"approval_value": None}, {"approval_text": "sha256:" + "0" * 64 + "  summary.md\n"},
@@ -589,6 +614,26 @@ class StableNotificationCorrection(unittest.TestCase):
         self.summary = self.summary.replace("0.15.0 안내 정정", "생략된 설명 보완")
         self.assertNotEqual(self.run_correction([]).returncode, 0)
         self.assertEqual(self.server.correction_requests, [])
+
+
+class StableNoticeOrdering(unittest.TestCase):
+    def test_pending_correction_blocks_direct_send_and_newer_recovery(self) -> None:
+        pending = (ROOT / "docs/releases/discord-pending-corrections.txt").read_text(encoding="utf-8").split()
+        self.assertEqual(pending, ["0.15.0"])
+        publish = yaml.safe_load((ROOT / ".github/workflows/release-publish.yml").read_text(encoding="utf-8"))
+        steps = {step.get("name"): step for step in publish["jobs"]["publish"]["steps"]}
+        guard = steps["Validate stable Discord subscriber update"]["run"]
+        self.assertIn('"$SEND_SUBSCRIBER_UPDATE" = true', guard)
+        self.assertIn("docs/releases/discord-pending-corrections.txt", guard)
+        self.assertLess(guard.index("exit 3"), guard.index("publish-stable-discord-update.py"))
+        names = [step.get("name") for step in publish["jobs"]["publish"]["steps"]]
+        self.assertLess(names.index("Validate stable Discord subscriber update"),
+                        names.index("Publish npm package family through trusted publishing"))
+        recover = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        contract = recover["jobs"]["notify"]["steps"][0]["run"]
+        self.assertIn("discord-pending-corrections.txt?ref=$source_sha", contract)
+        self.assertIn("stable-discord-correction-$previous-$source_sha", contract)
+        self.assertLess(contract.index("must be sent before this notice"), contract.index("GITHUB_OUTPUT"))
 
 
 class StableCorrectionWorkflowContract(unittest.TestCase):

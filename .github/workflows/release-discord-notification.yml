@@ -78,6 +78,20 @@ jobs:
             echo 'This version already has a notification receipt; duplicate send refused.' >&2
             exit 3
           fi
+          # An older notice listed as pending correction must be corrected before this newer notice.
+          if pending_b64=$(gh api "repos/$GITHUB_REPOSITORY/contents/docs/releases/discord-pending-corrections.txt?ref=$source_sha" --jq .content 2>/dev/null); then
+            pending=$(base64 -d <<<"$pending_b64")
+          else
+            pending=""
+          fi
+          for previous in $(grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' <<<"$pending" || true); do
+            [ "$previous" = "$PRODUCT_VERSION" ] && continue
+            corrected=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=stable-discord-correction-$previous-$source_sha&per_page=1")
+            if [ "$(jq -r .total_count <<<"$corrected")" = 0 ]; then
+              echo "The $previous notice correction must be sent before this notice; run operation=correct first." >&2
+              exit 3
+            fi
+          done
           printf 'source_sha=%s\n' "$source_sha" >>"$GITHUB_OUTPUT"
           printf 'summary_source_sha=%s\n' "$summary_source_sha" >>"$GITHUB_OUTPUT"
           printf 'receipt_name=%s\n' "$receipt_name" >>"$GITHUB_OUTPUT"

@@ -235,16 +235,25 @@ def validate_correction(summary: str, product_version: str, message_id: str) -> 
         fail("Discord message ID must be a numeric message snowflake")
 
 
-def correct_notice(*, summary: str, product_version: str, message_id: str, webhook_url: str) -> dict:
+def correct_notice(*, summary: str, product_version: str, message_id: str, webhook_url: str,
+                   attempts: list | None = None) -> dict:
     validate_correction(summary, product_version, message_id)
+    attempts = [] if attempts is None else attempts
+
+    def call(method: str, url: str, body: dict | None = None) -> tuple[int, dict]:
+        # Record before sending so an interrupted request still counts as attempted.
+        entry = {"method": method, "status": None}
+        attempts.append(entry)
+        status, value = webhook_request(url, method, body)
+        entry["status"] = status
+        return status, value
+
     title = f"# Aigent Hive v{product_version} 업데이트 내역:"
     payload = {"content": summary, "allowed_mentions": {"parse": []}}
     old_deleted = False
-    attempts = []
     if message_id:
         endpoint = f"{webhook_url}/messages/{message_id}"
-        status, original = webhook_request(endpoint, "GET")
-        attempts.append({"method": "GET", "status": status})
+        status, original = call("GET", endpoint)
         if status == 200:
             content = original.get("content")
             if original.get("id") != message_id or not isinstance(content, str) or not content.startswith(title):
@@ -252,8 +261,7 @@ def correct_notice(*, summary: str, product_version: str, message_id: str, webho
             if original.get("content") == summary:
                 return {"operation": "already-corrected", "message_id": message_id,
                         "manual_delete_required": False, "attempts": attempts}
-            status, edited = webhook_request(endpoint, "PATCH", payload)
-            attempts.append({"method": "PATCH", "status": status})
+            status, edited = call("PATCH", endpoint, payload)
             if status == 200:
                 if edited.get("id") != message_id or edited.get("content") != summary:
                     fail("Discord edit could not be verified; inspect delivery before retrying")
@@ -261,22 +269,40 @@ def correct_notice(*, summary: str, product_version: str, message_id: str, webho
                         "manual_delete_required": False, "attempts": attempts}
             if status not in (403, 404, 405):
                 fail(f"Discord edit returned HTTP {status}; no automatic replacement attempted")
-            status, _ = webhook_request(endpoint, "DELETE")
-            attempts.append({"method": "DELETE", "status": status})
+            status, _ = call("DELETE", endpoint)
             if status == 204:
                 old_deleted = True
             elif status not in (403, 404, 405):
                 fail(f"Discord deletion returned HTTP {status}; inspect the old notice before retrying")
         elif status not in (403, 404):
             fail(f"Discord message lookup returned HTTP {status}; no automatic replacement attempted")
-    status, posted = webhook_request(f"{webhook_url}?wait=true", "POST", payload)
-    attempts.append({"method": "POST", "status": status})
+    status, posted = call("POST", f"{webhook_url}?wait=true", payload)
     if status != 200 or re.fullmatch(r"[1-9][0-9]{16,21}", str(posted.get("id", ""))) is None:
         fail(f"Discord correction POST is unverified (HTTP {status}); inspect delivery before retrying")
     if posted.get("content") != summary:
         fail("Discord correction content is unverified; inspect delivery before retrying")
     return {"operation": "replaced" if old_deleted else "posted-correction",
             "message_id": posted["id"], "manual_delete_required": not old_deleted, "attempts": attempts}
+
+def uncertain_write(attempts: list) -> bool:
+    """A change request with no answer, a redirect or an unverified success may have reached Discord."""
+    writes = [entry for entry in attempts if entry["method"] != "GET"]
+    return bool(writes) and (writes[-1]["status"] is None or 200 <= writes[-1]["status"] < 400)
+
+
+def write_unknown_receipt(arguments, attempts: list) -> None:
+    if not uncertain_write(attempts):
+        return
+    receipt = {"schema_version": 1, "status": "unknown", "product_version": arguments.product_version,
+               "summary_sha256": approval_digest(arguments.summary_approval, arguments.summary),
+               "attempts": attempts, "webhook_recorded": False, "recipient_reading_verified": False,
+               "original_message_id": arguments.message_id or None,
+               "manual_action": "Inspect Discord before any retry; a rerun is refused while this receipt exists."}
+    try:
+        arguments.receipt.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -319,8 +345,14 @@ def main() -> int:
         if arguments.validate_only:
             return 0
         if arguments.correction:
-            receipt = correct_notice(summary=summary, product_version=arguments.product_version,
-                                     message_id=arguments.message_id, webhook_url=webhook_url)
+            attempts: list = []
+            try:
+                receipt = correct_notice(summary=summary, product_version=arguments.product_version,
+                                         message_id=arguments.message_id, webhook_url=webhook_url,
+                                         attempts=attempts)
+            except NotificationError:
+                write_unknown_receipt(arguments, attempts)
+                raise
             receipt.update({"schema_version": 1, "status": "accepted", "product_version": arguments.product_version,
                             "summary_sha256": approval_digest(arguments.summary_approval, arguments.summary),
                             "webhook_recorded": False, "recipient_reading_verified": False,
