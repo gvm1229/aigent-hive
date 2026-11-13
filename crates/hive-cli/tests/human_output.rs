@@ -98,7 +98,12 @@ fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
     for args in [vec!["doctor"], vec!["check-target", target]] {
         let output = run(&args, "ko");
         assert!(output.status.success());
-        assert!(String::from_utf8_lossy(&output.stdout).starts_with("완료."));
+        let text = String::from_utf8_lossy(&output.stdout);
+        let first = text.lines().next().unwrap_or("");
+        assert!(
+            first.ends_with("완료.") && first.matches("완료").count() == 1,
+            "{first}"
+        );
         let mut args = args;
         args.extend(["--output", "json"]);
         let output = run(&args, "ko");
@@ -116,10 +121,11 @@ fn successful_storage_results_use_the_same_localized_renderer() {
         assert!(output.status.success());
         let text = String::from_utf8(output.stdout).unwrap();
         assert!(text.starts_with(if language == "ko" {
-            "완료."
+            "저장 공간 사용량 확인 완료."
         } else {
-            "Success."
+            "Success. Hive storage measured without changes."
         }));
+        assert!(!text.contains("[Hades]"));
         assert!(text.contains(if language == "ko" {
             "크기(바이트)"
         } else {

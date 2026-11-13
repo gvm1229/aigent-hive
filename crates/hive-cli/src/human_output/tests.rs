@@ -16,6 +16,36 @@ fn bilingual_action_family_snapshots() {
     }
     snapshot.pop();
     assert_eq!(snapshot, include_str!("actions.snap"));
+    for line in snapshot.lines().filter(|line| line.starts_with("ko: ")) {
+        assert!(
+            line.matches("완료").count() <= 1,
+            "repeated outcome word: {line}"
+        );
+    }
+    for (_, _, en) in ACTIONS {
+        assert!(
+            en.split(' ')
+                .all(|word| word.len() < 16 || word.contains('-')),
+            "joined identifier in English topic: {en}"
+        );
+    }
+}
+
+#[test]
+fn internal_component_tags_stay_out_of_human_text_but_remain_in_the_receipt() {
+    let value = json!({"action":"ReportStorage","status":"success","exit_code":0,
+        "message":"[Hades] Hive storage measured without changes"});
+    let english = render(&value, InterfaceLanguage::En, "storage");
+    assert!(english.starts_with("Success. Hive storage measured without changes."));
+    assert!(!english.contains("[Hades]"));
+    assert_eq!(
+        render(&value, InterfaceLanguage::Ko, "storage"),
+        "저장 공간 사용량 확인 완료."
+    );
+    assert_eq!(
+        value["message"],
+        "[Hades] Hive storage measured without changes"
+    );
 }
 
 #[test]
@@ -63,7 +93,7 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
     assert_eq!(render(&value, InterfaceLanguage::Ko, "knowledge"),
         "처리 실패: 지식 검색. 필요한 입력이나 파일이 없습니다. --target 값을 확인하세요.\n다음 단계: --help로 입력 방법을 확인하세요. 자세한 원인은 같은 명령의 --output json에서 확인할 수 있습니다.");
     let english = render(&value, InterfaceLanguage::En, "knowledge");
-    assert!(english.contains("requires --target"));
+    assert!(english.starts_with("Failed. Knowledge query requires --target."));
     assert!(english.contains("Next:"));
     let unknown = json!({"action":"UnknownAction","status":"error","exit_code":2,
         "message":"unknown command: example\n\nAigent Hive\nUSAGE: many commands"});

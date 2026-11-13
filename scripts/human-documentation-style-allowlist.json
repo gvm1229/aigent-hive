@@ -879,7 +879,7 @@
     "path": "docs/research/overhaul/stage-4-command-coverage.md",
     "line": 29,
     "reason": "Exact CLI UI output literal required by the maintainer bilingual coverage table; not authored narrative.",
-    "text_sha256": "aa7380e641dca524fe745ffb4f5d52b8361d5721d38e270cfa591796494789b1"
+    "text_sha256": "c97111127e00fbbbd4f00ddcada815be3b0e15c48926474779920d93e4062610"
   },
   {
     "path": "docs/research/overhaul/stage-4-command-coverage.md",

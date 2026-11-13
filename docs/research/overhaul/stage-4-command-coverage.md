@@ -9,143 +9,143 @@
 
 | action | 한국어 표본 | English sample |
 | --- | --- | --- |
-| `AnswerSimpleQuestion` | `완료. 간단한 질문 처리 완료.` | `Success. Question processed.` |
-| `DescribeHiveSetupQuestion` | `완료. 설정 질문 확인 완료.` | `Success. Setup question inspected.` |
-| `DescribeHiveSetupSection` | `완료. 설정 항목 확인 완료.` | `Success. Setup section inspected.` |
-| `NotionKnowledge` | `완료. Notion 지식 요청 처리 완료.` | `Success. Notion knowledge request processed.` |
-| `RoleWork` | `완료. 역할 작업 처리 완료.` | `Success. Role work processed.` |
-| `RunWork` | `완료. 작업 기록 처리 완료.` | `Success. Work record processed.` |
-| `ScanProjectUpgrade` | `완료. 프로젝트 갱신 대상 확인 완료.` | `Success. Project update targets inspected.` |
-| `ValidateProjectUpgrade` | `완료. 프로젝트 갱신 확인 완료.` | `Success. Project update checked.` |
-| `VectorKnowledge` | `완료. 의미 기반 지식 검색 처리 완료.` | `Success. Meaning-based knowledge search processed.` |
-| `CheckRunClosure` | `완료. 작업 종료 조건 확인 완료.` | `Success. Work completion conditions checked.` |
-| `CheckRunContinuation` | `완료. 작업 계속 조건 확인 완료.` | `Success. Work continuation conditions checked.` |
-| `CheckpointRun` | `완료. 작업 진행 저장 완료.` | `Success. Work progress saved.` |
-| `ProbeNativeUsage` | `완료. 앱의 사용량 조회 처리 완료.` | `Success. Host usage inspected.` |
-| `RecoverHiveUser` | `완료. 사용자 설정 복구 처리 완료.` | `Success. User setup recovery processed.` |
-| `RecoverProjectUpgrade` | `완료. 프로젝트 갱신 복구 처리 완료.` | `Success. Project update recovery processed.` |
-| `RefinePrompt` | `완료. 요청 다듬기 처리 완료.` | `Success. Request refinement processed.` |
-| `ResumeWork` | `완료. 저장된 작업 재개 처리 완료.` | `Success. Saved work resume processed.` |
-| `UnknownAction` | `처리 실패: 명령 처리. 사용할 수 없는 명령이나 옵션입니다. --help에서 사용할 이름을 확인하세요.` | `Could not complete: Command processing. Unknown top-level action: example.` |
-| `ValidateHiveUser` | `완료. 사용자 설치 확인 완료.` | `Success. User installation checked.` |
-| `InspectInstallation` | `완료. Hive 설치 상태 확인 완료.` | `Success. Hive installation inspected.` |
-| `CheckTarget` | `완료. 대상 폴더 확인 완료.` | `Success. Target folder checked.` |
-| `SetupHarness` | `완료. 프로젝트 설정 처리 완료.` | `Success. Project setup processed.` |
-| `SetupHiveUser` | `완료. 사용자 설정 처리 완료.` | `Success. User setup processed.` |
-| `DescribeHiveUserSetup` | `완료. 설정 질문과 선택지 확인 완료.` | `Success. Setup choices inspected.` |
-| `ManageHiveUserFeature` | `완료. 선택 기능 설정 처리 완료.` | `Success. Optional feature settings processed.` |
-| `InstallHiveUser` | `완료. 사용자 환경 설치 처리 완료.` | `Success. User installation processed.` |
-| `UninstallHiveUser` | `완료. Hive 제거 처리 완료.` | `Success. Hive removal processed.` |
-| `UpdateHiveUser` | `완료. 사용자 환경 갱신 처리 완료.` | `Success. User update processed.` |
-| `UpdateHarness` | `완료. Hive 갱신 처리 완료.` | `Success. Hive update processed.` |
-| `UpdateProjectHarness` | `완료. 프로젝트 갱신 처리 완료.` | `Success. Project update processed.` |
-| `CheckHiveUpdate` | `완료. 새 버전 확인 완료.` | `Success. New version checked.` |
-| `VerifyRelease` | `완료. 배포 파일 확인 완료.` | `Success. Release files checked.` |
-| `RouteAgent` | `완료. 요청에 맞는 작업 경로 선택 완료.` | `Success. Work route selected.` |
-| `ValidatePrompt` | `완료. 다듬은 요청 확인 완료.` | `Success. Refined request checked.` |
-| `ApprovePrompt` | `완료. 다듬은 요청 승인 처리 완료.` | `Success. Refined request approval processed.` |
-| `EvaluateHook` | `완료. 연결된 작업의 허용 여부 확인 완료.` | `Success. Hook request checked.` |
-| `EvaluatePolicy` | `완료. 안전 규칙 확인 완료.` | `Success. Safety policy checked.` |
-| `ConfigurePolicyHooks` | `완료. 안전 규칙 연결 설정 처리 완료.` | `Success. Safety hook settings processed.` |
-| `ReviewPolicyCandidate` | `완료. 안전 규칙 검토 처리 완료.` | `Success. Policy review processed.` |
-| `CheckUsage` | `완료. 사용량 보호 확인 완료.` | `Success. Usage protection checked.` |
-| `ShowUsageStatus` | `완료. 사용량과 보호 상태 확인 완료.` | `Success. Usage and protection inspected.` |
-| `CaptureUsage` | `완료. 사용량 관측 처리 완료.` | `Success. Usage observation processed.` |
+| `AnswerSimpleQuestion` | `간단한 질문 처리 완료.` | `Success. Question processed.` |
+| `DescribeHiveSetupQuestion` | `설정 질문 확인 완료.` | `Success. Setup question inspected.` |
+| `DescribeHiveSetupSection` | `설정 항목 확인 완료.` | `Success. Setup section inspected.` |
+| `NotionKnowledge` | `Notion 지식 요청 처리 완료.` | `Success. Notion knowledge request processed.` |
+| `RoleWork` | `역할 작업 처리 완료.` | `Success. Role work processed.` |
+| `RunWork` | `작업 기록 처리 완료.` | `Success. Work record processed.` |
+| `ScanProjectUpgrade` | `프로젝트 갱신 대상 확인 완료.` | `Success. Project update targets inspected.` |
+| `ValidateProjectUpgrade` | `프로젝트 갱신 확인 완료.` | `Success. Project update checked.` |
+| `VectorKnowledge` | `의미 기반 지식 검색 처리 완료.` | `Success. Meaning-based knowledge search processed.` |
+| `CheckRunClosure` | `작업 종료 조건 확인 완료.` | `Success. Work completion conditions checked.` |
+| `CheckRunContinuation` | `작업 계속 조건 확인 완료.` | `Success. Work continuation conditions checked.` |
+| `CheckpointRun` | `작업 진행 저장 완료.` | `Success. Work progress saved.` |
+| `ProbeNativeUsage` | `앱의 사용량 조회 처리 완료.` | `Success. Host usage inspected.` |
+| `RecoverHiveUser` | `사용자 설정 복구 처리 완료.` | `Success. User setup recovery processed.` |
+| `RecoverProjectUpgrade` | `프로젝트 갱신 복구 처리 완료.` | `Success. Project update recovery processed.` |
+| `RefinePrompt` | `요청 다듬기 처리 완료.` | `Success. Request refinement processed.` |
+| `ResumeWork` | `저장된 작업 재개 처리 완료.` | `Success. Saved work resume processed.` |
+| `UnknownAction` | `처리 실패: 명령 처리. 사용할 수 없는 명령이나 옵션입니다. --help에서 사용할 이름을 확인하세요.` | `Failed. Unknown top-level action: example.` |
+| `ValidateHiveUser` | `사용자 설치 확인 완료.` | `Success. User installation checked.` |
+| `InspectInstallation` | `Hive 설치 상태 확인 완료.` | `Success. Hive installation inspected.` |
+| `CheckTarget` | `대상 폴더 확인 완료.` | `Success. Target folder checked.` |
+| `SetupHarness` | `프로젝트 설정 처리 완료.` | `Success. Project setup processed.` |
+| `SetupHiveUser` | `사용자 설정 처리 완료.` | `Success. User setup processed.` |
+| `DescribeHiveUserSetup` | `설정 질문과 선택지 확인 완료.` | `Success. Setup choices inspected.` |
+| `ManageHiveUserFeature` | `선택 기능 설정 처리 완료.` | `Success. Optional feature settings processed.` |
+| `InstallHiveUser` | `사용자 환경 설치 처리 완료.` | `Success. User installation processed.` |
+| `UninstallHiveUser` | `Hive 제거 처리 완료.` | `Success. Hive removal processed.` |
+| `UpdateHiveUser` | `사용자 환경 갱신 처리 완료.` | `Success. User update processed.` |
+| `UpdateHarness` | `Hive 갱신 처리 완료.` | `Success. Hive update processed.` |
+| `UpdateProjectHarness` | `프로젝트 갱신 처리 완료.` | `Success. Project update processed.` |
+| `CheckHiveUpdate` | `새 버전 확인 완료.` | `Success. New version checked.` |
+| `VerifyRelease` | `배포 파일 확인 완료.` | `Success. Release files checked.` |
+| `RouteAgent` | `요청에 맞는 작업 경로 선택 완료.` | `Success. Work route selected.` |
+| `ValidatePrompt` | `다듬은 요청 확인 완료.` | `Success. Refined request checked.` |
+| `ApprovePrompt` | `다듬은 요청 승인 처리 완료.` | `Success. Refined request approval processed.` |
+| `EvaluateHook` | `연결된 작업의 허용 여부 확인 완료.` | `Success. Hook request checked.` |
+| `EvaluatePolicy` | `안전 규칙 확인 완료.` | `Success. Safety policy checked.` |
+| `ConfigurePolicyHooks` | `안전 규칙 연결 설정 처리 완료.` | `Success. Safety hook settings processed.` |
+| `ReviewPolicyCandidate` | `안전 규칙 검토 처리 완료.` | `Success. Policy review processed.` |
+| `CheckUsage` | `사용량 보호 확인 완료.` | `Success. Usage protection checked.` |
+| `ShowUsageStatus` | `사용량과 보호 상태 확인 완료.` | `Success. Usage and protection inspected.` |
+| `CaptureUsage` | `사용량 관측 처리 완료.` | `Success. Usage observation processed.` |
 | `SetUsageThreshold` | `변경 완료. 사용량 보호 기준을 30%에서 10%로 바꿨습니다.` | `Success. Hive usage guard threshold lowered from 30% to 10%.` |
-| `ControlUsageSession` | `완료. 현재 세션의 사용량 보호 설정 처리 완료.` | `Success. Session usage protection processed.` |
-| `ManageUsageMonitor` | `완료. 상시 사용량 감시 설정 확인 완료.` | `Success. Background usage monitoring inspected.` |
-| `InstallUsageFallback` | `완료. 대체 사용량 확인 도구 설치 처리 완료.` | `Success. Fallback usage tool installation processed.` |
-| `SummarizeTokens` | `완료. 토큰 사용량 합산 완료.` | `Success. Token usage summarized.` |
-| `ReportStorage` | `완료. 저장 공간 사용량 확인 완료.` | `Success. Storage use inspected.` |
-| `PruneStorage` | `완료. 정리 대상 처리 완료.` | `Success. Storage cleanup processed.` |
-| `CoordinateSession` | `완료. 파일 수정 예약 처리 완료.` | `Success. File edit reservation processed.` |
-| `BeginSession` | `완료. 세션 시작과 파일 예약 처리 완료.` | `Success. Session and file reservation started.` |
-| `CheckSession` | `완료. 세션과 파일 예약 확인 완료.` | `Success. Session reservations checked.` |
-| `UpdateSession` | `완료. 세션 파일 예약 갱신 완료.` | `Success. Session reservations updated.` |
-| `CloseSession` | `완료. 세션 파일 예약 해제 완료.` | `Success. Session reservations closed.` |
-| `RecoverSession` | `완료. 끝난 세션의 파일 예약 복구 완료.` | `Success. Ended session reservations recovered.` |
-| `ValidateRole` | `완료. 역할 설정 확인 완료.` | `Success. Role settings checked.` |
-| `RecordRoleHandoff` | `완료. 역할 인계 기록 완료.` | `Success. Role handoff recorded.` |
-| `VerifyWork` | `완료. 작업 결과 확인 완료.` | `Success. Work result checked.` |
-| `InitializeLoop` | `완료. 반복 작업 초기화 완료.` | `Success. Repeated work initialized.` |
-| `ValidateLoop` | `완료. 반복 작업 상태 확인 완료.` | `Success. Repeated work state checked.` |
-| `CheckpointLoop` | `완료. 반복 작업 진행 저장 완료.` | `Success. Repeated work progress saved.` |
-| `SteerLoop` | `완료. 반복 작업 방향 변경 처리 완료.` | `Success. Repeated work direction processed.` |
-| `PrepareLoopDispatch` | `완료. 반복 작업의 전달 준비 완료.` | `Success. Repeated work delivery prepared.` |
-| `RecoverLoop` | `완료. 반복 작업 복구 처리 완료.` | `Success. Repeated work recovery processed.` |
-| `OrchestrationStatus` | `완료. 작업 조율 상태 확인 완료.` | `Success. Coordination state inspected.` |
-| `OrchestrationPlan` | `완료. 작업 조율 계획 처리 완료.` | `Success. Coordination plan processed.` |
-| `OrchestrationDispatch` | `완료. 작업 전달 준비 처리 완료.` | `Success. Work delivery preparation processed.` |
-| `OrchestrationReceipt` | `완료. 작업 수신 기록 처리 완료.` | `Success. Work receipt processed.` |
-| `OrchestrationCancel` | `완료. 작업 취소 처리 완료.` | `Success. Work cancellation processed.` |
-| `OrchestrationRecover` | `완료. 작업 조율 복구 처리 완료.` | `Success. Coordination recovery processed.` |
-| `OrchestrationAuthority` | `완료. 작업 승인 정보 처리 완료.` | `Success. Work approval processed.` |
-| `OrchestrationAuthorityIssue` | `완료. 작업 승인 발급 처리 완료.` | `Success. Work approval issued.` |
-| `OrchestrationAuthorityRevoke` | `완료. 작업 승인 철회 처리 완료.` | `Success. Work approval revoked.` |
-| `OrchestrationMigrate` | `완료. 작업 기록 이전 처리 완료.` | `Success. Work records migrated.` |
-| `PackageJudge` | `완료. 독립 검토 자료 준비 완료.` | `Success. Independent review material prepared.` |
-| `RecordJudgeReceipt` | `완료. 독립 검토 결과 기록 완료.` | `Success. Independent review result recorded.` |
-| `EvaluateJudgeQuorum` | `완료. 독립 검토의 동의 수 확인 완료.` | `Success. Independent review agreement checked.` |
-| `KoreanLanguage` | `완료. 한국어 문장 처리 완료.` | `Success. Korean text processed.` |
-| `InspectKorean` | `완료. 한국어 문장 검사 완료.` | `Success. Korean text inspected.` |
-| `VerifyKorean` | `완료. 문장 의미와 보존 조건 확인 완료.` | `Success. Text preservation checked.` |
-| `SanitizeKorean` | `완료. 한국어 문장 정리 완료.` | `Success. Korean text cleaned.` |
-| `PreviewKoreanPack` | `완료. 한국어 규칙 미리보기 완료.` | `Success. Korean rules previewed.` |
-| `ActivateKoreanPack` | `완료. 한국어 규칙 적용 완료.` | `Success. Korean rules activated.` |
-| `CheckKoreanPack` | `완료. 한국어 규칙 확인 완료.` | `Success. Korean rules checked.` |
-| `StatusKoreanPack` | `완료. 한국어 규칙 상태 확인 완료.` | `Success. Korean rules status inspected.` |
-| `RollbackKoreanPack` | `완료. 한국어 규칙 되돌림 완료.` | `Success. Korean rules rolled back.` |
-| `InspectDiscordInbound` | `완료. Discord 요청 수신 설정 확인 완료.` | `Success. Discord inbound settings inspected.` |
-| `TestDiscordWebhook` | `완료. Discord 알림 시험 처리 완료.` | `Success. Discord notification test processed.` |
-| `DeveloperReport` | `완료. 문제 보고 자료 처리 완료.` | `Success. Problem report processed.` |
-| `PreviewDeveloperReport` | `완료. 문제 보고 자료 미리보기 완료.` | `Success. Problem report previewed.` |
-| `CollectDeveloperReport` | `완료. 문제 보고 자료 수집 완료.` | `Success. Problem report collected.` |
-| `ExportDeveloperReport` | `완료. 문제 보고 자료 내보내기 완료.` | `Success. Problem report exported.` |
-| `RecommendAgent` | `완료. 작업자 추천 완료.` | `Success. Worker recommendation prepared.` |
-| `CreateAgent` | `완료. 맞춤 작업자 생성 완료.` | `Success. Custom worker created.` |
-| `PreviewAgent` | `완료. 맞춤 작업자 미리보기 완료.` | `Success. Custom worker previewed.` |
-| `ValidateAgent` | `완료. 맞춤 작업자 확인 완료.` | `Success. Custom worker checked.` |
-| `PreflightAgent` | `완료. 맞춤 작업자 실행 전 확인 완료.` | `Success. Custom worker preflight checked.` |
-| `ApplyAgent` | `완료. 맞춤 작업자 적용 완료.` | `Success. Custom worker applied.` |
-| `AttestAgent` | `완료. 맞춤 작업자 증명 확인 완료.` | `Success. Custom worker evidence checked.` |
-| `DisableAgent` | `완료. 맞춤 작업자 비활성 처리 완료.` | `Success. Custom worker disabled.` |
-| `RemoveAgent` | `완료. 맞춤 작업자 제거 처리 완료.` | `Success. Custom worker removed.` |
-| `Summon` | `완료. 역할별 작업 준비 완료, 자동 실행 없음.` | `Success. Role work prepared; automatic execution remains disabled.` |
-| `roster` | `완료. 역할별 모델과 설정 확인 완료.` | `Success. Role models and settings inspected.` |
-| `summon` | `완료. 역할별 작업 준비 완료, 자동 실행 없음.` | `Success. Role work prepared; automatic execution remains disabled.` |
-| `AddKnowledge` | `완료. 지식 추가 처리 완료.` | `Success. Knowledge add processed.` |
-| `AuthorizeConfidentialKnowledge` | `완료. 지식 기밀 사용 승인 처리 완료.` | `Success. Knowledge authorizeconfidential processed.` |
-| `DeleteKnowledge` | `완료. 지식 삭제 처리 완료.` | `Success. Knowledge delete processed.` |
-| `ExportKnowledge` | `완료. 지식 내보내기 처리 완료.` | `Success. Knowledge export processed.` |
-| `ImportKnowledge` | `완료. 지식 가져오기 처리 완료.` | `Success. Knowledge import processed.` |
-| `IngestKnowledge` | `완료. 지식 원문 반영 처리 완료.` | `Success. Knowledge ingest processed.` |
-| `LintKnowledge` | `완료. 지식 검사 처리 완료.` | `Success. Knowledge lint processed.` |
-| `ListKnowledge` | `완료. 지식 목록 조회 처리 완료.` | `Success. Knowledge list processed.` |
-| `MapKnowledge` | `완료. 지식 연결 처리 완료.` | `Success. Knowledge map processed.` |
-| `PromoteKnowledge` | `완료. 지식 공유 처리 완료.` | `Success. Knowledge promote processed.` |
-| `QueryKnowledge` | `완료. 지식 검색 처리 완료.` | `Success. Knowledge query processed.` |
-| `ReadKnowledge` | `완료. 지식 읽기 처리 완료.` | `Success. Knowledge read processed.` |
-| `RebuildKnowledge` | `완료. 지식 색인 재생성 처리 완료.` | `Success. Knowledge rebuild processed.` |
-| `RefreshKnowledge` | `완료. 지식 갱신 처리 완료.` | `Success. Knowledge refresh processed.` |
-| `RememberKnowledge` | `완료. 지식 기록 처리 완료.` | `Success. Knowledge remember processed.` |
-| `RetrieveKnowledge` | `완료. 지식 관련 자료 검색 처리 완료.` | `Success. Knowledge retrieve processed.` |
-| `ScanKnowledge` | `완료. 지식 폴더 조사 처리 완료.` | `Success. Knowledge scan processed.` |
-| `SuppressKnowledge` | `완료. 지식 검색 제외 처리 완료.` | `Success. Knowledge suppress processed.` |
-| `TransferKnowledge` | `완료. 지식 이전 처리 완료.` | `Success. Knowledge transfer processed.` |
-| `SyncNotionKnowledge` | `완료. 지식 Notion 동기화 처리 완료.` | `Success. Knowledge syncnotion processed.` |
-| `RetrieveNotionKnowledge` | `완료. 지식 Notion 검색 처리 완료.` | `Success. Knowledge retrievenotion processed.` |
-| `WriteThroughNotionKnowledge` | `완료. 지식 Notion 기록 처리 완료.` | `Success. Knowledge writethroughnotion processed.` |
-| `MapKnowledgeCollection` | `완료. 지식 모음 연결 처리 완료.` | `Success. Knowledge collection mapped.` |
-| `RebuildKnowledgeIndex` | `완료. 지식 검색 색인 재생성 완료.` | `Success. Knowledge search index rebuilt.` |
-| `LintSourceWiki` | `완료. 소스 위키 검사 완료.` | `Success. Source Wiki checked.` |
-| `QuerySourceWiki` | `완료. 소스 위키 검색 완료.` | `Success. Source Wiki searched.` |
-| `RebuildSourceWikiIndex` | `완료. 소스 위키 색인 재생성 완료.` | `Success. Source Wiki index rebuilt.` |
-| `InspectUserSetupProgress` | `완료. 사용자 설정 진행 확인 완료.` | `Success. User setup progress inspect processed.` |
-| `SaveUserSetupProgress` | `완료. 사용자 설정 진행 저장 완료.` | `Success. User setup progress save processed.` |
-| `ClearUserSetupProgress` | `완료. 사용자 설정 진행 초기화 완료.` | `Success. User setup progress clear processed.` |
-| `InspectProjectSetupProgress` | `완료. 프로젝트 설정 진행 확인 완료.` | `Success. Project setup progress inspect processed.` |
-| `SaveProjectSetupProgress` | `완료. 프로젝트 설정 진행 저장 완료.` | `Success. Project setup progress save processed.` |
-| `ClearProjectSetupProgress` | `완료. 프로젝트 설정 진행 초기화 완료.` | `Success. Project setup progress clear processed.` |
+| `ControlUsageSession` | `현재 세션의 사용량 보호 설정 처리 완료.` | `Success. Session usage protection processed.` |
+| `ManageUsageMonitor` | `상시 사용량 감시 설정 확인 완료.` | `Success. Background usage monitoring inspected.` |
+| `InstallUsageFallback` | `대체 사용량 확인 도구 설치 처리 완료.` | `Success. Fallback usage tool installation processed.` |
+| `SummarizeTokens` | `토큰 사용량 합산 완료.` | `Success. Token usage summarized.` |
+| `ReportStorage` | `저장 공간 사용량 확인 완료.` | `Success. Storage use inspected.` |
+| `PruneStorage` | `정리 대상 처리 완료.` | `Success. Storage cleanup processed.` |
+| `CoordinateSession` | `파일 수정 예약 처리 완료.` | `Success. File edit reservation processed.` |
+| `BeginSession` | `세션 시작과 파일 예약 처리 완료.` | `Success. Session and file reservation started.` |
+| `CheckSession` | `세션과 파일 예약 확인 완료.` | `Success. Session reservations checked.` |
+| `UpdateSession` | `세션 파일 예약 갱신 완료.` | `Success. Session reservations updated.` |
+| `CloseSession` | `세션 파일 예약 해제 완료.` | `Success. Session reservations closed.` |
+| `RecoverSession` | `끝난 세션의 파일 예약 복구 완료.` | `Success. Ended session reservations recovered.` |
+| `ValidateRole` | `역할 설정 확인 완료.` | `Success. Role settings checked.` |
+| `RecordRoleHandoff` | `역할 인계 기록 완료.` | `Success. Role handoff recorded.` |
+| `VerifyWork` | `작업 결과 확인 완료.` | `Success. Work result checked.` |
+| `InitializeLoop` | `반복 작업 초기화 완료.` | `Success. Repeated work initialized.` |
+| `ValidateLoop` | `반복 작업 상태 확인 완료.` | `Success. Repeated work state checked.` |
+| `CheckpointLoop` | `반복 작업 진행 저장 완료.` | `Success. Repeated work progress saved.` |
+| `SteerLoop` | `반복 작업 방향 변경 처리 완료.` | `Success. Repeated work direction processed.` |
+| `PrepareLoopDispatch` | `반복 작업의 전달 준비 완료.` | `Success. Repeated work delivery prepared.` |
+| `RecoverLoop` | `반복 작업 복구 처리 완료.` | `Success. Repeated work recovery processed.` |
+| `OrchestrationStatus` | `작업 조율 상태 확인 완료.` | `Success. Coordination state inspected.` |
+| `OrchestrationPlan` | `작업 조율 계획 처리 완료.` | `Success. Coordination plan processed.` |
+| `OrchestrationDispatch` | `작업 전달 준비 처리 완료.` | `Success. Work delivery preparation processed.` |
+| `OrchestrationReceipt` | `작업 수신 기록 처리 완료.` | `Success. Work receipt processed.` |
+| `OrchestrationCancel` | `작업 취소 처리 완료.` | `Success. Work cancellation processed.` |
+| `OrchestrationRecover` | `작업 조율 복구 처리 완료.` | `Success. Coordination recovery processed.` |
+| `OrchestrationAuthority` | `작업 승인 정보 처리 완료.` | `Success. Work approval processed.` |
+| `OrchestrationAuthorityIssue` | `작업 승인 발급 처리 완료.` | `Success. Work approval issued.` |
+| `OrchestrationAuthorityRevoke` | `작업 승인 철회 처리 완료.` | `Success. Work approval revoked.` |
+| `OrchestrationMigrate` | `작업 기록 이전 처리 완료.` | `Success. Work records migrated.` |
+| `PackageJudge` | `독립 검토 자료 준비 완료.` | `Success. Independent review material prepared.` |
+| `RecordJudgeReceipt` | `독립 검토 결과 기록 완료.` | `Success. Independent review result recorded.` |
+| `EvaluateJudgeQuorum` | `독립 검토의 동의 수 확인 완료.` | `Success. Independent review agreement checked.` |
+| `KoreanLanguage` | `한국어 문장 처리 완료.` | `Success. Korean text processed.` |
+| `InspectKorean` | `한국어 문장 검사 완료.` | `Success. Korean text inspected.` |
+| `VerifyKorean` | `문장 의미와 보존 조건 확인 완료.` | `Success. Text preservation checked.` |
+| `SanitizeKorean` | `한국어 문장 정리 완료.` | `Success. Korean text cleaned.` |
+| `PreviewKoreanPack` | `한국어 규칙 미리보기 완료.` | `Success. Korean rules previewed.` |
+| `ActivateKoreanPack` | `한국어 규칙 적용 완료.` | `Success. Korean rules activated.` |
+| `CheckKoreanPack` | `한국어 규칙 확인 완료.` | `Success. Korean rules checked.` |
+| `StatusKoreanPack` | `한국어 규칙 상태 확인 완료.` | `Success. Korean rules status inspected.` |
+| `RollbackKoreanPack` | `한국어 규칙 되돌림 완료.` | `Success. Korean rules rolled back.` |
+| `InspectDiscordInbound` | `Discord 요청 수신 설정 확인 완료.` | `Success. Discord inbound settings inspected.` |
+| `TestDiscordWebhook` | `Discord 알림 시험 처리 완료.` | `Success. Discord notification test processed.` |
+| `DeveloperReport` | `문제 보고 자료 처리 완료.` | `Success. Problem report processed.` |
+| `PreviewDeveloperReport` | `문제 보고 자료 미리보기 완료.` | `Success. Problem report previewed.` |
+| `CollectDeveloperReport` | `문제 보고 자료 수집 완료.` | `Success. Problem report collected.` |
+| `ExportDeveloperReport` | `문제 보고 자료 내보내기 완료.` | `Success. Problem report exported.` |
+| `RecommendAgent` | `작업자 추천 완료.` | `Success. Worker recommendation prepared.` |
+| `CreateAgent` | `맞춤 작업자 생성 완료.` | `Success. Custom worker created.` |
+| `PreviewAgent` | `맞춤 작업자 미리보기 완료.` | `Success. Custom worker previewed.` |
+| `ValidateAgent` | `맞춤 작업자 확인 완료.` | `Success. Custom worker checked.` |
+| `PreflightAgent` | `맞춤 작업자 실행 전 확인 완료.` | `Success. Custom worker preflight checked.` |
+| `ApplyAgent` | `맞춤 작업자 적용 완료.` | `Success. Custom worker applied.` |
+| `AttestAgent` | `맞춤 작업자 증명 확인 완료.` | `Success. Custom worker evidence checked.` |
+| `DisableAgent` | `맞춤 작업자 비활성 처리 완료.` | `Success. Custom worker disabled.` |
+| `RemoveAgent` | `맞춤 작업자 제거 처리 완료.` | `Success. Custom worker removed.` |
+| `Summon` | `역할별 작업 준비 완료, 자동 실행 없음.` | `Success. Role work prepared; automatic execution remains disabled.` |
+| `roster` | `역할별 모델과 설정 확인 완료.` | `Success. Role models and settings inspected.` |
+| `summon` | `역할별 작업 준비 완료, 자동 실행 없음.` | `Success. Role work prepared; automatic execution remains disabled.` |
+| `AddKnowledge` | `지식 추가 처리 완료.` | `Success. Knowledge entry added.` |
+| `AuthorizeConfidentialKnowledge` | `지식 기밀 사용 승인 처리 완료.` | `Success. Confidential knowledge approval processed.` |
+| `DeleteKnowledge` | `지식 삭제 처리 완료.` | `Success. Knowledge deletion processed.` |
+| `ExportKnowledge` | `지식 내보내기 처리 완료.` | `Success. Knowledge export processed.` |
+| `ImportKnowledge` | `지식 가져오기 처리 완료.` | `Success. Knowledge import processed.` |
+| `IngestKnowledge` | `지식 원문 반영 처리 완료.` | `Success. Source material added to knowledge.` |
+| `LintKnowledge` | `지식 검사 처리 완료.` | `Success. Knowledge checked.` |
+| `ListKnowledge` | `지식 목록 조회 처리 완료.` | `Success. Knowledge listed.` |
+| `MapKnowledge` | `지식 연결 처리 완료.` | `Success. Knowledge links processed.` |
+| `PromoteKnowledge` | `지식 공유 처리 완료.` | `Success. Knowledge sharing processed.` |
+| `QueryKnowledge` | `지식 검색 처리 완료.` | `Success. Knowledge searched.` |
+| `ReadKnowledge` | `지식 읽기 처리 완료.` | `Success. Knowledge page read.` |
+| `RebuildKnowledge` | `지식 색인 재생성 처리 완료.` | `Success. Knowledge index rebuilt.` |
+| `RefreshKnowledge` | `지식 갱신 처리 완료.` | `Success. Knowledge refreshed.` |
+| `RememberKnowledge` | `지식 기록 처리 완료.` | `Success. Knowledge recorded.` |
+| `RetrieveKnowledge` | `지식 관련 자료 검색 처리 완료.` | `Success. Related knowledge retrieved.` |
+| `ScanKnowledge` | `지식 폴더 조사 처리 완료.` | `Success. Knowledge folder scanned.` |
+| `SuppressKnowledge` | `지식 검색 제외 처리 완료.` | `Success. Knowledge excluded from search.` |
+| `TransferKnowledge` | `지식 이전 처리 완료.` | `Success. Knowledge transfer processed.` |
+| `SyncNotionKnowledge` | `지식 Notion 동기화 처리 완료.` | `Success. Notion knowledge sync processed.` |
+| `RetrieveNotionKnowledge` | `지식 Notion 검색 처리 완료.` | `Success. Notion knowledge search processed.` |
+| `WriteThroughNotionKnowledge` | `지식 Notion 기록 처리 완료.` | `Success. Notion knowledge write processed.` |
+| `MapKnowledgeCollection` | `지식 모음 연결 처리 완료.` | `Success. Knowledge collection mapped.` |
+| `RebuildKnowledgeIndex` | `지식 검색 색인 재생성 완료.` | `Success. Knowledge search index rebuilt.` |
+| `LintSourceWiki` | `소스 위키 검사 완료.` | `Success. Source Wiki checked.` |
+| `QuerySourceWiki` | `소스 위키 검색 완료.` | `Success. Source Wiki searched.` |
+| `RebuildSourceWikiIndex` | `소스 위키 색인 재생성 완료.` | `Success. Source Wiki index rebuilt.` |
+| `InspectUserSetupProgress` | `사용자 설정 진행 확인 완료.` | `Success. User setup progress inspected.` |
+| `SaveUserSetupProgress` | `사용자 설정 진행 저장 완료.` | `Success. User setup progress saved.` |
+| `ClearUserSetupProgress` | `사용자 설정 진행 초기화 완료.` | `Success. User setup progress cleared.` |
+| `InspectProjectSetupProgress` | `프로젝트 설정 진행 확인 완료.` | `Success. Project setup progress inspected.` |
+| `SaveProjectSetupProgress` | `프로젝트 설정 진행 저장 완료.` | `Success. Project setup progress saved.` |
+| `ClearProjectSetupProgress` | `프로젝트 설정 진행 초기화 완료.` | `Success. Project setup progress cleared.` |
 
 ## 전체 도움말의 명령 형식
 

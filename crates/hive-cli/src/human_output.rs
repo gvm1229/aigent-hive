@@ -83,7 +83,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             }
         });
     if failed {
-        return failure(value, language, &ko, &en);
+        return failure(value, language, &ko);
     }
     if action == "SetUsageThreshold" {
         if let Some(text) = threshold_message(data, language) {
@@ -95,7 +95,8 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         if message.chars().any(|c| ('가'..='힣').contains(&c)) {
             format!("완료. {message}")
         } else {
-            format!("완료. {ko}.")
+            // Topics already end with their outcome word (완료), so no second prefix.
+            format!("{ko}.")
         }
     } else if message.is_empty() {
         format!("Success. {en}.")
@@ -203,6 +204,11 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
 }
 
 fn sentence(message: &str) -> String {
+    // Internal component tags such as "[Hades]" stay in the JSON message only.
+    let message = message
+        .strip_prefix('[')
+        .and_then(|rest| rest.split_once("] "))
+        .map_or(message, |(_, rest)| rest);
     let mut chars = message.chars();
     let mut text = chars
         .next()
@@ -214,7 +220,7 @@ fn sentence(message: &str) -> String {
     text
 }
 
-fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> String {
+fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
     let message = value["message"]
         .as_str()
         .unwrap_or("The request could not be completed.");
@@ -223,10 +229,8 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, en: &str) -> St
         let remedy = value["next_action"].as_str().unwrap_or(
             "Check the command options with --help. Correct the named input or file, then retry.",
         );
-        return format!(
-            "Could not complete: {en}. {}\nNext: {remedy}",
-            sentence(message)
-        );
+        // Topics are past-tense outcomes, so the failure line states the cause directly.
+        return format!("Failed. {}\nNext: {remedy}", sentence(message));
     }
     let cause = korean_cause(message);
     let mut output = format!(
