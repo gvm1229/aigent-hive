@@ -334,11 +334,7 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
         );
         assert_eq!(
             result["data"]["normalized_fields"],
-            json!([
-                "project_profile",
-                "selected_project_skills",
-                "project_skill_policy_version"
-            ])
+            json!(["selected_project_skills", "project_skill_policy_version"])
         );
         assert_eq!(
             result["data"]["skill_merges"][0],

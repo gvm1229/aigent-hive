@@ -952,6 +952,9 @@ fn refresh_project_profile(
     normalized_fields: &mut Vec<String>,
 ) -> Result<(), RenderError> {
     let profile = hive_core::project_profile::ProjectProfile::detect_in(target_dir);
+    if profile.project_kind() == "general" && answers.project_profile.is_none() {
+        return Ok(());
+    }
     if answers.project_profile.as_ref() != Some(&profile) {
         answers.preference_decisions.remove("/project_profile");
         if answers.project_kind == "general" && profile.project_kind() != "general" {
