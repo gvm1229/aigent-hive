@@ -632,19 +632,20 @@ class StableNoticeOrdering(unittest.TestCase):
         recover = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
         contract = recover["jobs"]["notify"]["steps"][0]["run"]
         self.assertIn("discord-pending-corrections.txt?ref=$source_sha", contract)
-        self.assertIn("stable-discord-correction-$previous-$source_sha", contract)
+        self.assertIn("stable-discord-correction-$previous&", contract)
         self.assertLess(contract.index("must be sent before this notice"), contract.index("GITHUB_OUTPUT"))
 
 
 class StableCorrectionWorkflowContract(unittest.TestCase):
-    def test_correction_uses_reviewed_151_source_after_stable_and_original_publication(self):
+    def test_correction_uses_reviewed_main_source_after_the_original_publication(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
         job = workflow["jobs"]["correct"]
         self.assertEqual(job["if"], "${{ inputs.operation == 'correct' }}")
         self.assertEqual(job["environment"]["name"], "release-publication")
         contract = job["steps"][0]["run"]
         for required in ('refs/heads/main', 'test "$PRODUCT_VERSION" = 0.15.0',
-                         'gh release view v0.15.1', '.isPrerelease', '.isDraft',
+                         'summary_source_sha=$GITHUB_SHA', 'stable-discord-correction-$PRODUCT_VERSION"',
+                         '.isPrerelease', '.isDraft',
                          '.head_sha', '.conclusion == "success"', 'duplicate send refused'):
             self.assertIn(required, contract)
         self.assertEqual(job["steps"][1]["with"]["ref"], "${{ steps.contract.outputs.summary_source_sha }}")

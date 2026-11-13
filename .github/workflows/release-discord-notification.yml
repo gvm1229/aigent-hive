@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Recover a skipped original notice or correct the approved 0.15.0 notice after 0.15.1 stable
+        description: Recover a skipped original notice or correct the approved 0.15.0 notice from reviewed main
         required: false
         default: recover
         type: choice
@@ -86,7 +86,7 @@ jobs:
           fi
           for previous in $(grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' <<<"$pending" || true); do
             [ "$previous" = "$PRODUCT_VERSION" ] && continue
-            corrected=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=stable-discord-correction-$previous-$source_sha&per_page=1")
+            corrected=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=stable-discord-correction-$previous&per_page=1")
             if [ "$(jq -r .total_count <<<"$corrected")" = 0 ]; then
               echo "The $previous notice correction must be sent before this notice; run operation=correct first." >&2
               exit 3
@@ -155,7 +155,7 @@ jobs:
 
   correct:
     if: ${{ inputs.operation == 'correct' }}
-    name: Correct the reviewed 0.15.0 subscriber notice after 0.15.1 stable
+    name: Correct the reviewed 0.15.0 subscriber notice from reviewed main
     runs-on: ubuntu-24.04
     environment:
       name: release-publication
@@ -165,7 +165,7 @@ jobs:
       PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
       MESSAGE_ID: ${{ inputs.message_id }}
     steps:
-      - name: Bind correction to the original publication and later reviewed stable source
+      - name: Bind correction to the original publication and the reviewed main source
         id: contract
         env:
           GH_TOKEN: ${{ github.token }}
@@ -189,12 +189,11 @@ jobs:
           jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID/jobs?per_page=100")
           sent=$(jq '[.jobs[].steps[] | select(.name == "Send stable Discord banner and subscriber update" and .conclusion == "success")] | length' <<<"$jobs")
           test "$sent" = 1
-          later=$(gh release view v0.15.1 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,targetCommitish)
-          test "$(jq -r .isDraft <<<"$later")" = false
-          test "$(jq -r .isPrerelease <<<"$later")" = false
-          summary_source_sha=$(jq -r .targetCommitish <<<"$later")
+          # The corrected notice and its digest reach main only through the reviewed develop-to-main PR.
+          summary_source_sha=$GITHUB_SHA
           [[ "$summary_source_sha" =~ ^[0-9a-f]{40}$ ]]
-          receipt_name="stable-discord-correction-$PRODUCT_VERSION-$summary_source_sha"
+          # One correction per version, wherever its source commit is.
+          receipt_name="stable-discord-correction-$PRODUCT_VERSION"
           delivered=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$receipt_name&per_page=1")
           if [ "$(jq -r .total_count <<<"$delivered")" != 0 ]; then
             echo 'This reviewed correction already has a receipt; duplicate send refused.' >&2

@@ -9,7 +9,7 @@ summary: "Approved subscriber copy is required before stable publication; skippe
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-discord-notification.yml#sha256:f17084ab9324e6759cd82ec5b5e8f4def26d18f7dc70a6686e1fb506bcaa301f"
+  - "repo:.github/workflows/release-discord-notification.yml#sha256:82dcb039bd8d5ddf0a4084d982e0743698ed3d98f8fbf6af61e2161222669e2f"
   - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:0e919445e53ecef2030dfc422679f20a22b519a37dc64ada56494ceb871e92d9"
@@ -24,4 +24,4 @@ status: active
 
 # Stable Release Discord Subscriber Notification
 
-Reviewed main PR approves copy/digest; AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr is required. Missing/other values block validation/send. No per-release settings; old secret removable. Validate name, bytes, one-line hash, 2,000 characters and ordered lists/sections. Stable Release sends banner then copy; no test notices/webhook disclosure. Normal recovery keeps released-source bindings and duplicate guard. Approved 0.15.0 correction uses stable 0.15.1 reviewed copy: ID edit/delete-replace; no ID means marked post/manual deletion. Save new ID/safe receipt, no body/token. PR review alone never publishes/sends. Local tests do not prove Discord delivery. Details: the 2026-11-12 decision.
+Reviewed main PR approves copy/digest; AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr is required. Missing/other values block validation/send. No per-release settings; old secret removable. Validate name, bytes, one-line hash, 2,000 characters and ordered lists/sections. Stable Release sends banner then copy; no test notices/webhook disclosure. Normal recovery keeps released-source bindings and duplicate guard. 0.15.0 correction: reviewed main copy before 0.15.1, ID edit or delete-replace, else marked post. Pending corrections block newer notices; uncertain writes leave an unknown receipt. Save new ID/safe receipt, no body/token. PR review alone never publishes/sends. Local tests do not prove Discord delivery. Details: the 2026-11-12 decision.
