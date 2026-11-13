@@ -283,7 +283,7 @@ fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
         .is_none_or(|action| action != "upgrade" && action != "refresh")
     {
         return Err(UpdateError::Input(
-            "project requires the upgrade action".to_owned(),
+            "project requires the upgrade action or its refresh alias".to_owned(),
         ));
     }
     let mut target = None;
@@ -4237,6 +4237,32 @@ mod tests {
 
         assert_eq!(merged.bytes.as_deref(), Some(current.as_ref()));
         assert_eq!(merged.disposition, MergeDisposition::IncomingReplace);
+    }
+
+    #[test]
+    fn refresh_is_an_exact_upgrade_alias_for_every_mode() {
+        let target = tempfile::tempdir().unwrap();
+        for mode in ["--scan", "--dry-run", "--apply", "--validate", "--recover"] {
+            let arguments = |action: &str| {
+                vec![
+                    action.to_owned(),
+                    "--target".into(),
+                    target.path().display().to_string(),
+                    mode.into(),
+                    "--output".into(),
+                    "json".into(),
+                ]
+            };
+            let upgrade = parse(&arguments("upgrade")).unwrap();
+            let refresh = parse(&arguments("refresh")).unwrap();
+            assert_eq!(upgrade.0, refresh.0);
+            assert!(upgrade.1 == refresh.1);
+            assert_eq!(upgrade.2, refresh.2);
+            assert!(upgrade.3.is_none() && refresh.3.is_none());
+            assert_eq!(upgrade.4, refresh.4);
+        }
+        let error = parse(&["unknown".into()]).err().unwrap();
+        assert!(error.to_string().contains("refresh alias"));
     }
 
     #[test]
