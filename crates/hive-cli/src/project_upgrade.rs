@@ -2749,10 +2749,8 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
                 "project harness upgrade plan validated".to_owned()
             };
             if !omitted_guidance_paths.is_empty() {
-                message.push_str(&format!(
-                    "; incoming guidance omitted to preserve user replacements: {}",
-                    omitted_guidance_paths.join(", ")
-                ));
+                message.push_str("; incoming guidance omitted to preserve user replacements: ");
+                message.push_str(&omitted_guidance_paths.join(", "));
             }
             message
         },
