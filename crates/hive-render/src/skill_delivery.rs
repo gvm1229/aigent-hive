@@ -11,6 +11,30 @@ pub const PROVIDERS_PATH: &str = ".hive/config/skill-providers.json";
 /// Verified plugin files keyed by the compiler's portable project-relative path.
 pub type PluginSkillFiles = BTreeMap<String, Vec<u8>>;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct VerifiedPlugins {
+    pub hosts: BTreeSet<String>,
+    pub files: BTreeMap<String, PluginSkillFiles>,
+}
+
+impl VerifiedPlugins {
+    #[must_use]
+    pub fn for_host(host: &str, files: PluginSkillFiles) -> Self {
+        Self {
+            hosts: BTreeSet::from([host.to_owned()]),
+            files: BTreeMap::from([(host.to_owned(), files)]),
+        }
+    }
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.hosts.is_empty()
+    }
+    pub fn clear(&mut self) {
+        self.hosts.clear();
+        self.files.clear();
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct SkillProviders {
@@ -30,11 +54,18 @@ fn instruction_bytes<'a>(path: &str, bytes: &'a [u8]) -> &'a [u8] {
     bytes
 }
 
-fn groups(files: &BTreeMap<PathBuf, Vec<u8>>) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+fn groups(
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    host: &str,
+) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
     let mut result: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     for (path, bytes) in files {
         let path = path.to_string_lossy().replace('\\', "/");
-        if let Some(rest) = path.strip_prefix(".agents/skills/") {
+        if let Some(rest) = path.strip_prefix(if host == "claude" {
+            ".claude/skills/"
+        } else {
+            ".agents/skills/"
+        }) {
             if let Some((name, suffix)) = rest.split_once('/') {
                 result
                     .entry(name.to_owned())
@@ -77,25 +108,20 @@ fn invocation_policy(files: &BTreeMap<String, Vec<u8>>) -> Option<bool> {
 pub(crate) fn apply<T: TargetRead + ?Sized>(
     target: &T,
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
-    plugin: &PluginSkillFiles,
+    plugin: &VerifiedPlugins,
     host: &str,
 ) -> Result<(), RenderError> {
     let empty = PluginSkillFiles::new();
-    let scoped = plugin
-        .keys()
-        .any(|path| path.starts_with("@verified-host/"));
-    let plugin = if (scoped && !plugin.contains_key(&format!("@verified-host/{host}")))
-        || (!scoped && host != "codex")
-    {
-        &empty
+    let plugin = if plugin.hosts.contains(host) {
+        plugin.files.get(host).unwrap_or(&empty)
     } else {
-        plugin
+        &empty
     };
     let plugin_files = plugin
         .iter()
         .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
         .collect();
-    let plugin_groups = groups(&plugin_files);
+    let plugin_groups = groups(&plugin_files, host);
     let mut ledger = SkillProviders {
         schema_version: 1,
         product_version: env!("CARGO_PKG_VERSION").to_owned(),
@@ -103,7 +129,7 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
         skills: BTreeMap::new(),
         local_skills: BTreeMap::new(),
     };
-    for (name, expected) in groups(files) {
+    for (name, expected) in groups(files, host) {
         let Some(provided) = plugin_groups.get(&name) else {
             ledger.local_skills.insert(
                 name,
@@ -116,7 +142,7 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
             );
             continue;
         };
-        if invocation_policy(&expected).is_none()
+        if (host != "claude" && invocation_policy(&expected).is_none())
             || invocation_policy(&expected) != invocation_policy(provided)
         {
             ledger
@@ -130,7 +156,14 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
                 .insert(name, "content-different".to_owned());
             continue;
         }
-        let prefix = PathBuf::from(format!(".agents/skills/{name}"));
+        let prefix = PathBuf::from(format!(
+            "{}/skills/{name}",
+            if host == "claude" {
+                ".claude"
+            } else {
+                ".agents"
+            }
+        ));
         let owned = expected
             .keys()
             .map(|suffix| prefix.join(suffix))
@@ -147,14 +180,13 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
                 .insert(name, "modified-resource".to_owned());
             continue;
         }
-        ledger.skills.insert(name, digest(&expected));
-        for path in owned {
-            files.remove(&path);
-            if host == "claude" {
-                files.remove(&PathBuf::from(
-                    path.to_string_lossy().replacen(".agents/", ".claude/", 1),
-                ));
+        ledger.skills.insert(name.clone(), digest(&expected));
+        for root in [".agents", ".claude"] {
+            if root == ".claude" && host != "claude" {
+                continue;
             }
+            let prefix = PathBuf::from(format!("{root}/skills/{name}"));
+            files.retain(|path, _| !path.starts_with(&prefix));
         }
     }
     files.insert(PathBuf::from(PROVIDERS_PATH), encode(&ledger)?);
@@ -241,7 +273,13 @@ pub fn covered(
             "Skill provider ledger is not canonical or version-bound".to_owned(),
         ));
     }
-    let expected = groups(expected);
+    let expected = groups(
+        expected,
+        ledger
+            .provider
+            .strip_prefix("aigent-hive:")
+            .expect("validated provider"),
+    );
     for (name, proof) in &ledger.skills {
         if expected
             .get(name)
@@ -334,8 +372,7 @@ mod tests {
             &[],
         )
         .unwrap();
-        let mut plugin = projection.files.clone();
-        plugin.insert("@verified-host/codex".into(), Vec::new());
+        let plugin = VerifiedPlugins::for_host("codex", projection.files.clone());
         for host in ["codex", "claude"] {
             let mut files = projection
                 .files
@@ -384,7 +421,13 @@ mod tests {
             } else if policy.is_none() {
                 plugin.remove(metadata);
             }
-            apply(&target, &mut files, &plugin, "codex").unwrap();
+            apply(
+                &target,
+                &mut files,
+                &VerifiedPlugins::for_host("codex", plugin),
+                "codex",
+            )
+            .unwrap();
             let ledger: SkillProviders =
                 serde_json::from_slice(&files[Path::new(PROVIDERS_PATH)]).unwrap();
             let local = files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md"));

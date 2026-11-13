@@ -401,14 +401,14 @@ fn validate_skill_merge_options(
 #[cfg(test)]
 fn prepare_with_plugin(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
 ) -> Result<UpgradePlan, UpdateError> {
     prepare_with_reviewed_skills(target, plugin, None)
 }
 
 fn prepare_with_reviewed_skills(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
     review: Option<&SkillMergeRequest>,
 ) -> Result<UpgradePlan, UpdateError> {
     prepare_candidate(target, plugin, review, None)
@@ -417,7 +417,7 @@ fn prepare_with_reviewed_skills(
 #[allow(clippy::too_many_lines)]
 fn prepare_candidate(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
     review: Option<&SkillMergeRequest>,
     incoming: Option<hive_render::ProjectUpgradeCandidate>,
 ) -> Result<UpgradePlan, UpdateError> {
@@ -4409,7 +4409,7 @@ mod tests {
         }
     }
 
-    fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::PluginSkillFiles {
+    fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::VerifiedPlugins {
         project_fixture_with_skills(
             path,
             vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
@@ -4419,7 +4419,7 @@ mod tests {
     fn project_fixture_with_skills(
         path: &Path,
         selected: Vec<String>,
-    ) -> hive_render::skill_delivery::PluginSkillFiles {
+    ) -> hive_render::skill_delivery::VerifiedPlugins {
         project_fixture_for_host(path, selected, "codex")
     }
 
@@ -4427,9 +4427,9 @@ mod tests {
         path: &Path,
         selected: Vec<String>,
         host: &str,
-    ) -> hive_render::skill_delivery::PluginSkillFiles {
+    ) -> hive_render::skill_delivery::VerifiedPlugins {
         let preferences = hive_render::GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: Default::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -4464,17 +4464,18 @@ mod tests {
             global_preferences: Some(preferences),
         })
         .unwrap();
-        let mut plugin = hive_projection::compile_user_projection(
-            hive_projection::Host::Codex,
+        let files = hive_projection::compile_user_projection(
+            if host == "claude" {
+                hive_projection::Host::Claude
+            } else {
+                hive_projection::Host::Codex
+            },
             &["prompt-refine".to_owned()],
             &[],
         )
         .unwrap()
         .files;
-        if host == "claude" {
-            plugin.insert("@verified-host/claude".into(), Vec::new());
-        }
-        plugin
+        hive_render::skill_delivery::VerifiedPlugins::for_host(host, files)
     }
 
     #[test]
@@ -4494,14 +4495,21 @@ mod tests {
                 .len(),
             0
         );
-        let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
+        let restore = prepare_with_plugin(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default(),
+        )
+        .unwrap();
         apply(&cap, &restore).unwrap();
         assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
         assert_eq!(
-            prepare_with_plugin(&cap, &BTreeMap::new())
-                .unwrap()
-                .changed_paths
-                .len(),
+            prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            )
+            .unwrap()
+            .changed_paths
+            .len(),
             0
         );
     }
@@ -4527,14 +4535,21 @@ mod tests {
             });
             assert!(!portable.exists());
             assert!(!primary.exists());
-            let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
+            let restore = prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default(),
+            )
+            .unwrap();
             apply(&cap, &restore).unwrap();
             assert!(portable.is_file());
             assert!(primary.is_file(), "{host}");
-            assert!(prepare_with_plugin(&cap, &BTreeMap::new())
-                .unwrap()
-                .changed_paths
-                .is_empty());
+            assert!(prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            )
+            .unwrap()
+            .changed_paths
+            .is_empty());
         }
     }
 
@@ -4638,7 +4653,11 @@ mod tests {
         }));
         assert!(skill_merge::input_result(&cap, "../ship").is_err());
         assert!(skill_merge::input_result(&cap, "user-setup").is_err());
-        assert!(prepare_with_plugin(&cap, &BTreeMap::new()).is_err());
+        assert!(prepare_with_plugin(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default()
+        )
+        .is_err());
         let merged = format!(
             "{}\n## Project safeguard\nRun the project commit guard.\n",
             String::from_utf8(incoming.files[path].clone()).unwrap()
@@ -4656,7 +4675,12 @@ mod tests {
         )
         .unwrap();
         let request = SkillMergeRequest::load(&request_path).unwrap();
-        let plan = prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).unwrap();
+        let plan = prepare_with_reviewed_skills(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default(),
+            Some(&request),
+        )
+        .unwrap();
         let report = plan
             .reports
             .iter()
@@ -4687,12 +4711,20 @@ mod tests {
             incoming.files[path]
         );
         assert_eq!(
-            prepare_with_plugin(&cap, &BTreeMap::new())
-                .unwrap()
-                .changed_paths,
+            prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            )
+            .unwrap()
+            .changed_paths,
             [] as [String; 0]
         );
-        assert!(prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).is_err());
+        assert!(prepare_with_reviewed_skills(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default(),
+            Some(&request)
+        )
+        .is_err());
     }
 
     #[test]
@@ -4782,7 +4814,10 @@ mod tests {
             .push_str("Forged baseline\n");
         assert!(authenticate_historical_base(&target, &forged).is_err());
         assert!(matches!(
-            prepare_with_plugin(&target, &BTreeMap::new()),
+            prepare_with_plugin(
+                &target,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            ),
             Err(UpdateError::Unsupported(_))
         ));
         assert_eq!(fs::read(root.join(path)).unwrap(), published);

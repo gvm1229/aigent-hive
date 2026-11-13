@@ -189,7 +189,7 @@ mod tests {
     use std::{collections::BTreeSet, fs};
     fn global() -> GlobalProjectPreferences {
         GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: Default::default(),
             interface_language: "en".into(),
             wiki_enabled: true,
             wiki_backend: "markdown".into(),

@@ -1063,13 +1063,16 @@ fn compact_project_creates_knowledge_only_when_first_used() {
     let target = crate::test_tempdir();
     let mut preferences = global(root.path());
     preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
-    preferences.codex_plugin_files = hive_projection::compile_user_projection(
-        hive_projection::Host::Codex,
-        &preferences.selected_project_skills,
-        &[],
-    )
-    .unwrap()
-    .files;
+    preferences.codex_plugin_files = hive_render::skill_delivery::VerifiedPlugins::for_host(
+        "codex",
+        hive_projection::compile_user_projection(
+            hive_projection::Host::Codex,
+            &preferences.selected_project_skills,
+            &[],
+        )
+        .unwrap()
+        .files,
+    );
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
     hive_render::execute_setup(&hive_render::SetupRequest {
         target: target.path(),

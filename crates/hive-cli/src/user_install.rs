@@ -1133,21 +1133,22 @@ pub(crate) fn validate_configured_host(
 /// authenticated installed source inventory must both verify before delivery.
 pub(crate) fn validated_codex_plugin_files(
     user_root: &Path,
-) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
+) -> Result<hive_render::skill_delivery::VerifiedPlugins, String> {
     validated_plugin_files_for_host(user_root, crate::user_setup::SelectedHost::Codex)
+        .map(|files| hive_render::skill_delivery::VerifiedPlugins::for_host("codex", files))
 }
 
 pub(crate) fn validated_project_plugin_files(
     user_root: &Path,
-) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
-    let mut files = hive_render::skill_delivery::PluginSkillFiles::new();
+) -> Result<hive_render::skill_delivery::VerifiedPlugins, String> {
+    let mut files = hive_render::skill_delivery::VerifiedPlugins::default();
     for (host, selected) in [
         ("codex", crate::user_setup::SelectedHost::Codex),
         ("claude", crate::user_setup::SelectedHost::Claude),
     ] {
         if let Ok(projection) = validated_plugin_files_for_host(user_root, selected) {
-            files.extend(projection);
-            files.insert(format!("@verified-host/{host}"), Vec::new());
+            files.hosts.insert(host.to_owned());
+            files.files.insert(host.to_owned(), projection);
         }
     }
     if files.is_empty() {
@@ -1172,13 +1173,23 @@ fn validated_plugin_files_for_host(
         crate::user_setup::InterfaceLanguage::Ko => DescriptorLanguage::Ko,
         crate::user_setup::InterfaceLanguage::En => DescriptorLanguage::En,
     };
-    let projection =
-        compile_user_projection_localized(ProjectionHost::Codex, &skills, &[], language)
-            .map_err(|error| error.to_string())?;
+    let projection = compile_user_projection_localized(
+        match selected_host {
+            crate::user_setup::SelectedHost::Codex => ProjectionHost::Codex,
+            crate::user_setup::SelectedHost::Claude => ProjectionHost::Claude,
+            crate::user_setup::SelectedHost::Antigravity => ProjectionHost::Antigravity,
+        },
+        &skills,
+        &[],
+        language,
+    )
+    .map_err(|error| error.to_string())?;
     Ok(projection
         .files
         .into_iter()
-        .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        .filter(|(path, _)| {
+            path.starts_with(".agents/skills/") || path.starts_with(".claude/skills/")
+        })
         .collect())
 }
 
