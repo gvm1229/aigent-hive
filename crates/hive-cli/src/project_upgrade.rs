@@ -4514,7 +4514,7 @@ mod tests {
         host: &str,
     ) -> hive_render::skill_delivery::VerifiedPlugins {
         let preferences = hive_render::GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),

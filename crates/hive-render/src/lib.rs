@@ -3146,7 +3146,7 @@ fn execute_release_update_for_target_in(
     }
     let replay_preferences = effective_preferences_from_harness(&installed)?.map(|preferences| {
         GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: preferences.interface_language,
             wiki_enabled: preferences.wiki_enabled,
             wiki_backend: preferences.wiki_backend,
@@ -3721,7 +3721,7 @@ fn resolve_effective_project_preferences(
     let mut effective = match answers.setup_mode.as_str() {
         "expedited" => EffectiveProjectPreferences {
             project_skill_policy_version: 1,
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             provenance: "global-inherited",
             interface_language: global.interface_language.clone(),
             wiki_enabled: global.wiki_enabled,
@@ -3761,7 +3761,7 @@ fn resolve_effective_project_preferences(
                 .expect("custom preferences were validated");
             EffectiveProjectPreferences {
                 project_skill_policy_version: 1,
-                codex_plugin_files: Default::default(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 provenance: "project-custom",
                 interface_language: answers
                     .interface_language
@@ -6697,7 +6697,7 @@ fn effective_preferences_from_harness(
         ));
     }
     let global = GlobalProjectPreferences {
-        codex_plugin_files: Default::default(),
+        codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
         interface_language: interface_language.clone(),
         wiki_enabled,
         wiki_backend: wiki_backend.clone(),
@@ -6715,7 +6715,7 @@ fn effective_preferences_from_harness(
     validate_global_project_preferences(&global).map_err(as_verification)?;
     Ok(Some(EffectiveProjectPreferences {
         project_skill_policy_version: harness.project_skill_policy_version,
-        codex_plugin_files: Default::default(),
+        codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
         provenance: if provenance == "global-inherited" {
             "global-inherited"
         } else {
@@ -7983,7 +7983,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: false,
             wiki_backend: "markdown".to_owned(),
@@ -8065,7 +8065,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "notion".to_owned(),
@@ -8123,7 +8123,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: Default::default(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -8158,7 +8158,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -8223,7 +8223,7 @@ mod tests {
     #[test]
     fn operational_release_update_requires_connected_preferences() {
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -8343,7 +8343,7 @@ mod tests {
             mode: SetupMode::DryRun,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(GlobalProjectPreferences {
-                codex_plugin_files: Default::default(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 interface_language: "en".to_owned(),
                 wiki_enabled: false,
                 wiki_backend: "markdown".to_owned(),
@@ -8384,7 +8384,7 @@ mod tests {
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(GlobalProjectPreferences {
-                codex_plugin_files: Default::default(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
                 wiki_backend: "markdown".to_owned(),
@@ -8638,7 +8638,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: Default::default(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -8791,7 +8791,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: Default::default(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -9178,7 +9178,7 @@ mod tests {
         let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
             .expect("resolution should load");
         let mut global = GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -9368,7 +9368,7 @@ mod tests {
 
     fn test_global_preferences() -> GlobalProjectPreferences {
         GlobalProjectPreferences {
-            codex_plugin_files: Default::default(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),

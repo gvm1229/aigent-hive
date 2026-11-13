@@ -2204,7 +2204,7 @@ mod tests {
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(GlobalProjectPreferences {
-                codex_plugin_files: std::collections::BTreeMap::new(),
+                codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
                 wiki_backend: "markdown".to_owned(),
@@ -2271,7 +2271,7 @@ mod tests {
     fn install_historical_consumer(target: &Path, version: &str) {
         let target = target.canonicalize().expect("consumer target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: std::collections::BTreeMap::new(),
+            codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),

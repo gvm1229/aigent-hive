@@ -3752,7 +3752,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
     let selected_project_skills =
         hive_projection::project_default_skills().map_err(|error| error.to_string())?;
     Ok(GlobalProjectPreferences {
-        codex_plugin_files: Default::default(),
+        codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
         interface_language: config.interface_language.as_str().to_owned(),
         wiki_enabled: config.wiki.enabled,
         wiki_backend: config.wiki.backend.as_str().to_owned(),

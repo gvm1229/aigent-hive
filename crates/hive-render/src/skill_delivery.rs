@@ -275,10 +275,11 @@ pub fn covered(
     }
     let expected = groups(
         expected,
-        ledger
-            .provider
-            .strip_prefix("aigent-hive:")
-            .expect("validated provider"),
+        if ledger.provider == "aigent-hive:claude" {
+            "claude"
+        } else {
+            "codex"
+        },
     );
     for (name, proof) in &ledger.skills {
         if expected
