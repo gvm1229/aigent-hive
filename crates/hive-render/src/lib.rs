@@ -957,8 +957,29 @@ fn refresh_project_profile(
     }
     if answers.project_profile.as_ref() != Some(&profile) {
         answers.preference_decisions.remove("/project_profile");
-        if answers.project_kind == "general" && profile.project_kind() != "general" {
-            let kind = profile.project_kind().to_owned();
+        let may_migrate_kind = answers
+            .preference_decisions
+            .get("/project_kind")
+            .is_none_or(|decision| {
+                decision.origin == hive_core::preferences::DecisionOrigin::Default
+                    && decision
+                        .policy_version
+                        .split('.')
+                        .map(str::parse::<u64>)
+                        .collect::<Result<Vec<_>, _>>()
+                        .is_ok_and(|version| {
+                            version.len() == 3 && version.as_slice() < [0, 15, 1].as_slice()
+                        })
+            });
+        let suggested = profile.project_kind();
+        if answers.project_kind != suggested && suggested != "general" && !may_migrate_kind {
+            normalized_fields.push(format!(
+                "project_kind_suggestion:{}->{suggested} (existing choice preserved)",
+                answers.project_kind
+            ));
+        }
+        if answers.project_kind == "general" && suggested != "general" && may_migrate_kind {
+            let kind = suggested.to_owned();
             normalized_fields.push(format!("project_kind:general->{kind}"));
             answers.project_kind = kind;
             let decision = hive_core::preferences::PreferenceDecision::new(
@@ -7682,6 +7703,65 @@ mod tests {
         let expected: BTreeMap<String, String> =
             serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
         assert_eq!(snapshots, expected);
+    }
+
+    #[test]
+    fn refresh_preserves_kind_decisions_and_only_migrates_old_defaults() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname='app'\nversion='1.0.0'\n",
+        )
+        .unwrap();
+        let cap =
+            cap_std::fs::Dir::open_ambient_dir(dir.path(), cap_std::ambient_authority()).unwrap();
+        for (origin, version, migrates) in [
+            (None, "0.15.0", true),
+            (Some(DecisionOrigin::Default), "0.15.0", true),
+            (Some(DecisionOrigin::Default), "0.15.1", false),
+            (Some(DecisionOrigin::Explicit), "0.15.0", false),
+            (Some(DecisionOrigin::AcceptedDefault), "0.15.0", false),
+        ] {
+            let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+            answers.project_kind = "general".into();
+            if let Some(origin) = origin {
+                answers.preference_decisions.insert(
+                    "/project_kind".into(),
+                    PreferenceDecision::new(
+                        &serde_json::json!("general"),
+                        origin,
+                        PreferenceInput::Terminal,
+                        PreferenceScope::Project,
+                        version,
+                        None,
+                    )
+                    .unwrap(),
+                );
+            }
+            let original = answers.preference_decisions.get("/project_kind").cloned();
+            let mut changes = Vec::new();
+            super::refresh_project_profile(&cap, &mut answers, &mut changes).unwrap();
+            assert_eq!(
+                answers.project_kind,
+                if migrates { "coding" } else { "general" }
+            );
+            assert!(answers.project_profile.is_some());
+            if !migrates {
+                assert_eq!(
+                    answers.preference_decisions.get("/project_kind"),
+                    original.as_ref()
+                );
+                assert!(changes
+                    .iter()
+                    .any(|field| field.starts_with("project_kind_suggestion:")));
+            }
+            changes.clear();
+            super::refresh_project_profile(&cap, &mut answers, &mut changes).unwrap();
+            assert!(changes.is_empty());
+        }
     }
 
     #[test]
