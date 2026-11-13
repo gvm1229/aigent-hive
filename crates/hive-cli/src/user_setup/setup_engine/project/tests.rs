@@ -1038,6 +1038,38 @@ fn detected_project_confirmation_accepts_rejects_and_cancels() {
 }
 
 #[test]
+fn readme_only_uses_a_kind_list_without_an_empty_confirmation() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    std::fs::write(target.path().join("README.md"), "# Notes").unwrap();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut progress = store
+        .new_progress(
+            "project-mode".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nNamed\ngeneral\n\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap()
+    );
+    assert_eq!(progress.answers["project_kind"], "general");
+    let shown = String::from_utf8(terminal.writer).unwrap();
+    assert!(!shown.contains("Detected:"));
+    assert!(shown.contains("Coding"));
+    assert_eq!(
+        progress.answers["preference_decisions"]["/project_kind"]["origin"],
+        "explicit"
+    );
+}
+
+#[test]
 fn described_project_kind_uses_evidence_without_accepting_it() {
     let root = crate::test_tempdir();
     let target = crate::test_tempdir();
