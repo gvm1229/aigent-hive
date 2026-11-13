@@ -6893,7 +6893,13 @@ fn validate_protected_contract(
             )));
         }
     }
+    let knowledge_absent = match fs::symlink_metadata(target.join(".hive/knowledge")) {
+        Ok(_) => false,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => true,
+        Err(error) => return Err(io_internal(error)),
+    };
     if compact
+        && knowledge_absent
         && read_target_optional(target, Path::new(".hive/knowledge/suppression.yml"))?.is_none()
     {
         return Ok(());
@@ -11313,6 +11319,29 @@ mod tests {
             fs::read(&outside).expect("outside bytes should remain readable"),
             b"foreign bytes\n"
         );
+    }
+
+    #[test]
+    fn compact_suppression_may_be_absent_only_before_knowledge_creation() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path();
+        fs::create_dir_all(target.join(".hive")).unwrap();
+        let (mut answers, _) = load_answers(&fixture("answers-no-role-no-hook.yml")).unwrap();
+        answers.compact_layout = true;
+        fs::write(
+            target.join(".hive/setup-answers.yml"),
+            render_setup_answers(&answers).unwrap(),
+        )
+        .unwrap();
+        super::validate_protected_contract(target, true, "markdown").unwrap();
+        fs::create_dir_all(target.join(".hive/knowledge")).unwrap();
+        assert!(super::validate_protected_contract(target, true, "markdown").is_err());
+        fs::write(
+            target.join(".hive/knowledge/suppression.yml"),
+            "schema_version: 1\nentries: []\n",
+        )
+        .unwrap();
+        super::validate_protected_contract(target, true, "markdown").unwrap();
     }
 
     #[test]
