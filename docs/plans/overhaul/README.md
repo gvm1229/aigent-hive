@@ -91,7 +91,7 @@
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
-| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 7/11 |
+| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 8/11 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |

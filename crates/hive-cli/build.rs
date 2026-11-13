@@ -79,11 +79,15 @@ fn main() {
 
 fn write_historical_user_plugin_tables(manifest_dir: &Path) {
     let mut releases = Vec::new();
-    for version in [
-        "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2",
-        "0.10.3", "0.11.0", "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2", "0.14.0", "0.14.1",
-        "0.14.2", "0.15.0",
-    ] {
+    let root = manifest_dir.join("../..");
+    let registry = checked_registry_path(&root, "harness/project-bases/registry.yml", false)
+        .expect("historical registry path");
+    println!("cargo:rerun-if-changed={}", registry.display());
+    let versions =
+        registry_plugin_versions(&fs::read_to_string(registry).expect("read historical registry"))
+            .expect("historical registry versions");
+    validate_registered_user_bases(&root, &versions).expect("historical user-base coverage");
+    for version in &versions {
         let base = manifest_dir.join(format!(
             "../../harness/user-bases/{version}/plugins/aigent-hive"
         ));
@@ -91,6 +95,10 @@ fn write_historical_user_plugin_tables(manifest_dir: &Path) {
         let mut files = Vec::new();
         collect_files(&base, &base, &mut files);
         files.sort_by(|left, right| left.0.cmp(&right.0));
+        assert!(
+            files.windows(2).all(|pair| pair[0].0 != pair[1].0),
+            "duplicate historical user path"
+        );
         releases.push((version, files));
     }
 
@@ -129,6 +137,128 @@ fn write_historical_user_plugin_tables(manifest_dir: &Path) {
     fs::write(output, generated).expect("write historical user plugin tables");
 }
 
+fn registry_version(value: &str) -> Option<(u64, u64, u64)> {
+    let [major, minor, patch]: [&str; 3] = value.split('.').collect::<Vec<_>>().try_into().ok()?;
+    let part = |part: &str| {
+        if part.is_empty()
+            || (part.len() > 1 && part.starts_with('0'))
+            || !part.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            return None;
+        }
+        part.parse::<u64>().ok()
+    };
+    Some((part(major)?, part(minor)?, part(patch)?))
+}
+
+fn registry_plugin_versions(text: &str) -> Result<Vec<String>, String> {
+    let registry: serde_yaml::Value =
+        serde_yaml::from_str(text).map_err(|error| error.to_string())?;
+    if registry["schema_version"].as_u64() != Some(1) {
+        return Err("unsupported registry schema".into());
+    }
+    let releases = registry["releases"]
+        .as_sequence()
+        .filter(|entries| !entries.is_empty())
+        .ok_or("registry releases are missing")?;
+    let mut versions = Vec::new();
+    let mut previous = None;
+    for release in releases {
+        let version = release["version"]
+            .as_str()
+            .ok_or("registry version is missing")?;
+        let key = registry_version(version).ok_or("invalid registry version")?;
+        if previous.is_some_and(|previous| previous >= key) {
+            return Err("registry versions must be sorted and unique".into());
+        }
+        previous = Some(key);
+        let digest = release
+            .get("user_projection_digest")
+            .ok_or("user projection registration is missing")?;
+        if !digest.is_null() {
+            let digest = digest.as_str().ok_or("invalid user projection digest")?;
+            if !digest.strip_prefix("sha256:").is_some_and(|hex| {
+                hex.len() == 64
+                    && hex
+                        .bytes()
+                        .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            }) {
+                return Err("invalid user projection digest".into());
+            }
+            // User plugins start at 0.9; the 0.8 adapter layout has its existing separate reader.
+            if key >= (0, 9, 0) {
+                versions.push(version.to_owned());
+            }
+        }
+    }
+    Ok(versions)
+}
+
+fn reparse_entry(metadata: &fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = metadata;
+        false
+    }
+}
+
+fn checked_registry_path(root: &Path, relative: &str, directory: bool) -> Result<PathBuf, String> {
+    if relative.is_empty()
+        || relative.contains('\\')
+        || relative
+            .split('/')
+            .any(|part| part.is_empty() || matches!(part, "." | ".."))
+        || Path::new(relative)
+            .components()
+            .any(|part| !matches!(part, std::path::Component::Normal(_)))
+    {
+        return Err("registry path is not portable and relative".into());
+    }
+    let mut path = root.to_path_buf();
+    let parts = relative.split('/').collect::<Vec<_>>();
+    for (index, part) in parts.iter().enumerate() {
+        path.push(part);
+        let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
+        if metadata.file_type().is_symlink()
+            || reparse_entry(&metadata)
+            || (index + 1 < parts.len() || directory) && !metadata.is_dir()
+            || index + 1 == parts.len() && !directory && !metadata.is_file()
+        {
+            return Err("registry path contains a link or unsupported entry".into());
+        }
+    }
+    Ok(path)
+}
+
+fn validate_registered_user_bases(root: &Path, versions: &[String]) -> Result<(), String> {
+    let directory = checked_registry_path(root, "harness/user-bases", true)?;
+    let mut present = std::collections::BTreeSet::new();
+    for entry in fs::read_dir(directory).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let name = entry
+            .file_name()
+            .into_string()
+            .map_err(|_| "user-base name is not UTF-8")?;
+        if registry_version(&name).is_some_and(|version| version >= (0, 9, 0)) {
+            checked_registry_path(
+                root,
+                &format!("harness/user-bases/{name}/plugins/aigent-hive"),
+                true,
+            )?;
+            present.insert(name);
+        }
+    }
+    if present != versions.iter().cloned().collect() {
+        return Err("registry omits or references a missing user plugin base".into());
+    }
+    Ok(())
+}
+
 fn collect_files(root: &PathBuf, current: &PathBuf, files: &mut Vec<(String, String)>) {
     let entries = fs::read_dir(current)
         .expect("read historical user plugin base")
@@ -136,15 +266,26 @@ fn collect_files(root: &PathBuf, current: &PathBuf, files: &mut Vec<(String, Str
         .expect("read historical user plugin entries");
     for entry in entries {
         let path = entry.path();
-        let metadata = fs::symlink_metadata(&path).expect("inspect historical 0.9.5 entry");
+        let metadata = fs::symlink_metadata(&path).expect("inspect historical user plugin entry");
+        assert!(
+            !metadata.file_type().is_symlink() && !reparse_entry(&metadata),
+            "historical user base contains a link"
+        );
         if metadata.is_dir() {
             collect_files(root, &path, files);
         } else if metadata.is_file() {
             let relative = path
                 .strip_prefix(root)
                 .expect("base descendant")
-                .to_string_lossy()
+                .to_str()
+                .expect("historical user path must be UTF-8")
                 .replace('\\', "/");
+            assert!(
+                !relative
+                    .split('/')
+                    .any(|part| part.is_empty() || matches!(part, "." | "..")),
+                "historical user path escapes its base"
+            );
             let digest_bytes = Sha256::digest(fs::read(&path).expect("read historical 0.9.5 file"));
             let mut digest = String::from("sha256:");
             for byte in digest_bytes {
@@ -184,6 +325,64 @@ fn valid_package_version(product: &str, package: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{valid_package_version, valid_release_date};
+
+    #[test]
+    fn registry_rejects_missing_duplicate_and_escaping_versions() {
+        let digest = "a".repeat(64);
+        let valid = format!("schema_version: 1\nreleases:\n  - version: 0.8.0\n    user_projection_digest: null\n  - version: 0.9.0\n    user_projection_digest: sha256:{digest}\n");
+        assert_eq!(
+            super::registry_plugin_versions(&valid).unwrap(),
+            vec!["0.9.0"]
+        );
+        for bad in [
+            "/outside",
+            "../outside",
+            "0.9.00",
+            "0.9",
+            "0.9.0-test.1",
+            "0.8.0",
+        ] {
+            assert!(
+                super::registry_plugin_versions(
+                    &valid.replace("version: 0.9.0", &format!("version: {bad}"))
+                )
+                .is_err(),
+                "{bad}"
+            );
+        }
+        assert!(super::registry_plugin_versions("schema_version: 1\n").is_err());
+        assert!(super::registry_plugin_versions(
+            &valid.replace("user_projection_digest: null", "ignored: null")
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn user_base_coverage_and_path_escape_fail_before_reading_contents() {
+        let temporary = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(
+            temporary
+                .path()
+                .join("harness/user-bases/0.9.0/plugins/aigent-hive"),
+        )
+        .unwrap();
+        assert!(super::validate_registered_user_bases(temporary.path(), &["0.9.0".into()]).is_ok());
+        assert!(super::validate_registered_user_bases(temporary.path(), &[]).is_err());
+        assert!(super::validate_registered_user_bases(
+            temporary.path(),
+            &["0.9.0".into(), "0.9.1".into()]
+        )
+        .is_err());
+        for path in [
+            "../outside",
+            "/outside",
+            "harness/../outside",
+            "harness//user-bases",
+            "harness/./user-bases",
+        ] {
+            assert!(super::checked_registry_path(temporary.path(), path, true).is_err());
+        }
+    }
 
     #[test]
     fn release_date_requires_exact_iso_calendar_shape() {
