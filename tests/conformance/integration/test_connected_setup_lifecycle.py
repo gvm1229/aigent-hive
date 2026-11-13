@@ -465,11 +465,11 @@ else:
         self.assertIn("Interface language: `ko`", agents)
         self.assertIn(
             "A message written in another language does not by itself change this preference.",
-            agents,
+            " ".join(behavior.split()),
         )
         self.assertIn(
             "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
-            agents,
+            " ".join(behavior.split()),
         )
         self.assertIn("ASD-STE100 Simplified Technical English", behavior)
         self.assertIn("Translate meaning rather than English word order.", behavior)
@@ -516,11 +516,11 @@ else:
         self.assertIn("Interface language: `en`", agents)
         self.assertIn(
             "A message written in another language does not by itself change this preference.",
-            agents,
+            " ".join(behavior.split()),
         )
         self.assertIn(
             "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
-            agents,
+            " ".join(behavior.split()),
         )
         self.assertIn("ASD-STE100 Simplified Technical English", behavior)
         self.assertIn("Translate meaning rather than English word order.", behavior)
