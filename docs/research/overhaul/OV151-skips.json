@@ -1,0 +1,185 @@
+{
+  "scope": "Codex Windows local Python suites",
+  "skipped_tests": [
+    {
+      "test": "test_symlink_is_a_failure_and_runtime_output_is_not_source_orphan (tests.conformance.documentation.test_human_documentation_style.HumanDocumentationStyleTest.test_symlink_is_a_failure_and_runtime_output_is_not_source_orphan)",
+      "reason": "\"symlink creation is unavailable: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: 'target.md' -> '<temporary-path>"
+    },
+    {
+      "test": "test_symlink_escape_refused (scripts.test_artifacts_checks.ArtifactTests.test_symlink_escape_refused)",
+      "reason": "'Windows symlink privilege unavailable; junction checked separately'"
+    },
+    {
+      "test": "test_generated_directory_symlink_escape_rolls_back_every_namespace (tests.conformance.security.test_ownership_hostile.Phase1OwnershipHostile.test_generated_directory_symlink_escape_rolls_back_every_namespace)",
+      "reason": "\"symlink creation is unavailable on this host: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_generated_file_symlink_escape_rolls_back_every_namespace (tests.conformance.security.test_ownership_hostile.Phase1OwnershipHostile.test_generated_file_symlink_escape_rolls_back_every_namespace)",
+      "reason": "\"symlink creation is unavailable on this host: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_shared_agents_symlink_escape_rolls_back_every_namespace (tests.conformance.security.test_ownership_hostile.Phase1OwnershipHostile.test_shared_agents_symlink_escape_rolls_back_every_namespace)",
+      "reason": "\"symlink creation is unavailable on this host: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_executable_change_after_version_fails_closed (tests.conformance.security.test_usage_guard.UsageGuardCliConformance.test_executable_change_after_version_fails_closed)",
+      "reason": "'Unix executable identity fixture'"
+    },
+    {
+      "test": "test_symlink_swap_cannot_change_the_qualified_executable (tests.conformance.security.test_usage_guard.UsageGuardCliConformance.test_symlink_swap_cannot_change_the_qualified_executable)",
+      "reason": "'Unix symlink identity fixture'"
+    },
+    {
+      "test": "test_atomic_activation_permission_failure_uses_stable_exit_ten_code (tests.conformance.contracts.test_cli_exit_contract.Phase1CliExitConformance.test_atomic_activation_permission_failure_uses_stable_exit_ten_code)",
+      "reason": "'Windows ACLs do not provide a portable chmod write-failure injection'"
+    },
+    {
+      "test": "test_predictable_pid_temp_user_sentinel_survives_successful_activation (tests.conformance.contracts.test_setup_regressions.Phase1ActivationRollback.test_predictable_pid_temp_user_sentinel_survives_successful_activation)",
+      "reason": "'PID-preserving exec wrapper is POSIX-specific'"
+    },
+    {
+      "test": "test_agents_symlink_is_rejected_before_external_fifo_read (tests.conformance.contracts.test_setup_regressions.Phase1NoFollowReadBoundary.test_agents_symlink_is_rejected_before_external_fifo_read)",
+      "reason": "'named-pipe read evidence is unavailable on this host'"
+    },
+    {
+      "test": "test_generated_config_symlink_is_rejected_before_external_fifo_read (tests.conformance.contracts.test_setup_regressions.Phase1NoFollowReadBoundary.test_generated_config_symlink_is_rejected_before_external_fifo_read)",
+      "reason": "'named-pipe read evidence is unavailable on this host'"
+    },
+    {
+      "test": "test_required_role_symlink_is_rejected_before_external_fifo_read (tests.conformance.contracts.test_setup_regressions.Phase1NoFollowReadBoundary.test_required_role_symlink_is_rejected_before_external_fifo_read)",
+      "reason": "'named-pipe read evidence is unavailable on this host'"
+    },
+    {
+      "test": "test_symlink_escape_is_rejected_without_writing_link_target (tests.conformance.contracts.test_setup.Phase1SetupConformance.test_symlink_escape_is_rejected_without_writing_link_target)",
+      "reason": "\"symlink creation is unavailable: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_current_external_runtime_makes_installed_hook_inert_before_input (tests.conformance.contracts.test_skill_projections.Phase3FallbackHookExclusions.test_current_external_runtime_makes_installed_hook_inert_before_input)",
+      "reason": "'FIFO no-read evidence is POSIX-specific'"
+    },
+    {
+      "test": "test_discovery_root_symlink_is_rejected_without_external_write (tests.conformance.contracts.test_skill_projections.Phase3ProjectionHostile.test_discovery_root_symlink_is_rejected_without_external_write)",
+      "reason": "'portable unprivileged directory symlink unavailable'"
+    },
+    {
+      "test": "test_codex_automatic_resume_process_failure_never_invokes_codexbar (tests.conformance.contracts.test_run_role_contracts.Phase4Contracts.test_codex_automatic_resume_process_failure_never_invokes_codexbar)",
+      "reason": "'Unix process fixture'"
+    },
+    {
+      "test": "test_role_unreadable_file_fails_bounded_without_mutation (tests.conformance.contracts.test_run_role_contracts.Phase4Contracts.test_role_unreadable_file_fails_bounded_without_mutation)",
+      "reason": "'portable unreadable mode check is POSIX-specific'"
+    },
+    {
+      "test": "test_unreadable_explicit_input_fails_without_read_or_write (tests.conformance.contracts.test_run_role_contracts.Phase4Contracts.test_unreadable_explicit_input_fails_without_read_or_write)",
+      "reason": "'portable unreadable mode check is POSIX-specific'"
+    },
+    {
+      "test": "test_threshold_rejects_a_symlinked_owned_config (tests.conformance.contracts.test_usage_control.ShippingUsageControlConformance.test_threshold_rejects_a_symlinked_owned_config)",
+      "reason": "'symlink fixture is POSIX-specific'"
+    },
+    {
+      "test": "test_symlink_is_rejected (tests.conformance.contracts.test_dev_install_recovery.DeveloperRecovery.test_symlink_is_rejected)",
+      "reason": "'symlink privilege unavailable'"
+    },
+    {
+      "test": "test_actual_unix_helper_exits_after_owning_parent_is_killed (tests.conformance.contracts.test_vector_parent.VectorParentLifetime.test_actual_unix_helper_exits_after_owning_parent_is_killed)",
+      "reason": "'real Unix reparenting; Windows uses native Job Objects'"
+    },
+    {
+      "test": "test_symlink_source_is_never_promoted (tests.conformance.contracts.test_directive_context.DirectiveContextTests.test_symlink_source_is_never_promoted)",
+      "reason": "'host cannot create symlink: OSError'"
+    },
+    {
+      "test": "test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall (tests.conformance.integration.test_connected_setup_lifecycle.AntigravityConnectedSetupLifecycleConformance.test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall)",
+      "reason": "'the v0.9 release default profile is the authenticated Codex acceptance path'"
+    },
+    {
+      "test": "test_index_symlink_is_never_followed_by_query_or_rebuild (tests.conformance.integration.test_wiki_lifecycle.Phase2WikiConformance.test_index_symlink_is_never_followed_by_query_or_rebuild)",
+      "reason": "\"symlink creation is unavailable: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_legacy_stale_marker_symlink_is_inert_and_never_followed (tests.conformance.integration.test_wiki_lifecycle.Phase2WikiConformance.test_legacy_stale_marker_symlink_is_inert_and_never_followed)",
+      "reason": "\"symlink creation is unavailable: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_target_below_symlinked_parent_is_rejected_without_external_write (tests.conformance.integration.test_wiki_lifecycle.Phase2WikiConformance.test_target_below_symlinked_parent_is_rejected_without_external_write)",
+      "reason": "\"symlink creation is unavailable: [WinError 1314] 클라이언트가 필요한 권한을 가지고 있지 않습니다: '<temporary-path>"
+    },
+    {
+      "test": "test_mode_change_between_plan_and_claim_is_preserved (tests.conformance.integration.test_root_knowledge_promotion.RootKnowledgePromotionConformance.test_mode_change_between_plan_and_claim_is_preserved)",
+      "reason": "'POSIX mode race'"
+    },
+    {
+      "test": "test_index_refuses_symlink_and_creates_no_foreign_runtime_state (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_index_refuses_symlink_and_creates_no_foreign_runtime_state)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_index_rejects_lock_symlink_without_touching_external_bytes (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_index_rejects_lock_symlink_without_touching_external_bytes)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_index_rejects_owned_claim_symlink_and_preserves_live_index (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_index_rejects_owned_claim_symlink_and_preserves_live_index)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_index_rejects_runtime_ancestor_symlink_escape (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_index_rejects_runtime_ancestor_symlink_escape)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_source_locator_rejects_ancestor_symlink_escape (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_source_locator_rejects_ancestor_symlink_escape)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_symlink_and_secret_candidates_are_rejected_without_escape (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_symlink_and_secret_candidates_are_rejected_without_escape)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_wiki_root_rejects_ancestor_symlink_escape (tests.conformance.integration.test_source_wiki.SourceWikiConformance.test_wiki_root_rejects_ancestor_symlink_escape)",
+      "reason": "'symlink creation may require Windows privileges'"
+    },
+    {
+      "test": "test_public_test2_project_upgrades_and_recovers_without_losing_user_bytes (tests.conformance.release.test_historical_project_bases.Public132ProjectUpgradeConformance.test_public_test2_project_upgrades_and_recovers_without_losing_user_bytes)",
+      "reason": "'requires the explicitly selected, pinned public 0.13.2-test.2 Windows binary'"
+    },
+    {
+      "test": "test_macos_installer_creates_owned_directories_with_mode_0755 (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_creates_owned_directories_with_mode_0755)",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "  test_macos_installer_does_not_follow_precreated_staged_leaf_symlinks (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_does_not_follow_precreated_staged_leaf_symlinks) (leaf='binary')",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "  test_macos_installer_does_not_follow_precreated_staged_leaf_symlinks (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_does_not_follow_precreated_staged_leaf_symlinks) (leaf='receipt')",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "test_macos_installer_leaf_renames_do_not_follow_injected_symlinks (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_leaf_renames_do_not_follow_injected_symlinks)",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "test_macos_installer_rejects_symlinked_install_ancestors_without_external_writes (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_rejects_symlinked_install_ancestors_without_external_writes)",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "test_macos_installer_rejects_valid_signature_from_wrong_team (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_installer_rejects_valid_signature_from_wrong_team)",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "test_macos_recovery_promotion_does_not_follow_injected_receipt_symlink (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_macos_recovery_promotion_does_not_follow_injected_receipt_symlink)",
+      "reason": "'macOS installer fixture is unavailable on Windows'"
+    },
+    {
+      "test": "test_release_shell_entrypoints_are_executable_and_reject_bad_versions (tests.conformance.release.test_update_migration.Phase6StaticContracts.test_release_shell_entrypoints_are_executable_and_reject_bad_versions)",
+      "reason": "'POSIX shell entrypoint checks are unavailable on Windows'"
+    },
+    {
+      "test": "test_evidence_digest_still_rejects_a_linked_binary (tests.conformance.release.test_vector_runtime_acceptance.VectorRuntimeAcceptance.test_evidence_digest_still_rejects_a_linked_binary)",
+      "reason": "'Windows symlink privilege unavailable'"
+    },
+    {
+      "test": "test_stable_publication_rejects_missing_or_disabled_notification_before_publish (tests.conformance.release.test_stable_release_discord_notification.StableReleaseDiscordNotification.test_stable_publication_rejects_missing_or_disabled_notification_before_publish)",
+      "reason": "'Git Bash is required for the publication shell contract'"
+    }
+  ]
+}

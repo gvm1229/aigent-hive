@@ -14,6 +14,8 @@
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
+- 단계 4: 현재 구현 8/8·계획 8/11, [검증·인계](../../research/overhaul/stage-4-implementation.md). 공개 시험·develop 통합 전 Fable 검토 대기
+
 ## 승인
 
 - 현재 요청: 0.15.0 Windows 왕복 근거·참조 처리기·공개 시험·develop/main 병합·정식·게시·구독자 안내·PC 설치 전 과정 승인, 기본 비활성 유지

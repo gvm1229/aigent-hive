@@ -2,11 +2,13 @@
 
 - 제품 버전: `0.15.1`
 - 공개 안정판·PC 설치: `0.15.0` 유지
-- 작업: 단계 4 판별 구현·검증, [소유 계획](../plans/active/0.15.1-detection.md)
+- 작업: 단계 4 요청 구현 8/8 완료, [소유 계획](../plans/active/0.15.1-detection.md)
 - 현재 요청: 항목별 커밋과 단계 브랜치 push. 공개 시험·develop 병합·정식·설치 제외
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
 - [이전 정식 근거와 한계](../research/overhaul/OV150-013.md) 보존
+
+- [단계 4 검증·인계](../research/overhaul/stage-4-implementation.md): Rust 1,453·Python 1,151 통과, 수동/환경 제외 5·45. 공개 test.1·develop 통합 전 Fable 검토 대기
 
 ## 생성된 구현·수용 항목
 
