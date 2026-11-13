@@ -410,3 +410,42 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
             command = step.get("run", "")
             for forbidden in ("npm publish", "gh release create", "git push", "gh secret"):
                 self.assertNotIn(forbidden, command)
+
+
+class StableAnnouncementContext(unittest.TestCase):
+    def test_each_new_notice_has_a_valid_complete_approved_payload(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("subscriber_context_notifier", NOTIFIER)
+        notifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(notifier)
+        for version in ("0.15.0", "0.15.1"):
+            with self.subTest(version=version):
+                text = notifier.read_summary(
+                    ROOT / f"docs/releases/{version}.subscriber.ko.md", version,
+                    ROOT / f"docs/releases/{version}.subscriber.ko.sha256")
+                self.assertLessEqual(len(text), 2000)
+                self.assertNotRegex(text, r"OV15[01]-|ADR-[0-9]|sha256:|control_epoch|dispatch-uncertain")
+
+    def test_correction_names_and_explains_every_shipped_god_with_a_call(self) -> None:
+        import tomllib
+        gods = tomllib.loads((ROOT / "harness/gods.toml").read_text(encoding="utf-8"))["gods"]
+        text = (ROOT / "docs/releases/0.15.0.subscriber.ko.md").read_text(encoding="utf-8")
+        self.assertEqual(len(gods), 9)
+        self.assertIn("0.15.0 안내 정정", text)
+        self.assertIn("기존 기능", text)
+        for god in gods:
+            with self.subTest(god=god["name"]):
+                line = next(line for line in text.splitlines() if f"·{god['korean']}**" in line)
+                self.assertIn(god["name"], line.casefold())
+                self.assertIn(f"`{god['korean']}, ", line)
+                self.assertIn(":", line)
+        self.assertIn("이번 버전에서 켜는 경로 없음", text)
+        self.assertIn("Gemini", text)
+        self.assertIn("미검증", text)
+
+    def test_151_copy_explains_detection_and_output_without_a_release_claim(self) -> None:
+        text = (ROOT / "docs/releases/0.15.1.subscriber.ko.md").read_text(encoding="utf-8")
+        for phrase in ("한 번 확인", "직접 선택", "모델 호출", "한국어·영어", "--output json",
+                       "코드 개발·문서 작성·일반 작업·사용자 지정", "자동 축소 없음"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("출시 완료", text)

@@ -22,6 +22,11 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 9. Save the exact copy's byte digest in `docs/releases/<current>.subscriber.ko.sha256` as `sha256:<digest>  <current>.subscriber.ko.md`. Submit both files through the normal reviewed develop-to-protected-main PR. That reviewed PR is subscriber-copy approval; no per-release GitHub secret registration is required.
 10. Delivery requires the version-independent `release-publication` environment variable `AIGENT_HIVE_SUBSCRIBER_APPROVAL` to equal `main-pr`. Any other value or absence blocks delivery. Configure it once; do not change GitHub settings for each release. The old per-release digest secret can be deleted. Delivery reads the notice and its matching one-line digest only from the released source commit, without rewriting either file. Changed copy requires another reviewed PR and a new release source; recovery sends only the original released copy. PR review does not itself publish or send messages.
 
+11. For an explicitly approved correction, keep normal recovery unchanged. Bind the old published
+    version and the reviewed replacement copy from a later release source. Use the existing protected
+    environment and main-pr digest gate. Edit only with a known message ID; otherwise use the reviewed
+    marked-correction path and record manual deletion when the old message cannot be addressed.
+
 ## Approved reference (required)
 
 Before drafting any update note, read the [concise 0.11.1 example](../../../docs/releases/0.11.1.subscriber.ko.md)
@@ -35,6 +40,22 @@ Transfer the approach, not its versions, features, figures, or fixed bullet coun
 new release claim. Preserve this approved example unless the maintainer explicitly revises it.
 The stable delivery tool checks this exact file against its sibling approval digest before sending
 the banner or summary.
+
+## Complete feature context
+
+- Explain every new feature for a person who does not know Hive's implementation: what it is,
+  what the user gets, how to use it (a complete invocation or copyable host request), and the
+  choices, costs and limits that affect use. A feature name or a few examples are not enough.
+- For a set, enumerate EVERY shipped member with its public name, Korean name when available,
+  plain-language role and invocation. The nine gods require all nine, not selected examples.
+  Distinguish a new entry to existing functions from a new underlying ability.
+- Inventory the release's complete user-visible delta before drafting. Reconcile every item with
+  the final copy; keep material disabled/unavailable functions visible beside the relevant benefit.
+  Do not expose internal IDs or require developer vocabulary to understand the announcement.
+- The 2,000-character limit never permits dropping members or feature context. Remove repetition
+  and engineering detail first. Keep the existing title, approval digest and reviewed-PR delivery
+  flow. A correction uses separately reviewed new copy; never rewrite an old release source or
+  treat a wording change as release/delivery authority.
 
 ## Feature positioning
 
