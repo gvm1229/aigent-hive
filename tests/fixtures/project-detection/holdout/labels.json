@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "policy": "Frozen before measurement; no detector tuning after the first run. Kind means coding/docs/general/custom. Precision counts emitted language/framework/manager/tool/structure/command facts against this explicit allowlist. Missing facts reduce coverage, not precision.",
+  "cases": [
+    {
+      "id": "express-ts",
+      "files": {
+        "package.json": "{\"dependencies\":{\"express\":\"5\",\"typescript\":\"5\"}}",
+        "tsconfig.json": "{}"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "JavaScript",
+        "TypeScript",
+        "Express",
+        "npm"
+      ]
+    },
+    {
+      "id": "next-pnpm",
+      "files": {
+        "package.json": "{\"dependencies\":{\"next\":\"16\",\"typescript\":\"5\"},\"packageManager\":\"pnpm@10\"}",
+        "pnpm-lock.yaml": "",
+        "tsconfig.json": "{}"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "JavaScript",
+        "TypeScript",
+        "Next.js",
+        "pnpm"
+      ]
+    },
+    {
+      "id": "tauri",
+      "files": {
+        "package.json": "{\"dependencies\":{\"@tauri-apps/api\":\"2\"}}",
+        "src-tauri/Cargo.toml": "[package]\nname=\"desktop\"\nversion=\"1.0.0\"\n",
+        "src-tauri/tauri.conf.json": "{}"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "JavaScript",
+        "Rust",
+        "cargo",
+        "cargo test",
+        "Tauri",
+        "npm"
+      ]
+    },
+    {
+      "id": "django-assets",
+      "files": {
+        "requirements.txt": "django==5\n",
+        "package.json": "{\"scripts\":{\"build\":\"esbuild app.js\"}}"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Python",
+        "Django",
+        "JavaScript",
+        "npm",
+        "npm run build"
+      ]
+    },
+    {
+      "id": "maturin",
+      "files": {
+        "pyproject.toml": "[build-system]\nrequires=[\"maturin\"]\nbuild-backend=\"maturin\"\n",
+        "Cargo.toml": "[package]\nname=\"extension\"\nversion=\"1.0.0\"\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Python",
+        "Rust",
+        "cargo",
+        "cargo test",
+        "cargo build",
+        "cargo clippy",
+        "maturin"
+      ]
+    },
+    {
+      "id": "js-library",
+      "files": {
+        "package.json": "{\"name\":\"small-lib\",\"main\":\"index.js\"}",
+        "README.md": "# Small library\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "JavaScript",
+        "npm"
+      ]
+    },
+    {
+      "id": "ruby",
+      "files": {
+        "Gemfile": "source \"https://rubygems.org\"\ngem \"rake\"\n",
+        "README.md": "# Ruby\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Ruby",
+        "bundler"
+      ]
+    },
+    {
+      "id": "php",
+      "files": {
+        "composer.json": "{\"require\":{\"php\":\"^8\"}}",
+        "README.md": "# PHP\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "PHP",
+        "composer"
+      ]
+    },
+    {
+      "id": "swift",
+      "files": {
+        "Package.swift": "// swift-tools-version: 6.0\nimport PackageDescription\n",
+        "README.md": "# Swift\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Swift",
+        "swift"
+      ]
+    },
+    {
+      "id": "flutter",
+      "files": {
+        "pubspec.yaml": "name: hello\ndependencies:\n  flutter:\n    sdk: flutter\n",
+        "README.md": "# Flutter\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Dart",
+        "Flutter",
+        "pub"
+      ]
+    },
+    {
+      "id": "nested-monorepo",
+      "files": {
+        "apps/api/package.json": "{\"dependencies\":{\"express\":\"5\"}}",
+        "crates/engine/Cargo.toml": "[package]\nname=\"engine\"\nversion=\"1.0.0\"\n",
+        "README.md": "# Workspace\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "JavaScript",
+        "Express",
+        "Rust",
+        "cargo",
+        "cargo test",
+        "npm",
+        "monorepo"
+      ]
+    },
+    {
+      "id": "dotnet-solution",
+      "files": {
+        "App.sln": "Microsoft Visual Studio Solution File\n",
+        "App/App.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"/>",
+        "README.md": "# App\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "C#",
+        "dotnet"
+      ]
+    },
+    {
+      "id": "android",
+      "files": {
+        "build.gradle.kts": "plugins { id(\"com.android.application\") }\n",
+        "settings.gradle.kts": "rootProject.name=\"App\"\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Kotlin",
+        "gradle",
+        "Android"
+      ]
+    },
+    {
+      "id": "mkdocs",
+      "files": {
+        "mkdocs.yml": "site_name: Guide\n",
+        "docs/index.md": "# Guide\n"
+      },
+      "expected_kind": "docs",
+      "allowed_facts": [
+        "MkDocs",
+        "Python"
+      ]
+    },
+    {
+      "id": "readme-license",
+      "files": {
+        "README.md": "# Notes\n",
+        "LICENSE": "MIT\n"
+      },
+      "expected_kind": "general",
+      "allowed_facts": []
+    },
+    {
+      "id": "uv-workspace",
+      "files": {
+        "pyproject.toml": "[tool.uv.workspace]\nmembers=[\"packages/*\"]\n",
+        "uv.lock": "version = 1\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "Python",
+        "uv",
+        "monorepo"
+      ]
+    },
+    {
+      "id": "deno",
+      "files": {
+        "deno.json": "{\"tasks\":{\"test\":\"deno test\"}}",
+        "README.md": "# Deno\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "TypeScript",
+        "deno",
+        "deno test"
+      ]
+    },
+    {
+      "id": "make-c",
+      "files": {
+        "Makefile": "all:\n\tcc main.c -o app\n",
+        "main.c": "int main(void) { return 0; }\n",
+        "README.md": "# C\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "C",
+        "make"
+      ]
+    },
+    {
+      "id": "terraform",
+      "files": {
+        "main.tf": "terraform {}\n",
+        "README.md": "# Infrastructure\n"
+      },
+      "expected_kind": "coding",
+      "allowed_facts": [
+        "HCL",
+        "terraform"
+      ]
+    },
+    {
+      "id": "docusaurus",
+      "files": {
+        "package.json": "{\"dependencies\":{\"@docusaurus/core\":\"3\"}}",
+        "docusaurus.config.ts": "export default {};\n",
+        "README.md": "# Docs\n"
+      },
+      "expected_kind": "docs",
+      "allowed_facts": [
+        "JavaScript",
+        "TypeScript",
+        "Docusaurus",
+        "npm"
+      ]
+    }
+  ]
+}
