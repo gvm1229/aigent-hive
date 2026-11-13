@@ -18,6 +18,7 @@
 
 ## 승인
 
+- 2026-11-14 유지관리자 "Clear the flags": 단계 4의 OV151-008 공개 시험·009 develop 병합·010 정식의 승인 대기 해제, 의존 순서와 Fable 검토 유지
 - 현재 요청: 0.15.0 Windows 왕복 근거·참조 처리기·공개 시험·develop/main 병합·정식·게시·구독자 안내·PC 설치 전 과정 승인, 기본 비활성 유지
 
 ## 재개 절차
@@ -94,7 +95,7 @@
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
 | 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 9/12 |
-| 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청 | 5/5 |
+| 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청·2026-11-14 재확인(다른 모든 작업보다 먼저) | 6/6 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |

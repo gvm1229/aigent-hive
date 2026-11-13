@@ -24,10 +24,16 @@
 1. 이번 변경의 Fable 추가 검토와 수정
 2. 별도 허용된 단계의 develop 통합·0.15.1-test.1 수용
 3. 승인된 develop→main PR에 0.15.0 정정 글·0.15.1 안내·지문·워크플로 포함, 별도 정정용 main PR 없음
-4. 0.15.1 정식 게시 뒤 바로 아래 정정 수동 실행. 현재 요청의 실행 대상 밖
+4. 0.15.1 정식 게시: `release-publish.yml`의 `send_subscriber_update=false`. Discord 전송 단계 건너뜀
+5. 0.15.0 정정 수동 실행
+6. 정정 수신 기록 확인 뒤 0.15.1 안내를 기존 `recover` 경로로 전송
+
+- 순서 근거: 2026-11-14 유지관리자 지시. "the 0.15.0 update note on discord must be either edited or sent again BEFORE the 0.15.1 update note hits. To keep the version update note ordered." 0.15.1 정식의 동시 전송 금지
+- `recover`는 게시 실행의 Discord 단계 건너뜀과 0.15.1 수신 기록 부재를 확인한 뒤 같은 승인 원문·지문으로 전송. 새 워크플로 코드 불필요
 
 ```powershell
 gh workflow run release-discord-notification.yml --ref main -f operation=correct -f product_version=0.15.0 -f publication_run_id=43329036663
+gh workflow run release-discord-notification.yml --ref main -f operation=recover -f product_version=0.15.1 -f publication_run_id=<0.15.1 정식 게시 실행 ID>
 ```
 
 - 나중에 원래 ID 확보 시 `-f message_id=<원래 메시지 ID>` 추가, 웹훅 주소·토큰 입력 금지
