@@ -155,33 +155,59 @@ def main() -> None:
         assert not result["changed_paths"]
         scenarios.append("user-update-automatic-cleanup-and-idempotence")
 
-        project = work / "project"
-        project.mkdir()
-        foreign = project / "README.md"
-        foreign.write_bytes(b"Foreign project content\n")
         project_answers = yaml.safe_load((ROOT / "tests/fixtures/setup/answers-base.yml").read_text())
         project_answers.update(setup_mode="custom", interface_language="en", wiki={"enabled": False, "language": "both"},
                                persona={"id": "balanced"}, skills={"mode": "individual", "selected": ["prompt-refine", "project-setup", "usage-guard"]})
-        path = work / "project.yml"
-        path.write_text(yaml.safe_dump(project_answers), encoding="utf-8")
-        invoke("setup", "--target", str(project), "--answers", str(path), "--capabilities", str(ROOT / "tests/fixtures/setup/capabilities-codex-host-native.json"),
-               "--user-root", str(user), "--apply", "--output", "json")
-        assert not (project / ".agents/skills/prompt-refine/SKILL.md").exists()
-        assert (project / ".agents/skills/project-setup/SKILL.md").is_file()
-        scenarios.append("project-only-selection-preserved")
-        upgrade = ("project", "upgrade", "--target", str(project), "--user-root", str(user))
         state = json.loads((user / "registration.json").read_text())
-        state["enabled"] = False
-        (user / "registration.json").write_text(json.dumps(state))
+
+        def set_plugin(enabled: bool) -> None:
+            state["enabled"] = enabled
+            (user / "registration.json").write_text(json.dumps(state))
+
+        def setup_project(name: str, compact: bool) -> tuple[Path, Path, tuple[str, ...]]:
+            project = work / name
+            project.mkdir()
+            foreign = project / "README.md"
+            foreign.write_bytes(b"Foreign project content\n")
+            path = work / f"{name}.yml"
+            # Compact layout is only offered without persistent roles.
+            answers = {**project_answers, "compact_layout": compact}
+            if compact:
+                answers["persistent_roles"] = []
+            path.write_text(yaml.safe_dump(answers), encoding="utf-8")
+            invoke("setup", "--target", str(project), "--answers", str(path), "--capabilities",
+                   str(ROOT / "tests/fixtures/setup/capabilities-codex-host-native.json"),
+                   "--user-root", str(user), "--apply", "--output", "json")
+            assert (project / ".agents/skills/project-setup/SKILL.md").is_file()
+            return project, foreign, ("project", "upgrade", "--target", str(project), "--user-root", str(user))
+
+        # A full-layout project keeps shared copies whatever this PC's plugin state is.
+        project, foreign, upgrade = setup_project("project-full", compact=False)
+        assert (project / ".agents/skills/prompt-refine/SKILL.md").is_file()
+        set_plugin(False)
+        invoke(*upgrade, "--apply", "--output", "json")
+        set_plugin(True)
+        invoke(*upgrade, "--apply", "--output", "json")
+        assert (project / ".agents/skills/prompt-refine/SKILL.md").is_file()
+        assert (project / ".agents/skills/usage-guard/references/control.md").is_file()
+        invoke(*upgrade, "--validate", "--output", "json")
+        assert foreign.read_bytes() == b"Foreign project content\n"
+        scenarios.append("full-layout-project-keeps-copies-across-plugin-changes")
+
+        # Only a compact project relies on the verified plugin for shared Skills.
+        project, foreign, upgrade = setup_project("project-compact", compact=True)
+        assert not (project / ".agents/skills/prompt-refine/SKILL.md").exists()
+        scenarios.append("project-only-selection-preserved")
+        set_plugin(False)
         invoke(*upgrade, "--apply", "--output", "json")
         assert (project / ".agents/skills/prompt-refine/SKILL.md").is_file()
         assert (project / ".agents/skills/usage-guard/references/control.md").is_file()
         assert (project / ".agents/skills/usage-guard/references/sensors.md").is_file()
-        state["enabled"] = True
-        (user / "registration.json").write_text(json.dumps(state))
+        set_plugin(True)
         invoke(*upgrade, "--apply", "--output", "json")
         assert not (project / ".agents/skills/prompt-refine/SKILL.md").exists()
         assert not (project / ".agents/skills/usage-guard").exists()
+        assert (project / ".agents/skills/project-setup/SKILL.md").is_file()
         invoke(*upgrade, "--validate", "--output", "json")
         assert foreign.read_bytes() == b"Foreign project content\n"
         scenarios.append("project-update-restoration-cleanup-and-foreign-preservation")
