@@ -120,15 +120,15 @@ fn successful_storage_results_use_the_same_localized_renderer() {
         assert!(output.status.success());
         let text = String::from_utf8(output.stdout).unwrap();
         assert!(text.starts_with(if language == "ko" {
-            "저장 공간 사용량 확인 완료."
+            "저장 공간 사용량을 확인했습니다. 바꾼 것은 없습니다."
         } else {
-            "Success. Hive storage measured without changes."
+            "Success. Hive storage measured. Nothing was changed."
         }));
         assert!(!text.contains("[Hades]"));
         assert!(text.contains(if language == "ko" {
-            "크기(바이트)"
+            "전체 크기"
         } else {
-            "Size (bytes)"
+            "Total size"
         }));
         assert!(!text.trim().starts_with('{'));
     }

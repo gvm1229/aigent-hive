@@ -85,6 +85,8 @@ fn choose(language: InterfaceLanguage, ko: &str, en: &str) -> String {
 
 // The topic names also form the bilingual action coverage inventory.
 include!("human_output/actions.rs");
+include!("human_output/codes.rs");
+include!("human_output/families.rs");
 
 pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -> String {
     let action = value["action"].as_str().unwrap_or(family);
@@ -114,18 +116,27 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             return text;
         }
     }
+    let coded = code_sentence(value["code"].as_str().unwrap_or(""));
+    let message = readable(message);
     let mut output = if language == InterfaceLanguage::Ko {
-        // Setup already supplies complete localized messages.
-        if message.chars().any(|c| ('가'..='힣').contains(&c)) {
+        if let Some((ko, _)) = coded {
+            ko.to_owned()
+        } else if has_hangul(&message) {
+            // Setup already supplies complete localized messages.
             format!("완료. {message}")
-        } else {
+        } else if message.is_empty() {
             // Topics already end with their outcome word (완료), so no second prefix.
             format!("{ko}.")
+        } else {
+            // Never replace a specific result with a generic topic; keep the original sentence.
+            format!("{ko}.\n안내(영문 원문): {}", sentence(&message))
         }
+    } else if let Some((_, en)) = coded.filter(|(_, en)| !en.is_empty()) {
+        format!("Success. {en}")
     } else if message.is_empty() {
         format!("Success. {en}.")
     } else {
-        format!("Success. {}", sentence(message))
+        format!("Success. {}", sentence(&message))
     };
     if !value["changed_paths"].as_array().is_none_or(Vec::is_empty) {
         output.push_str(&if planned_only(value, data) {
@@ -142,7 +153,10 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             write!(output, "\n- {path}").expect("formatting a String");
         }
     }
-    details(data, language, &mut output, 0);
+    match family_details(action, value, data, language) {
+        Some(text) => output.push_str(&text),
+        None => details(data, language, &mut output, 0),
+    }
     if let Some(next) = value["next_action"]
         .as_str()
         .filter(|next| !next.is_empty())
@@ -151,7 +165,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         if language == InterfaceLanguage::Ko {
             output.push_str(&next_ko(next));
         } else {
-            output.push_str(&next.replace(" --output json", ""));
+            output.push_str(&readable(next));
         }
     }
     if data["session_recheck_required"] == true {
@@ -241,112 +255,132 @@ fn sentence(message: &str) -> String {
 }
 
 fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
-    let message = value["message"]
+    let original = value["message"]
         .as_str()
         .unwrap_or("The request could not be completed.");
-    let message = message.lines().next().unwrap_or(message);
-    if language == InterfaceLanguage::En {
-        let remedy = value["next_action"].as_str().unwrap_or(
-            "Check the command options with --help. Correct the named input or file, then retry.",
+    let message = readable(original.lines().next().unwrap_or(original));
+    let coded = code_sentence(value["code"].as_str().unwrap_or(""));
+    let diagnostic = value["data"]["diagnostic"]["original_message"]
+        .as_str()
+        .map(readable)
+        .filter(|cause| !cause.is_empty() && *cause != message);
+    let option = missing_option(&message);
+    let next = value["next_action"]
+        .as_str()
+        .filter(|next| !next.is_empty())
+        .map(str::to_owned)
+        .or_else(|| setup_first(original).then(|| "hive setup".to_owned()));
+    if let Some(option) =
+        option.filter(|_| !next.as_deref().is_some_and(|n| n.starts_with("hive ")))
+    {
+        // A missing option has one exact fix; say it instead of a generic --help pointer.
+        return choose(
+            language,
+            &format!("처리 실패: {}. 필요한 옵션 {option}을(를) 지정하지 않았습니다.\n다음 단계: {option} 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 --help로 볼 수 있습니다.",
+                ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료")),
+            &format!("Failed. The required option {option} is missing.\nNext: add {option} and run the same command again. See --help for usage."),
         );
-        // Topics are past-tense outcomes, so the failure line states the cause directly.
-        return format!("Failed. {}\nNext: {remedy}", sentence(message));
     }
-    let cause = korean_cause(message);
-    let mut output = format!(
-        "처리 실패: {}. {cause}",
-        ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료")
-    );
+    if language == InterfaceLanguage::En {
+        let cause = coded
+            .filter(|(_, en)| !en.is_empty())
+            .map_or_else(|| sentence(&message), |(_, en)| en.to_owned());
+        let mut output = format!("Failed. {cause}");
+        if let Some(diagnostic) = diagnostic {
+            write!(output, "\nCause: {}", sentence(&diagnostic)).expect("formatting a String");
+        }
+        let remedy = next.map_or_else(
+            || {
+                "Check the command options with --help, correct the named input, then retry."
+                    .to_owned()
+            },
+            |next| readable(&next),
+        );
+        write!(output, "\nNext: {remedy}").expect("formatting a String");
+        return output;
+    }
+    let topic = ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료");
+    let mut output = format!("처리 실패: {topic}. ");
+    if let Some((ko, _)) = coded {
+        output.push_str(ko);
+        if !has_hangul(&message) {
+            // Keep the specific detail the code sentence cannot know.
+            write!(output, "\n세부 내용(영문 원문): {}", sentence(&message))
+                .expect("formatting a String");
+        }
+    } else if has_hangul(&message) {
+        output.push_str(&message);
+    } else {
+        // Do not guess a Korean cause from English words; show the real one.
+        write!(output, "원인(영문 원문): {}", sentence(&message)).expect("formatting a String");
+    }
+    if let Some(diagnostic) = diagnostic {
+        write!(output, "\n원래 원인: {diagnostic}").expect("formatting a String");
+    }
     output.push_str("\n다음 단계: ");
-    output.push_str(&value["next_action"].as_str().map_or_else(
-        || "--help로 입력 방법을 확인하세요. 자세한 원인은 같은 명령의 --output json에서 확인할 수 있습니다.".into(), next_ko));
+    output.push_str(&next.map_or_else(
+        || "--help로 사용 방법을 확인하고, 표시된 입력을 고친 뒤 다시 실행하세요.".to_owned(),
+        |next| next_ko(&next),
+    ));
     output
 }
 
-fn korean_cause(message: &str) -> String {
-    if message.chars().any(|c| ('가'..='힣').contains(&c)) {
-        return message.into();
-    }
+fn code_sentence(code: &str) -> Option<(&'static str, &'static str)> {
+    CODES
+        .iter()
+        .find(|(name, _, _)| *name == code)
+        .map(|(_, ko, en)| (*ko, *en))
+}
+
+/// The option named by the fixed "missing required option", "missing value for" or "requires" shapes.
+fn missing_option(message: &str) -> Option<String> {
     let lower = message.to_ascii_lowercase();
-    let plain = if (lower.contains("source workspace") || lower.contains("source root"))
-        && lower.contains("consumer")
-    {
-        Some("Hive 자체 코드를 고치는 폴더에서는 사용자·프로젝트 설정을 적용할 수 없습니다. Hive를 사용할 다른 프로젝트 폴더를 대상으로 골라 주세요.")
-    } else if lower.contains("symlink")
-        || lower.contains("reparse")
-        || lower.contains("symbolic link")
-    {
-        Some("다른 위치로 연결된 경로라서 안전하게 처리할 수 없습니다. 연결 경로 대신 실제 폴더의 전체 경로를 선택하세요.")
-    } else if lower.contains("orchestration") && lower.contains("disabled") {
-        Some("이번 버전의 작업자 자동 실행은 꺼져 있으며 켜는 경로가 없습니다. 작업 내용의 미리보기와 전달 준비만 사용할 수 있습니다.")
-    } else if lower.contains("--summary") && lower.contains("preview") {
-        Some("변경 승인용 미리보기와 질문 설명에는 요약 옵션을 함께 쓸 수 없습니다. --summary를 빼고 확인하세요.")
-    } else if lower.contains("output") && lower.contains("json") {
-        Some("직접 지정할 수 있는 기계 출력 형식은 JSON입니다. 사람이 읽는 결과는 --output 옵션을 빼고 실행하세요.")
-    } else if lower.contains("usable terminal") {
-        Some("대화형 실행에는 직접 입력할 수 있는 터미널이 필요합니다. 터미널에서 다시 실행하거나 --interactive를 빼고 필요한 입력을 지정하세요.")
-    } else if lower.contains("software update approval") {
-        Some("프로그램 업데이트 설치를 승인하지 않아 설치하지 않았습니다. 설치를 원할 때 터미널에서 내용을 확인하고 승인하세요.")
-    } else if lower.contains("integer") && lower.contains("99") {
-        Some(
-            "사용량 기준은 0부터 99까지의 정수여야 합니다. 소수점이나 범위를 벗어난 값을 고치세요.",
-        )
-    } else if lower.contains("credential") || lower.contains("secret") {
-        Some("비밀 정보가 포함되어 이 작업을 진행할 수 없습니다. 비밀 값을 제외한 자료만 선택하세요.")
-    } else if lower.contains("signature") || lower.contains("digest") || lower.contains("checksum")
-    {
-        Some("현재 파일과 승인한 내용이 같은지 확인하지 못했습니다. 신뢰할 수 있는 원본과 변경 미리보기를 확인한 뒤 다시 승인하세요.")
-    } else if lower.contains("manifest") || lower.contains("ownership") {
-        Some("설치 기록과 파일의 소유를 확인하지 못했습니다. 원래 파일을 보존하고 설치 기록과 변경 미리보기를 먼저 확인하세요.")
-    } else if lower.contains("absolute") {
-        Some("대상 폴더의 전체 경로가 필요합니다. 현재 폴더에서 시작하는 짧은 경로 대신 전체 경로를 지정하세요.")
-    } else if lower.contains("schema") {
-        Some("입력 파일의 형식이나 버전을 확인하지 못했습니다. 해당 명령의 --help에서 필요한 파일 형식을 확인하세요.")
-    } else if lower.contains("conflict") && message.contains("--") {
-        Some("함께 사용할 수 없는 옵션을 선택했습니다. --help에서 한 가지 실행 방식만 골라 다시 실행하세요.")
-    } else {
-        None
-    };
-    if let Some(plain) = plain {
-        return plain.into();
-    }
-    if message.contains("duplicate") {
-        "같은 입력을 두 번 지정했습니다. 중복된 옵션을 지우세요.".into()
-    } else if message.contains("missing")
-        || message.contains("requires")
-        || message.contains("required")
-    {
-        let options: Vec<_> = message
-            .split_whitespace()
-            .filter(|word| word.starts_with("--"))
-            .collect();
-        format!(
-            "필요한 입력이나 파일이 없습니다. {} 값을 확인하세요.",
-            options.join(" ")
-        )
-    } else if message.contains("unknown") || message.contains("unsupported") {
-        "사용할 수 없는 명령이나 옵션입니다. --help에서 사용할 이름을 확인하세요.".into()
-    } else if message.contains("conflict")
-        || message.contains("changed")
-        || message.contains("stale")
-    {
-        "파일이나 승인 정보가 이전 확인 때와 다릅니다. 현재 상태를 살펴본 뒤 미리보기를 다시 확인하세요.".into()
-    } else if message.contains("permission") || message.contains("denied") {
-        "파일이나 작업에 접근할 수 없습니다. 대상 경로와 접근 권한을 확인하세요.".into()
-    } else if message.contains("usage") || message.contains("quota") {
-        "사용량을 확인하지 못했거나 보호 기준에 도달했습니다. 사용량과 다음 초기화 시간을 확인하세요.".into()
-    } else {
-        "입력이나 현재 상태를 확인하지 못했습니다. 대상 파일과 저장된 설정을 확인하세요.".into()
-    }
+    let after = [
+        "missing required option ",
+        "missing value for ",
+        " requires ",
+    ]
+    .iter()
+    .find_map(|marker| lower.find(marker).map(|at| &message[at + marker.len()..]))?;
+    let option = after
+        .split(|c: char| c.is_whitespace() || matches!(c, '.' | ',' | ';' | ':'))
+        .next()?;
+    // --output only chooses a machine format; never advise adding it.
+    (option.starts_with("--") && option.len() > 2 && option != "--output")
+        .then(|| option.to_owned())
+}
+
+fn has_hangul(text: &str) -> bool {
+    text.chars().any(|c| ('가'..='힣').contains(&c))
+}
+
+/// A first run without global setup should point at `hive setup`, not at --help.
+fn setup_first(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("global hive setup is required") || lower.contains(".hive/config/user-setup.yml")
+}
+
+/// What a person sees: no JSON pointers, no machine flags, no Windows verbatim path prefix.
+fn readable(text: &str) -> String {
+    let text = text.replace(" --output json", "").replace(r"\\?\", "");
+    let kept: Vec<&str> = text
+        .split_inclusive(['.', '!', '?'])
+        .filter(|part| {
+            let lower = part.to_ascii_lowercase();
+            !(lower.contains("json") && (lower.contains("diagnostic") || lower.contains("output")))
+                && !part.contains("JSON 출력")
+        })
+        .collect();
+    kept.concat().trim().to_owned()
 }
 
 fn next_ko(next: &str) -> String {
-    let readable = next.replace(" --output json", "");
+    let readable = readable(next);
     let next = readable.as_str();
     if next.starts_with("hive ") {
         return format!("다음 명령으로 이어가세요: {next}");
     }
-    if next.chars().any(|c| ('가'..='힣').contains(&c)) {
+    if has_hangul(next) {
         return next.into();
     }
     let commands: Vec<_> = next
@@ -355,24 +389,18 @@ fn next_ko(next: &str) -> String {
         .filter_map(|(i, text)| (i % 2 == 1 && text.starts_with("hive ")).then_some(text))
         .collect();
     if !commands.is_empty() {
-        return format!("다음 명령으로 상태를 확인하세요: {}", commands.join("; "));
+        return format!("다음 명령으로 이어가세요: {}", commands.join("; "));
     }
-    if next.contains("approv") || next.contains("consent") {
-        "미리보기의 대상과 변경 내용을 확인하고 승인한 뒤 다시 실행하세요.".into()
-    } else if next.contains("session") || next.contains("reservation") {
-        "사용 중인 세션과 파일 예약을 확인하고 충돌을 해결한 뒤 다시 실행하세요.".into()
-    } else if next.contains("repair") || next.contains("fix") {
-        "표시한 문제를 고친 뒤 같은 검사를 다시 실행하세요.".into()
-    } else {
-        "현재 상태와 필요한 입력을 확인하세요. 자세한 다음 행동은 같은 명령의 --output json에서 확인할 수 있습니다.".into()
-    }
+    format!("안내(영문 원문): {}", sentence(next))
 }
 
 fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
     let (ko, en) = match key {
         "enabled" => ("사용 여부", "Enabled"),
         "active" => ("실제 동작 여부", "Active"),
-        "guard_enabled" | "enforcement_enabled" => ("일반 사용량 보호", "General usage protection"),
+        "guard_enabled" => ("일반 사용량 보호", "General usage protection"),
+        // Distinct from the saved switch: whether protection is actually being applied now.
+        "enforcement_enabled" => ("사용량 보호 적용 중", "Usage protection applied now"),
         "quota_reset_guard_enabled" => ("사용량 초기화 보호", "Usage reset protection"),
         "zero_quota_guard_enabled" => ("사용량 소진 보호", "Zero-quota protection"),
         "mode" => ("동작", "Mode"),
@@ -470,9 +498,11 @@ fn details(value: &Value, language: InterfaceLanguage, output: &mut String, dept
                 match value {
                     Value::Null => {}
                     Value::Array(_) | Value::Object(_) => {
-                        if !value.as_array().is_some_and(Vec::is_empty) {
-                            write!(output, "\n{label}:").expect("formatting a String");
-                            details(value, language, output, depth + 1);
+                        // Print a heading only when something readable sits under it.
+                        let mut nested = String::new();
+                        details(value, language, &mut nested, depth + 1);
+                        if !nested.is_empty() {
+                            write!(output, "\n{label}:{nested}").expect("formatting a String");
                         }
                     }
                     _ => {

@@ -38,10 +38,15 @@ fn internal_component_tags_stay_out_of_human_text_but_remain_in_the_receipt() {
     let english = render(&value, InterfaceLanguage::En, "storage");
     assert!(english.starts_with("Success. Hive storage measured without changes."));
     assert!(!english.contains("[Hades]"));
-    assert_eq!(
-        render(&value, InterfaceLanguage::Ko, "storage"),
-        "저장 공간 사용량 확인 완료."
+    let korean = render(&value, InterfaceLanguage::Ko, "storage");
+    assert!(
+        korean.starts_with(
+            "저장 공간 사용량 확인 완료.
+안내(영문 원문): Hive storage measured"
+        ),
+        "{korean}"
     );
+    assert!(!korean.contains("[Hades]"));
     assert_eq!(
         value["message"],
         "[Hades] Hive storage measured without changes"
@@ -91,9 +96,9 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
     let value = json!({"action":"QueryKnowledge","status":"error","exit_code":2,
         "message":"knowledge query requires --target","code":"hive.invalid-input"});
     assert_eq!(render(&value, InterfaceLanguage::Ko, "knowledge"),
-        "처리 실패: 지식 검색. 필요한 입력이나 파일이 없습니다. --target 값을 확인하세요.\n다음 단계: --help로 입력 방법을 확인하세요. 자세한 원인은 같은 명령의 --output json에서 확인할 수 있습니다.");
+        "처리 실패: 지식 검색. 필요한 옵션 --target을(를) 지정하지 않았습니다.\n다음 단계: --target 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 --help로 볼 수 있습니다.");
     let english = render(&value, InterfaceLanguage::En, "knowledge");
-    assert!(english.starts_with("Failed. Knowledge query requires --target."));
+    assert!(english.starts_with("Failed. The required option --target is missing."));
     assert!(english.contains("Next:"));
     let unknown = json!({"action":"UnknownAction","status":"error","exit_code":2,
         "message":"unknown command: example\n\nAigent Hive\nUSAGE: many commands"});
@@ -174,24 +179,74 @@ fn private_worker_wire_protocol_is_not_changed_by_the_user_display_default() {
 }
 
 #[test]
-fn common_safety_errors_explain_the_actual_cause_and_recovery() {
-    for (message, expected) in [
-        (
-            "consumer target is a Hive source workspace",
-            "다른 프로젝트 폴더",
-        ),
-        ("usage check requires --output json", "--output 옵션을 빼고"),
-        ("symlink target refused", "실제 폴더의 전체 경로"),
-        (
-            "orchestration is disabled in this build",
-            "켜는 경로가 없습니다",
-        ),
+fn failures_show_the_real_cause_and_never_point_people_at_json() {
+    for message in [
+        "consumer target is a Hive source workspace",
+        "usage check requires --output json",
+        "account digest mismatch for the selected account",
+        "orchestration is disabled in this build",
     ] {
-        let value =
-            json!({"action":"UnknownAction","status":"error","exit_code":2,"message":message});
-        assert!(render(&value, InterfaceLanguage::Ko, "example").contains(expected));
+        let value = json!({"action":"UnknownAction","status":"error","exit_code":2,
+            "message":message,"code":"hive.invalid-input"});
+        for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+            let text = render(&value, language, "example");
+            assert!(!text.to_ascii_lowercase().contains("json"), "{text}");
+            assert!(!text.contains("--output"), "{text}");
+        }
+        let korean = render(&value, InterfaceLanguage::Ko, "example");
+        // No Korean cause guessed from English words: the real sentence is shown and labelled.
+        assert!(
+            korean.contains("원인(영문 원문)") || korean.contains("필요한 옵션"),
+            "{korean}"
+        );
         assert_eq!(value["message"], message);
     }
+}
+
+#[test]
+fn coded_results_state_the_real_outcome_in_both_languages() {
+    let disabled = json!({"action":"CheckHiveUpdate","status":"success","exit_code":0,
+        "code":"hive.update-check-disabled","message":"daily update checking is disabled"});
+    let korean = render(&disabled, InterfaceLanguage::Ko, "update");
+    assert!(
+        korean.starts_with("매일 새 버전 확인이 꺼져 있어 확인하지 않았습니다."),
+        "{korean}"
+    );
+    assert!(!korean.contains("새 버전 확인 완료"));
+    assert!(render(&disabled, InterfaceLanguage::En, "update")
+        .starts_with("Success. Daily update checking is turned off"));
+    let blocked = json!({"action":"CheckSession","status":"blocked","exit_code":3,
+        "code":"hive.session-coordination-blocked","message":"live session other-1 reserves AGENTS.md"});
+    let korean = render(&blocked, InterfaceLanguage::Ko, "session");
+    assert!(
+        korean.contains("다른 세션이 같은 파일을 예약해 두어"),
+        "{korean}"
+    );
+    assert!(korean.contains("other-1 reserves AGENTS.md"), "{korean}");
+    let setup = json!({"action":"SetupHarness","status":"conflict","exit_code":3,
+        "code":"hive.user-setup-conflict",
+        "message":"Settings or progress differ from the expected state. JSON diagnostic contains the original cause.",
+        "next_action":r"hive setup --target '\\?\C:\work\p' --resume",
+        "data":{"diagnostic":{"original_message":"installed user setup is invalid"}}});
+    for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+        let text = render(&setup, language, "setup");
+        assert!(
+            text.to_lowercase()
+                .contains("installed user setup is invalid"),
+            "{text}"
+        );
+        assert!(!text.contains("JSON"), "{text}");
+        assert!(!text.contains(r"\\?\"), "{text}");
+        assert!(text.contains(r"'C:\work\p'"), "{text}");
+    }
+}
+
+#[test]
+fn global_setup_errors_point_at_hive_setup() {
+    let value = json!({"action":"QueryKnowledge","status":"error","exit_code":3,
+        "message":"Global Hive setup is required before this command"});
+    assert!(render(&value, InterfaceLanguage::En, "knowledge").ends_with("Next: hive setup"));
+    assert!(render(&value, InterfaceLanguage::Ko, "knowledge").contains("hive setup"));
 }
 
 #[test]
