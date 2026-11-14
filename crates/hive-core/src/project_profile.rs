@@ -759,7 +759,7 @@ mod tests {
         std::fs::write(dir.path().join("Cargo.toml"), "[package]\nname='native'\n").unwrap();
         std::fs::write(dir.path().join("requirements.txt"), "Django==5").unwrap();
         let profile = ProjectProfile::detect(dir.path());
-        assert!(profile.structure.is_empty());
+        assert_eq!(profile.structure, Vec::new());
         assert_eq!(profile.commands["js:test"].name, "pnpm run test");
         assert_eq!(profile.commands["cargo:test"].name, "cargo test");
         for fact in profile.languages.iter().chain(&profile.structure) {
@@ -782,10 +782,10 @@ name='one'
 ",
         )
         .unwrap();
-        assert!(ProjectProfile::detect(dir.path()).structure.is_empty());
+        assert_eq!(ProjectProfile::detect(dir.path()).structure, Vec::new());
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("package.json"), r#"{"workspaces":[]}"#).unwrap();
-        assert!(ProjectProfile::detect(dir.path()).structure.is_empty());
+        assert_eq!(ProjectProfile::detect(dir.path()).structure, Vec::new());
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("Cargo.toml"),

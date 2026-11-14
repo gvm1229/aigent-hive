@@ -4610,13 +4610,13 @@ mod tests {
             });
             assert!(portable.is_file(), "{host}");
             assert!(primary.is_file(), "{host}");
-            assert!(prepare_with_plugin(
+            let changed = prepare_with_plugin(
                 &cap,
-                &hive_render::skill_delivery::VerifiedPlugins::default()
+                &hive_render::skill_delivery::VerifiedPlugins::default(),
             )
             .unwrap()
-            .changed_paths
-            .is_empty());
+            .changed_paths;
+            assert_eq!(changed, Vec::<String>::new(), "{host}");
         }
     }
 

@@ -7822,7 +7822,7 @@ mod tests {
             }
             changes.clear();
             super::refresh_project_profile(&cap, &mut answers, &mut changes).unwrap();
-            assert!(changes.is_empty());
+            assert_eq!(changes, Vec::<String>::new());
         }
     }
 
