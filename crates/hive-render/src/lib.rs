@@ -11427,6 +11427,7 @@ mod tests {
         let temporary = tempfile::tempdir().unwrap();
         let target = temporary.path().join("project");
         fs::create_dir(&target).unwrap();
+        let target = target.canonicalize().unwrap();
         let mut preferences = test_global_preferences();
         preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
         preferences.codex_plugin_files = super::skill_delivery::VerifiedPlugins::for_host(
