@@ -182,7 +182,7 @@ fn private_worker_wire_protocol_is_not_changed_by_the_user_display_default() {
 fn failures_show_the_real_cause_and_never_point_people_at_json() {
     for message in [
         "consumer target is a Hive source workspace",
-        "usage check requires --output json",
+        "Settings differ. JSON diagnostic contains the original cause.",
         "account digest mismatch for the selected account",
         "orchestration is disabled in this build",
     ] {
@@ -190,8 +190,9 @@ fn failures_show_the_real_cause_and_never_point_people_at_json() {
             "message":message,"code":"hive.invalid-input"});
         for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
             let text = render(&value, language, "example");
-            assert!(!text.to_ascii_lowercase().contains("json"), "{text}");
-            assert!(!text.contains("--output"), "{text}");
+            // Real causes stay; only "see the JSON" pointers go.
+            assert!(!text.contains("JSON diagnostic"), "{text}");
+            assert!(!text.contains("--output json에서"), "{text}");
         }
         let korean = render(&value, InterfaceLanguage::Ko, "example");
         // No Korean cause guessed from English words: the real sentence is shown and labelled.
@@ -299,4 +300,42 @@ fn host_protocol_commands_are_always_machine_output() {
         assert!(machine(), "{command:?}");
     }
     OPTIONS.with(|options| *options.borrow_mut() = previous);
+}
+
+#[test]
+fn code_sentences_only_cover_single_cause_codes() {
+    // These codes come from generic error mappings with many different causes.
+    for shared in [
+        "hive.update-compatibility-blocked",
+        "hive.update-conflict",
+        "hive.update-release-verification-failed",
+        "hive.usage-control-blocked",
+        "hive.usage-control-conflict",
+        "hive.invalid-input",
+        "hive.internal-error",
+    ] {
+        assert!(code_sentence(shared).is_none(), "{shared}");
+    }
+    let value = json!({"action":"SetUsageThreshold","status":"blocked","exit_code":3,
+        "code":"hive.usage-control-blocked","message":"installed .hive/config/harness.toml is required"});
+    for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+        let text = render(&value, language, "usage");
+        assert!(
+            text.to_lowercase().contains("harness.toml is required"),
+            "{text}"
+        );
+        assert!(
+            text.contains("hive setup --target <project folder>"),
+            "{text}"
+        );
+    }
+}
+
+#[test]
+fn a_wrong_output_value_keeps_its_cause() {
+    let value = json!({"action":"ReportStorage","status":"error","exit_code":2,
+        "code":"hive.storage-input-invalid","message":"--output accepts only json"});
+    for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+        assert!(render(&value, language, "storage").contains("--output accepts only json"));
+    }
 }

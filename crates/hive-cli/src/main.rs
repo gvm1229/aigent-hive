@@ -275,6 +275,10 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
     {
         return gods::run_alias(god, &arguments[1..]);
     }
+    if let Some(family) = family_help_request(&arguments) {
+        print_family_help(family);
+        return ExitCode::SUCCESS;
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")
@@ -292,6 +296,13 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         }
         Some("setup") if arguments.iter().any(|argument| argument == "--scope") => {
             user_setup::run(&arguments[1..])
+        }
+        // A bare `hive setup` is a person's first step: start the global user setup.
+        Some("setup") if matches!(&arguments[1..], [] | [_, _] if arguments[1..].iter().map(String::as_str).eq(["--output", "json"]) || arguments.len() == 1) =>
+        {
+            let mut user = vec!["--scope".to_owned(), "user".to_owned()];
+            user.extend_from_slice(&arguments[1..]);
+            user_setup::run(&user)
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
@@ -705,6 +716,39 @@ fn usage_unknown_result_with_next(
         }),
         next_action,
         data: None,
+    }
+}
+
+/// `hive <family> ... --help` for families without their own help. Machine protocols and
+/// families that already print dedicated help keep their behaviour.
+fn family_help_request(arguments: &[String]) -> Option<&str> {
+    let family = arguments.first()?.as_str();
+    let asks = arguments[1..]
+        .iter()
+        .any(|argument| argument == "--help" || argument == "-h");
+    let own_help = matches!(
+        family,
+        "setup" | "usage" | "update" | "source-wiki" | "hook" | "policy" | "discord"
+    );
+    (asks && !own_help && !family.starts_with('-') && !family.starts_with("__")).then_some(family)
+}
+
+fn print_family_help(family: &str) {
+    let prefix = format!("hive {family}");
+    let lines: Vec<&str> = USAGE
+        .lines()
+        .filter(|line| {
+            let line = line.trim_start();
+            line == prefix || line.starts_with(&format!("{prefix} "))
+        })
+        .collect();
+    if lines.is_empty() {
+        print!("{USAGE}");
+        return;
+    }
+    println!("Aigent Hive {family}\n\nUSAGE:");
+    for line in lines {
+        println!("{line}");
     }
 }
 

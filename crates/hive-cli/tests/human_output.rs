@@ -319,3 +319,174 @@ fn every_family_reads_as_plain_text_in_both_languages() {
         }
     }
 }
+
+fn run_in(home: &std::path::Path, arguments: &[String]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_hive"))
+        .args(arguments)
+        .env("USERPROFILE", home)
+        .env("HOME", home)
+        .output()
+        .unwrap()
+}
+
+/// Every `hive ...` next step a person is shown must be a command Hive accepts.
+fn assert_next_steps_run(home: &std::path::Path, project: &str, text: &str, context: &str) {
+    for line in text.lines() {
+        let command = line
+            .split_once("Next: ")
+            .or_else(|| line.split_once("다음 명령으로 이어가세요: "))
+            .map(|(_, rest)| rest.trim());
+        let Some(command) = command.filter(|command| command.starts_with("hive ")) else {
+            continue;
+        };
+        let mut arguments: Vec<String> = command
+            .replace("<project folder>", project)
+            .split_whitespace()
+            .skip(1)
+            .map(|part| part.trim_matches('\'').to_owned())
+            .collect();
+        arguments.extend(["--output".to_owned(), "json".to_owned()]);
+        let output = run_in(home, &arguments);
+        let receipt: serde_json::Value =
+            serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+        let code = receipt["code"].as_str().unwrap_or("");
+        assert!(
+            !matches!(code, "hive.invalid-input" | "hive.unknown-action")
+                && !receipt["message"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_lowercase()
+                    .contains("invalid project setup scope"),
+            "next step {command:?} from {context} was rejected: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+}
+
+#[test]
+fn configured_projects_help_wrong_output_and_next_steps_are_usable() {
+    for language in ["ko", "en"] {
+        let home = configured_home(language);
+        let root = home.path().to_str().unwrap().to_owned();
+        let project = home.path().join("project").to_str().unwrap().to_owned();
+        let fixture =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+        let setup = run_in(
+            home.path(),
+            &[
+                "setup",
+                "--target",
+                &project,
+                "--answers",
+                fixture.join("answers-base.yml").to_str().unwrap(),
+                "--capabilities",
+                fixture
+                    .join("capabilities-codex-omx.json")
+                    .to_str()
+                    .unwrap(),
+                "--user-root",
+                &root,
+                "--apply",
+                "--output",
+                "json",
+            ]
+            .map(str::to_owned),
+        );
+        assert!(
+            setup.status.success(),
+            "{}",
+            String::from_utf8_lossy(&setup.stdout)
+        );
+        let shown = String::from_utf8(
+            run_in(
+                home.path(),
+                &[
+                    "setup".into(),
+                    "--show".into(),
+                    "--target".into(),
+                    project.clone(),
+                ],
+            )
+            .stdout,
+        )
+        .unwrap();
+        for key in [
+            if language == "ko" {
+                "화면 언어"
+            } else {
+                "Interface language"
+            },
+            if language == "ko" {
+                "선택한 Skill"
+            } else {
+                "Selected Skills"
+            },
+        ] {
+            assert!(shown.contains(key), "{shown}");
+        }
+        let wrong = String::from_utf8(
+            run_in(
+                home.path(),
+                &["storage".into(), "--output".into(), "yaml".into()],
+            )
+            .stdout,
+        )
+        .unwrap();
+        assert!(wrong.contains("--output accepts only json"), "{wrong}");
+        for family in [
+            "session",
+            "project",
+            "role",
+            "doctor",
+            "knowledge",
+            "run",
+            "judge",
+            "install",
+        ] {
+            let output = run_in(home.path(), &[family.to_owned(), "--help".to_owned()]);
+            let text = String::from_utf8_lossy(&output.stdout);
+            assert!(output.status.success(), "{family}: {text}");
+            assert!(text.contains(&format!("hive {family}")), "{family}: {text}");
+        }
+        let empty = tempfile::tempdir().unwrap();
+        for (home_dir, arguments) in [
+            (
+                empty.path(),
+                vec![
+                    "update".to_owned(),
+                    "--check".to_owned(),
+                    "--user-root".to_owned(),
+                    empty.path().to_str().unwrap().to_owned(),
+                ],
+            ),
+            (
+                home.path(),
+                vec![
+                    "usage".to_owned(),
+                    "threshold".to_owned(),
+                    "--target".to_owned(),
+                    root.clone(),
+                    "--remaining-percent".to_owned(),
+                    "10".to_owned(),
+                ],
+            ),
+            (
+                home.path(),
+                vec![
+                    "project".to_owned(),
+                    "upgrade".to_owned(),
+                    "--target".to_owned(),
+                    root.clone(),
+                    "--scan".to_owned(),
+                ],
+            ),
+        ] {
+            let text = String::from_utf8_lossy(&run_in(home_dir, &arguments).stdout).into_owned();
+            assert!(
+                !text.contains("--help로 사용 방법") && !text.contains("Check the command options"),
+                "{arguments:?}: {text}"
+            );
+            assert_next_steps_run(home_dir, &project, &text, &format!("{arguments:?}"));
+        }
+    }
+}

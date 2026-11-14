@@ -165,7 +165,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
         if language == InterfaceLanguage::Ko {
             output.push_str(&next_ko(next));
         } else {
-            output.push_str(&readable(next));
+            output.push_str(&readable_command(next));
         }
     }
     if data["session_recheck_required"] == true {
@@ -269,7 +269,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
         .as_str()
         .filter(|next| !next.is_empty())
         .map(str::to_owned)
-        .or_else(|| setup_first(original).then(|| "hive setup".to_owned()));
+        .or_else(|| exact_next_step(original));
     if let Some(option) =
         option.filter(|_| !next.as_deref().is_some_and(|n| n.starts_with("hive ")))
     {
@@ -286,6 +286,10 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
             .filter(|(_, en)| !en.is_empty())
             .map_or_else(|| sentence(&message), |(_, en)| en.to_owned());
         let mut output = format!("Failed. {cause}");
+        if coded.is_some_and(|(_, en)| !en.is_empty()) && !message.is_empty() {
+            // Keep the specific detail the code sentence cannot know, as Korean does.
+            write!(output, "\nDetails: {}", sentence(&message)).expect("formatting a String");
+        }
         if let Some(diagnostic) = diagnostic {
             write!(output, "\nCause: {}", sentence(&diagnostic)).expect("formatting a String");
         }
@@ -294,7 +298,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
                 "Check the command options with --help, correct the named input, then retry."
                     .to_owned()
             },
-            |next| readable(&next),
+            |next| readable_command(&next),
         );
         write!(output, "\nNext: {remedy}").expect("formatting a String");
         return output;
@@ -354,6 +358,22 @@ fn has_hangul(text: &str) -> bool {
     text.chars().any(|c| ('가'..='힣').contains(&c))
 }
 
+/// Fixed messages with one exact fix get that command instead of a generic --help pointer.
+fn exact_next_step(message: &str) -> Option<String> {
+    let lower = message.to_ascii_lowercase();
+    if setup_first(message) {
+        Some("hive setup".to_owned())
+    } else if lower.contains("installed .hive/config/harness.toml is required")
+        || lower.contains("required installed setup answers is missing")
+    {
+        Some("hive setup --target <project folder>".to_owned())
+    } else if lower.contains("installed project harness has applicable upgrades") {
+        Some("hive project upgrade --target <project folder> --apply".to_owned())
+    } else {
+        None
+    }
+}
+
 /// A first run without global setup should point at `hive setup`, not at --help.
 fn setup_first(message: &str) -> bool {
     let lower = message.to_ascii_lowercase();
@@ -362,20 +382,29 @@ fn setup_first(message: &str) -> bool {
 
 /// What a person sees: no JSON pointers, no machine flags, no Windows verbatim path prefix.
 fn readable(text: &str) -> String {
-    let text = text.replace(" --output json", "").replace(r"\\?\", "");
-    let kept: Vec<&str> = text
+    let text = text.replace(r"\\?\", "");
+    // Only the two known "see the JSON diagnostic" pointer sentences go; every cause stays.
+    let kept: String = text
         .split_inclusive(['.', '!', '?'])
         .filter(|part| {
-            let lower = part.to_ascii_lowercase();
-            !(lower.contains("json") && (lower.contains("diagnostic") || lower.contains("output")))
-                && !part.contains("JSON 출력")
+            !part.contains("JSON diagnostic") && !part.contains("JSON 출력의 diagnostic")
         })
         .collect();
-    kept.concat().trim().to_owned()
+    let kept = kept.trim();
+    if kept.is_empty() {
+        text.trim().to_owned()
+    } else {
+        kept.to_owned()
+    }
+}
+
+/// A next-step command a person can type: no machine-format flag.
+fn readable_command(text: &str) -> String {
+    readable(&text.replace(" --output json", ""))
 }
 
 fn next_ko(next: &str) -> String {
-    let readable = readable(next);
+    let readable = readable_command(next);
     let next = readable.as_str();
     if next.starts_with("hive ") {
         return format!("다음 명령으로 이어가세요: {next}");

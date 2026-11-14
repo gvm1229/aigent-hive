@@ -24,6 +24,13 @@ fn family_details(
                 "\nThis project has no settings of its own, so it uses your global settings.",
             ));
         }
+        "SetupHarness"
+            if code == "hive.project-setup-shown"
+                && data["effective"].is_object()
+                && data.get("questions").is_none() =>
+        {
+            effective_settings(&data["effective"], language, &mut out);
+        }
         "PreviewDeveloperReport" if data["included"].is_array() => {
             report_details(data, language, &mut out);
         }
@@ -86,6 +93,42 @@ fn monitor_details(data: &Value, language: InterfaceLanguage, out: &mut String) 
     let _ = write!(out, "\n{running}: {}", yes_no(&data["controller_alive"]));
     let _ = write!(out, "\n{verified}: {}", yes_no(&data["monitoring_verified"]));
     let _ = write!(out, "\n{reading}: {health}");
+}
+
+fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut String) {
+    let ko = language == InterfaceLanguage::Ko;
+    let on_off = |flag: &Value| scalar(&Value::String(if flag == true { "enabled" } else { "disabled" }.into()), language);
+    let source = match (settings["provenance"].as_str().unwrap_or(""), ko) {
+        ("global-inherited", true) => "전역 설정을 그대로 사용",
+        ("global-inherited", false) => "inherited from your global settings",
+        (_, true) => "이 프로젝트에 저장한 설정",
+        (_, false) => "saved for this project",
+    };
+    let text = |key: &str| settings[key].as_str().unwrap_or("-").to_owned();
+    let skills = settings["selected_project_skills"].as_array().map_or(0, Vec::len);
+    let rows = [
+        (label_for(ko, "설정 출처", "Settings source"), source.to_owned()),
+        (label_for(ko, "화면 언어", "Interface language"), text("interface_language")),
+        (label_for(ko, "답변 방식", "Answer style"), text("persona_id")),
+        (
+            label_for(ko, "지식 위키", "Knowledge wiki"),
+            format!("{} ({})", on_off(&settings["wiki_enabled"]), text("wiki_language")),
+        ),
+        (
+            label_for(ko, "사용량 보호", "Usage protection"),
+            format!(
+                "{} ({} {}%)",
+                on_off(&settings["usage_guard_enabled"]),
+                label_for(ko, "남은 사용량 기준", "stop below"),
+                settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0)
+            ),
+        ),
+        (label_for(ko, "선택한 Skill", "Selected Skills"), skills.to_string()),
+        (label_for(ko, "설정 방식", "Setup mode"), text("setup_mode")),
+    ];
+    for (label, value) in rows {
+        let _ = write!(out, "\n{label}: {value}");
+    }
 }
 
 fn report_details(data: &Value, language: InterfaceLanguage, out: &mut String) {

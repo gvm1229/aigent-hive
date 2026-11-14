@@ -294,3 +294,5 @@ class HostMemoryRuleTests(unittest.TestCase):
         self.assertIn("Hive knowledge replaces host memory", flat)
         self.assertIn("never as a second copy in host memory", flat)
         self.assertIn("user-root knowledge only for a fact that applies beyond this project", flat)
+        self.assertIn("When Wiki is enabled, Hive knowledge replaces host memory", flat)
+        self.assertIn("With Wiki disabled, say so and suggest enabling it", flat)

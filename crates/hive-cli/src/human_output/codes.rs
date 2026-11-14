@@ -1,5 +1,6 @@
 /// Result-code sentences for the commands people type. Empty English keeps the original message.
 /// Success rows describe the outcome; failure rows state the cause in plain words.
+/// Only single-cause codes belong here: a code shared by several causes keeps its real message.
 pub(super) const CODES: &[(&str, &str, &str)] = &[
     // Update checks and updates.
     ("hive.update-available", "새 버전이 있습니다. 아직 설치하지 않았습니다.", "A newer Hive version is available. Nothing was installed."),
@@ -11,9 +12,6 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.update-dry-run-complete", "업데이트 미리보기를 마쳤습니다. 파일은 바꾸지 않았습니다.", "Update preview finished. No files were changed."),
     ("hive.update-recovered", "중단된 업데이트를 복구했습니다.", "The interrupted update was recovered."),
     ("hive.update-recovery-required", "이전 업데이트가 중간에 멈춰 먼저 복구가 필요합니다.", "An earlier update stopped part-way and must be recovered first."),
-    ("hive.update-compatibility-blocked", "현재 설치와 맞지 않아 업데이트하지 않았습니다.", ""),
-    ("hive.update-conflict", "설치된 파일이 예상과 달라 업데이트하지 않았습니다.", ""),
-    ("hive.update-release-verification-failed", "설치에 필요한 파일이 없거나 확인되지 않았습니다.", ""),
     ("hive.release-verified", "배포 파일이 손상되지 않았음을 확인했습니다.", "The release files are intact."),
     // Usage protection.
     ("hive.usage-allowed", "사용량이 충분해 작업을 계속할 수 있습니다.", "Enough usage remains to continue."),
@@ -40,13 +38,10 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.usage-zero-quota-guard-enabled", "사용량 소진 보호를 켰습니다.", "Zero-usage protection is on."),
     ("hive.usage-zero-quota-guard-disabled", "사용량 소진 보호를 껐습니다.", "Zero-usage protection is off."),
     ("hive.usage-monitor-complete", "상시 사용량 감시 명령을 마쳤습니다.", "The background usage monitor command finished."),
-    ("hive.usage-control-blocked", "보호 규칙 때문에 이 사용량 설정 변경을 막았습니다.", ""),
-    ("hive.usage-control-conflict", "다른 작업이 같은 설정을 바꾸는 중이라 변경하지 않았습니다.", ""),
     // Storage.
     ("hive.storage-reported", "저장 공간 사용량을 확인했습니다. 바꾼 것은 없습니다.", "Hive storage measured. Nothing was changed."),
     ("hive.storage-prune-previewed", "정리 미리보기를 마쳤습니다. 아직 지운 파일은 없습니다.", "Cleanup preview finished. Nothing was deleted yet."),
     ("hive.storage-pruned", "승인한 파일을 정리했습니다.", "The approved files were removed."),
-    ("hive.storage-prune-refused", "안전하게 지울 수 없는 항목이 있어 정리하지 않았습니다.", ""),
     ("hive.storage-read-failed", "저장 공간을 읽지 못했습니다.", ""),
     // Session file reservations.
     ("hive.session-begun", "세션을 시작하고 수정할 파일을 예약했습니다.", "Session started and files reserved."),
