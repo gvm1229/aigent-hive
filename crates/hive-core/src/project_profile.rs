@@ -38,21 +38,18 @@ fn add(facts: &mut Vec<Fact>, name: &str, path: &str) {
 }
 
 /// Documentation wins only when no code category is present.
-fn pick_category<'a>(categories: impl Iterator<Item = &'a str> + Clone) -> Option<&'static str> {
-    let has_code = categories.clone().any(|value| {
+fn pick_category(categories: &[&str]) -> Option<&'static str> {
+    let has_code = categories.iter().any(|value| {
         CATEGORY_PRECEDENCE
             .iter()
             // A bare package.json is generic "coding"; only a specific code category outranks docs.
             .any(|category| {
-                *category == value && !matches!(*category, "monorepo" | "docs" | "coding")
+                category == value && !matches!(*category, "monorepo" | "docs" | "coding")
             })
     });
     CATEGORY_PRECEDENCE
         .iter()
-        .find(|category| {
-            (**category != "docs" || !has_code)
-                && categories.clone().any(|value| value == **category)
-        })
+        .find(|category| (**category != "docs" || !has_code) && categories.contains(category))
         .copied()
 }
 
@@ -396,8 +393,8 @@ impl ProjectProfile {
                 destination.sort_by(|a, b| a.name.cmp(&b.name));
             }
         }
-        result.category = pick_category(categories.iter().map(String::as_str))
-            .map_or(result.category, str::to_owned);
+        let names: Vec<&str> = categories.iter().map(String::as_str).collect();
+        result.category = pick_category(&names).map_or(result.category, str::to_owned);
         result
     }
 
@@ -688,7 +685,7 @@ impl ProjectProfile {
         }
         result.category = if !result.structure.is_empty() {
             "monorepo"
-        } else if let Some(category) = pick_category(categories.iter().copied()) {
+        } else if let Some(category) = pick_category(&categories) {
             category
         } else if text(dir, "README.md").is_some() || dir.is_dir("docs") {
             "docs" // Low-confidence documentation hint: project_kind still requires a list choice.
