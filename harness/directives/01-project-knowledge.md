@@ -4,6 +4,9 @@
   Hive lookup, capture, indexing, and lint; leave canonical knowledge unchanged. Read existing
   Markdown only as project documents and never claim a CLI operation succeeded.
 - Keep project canonical knowledge under `.hive/knowledge/{Raw,Wiki,Schema}`.
+- Hive knowledge replaces host memory: record a fact you would otherwise keep in the host's own
+  memory as canonical Markdown here, never as a second copy in host memory. Use user-root knowledge
+  only for a fact that applies beyond this project, under the promotion rules below.
 - Use the configured user-root shared SQLite index as a disposable projection. A project-local
   `.hive/index/hive.sqlite3` belongs only to historical compatibility, not current setup.
 - When the installed harness reports Wiki enabled, run agent-reviewed task-fact autocapture before

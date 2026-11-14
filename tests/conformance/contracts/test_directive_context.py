@@ -1,5 +1,6 @@
 """Approved context wire replay; this does not simulate model adherence or real compaction."""
 
+import unittest
 import hashlib
 import json
 import os
@@ -276,3 +277,20 @@ paths = ["tests"]
             "--expected-policy", "sha256:" + "0" * 64], input="{}", capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("policy changed", json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"])
+
+
+class HostMemoryRuleTests(unittest.TestCase):
+    def test_installed_project_directive_puts_host_memory_facts_into_hive_knowledge(self):
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[3]
+        copies = [
+            root / "harness/directives/01-project-knowledge.md",
+            root / "harness/template/.agents/directives/01-project-knowledge.md",
+        ]
+        texts = [path.read_text(encoding="utf-8") for path in copies]
+        self.assertEqual(texts[0], texts[1])
+        flat = " ".join(texts[0].split())
+        self.assertIn("Hive knowledge replaces host memory", flat)
+        self.assertIn("never as a second copy in host memory", flat)
+        self.assertIn("user-root knowledge only for a fact that applies beyond this project", flat)
