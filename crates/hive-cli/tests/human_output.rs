@@ -364,7 +364,7 @@ fn assert_next_steps_run(home: &std::path::Path, project: &str, text: &str, cont
 }
 
 #[test]
-fn configured_projects_help_wrong_output_and_next_steps_are_usable() {
+fn configured_projects_help_and_wrong_output_are_readable() {
     for language in ["ko", "en"] {
         let home = configured_home(language);
         let root = home.path().to_str().unwrap().to_owned();
@@ -448,6 +448,15 @@ fn configured_projects_help_wrong_output_and_next_steps_are_usable() {
             assert!(output.status.success(), "{family}: {text}");
             assert!(text.contains(&format!("hive {family}")), "{family}: {text}");
         }
+    }
+}
+
+#[test]
+fn every_printed_next_step_is_a_command_hive_accepts() {
+    for language in ["ko", "en"] {
+        let home = configured_home(language);
+        let root = home.path().to_str().unwrap().to_owned();
+        let project = home.path().join("project").to_str().unwrap().to_owned();
         let empty = tempfile::tempdir().unwrap();
         for (home_dir, arguments) in [
             (
@@ -488,5 +497,40 @@ fn configured_projects_help_wrong_output_and_next_steps_are_usable() {
             );
             assert_next_steps_run(home_dir, &project, &text, &format!("{arguments:?}"));
         }
+    }
+}
+
+#[test]
+fn every_family_help_shows_real_usage_not_a_pointer_to_itself() {
+    let home = configured_home("en");
+    for family in [
+        "session",
+        "project",
+        "role",
+        "doctor",
+        "run",
+        "judge",
+        "install",
+        "storage",
+        "knowledge",
+        "roster",
+        "report",
+        "summon",
+        "loop",
+        "orchestration",
+        "korean",
+        "setup",
+        "usage",
+        "update",
+        "source-wiki",
+    ] {
+        let output = run_in(home.path(), &[family.to_owned(), "--help".to_owned()]);
+        let text = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success(), "{family}: {text}");
+        assert!(
+            text.lines()
+                .any(|line| line.contains("hive") && !line.trim_end().ends_with("--help")),
+            "{family} help only points at itself: {text}"
+        );
     }
 }

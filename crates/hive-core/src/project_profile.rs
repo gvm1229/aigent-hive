@@ -426,10 +426,8 @@ impl ProjectProfile {
             }
             for field in ["dependencies", "devDependencies"] {
                 if let Some(deps) = package[field].as_object() {
-                    for (dependency, language) in [("typescript", "TypeScript")] {
-                        if deps.contains_key(dependency) {
-                            add(&mut result.languages, language, "package.json");
-                        }
+                    if deps.contains_key("typescript") {
+                        add(&mut result.languages, "TypeScript", "package.json");
                     }
                     for (dependency, name) in [
                         ("next", "Next.js"),

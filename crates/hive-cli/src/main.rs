@@ -730,24 +730,33 @@ fn family_help_request(arguments: &[String]) -> Option<&str> {
         family,
         "setup" | "usage" | "update" | "source-wiki" | "hook" | "policy" | "discord"
     );
-    (asks && !own_help && !family.starts_with('-') && !family.starts_with("__")).then_some(family)
+    let lines = family_usage_lines(family);
+    // A family listed only as `... --help` prints its own detailed help; leave it alone.
+    let has_real_usage = lines
+        .iter()
+        .any(|line| !line.trim_end().ends_with("--help"));
+    (asks && !own_help && has_real_usage && !family.starts_with('-') && !family.starts_with("__"))
+        .then_some(family)
 }
 
-fn print_family_help(family: &str) {
+fn family_usage_lines(family: &str) -> Vec<&'static str> {
     let prefix = format!("hive {family}");
-    let lines: Vec<&str> = USAGE
+    USAGE
         .lines()
         .filter(|line| {
             let line = line.trim_start();
             line == prefix || line.starts_with(&format!("{prefix} "))
         })
-        .collect();
-    if lines.is_empty() {
-        print!("{USAGE}");
-        return;
-    }
-    println!("Aigent Hive {family}\n\nUSAGE:");
-    for line in lines {
+        .collect()
+}
+
+fn print_family_help(family: &str) {
+    println!(
+        "Aigent Hive {family}
+
+USAGE:"
+    );
+    for line in family_usage_lines(family) {
         println!("{line}");
     }
 }
