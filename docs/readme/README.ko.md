@@ -6,23 +6,23 @@
 
 > Codex, Claude Code(검증 전), Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.15.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.15.1-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.1 release-date=2026-11-15 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.15.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.15.1`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.15.0|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.15.1|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.15.0
+npm install -g aigent-hive@0.15.1
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.15.0 (released 2026-11-12)
+AIgent Hive v0.15.1 (released 2026-11-15)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.15.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.15.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.15.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.15.1/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.1/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.15.0. The stable install guidance is
+Install the current stable release 0.15.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,17 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.15.0 주요 변경
+## 0.15.1 주요 변경
+
+- 명령 결과를 기본값으로 쉬운 한국어·영어 문장과 원인·다음 행동으로 표시. 프로그램이 읽을 때만 `--output json` 추가
+- 프로젝트 설정에서 모델 호출 없이 언어·프레임워크·패키지 관리자·명령·구조를 로컬 감지, 한 번의 확인으로 제안 적용
+- 프로젝트 사실과 짧은 Hive 입구 분리, Hive 표시 밖의 사용자 규칙 보존
+- 압축 배치를 고른 프로젝트만 검증된 Hive 플러그인의 공용 Skill 재사용, 그 밖의 프로젝트는 로컬 Skill 사본 유지
+- AI가 자체 기억에 남길 사실을 Hive Markdown 지식에 기록. 프로젝트 우선, 여러 프로젝트에 적용되는 사실만 전역 지식
+- 신 입구 9개를 포함한 모든 Skill 설명에 하는 일 표시
+- 공개 0.15.0·0.14.x에서 인증된 과거 원본으로 보존 갱신. 지원 JSON 스키마·값·종료 코드 유지
+
+## 이전 0.15.0 변경
 
 - 계획·조사·구현·글쓰기·설정·조율·지식·사용량·정리의 신 입구 9개와 한글 이름·별칭 추가, 기존 명령·Skill 경로 보존
 - 전역 기본값과 프로젝트별 역할의 모델·작업 수준 설정 추가, `hive roster`로 합친 구성 확인·기존 고정 모델 보존
@@ -132,7 +142,7 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.15.0 근거 |
+| Platform | Native target | 0.15.1 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -142,7 +152,7 @@ an optional third-party Skill.
 
 공개 시험의 Windows x64·Linux x64·macOS arm64 설정·취소·복구·갱신·제거·재설치 수용.
 Windows의 실제 Codex CLI 등록·대기 감시 포함, 모든 호스트의 실제 데스크톱 모델·할당량 조회 증명 제외.
-Claude Code의 실제 구독 세션 미검증. Stable `0.15.0`: macOS ad-hoc signing,
+Claude Code의 실제 구독 세션 미검증. Stable `0.15.1`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 
@@ -280,6 +290,5 @@ Apache-2.0. [LICENSE](../../LICENSE) 참고.
 
 ## 명령 결과 표시
 
-- 미발행 0.15.1 개발판부터 한국어·영어 설정에 맞춘 결과·변경 전후·다음 행동 안내
+- 한국어·영어 설정에 맞춘 결과·변경 전후·다음 행동 안내
 - 사람용 명령에서 JSON 인자 생략, 프로그램·스킬·훅의 기계 판독에는 `--output json` 선택
-- 공개 0.15.0의 기존 명령에서는 `--output json` 유지, 0.15.1 정식 출시 전의 개발 범위와 구분
