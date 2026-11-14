@@ -9,19 +9,19 @@ summary: "Approved subscriber copy is required before stable publication; skippe
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-discord-notification.yml#sha256:05cbd3bebb278b5b4fe3780f536033a896fb83212d9749e5f0005ae10afd73e6"
-  - "repo:.github/workflows/release-publish.yml#sha256:241b1121f2b95690858514f9bcc8af27f6bd9084d125b14ff0e5df31cd401a3d"
+  - "repo:.github/workflows/release-discord-notification.yml#sha256:82dcb039bd8d5ddf0a4084d982e0743698ed3d98f8fbf6af61e2161222669e2f"
+  - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:1cc98f5afa3e10399575b307a14591208b5f3ee2157192362e799cfbdd6409fd"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:04aa8a37aaa8843451dcd3512f0dac1cba68a651695ce7637d0ede74dbf5ff6a"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:456e507860ad43d9c2ed1f69a6304e7802e1a8a5"
+reviewed_revision: "git:84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa"
 status: active
 ---
 
 # Stable Release Discord Subscriber Notification
 
-Reviewed develop-to-main PR approves notice/one-line SHA-256 file. release-publication variable AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr enables sends; absent/other values block stable prepublication validation and delivery. No per-release settings; old digest secret removable. Read only released source; preserve main/candidate/published-release bindings and version duplicate guard. Revised-copy resend retired. Validate filename, bytes, 2,000 characters, lists and ordered nonempty sections. After Release success send banner then copy; no test notices or webhook disclosure. Local receiver proves order/refusal, not Discord delivery. See the 2026-11-12 decision for approval details.
+Reviewed main PR approves copy/digest; AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr is required. Missing/other values block validation/send. No per-release settings; old secret removable. Validate name, bytes, one-line hash, 2,000 characters and ordered lists/sections. Stable Release sends banner then copy; no test notices/webhook disclosure. Normal recovery keeps released-source bindings and duplicate guard. 0.15.0 correction: reviewed main copy before 0.15.1, ID edit or delete-replace, else marked post. Pending corrections block newer notices; uncertain writes leave an unknown receipt. Save new ID/safe receipt, no body/token. PR review alone never publishes/sends. Local tests do not prove Discord delivery. Details: the 2026-11-12 decision.

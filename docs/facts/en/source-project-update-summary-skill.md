@@ -9,7 +9,7 @@ summary: "The source-only update-summary Skill promotes verified product changes
 tags: [development, release-notes, skill]
 aliases: ["update-summary"]
 sources:
-  - "repo:.agents/skills/update-summary/SKILL.md#sha256:b604e489dedcf902d819d30609c2c1a3a2705521c79b9e45ff4cac6a7dcebaa3"
+  - "repo:.agents/skills/update-summary/SKILL.md#sha256:37f8bc71e3ef0e02ccaa82fc2d430dfb61be148f26be1709ac439c0424b8daf8"
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
   - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
   - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
