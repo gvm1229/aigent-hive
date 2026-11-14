@@ -1,13 +1,13 @@
 # 현재 상태
 
 - 제품 버전: `0.15.1`
-- 공개 안정판·PC 설치: `0.15.0` 유지, 정식 `0.15.1` 진행 중
+- 공개 안정판: `0.15.1` (2026-11-15). PC 전역 명령 0.15.1, 사용자 설정은 대화형 재개·보호 선택 대기 ([근거](../research/overhaul/OV151-010.md))
 - 작업: 단계 4와 최우선 요청 완료, 0.15.1-test.1 세 OS 수용 통과. [소유 계획](../plans/active/0.15.1-detection.md)
-- 현재 요청: 정식 0.15.1까지 진행 뒤 재정비 일시 정지. 나머지 단계는 종료가 아닌 보류
-- 구독자 글: 0.15.0 원래 메시지 제자리 수정 완료, 0.15.1 안내는 정식 게시와 함께 전송
+- 현재 요청: 정식 0.15.1 완료, 재정비 일시 정지. 나머지 단계는 종료가 아닌 보류
+- 구독자 글: 0.15.0 원래 메시지 제자리 수정 완료, 0.15.1 안내 정식 게시와 함께 전송 완료
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
-- [이전 정식 근거와 한계](../research/overhaul/OV150-013.md) 보존
+- [정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md)·[이전 정식 근거](../research/overhaul/OV150-013.md) 보존
 
 - [최종 CLI·안내 검증](../research/overhaul/stage-4-human-output.md): Rust 1,475개 통과·5개 수동 제외, Python 1,211개 중 1,167개 통과·44개 제외. fmt·clippy·문서·문체·지침·계획·Source Wiki 통과, Windows 밖 실행·실제 설치·Discord 전송 미검증
 - [이전 판별 검토·측정](../research/overhaul/stage-4-review.md): 보류 종류 19/20·출력 사실 53/53, 고정 검색 22/40의 당시 근거 보존. 감지기·검색 구현·동결 정답 변경 없음
@@ -18,9 +18,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.1`
-- 현재 등록 항목: 27/28 완료
+- 현재 등록 항목: 28/28 완료
 
-- `agent-owned`: `OV151-010`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
