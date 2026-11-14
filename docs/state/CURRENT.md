@@ -1,6 +1,7 @@
 # 현재 상태
 
-- 제품·공개 안정판: `0.15.0`, [정식 릴리스](https://github.com/gvm1229/aigent-hive/releases/tag/v0.15.0)·[npm](https://www.npmjs.com/package/aigent-hive/v/0.15.0)
+- 제품 버전: `0.15.0`
+- 공개 안정판: `0.15.0`, [정식 릴리스](https://github.com/gvm1229/aigent-hive/releases/tag/v0.15.0)·[npm](https://www.npmjs.com/package/aigent-hive/v/0.15.0)
 - 단계 3: 19/19 완료. [계획](../plans/PLAN.md)·[정식 근거와 한계](../research/overhaul/OV150-013.md). develop에서 문서 종료, 단계 브랜치 원격·로컬 삭제 완료. 이번 요청 범위의 다음 단계 구현 미시작
 - 공개 test.1: 소스 29875af0·후보 43305279711·복구 게시 43312182798·[세 OS 수용 43312886228](https://github.com/gvm1229/aigent-hive/actions/runs/43312886228) success. Windows x64·Linux musl x64·macOS arm64의 실제 공개 설치. [정확한 대상·검증값 결합·한계](../research/overhaul/OV150-011.md)
 - 정식: [PR #94](https://github.com/gvm1229/aigent-hive/pull/94) 일반 병합·main 0d8338ab, main CI 43323303057·후보 43323365241·[복구 게시/구독자 전송 43329036663](https://github.com/gvm1229/aigent-hive/actions/runs/43329036663) success. 추가 develop→main 모델 검토 없음

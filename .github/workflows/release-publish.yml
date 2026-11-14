@@ -322,6 +322,12 @@ jobs:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
           AIGENT_HIVE_SUBSCRIBER_APPROVAL: ${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}
         run: |
+          # A listed older notice must be corrected first; this notice then goes out through recover.
+          if [ "$SEND_SUBSCRIBER_UPDATE" = true ] && [ -f docs/releases/discord-pending-corrections.txt ] \
+            && grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' docs/releases/discord-pending-corrections.txt; then
+            echo 'A Discord notice correction is pending; publish with send_subscriber_update=false, correct, then recover this notice.' >&2
+            exit 3
+          fi
           python3 scripts/publish-stable-discord-update.py \
             --product-version "$PRODUCT_VERSION" \
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
