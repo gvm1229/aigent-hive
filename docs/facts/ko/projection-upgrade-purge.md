@@ -9,7 +9,7 @@ summary: "Hive는 이전 Hive projection을 인증한 뒤 retired Skill과 직�
 tags: [consumer-harness, preservation, skills, upgrade]
 aliases: ["PUG93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:e9c2466a9f85fbb0f2d0f8653eb264608b1ad5ed284b93722ac7db9390bb97de"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:55c9618f6cc2f1e5b18c00c2fc0c8260c6ada6c2020638a0ac2e81d6c0e4e4e0"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:9903f35f13ae28c9853cdf99ab17c42876e8a5b12c91100e7f4c51cc04147c09"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:8393c3c225b6a708473b19181830849e499918f0396a2c226ab7fb4e3afe28d5"
   - "repo:crates/hive-update/src/merge.rs#sha256:f9c983dc6fb71aa50994332395faaa55058d8e95add818221bed9c8073510558"

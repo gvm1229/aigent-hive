@@ -9,8 +9,8 @@ summary: "전체 출처 인증의 안정판 호환과0.14.0의 정확한 공개0
 tags: [compatibility, provenance, release, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:e9c2466a9f85fbb0f2d0f8653eb264608b1ad5ed284b93722ac7db9390bb97de"
-  - "repo:crates/hive-render/src/lib.rs#sha256:334534e638f8266e8f4aa3b98e1092dd657bbe47f0d7c8ae40b932a64d5b1df9"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:55c9618f6cc2f1e5b18c00c2fc0c8260c6ada6c2020638a0ac2e81d6c0e4e4e0"
+  - "repo:crates/hive-render/src/lib.rs#sha256:9859ba77fe6044c1da05931adedb5ffc1c9bb523b6953964438afb48a91c26fb"
   - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:958df30cdb8c19d4591eed2324587cd0cdb3fb90a30da8ef01daee015efc150e"
   - "repo:tests/results/acceptance-0.12.0-test.3.json#sha256:56a95cce7790c624305121943ac216f2651350f2b9325b8f61a24db566b89304"
   - "repo:tests/results/runs/20261025T093057-ad8ea764ff85.md#sha256:967efbf8264cbd3006be34c738a08c80dc76bc482bbeb4e64141fe95a7ba1369"

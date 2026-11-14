@@ -9,9 +9,9 @@ summary: "선언된 프로젝트 갱신 source range와 exact full 기준본·ma
 tags: [migration, project-upgrade, regression, release]
 aliases: ["과거 기준본 정합성"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:e9c2466a9f85fbb0f2d0f8653eb264608b1ad5ed284b93722ac7db9390bb97de"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:55c9618f6cc2f1e5b18c00c2fc0c8260c6ada6c2020638a0ac2e81d6c0e4e4e0"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:70713e7d4c2de637a09b089dbd64716330e3e1e4859161e3f868c5f260d0960c"
-  - "repo:crates/hive-render/src/lib.rs#sha256:334534e638f8266e8f4aa3b98e1092dd657bbe47f0d7c8ae40b932a64d5b1df9"
+  - "repo:crates/hive-render/src/lib.rs#sha256:9859ba77fe6044c1da05931adedb5ffc1c9bb523b6953964438afb48a91c26fb"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"

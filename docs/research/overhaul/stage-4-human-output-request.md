@@ -23,3 +23,19 @@
 - 정정: 새 기능(신 아홉)을 도입한 버전은 **0.15.0**. 2026-11-13 원문의 "0.15.1 introduced"는 이 원문으로 대체
 - 우선순위: 재정비의 다른 모든 작업보다 먼저. 단계 4의 병합·공개 시험·정식, 단계 5 이후 시작 모두 OV151-013–018 완료 뒤
 - 같은 날 추가 지시: "the 0.15.0 update note on discord must be either edited or sent again BEFORE the 0.15.1 update note hits. To keep the version update note ordered." [게시 순서](stage-4-discord-correction.md#실행-순서)
+
+## 2026-11-14 Skill 설명 요청
+
+출처: 현재 유지관리자 요청. 정확한 외부 인용
+
+> "Also another thing to point out that must be fixed: I've observed that the gods' skills description is just generic "명시한 신 이름에 사용" instead of summarizing what that skill does. Any and every skill must have a description relevant to what it does."
+
+- 처리: [OV151-026](../../plans/active/0.15.1-review-fixes.md). 신 Skill 9개의 설명에 하는 일 요약, 모든 현재 Skill 설명의 하는 일 표시를 시험으로 고정
+
+## 2026-11-14 지식 기록 규칙 요청
+
+출처: 현재 유지관리자 요청. 정확한 외부 인용
+
+> "One of hive's core features is to write facts that would usually end up in an AI agent's memory as a markdown document. Generally locally in the project, but also in the global hive knowledge base if the fact is general enough. This must be enforced in the global hive directives, and for the hive that's installed in projects. Include this in the next stable release scope."
+
+- 처리: [OV151-027](../../plans/active/0.15.1-review-fixes.md). 다음 정식인 0.15.1 범위
