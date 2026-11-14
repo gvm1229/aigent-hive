@@ -37,6 +37,25 @@ fn add(facts: &mut Vec<Fact>, name: &str, path: &str) {
     }
 }
 
+/// Documentation wins only when no code category is present.
+fn pick_category<'a>(categories: impl Iterator<Item = &'a str> + Clone) -> Option<&'static str> {
+    let has_code = categories.clone().any(|value| {
+        CATEGORY_PRECEDENCE
+            .iter()
+            // A bare package.json is generic "coding"; only a specific code category outranks docs.
+            .any(|category| {
+                *category == value && !matches!(*category, "monorepo" | "docs" | "coding")
+            })
+    });
+    CATEGORY_PRECEDENCE
+        .iter()
+        .find(|category| {
+            (**category != "docs" || !has_code)
+                && categories.clone().any(|value| value == **category)
+        })
+        .copied()
+}
+
 fn text(dir: &Dir, path: &str) -> Option<String> {
     // Capability-relative opens reject symlink escapes; bound even concurrently growing files.
     let file = dir.open(path).ok()?;
@@ -330,7 +349,19 @@ impl ProjectProfile {
         };
         for name in entries(dir) {
             if name.starts_with('.')
-                || matches!(name.as_str(), "node_modules" | "target" | "vendor")
+                || matches!(
+                    name.as_str(),
+                    "node_modules"
+                        | "target"
+                        | "vendor"
+                        | "public"
+                        | "dist"
+                        | "build"
+                        | "out"
+                        | "site"
+                        | "_site"
+                        | "static"
+                )
             {
                 continue;
             }
@@ -365,10 +396,8 @@ impl ProjectProfile {
                 destination.sort_by(|a, b| a.name.cmp(&b.name));
             }
         }
-        result.category = CATEGORY_PRECEDENCE
-            .iter()
-            .find(|category| categories.iter().any(|value| value == **category))
-            .map_or(result.category, |category| (*category).to_owned());
+        result.category = pick_category(categories.iter().map(String::as_str))
+            .map_or(result.category, str::to_owned);
         result
     }
 
@@ -389,7 +418,13 @@ impl ProjectProfile {
             } else {
                 "coding"
             });
-            if package.get("workspaces").is_some() {
+            // An empty workspace list declares no member packages.
+            let members = &package["workspaces"];
+            if members.as_array().is_some_and(|list| !list.is_empty())
+                || members["packages"]
+                    .as_array()
+                    .is_some_and(|list| !list.is_empty())
+            {
                 add(&mut result.structure, "monorepo", "package.json");
             }
             for field in ["dependencies", "devDependencies"] {
@@ -511,7 +546,12 @@ impl ProjectProfile {
             add(&mut result.languages, "Rust", "Cargo.toml");
             add(&mut result.package_managers, "cargo", "Cargo.toml");
             categories.push("rust");
-            if cargo.get("workspace").is_some() {
+            if cargo
+                .get("workspace")
+                .and_then(|workspace| workspace.get("members"))
+                .and_then(toml::Value::as_array)
+                .is_some_and(|members| !members.is_empty())
+            {
                 add(&mut result.structure, "monorepo", "Cargo.toml");
             }
             for (key, command) in [
@@ -635,12 +675,20 @@ impl ProjectProfile {
                 add(&mut result.structure, "monorepo", "pyproject.toml");
             }
         }
+        // A build tool alone does not prove which language the code uses.
+        for fact in &mut result.languages {
+            if fact.evidence.iter().all(|path| {
+                matches!(
+                    path.as_str(),
+                    "CMakeLists.txt" | "build.gradle" | "build.gradle.kts"
+                )
+            }) {
+                fact.confidence = "low".into();
+            }
+        }
         result.category = if !result.structure.is_empty() {
             "monorepo"
-        } else if let Some(category) = CATEGORY_PRECEDENCE
-            .iter()
-            .find(|category| categories.contains(category))
-        {
+        } else if let Some(category) = pick_category(categories.iter().copied()) {
             category
         } else if text(dir, "README.md").is_some() || dir.is_dir("docs") {
             "docs" // Low-confidence documentation hint: project_kind still requires a list choice.
@@ -724,6 +772,99 @@ mod tests {
                 .evidence
                 .iter()
                 .all(|path| dir.path().join(path).exists()));
+        }
+    }
+
+    #[test]
+    fn empty_workspaces_docs_beside_code_and_output_folders_do_not_mislead() {
+        // Empty workspace declarations are not a monorepo.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]
+name='one'
+[workspace]
+",
+        )
+        .unwrap();
+        assert!(ProjectProfile::detect(dir.path()).structure.is_empty());
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("package.json"), r#"{"workspaces":[]}"#).unwrap();
+        assert!(ProjectProfile::detect(dir.path()).structure.is_empty());
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            "[workspace]
+members=['crates/a']
+",
+        )
+        .unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).category, "monorepo");
+        // A Python project with an mkdocs site stays a coding project.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("pyproject.toml"),
+            "[project]
+name='tool'
+",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("mkdocs.yml"),
+            "site_name: Tool
+",
+        )
+        .unwrap();
+        assert_ne!(ProjectProfile::detect(dir.path()).category, "docs");
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("mkdocs.yml"),
+            "site_name: Notes
+",
+        )
+        .unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).category, "docs");
+        // A documentation site's package.json alone does not make it a code project.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("package.json"),
+            r#"{"dependencies":{"@docusaurus/core":"3"}}"#,
+        )
+        .unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).category, "docs");
+        // A generated or static output page does not turn notes into code.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("README.md"),
+            "# Notes
+",
+        )
+        .unwrap();
+        std::fs::create_dir(dir.path().join("public")).unwrap();
+        std::fs::write(dir.path().join("public/index.html"), "<html></html>").unwrap();
+        assert_eq!(ProjectProfile::detect(dir.path()).category, "docs");
+    }
+
+    #[test]
+    fn build_tools_alone_do_not_claim_a_language_with_high_confidence() {
+        for file in ["CMakeLists.txt", "build.gradle"] {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(dir.path().join(file), "").unwrap();
+            let profile = ProjectProfile::detect(dir.path());
+            assert!(
+                profile
+                    .languages
+                    .iter()
+                    .all(|fact| fact.confidence == "low"),
+                "{file}"
+            );
+            assert!(
+                profile
+                    .package_managers
+                    .iter()
+                    .all(|fact| fact.confidence == "high"),
+                "{file}"
+            );
         }
     }
 

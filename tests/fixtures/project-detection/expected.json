@@ -169,7 +169,7 @@
     "label": "Rust workspace",
     "expected_kind": "monorepo",
     "files": {
-      "Cargo.toml": "[workspace]\nmembers=[]"
+      "Cargo.toml": "[workspace]\nmembers=[\"crates/*\"]"
     },
     "observed_default": "general",
     "observed_effective": null
