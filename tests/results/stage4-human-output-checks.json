@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "os": "Windows 11 10.0.26300",
+  "frozen_source": {
+    "commit": "bb4238aa8212c9d6a1210982d63a4d88506a7e0d",
+    "trees": {
+      "crates": "8b14c0b1516431382d5c1c473bb814efb6dffd52",
+      "harness": "cb2d3a8bb98e7ca47725fea32f66b83cc7d27f9e",
+      "schemas": "f3747c29b5a17e1ee06def5146372cbec73513df"
+    },
+    "binary_sha256": "296ad7d8d46d6529210eb02dd46a887e310e66551e7f2b2e682fa4ec80550e80"
+  },
+  "rust": {
+    "passed": 1475,
+    "failed": 0,
+    "ignored": 5,
+    "doc_groups": 5,
+    "doc_cases": 0,
+    "fmt": "passed",
+    "clippy": "passed",
+    "existing_vendor_warnings": 3
+  },
+  "python": [
+    {
+      "lane": "documentation",
+      "reported": 164,
+      "passed": 162,
+      "skipped": 2,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "lane": "security",
+      "reported": 103,
+      "passed": 98,
+      "skipped": 5,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "lane": "contract",
+      "reported": 673,
+      "passed": 658,
+      "skipped": 15,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "lane": "integration",
+      "reported": 105,
+      "passed": 93,
+      "skipped": 12,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "lane": "release",
+      "reported": 166,
+      "passed": 156,
+      "skipped": 10,
+      "failed": 0,
+      "errors": 0
+    }
+  ],
+  "limits": [
+    "Windows execution only; cfg(unix) cases do not compile on this host.",
+    "Manual real sensor/vector and release-profile 50k corpus qualifications are ignored.",
+    "No live Discord/GitHub correction dispatch, package install, public test or stable publication."
+  ]
+}

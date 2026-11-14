@@ -132,9 +132,9 @@ fn default_workers() -> usize {
     std::thread::available_parallelism().map_or(1, |count| count.get().min(12))
 }
 const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
-    hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private|confidential [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
-    hive knowledge vector authorize-build --user-root <dir> --target <dir> --collection <id> --visibility confidential --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--operation rebuild|rollback] --output json\n\
-    hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private|confidential [--python <absolute-executable>] [--consent-digest <sha256:...>] [--output json]\n\
+    hive knowledge vector authorize-build --user-root <dir> --target <dir> --collection <id> --visibility confidential --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--operation rebuild|rollback] [--output json]\n\
+    hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] [--output json]\n\
     source query options: --query <text> --top-k <1..100>\n\
     rebuild options: --max-seconds <1..60> --workers <1..16> --rebuild-mode resume|fresh\n\
     shared rebuild window: replace --collection with --collections <JSON-array-of-1..100-explicit-ids>\n\

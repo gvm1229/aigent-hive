@@ -27,7 +27,9 @@ class UpdateInteractionConformance(Phase1CliTestCase):
             self.assertEqual(process.returncode, result["exit_code"])
             self.assertEqual(result["changed_paths"], [])
             return process, result
-        self.assertEqual(process.stdout, "")
+        self.assertTrue(process.stdout.strip())
+        self.assertFalse(process.stdout.lstrip().startswith("{"))
+        self.assertIn("Next:", process.stdout)
         return process, None
 
     def test_json_and_noninteractive_do_not_take_pipe_input_as_update_consent(self) -> None:
@@ -40,7 +42,7 @@ class UpdateInteractionConformance(Phase1CliTestCase):
     def test_explicit_terminal_without_a_terminal_never_applies(self) -> None:
         process, _ = self.invoke("--confirm", "--interactive", machine=False)
         self.assertEqual(process.returncode, 2)
-        self.assertIn("usable terminal", process.stderr)
+        self.assertIn("usable terminal", process.stdout)
 
     def test_conflicting_and_duplicate_options_fail_before_mutation(self) -> None:
         for flags in [
@@ -57,7 +59,7 @@ class UpdateInteractionConformance(Phase1CliTestCase):
     def test_input_redirection_alone_does_not_confirm_an_update(self) -> None:
         process, _ = self.invoke(machine=False)
         self.assertEqual(process.returncode, 2)
-        self.assertIn("approval is required", process.stderr)
+        self.assertIn("approval is required", process.stdout)
 
 
 class ApprovedUpdateResumeConformance(Phase1CliTestCase):

@@ -1,6 +1,6 @@
 ---
 name: apollon
-description: "(apollon) Use only when the user names apollon, 아폴론, Apollo, 아폴로."
+description: "(apollon) Writes and polishes text, and refines requests and prompts. Use only when the user names apollon, 아폴론, Apollo, 아폴로."
 ---
 
 # Apollon

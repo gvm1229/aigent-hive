@@ -327,8 +327,8 @@ pub struct SetupRequest<'a> {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 pub struct GlobalProjectPreferences {
-    /// Files from an authenticated active Codex plugin, supplied by the CLI.
-    pub codex_plugin_files: skill_delivery::PluginSkillFiles,
+    /// Authenticated host-specific plugin proofs, supplied by the CLI.
+    pub codex_plugin_files: skill_delivery::VerifiedPlugins,
     /// Preferred user-facing interface language.
     pub interface_language: String,
     /// Whether canonical Wiki capture and query are enabled globally.
@@ -364,7 +364,7 @@ pub struct GlobalProjectPreferences {
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct EffectiveProjectPreferences {
     project_skill_policy_version: u32,
-    codex_plugin_files: skill_delivery::PluginSkillFiles,
+    codex_plugin_files: skill_delivery::VerifiedPlugins,
     provenance: &'static str,
     interface_language: String,
     wiki_enabled: bool,
@@ -390,6 +390,10 @@ struct SetupAnswers {
     project_identity: String,
     setup_mode: String,
     project_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    project_profile: Option<hive_core::project_profile::ProjectProfile>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    compact_layout: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     interface_language: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -506,6 +510,8 @@ struct ProjectBaseFile {
 
 #[derive(Debug, Deserialize)]
 struct InstalledHarness {
+    #[serde(default)]
+    skill_providers: Option<skill_delivery::SkillProviders>,
     #[serde(default)]
     project_skill_policy_version: u32,
     schema_version: u32,
@@ -911,7 +917,26 @@ pub fn execute_setup_with_post_apply(
 pub fn project_upgrade_candidate_in(
     target_dir: &Dir,
 ) -> Result<ProjectUpgradeCandidate, RenderError> {
-    project_upgrade_candidate_with_plugin_in(target_dir, &BTreeMap::new())
+    project_upgrade_candidate_impl(
+        target_dir,
+        &skill_delivery::VerifiedPlugins::default(),
+        false,
+    )
+}
+
+/// Read the typed provider proof from either supported project layout.
+///
+/// # Errors
+/// Returns an error for invalid project configuration or unsafe paths.
+pub fn project_skill_provider_bytes_in(target: &Dir) -> Result<Option<Vec<u8>>, RenderError> {
+    if let Some(bytes) = read_target_optional(target, Path::new(skill_delivery::PROVIDERS_PATH))? {
+        return Ok(Some(bytes));
+    }
+    read_installed_harness(target)?
+        .skill_providers
+        .as_ref()
+        .map(skill_delivery::encode)
+        .transpose()
 }
 
 /// Build a project update using only CLI-verified plugin files.
@@ -920,7 +945,70 @@ pub fn project_upgrade_candidate_in(
 /// Returns an error for invalid installed project inputs or provider proofs.
 pub fn project_upgrade_candidate_with_plugin_in(
     target_dir: &Dir,
-    plugin: &skill_delivery::PluginSkillFiles,
+    plugin: &skill_delivery::VerifiedPlugins,
+) -> Result<ProjectUpgradeCandidate, RenderError> {
+    project_upgrade_candidate_impl(target_dir, plugin, true)
+}
+
+fn refresh_project_profile(
+    target_dir: &Dir,
+    answers: &mut SetupAnswers,
+    normalized_fields: &mut Vec<String>,
+) -> Result<(), RenderError> {
+    let profile = hive_core::project_profile::ProjectProfile::detect_in(target_dir);
+    if profile.project_kind() == "general" && answers.project_profile.is_none() {
+        return Ok(());
+    }
+    if answers.project_profile.as_ref() != Some(&profile) {
+        answers.preference_decisions.remove("/project_profile");
+        let may_migrate_kind = answers
+            .preference_decisions
+            .get("/project_kind")
+            .is_none_or(|decision| {
+                decision.origin == hive_core::preferences::DecisionOrigin::Default
+                    && decision
+                        .policy_version
+                        .split('.')
+                        .map(str::parse::<u64>)
+                        .collect::<Result<Vec<_>, _>>()
+                        .is_ok_and(|version| {
+                            version.len() == 3 && version.as_slice() < [0, 15, 1].as_slice()
+                        })
+            });
+        let suggested = profile.project_kind();
+        if answers.project_kind != suggested && suggested != "general" && !may_migrate_kind {
+            normalized_fields.push(format!(
+                "project_kind_suggestion:{}->{suggested} (existing choice preserved)",
+                answers.project_kind
+            ));
+        }
+        if answers.project_kind == "general" && suggested == "coding" && may_migrate_kind {
+            let kind = suggested.to_owned();
+            normalized_fields.push(format!("project_kind:general->{kind}"));
+            answers.project_kind = kind;
+            let decision = hive_core::preferences::PreferenceDecision::new(
+                &serde_json::json!(answers.project_kind),
+                hive_core::preferences::DecisionOrigin::Default,
+                hive_core::preferences::PreferenceInput::Migration,
+                hive_core::preferences::PreferenceScope::Project,
+                env!("CARGO_PKG_VERSION"),
+                None,
+            )
+            .map_err(RenderError::Input)?;
+            answers
+                .preference_decisions
+                .insert("/project_kind".into(), decision);
+        }
+        answers.project_profile = Some(profile);
+        normalized_fields.push("project_profile".into());
+    }
+    Ok(())
+}
+
+fn project_upgrade_candidate_impl(
+    target_dir: &Dir,
+    plugin: &skill_delivery::VerifiedPlugins,
+    redetect: bool,
 ) -> Result<ProjectUpgradeCandidate, RenderError> {
     let mut answers = read_installed_answers(target_dir)?;
     let answers_value =
@@ -933,6 +1021,9 @@ pub fn project_upgrade_candidate_with_plugin_in(
     let source_version = harness.harness_version.clone();
     let mut effective_preferences = effective_preferences_from_harness(&harness)?;
     let mut normalized_fields = Vec::new();
+    if redetect {
+        refresh_project_profile(target_dir, &mut answers, &mut normalized_fields)?;
+    }
     let skill_merges = normalize_project_skill_policy(
         &harness,
         &mut answers,
@@ -949,8 +1040,17 @@ pub fn project_upgrade_candidate_with_plugin_in(
         &BTreeSet::new(),
         effective_preferences.as_ref(),
     )?;
-    if answers.primary_host == "codex" && effective_preferences.is_none() {
-        skill_delivery::apply(target_dir, &mut files, plugin)?;
+    if matches!(answers.primary_host.as_str(), "codex" | "claude")
+        && effective_preferences.is_none()
+    {
+        let remove_copies = may_remove_plugin_copies(target_dir)?;
+        skill_delivery::apply(
+            target_dir,
+            &mut files,
+            plugin,
+            &answers.primary_host,
+            remove_copies,
+        )?;
     }
     let mut baseline = files.clone();
     if !plugin.is_empty() {
@@ -981,7 +1081,7 @@ pub fn project_upgrade_candidate_with_plugin_in(
         skill_delivery::PROVIDERS_PATH,
     ]
     .into_iter()
-    .filter(|path| *path != skill_delivery::PROVIDERS_PATH || files.contains_key(Path::new(path)))
+    .filter(|path| files.contains_key(Path::new(path)))
     .map(|path| {
         files
             .get(Path::new(path))
@@ -2449,6 +2549,86 @@ fn frozen_project_base_0_14_2(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+// Exact public stable v0.15.0 baseline.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_15_0_without_resources,
+    "0.15.0",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "aither",
+        "amend-directive",
+        "apollon",
+        "artemis",
+        "athena",
+        "code-polish",
+        "custom-subagent-create",
+        "demeter",
+        "eileithyia",
+        "hades",
+        "hephaistos",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "poseidon",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_15_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_15_0_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.15.0/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" { files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec()); }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
@@ -2592,7 +2772,10 @@ fn frozen_project_base_0_8_or_0_9(
         && resolution.resolved_owner == harness.resolved_owner
         && resolution.evidence_digest == harness.resolution_evidence_digest
         && !harness.project_name.trim().is_empty()
-        && matches!(harness.project_kind.as_str(), "general" | "custom")
+        && matches!(
+            harness.project_kind.as_str(),
+            "coding" | "docs" | "general" | "custom"
+        )
         && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
         && preference_provenance_matches
         && matches!(harness.interface_language.as_str(), "en" | "ko")
@@ -2970,7 +3153,7 @@ fn execute_release_update_for_target_in(
     }
     let replay_preferences = effective_preferences_from_harness(&installed)?.map(|preferences| {
         GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: preferences.interface_language,
             wiki_enabled: preferences.wiki_enabled,
             wiki_backend: preferences.wiki_backend,
@@ -3396,7 +3579,10 @@ fn validate_answers(answers: &SetupAnswers) -> Result<(), RenderError> {
     if !matches!(answers.schema_version, 1 | 2)
         || answers.project_name.trim().is_empty()
         || !matches!(answers.setup_mode.as_str(), "expedited" | "custom")
-        || !matches!(answers.project_kind.as_str(), "general" | "custom")
+        || !matches!(
+            answers.project_kind.as_str(),
+            "coding" | "docs" | "general" | "custom"
+        )
         || !matches!(
             answers.primary_host.as_str(),
             "codex" | "claude" | "antigravity"
@@ -3542,7 +3728,7 @@ fn resolve_effective_project_preferences(
     let mut effective = match answers.setup_mode.as_str() {
         "expedited" => EffectiveProjectPreferences {
             project_skill_policy_version: 1,
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             provenance: "global-inherited",
             interface_language: global.interface_language.clone(),
             wiki_enabled: global.wiki_enabled,
@@ -3582,7 +3768,7 @@ fn resolve_effective_project_preferences(
                 .expect("custom preferences were validated");
             EffectiveProjectPreferences {
                 project_skill_policy_version: 1,
-                codex_plugin_files: BTreeMap::new(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 provenance: "project-custom",
                 interface_language: answers
                     .interface_language
@@ -4385,8 +4571,49 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         PathBuf::from(".hive/config/harness.toml"),
         render_harness_toml(answers, resolution, effective_preferences).into_bytes(),
     );
+    render_shared_entrypoints(
+        target,
+        answers,
+        resolution,
+        effective_preferences,
+        &mut files,
+    )?;
+    render_roles(target, answers, reconfigure_roles, &mut files)?;
+    let base = render_project_base(&files)?;
+    files.insert(PathBuf::from(".hive/config/project-base.json"), base);
+    let projection_base_files = files.clone();
+    if matches!(answers.primary_host.as_str(), "codex" | "claude") {
+        let empty = skill_delivery::VerifiedPlugins::default();
+        let plugin =
+            effective_preferences.map_or(&empty, |preferences| &preferences.codex_plugin_files);
+        // Check plugin coverage on a scratch copy to decide the layout. A full-layout project
+        // records local delivery for every Skill, so its shared copies never depend on which
+        // machine ran the update.
+        let mut probe = files.clone();
+        skill_delivery::apply(target, &mut probe, plugin, &answers.primary_host, false)?;
+        if uses_compact_layout(target, answers, &probe)? {
+            files = probe;
+        } else {
+            skill_delivery::apply(target, &mut files, &empty, &answers.primary_host, false)?;
+        }
+    }
+    apply_compact_project_layout(target, answers, &mut files, projection_base_files)?;
+    Ok(files)
+}
+
+fn render_shared_entrypoints<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    resolution: &CapabilityResolution,
+    effective_preferences: Option<&EffectiveProjectPreferences>,
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
     let marker = render_agents_marker(answers, resolution, effective_preferences);
-    let merged = merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?;
+    let merged = if read_target_optional(target, Path::new("AGENTS.md"))?.is_none() {
+        format!("{}{marker}", project_rules_seed()).into_bytes()
+    } else {
+        merge_shared_marker(target, Path::new("AGENTS.md"), marker.as_bytes())?
+    };
     files.insert(PathBuf::from("AGENTS.md"), merged);
     for adapter in ["CLAUDE.md", "GEMINI.md"] {
         let marker = format!("{MARKER_START}\n@AGENTS.md\n{MARKER_END}\n");
@@ -4399,17 +4626,110 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         FORMATTER_IGNORE.as_bytes(),
     )?;
     files.insert(PathBuf::from(".prettierignore"), formatter);
-    render_roles(target, answers, reconfigure_roles, &mut files)?;
-    let base = render_project_base(&files)?;
-    files.insert(PathBuf::from(".hive/config/project-base.json"), base);
-    if answers.primary_host == "codex" {
-        let empty = BTreeMap::new();
-        let plugin =
-            effective_preferences.map_or(&empty, |preferences| &preferences.codex_plugin_files);
-        skill_delivery::apply(target, &mut files, plugin)?;
-    }
-    Ok(files)
+    Ok(())
 }
+
+/// An existing full-layout project keeps its shared Skill copies whatever this machine's plugin
+/// state is; only a stored compact choice may drop them.
+fn may_remove_plugin_copies<T: TargetRead + ?Sized>(target: &T) -> Result<bool, RenderError> {
+    read_target_optional(target, Path::new(".hive/setup-answers.yml"))?.map_or(Ok(false), |bytes| {
+        serde_yaml::from_slice::<SetupAnswers>(&bytes)
+            .map(|stored| stored.compact_layout)
+            .map_err(|error| RenderError::Verification(error.to_string()))
+    })
+}
+
+/// The stored choice wins; a new project goes compact only when asked or fully plugin-covered.
+fn uses_compact_layout<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<bool, RenderError> {
+    let eligible = answers.persistent_roles.is_empty()
+        && answers.approved_optional_skills.is_empty()
+        && answers.approved_fallback_hooks.is_empty();
+    let plugin_covers_all = files
+        .get(Path::new(skill_delivery::PROVIDERS_PATH))
+        .and_then(|bytes| serde_json::from_slice::<skill_delivery::SkillProviders>(bytes).ok())
+        .is_some_and(|ledger| !ledger.skills.is_empty() && ledger.local_skills.is_empty());
+    let installed = read_target_optional(target, Path::new(".hive/setup-answers.yml"))?
+        .map(|bytes| {
+            serde_yaml::from_slice::<SetupAnswers>(&bytes)
+                .map_err(|error| RenderError::Verification(error.to_string()))
+        })
+        .transpose()?;
+    let choice = installed
+        .as_ref()
+        .map_or(answers.compact_layout || plugin_covers_all, |stored| {
+            stored.compact_layout
+        });
+    Ok(eligible && choice)
+}
+
+fn apply_compact_project_layout<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+    projection_base_files: BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
+    if uses_compact_layout(target, answers, files)? {
+        // Only a compact project drops copies the verified plugin already provides.
+        skill_delivery::remove_plugin_copies(files, &answers.primary_host)?;
+        let mut compact = answers.clone();
+        compact.compact_layout = true;
+        files.insert(
+            PathBuf::from(".hive/setup-answers.yml"),
+            render_setup_answers(&compact)?,
+        );
+        for path in [
+            ".hive/config/role-seeds.yml",
+            ".hive/config/knowledge-scope.yml",
+            ".hive/config/approved-skills.yml",
+            "GEMINI.md",
+            ".prettierignore",
+        ] {
+            files.remove(Path::new(path));
+        }
+        if answers.primary_host != "claude" {
+            files.remove(Path::new("CLAUDE.md"));
+        }
+        if let Some(bytes) = files.remove(Path::new(skill_delivery::PROVIDERS_PATH)) {
+            let provider: skill_delivery::SkillProviders = serde_json::from_slice(&bytes)
+                .map_err(|error| RenderError::Internal(error.to_string()))?;
+            let table = toml::to_string(&BTreeMap::from([("skill_providers", provider)]))
+                .map_err(|error| RenderError::Internal(error.to_string()))?;
+            files
+                .get_mut(Path::new(".hive/config/harness.toml"))
+                .expect("harness")
+                .extend_from_slice(format!("\n{table}").as_bytes());
+        }
+        for path in COMPACT_LAZY_SEEDS {
+            if read_target_optional(target, Path::new(path))?.is_none() {
+                files.remove(Path::new(path));
+            }
+        }
+        let mut compact_base = files.clone();
+        for (path, bytes) in projection_base_files {
+            if is_hive_skill_projection_path(&path) {
+                compact_base.insert(path, bytes);
+            }
+        }
+        let base = render_project_base(&compact_base)?;
+        files.insert(PathBuf::from(".hive/config/project-base.json"), base);
+    }
+    Ok(())
+}
+
+const COMPACT_LAZY_SEEDS: &[&str] = &[
+    ".hive/README.md",
+    ".hive/knowledge/Raw/README.md",
+    ".hive/knowledge/Schema/schema.md",
+    ".hive/knowledge/Wiki/index.md",
+    ".hive/knowledge/Wiki/log.md",
+    ".hive/knowledge/suppression.yml",
+    ".hive/runs/README.md",
+    ".hive/team/roles/README.md",
+];
 
 fn compile_effective_projection(
     host: ProjectionHost,
@@ -4747,6 +5067,61 @@ fn render_harness_toml(
     output
 }
 
+fn project_rules_seed() -> &'static str {
+    include_str!("../../../harness/template/AGENTS.md.jinja")
+        .split_once(MARKER_START)
+        .expect("template marker")
+        .0
+}
+
+fn project_profile_markdown(answers: &SetupAnswers) -> String {
+    let Some(profile) = &answers.project_profile else {
+        return String::new();
+    };
+    let clean = |text: &str| {
+        text.chars()
+            .filter(|c| !c.is_control() && !matches!(c, '<' | '>' | '`'))
+            .collect::<String>()
+    };
+    let mut lines = Vec::new();
+    for (label, facts) in [
+        ("Languages", &profile.languages),
+        ("Frameworks", &profile.frameworks),
+        ("Package managers", &profile.package_managers),
+        ("Test tools", &profile.test_tools),
+        ("Structure", &profile.structure),
+    ] {
+        if facts.iter().any(|fact| fact.confidence != "low") {
+            lines.push(format!(
+                "- {label}: {}",
+                facts
+                    .iter()
+                    .filter(|fact| fact.confidence != "low")
+                    .map(|f| clean(&f.name))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+    for (key, fact) in &profile.commands {
+        if fact.confidence == "low" {
+            continue;
+        }
+        lines.push(format!(
+            "- {}: `{}` (source: {})",
+            clean(key),
+            clean(&fact.name),
+            fact.evidence
+                .iter()
+                .map(|p| clean(p))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    lines.push(String::new());
+    lines.join("\n")
+}
+
 fn render_agents_marker(
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
@@ -4787,8 +5162,14 @@ fn render_agents_marker(
         },
     );
     let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
+        .strip_prefix(project_rules_seed())
+        .expect("project rules seed")
         .replace("{{ project_name }}", &answers.project_name)
         .replace("{{ project_kind }}", &answers.project_kind)
+        .replace(
+            "{{ project_profile_markdown }}",
+            &project_profile_markdown(answers),
+        )
         .replace("{{ setup_mode }}", &answers.setup_mode)
         .replace("{{ preference_provenance }}", preference_provenance)
         .replace("{{ interface_language }}", interface_language)
@@ -5489,6 +5870,14 @@ fn validate_desired_projection_ownership(
         })?)
         .map_err(|error| RenderError::Internal(format!("compiled harness is invalid: {error}")))?;
     let effective_preferences = effective_preferences_from_harness(&harness)?;
+    let provider_bytes = desired_files
+        .get(Path::new(skill_delivery::PROVIDERS_PATH))
+        .cloned()
+        .or(harness
+            .skill_providers
+            .as_ref()
+            .map(skill_delivery::encode)
+            .transpose()?);
     let mut owned = reproduce_projection_ownership(
         None::<&Path>,
         &active_bytes,
@@ -5498,9 +5887,7 @@ fn validate_desired_projection_ownership(
         effective_preferences
             .as_ref()
             .map(|preferences| preferences.selected_project_skills.as_slice()),
-        desired_files
-            .get(Path::new(skill_delivery::PROVIDERS_PATH))
-            .map(Vec::as_slice),
+        provider_bytes.as_deref(),
         |relative, label| {
             desired_files.get(relative).cloned().ok_or_else(|| {
                 RenderError::Internal(format!(
@@ -5524,7 +5911,12 @@ fn validate_projection_ownership<T: TargetRead + ?Sized>(
     let active_bytes = read_target_required(target, active_path, "active Skill projection ledger")?;
     let harness = read_installed_harness(target)?;
     let effective_preferences = effective_preferences_from_harness(&harness)?;
-    let providers = read_target_optional(target, Path::new(skill_delivery::PROVIDERS_PATH))?;
+    let providers =
+        read_target_optional(target, Path::new(skill_delivery::PROVIDERS_PATH))?.or(harness
+            .skill_providers
+            .as_ref()
+            .map(skill_delivery::encode)
+            .transpose()?);
     reproduce_projection_ownership(
         Some(target),
         &active_bytes,
@@ -5872,7 +6264,7 @@ fn authenticate_projected_skill_files<T: TargetRead + ?Sized>(
         }
     }
     let covered = skill_delivery::covered(providers, &expected_files, source_version)?;
-    if host != ProjectionHost::Codex && !covered.is_empty() {
+    if !matches!(host, ProjectionHost::Codex | ProjectionHost::Claude) && !covered.is_empty() {
         return Err(RenderError::Verification(
             "plugin Skill delivery is only supported for Codex".to_owned(),
         ));
@@ -6195,18 +6587,7 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     validate_resolution(&installed_answers, &resolution).map_err(as_verification)?;
     validate_harness_cross_file(&harness, &installed_answers, &resolution)?;
 
-    let skills_relative = Path::new(".hive/config/approved-skills.yml");
-    let bytes = read_target_required(target, skills_relative, "Skill approval ledger")
-        .map_err(as_verification)?;
-    let ledger: SkillLedger = serde_yaml::from_slice(&bytes).map_err(|error| {
-        RenderError::Verification(format!("invalid installed Skill ledger: {error}"))
-    })?;
-    validate_skill_approvals(&ledger.skills).map_err(as_verification)?;
-    if ledger.skills != installed_answers.approved_optional_skills {
-        return Err(RenderError::Verification(
-            "installed Skill ledger does not match setup approvals".to_owned(),
-        ));
-    }
+    validate_installed_skill_approvals(target, &installed_answers)?;
     validate_projection_ownership(target, &installed_answers).map_err(as_verification)?;
 
     let hooks_relative = Path::new(".hive/config/approved-hooks.yml");
@@ -6264,6 +6645,34 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     )?;
     validate_editing_discipline(target)?;
     validate_installed_marker(target, &installed_answers, &resolution)?;
+    Ok(())
+}
+
+fn validate_installed_skill_approvals(
+    target: &Path,
+    answers: &SetupAnswers,
+) -> Result<(), RenderError> {
+    let skills_relative = Path::new(".hive/config/approved-skills.yml");
+    let bytes = match read_target_optional(target, skills_relative).map_err(as_verification)? {
+        Some(bytes) => bytes,
+        None if answers.compact_layout && answers.approved_optional_skills.is_empty() => {
+            render_yaml_projection(None, "skills", &Vec::<SkillApproval>::new())?
+        }
+        None => {
+            return Err(RenderError::Verification(
+                "Skill approval ledger is missing".into(),
+            ))
+        }
+    };
+    let ledger: SkillLedger = serde_yaml::from_slice(&bytes).map_err(|error| {
+        RenderError::Verification(format!("invalid installed Skill ledger: {error}"))
+    })?;
+    validate_skill_approvals(&ledger.skills).map_err(as_verification)?;
+    if ledger.skills != answers.approved_optional_skills {
+        return Err(RenderError::Verification(
+            "installed Skill ledger does not match setup approvals".to_owned(),
+        ));
+    }
     Ok(())
 }
 
@@ -6325,7 +6734,7 @@ fn effective_preferences_from_harness(
         ));
     }
     let global = GlobalProjectPreferences {
-        codex_plugin_files: BTreeMap::new(),
+        codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
         interface_language: interface_language.clone(),
         wiki_enabled,
         wiki_backend: wiki_backend.clone(),
@@ -6343,7 +6752,7 @@ fn effective_preferences_from_harness(
     validate_global_project_preferences(&global).map_err(as_verification)?;
     Ok(Some(EffectiveProjectPreferences {
         project_skill_policy_version: harness.project_skill_policy_version,
-        codex_plugin_files: BTreeMap::new(),
+        codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
         provenance: if provenance == "global-inherited" {
             "global-inherited"
         } else {
@@ -6502,6 +6911,7 @@ fn validate_protected_contract(
         ".hive/runs/README.md",
         ".hive/team/roles/README.md",
     ];
+    let compact = read_installed_answers(target)?.compact_layout;
     let local_wiki_required = wiki_enabled && wiki_backend == "markdown";
     for path in ALWAYS_REQUIRED
         .iter()
@@ -6509,6 +6919,9 @@ fn validate_protected_contract(
         .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/index.md"))
         .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/log.md"))
     {
+        if compact && read_target_optional(target, Path::new(path))?.is_none() {
+            continue;
+        }
         let bytes = read_target_required(target, Path::new(path), "protected canonical seed")
             .map_err(as_verification)?;
         if bytes.is_empty() {
@@ -6516,6 +6929,17 @@ fn validate_protected_contract(
                 "protected canonical seed is empty: {path}"
             )));
         }
+    }
+    let knowledge_absent = match fs::symlink_metadata(target.join(".hive/knowledge")) {
+        Ok(_) => false,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => true,
+        Err(error) => return Err(io_internal(error)),
+    };
+    if compact
+        && knowledge_absent
+        && read_target_optional(target, Path::new(".hive/knowledge/suppression.yml"))?.is_none()
+    {
+        return Ok(());
     }
     let suppression = read_target_required(
         target,
@@ -6624,7 +7048,13 @@ fn validate_installed_against(
     planned: &BTreeMap<PathBuf, Vec<u8>>,
 ) -> Result<(), RenderError> {
     validate_installed(target)?;
-    if read_installed_answers(target)? != *answers
+    let mut expected_answers = answers.clone();
+    if let Some(bytes) = planned.get(Path::new(".hive/setup-answers.yml")) {
+        let planned_answers: SetupAnswers = serde_yaml::from_slice(bytes)
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+        expected_answers.compact_layout = planned_answers.compact_layout;
+    }
+    if read_installed_answers(target)? != expected_answers
         || read_installed_resolution(target)? != *resolution
     {
         return Err(RenderError::Verification(
@@ -6803,6 +7233,12 @@ critical_judge_quorum: {}\n",
         quote(&answers.elevated_judge_quorum),
         quote(&answers.critical_judge_quorum),
     );
+    if answers.compact_layout {
+        append_yaml_key(&mut output, "compact_layout", &true)?;
+    }
+    if let Some(profile) = &answers.project_profile {
+        append_yaml_key(&mut output, "project_profile", profile)?;
+    }
     append_custom_setup_preferences(&mut output, answers)?;
     append_yaml_key(&mut output, "persistent_roles", &answers.persistent_roles)?;
     append_yaml_key(
@@ -7295,6 +7731,121 @@ mod tests {
     }
 
     #[test]
+    fn stage_two_corpus_agents_snapshots_and_user_rules() {
+        let root =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/project-detection");
+        let cases: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("expected.json")).unwrap()).unwrap();
+        let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json")).unwrap();
+        let mut snapshots = BTreeMap::new();
+        for case in cases.as_array().unwrap() {
+            let id = case["id"].as_str().unwrap();
+            let profile = hive_core::project_profile::ProjectProfile::detect(&root.join(id));
+            answers.project_kind = profile.project_kind().into();
+            answers.project_profile = Some(profile);
+            let marker = render_agents_marker(&answers, &resolution, None);
+            assert!(marker.split("## Hive\n").nth(1).unwrap().lines().count() <= 15);
+            let target = tempfile::tempdir().unwrap();
+            let foreign = "# My rules\nKeep this exact text.\n\n";
+            fs::write(
+                target.path().join("AGENTS.md"),
+                format!("{foreign}{marker}"),
+            )
+            .unwrap();
+            let merged =
+                merge_shared_marker(target.path(), Path::new("AGENTS.md"), marker.as_bytes())
+                    .unwrap();
+            assert_eq!(merged, format!("{foreign}{marker}").as_bytes());
+            snapshots.insert(id.to_owned(), marker);
+        }
+        let path = root.join("../project-detection-agents.json");
+        let expected: BTreeMap<String, String> =
+            serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        for (id, snapshot) in snapshots {
+            assert_eq!(snapshot, expected[&id], "{id}");
+        }
+    }
+
+    #[test]
+    fn refresh_preserves_kind_decisions_and_only_migrates_old_defaults() {
+        use hive_core::preferences::{
+            DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname='app'\nversion='1.0.0'\n",
+        )
+        .unwrap();
+        let cap =
+            cap_std::fs::Dir::open_ambient_dir(dir.path(), cap_std::ambient_authority()).unwrap();
+        for (origin, version, migrates) in [
+            (None, "0.15.0", true),
+            (Some(DecisionOrigin::Default), "0.15.0", true),
+            (Some(DecisionOrigin::Default), "0.15.1", false),
+            (Some(DecisionOrigin::Explicit), "0.15.0", false),
+            (Some(DecisionOrigin::AcceptedDefault), "0.15.0", false),
+        ] {
+            let (mut answers, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+            answers.project_kind = "general".into();
+            if let Some(origin) = origin {
+                answers.preference_decisions.insert(
+                    "/project_kind".into(),
+                    PreferenceDecision::new(
+                        &serde_json::json!("general"),
+                        origin,
+                        PreferenceInput::Terminal,
+                        PreferenceScope::Project,
+                        version,
+                        None,
+                    )
+                    .unwrap(),
+                );
+            }
+            let original = answers.preference_decisions.get("/project_kind").cloned();
+            let mut changes = Vec::new();
+            super::refresh_project_profile(&cap, &mut answers, &mut changes).unwrap();
+            assert_eq!(
+                answers.project_kind,
+                if migrates { "coding" } else { "general" }
+            );
+            assert!(answers.project_profile.is_some());
+            if !migrates {
+                assert_eq!(
+                    answers.preference_decisions.get("/project_kind"),
+                    original.as_ref()
+                );
+                assert!(changes
+                    .iter()
+                    .any(|field| field.starts_with("project_kind_suggestion:")));
+            }
+            changes.clear();
+            super::refresh_project_profile(&cap, &mut answers, &mut changes).unwrap();
+            assert_eq!(changes, Vec::<String>::new());
+        }
+    }
+
+    #[test]
+    fn four_kinds_and_profile_round_trip_with_legacy_answers() {
+        let (legacy, _) = load_answers(&fixture("answers-base.yml")).unwrap();
+        assert!(legacy.project_profile.is_none());
+        for kind in ["coding", "docs", "general", "custom"] {
+            let mut answers = legacy.clone();
+            answers.project_kind = kind.into();
+            answers.project_profile = Some(hive_core::project_profile::ProjectProfile::detect(
+                &fixture("missing"),
+            ));
+            super::validate_answers(&answers).unwrap();
+            let bytes = render_setup_answers(&answers).unwrap();
+            let value: serde_json::Value = serde_yaml::from_slice(&bytes).unwrap();
+            super::validate_schema_instance(super::SETUP_SCHEMA, &value, "answers").unwrap();
+            let restored: SetupAnswers = serde_yaml::from_slice(&bytes).unwrap();
+            assert_eq!(restored, answers);
+        }
+    }
+
+    #[test]
     fn version_two_project_answers_keep_decisions_through_apply_and_validate() {
         use hive_core::preferences::{
             DecisionOrigin, PreferenceDecision, PreferenceInput, PreferenceScope,
@@ -7469,7 +8020,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: false,
             wiki_backend: "markdown".to_owned(),
@@ -7551,7 +8102,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "notion".to_owned(),
@@ -7609,7 +8160,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: BTreeMap::new(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -7644,7 +8195,7 @@ mod tests {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -7709,7 +8260,7 @@ mod tests {
     #[test]
     fn operational_release_update_requires_connected_preferences() {
         let preferences = GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -7829,7 +8380,7 @@ mod tests {
             mode: SetupMode::DryRun,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(GlobalProjectPreferences {
-                codex_plugin_files: BTreeMap::new(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 interface_language: "en".to_owned(),
                 wiki_enabled: false,
                 wiki_backend: "markdown".to_owned(),
@@ -7870,7 +8421,7 @@ mod tests {
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(GlobalProjectPreferences {
-                codex_plugin_files: BTreeMap::new(),
+                codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
                 wiki_backend: "markdown".to_owned(),
@@ -8124,7 +8675,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: BTreeMap::new(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -8277,7 +8828,7 @@ mod tests {
                 mode: SetupMode::Apply,
                 reconfigure_roles: BTreeSet::new(),
                 global_preferences: Some(GlobalProjectPreferences {
-                    codex_plugin_files: BTreeMap::new(),
+                    codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
                     wiki_backend: "markdown".to_owned(),
@@ -8664,7 +9215,7 @@ mod tests {
         let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
             .expect("resolution should load");
         let mut global = GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -8683,8 +9234,14 @@ mod tests {
             .expect("preferences should resolve")
             .expect("global preferences should produce an effective projection");
         let expected = include_str!("../../../harness/template/AGENTS.md.jinja")
+            .strip_prefix(super::project_rules_seed())
+            .expect("project rules seed")
             .replace("{{ project_name }}", &answers.project_name)
             .replace("{{ project_kind }}", &answers.project_kind)
+            .replace(
+                "{{ project_profile_markdown }}",
+                &super::project_profile_markdown(&answers),
+            )
             .replace("{{ setup_mode }}", &answers.setup_mode)
             .replace("{{ preference_provenance }}", effective.provenance)
             .replace("{{ interface_language }}", &effective.interface_language)
@@ -8848,7 +9405,7 @@ mod tests {
 
     fn test_global_preferences() -> GlobalProjectPreferences {
         GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: crate::skill_delivery::VerifiedPlugins::default(),
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -10802,19 +11359,130 @@ mod tests {
     }
 
     #[test]
+    fn compact_suppression_may_be_absent_only_before_knowledge_creation() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path();
+        fs::create_dir_all(target.join(".hive")).unwrap();
+        let (mut answers, _) = load_answers(&fixture("answers-no-role-no-hook.yml")).unwrap();
+        answers.compact_layout = true;
+        fs::write(
+            target.join(".hive/setup-answers.yml"),
+            render_setup_answers(&answers).unwrap(),
+        )
+        .unwrap();
+        super::validate_protected_contract(target, true, "markdown").unwrap();
+        fs::create_dir_all(target.join(".hive/knowledge")).unwrap();
+        assert!(super::validate_protected_contract(target, true, "markdown").is_err());
+        fs::write(
+            target.join(".hive/knowledge/suppression.yml"),
+            "schema_version: 1\nentries: []\n",
+        )
+        .unwrap();
+        super::validate_protected_contract(target, true, "markdown").unwrap();
+    }
+
+    #[test]
+    fn verified_plugin_fresh_project_has_at_most_fifteen_files() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path().canonicalize().unwrap();
+        let mut preferences = test_global_preferences();
+        preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
+        preferences.codex_plugin_files = super::skill_delivery::VerifiedPlugins::for_host(
+            "codex",
+            hive_projection::compile_user_projection(
+                hive_projection::Host::Codex,
+                &preferences.selected_project_skills,
+                &[],
+            )
+            .unwrap()
+            .files,
+        );
+        let mut request = SetupRequest {
+            target: &target,
+            answers: &fixture("answers-no-role-no-hook.yml"),
+            capabilities: &fixture("capabilities-codex-host-native.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        };
+        let outcome = execute_setup(&request).unwrap();
+        assert_eq!(
+            outcome.changed_paths.len(),
+            14,
+            "{:?}",
+            outcome.changed_paths
+        );
+        let answers = super::read_installed_answers(target.as_path()).unwrap();
+        assert!(answers.compact_layout);
+        request.mode = SetupMode::Validate;
+        execute_setup(&request).unwrap();
+        assert!(fs::read_to_string(target.join("AGENTS.md"))
+            .unwrap()
+            .contains("Hive Skills missing on this PC"));
+        assert!(!target.join(".agents/skills").exists());
+    }
+
+    #[test]
+    fn claude_plugin_is_host_scoped_and_keeps_the_active_entrypoint() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path().join("project");
+        fs::create_dir(&target).unwrap();
+        let target = target.canonicalize().unwrap();
+        let mut preferences = test_global_preferences();
+        preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
+        preferences.codex_plugin_files = super::skill_delivery::VerifiedPlugins::for_host(
+            "claude",
+            hive_projection::compile_user_projection(
+                hive_projection::Host::Claude,
+                &preferences.selected_project_skills,
+                &[],
+            )
+            .unwrap()
+            .files,
+        );
+
+        let (mut answers, _) = load_answers(&fixture("answers-no-role-no-hook.yml")).unwrap();
+        answers.primary_host = "claude".into();
+        let input = temporary.path().join("answers.yml");
+        fs::write(&input, render_setup_answers(&answers).unwrap()).unwrap();
+        let mut request = SetupRequest {
+            target: &target,
+            answers: &input,
+            capabilities: &fixture("capabilities-claude-host-native.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        };
+        let outcome = execute_setup(&request).unwrap();
+        assert!(
+            outcome.changed_paths.len() <= 15,
+            "{:?}",
+            outcome.changed_paths
+        );
+        assert!(target.join("CLAUDE.md").is_file());
+        assert!(!target.join(".claude/skills").exists());
+        assert!(!target.join(".agents/skills").exists());
+        request.mode = SetupMode::Validate;
+        execute_setup(&request).unwrap();
+    }
+
+    #[test]
     fn codex_plugin_delivery_setup_and_validation_keep_project_only_skills() {
         let temporary = tempfile::tempdir().unwrap();
         let target = temporary.path().canonicalize().unwrap();
         let mut preferences = test_global_preferences();
         preferences.selected_project_skills =
             vec!["prompt-refine".to_owned(), "project-setup".to_owned()];
-        preferences.codex_plugin_files = hive_projection::compile_user_projection(
-            hive_projection::Host::Codex,
-            &["prompt-refine".to_owned()],
-            &[],
-        )
-        .unwrap()
-        .files;
+        preferences.codex_plugin_files = super::skill_delivery::VerifiedPlugins::for_host(
+            "codex",
+            hive_projection::compile_user_projection(
+                hive_projection::Host::Codex,
+                &["prompt-refine".to_owned()],
+                &[],
+            )
+            .unwrap()
+            .files,
+        );
         let mut request = SetupRequest {
             target: &target,
             answers: &fixture("answers-base.yml"),
@@ -10824,9 +11492,10 @@ mod tests {
             global_preferences: Some(preferences),
         };
         execute_setup(&request).unwrap();
-        assert!(!target
+        // Partial plugin coverage keeps the full layout, so every shared copy stays.
+        assert!(target
             .join(".agents/skills/prompt-refine/SKILL.md")
-            .exists());
+            .is_file());
         assert!(target
             .join(".agents/skills/project-setup/SKILL.md")
             .is_file());
@@ -10834,19 +11503,17 @@ mod tests {
         execute_setup(&request).unwrap();
         request.mode = SetupMode::Apply;
         assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
-        request.mode = SetupMode::Validate;
+        // A teammate without the plugin sees the same valid project and no changes.
         request
             .global_preferences
             .as_mut()
             .unwrap()
             .codex_plugin_files
             .clear();
-        assert!(execute_setup(&request).is_err());
-        request.mode = SetupMode::Apply;
+        request.mode = SetupMode::Validate;
         execute_setup(&request).unwrap();
-        assert!(target
-            .join(".agents/skills/prompt-refine/SKILL.md")
-            .is_file());
+        request.mode = SetupMode::Apply;
+        assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
     }
     #[test]
     fn legacy_policy_uses_daily_work_once_and_keeps_subsequent_custom_or_empty_selection() {

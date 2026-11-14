@@ -342,7 +342,7 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
         self.assertEqual(json.loads(result_path.read_text())["exit_code"], 0)
         answers = read_yaml(target / ".hive/setup-answers.yml")
         self.assertEqual(answers["project_name"], "multi-manifest")
-        self.assertEqual(answers["project_kind"], "general")
+        self.assertEqual(answers["project_kind"], "coding")
         self.assertEqual(answers["persistent_roles"], [])
         self.assertEqual(answers["approved_fallback_hooks"], [])
         capabilities = read_yaml(target / ".hive/config/capability-resolution.yml")
@@ -389,7 +389,7 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
                 reviewed = subprocess.run([str(helper),str(self.hive_binary),str(root),str(result_path),"review-all"],
                     env=environment, capture_output=True, text=True, timeout=45,
                     creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
-                self.assertEqual(reviewed.returncode, 0, reviewed.stderr)
+                self.assertEqual(reviewed.returncode, 0, reviewed.stderr + (Path(str(result_path) + ".error.txt").read_text(encoding="utf-8") if Path(str(result_path) + ".error.txt").exists() else ""))
                 receipt = json.loads(result_path.read_text())
                 self.assertTrue(receipt["confirmed"])
                 self.assertGreater(receipt["questions"], 6)
@@ -449,7 +449,9 @@ class SetupConsoleInterruptConformance(Phase1CliTestCase):
             capture_output=True, text=True, timeout=45,
             creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup,
         )
-        self.assertEqual(result.returncode, 0, result.stderr)
+        error_path = Path(str(result_path) + ".error.txt")
+        detail = error_path.read_text(encoding="utf-8", errors="replace") if error_path.exists() else ""
+        self.assertEqual(result.returncode, 0, result.stderr + "\n" + detail)
         self.assertNotEqual(json.loads(result_path.read_text())["exit_code"], 0)
         if kind == "eof":
             self.assertEqual(json.loads(result_path.read_text())["exit_code"], 2)

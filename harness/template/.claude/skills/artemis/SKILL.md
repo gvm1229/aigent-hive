@@ -1,6 +1,6 @@
 ---
 name: artemis
-description: "(artemis) Use only when the user names artemis, 아르테미스."
+description: "(artemis) Researches sources and diagnoses the cause of a problem without changing code. Use only when the user names artemis, 아르테미스."
 ---
 
 # Artemis

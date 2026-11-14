@@ -21,13 +21,11 @@ const CATEGORIES: &[(&str, &str)] = &[
 
 struct Options {
     user_root: PathBuf,
-    json: bool,
     mode: Option<&'static str>,
 }
 
 fn parse(arguments: &[String], prune: bool) -> Result<Options, String> {
     let mut user_root = None;
-    let mut json = false;
     let mut mode = None;
     let mut index = 0;
     while index < arguments.len() {
@@ -42,7 +40,6 @@ fn parse(arguments: &[String], prune: bool) -> Result<Options, String> {
                 if arguments.get(index).map(String::as_str) != Some("json") {
                     return Err("--output accepts only json".to_owned());
                 }
-                json = true;
             }
             "--dry-run" if prune && mode.is_none() => mode = Some("dry-run"),
             "--confirm" if prune && mode.is_none() => mode = Some("confirm"),
@@ -60,11 +57,7 @@ fn parse(arguments: &[String], prune: bool) -> Result<Options, String> {
     if !user_root.is_absolute() {
         return Err("--user-root must be absolute".to_owned());
     }
-    Ok(Options {
-        user_root,
-        json,
-        mode,
-    })
+    Ok(Options { user_root, mode })
 }
 
 /// Sum regular-file bytes per category without following symbolic links.
@@ -166,20 +159,6 @@ fn failure(action: &'static str, message: String) -> ExitCode {
     })
 }
 
-fn human_size(bytes: u64) -> String {
-    #[allow(clippy::cast_precision_loss)]
-    let value = bytes as f64;
-    if bytes >= 1 << 30 {
-        format!("{:.1} GiB", value / f64::from(1_u32 << 30))
-    } else if bytes >= 1 << 20 {
-        format!("{:.1} MiB", value / f64::from(1_u32 << 20))
-    } else if bytes >= 1 << 10 {
-        format!("{:.1} KiB", value / f64::from(1_u32 << 10))
-    } else {
-        format!("{bytes} B")
-    }
-}
-
 pub(crate) const STORAGE_USAGE: &str = "Usage:\n  hive storage [--user-root <path>] [--output json]\n  hive prune --dry-run|--confirm [--user-root <path>] [--output json]\n\nstorage reports Hive file bytes by category and changes nothing.\nprune lists or removes monitor executables that the saved monitor records do not use.\n";
 
 fn is_help(arguments: &[String]) -> bool {
@@ -201,13 +180,6 @@ pub(crate) fn run_storage(arguments: &[String]) -> ExitCode {
         Ok(measured) => measured,
         Err(message) => return failure("ReportStorage", message),
     };
-    if !options.json {
-        for (name, bytes, files) in &categories {
-            println!("{PREFIX} {name}: {} ({files} files)", human_size(*bytes));
-        }
-        println!("{PREFIX} total: {}", human_size(total));
-        return ExitCode::SUCCESS;
-    }
     let rows: Vec<Value> = categories
         .iter()
         .map(|(name, bytes, files)| json!({"category":name,"bytes":bytes,"files":files}))
@@ -250,39 +222,6 @@ pub(crate) fn run_prune(arguments: &[String]) -> ExitCode {
     };
     let list = |key: &str| report[key].as_array().cloned().unwrap_or_default();
     let (candidates, removed, skipped) = (list("candidates"), list("removed"), list("skipped"));
-    if !options.json {
-        for item in &candidates {
-            let bytes = item["bytes"].as_u64().unwrap_or(0);
-            println!(
-                "{PREFIX} would remove: {} ({})",
-                item["path"].as_str().unwrap_or("?"),
-                human_size(bytes)
-            );
-        }
-        for item in &removed {
-            println!("{PREFIX} removed: {}", item.as_str().unwrap_or("?"));
-        }
-        for item in &skipped {
-            println!(
-                "{PREFIX} skipped: {} ({})",
-                item["path"].as_str().unwrap_or("?"),
-                item["reason"].as_str().unwrap_or("unknown")
-            );
-        }
-        if confirm {
-            println!(
-                "{PREFIX} {} removed, {} skipped",
-                removed.len(),
-                skipped.len()
-            );
-        } else {
-            println!(
-                "{PREFIX} {} candidate(s); run with --confirm to delete",
-                candidates.len()
-            );
-        }
-        return ExitCode::SUCCESS;
-    }
     let changed = removed
         .iter()
         .filter_map(|path| path.as_str().map(str::to_owned))

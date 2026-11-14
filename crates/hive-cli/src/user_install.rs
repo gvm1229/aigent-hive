@@ -1133,34 +1133,63 @@ pub(crate) fn validate_configured_host(
 /// authenticated installed source inventory must both verify before delivery.
 pub(crate) fn validated_codex_plugin_files(
     user_root: &Path,
+) -> Result<hive_render::skill_delivery::VerifiedPlugins, String> {
+    validated_plugin_files_for_host(user_root, crate::user_setup::SelectedHost::Codex)
+        .map(|files| hive_render::skill_delivery::VerifiedPlugins::for_host("codex", files))
+}
+
+pub(crate) fn validated_project_plugin_files(
+    user_root: &Path,
+) -> Result<hive_render::skill_delivery::VerifiedPlugins, String> {
+    let mut files = hive_render::skill_delivery::VerifiedPlugins::default();
+    for (host, selected) in [
+        ("codex", crate::user_setup::SelectedHost::Codex),
+        ("claude", crate::user_setup::SelectedHost::Claude),
+    ] {
+        if let Ok(projection) = validated_plugin_files_for_host(user_root, selected) {
+            files.hosts.insert(host.to_owned());
+            files.files.insert(host.to_owned(), projection);
+        }
+    }
+    if files.is_empty() {
+        return Err("no supported user plugin is verified".into());
+    }
+    Ok(files)
+}
+
+fn validated_plugin_files_for_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
 ) -> Result<hive_render::skill_delivery::PluginSkillFiles, String> {
     let root = open_user_root_for_setup(user_root)?;
     let (config, skills) = crate::user_setup::resolved_operational_skills(&root)
         .map_err(|error| error.message().to_owned())?
         .ok_or_else(|| "global Hive setup is missing".to_owned())?;
-    if !config
-        .selected_hosts
-        .contains(&crate::user_setup::SelectedHost::Codex)
-    {
-        return Err("Codex is not a selected Hive host".to_owned());
+    if !config.selected_hosts.contains(&selected_host) {
+        return Err("plugin host is not selected".to_owned());
     }
-    validate_configured_host(
-        user_root,
-        crate::user_setup::SelectedHost::Codex,
-        &config,
-        &skills,
-    )?;
+    validate_configured_host(user_root, selected_host, &config, &skills)?;
     let language = match config.interface_language {
         crate::user_setup::InterfaceLanguage::Ko => DescriptorLanguage::Ko,
         crate::user_setup::InterfaceLanguage::En => DescriptorLanguage::En,
     };
-    let projection =
-        compile_user_projection_localized(ProjectionHost::Codex, &skills, &[], language)
-            .map_err(|error| error.to_string())?;
+    let projection = compile_user_projection_localized(
+        match selected_host {
+            crate::user_setup::SelectedHost::Codex => ProjectionHost::Codex,
+            crate::user_setup::SelectedHost::Claude => ProjectionHost::Claude,
+            crate::user_setup::SelectedHost::Antigravity => ProjectionHost::Antigravity,
+        },
+        &skills,
+        &[],
+        language,
+    )
+    .map_err(|error| error.to_string())?;
     Ok(projection
         .files
         .into_iter()
-        .filter(|(path, _)| path.starts_with(".agents/skills/"))
+        .filter(|(path, _)| {
+            path.starts_with(".agents/skills/") || path.starts_with(".claude/skills/")
+        })
         .collect())
 }
 
@@ -1660,7 +1689,7 @@ fn parse(arguments: &[String]) -> Result<UserCommandArguments, InstallError> {
             "user installation requires --scope user".to_owned(),
         ));
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(InstallError::Input(
             "user installation requires --output json".to_owned(),
         ));
@@ -9919,6 +9948,7 @@ mod tests {
                 ("0.14.0", 77),
                 ("0.14.1", 77),
                 ("0.14.2", 77),
+                ("0.15.0", 95),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10088,6 +10118,7 @@ mod tests {
                         | "0.14.0"
                         | "0.14.1"
                         | "0.14.2"
+                        | "0.15.0"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")

@@ -179,6 +179,14 @@ pub(super) fn inspect(
         };
         let section = selected_section.as_str();
         let mut questions = described(section, stored.as_ref(), &sources, &effective)?;
+        let profile = hive_core::project_profile::ProjectProfile::detect(&options.target);
+        if stored.is_none() {
+            for entry in questions.as_array_mut().expect("questions") {
+                if entry["question"]["id"] == "project-kind" {
+                    entry["question"]["default"] = json!(profile.project_kind());
+                }
+            }
+        }
         if let Some(id) = &options.question {
             questions = super::super::summary::one_question(
                 questions,
@@ -186,7 +194,7 @@ pub(super) fn inspect(
                 language == InterfaceLanguage::Ko,
             )?;
         }
-        json!({"section":section,"questions":questions,"parent":parent})
+        json!({"section":section,"questions":questions,"parent":parent,"project_profile":profile})
     } else {
         json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
     };

@@ -78,6 +78,9 @@ class V09HostNativeContractTests(unittest.TestCase):
         for relative, required in CURRENT_REQUIRED.items():
             text = " ".join((REPOSITORY_ROOT / relative).read_text(encoding="utf-8").split())
             with self.subTest(path=relative):
+                if relative == "harness/template/AGENTS.md.jinja":
+                    self.assertIn(".agents/directives/00-project-harness.md", text)
+                    text += " " + " ".join((REPOSITORY_ROOT / "harness/directives/00-project-harness.md").read_text(encoding="utf-8").split())
                 for phrase in required:
                     self.assertIn(phrase, text)
 
@@ -107,7 +110,7 @@ class V09HostNativeContractTests(unittest.TestCase):
         ):
             self.assertIn(required, text)
         for forbidden in (
-            "Never call provider APIs, request credentials, or launch model/subagent processes.",
+            "No provider APIs, credential requests or model/subagent process launch.",
         ):
             self.assertIn(forbidden, text)
 

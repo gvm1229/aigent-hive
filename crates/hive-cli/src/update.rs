@@ -17,8 +17,8 @@ const UPDATE_USAGE: &str = "\
 Verify and activate a local Aigent Hive release bundle.
 
 USAGE:
-    hive update --target <dir> --bundle <release-dir> (--dry-run|--apply) --output json
-    hive update --target <dir> --recover --output json
+    hive update --target <dir> --bundle <release-dir> (--dry-run|--apply) [--output json]
+    hive update --target <dir> --recover [--output json]
 
 BREAKING RELEASES:
     --exact-major-target <X.Y.Z> --major-confirmation <confirmation.json>
@@ -27,7 +27,7 @@ const RELEASE_USAGE: &str = "\
 Verify a local Aigent Hive release bundle without mutation.
 
 USAGE:
-    hive release verify --bundle <release-dir> --output json
+    hive release verify --bundle <release-dir> [--output json]
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -104,7 +104,7 @@ fn parse_release_arguments(arguments: &[String]) -> Result<PathBuf, AdapterError
             )));
         }
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "release verify requires --output json".to_owned(),
         ));
@@ -192,7 +192,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
             }
         }
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "update requires --output json".to_owned(),
         ));

@@ -1,6 +1,6 @@
 ---
 name: athena
-description: "(athena) Use only when the user names athena, 아테나, Minerva, 미네르바."
+description: "(athena) Plans work and saves acceptance criteria before implementation, then runs a separate review of the result. Use only when the user names athena, 아테나, Minerva, 미네르바."
 ---
 
 # Athena

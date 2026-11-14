@@ -106,15 +106,15 @@ const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
 
 USAGE:
-    hive setup --scope user --describe --output json
-    hive setup --scope user --user-root <dir> --show --summary --output json
-    hive setup --scope user --user-root <dir> --describe --question <question-id> --output json
-    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] --output json
-    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
-    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
-    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
-    hive setup --progress status|clear --scope user [--user-root <dir>] --output json
-    hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] --output json
+    hive setup --scope user --describe [--output json]
+    hive setup --scope user --user-root <dir> --show --summary [--output json]
+    hive setup --scope user --user-root <dir> --describe --question <question-id> [--output json]
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] [--input-channel answers-file|agent] [--output json]
+    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] [--output json]
+    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] [--output json]
+    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] [--output json]
+    hive setup --progress status|clear --scope user [--user-root <dir>] [--output json]
+    hive setup --progress save|status|clear --scope project --target <dir> [--step <step> --answers <yml>] [--user-root <dir>] [--output json]
 
 MODES:
     --summary    Bound JSON status/completion output; not an approval preview
@@ -681,7 +681,9 @@ fn parse_feature(arguments: &[String]) -> Result<FeatureArguments, SetupError> {
         }
         index += 2;
     }
-    if id.as_deref() != Some("vector-search") || output.as_deref() != Some("json") {
+    if id.as_deref() != Some("vector-search")
+        || output.as_deref().is_some_and(|value| value != "json")
+    {
         return Err(SetupError::Input(
             "setup feature requires --id vector-search and --output json".to_owned(),
         ));
@@ -1114,7 +1116,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
         index += 2;
     }
     if !matches!(scope.as_deref(), Some("user" | "project"))
-        || output.as_deref() != Some("json")
+        || output.as_deref().is_some_and(|value| value != "json")
         || (scope.as_deref() == Some("project")) != target.is_some()
     {
         return Err(SetupError::Input(
@@ -1421,7 +1423,7 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
             "user setup requires --scope user".to_owned(),
         ));
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(SetupError::Input(
             "user setup requires --output json".to_owned(),
         ));
@@ -3481,7 +3483,8 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     let mut rendered = match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly; an unregistered repository's user-global fact stays at `user-root`, and ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Hive knowledge is the memory: write every fact you would otherwise keep in the host's own memory (auto-memory, memory files, saved memories) as Hive Markdown knowledge instead, and never keep a second copy in host memory. Record it in the current project's Hive knowledge when the project uses Hive; use the global user-root knowledge only when the fact applies beyond one project. When no Hive knowledge destination fits (a project-specific fact in a folder without Hive), say so and suggest `hive setup --target <project folder>`; only then may host memory keep it.
+- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly; an unregistered repository's user-global fact stays at `user-root`, and ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
@@ -3492,7 +3495,8 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         }
         InterfaceLanguage::Ko => {
             let capture = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- Hive 지식이 기억 저장소: 앱 자체 기억(자동 기억·기억 파일·저장된 기억)에 남길 사실은 Hive Markdown 지식으로 기록하고 앱 기억에 중복 저장 금지. Hive를 쓰는 프로젝트의 사실은 그 프로젝트 지식에 기록, 한 프로젝트를 넘어 적용되는 사실만 전역 user-root 지식에 기록. 맞는 Hive 지식 위치가 없으면(Hive 없는 폴더의 프로젝트 전용 사실) 이를 알리고 `hive setup --target <project folder>`를 제안, 그때만 앱 기억에 보관 허용.
+- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
@@ -3752,7 +3756,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
     let selected_project_skills =
         hive_projection::project_default_skills().map_err(|error| error.to_string())?;
     Ok(GlobalProjectPreferences {
-        codex_plugin_files: std::collections::BTreeMap::new(),
+        codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
         interface_language: config.interface_language.as_str().to_owned(),
         wiki_enabled: config.wiki.enabled,
         wiki_backend: config.wiki.backend.as_str().to_owned(),
@@ -3917,6 +3921,11 @@ fn failure(error: &SetupError) -> ActionResult {
         next_action: None,
         data: None,
     }
+}
+
+/// Resolve the existing display preference without changing saved settings.
+pub(crate) fn output_language(arguments: &[String]) -> InterfaceLanguage {
+    setup_engine::messages::language(arguments)
 }
 
 #[cfg(test)]
@@ -5684,6 +5693,12 @@ usage_guard:
         ))
         .expect("enabled guidance");
         assert!(enabled.contains("Before every final response, review the current user statement"));
+        // Hive knowledge replaces the host's own memory: project first, global only when general.
+        assert!(enabled.contains("Hive knowledge is the memory"));
+        assert!(enabled.contains("never keep a second copy in host memory"));
+        assert!(enabled
+            .contains("global user-root knowledge only when the fact applies beyond one project"));
+        assert!(enabled.contains("only then may host memory keep it"));
         assert!(enabled
             .contains("applies immediately after installation in every selected-host folder"));
         assert!(
@@ -5706,6 +5721,9 @@ usage_guard:
         ))
         .expect("Korean enabled guidance");
         assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
+        assert!(korean.contains("Hive 지식이 기억 저장소"));
+        assert!(korean.contains("앱 기억에 중복 저장 금지"));
+        assert!(korean.contains("한 프로젝트를 넘어 적용되는 사실만 전역 user-root 지식에 기록"));
         assert!(korean.contains("설치 직후 선택 호스트의 모든 폴더에 적용"));
         assert!(korean.contains(
             "미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백"

@@ -86,6 +86,50 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0, validated)
         self.assertEqual(validated["changed_paths"], [])
 
+    def test_public_0150_default_upgrade_with_verified_plugin_preserves_layout(self) -> None:
+        fixture = REPOSITORY_ROOT / "tests/fixtures/project-predecessors/0.15.0/public-stable"
+        metadata = json.loads((fixture / "manifest.json").read_bytes())
+        archive = fixture / metadata["archive"]
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), metadata["sha256"])
+        target = self.work_root / "public-0150-default"
+        with ZipFile(archive) as package:
+            package.extractall(target)
+        self.assertFalse(read_yaml(target / ".hive/setup-answers.yml")["persistent_roles"])
+        user = self.work_root / "verified-plugin-user"
+        user.mkdir()
+        env = {"HIVE_TEST_USER_ROOT": str(user)}
+        process, result = self.invoke("install", "--scope", "user", "--host", "codex",
+                                      "--user-root", str(user), "--apply", environment=env)
+        self.assertEqual(process.returncode, 0, result)
+        answers = self.write_user_setup_answers("plugin-setup", hosts=["codex"])
+        process, result = self.invoke("setup", "--scope", "user", "--answers", str(answers),
+                                      "--user-root", str(user), "--apply", environment=env)
+        self.assertEqual(process.returncode, 0, result)
+        # User validation verifies native registration and source fingerprints, without a host call.
+        process, result = self.invoke("setup", "--scope", "user", "--answers", str(answers),
+                                      "--user-root", str(user), "--validate", environment=env)
+        self.assertEqual(process.returncode, 0, result)
+        foreign = target / "team-owned.txt"
+        foreign.write_bytes(b"team bytes\r\n")
+        before = snapshot_tree(target)
+        identity = ["--target", str(target), "--user-root", str(user)]
+        process, preview = self.invoke("project", "upgrade", *identity, "--dry-run", environment=env)
+        self.assertEqual(process.returncode, 0, preview)
+        self.assertEqual(snapshot_tree(target), before)
+        process, applied = self.invoke("project", "upgrade", *identity, "--apply", environment=env)
+        self.assertEqual(process.returncode, 0, applied)
+        self.assertFalse(read_yaml(target / ".hive/setup-answers.yml").get("compact_layout", False))
+        for name in ["GEMINI.md", "CLAUDE.md", ".prettierignore"]:
+            self.assertTrue((target / name).is_file(), name)
+        self.assertEqual(foreign.read_bytes(), b"team bytes\r\n")
+        process, validated = self.invoke("project", "upgrade", *identity, "--validate", environment=env)
+        self.assertEqual(process.returncode, 0, validated)
+        after = snapshot_tree(target)
+        process, again = self.invoke("project", "upgrade", *identity, "--apply", environment=env)
+        self.assertEqual(process.returncode, 0, again)
+        self.assertEqual(again["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), after)
+
     def test_all_public_stable_predecessors_preserve_and_recover(self) -> None:
         self._qualify_all_public_stable_predecessors(failure_tests=True)
 
@@ -159,8 +203,10 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
         after = tomllib.loads(harness_path.read_text(encoding="utf-8"))
         self.assertEqual(after["harness_version"], PRODUCT_VERSION)
         updated_agents = agents_path.read_bytes()
-        self.assertIn(b"Hive installation is optional for collaborators", updated_agents)
-        self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated_agents)
+        self.assertIn(b".agents/directives/00-project-harness.md", updated_agents)
+        self.assertIn(b"Hive installation is optional for collaborators", (target / ".agents/directives/00-project-harness.md").read_bytes())
+        self.assertIn(b".agents/directives/00-project-harness.md", updated_agents)
+        self.assertIn(b"In Hive-enabled mode, require exact path reservations", (target / ".agents/directives/00-project-harness.md").read_bytes())
         self.assertNotIn(b"- Before an automated edit, reserve exact paths", updated_agents)
         self.assertIn(b"## Hive availability gate", (target / ".agents/directives/00-project-harness.md").read_bytes())
         if local_note:
@@ -251,11 +297,14 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
                 updated = agents.read_bytes()
                 self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:START -->", 1)[0], prefix)
                 self.assertEqual(updated.split(b"<!-- AIGENT-HIVE:END -->", 1)[1], suffix + foreign)
-                self.assertIn(b"Hive installation is optional for collaborators", updated)
-                self.assertIn(b"In Hive-enabled mode, require exact path reservations", updated)
+                self.assertIn(b".agents/directives/00-project-harness.md", updated)
+                self.assertIn(b"Hive installation is optional for collaborators", (target / ".agents/directives/00-project-harness.md").read_bytes())
+                self.assertIn(b".agents/directives/00-project-harness.md", updated)
+                self.assertIn(b"In Hive-enabled mode, require exact path reservations", (target / ".agents/directives/00-project-harness.md").read_bytes())
                 self.assertNotIn(b"always require Hive even when it is unavailable", updated)
                 behavior = (target / ".agents/directives/00-project-harness.md").read_bytes()
-                self.assertEqual(behavior, (REPOSITORY_ROOT / "harness/directives/00-project-harness.md").read_bytes() + local_note)
+                self.assertEqual(behavior.count(local_note), 1)
+                self.assertEqual(behavior.replace(local_note, b"", 1), (REPOSITORY_ROOT / "harness/directives/00-project-harness.md").read_bytes())
                 self.assertEqual(user_rule.read_bytes(), b"# Team rules\r\nRun project tests.\r\n")
                 self.assertEqual(other_config.read_bytes(), b'{"enabled":true,"owner":"collaborator"}\r\n')
                 upgraded = active_snapshot()

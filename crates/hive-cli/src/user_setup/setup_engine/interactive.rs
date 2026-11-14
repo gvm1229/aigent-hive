@@ -137,14 +137,12 @@ pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCod
             execute(&options, mode, &mut terminal)
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
-    if json_output {
-        return crate::emit_action_result(&super::compact_result(result, summary));
-    }
-    eprintln!("{}", result.message);
-    if let Some(next) = &result.next_action {
-        eprintln!("{next}");
-    }
-    ExitCode::from(result.exit_code)
+    let result = if json_output {
+        super::compact_result(result, summary)
+    } else {
+        result
+    };
+    crate::emit_action_result(&result)
 }
 
 pub(in crate::user_setup) fn resume_pending_update(
@@ -1123,6 +1121,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             terminal.say("경고는 이미 확인한 사용량을 이용하며 추가로 조회하지 않습니다. 보호를 바꾸지 않고 사용량을 직접 확인하려면 다음 명령을 실행하세요.",
                 "Warnings reuse existing measurements without extra queries. To read usage without changing protection, run one of these commands:")?;
             for command in &manual_commands {
+                let command = command.strip_suffix(" --output json").unwrap_or(command);
                 terminal.say(command, command)?;
             }
         }

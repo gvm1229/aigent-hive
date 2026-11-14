@@ -16,8 +16,8 @@
 사용자 루트는 `.hive`의 상위 폴더. 현재 작업 폴더를 사용자 루트로 임의 대체 금지.
 
 ```text
-hive knowledge transfer export --preview --bundle ./knowledge.hivekb --output json
-hive knowledge transfer export --apply --bundle ./knowledge.hivekb --output json
+hive knowledge transfer export --preview --bundle ./knowledge.hivekb
+hive knowledge transfer export --apply --bundle ./knowledge.hivekb
 ```
 
 - 기본 범위: `all-portable`; 미리보기의 포함 수·제외 수·용량 확인
@@ -31,8 +31,8 @@ hive knowledge transfer export --apply --bundle ./knowledge.hivekb --output json
 명령은 PowerShell과 POSIX 셸에서 동일. 공백 경로는 따옴표로 감싸고 실제 파일 위치로 변경.
 
 ```text
-hive knowledge transfer import --preview --bundle ./knowledge.hivekb --expected-sha256 sha256:<전달받은_지문> --output json
-hive knowledge transfer import --apply --bundle ./knowledge.hivekb --expected-sha256 sha256:<전달받은_지문> --preview-digest sha256:<미리보기_지문> --output json
+hive knowledge transfer import --preview --bundle ./knowledge.hivekb --expected-sha256 sha256:<전달받은_지문>
+hive knowledge transfer import --apply --bundle ./knowledge.hivekb --expected-sha256 sha256:<전달받은_지문> --preview-digest sha256:<미리보기_지문>
 ```
 
 1. 파일 무결성·모음·충돌 경로 검토
@@ -50,8 +50,8 @@ FTS 미준비 상태를 별도 표시하고 사용 설정은 보존.
 이전 응답의 `transfer.id`·`receipt_digest`로 선택을 정확한 작업에 연결.
 
 ```text
-hive knowledge transfer status --id <이전_ID> --output json
-hive knowledge transfer vector --id <이전_ID> --receipt-digest sha256:<현재_기록_지문> --answer yes --output json
+hive knowledge transfer status --id <이전_ID>
+hive knowledge transfer vector --id <이전_ID> --receipt-digest sha256:<현재_기록_지문> --answer yes
 ```
 
 - `yes`: 이미 승인된 해당 모음만 즉시 재생성. 완료된 색인은 검증 후 재사용
@@ -68,7 +68,7 @@ hive knowledge transfer vector --id <이전_ID> --receipt-digest sha256:<현재_
 `merge` 사용. 입력 묶음 원본 변경 없음.
 
 ```text
-hive knowledge transfer merge preview --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --user-root <C의_사용자_루트> --output json
+hive knowledge transfer merge preview --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --user-root <C의_사용자_루트>
 ```
 
 - `exact_duplicate_count`: 같은 바이트 지식의 자동 중복 제거 수
@@ -102,8 +102,8 @@ hive knowledge transfer merge preview --bundle ./computer-a.hivekb --bundle ./co
 ```
 
 ```text
-hive knowledge transfer merge review --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --user-root <C의_사용자_루트> --output json
-hive knowledge transfer merge apply --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --review-digest sha256:<review_digest> --user-root <C의_사용자_루트> --output json
+hive knowledge transfer merge review --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --user-root <C의_사용자_루트>
+hive knowledge transfer merge apply --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --review-digest sha256:<review_digest> --user-root <C의_사용자_루트>
 ```
 
 - `review`: 검토 지문·결정 범위 확인. 원문·FTS 변경 없음

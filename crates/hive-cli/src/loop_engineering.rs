@@ -43,12 +43,12 @@ const LOOP_USAGE: &str = "\
 Manage a durable prepare-only loop graph.
 
 USAGE:
-    hive loop initialize --target <dir> --graph <graph.md> --output json
-    hive loop validate --target <dir> --run <run-id> --output json
-    hive loop checkpoint --target <dir> --request <request.json> --output json
-    hive loop steer --target <dir> --request <request.json> --output json
-    hive loop prepare --target <dir> --request <request.json> --output json
-    hive loop recover --target <dir> --run <run-id> --output json
+    hive loop initialize --target <dir> --graph <graph.md> [--output json]
+    hive loop validate --target <dir> --run <run-id> [--output json]
+    hive loop checkpoint --target <dir> --request <request.json> [--output json]
+    hive loop steer --target <dir> --request <request.json> [--output json]
+    hive loop prepare --target <dir> --request <request.json> [--output json]
+    hive loop recover --target <dir> --run <run-id> [--output json]
 ";
 
 #[derive(Debug)]

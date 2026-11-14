@@ -32,6 +32,9 @@ pub(crate) fn run_alias(god: &God, args: &[String]) -> std::process::ExitCode {
     let expanded = match alias_arguments(god, args) {
         Ok(args) => args,
         Err(error) => {
+            if !crate::human_output::machine() {
+                return crate::human_output::error(&error);
+            }
             eprintln!("{} {error}", god.prefix());
             return std::process::ExitCode::from(2);
         }
@@ -47,6 +50,9 @@ pub(crate) fn run_alias(god: &God, args: &[String]) -> std::process::ExitCode {
     match user.and_then(|user| decorate(&mut serde_json::json!({}), god, &user)) {
         Ok(()) => crate::dispatch(expanded),
         Err(error) => {
+            if !crate::human_output::machine() {
+                return crate::human_output::error(&error);
+            }
             eprintln!("{error}");
             std::process::ExitCode::from(2)
         }

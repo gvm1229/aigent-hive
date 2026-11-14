@@ -9,8 +9,8 @@ summary: "Native host 분담 기능과 별개로 exact runtime attestation을 �
 tags: [antigravity, claude, codex, model-routing, subagent, v0-10, v0-9]
 aliases: ["Sol Advisor 기능 동등성", "Task별 model routing"]
 sources:
-  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:315e8160293b1df22289c1b688ff8fb7ce444a791c858013324a73195b01c194"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:c1b10c7785570de5b92f85ef3a2b6a9f43efe12e03e008cc0950bbf156f00819"
+  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:48906789154025820ec3ca68af79382ad4c4b72167a99d3b535824654378eb40"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:34e8f7c0d827e90ed98a1b8832f8a2ab4b19f736ea67135f6fe71f728bf87287"
   - "repo:crates/hive-core/src/native_workflow.rs#sha256:246f845d21fe73c070abdfa4ffa78d28e829d84b3da498dcc1530355a54a0900"
   - "repo:docs/archive/plans/foundations/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"
   - "repo:docs/research/host-work-delegation-2026-08-20.md#sha256:00e8c2821082ececec3cbef81538030fc9487a8ba0903f1ee1fb378d73aa6c74"

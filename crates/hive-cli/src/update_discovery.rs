@@ -19,7 +19,7 @@ const UPDATE_CHECK_USAGE: &str = "\
 Check the fixed npm registry metadata endpoint for a newer Aigent Hive version.
 
 USAGE:
-    hive update --check --user-root <absolute-dir> --output json
+    hive update --check --user-root <absolute-dir> [--output json]
 
 The check never installs or activates an update.
 ";
@@ -122,7 +122,7 @@ fn parse_arguments(arguments: &[String]) -> Result<Arguments, String> {
             }
         }
     }
-    if !check || output.as_deref() != Some("json") {
+    if !check || output.as_deref().is_some_and(|value| value != "json") {
         return Err("update check requires --check and --output json".to_owned());
     }
     let user_root =

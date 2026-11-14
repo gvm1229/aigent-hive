@@ -36,7 +36,7 @@ fn parse(arguments: &[String]) -> Result<Options, AdapterError> {
             ));
         }
     }
-    if values.get("--output") != Some(&"json") {
+    if values.get("--output").is_some_and(|value| *value != "json") {
         return Err(AdapterError::Input(
             "usage show requires --output json".into(),
         ));

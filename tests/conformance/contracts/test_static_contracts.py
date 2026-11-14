@@ -277,8 +277,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")
         self.assertIn("no separate tracked Skill inventory", " ".join(agents.split()))
         architecture=" ".join(directive_text(".agents/directives/02-architecture.md").split())
-        self.assertIn("Only source-project exceptions:",architecture)
-        self.assertIn("nonshipping, with no general source Skill inventory",architecture)
+        self.assertIn("Source exceptions:",architecture)
+        self.assertIn("neither ships. No general source Skill inventory",architecture)
         for name in ["update-summary","draft-devlog"]:
             self.assertIn(f".agents/skills/{name}/",architecture)
         self.assertIn("Source 규칙", ownership)

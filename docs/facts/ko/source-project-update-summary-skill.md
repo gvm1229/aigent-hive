@@ -11,7 +11,7 @@ aliases: ["update-summary"]
 sources:
   - "repo:.agents/skills/update-summary/SKILL.md#sha256:37f8bc71e3ef0e02ccaa82fc2d430dfb61be148f26be1709ac439c0424b8daf8"
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
-  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
+  - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:0e919445e53ecef2030dfc422679f20a22b519a37dc64ada56494ceb871e92d9"
   - "repo:docs/releases/0.10.0.subscriber.ko.md#sha256:ce658d7a5addabc93d69c99d3bea80fd0137c61d3141c9880c05fa1e50d4e426"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [public-skill-identity, source-development, v0-9-full-release]

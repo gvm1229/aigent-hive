@@ -159,6 +159,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     self.discovery_root(target, host)
                     / "usage-guard/SKILL.md"
                 ).read_text(encoding="utf-8")
+                self.assertIn(".agents/directives/00-project-harness.md", agents)
+                self.assertLessEqual(len(agents.split("## Hive\n", 1)[1].splitlines()), 15)
+                agents += "\n" + (target / ".agents/directives/00-project-harness.md").read_text(encoding="utf-8")
                 self.assertIn("hive usage enforce", agents)
                 self.assertIn("immediately before automatic dispatch", agents.lower())
                 self.assertIn("In Hive-enabled mode, require the installed session-bound", agents)

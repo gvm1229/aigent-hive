@@ -25,6 +25,7 @@ mod custom_agent_cli;
 mod discord;
 mod display_options;
 mod gods;
+mod human_output;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -67,65 +68,68 @@ mod user_setup;
 const USAGE: &str = "\
 Aigent Hive
 
+OUTPUT:
+    Readable results use your saved language. Add --output json for machine output.
+
 USAGE:
     hive doctor
     hive roster --help
     hive summon --help
     hive <god> <command> [options]
-    hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
-    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
-    hive setup --target <dir> --user-root <dir> --show --summary --output json
-    hive setup --target <dir> --user-root <dir> --describe --question <question-id> --output json
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] --output json
-    hive source-wiki lint --target <source-root> --output json
-    hive source-wiki index --target <source-root> --output json
-    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
-    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] --output json
-    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
+    hive setup --target <dir> --user-root <dir> --show --summary [--output json]
+    hive setup --target <dir> --user-root <dir> --describe --question <question-id> [--output json]
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
+    hive source-wiki lint --target <source-root> [--output json]
+    hive source-wiki index --target <source-root> [--output json]
+    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
+    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] [--output json]
+    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm] [--interactive|--non-interactive] [--output json]
-    hive update --check --user-root <absolute-dir> --output json
+    hive update --check --user-root <absolute-dir> [--output json]
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
-    hive discord inbound --host codex|claude|antigravity --output json
+    hive discord inbound --host codex|claude|antigravity [--output json]
     hive report preview|collect|export --help
-    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] --output json
-    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
-    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
-    hive session recover --target <dir> --output json
-    hive index rebuild --target <dir> --output json
-    hive route --request <json> --output json
-    hive prompt validate --request <input.json> --result <result.json> --output json
-    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
-    hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
-    hive policy evaluate --input <json> --output json
-    hive usage check --account-digest <sha256:...> [--threshold <0..99>] --output json
-    hive usage probe-native --host codex|claude|antigravity --output json
-    hive usage monitor preview|enable|disable|status --user-root <dir> --output json
+    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) [--skill-merge-inputs <skill>|--skill-merges <json> --approve-skill-merge <digest>] [--output json]
+    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... [--output json]
+    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> [--output json]
+    hive session recover --target <dir> [--output json]
+    hive index rebuild --target <dir> [--output json]
+    hive route --request <json> [--output json]
+    hive prompt validate --request <input.json> --result <result.json> [--output json]
+    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
+    hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] [--output json]
+    hive policy evaluate --input <json> [--output json]
+    hive usage check --account-digest <sha256:...> [--threshold <0..99>] [--output json]
+    hive usage probe-native --host codex|claude|antigravity [--output json]
+    hive usage monitor preview|enable|disable|status --user-root <dir> [--output json]
     hive storage [--user-root <dir>] [--output json]
     hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
-    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
-    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json --output json
-    hive usage summarize-tokens --request <normalized-events.json> --output json
-    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] --output json
-    hive role validate --target <dir> --role <role-id> --output json
-    hive role handoff --target <dir> --request <request.json> --output json
-    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] --output json
-    hive run closure --target <dir> --run <run-id> --output json
-    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> [--output json]
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] [--output json]
+    hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json [--output json]
+    hive usage summarize-tokens --request <normalized-events.json> [--output json]
+    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] [--output json]
+    hive role validate --target <dir> --role <role-id> [--output json]
+    hive role handoff --target <dir> --request <request.json> [--output json]
+    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> [--output json]
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] [--output json]
+    hive run closure --target <dir> --run <run-id> [--output json]
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> [--output json]
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive orchestration status|plan|dispatch|receipt|cancel|recover|authority|migrate --help
-    hive judge package --target <dir> --request <json> --output json
-    hive judge receipt --target <dir> --request <json> --package <json> --assignment <json> --output json
-    hive judge quorum --target <dir> --request <json> --output json
+    hive judge package --target <dir> --request <json> [--output json]
+    hive judge receipt --target <dir> --request <json> --package <json> --assignment <json> [--output json]
+    hive judge quorum --target <dir> --request <json> [--output json]
     hive korean inspect|verify|sanitize|pack --help
-    hive release verify --bundle <release-dir> --output json
+    hive release verify --bundle <release-dir> [--output json]
     hive update --help
 ";
 
@@ -134,11 +138,11 @@ Create or validate an installed Aigent Hive consumer harness.
 
 USAGE:
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
-    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) --output json
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--output json]
 
 MODES:
-    --summary    Bound JSON status/completion output; not an approval preview
+    --summary    Compact status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
@@ -236,6 +240,7 @@ fn main() -> ExitCode {
     update_bridge::mark_process_start();
     let mut arguments: Vec<String> = env::args().skip(1).collect();
     display_options::configure(&mut arguments);
+    human_output::configure(&arguments);
     if arguments == ["__setup-apply-worker"] {
         return user_setup::run_apply_worker();
     }
@@ -270,6 +275,10 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
     {
         return gods::run_alias(god, &arguments[1..]);
     }
+    if let Some(family) = family_help_request(&arguments) {
+        print_family_help(family);
+        return ExitCode::SUCCESS;
+    }
     match arguments.first().map(String::as_str) {
         Some("setup")
             if arguments.iter().any(|argument| argument == "--scope")
@@ -287,6 +296,13 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         }
         Some("setup") if arguments.iter().any(|argument| argument == "--scope") => {
             user_setup::run(&arguments[1..])
+        }
+        // A bare `hive setup` is a person's first step: start the global user setup.
+        Some("setup") if matches!(&arguments[1..], [] | [_, _] if arguments[1..].iter().map(String::as_str).eq(["--output", "json"]) || arguments.len() == 1) =>
+        {
+            let mut user = vec!["--scope".to_owned(), "user".to_owned()];
+            user.extend_from_slice(&arguments[1..]);
+            user_setup::run(&user)
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
@@ -343,6 +359,12 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
             update_discovery::run(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
+        Some("doctor" | "check-target") if !wants_json(&arguments) => {
+            match run_human(arguments.into_iter()) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(message) => human_output::error(&message),
+            }
+        }
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {
@@ -358,15 +380,12 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
                 data: None,
             };
             emit_json_result(&result);
-            eprintln!("error: {}", result.message);
+            crate::human_output::diagnostic(&result.message);
             ExitCode::from(2)
         }
         _ => match run_human(arguments.into_iter()) {
             Ok(()) => ExitCode::SUCCESS,
-            Err(message) => {
-                eprintln!("error: {message}");
-                ExitCode::from(2)
-            }
+            Err(message) => human_output::error(&message),
         },
     }
 }
@@ -382,6 +401,16 @@ enum ParsedUsageArguments {
 }
 
 fn run_usage(arguments: &[String]) -> ExitCode {
+    if arguments.is_empty() || is_help_request(arguments) {
+        println!("Aigent Hive usage protection\n\nUSAGE:");
+        for line in USAGE
+            .lines()
+            .filter(|line| line.trim_start().starts_with("hive usage "))
+        {
+            println!("{line}");
+        }
+        return ExitCode::SUCCESS;
+    }
     if arguments.first().map(String::as_str) == Some("monitor") {
         return usage_monitor::run(&arguments[1..]);
     }
@@ -420,7 +449,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     };
     emit_json_result(&result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -445,7 +474,7 @@ fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
             }
             index += 2;
         }
-        if output.as_deref() != Some("json") {
+        if output.as_deref().is_some_and(|value| value != "json") {
             return Err("usage probe-native requires --output json".to_owned());
         }
         let host = match host.as_deref() {
@@ -495,7 +524,7 @@ fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("usage check requires --output json".to_owned());
     }
     let account_digest =
@@ -690,6 +719,48 @@ fn usage_unknown_result_with_next(
     }
 }
 
+/// `hive <family> ... --help` for families without their own help. Machine protocols and
+/// families that already print dedicated help keep their behaviour.
+fn family_help_request(arguments: &[String]) -> Option<&str> {
+    let family = arguments.first()?.as_str();
+    let asks = arguments[1..]
+        .iter()
+        .any(|argument| argument == "--help" || argument == "-h");
+    let own_help = matches!(
+        family,
+        "setup" | "usage" | "update" | "source-wiki" | "hook" | "policy" | "discord"
+    );
+    let lines = family_usage_lines(family);
+    // A family listed only as `... --help` prints its own detailed help; leave it alone.
+    let has_real_usage = lines
+        .iter()
+        .any(|line| !line.trim_end().ends_with("--help"));
+    (asks && !own_help && has_real_usage && !family.starts_with('-') && !family.starts_with("__"))
+        .then_some(family)
+}
+
+fn family_usage_lines(family: &str) -> Vec<&'static str> {
+    let prefix = format!("hive {family}");
+    USAGE
+        .lines()
+        .filter(|line| {
+            let line = line.trim_start();
+            line == prefix || line.starts_with(&format!("{prefix} "))
+        })
+        .collect()
+}
+
+fn print_family_help(family: &str) {
+    println!(
+        "Aigent Hive {family}
+
+USAGE:"
+    );
+    for line in family_usage_lines(family) {
+        println!("{line}");
+    }
+}
+
 fn is_help_request(arguments: &[String]) -> bool {
     matches!(arguments, [argument] if argument == "-h" || argument == "--help")
 }
@@ -756,7 +827,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let result = user_setup::setup_summary(result, summary);
     emit_json_result(&result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -803,7 +874,7 @@ fn execute_setup_and_registry(
             .map(|preferences| &preferences.codex_plugin_files)
             .filter(|files| !files.is_empty())
         {
-            let current = user_install::validated_codex_plugin_files(user_root)
+            let current = user_install::validated_project_plugin_files(user_root)
                 .map_err(RenderError::Verification)?;
             if &current != expected {
                 return Err(RenderError::Verification(
@@ -984,7 +1055,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err(RenderError::Input(
             "setup requires --output json".to_owned(),
         ));
@@ -1053,6 +1124,9 @@ fn failure_result_for(
 }
 
 fn emit_json_result(result: &ActionResult) {
+    if human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(json) => println!("{json}"),
         Err(error) => {
@@ -1151,7 +1225,7 @@ fn parse_route(arguments: &[String]) -> Result<RouteArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("route requires --output json".to_owned());
     }
     Ok(RouteArguments {
@@ -1251,7 +1325,7 @@ fn parse_prompt_validate(arguments: &[String]) -> Result<PromptArguments, String
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("prompt validate requires --output json".to_owned());
     }
     Ok(PromptArguments {
@@ -1392,7 +1466,7 @@ fn parse_prompt_approval(arguments: &[String]) -> Result<PromptApprovalArguments
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("prompt approve requires --output json".to_owned());
     }
     Ok(PromptApprovalArguments {
@@ -1623,7 +1697,7 @@ fn logical_action_name(action: LogicalAction) -> &'static str {
 fn emit_action_result(result: &ActionResult) -> ExitCode {
     emit_json_result(result);
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
     ExitCode::from(result.exit_code)
 }
@@ -1638,20 +1712,20 @@ fn run_hook(arguments: &[String]) -> ExitCode {
             )
         })
     {
-        println!("{}", neutral_stop_hook_payload());
+        emit_hook_literal(neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
     }
     match parse_hook(arguments) {
         Ok(arguments) => {
             let Some(fresh_capabilities) = arguments.capabilities.as_deref() else {
-                println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                emit_hook_literal(neutral_stop_hook_payload());
                 return ExitCode::SUCCESS;
             };
             let target = match env::current_dir() {
                 Ok(target) => target,
                 Err(error) => {
                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     return ExitCode::SUCCESS;
                 }
             };
@@ -1673,38 +1747,41 @@ fn run_hook(arguments: &[String]) -> ExitCode {
                                 }
                                 Err(error) => {
                                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                                    println!(
-                                "{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}"
-                            );
+                                    emit_hook_literal(neutral_stop_hook_payload());
                                     ExitCode::SUCCESS
                                 }
                             }
                         }
                         Err(error) => {
                             eprintln!("diagnostic: inactive fallback hook: {error}");
-                            println!(
-                                "{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}"
-                            );
+                            emit_hook_literal(neutral_stop_hook_payload());
                             ExitCode::SUCCESS
                         }
                     }
                 }
                 Ok(HookAuthorization::Inert) => {
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     ExitCode::SUCCESS
                 }
                 Err(error) => {
                     eprintln!("diagnostic: inactive fallback hook: {error}");
-                    println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                    emit_hook_literal(neutral_stop_hook_payload());
                     ExitCode::SUCCESS
                 }
             }
         }
         Err(message) => {
             eprintln!("diagnostic: inactive fallback hook: {message}");
-            println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+            emit_hook_literal(neutral_stop_hook_payload());
             ExitCode::SUCCESS
         }
+    }
+}
+
+fn emit_hook_literal(text: &str) {
+    let value: serde_json::Value = serde_json::from_str(text).expect("static hook payload");
+    if !human_output::emit_if_human(&value) {
+        println!("{text}");
     }
 }
 
@@ -2161,11 +2238,14 @@ fn checkpoint_reminder(target: &Path, input: &HookInput) -> Result<HookResult, R
 }
 
 fn emit_hook_result(result: &HookResult) {
+    if human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(json) => println!("{json}"),
         Err(error) => {
             eprintln!("diagnostic: inactive fallback hook: {error}");
-            println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+            emit_hook_literal(neutral_stop_hook_payload());
         }
     }
 }
@@ -2213,7 +2293,7 @@ fn parse_hook(arguments: &[String]) -> Result<HookArguments, String> {
         }
         index += 1;
     }
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("hook requires --output json".to_owned());
     }
     Ok(HookArguments {
@@ -2238,7 +2318,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             check_target(Path::new(&target))
         }
         Some("-v" | "-V" | "--version") => {
-            println!("{}", version_output());
+            human_output::emit_version(&version_output());
             Ok(())
         }
         Some("-h" | "--help") | None => {
@@ -2286,20 +2366,40 @@ fn doctor() -> Result<(), String> {
         env::current_dir().map_err(|error| format!("cannot read current directory: {error}"))?;
     let marker = source_marker_path(&current_directory);
 
+    // Release and install checks match this exact identity line.
     println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
-    println!("workspace: {}", current_directory.display());
-    println!(
-        "source workspace: {}",
-        if marker.is_file() { "yes" } else { "no" }
-    );
-    println!("model API client: disabled by architecture");
-    println!("setup renderer: available");
+    emit_json_result(&ActionResult {
+        schema_version: 1,
+        action: "InspectInstallation",
+        status: "success",
+        exit_code: 0,
+        code: "hive.doctor-complete",
+        message: "Hive installation inspected".into(),
+        changed_paths: vec![],
+        evidence: vec![],
+        next_action: None,
+        data: Some(
+            serde_json::json!({"version":env!("CARGO_PKG_VERSION"),"path":current_directory,
+            "source_workspace":marker.is_file(),"model_api_client":false,"setup_renderer":true}),
+        ),
+    });
     Ok(())
 }
 
 fn check_target(target: &Path) -> Result<(), String> {
     ensure_consumer_target(target).map_err(|error| error.to_string())?;
-    println!("target accepted: {}", target.display());
+    emit_json_result(&ActionResult {
+        schema_version: 1,
+        action: "CheckTarget",
+        status: "success",
+        exit_code: 0,
+        code: "hive.target-accepted",
+        message: "Target folder accepted".into(),
+        changed_paths: vec![],
+        evidence: vec![],
+        next_action: None,
+        data: Some(serde_json::json!({"path":target})),
+    });
     Ok(())
 }
 

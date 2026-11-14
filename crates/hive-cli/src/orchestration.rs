@@ -27,9 +27,9 @@ const ORCHESTRATION_USAGE: &str = "\
 Manage provider-neutral durable orchestration state without spawning a host process.
 
 USAGE:
-    hive orchestration status --target <dir> --run <id> --output json
-    hive orchestration plan|dispatch|cancel|recover --target <dir> --run <id> --event <event.toml|json> --expected-head <none|sequence:sha256> --control-epoch <n> --authority <authority.toml|json> --trust-root <external-root.toml|json> --request-digest <sha256> --now <ordered-time> --output json
-    hive orchestration receipt --target <dir> --run <id> --event <event.toml|json> --receipt <receipt.json> --expected-head <none|sequence:sha256> --control-epoch <n> --authority <authority.toml|json> --trust-root <external-root.toml|json> --request-digest <sha256> --now <ordered-time> --output json
+    hive orchestration status --target <dir> --run <id> [--output json]
+    hive orchestration plan|dispatch|cancel|recover --target <dir> --run <id> --event <event.toml|json> --expected-head <none|sequence:sha256> --control-epoch <n> --authority <authority.toml|json> --trust-root <external-root.toml|json> --request-digest <sha256> --now <ordered-time> [--output json]
+    hive orchestration receipt --target <dir> --run <id> --event <event.toml|json> --receipt <receipt.json> --expected-head <none|sequence:sha256> --control-epoch <n> --authority <authority.toml|json> --trust-root <external-root.toml|json> --request-digest <sha256> --now <ordered-time> [--output json]
     hive orchestration authority issue|revoke --help
     hive orchestration migrate --help
 ";

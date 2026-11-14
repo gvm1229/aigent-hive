@@ -92,8 +92,11 @@ class DocsWikiConformance(unittest.TestCase):
             self.assertIn("hive knowledge export --user-root", text)
             self.assertIn("hive knowledge import --user-root", text)
             self.assertIn("--scope global", text)
-            self.assertIn("--dry-run --output json", text)
-            self.assertIn("--apply --output json", text)
+            self.assertIn("--dry-run", text)
+            self.assertIn("--apply", text)
+            self.assertNotIn("--dry-run --output json", text)
+            self.assertNotIn("--apply --output json", text)
+            self.assertIn("--output json", text)
             self.assertIn("$HOME", text)
             self.assertIn("$env:USERPROFILE", text)
 

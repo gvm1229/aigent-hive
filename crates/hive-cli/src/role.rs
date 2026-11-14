@@ -22,13 +22,13 @@ const VALIDATE_USAGE: &str = "\
 Validate one persistent role without mutation.
 
 USAGE:
-    hive role validate --target <dir> --role <role-id> --output json
+    hive role validate --target <dir> --role <role-id> [--output json]
 ";
 const HANDOFF_USAGE: &str = "\
 Record one explicit optimistic role handoff transaction.
 
 USAGE:
-    hive role handoff --target <dir> --request <request.json> --output json
+    hive role handoff --target <dir> --request <request.json> [--output json]
 ";
 
 #[derive(Debug, Deserialize)]

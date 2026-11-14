@@ -56,7 +56,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         return native::run(&arguments[1..]);
     }
     if arguments == ["--help"] || arguments == ["evaluate", "--help"] {
-        println!("Policy evaluation and explicit native hook configuration.\n\nhive policy evaluate --input <json> --output json\nhive policy hook --help\nhive policy hooks --help\nEvaluation is evidence, never execution authority.");
+        println!("Policy evaluation and explicit native hook configuration.\n\nhive policy evaluate --input <json> [--output json]\nhive policy hook --help\nhive policy hooks --help\nEvaluation is evidence, never execution authority.");
         return ExitCode::SUCCESS;
     }
     let result = parse_and_evaluate(arguments);

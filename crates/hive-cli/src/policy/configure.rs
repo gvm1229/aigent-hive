@@ -810,7 +810,7 @@ fn require_native_owner(target: &PinnedTarget) -> Result<(), String> {
 
 pub(super) fn run(args: &[String]) -> ExitCode {
     if args == ["--help"] {
-        println!("hive policy hooks preview|apply|remove|status|recover --host codex|claude|antigravity --target <project> --output json [--confirm <preview-digest>] [--review-run <id>]\nOptional review-run is for Codex/Claude install previews and binds notices to an existing run's recorded session. Preview is read-only. Apply and removal require their exact preview. Host trust and effect remain separately unverified.");
+        println!("hive policy hooks preview|apply|remove|status|recover --host codex|claude|antigravity --target <project> [--output json] [--confirm <preview-digest>] [--review-run <id>]\nOptional review-run is for Codex/Claude install previews and binds notices to an existing run's recorded session. Preview is read-only. Apply and removal require their exact preview. Host trust and effect remain separately unverified.");
         return ExitCode::SUCCESS;
     }
     let before = observe(args);

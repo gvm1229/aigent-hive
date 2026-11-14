@@ -40,26 +40,26 @@ const CHECKPOINT_USAGE: &str = "\
 Record one optimistic durable run checkpoint.
 
 USAGE:
-    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
+    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> [--output json]
 ";
 const RESUME_USAGE: &str = "\
 Inspect a durable run, or prepare one session-bound automatic authorization without spawning.
 
 USAGE:
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id> --process-id <positive-u32>] [--user-root <dir>] [--role <role-id> [--threshold <0..99>]] [--output json]
     Automatic preparation requires --session-id, --process-id, and --role. Manual inspection remains read-only.
 ";
 const CLOSURE_USAGE: &str = "\
 Calculate whether one durable Hive run may finish without spawning or mutation.
 
 USAGE:
-    hive run closure --target <dir> --run <run-id> --output json
+    hive run closure --target <dir> --run <run-id> [--output json]
 ";
 const CONTINUATION_USAGE: &str = "\
 Evaluate one host-owned continuation request without spawning or mutation.
 
 USAGE:
-    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> [--output json]
 ";
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -1896,7 +1896,7 @@ pub(crate) fn parse_options<'a>(
         options.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&options, "--output") != Some("json") {
+    if optional(&options, "--output").is_some_and(|value| value != "json") {
         return Err(AdapterError::Input(
             "role and run commands require --output json".to_owned(),
         ));

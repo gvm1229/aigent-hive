@@ -9,11 +9,11 @@ const SOURCE_WIKI_USAGE: &str = "\
 Provider-neutral bilingual source Wiki and disposable SQLite index.
 
 USAGE:
-    hive source-wiki lint --target <source-root> --output json
-    hive source-wiki index --target <source-root> --output json
-    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
-    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--format json|html] --output json
-    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] --output json
+    hive source-wiki lint --target <source-root> [--output json]
+    hive source-wiki index --target <source-root> [--output json]
+    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
+    hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--format json|html] [--output json]
+    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive source-wiki vector --help
 ";
 
@@ -240,7 +240,7 @@ fn parse_options<'a>(arguments: &'a [String], allowed: &[&str]) -> Result<Option
         options.push((option, value.as_str()));
         index += 2;
     }
-    if optional(&options, "--output") != Some("json") {
+    if optional(&options, "--output").is_some_and(|value| value != "json") {
         return Err(WikiError::InvalidInput(
             "source-wiki commands require --output json".to_owned(),
         ));

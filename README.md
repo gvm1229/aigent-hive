@@ -6,20 +6,20 @@
 
 > A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.15.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.15.1-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.0 release-date=2026-11-12 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.1 release-date=2026-11-15 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.15.0` is the current public release.
+Stable `0.15.1` is the current public release.
 
 ## Roles and named feature entries
 
@@ -29,7 +29,7 @@ this release has no enablement path. See [feature ownership and role migration](
 
 ## Install the current stable release
 
-`0.15.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.15.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -38,7 +38,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.15.0
+npm install -g aigent-hive@0.15.1
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -47,26 +47,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.15.0 (released 2026-11-12)
+AIgent Hive v0.15.1 (released 2026-11-15)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.15.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.15.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.15.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.15.1/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.1/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -82,7 +82,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.15.0. The stable install guidance is
+Install the current stable release 0.15.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -100,7 +100,17 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.15.0
+## What changed in 0.15.1
+
+- Commands print readable English or Korean results by default, with the reason and the next step. Add `--output json` when a program reads the result.
+- Project setup detects languages, frameworks, package managers, commands and structure locally without model calls, and shows the proposal for one confirmation.
+- Project facts live apart from a short Hive entry. Rules you wrote outside Hive markers stay unchanged.
+- A project chosen as compact reuses the verified Hive plugin for shared Skills. Other projects keep their local Skill copies.
+- Facts an agent would keep in its own memory are written as Hive Markdown knowledge, in the project first and in global knowledge only when they apply beyond one project.
+- Every Skill description, including the nine named entries, says what the Skill does.
+- Upgrade from 0.15.0 or 0.14.x with authenticated historical sources. Supported JSON schemas, values and exit codes stay the same.
+
+## Earlier changes in 0.15.0
 
 - Choose among nine named entries for planning, research, implementation, writing, setup, coordination, knowledge, usage and cleanup. Existing commands and Skill paths remain available.
 - Set role models and effort globally or per project. Inspect the merged configuration with `hive roster`; fixed-model user profiles remain preserved.
@@ -137,7 +147,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 
 ## Supported targets
 
-| Platform | Native target | 0.15.0 evidence |
+| Platform | Native target | 0.15.1 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -148,7 +158,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 The accepted public test covers setup, cancellation, recovery, updates, removal and
 reinstallation on Windows x64, Linux x64 and macOS arm64. Windows also covers actual Codex
 CLI registration and an idle monitor. This does not prove live desktop-model or quota sensing
-on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.0` uses explicit macOS ad-hoc signing and publishes Windows as
+on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.1` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
@@ -226,6 +236,11 @@ Antigravity session retries it.
 
 Hive never installs an update silently.
 
+## CLI output
+
+Commands print readable Korean or English results by default.
+Add `--output json` only when a program, Skill or hook reads the result.
+
 ## Move global knowledge to another computer
 
 Use a `.hivekb` bundle to move global knowledge between computers. `--user-root` is the
@@ -242,7 +257,7 @@ Export the global bundle:
 
 ```sh
 bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle" --output json
+hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle"
 shasum -a 256 "$bundle"
 ```
 
@@ -253,9 +268,9 @@ matches, and the dry run reports no conflict or validation error.
 ```sh
 bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 shasum -a 256 "$bundle"
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run --output json
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply --output json
-hive knowledge lint --target "$HOME" --user-root "$HOME" --output json
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply
+hive knowledge lint --target "$HOME" --user-root "$HOME"
 ```
 
 ### Windows PowerShell
@@ -264,7 +279,7 @@ Export the global bundle:
 
 ```powershell
 $bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle --output json
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle
 Get-FileHash -Algorithm SHA256 $bundle
 ```
 
@@ -275,9 +290,9 @@ conflict or validation error.
 ```powershell
 $bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
 Get-FileHash -Algorithm SHA256 $bundle
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run --output json
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply --output json
-hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --output json
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply
+hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE
 ```
 
 ## Automatic dispatch safeguard
@@ -287,7 +302,7 @@ dispatch:
 
 ```console
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
-hive run resume --dispatch-intent automatic --target <project> --run <run-id> --capabilities <json> --output json
+hive run resume --dispatch-intent automatic --target <project> --run <run-id> --capabilities <json>
 ```
 
 The first command is only a preflight; it never authorizes dispatch by itself. External

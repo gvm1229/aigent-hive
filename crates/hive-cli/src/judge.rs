@@ -36,21 +36,21 @@ const PACKAGE_USAGE: &str = "\
 Build one digest-bound clean-context judge package without mutation.
 
 USAGE:
-    hive judge package --target <dir> --request <request.json> --output json
+    hive judge package --target <dir> --request <request.json> [--output json]
 ";
 const QUORUM_USAGE: &str = "\
 Aggregate independent final judge verdicts without mutation.
 
 USAGE:
     hive judge quorum --target <dir> --request <request.json> \
-        --trust-root <external-protected.toml> --output json
+        --trust-root <external-protected.toml> [--output json]
 ";
 const RECEIPT_USAGE: &str = "\
 Validate one host-owned adversarial Judge launch and result without mutation.
 
 USAGE:
     hive judge receipt --target <dir> --request <receipt.json> \
-        --package <package.json> --assignment <assignment.json> --output json
+        --package <package.json> --assignment <assignment.json> [--output json]
 ";
 
 #[derive(Debug, Deserialize)]

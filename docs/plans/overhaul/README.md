@@ -8,14 +8,17 @@
 
 - 단계 1b: 8/8·0.14.2 정식·병합·분기 삭제
 - 단계 2: 10/10(확인 7·대체 종료 3), `develop@24057f36` 병합·분기 삭제
-- 단계 3: 19/19·0.15.0 정식·구독자 전송·PC 설치·단계 브랜치 원격/로컬 삭제 완료. [정식 근거](../../research/overhaul/OV150-013.md)·[Windows 실제 Claude 왕복](../../research/overhaul/OV150-001.md), 다음 단계 구현 미시작
+- 단계 3: 19/19·0.15.0 정식·구독자 전송·PC 설치·단계 브랜치 원격/로컬 삭제 완료. [정식 근거](../../research/overhaul/OV150-013.md)·[Windows 실제 Claude 왕복](../../research/overhaul/OV150-001.md), 단계 4 구현 시작, 공개 시험 전 중단
 - Fable (b) 채택. [ADR-0026](../../decisions/ADR-0026-official-cli-extension-points.md)·[반영·검증](../../research/overhaul/OVX-009.md)
 - OVX-005–007: 창 제어 폐기로 대체 종료, 성공 없음·근거 보존. 대체 왕복: OV150-001
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
+- 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
+
 ## 승인
 
+- 2026-11-14 유지관리자 "Clear the flags": 단계 4의 OV151-008 공개 시험·009 develop 병합·010 정식의 승인 대기 해제, 의존 순서와 Fable 검토 유지
 - 현재 요청: 0.15.0 Windows 왕복 근거·참조 처리기·공개 시험·develop/main 병합·정식·게시·구독자 안내·PC 설치 전 과정 승인, 기본 비활성 유지
 
 ## 재개 절차
@@ -91,7 +94,9 @@
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
-| 4 0.15.1 판별 | [0.15.1-detection.md](0.15.1-detection.md) | 있음 | 0.15.0 정식 | 0/11 |
+| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 9/12 |
+| 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청·2026-11-14 재확인(다른 모든 작업보다 먼저) | 6/6 |
+| 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 9/10 |
 | 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |

@@ -180,8 +180,10 @@ fn try_lock(file: &File) -> Result<bool, WikiError> {
 }
 
 fn busy(error: &io::Error) -> bool {
+    // Windows reports access denied (5) while a released lock file is still delete-pending;
+    // retry within the timeout like a sharing (32) or lock (33) violation.
     error.kind() == io::ErrorKind::WouldBlock
-        || (cfg!(windows) && matches!(error.raw_os_error(), Some(32 | 33)))
+        || (cfg!(windows) && matches!(error.raw_os_error(), Some(5 | 32 | 33)))
 }
 
 fn failure(error: &io::Error) -> WikiError {

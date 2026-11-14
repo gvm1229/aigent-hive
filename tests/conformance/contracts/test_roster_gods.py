@@ -45,6 +45,22 @@ class GodEntryTests(unittest.TestCase):
         self.assertNotIn("cleanup", poseidon)
         self.assertNotIn("implementation requests", poseidon)
 
+    def test_every_current_skill_description_says_what_the_skill_does(self):
+        # Names alone only decide when a Skill is called; the description must state its work.
+        for path in sorted((ROOT / "harness/skills").glob("*/SKILL.md")):
+            header = yaml.safe_load(path.read_text(encoding="utf-8").split("---", 2)[1])
+            summary = re.sub(r"^\([a-z0-9-]+\)\s*", "", header["description"])
+            work = summary.split("Use only when", 1)[0].strip()
+            self.assertGreaterEqual(len(work.split()), 4, f"{path.parent.name}: {header['description']}")
+        rust = (ROOT / "crates/hive-core/src/gods_generated.rs").read_text(encoding="utf-8")
+        for god in GODS:
+            self.assertIn(god.summary_en, god.description_en)
+            self.assertIn(f'"({god.name}) {god.summary_ko}.', rust)
+            self.assertNotIn("명시한 신 이름에만 사용", rust)
+        guide = (ROOT / "docs/skills.md").read_text(encoding="utf-8")
+        for god in GODS:
+            self.assertIn(f"| `{god.name}` | {god.summary_ko} |", guide)
+
     def test_generated_surfaces_match_the_canonical_typed_table(self):
         result = subprocess.run([sys.executable, str(ROOT / "scripts/generate-gods.py"), "--check"], capture_output=True, text=True, cwd=ROOT)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

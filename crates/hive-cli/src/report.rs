@@ -20,9 +20,9 @@ const REPORT_USAGE: &str = "\
 Create a local, sanitized report for an Aigent Hive developer.
 
 USAGE:
-    hive report preview --target <dir> --output json
-    hive report collect --target <dir> --issue-code <safe-id> [--summary <manual-summary>] --output json
-    hive report export --target <dir> --report <report-id> --destination <absolute-new-file> --output json
+    hive report preview --target <dir> [--output json]
+    hive report collect --target <dir> --issue-code <safe-id> [--summary <manual-summary>] [--output json]
+    hive report export --target <dir> --report <report-id> --destination <absolute-new-file> [--output json]
 
 Reports exclude raw prompts and transcripts, redact likely credentials in an
 optional manual summary, and never upload automatically.
@@ -165,14 +165,6 @@ fn parse_options<'a>(
         }
         options.push((key, value.as_str()));
         index += 2;
-    }
-    if !arguments
-        .windows(2)
-        .any(|pair| pair == ["--output", "json"])
-    {
-        return Err(AdapterError::Input(
-            "report requires --output json".to_owned(),
-        ));
     }
     Ok(options)
 }

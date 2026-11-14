@@ -65,7 +65,7 @@ USAGE:
 
 The default channel is stable. The test channel requires explicit --channel test.
 --confirm accepts only the software update. It does not answer setup questions.
---non-interactive and --output json never wait for input.
+--non-interactive and [--output json] never wait for input.
 --interactive requires a terminal and conflicts with non-interactive or JSON output.
 ";
 

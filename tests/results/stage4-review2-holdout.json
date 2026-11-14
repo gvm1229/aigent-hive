@@ -1,0 +1,777 @@
+{
+  "labels_frozen_commit": "0ee70b1d",
+  "labels_sha256": "194ab83963bcca686b8a62ff284081a76ad69b416c398e9e6eea76d5259fee02",
+  "detector_sha256": "f2929f34bb6d2093109a5ef285d85ee6993d63587372ac49a08d726175637400",
+  "binary_sha256": "08255e0e0ab22754b15abe96e249b37201c0d2c30d62dabedc4bf4f3d72ea7ef",
+  "summary": {
+    "kind_correct": 19,
+    "cases": 20,
+    "kind_accuracy": 0.95,
+    "facts_emitted": 53,
+    "wrong_facts": 0,
+    "fact_precision": 1.0
+  },
+  "cases": [
+    {
+      "id": "express-ts",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "server",
+      "facts": 4,
+      "wrong_facts": [],
+      "profile": {
+        "category": "server",
+        "commands": {},
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "Express"
+          }
+        ],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          },
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json",
+              "tsconfig.json"
+            ],
+            "name": "TypeScript"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "next-pnpm",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "web",
+      "facts": 4,
+      "wrong_facts": [],
+      "profile": {
+        "category": "web",
+        "commands": {},
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "Next.js"
+          }
+        ],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          },
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json",
+              "tsconfig.json"
+            ],
+            "name": "TypeScript"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json",
+              "pnpm-lock.yaml"
+            ],
+            "name": "pnpm"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "tauri",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "desktop",
+      "facts": 6,
+      "wrong_facts": [],
+      "profile": {
+        "category": "desktop",
+        "commands": {},
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "src-tauri/tauri.conf.json"
+            ],
+            "name": "Tauri"
+          }
+        ],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          },
+          {
+            "confidence": "high",
+            "evidence": [
+              "src-tauri/Cargo.toml"
+            ],
+            "name": "Rust"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "src-tauri/Cargo.toml"
+            ],
+            "name": "cargo"
+          },
+          {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm"
+          }
+        ],
+        "structure": [],
+        "test_tools": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "src-tauri/Cargo.toml"
+            ],
+            "name": "cargo test"
+          }
+        ]
+      }
+    },
+    {
+      "id": "django-assets",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "web",
+      "facts": 5,
+      "wrong_facts": [],
+      "profile": {
+        "category": "web",
+        "commands": {
+          "js:build": {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm run build"
+          }
+        },
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "requirements.txt"
+            ],
+            "name": "Django"
+          }
+        ],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          },
+          {
+            "confidence": "high",
+            "evidence": [
+              "requirements.txt"
+            ],
+            "name": "Python"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "maturin",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "rust",
+      "facts": 7,
+      "wrong_facts": [],
+      "profile": {
+        "category": "rust",
+        "commands": {
+          "cargo:build": {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "cargo build"
+          },
+          "cargo:lint": {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "cargo clippy"
+          },
+          "cargo:test": {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "cargo test"
+          }
+        },
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "pyproject.toml"
+            ],
+            "name": "Python"
+          },
+          {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "Rust"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "cargo"
+          }
+        ],
+        "structure": [],
+        "test_tools": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Cargo.toml"
+            ],
+            "name": "cargo test"
+          }
+        ]
+      }
+    },
+    {
+      "id": "js-library",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "ruby",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Gemfile"
+            ],
+            "name": "Ruby"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Gemfile"
+            ],
+            "name": "bundler"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "php",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "composer.json"
+            ],
+            "name": "PHP"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "composer.json"
+            ],
+            "name": "composer"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "swift",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Package.swift"
+            ],
+            "name": "Swift"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "Package.swift"
+            ],
+            "name": "swift"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "flutter",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "pubspec.yaml"
+            ],
+            "name": "Dart"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "pubspec.yaml"
+            ],
+            "name": "pub"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "nested-monorepo",
+      "expected_kind": "coding",
+      "kind": "general",
+      "category": "docs",
+      "facts": 0,
+      "wrong_facts": [],
+      "profile": {
+        "category": "docs",
+        "commands": {},
+        "frameworks": [],
+        "languages": [],
+        "package_managers": [],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "dotnet-solution",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "dotnet",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "dotnet",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "App/App.csproj"
+            ],
+            "name": "C#"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "App.sln",
+              "App/App.csproj"
+            ],
+            "name": "dotnet"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "android",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "java",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "java",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "low",
+            "evidence": [
+              "build.gradle.kts"
+            ],
+            "name": "Kotlin"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "build.gradle.kts"
+            ],
+            "name": "gradle"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "mkdocs",
+      "expected_kind": "docs",
+      "kind": "docs",
+      "category": "docs",
+      "facts": 1,
+      "wrong_facts": [],
+      "profile": {
+        "category": "docs",
+        "commands": {},
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "mkdocs.yml"
+            ],
+            "name": "MkDocs"
+          }
+        ],
+        "languages": [],
+        "package_managers": [],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "readme-license",
+      "expected_kind": "general",
+      "kind": "general",
+      "category": "docs",
+      "facts": 0,
+      "wrong_facts": [],
+      "profile": {
+        "category": "docs",
+        "commands": {},
+        "frameworks": [],
+        "languages": [],
+        "package_managers": [],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "uv-workspace",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "monorepo",
+      "facts": 3,
+      "wrong_facts": [],
+      "profile": {
+        "category": "monorepo",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "pyproject.toml"
+            ],
+            "name": "Python"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "uv.lock"
+            ],
+            "name": "uv"
+          }
+        ],
+        "structure": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "pyproject.toml"
+            ],
+            "name": "monorepo"
+          }
+        ],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "deno",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "deno.json"
+            ],
+            "name": "TypeScript"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "deno.json"
+            ],
+            "name": "deno"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "make-c",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "native",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "native",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "main.c"
+            ],
+            "name": "C"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "main.c"
+            ],
+            "name": "make"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "terraform",
+      "expected_kind": "coding",
+      "kind": "coding",
+      "category": "coding",
+      "facts": 2,
+      "wrong_facts": [],
+      "profile": {
+        "category": "coding",
+        "commands": {},
+        "frameworks": [],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "main.tf"
+            ],
+            "name": "HCL"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "main.tf"
+            ],
+            "name": "terraform"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    },
+    {
+      "id": "docusaurus",
+      "expected_kind": "docs",
+      "kind": "docs",
+      "category": "docs",
+      "facts": 3,
+      "wrong_facts": [],
+      "profile": {
+        "category": "docs",
+        "commands": {},
+        "frameworks": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json",
+              "docusaurus.config.ts"
+            ],
+            "name": "Docusaurus"
+          }
+        ],
+        "languages": [
+          {
+            "confidence": "high",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "JavaScript"
+          }
+        ],
+        "package_managers": [
+          {
+            "confidence": "low",
+            "evidence": [
+              "package.json"
+            ],
+            "name": "npm"
+          }
+        ],
+        "structure": [],
+        "test_tools": []
+      }
+    }
+  ]
+}

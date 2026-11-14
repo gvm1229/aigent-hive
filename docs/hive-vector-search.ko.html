@@ -139,9 +139,10 @@
     <article class="card"><span class="number">수 초의 조회</span><h3>의미 검색은 수 초</h3><p>질문 변환·벡터 탐색·FTS 결합·인용 검증을 포함한 대기. 정확한 코드·문구 조회에는 기본 FTS 사용.</p><p class="sub">원문·색인이 없거나 오래되면 자동 무제한 생성 대신 현재 상태와 필요한 조치 안내.</p></article>
   </div>
   <div class="notice"><h3>“작업 동안 모델 유지” 제안의 결론</h3><p>조회 때마다 모델을 다시 준비하는 비용을 줄이려던 벡터 성능 개선안. 검색 기능이나 보안 결함을 해결하기 위한 필수 단계가 아님.</p><p><strong>이번 범위에서는 생략.</strong> 현재 성능 수용에 따라 새로운 연속 실행 방식·상주 모델·백그라운드 서비스 추가 없음. 현재 단발 실행과 요청별 검증 유지.</p></div>
-  <details><summary>명령 예시와 운영 주의사항</summary><div class="detail">다음은 사용자·프로젝트 지식용 명령 형태. 다운로드·설치 전에 미리보기 확인과 별도 동의 필수. Hive 소스에서는 <code>source-wiki vector</code> 경로 사용.</div><pre><code>hive knowledge vector preview --user-root &lt;user-root&gt; --target &lt;project-root&gt; --collection user-root --visibility shared --python &lt;python&gt; --output json
+  <details><summary>명령 예시와 운영 주의사항</summary><div class="detail">다음은 사용자·프로젝트 지식용 명령 형태. 다운로드·설치 전에 미리보기 확인과 별도 동의 필수. Hive 소스에서는 <code>source-wiki vector</code> 경로 사용.</div><p class="caption">0.15.1 개발판부터 사람용 명령의 JSON 인자 생략, 설정한 한국어·영어로 결과 표시. 기계 판독에는 <code>--output json</code> 선택, 공개 0.15.0에서는 이 인자 유지.</p>
+<pre><code>hive knowledge vector preview --user-root &lt;user-root&gt; --target &lt;project-root&gt; --collection user-root --visibility shared --python &lt;python&gt;
 
-hive knowledge retrieve --user-root &lt;user-root&gt; --target &lt;project-root&gt; --scope auto --query "지운 자료를 되찾는 방법" --mode semantic --output json</code></pre><p class="caption">전체 명령·동의·재개·rollback: <a href="guides/vector-search.md">선택형 의미 검색 사용 안내</a>. <code>fresh</code>의 미시작 모음은 새 계산 유지, 이번 실행의 검증된 중간 결과만 <code>resume</code> 사용.</p></details>
+hive knowledge retrieve --user-root &lt;user-root&gt; --target &lt;project-root&gt; --scope auto --query "지운 자료를 되찾는 방법" --mode semantic</code></pre><p class="caption">전체 명령·동의·재개·rollback: <a href="guides/vector-search.md">선택형 의미 검색 사용 안내</a>. <code>fresh</code>의 미시작 모음은 새 계산 유지, 이번 실행의 검증된 중간 결과만 <code>resume</code> 사용.</p></details>
 </section>
 
 <section class="section" id="sources"><p class="eyebrow">구현 근거</p><h2>설명과 코드의 연결</h2><div class="table-wrap"><table><thead><tr><th scope="col">책임</th><th scope="col">정본 파일</th></tr></thead><tbody>

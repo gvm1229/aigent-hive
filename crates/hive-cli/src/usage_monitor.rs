@@ -46,7 +46,7 @@ const CONFIG: &str = ".hive/runtime/usage-monitor/config.json";
 const STATE: &str = ".hive/runtime/usage-monitor/state.json";
 const STARTUP: &str = ".hive/runtime/usage-monitor/startup.json";
 
-const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] --output json\n";
+const HELP: &str = "hive usage monitor preview|enable|disable|status --user-root <dir> [--confirm <preview-digest> --confirm-session-interruption] [--output json]\n";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -411,9 +411,6 @@ fn parse_and_run(args: &[String]) -> Result<Value, AdapterError> {
             }
         }
         index += 2;
-    }
-    if !output {
-        return Err(AdapterError::Input("--output json is required".into()));
     }
     if (action == "enable") != (confirm.is_some() && terminate)
         || (action != "enable" && (confirm.is_some() || terminate))

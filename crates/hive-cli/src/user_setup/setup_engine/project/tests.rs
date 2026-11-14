@@ -992,3 +992,159 @@ fn assert_changed_role_needs_approval(
         .contains("Approve definition changes"));
     *snapshot = store.save(snapshot, original).unwrap();
 }
+#[test]
+fn detected_project_confirmation_accepts_rejects_and_cancels() {
+    for (input, expected, completed) in [
+        ("\nNamed\nyes\n\n", "coding", true),
+        ("\nNamed\nno\ndocs\n\n", "docs", true),
+        ("\nNamed\nno\n:cancel\n", "coding", false),
+        ("\nNamed\n:cancel\n", "coding", false),
+    ] {
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
+        std::fs::write(
+            target.path().join("package.json"),
+            r#"{"dependencies":{"next":"16"},"packageManager":"pnpm@10"}"#,
+        )
+        .unwrap();
+        let global = global(root.path());
+        let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+        let mut snapshot = store.load().unwrap();
+        let mut progress = store
+            .new_progress(
+                "project-mode".into(),
+                questions::defaults(target.path(), &global, "codex"),
+            )
+            .unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(input.as_bytes()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        assert_eq!(
+            questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal)
+                .unwrap(),
+            completed
+        );
+        assert_eq!(progress.answers["project_kind"], expected);
+        let shown = String::from_utf8(terminal.writer).unwrap();
+        assert_eq!(shown.matches("맞습니까?").count(), 1);
+        assert!(shown.contains("Next.js, pnpm"));
+        if !completed {
+            assert!(!progress.answered_questions.contains_key("project-kind"));
+        }
+        validate_answers(&progress.answers);
+    }
+}
+
+#[test]
+fn readme_only_uses_a_kind_list_without_an_empty_confirmation() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    std::fs::write(target.path().join("README.md"), "# Notes").unwrap();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let mut snapshot = store.load().unwrap();
+    let mut progress = store
+        .new_progress(
+            "project-mode".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nNamed\ngeneral\n\n"),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    assert!(
+        questions::collect(&store, &mut snapshot, &mut progress, &global, &mut terminal).unwrap()
+    );
+    assert_eq!(progress.answers["project_kind"], "general");
+    let shown = String::from_utf8(terminal.writer).unwrap();
+    assert!(!shown.contains("Detected:"));
+    assert!(shown.contains("Coding"));
+    assert_eq!(
+        progress.answers["preference_decisions"]["/project_kind"]["origin"],
+        "explicit"
+    );
+}
+
+#[test]
+fn described_project_kind_uses_evidence_without_accepting_it() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    std::fs::write(
+        target.path().join("Cargo.toml"),
+        "[package]\nname=\"sample\"\nversion=\"1.0.0\"\n",
+    )
+    .unwrap();
+    let mut opts = options(root.path(), target.path());
+    opts.describe = true;
+    opts.question = Some("project-kind".into());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let result = preferences::inspect(&opts, &store, None, InterfaceLanguage::Ko).unwrap();
+    let data = result.data.unwrap();
+    assert_eq!(data["questions"][0]["question"]["default"], "coding");
+    assert!(data["questions"][0]["effective"].is_null());
+    assert_eq!(data["project_profile"]["languages"][0]["name"], "Rust");
+    assert!(!target.path().join(".hive").exists());
+}
+#[test]
+fn compact_project_creates_knowledge_only_when_first_used() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    let mut preferences = global(root.path());
+    preferences.selected_project_skills = hive_projection::project_default_skills().unwrap();
+    preferences.codex_plugin_files = hive_render::skill_delivery::VerifiedPlugins::for_host(
+        "codex",
+        hive_projection::compile_user_projection(
+            hive_projection::Host::Codex,
+            &preferences.selected_project_skills,
+            &[],
+        )
+        .unwrap()
+        .files,
+    );
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
+    hive_render::execute_setup(&hive_render::SetupRequest {
+        target: target.path(),
+        answers: &fixtures.join("setup/answers-no-role-no-hook.yml"),
+        capabilities: &fixtures.join("setup/capabilities-codex-host-native.json"),
+        mode: hive_render::SetupMode::Apply,
+        reconfigure_roles: BTreeSet::new(),
+        global_preferences: Some(preferences),
+    })
+    .unwrap();
+    assert!(!target.path().join(".hive/knowledge").exists());
+    let draft = root.path().join("draft.md");
+    let content = std::fs::read_to_string(fixtures.join("knowledge/wiki/alpha.md"))
+        .unwrap()
+        .replace("links: [beta]", "links: []")
+        .replace(" See [[beta]].", "");
+    std::fs::write(&draft, content).unwrap();
+    let outcome = hive_wiki::ingest(
+        target.path(),
+        &fixtures.join("knowledge/raw/alpha.md"),
+        &draft,
+    )
+    .unwrap();
+    assert!(outcome
+        .changed_paths
+        .contains(&".hive/knowledge/suppression.yml".to_owned()));
+    assert!(target
+        .path()
+        .join(".hive/knowledge/Wiki/alpha.md")
+        .is_file());
+    assert_eq!(
+        hive_wiki::query(target.path(), Some("canonical"), None, 5)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(hive_wiki::lint(target.path())
+        .unwrap()
+        .iter()
+        .all(|issue| issue.severity != hive_wiki::LintSeverity::Error));
+    std::fs::remove_file(target.path().join(".hive/knowledge/suppression.yml")).unwrap();
+    assert!(hive_wiki::rebuild_index(target.path()).is_err());
+}

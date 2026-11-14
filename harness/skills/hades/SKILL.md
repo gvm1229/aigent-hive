@@ -1,6 +1,6 @@
 ---
 name: hades
-description: "(hades) Use only when the user names hades, 하데스."
+description: "(hades) Measures Hive storage and previews files that can be cleaned up. Use only when the user names hades, 하데스."
 ---
 
 # Hades

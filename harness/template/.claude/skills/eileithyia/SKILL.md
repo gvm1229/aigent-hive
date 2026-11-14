@@ -1,6 +1,6 @@
 ---
 name: eileithyia
-description: "(eileithyia) Use only when the user names eileithyia, 에일레이티이아, Eleuthia, 에일레이티아, 엘레이티아, 엘레우티아."
+description: "(eileithyia) Sets up Hive for the user or a project and installs Hive updates. Use only when the user names eileithyia, 에일레이티이아, Eleuthia, 에일레이티아, 엘레이티아, 엘레우티아."
 ---
 
 # Eileithyia

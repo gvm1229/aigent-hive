@@ -9,7 +9,7 @@ summary: "0.13.2 소스의 통신 호환 검사·현재 Windows의 초기화와 
 tags: [guard, history, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:54c9cfd8a07ffc63128ae68be4a2dfd17ca438682008173241517387ffc334cf"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:b538f69c8e52a9e078bfc0f5eb4739551f24ccacbaa7f88ad13cd946aeb9931a"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:6effcddaa5061365989f4ce449664b30f59bebc1eaf15f6fdf08f2d9e741a102"
   - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9835d127c2115e3a597448e6bca2860c21cd219b3ab8990348c3a1af2659ba79"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"

@@ -31,16 +31,16 @@ const USAGE: &str = "\
 Preview, recommend, create, apply, validate, attest, route, or remove one consented Hive custom-agent profile.\n\
 \n\
 USAGE:\n\
-    hive agent preview --profile <profile.json> --root <dir> --output json\n\
-    hive agent recommend --purpose <text> --scope <user|project> --catalog <catalog.json> --catalog-attestation <attestation.json> --trust-root <trust-root.toml> [--previous-request <creation.json>] --output json\n\
-    hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> [--prior-decision <creation.json>] --output json\n\
-    hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
-    hive agent validate --profile <profile.json> --root <dir> --output json\n\
-    hive agent preflight --profile <profile.json> --host <codex|claude> --capabilities <capability.json> --output json\n\
-    hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> --output json\n\
-    hive agent route --user-root <dir> --project-root <dir> --request <text> --output json\n\
-    hive agent disable --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n\
-    hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n";
+    hive agent preview --profile <profile.json> --root <dir> [--output json]\n\
+    hive agent recommend --purpose <text> --scope <user|project> --catalog <catalog.json> --catalog-attestation <attestation.json> --trust-root <trust-root.toml> [--previous-request <creation.json>] [--output json]\n\
+    hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> [--prior-decision <creation.json>] [--output json]\n\
+    hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> [--output json]\n\
+    hive agent validate --profile <profile.json> --root <dir> [--output json]\n\
+    hive agent preflight --profile <profile.json> --host <codex|claude> --capabilities <capability.json> [--output json]\n\
+    hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> [--output json]\n\
+    hive agent route --user-root <dir> --project-root <dir> --request <text> [--output json]\n\
+    hive agent disable --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> [--output json]\n\
+    hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> [--output json]\n";
 
 const PROFILE_DIRECTORY: &str = ".hive/config/custom-subagents";
 const LEDGER_PATH: &str = ".hive/config/custom-subagents/OWNERSHIP.json";

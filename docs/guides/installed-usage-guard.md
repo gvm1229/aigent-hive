@@ -3,6 +3,12 @@
 Source 개발도 설치된 `hive usage`를 단일 정본으로 사용. 별도 Python gate, 15초 watcher,
 source-local threshold·halt state 없음.
 
+## 사람이 읽는 결과
+
+- 설정한 한국어·영어에 맞춘 짧은 결과와 다음 행동 표시
+- 기준 변경 예: 30% → 10%의 이전·새 기준 표시
+- 자동 도구·Skill·훅의 기계 판독에는 기존 `--output json` 유지, 사람용 명령에서는 생략
+
 ## 대상 분류
 
 | 대상 | 사용량 보호 | Threshold |
@@ -47,7 +53,7 @@ Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 f
 현재 작업의 초기화 감지만 제외하는 개발 명령:
 
 ```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-reset-guard --confirm-reset-guard-disable --output json
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-reset-guard --confirm-reset-guard-disable
 ```
 
 - 복원: 확인 인자 없이 `--action enable-reset-guard`. 두 동작 뒤 같은 연결 정보로 `enforce` 필수
@@ -61,13 +67,13 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 명시적 global 변경:
 
 ```text
-hive usage threshold --user-root <user-root> --remaining-percent <0..99> --output json
+hive usage threshold --user-root <user-root> --remaining-percent <0..99>
 ```
 
 설정 완료 Hive project의 조기 중지 변경:
 
 ```text
-hive usage threshold --target <project-root> --remaining-percent <0..99> --output json
+hive usage threshold --target <project-root> --remaining-percent <0..99>
 ```
 
 0.13.2의 허용 범위0~99%.0%는 비활성화가 아닌 소진 보호, 양수 할당량 실행과 크레딧 잔액에 무관한0% 차단. 더 높은 프로젝트 하한 유지.
@@ -80,13 +86,13 @@ Global `20%`, project `40%`: 적용값 `40%`. Non-Hive target의 project `40%` �
 현재 binding만 비활성화:
 
 ```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable --confirm-session-disable --output json
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable --confirm-session-disable
 ```
 
 재활성화:
 
 ```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action enable --output json
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action enable
 ```
 
 새 session 기본값: 활성. Raw account·session ID 저장 없음. Native sensor 우선, CodexBar는
@@ -117,7 +123,7 @@ Windows Codex에서 [명령·사용량 검사](../../tests/results/runs/20260919
 - 현재 대화 한정 제외: 정확한 호스트·대화·프로세스의 아래 별도 명령. 새 대화·프로세스 기본 활성
 
 ```text
-hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-zero-quota-guard --confirm-zero-quota-guard-disable --output json
+hive usage session --target <hive-target> --host <active-host> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> --action disable-zero-quota-guard --confirm-zero-quota-guard-disable
 ```
 
 - 복원: 확인 인자 없는 `--action enable-zero-quota-guard`, 두 명령 뒤 같은 연결의 `enforce` 필수
@@ -138,10 +144,10 @@ hive usage session --target <hive-target> --host <active-host> --session-id <cur
 - 기존 하한·0% 보호 유지. 서버 처리·과금 종료 시각과 소비 상한 보장 제외
 
 ```text
-hive usage monitor preview --user-root <user-root> --output json
-hive usage monitor enable --user-root <user-root> --confirm <preview-digest> --confirm-session-interruption --output json
-hive usage monitor status --user-root <user-root> --output json
-hive usage monitor disable --user-root <user-root> --output json
+hive usage monitor preview --user-root <user-root>
+hive usage monitor enable --user-root <user-root> --confirm <preview-digest> --confirm-session-interruption
+hive usage monitor status --user-root <user-root>
+hive usage monitor disable --user-root <user-root>
 ```
 
 - 설치 전 미리보기의 설정·상태·고정 실행 파일·로그인 예약 경로 확인. enable은 정확한 미리보기 지문과 버전별 설치 승인 필수

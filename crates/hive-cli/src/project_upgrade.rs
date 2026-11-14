@@ -185,7 +185,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
                 ));
             }
             let plugin = user_root.as_deref()
-                .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                .and_then(|root| crate::user_install::validated_project_plugin_files(root).ok())
                 .unwrap_or_default();
             if let Some(SkillReview::Inputs(name)) = skill_merges.as_ref() {
                 if mode != CommandMode::Scan || approval.is_some() {
@@ -211,7 +211,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             if mode == CommandMode::Apply {
                 if !plugin.is_empty() {
                     let refreshed = user_root.as_deref()
-                        .and_then(|root| crate::user_install::validated_codex_plugin_files(root).ok())
+                        .and_then(|root| crate::user_install::validated_project_plugin_files(root).ok())
                         .unwrap_or_default();
                     if refreshed != plugin {
                         return Err(UpdateError::Conflict("Codex plugin changed after the project cleanup preview; no project files changed".to_owned()));
@@ -266,10 +266,24 @@ type UpgradeArguments = (
     Option<String>,
 );
 
+fn parse_command_mode(option: &str) -> CommandMode {
+    match option {
+        "--scan" => CommandMode::Scan,
+        "--dry-run" => CommandMode::DryRun,
+        "--apply" => CommandMode::Apply,
+        "--validate" => CommandMode::Validate,
+        "--recover" => CommandMode::Recover,
+        _ => unreachable!(),
+    }
+}
+
 fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
-    if arguments.first().map(String::as_str) != Some("upgrade") {
+    if arguments
+        .first()
+        .is_none_or(|action| action != "upgrade" && action != "refresh")
+    {
         return Err(UpdateError::Input(
-            "project requires the upgrade action".to_owned(),
+            "project requires the upgrade action or its refresh alias".to_owned(),
         ));
     }
     let mut target = None;
@@ -283,14 +297,7 @@ fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
         let option = arguments[index].as_str();
         match option {
             "--scan" | "--dry-run" | "--apply" | "--validate" | "--recover" => {
-                let candidate = match option {
-                    "--scan" => CommandMode::Scan,
-                    "--dry-run" => CommandMode::DryRun,
-                    "--apply" => CommandMode::Apply,
-                    "--validate" => CommandMode::Validate,
-                    "--recover" => CommandMode::Recover,
-                    _ => unreachable!(),
-                };
+                let candidate = parse_command_mode(option);
                 if mode.replace(candidate).is_some() {
                     return Err(UpdateError::Input(
                         "project upgrade requires exactly one mode".to_owned(),
@@ -348,7 +355,7 @@ fn parse(arguments: &[String]) -> Result<UpgradeArguments, UpdateError> {
             }
         }
     }
-    if output != Some("json") {
+    if output.is_some_and(|value| value != "json") {
         return Err(UpdateError::Input(
             "project upgrade requires --output json".to_owned(),
         ));
@@ -394,14 +401,14 @@ fn validate_skill_merge_options(
 #[cfg(test)]
 fn prepare_with_plugin(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
 ) -> Result<UpgradePlan, UpdateError> {
     prepare_with_reviewed_skills(target, plugin, None)
 }
 
 fn prepare_with_reviewed_skills(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
     review: Option<&SkillMergeRequest>,
 ) -> Result<UpgradePlan, UpdateError> {
     prepare_candidate(target, plugin, review, None)
@@ -410,7 +417,7 @@ fn prepare_with_reviewed_skills(
 #[allow(clippy::too_many_lines)]
 fn prepare_candidate(
     target: &Dir,
-    plugin: &hive_render::skill_delivery::PluginSkillFiles,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
     review: Option<&SkillMergeRequest>,
     incoming: Option<hive_render::ProjectUpgradeCandidate>,
 ) -> Result<UpgradePlan, UpdateError> {
@@ -449,11 +456,8 @@ fn prepare_candidate(
             .map(|entry| (entry.path.clone(), entry.content.as_bytes().to_vec()))
             .collect::<BTreeMap<_, _>>()
     });
-    let provider_bytes = read_bounded_optional(
-        target,
-        Path::new(hive_render::skill_delivery::PROVIDERS_PATH),
-        MAX_LEDGER_BYTES,
-    )?;
+    let provider_bytes =
+        hive_render::project_skill_provider_bytes_in(target).map_err(render_error)?;
     let provider_base = base_files
         .iter()
         .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
@@ -485,7 +489,7 @@ fn prepare_candidate(
         let effective_base = if base.is_none() { incoming } else { base_bytes };
         let restore_plugin_file = local.is_none()
             && incoming.is_some()
-            && Path::new(&path).starts_with(".agents/skills/")
+            && is_hive_skill_projection_path(Path::new(&path))
             && Path::new(&path).components().nth(2).is_some_and(|name| {
                 previous_plugin_skills.contains(&name.as_os_str().to_string_lossy().into_owned())
             });
@@ -2709,6 +2713,15 @@ fn plan_changes(
 }
 
 fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
+    let omitted_guidance_paths = plan
+        .reports
+        .iter()
+        .filter(|report| {
+            report.omitted_incoming_hunks > 0
+                && is_hive_directive_projection_path(Path::new(&report.path))
+        })
+        .map(|report| report.path.as_str())
+        .collect::<Vec<_>>();
     let action = match mode {
         CommandMode::Scan => "ScanProjectUpgrade",
         CommandMode::DryRun | CommandMode::Apply => "UpdateProjectHarness",
@@ -2729,10 +2742,17 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
         } else {
             "hive.project-upgrade-planned"
         },
-        message: if plan.changed_paths.is_empty() {
-            "project harness is current".to_owned()
-        } else {
-            "project harness upgrade plan validated".to_owned()
+        message: {
+            let mut message = if plan.changed_paths.is_empty() {
+                "project harness is current".to_owned()
+            } else {
+                "project harness upgrade plan validated".to_owned()
+            };
+            if !omitted_guidance_paths.is_empty() {
+                message.push_str("; incoming guidance omitted to preserve user replacements: ");
+                message.push_str(&omitted_guidance_paths.join(", "));
+            }
+            message
         },
         changed_paths: plan.changed_paths.clone(),
         evidence: vec![ProjectEvidence {
@@ -2749,7 +2769,8 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
             "normalized_fields": plan.normalized_fields,
             "skill_merges": plan.skill_merges,
             "plan_digest": plan.plan_digest,
-            "reports": plan.reports
+            "reports": plan.reports,
+            "omitted_guidance_paths": omitted_guidance_paths
         })),
     }
 }
@@ -2782,6 +2803,9 @@ fn failure(error: &UpdateError) -> ProjectResult {
 }
 
 fn emit(result: &ProjectResult) {
+    if crate::human_output::emit_if_human(result) {
+        return;
+    }
     match serde_json::to_string(result) {
         Ok(value) => println!("{value}"),
         Err(error) => {
@@ -2790,7 +2814,7 @@ fn emit(result: &ProjectResult) {
         }
     }
     if result.exit_code != 0 {
-        eprintln!("error: {}", result.message);
+        crate::human_output::diagnostic(&result.message);
     }
 }
 
@@ -4217,6 +4241,72 @@ mod tests {
     }
 
     #[test]
+    fn refresh_is_an_exact_upgrade_alias_for_every_mode() {
+        let target = tempfile::tempdir().unwrap();
+        for mode in ["--scan", "--dry-run", "--apply", "--validate", "--recover"] {
+            let arguments = |action: &str| {
+                vec![
+                    action.to_owned(),
+                    "--target".into(),
+                    target.path().display().to_string(),
+                    mode.into(),
+                    "--output".into(),
+                    "json".into(),
+                ]
+            };
+            let upgrade = parse(&arguments("upgrade")).unwrap();
+            let refresh = parse(&arguments("refresh")).unwrap();
+            assert_eq!(upgrade.0, refresh.0);
+            assert!(upgrade.1 == refresh.1);
+            assert_eq!(upgrade.2, refresh.2);
+            assert!(upgrade.3.is_none() && refresh.3.is_none());
+            assert_eq!(upgrade.4, refresh.4);
+        }
+        let error = parse(&["unknown".into()]).err().unwrap();
+        assert!(error.to_string().contains("refresh alias"));
+    }
+
+    #[test]
+    fn replaced_harness_omission_is_visible_in_upgrade_summary() {
+        let path = ".agents/directives/00-project-harness.md";
+        let base = b"# Hive harness\n- Preserve owner boundaries.\n";
+        let local = b"# My entirely independent project notes\nUse the team workflow.\n";
+        let incoming = b"# Hive harness\n- Preserve owner boundaries and new checks.\n";
+        let merged = three_way_merge_hive_directive(
+            Path::new(path),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .unwrap();
+        assert_eq!(merged.bytes.as_deref(), Some(local.as_slice()));
+        assert!(merged.omitted_incoming_hunks > 0);
+        let mut plan = one_file_plan(path, Some(local), Some(local));
+        plan.reports.push(PathReport {
+            path: path.into(),
+            base_digest: Some(sha256_digest(base)),
+            local_digest: Some(sha256_digest(local)),
+            incoming_digest: Some(sha256_digest(incoming)),
+            final_digest: Some(sha256_digest(local)),
+            disposition: merged.disposition,
+            omitted_incoming_hunks: merged.omitted_incoming_hunks,
+            local_priority: merged.local_priority,
+        });
+        for mode in [
+            CommandMode::DryRun,
+            CommandMode::Apply,
+            CommandMode::Validate,
+        ] {
+            let result = plan_result(&plan, mode);
+            assert!(result.message.contains(path));
+            assert_eq!(
+                result.data.unwrap()["omitted_guidance_paths"],
+                json!([path])
+            );
+        }
+    }
+
+    #[test]
     fn directive_upgrade_adds_new_hive_clause_without_rewriting_user_local_text() {
         let base =
             include_bytes!("../../../harness/project-bases/0.9.0/directives/02-project-upgrade.md");
@@ -4405,7 +4495,7 @@ mod tests {
         }
     }
 
-    fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::PluginSkillFiles {
+    fn plugin_project_fixture(path: &Path) -> hive_render::skill_delivery::VerifiedPlugins {
         project_fixture_with_skills(
             path,
             vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
@@ -4415,9 +4505,17 @@ mod tests {
     fn project_fixture_with_skills(
         path: &Path,
         selected: Vec<String>,
-    ) -> hive_render::skill_delivery::PluginSkillFiles {
+    ) -> hive_render::skill_delivery::VerifiedPlugins {
+        project_fixture_for_host(path, selected, "codex")
+    }
+
+    fn project_fixture_for_host(
+        path: &Path,
+        selected: Vec<String>,
+        host: &str,
+    ) -> hive_render::skill_delivery::VerifiedPlugins {
         let preferences = hive_render::GlobalProjectPreferences {
-            codex_plugin_files: BTreeMap::new(),
+            codex_plugin_files: hive_render::skill_delivery::VerifiedPlugins::default(),
             interface_language: "en".to_owned(),
             wiki_enabled: true,
             wiki_backend: "markdown".to_owned(),
@@ -4433,51 +4531,93 @@ mod tests {
             usage_stop_remaining_percent: 20,
         };
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/setup");
+        let mut answers: Value =
+            serde_yaml::from_slice(&fs::read(fixture.join("answers-base.yml")).unwrap()).unwrap();
+        answers["primary_host"] = json!(host);
+        let input = tempfile::NamedTempFile::new().unwrap();
+        fs::write(input.path(), serde_json::to_vec(&answers).unwrap()).unwrap();
+        let capabilities = fixture.join(if host == "codex" {
+            "capabilities-codex-omx.json"
+        } else {
+            "capabilities-claude-host-native.json"
+        });
         hive_render::execute_setup(&hive_render::SetupRequest {
             target: path,
-            answers: &fixture.join("answers-base.yml"),
-            capabilities: &fixture.join("capabilities-codex-omx.json"),
+            answers: input.path(),
+            capabilities: &capabilities,
             mode: hive_render::SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
             global_preferences: Some(preferences),
         })
         .unwrap();
-        hive_projection::compile_user_projection(
-            hive_projection::Host::Codex,
+        let files = hive_projection::compile_user_projection(
+            if host == "claude" {
+                hive_projection::Host::Claude
+            } else {
+                hive_projection::Host::Codex
+            },
             &["prompt-refine".to_owned()],
             &[],
         )
         .unwrap()
-        .files
+        .files;
+        hive_render::skill_delivery::VerifiedPlugins::for_host(host, files)
     }
 
     #[test]
-    fn project_upgrade_cleans_plugin_copies_and_restores_local_delivery_when_unavailable() {
+    fn full_layout_project_keeps_shared_copies_on_machines_with_and_without_the_plugin() {
         let temporary = tempdir().unwrap();
         let root = temporary.path().canonicalize().unwrap();
         let plugin = plugin_project_fixture(&root);
         let cap = target_dir(&root);
         let plan = prepare_with_plugin(&cap, &plugin).unwrap();
         apply(&cap, &plan).unwrap();
-        assert!(!root.join(".agents/skills/prompt-refine/SKILL.md").exists());
-        assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
-        assert_eq!(
-            prepare_with_plugin(&cap, &plugin)
-                .unwrap()
-                .changed_paths
-                .len(),
-            0
-        );
-        let restore = prepare_with_plugin(&cap, &BTreeMap::new()).unwrap();
-        apply(&cap, &restore).unwrap();
+        // A machine with the plugin must not remove the copies a teammate without it needs.
         assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
-        assert_eq!(
-            prepare_with_plugin(&cap, &BTreeMap::new())
-                .unwrap()
-                .changed_paths
-                .len(),
-            0
-        );
+        assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
+        for machine in [
+            plugin.clone(),
+            hive_render::skill_delivery::VerifiedPlugins::default(),
+        ] {
+            assert_eq!(
+                prepare_with_plugin(&cap, &machine)
+                    .unwrap()
+                    .changed_paths
+                    .len(),
+                0
+            );
+        }
+    }
+
+    #[test]
+    fn full_layout_project_keeps_both_host_copies_whatever_plugin_this_machine_has() {
+        for host in ["codex", "claude"] {
+            let temporary = tempdir().unwrap();
+            let root = temporary.path().canonicalize().unwrap();
+            let plugin = project_fixture_for_host(
+                &root,
+                vec!["prompt-refine".into(), "project-setup".into()],
+                host,
+            );
+            let cap = target_dir(&root);
+            let plan = prepare_with_plugin(&cap, &plugin).unwrap();
+            apply(&cap, &plan).unwrap();
+            let portable = root.join(".agents/skills/prompt-refine/SKILL.md");
+            let primary = root.join(if host == "claude" {
+                ".claude/skills/prompt-refine/SKILL.md"
+            } else {
+                ".agents/skills/prompt-refine/SKILL.md"
+            });
+            assert!(portable.is_file(), "{host}");
+            assert!(primary.is_file(), "{host}");
+            let changed = prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default(),
+            )
+            .unwrap()
+            .changed_paths;
+            assert_eq!(changed, Vec::<String>::new(), "{host}");
+        }
     }
 
     #[test]
@@ -4499,14 +4639,14 @@ mod tests {
             apply(&cap, &plan).unwrap();
             assert_eq!(fs::read(changed).unwrap(), custom);
             assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
+            // A full-layout project delivers every Skill locally; the plugin is not recorded.
             let ledger: Value = serde_json::from_slice(
                 &fs::read(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap(),
             )
             .unwrap();
-            assert!(ledger["local_skills"]["prompt-refine"]
-                .as_str()
-                .unwrap()
-                .contains("resource"));
+            assert!(ledger["skills"]
+                .as_object()
+                .is_none_or(serde_json::Map::is_empty));
             assert_eq!(
                 prepare_with_plugin(&cap, &plugin)
                     .unwrap()
@@ -4580,7 +4720,11 @@ mod tests {
         }));
         assert!(skill_merge::input_result(&cap, "../ship").is_err());
         assert!(skill_merge::input_result(&cap, "user-setup").is_err());
-        assert!(prepare_with_plugin(&cap, &BTreeMap::new()).is_err());
+        assert!(prepare_with_plugin(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default()
+        )
+        .is_err());
         let merged = format!(
             "{}\n## Project safeguard\nRun the project commit guard.\n",
             String::from_utf8(incoming.files[path].clone()).unwrap()
@@ -4598,7 +4742,12 @@ mod tests {
         )
         .unwrap();
         let request = SkillMergeRequest::load(&request_path).unwrap();
-        let plan = prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).unwrap();
+        let plan = prepare_with_reviewed_skills(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default(),
+            Some(&request),
+        )
+        .unwrap();
         let report = plan
             .reports
             .iter()
@@ -4629,12 +4778,20 @@ mod tests {
             incoming.files[path]
         );
         assert_eq!(
-            prepare_with_plugin(&cap, &BTreeMap::new())
-                .unwrap()
-                .changed_paths,
+            prepare_with_plugin(
+                &cap,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            )
+            .unwrap()
+            .changed_paths,
             [] as [String; 0]
         );
-        assert!(prepare_with_reviewed_skills(&cap, &BTreeMap::new(), Some(&request)).is_err());
+        assert!(prepare_with_reviewed_skills(
+            &cap,
+            &hive_render::skill_delivery::VerifiedPlugins::default(),
+            Some(&request)
+        )
+        .is_err());
     }
 
     #[test]
@@ -4724,7 +4881,10 @@ mod tests {
             .push_str("Forged baseline\n");
         assert!(authenticate_historical_base(&target, &forged).is_err());
         assert!(matches!(
-            prepare_with_plugin(&target, &BTreeMap::new()),
+            prepare_with_plugin(
+                &target,
+                &hive_render::skill_delivery::VerifiedPlugins::default()
+            ),
             Err(UpdateError::Unsupported(_))
         ));
         assert_eq!(fs::read(root.join(path)).unwrap(), published);

@@ -1,6 +1,6 @@
 ---
 name: hephaistos
-description: "(hephaistos) Use only when the user names hephaistos, 헤파이스토스, Hephaestus."
+description: "(hephaistos) Implements a saved plan and cleans up the resulting code. Use only when the user names hephaistos, 헤파이스토스, Hephaestus."
 ---
 
 # Hephaistos

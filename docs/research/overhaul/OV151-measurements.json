@@ -1,0 +1,475 @@
+{
+  "summary": {
+    "detection": {
+      "matched": 30,
+      "total": 30,
+      "defaults": {
+        "coding": 28,
+        "docs": 1,
+        "general": 1
+      },
+      "unaccepted_effective": 30
+    },
+    "retrieval": {
+      "hits": 22,
+      "total": 40,
+      "holdout_hits": 3,
+      "holdout_total": 10
+    },
+    "fixed_inputs_preserved": true
+  },
+  "detection": [
+    {
+      "id": "ts-web",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "next",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "vite",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "react",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "vue",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "svelte",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "astro",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "angular",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "express",
+      "expected_category": "server",
+      "category": "server",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "node-cli",
+      "expected_category": "cli",
+      "category": "cli",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "python",
+      "expected_category": "python",
+      "category": "python",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "django",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "fastapi",
+      "expected_category": "server",
+      "category": "server",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "flask",
+      "expected_category": "server",
+      "category": "server",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "poetry",
+      "expected_category": "python",
+      "category": "python",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "rust",
+      "expected_category": "rust",
+      "category": "rust",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "rust-workspace",
+      "expected_category": "monorepo",
+      "category": "monorepo",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "go",
+      "expected_category": "go",
+      "category": "go",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "java-maven",
+      "expected_category": "java",
+      "category": "java",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "java-gradle",
+      "expected_category": "java",
+      "category": "java",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "dotnet",
+      "expected_category": "dotnet",
+      "category": "dotnet",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "fsharp",
+      "expected_category": "dotnet",
+      "category": "dotnet",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "pnpm",
+      "expected_category": "monorepo",
+      "category": "monorepo",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "nx",
+      "expected_category": "monorepo",
+      "category": "monorepo",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "turbo",
+      "expected_category": "monorepo",
+      "category": "monorepo",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "docs",
+      "expected_category": "docs",
+      "category": "docs",
+      "default": "docs",
+      "effective": null
+    },
+    {
+      "id": "empty",
+      "expected_category": "general",
+      "category": "general",
+      "default": "general",
+      "effective": null
+    },
+    {
+      "id": "static",
+      "expected_category": "web",
+      "category": "web",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "cpp",
+      "expected_category": "native",
+      "category": "native",
+      "default": "coding",
+      "effective": null
+    },
+    {
+      "id": "mixed",
+      "expected_category": "monorepo",
+      "category": "monorepo",
+      "default": "coding",
+      "effective": null
+    }
+  ],
+  "retrieval": [
+    {
+      "id": "minimal",
+      "query": "미니멀",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "minimal",
+      "query": "HTML 디자인 선호",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "minimal",
+      "query": "minimal style",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "minimal",
+      "query": "간결한 화면 구성",
+      "holdout": true,
+      "hit": true
+    },
+    {
+      "id": "color",
+      "query": "색",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "color",
+      "query": "남색",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "color",
+      "query": "preferred colors",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "color",
+      "query": "어떤 팔레트가 좋을까",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "font",
+      "query": "글꼴",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "font",
+      "query": "Pretendard",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "font",
+      "query": "body font",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "font",
+      "query": "어떤 서체를 쓸까",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "avoid",
+      "query": "피할 디자인",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "avoid",
+      "query": "보라색",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "avoid",
+      "query": "avoid gradient",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "avoid",
+      "query": "좋아하지 않는 시각 효과",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "accessibility",
+      "query": "접근성",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "accessibility",
+      "query": "버튼 이름",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "accessibility",
+      "query": "accessible buttons",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "accessibility",
+      "query": "스크린리더용 이름",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "tests",
+      "query": "단위 시험",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "tests",
+      "query": "코드 변경",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "tests",
+      "query": "run tests first",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "tests",
+      "query": "수정 뒤 확인 순서",
+      "holdout": true,
+      "hit": true
+    },
+    {
+      "id": "commit",
+      "query": "커밋 제목",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "commit",
+      "query": "한국어",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "commit",
+      "query": "Korean commit title",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "commit",
+      "query": "변경 이력의 제목 언어",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "release",
+      "query": "안정판",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "release",
+      "query": "유지관리자 승인",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "release",
+      "query": "stable release approval",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "release",
+      "query": "정식 게시 전 필요한 절차",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "docs",
+      "query": "사용자 문서",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "docs",
+      "query": "쉬운 한국어",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "docs",
+      "query": "plain Korean documentation",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "docs",
+      "query": "처음 읽는 사람을 위한 설명",
+      "holdout": true,
+      "hit": false
+    },
+    {
+      "id": "backup",
+      "query": "백업",
+      "holdout": false,
+      "hit": false
+    },
+    {
+      "id": "backup",
+      "query": "파일 갱신",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "backup",
+      "query": "recoverable backup",
+      "holdout": false,
+      "hit": true
+    },
+    {
+      "id": "backup",
+      "query": "덮어쓰기 전 복구 준비",
+      "holdout": true,
+      "hit": true
+    }
+  ]
+}

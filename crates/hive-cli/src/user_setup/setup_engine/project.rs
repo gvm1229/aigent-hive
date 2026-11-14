@@ -105,7 +105,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         .map_err(SetupError::Input)?;
     if options.target.as_os_str().is_empty()
         || (options.show && (options.resume || options.dry_run || options.describe))
-        || (options.describe && (options.resume || options.dry_run || !options.interaction.json))
+        || (options.describe && (options.resume || options.dry_run))
         || (options.section.is_some() && !options.describe)
         || (options.question.is_some() && (!options.describe || options.section.is_some()))
     {
@@ -158,14 +158,12 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     result.action = "SetupHarness";
-    if json_output {
-        return crate::emit_action_result(&super::compact_result(result, summary));
-    }
-    let _ = writeln!(terminal.writer, "{}", result.message);
-    if let Some(next) = result.next_action {
-        let _ = writeln!(terminal.writer, "{next}");
-    }
-    ExitCode::from(result.exit_code)
+    let result = if json_output {
+        super::compact_result(result, summary)
+    } else {
+        result
+    };
+    crate::emit_action_result(&result)
 }
 
 fn resume_command(options: &Options) -> String {
@@ -363,7 +361,7 @@ fn resume_without_input(
 fn global_preferences(root: &Path) -> Result<hive_render::GlobalProjectPreferences, SetupError> {
     let mut global = user_setup::project_preferences(root).map_err(SetupError::Conflict)?;
     global.codex_plugin_files =
-        crate::user_install::validated_codex_plugin_files(root).unwrap_or_default();
+        crate::user_install::validated_project_plugin_files(root).unwrap_or_default();
     Ok(global)
 }
 

@@ -43,17 +43,10 @@ fn result(
 }
 
 pub(super) fn emit(json_output: bool, result: &ActionResult) -> ExitCode {
-    if json_output {
-        return crate::emit_action_result(result);
+    if !json_output {
+        crate::human_output::guidance(&guidance(result));
     }
-    eprintln!("{}", result.message);
-    for line in guidance(result) {
-        eprintln!("{line}");
-    }
-    if let Some(next) = &result.next_action {
-        eprintln!("{next}");
-    }
-    ExitCode::from(result.exit_code)
+    crate::emit_action_result(result)
 }
 
 pub(super) fn error(json_output: bool, message: String) -> ExitCode {

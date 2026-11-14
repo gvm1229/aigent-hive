@@ -86,7 +86,7 @@ fn parse(arguments: &[String]) -> Result<InstallArguments, String> {
         Some(_) => return Err("--host must be codex, claude, or antigravity".to_owned()),
         None => return Err("missing required option --host".to_owned()),
     };
-    if output.as_deref() != Some("json") {
+    if output.as_deref().is_some_and(|value| value != "json") {
         return Err("usage fallback installation requires --output json".to_owned());
     }
     let mode = mode.ok_or_else(|| "exactly one of --dry-run or --apply is required".to_owned())?;
