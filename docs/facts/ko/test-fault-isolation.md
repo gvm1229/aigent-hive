@@ -10,7 +10,7 @@ tags: [release, test, update]
 aliases: ["장애 주입 범위"]
 sources:
   - "repo:crates/hive-render/src/activation.rs#sha256:33b2d062ff0344069aff6fe9bf682f3fd1f69043903a3a5755649df729d9e18f"
-  - "repo:crates/hive-render/src/lib.rs#sha256:9859ba77fe6044c1da05931adedb5ffc1c9bb523b6953964438afb48a91c26fb"
+  - "repo:crates/hive-render/src/lib.rs#sha256:0ab91f6389a28a312d90f0aa6ccd5b783da55b2bc21227d533448b6426e548d7"
   - "repo:crates/hive-update/src/transaction.rs#sha256:9b6b1f0d01bd69c287783f4d4089e3a580d848a7ff9b97cd13ee3445540edca4"
 links: [test-distribution]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
