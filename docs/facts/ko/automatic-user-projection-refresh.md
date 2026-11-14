@@ -11,7 +11,7 @@ aliases: ["갱신 뒤 투영 refresh"]
 sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:0653e7f8726d66b01b155e761f705055c4a9857a49e57a4c79bca2c95579be66"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:9903f35f13ae28c9853cdf99ab17c42876e8a5b12c91100e7f4c51cc04147c09"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:8393c3c225b6a708473b19181830849e499918f0396a2c226ab7fb4e3afe28d5"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:5bc49609f63d2ee8d6047c46ea830d3875ada61b9d394c3f9c79bebc8c09cd75"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
