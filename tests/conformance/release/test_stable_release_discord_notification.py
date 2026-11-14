@@ -25,7 +25,34 @@ class RecordingServer(ThreadingHTTPServer):
 
 
 class RecordingHandler(BaseHTTPRequestHandler):
+    def correction(self) -> None:
+        body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        payload = json.loads(body) if body else None
+        self.server.correction_requests.append((self.command, self.path, payload))
+        status, response = self.server.correction_responses.pop(0)
+        response = dict(response)
+        if response.pop("echo_content", False):
+            response["content"] = payload["content"]
+        self.send_response(status)
+        if status == 302:
+            self.send_header("Location", "/redirected")
+        self.end_headers()
+        if status != 204:
+            self.wfile.write(json.dumps(response).encode())
+
+    def do_GET(self) -> None:  # noqa: N802
+        self.correction()
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self.correction()
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self.correction()
+
     def do_POST(self) -> None:  # noqa: N802
+        if getattr(self.server, "correction_mode", False):
+            self.correction()
+            return
         body = self.rfile.read(int(self.headers["Content-Length"]))
         self.server.requests.append((self.headers["Content-Type"], body))  # type: ignore[attr-defined]
         status = self.server.responses.pop(0) if self.server.responses else 204  # type: ignore[attr-defined]
@@ -56,6 +83,8 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         approval_text: str | None = None,
         approval_value: str | None = "main-pr",
         validate_only: bool = False,
+        correction: bool = False,
+        message_id: str = "",
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -94,9 +123,11 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 str(banner),
                 "--allow-insecure-test-webhook",
             ]
+            if correction:
+                command.extend(["--correction", "--message-id", message_id, "--receipt", str(root / "receipt.json")])
             if validate_only:
                 command.append("--validate-only")
-            return subprocess.run(
+            result = subprocess.run(
                 command,
                 cwd=ROOT,
                 check=False,
@@ -104,6 +135,9 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 text=True,
                 env=environment,
             )
+            receipt = root / "receipt.json"
+            self.last_receipt = json.loads(receipt.read_text(encoding="utf-8")) if receipt.is_file() else None
+            return result
 
     def test_sends_banner_before_the_korean_subscriber_summary(self) -> None:
         result = self.run_notifier()
@@ -377,7 +411,7 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
     def test_recovery_always_uses_released_source_and_version_scoped_receipt(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
         events = workflow.get("on", workflow.get(True))
-        self.assertEqual(set(events["workflow_dispatch"]["inputs"]), {"product_version", "publication_run_id"})
+        self.assertEqual(set(events["workflow_dispatch"]["inputs"]), {"product_version", "publication_run_id", "operation", "message_id"})
         steps = workflow["jobs"]["notify"]["steps"]
         contract = steps[0]["run"]
         self.assertIn('summary_source_sha=$source_sha', contract)
@@ -410,3 +444,220 @@ class StableNotificationRecoveryWorkflow(unittest.TestCase):
             command = step.get("run", "")
             for forbidden in ("npm publish", "gh release create", "git push", "gh secret"):
                 self.assertNotIn(forbidden, command)
+
+
+class StableAnnouncementContext(unittest.TestCase):
+    def test_each_new_notice_has_a_valid_complete_approved_payload(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("subscriber_context_notifier", NOTIFIER)
+        notifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(notifier)
+        for version in ("0.15.0", "0.15.1"):
+            with self.subTest(version=version):
+                text = notifier.read_summary(
+                    ROOT / f"docs/releases/{version}.subscriber.ko.md", version,
+                    ROOT / f"docs/releases/{version}.subscriber.ko.sha256")
+                self.assertLessEqual(len(text), 2000)
+                self.assertNotRegex(text, r"OV15[01]-|ADR-[0-9]|sha256:|control_epoch|dispatch-uncertain")
+
+    def test_correction_names_and_explains_every_shipped_god_with_a_call(self) -> None:
+        import tomllib
+        gods = tomllib.loads((ROOT / "harness/gods.toml").read_text(encoding="utf-8"))["gods"]
+        text = (ROOT / "docs/releases/0.15.0.subscriber.ko.md").read_text(encoding="utf-8")
+        self.assertEqual(len(gods), 9)
+        self.assertIn("0.15.0 안내 정정", text)
+        self.assertIn("기존 기능", text)
+        for god in gods:
+            with self.subTest(god=god["name"]):
+                line = next(line for line in text.splitlines() if f"·{god['korean']}**" in line)
+                self.assertIn(god["name"], line.casefold())
+                self.assertIn(f"`{god['korean']}, ", line)
+                self.assertIn(":", line)
+        self.assertIn("이번 버전에서 켜는 경로 없음", text)
+        self.assertIn("Gemini", text)
+        self.assertIn("미검증", text)
+
+    def test_151_copy_explains_detection_and_output_without_a_release_claim(self) -> None:
+        text = (ROOT / "docs/releases/0.15.1.subscriber.ko.md").read_text(encoding="utf-8")
+        for phrase in ("한 번 확인", "직접 선택", "모델 호출", "한국어·영어", "--output json",
+                       "코드 개발·문서 작성·일반 작업·사용자 지정", "자동 축소 없음"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("출시 완료", text)
+
+
+class StableNotificationCorrection(unittest.TestCase):
+    setUp_server = StableReleaseDiscordNotification.setUp
+    tearDown = StableReleaseDiscordNotification.tearDown
+    run_notifier = StableReleaseDiscordNotification.run_notifier
+    OLD_ID = "123456789012345678"
+    NEW_ID = "987654321098765432"
+
+    def setUp(self) -> None:
+        self.setUp_server()
+        self.server.correction_mode = True
+        self.server.correction_requests = []
+        self.server.correction_responses = []
+        self.summary = (ROOT / "docs/releases/0.15.0.subscriber.ko.md").read_text(encoding="utf-8").strip()
+
+    # Reuse the server harness, without repeating the parent's ordinary-send tests.
+    def run_correction(self, responses, *, message_id="", **options):
+        self.server.correction_responses = responses
+        return self.run_notifier(version="0.15.0", summary_text=self.summary,
+                                 correction=True, message_id=message_id, **options)
+
+    def original(self, content=None):
+        return {"id": self.OLD_ID, "content": content or "# Aigent Hive v0.15.0 업데이트 내역:\n\n- 원래 안내"}
+
+    def test_known_id_edits_without_posting_a_duplicate(self) -> None:
+        result = self.run_correction([(200, self.original()), (200, {"id": self.OLD_ID, "echo_content": True})], message_id=self.OLD_ID)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(result.stdout)
+        self.assertEqual(receipt["operation"], "edited")
+        self.assertFalse(receipt["manual_delete_required"])
+        self.assertEqual([r[0] for r in self.server.correction_requests], ["GET", "PATCH"])
+        payload = self.server.correction_requests[-1][2]
+        self.assertEqual(payload["content"], self.summary)
+        self.assertEqual(payload["allowed_mentions"], {"parse": []})
+
+    def test_known_id_already_corrected_needs_no_write(self) -> None:
+        result = self.run_correction([(200, self.original(self.summary))], message_id=self.OLD_ID)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["operation"], "already-corrected")
+        self.assertEqual([r[0] for r in self.server.correction_requests], ["GET"])
+
+    def test_patch_unavailable_deletes_then_replaces(self) -> None:
+        result = self.run_correction([(200, self.original()), (405, {}), (204, {}),
+            (200, {"id": self.NEW_ID, "echo_content": True})], message_id=self.OLD_ID)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(result.stdout)
+        self.assertEqual(receipt["operation"], "replaced")
+        self.assertFalse(receipt["manual_delete_required"])
+        self.assertEqual([r[0] for r in self.server.correction_requests], ["GET", "PATCH", "DELETE", "POST"])
+
+    def test_missing_id_posts_marked_correction_and_records_new_id_and_manual_delete(self) -> None:
+        result = self.run_correction([(200, {"id": self.NEW_ID, "echo_content": True})])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(result.stdout)
+        self.assertEqual(receipt["message_id"], self.NEW_ID)
+        self.assertTrue(receipt["manual_delete_required"])
+        self.assertEqual(receipt["operation"], "posted-correction")
+        method, path, payload = self.server.correction_requests[0]
+        self.assertEqual(method, "POST")
+        self.assertTrue(path.endswith("?wait=true"))
+        self.assertIn("0.15.0 안내 정정", payload["content"])
+        for secret in ("/api/webhooks", "127.0.0.1", self.summary):
+            self.assertNotIn(secret, result.stdout + result.stderr)
+
+    def test_unaddressable_or_forbidden_old_message_records_manual_deletion(self) -> None:
+        cases = [[(404, {}), (200, {"id": self.NEW_ID, "echo_content": True})],
+                 [(200, self.original()), (403, {}), (403, {}),
+                  (200, {"id": self.NEW_ID, "echo_content": True})]]
+        for responses in cases:
+            with self.subTest(responses=responses):
+                self.server.correction_requests = []
+                result = self.run_correction(responses, message_id=self.OLD_ID)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue(json.loads(result.stdout)["manual_delete_required"])
+
+    def test_wrong_notice_id_never_modifies_or_posts(self) -> None:
+        result = self.run_correction([(200, self.original("# Aigent Hive v0.14.2 업데이트 내역:"))], message_id=self.OLD_ID)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual([r[0] for r in self.server.correction_requests], ["GET"])
+
+    def test_transient_edit_failure_never_deletes_or_posts(self) -> None:
+        for status in (429, 500):
+            with self.subTest(status=status):
+                self.server.correction_requests = []
+                result = self.run_correction([(200, self.original()), (status, {})], message_id=self.OLD_ID)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual([r[0] for r in self.server.correction_requests], ["GET", "PATCH"])
+
+    def test_redirects_are_not_followed_and_post_is_not_retried(self) -> None:
+        result = self.run_correction([(302, {})])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(self.server.correction_requests), 1)
+
+    def test_invalid_post_receipt_is_not_success_and_not_retried(self) -> None:
+        result = self.run_correction([(200, {"id": "invalid"})])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("inspect delivery before retrying", result.stderr)
+        self.assertEqual(len(self.server.correction_requests), 1)
+
+    def test_uncertain_write_leaves_an_unknown_receipt_that_blocks_a_blind_rerun(self) -> None:
+        for responses in ([(302, {})], [(200, {"id": "invalid"})]):
+            with self.subTest(responses=responses):
+                self.server.correction_requests = []
+                result = self.run_correction(responses)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNotNone(self.last_receipt)
+                self.assertEqual(self.last_receipt["status"], "unknown")
+                self.assertEqual(self.last_receipt["attempts"][-1]["method"], "POST")
+                self.assertIn("Inspect Discord before any retry", self.last_receipt["manual_action"])
+                text = json.dumps(self.last_receipt)
+                for secret in ("/api/webhooks", "127.0.0.1", self.summary):
+                    self.assertNotIn(secret, text)
+
+    def test_refused_write_or_lookup_failure_leaves_no_receipt(self) -> None:
+        for responses in ([(200, self.original()), (429, {})], [(500, {})]):
+            with self.subTest(responses=responses):
+                self.server.correction_requests = []
+                result = self.run_correction(responses, message_id=self.OLD_ID)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNone(self.last_receipt)
+
+    def test_validation_approval_digest_marker_and_id_fail_before_network(self) -> None:
+        self.assertEqual(self.run_correction([], validate_only=True).returncode, 0)
+        for options in ({"approval_value": None}, {"approval_text": "sha256:" + "0" * 64 + "  summary.md\n"},
+                        {"message_id": "not-a-message"}):
+            with self.subTest(options=options):
+                self.assertNotEqual(self.run_correction([], **options).returncode, 0)
+        self.summary = self.summary.replace("0.15.0 안내 정정", "생략된 설명 보완")
+        self.assertNotEqual(self.run_correction([]).returncode, 0)
+        self.assertEqual(self.server.correction_requests, [])
+
+
+class StableNoticeOrdering(unittest.TestCase):
+    def test_pending_correction_blocks_direct_send_and_newer_recovery(self) -> None:
+        pending = (ROOT / "docs/releases/discord-pending-corrections.txt").read_text(encoding="utf-8").split()
+        self.assertEqual(pending, ["0.15.0"])
+        publish = yaml.safe_load((ROOT / ".github/workflows/release-publish.yml").read_text(encoding="utf-8"))
+        steps = {step.get("name"): step for step in publish["jobs"]["publish"]["steps"]}
+        guard = steps["Validate stable Discord subscriber update"]["run"]
+        self.assertIn('"$SEND_SUBSCRIBER_UPDATE" = true', guard)
+        self.assertIn("docs/releases/discord-pending-corrections.txt", guard)
+        self.assertLess(guard.index("exit 3"), guard.index("publish-stable-discord-update.py"))
+        names = [step.get("name") for step in publish["jobs"]["publish"]["steps"]]
+        self.assertLess(names.index("Validate stable Discord subscriber update"),
+                        names.index("Publish npm package family through trusted publishing"))
+        recover = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        contract = recover["jobs"]["notify"]["steps"][0]["run"]
+        self.assertIn("discord-pending-corrections.txt?ref=$source_sha", contract)
+        self.assertIn("stable-discord-correction-$previous&", contract)
+        self.assertLess(contract.index("must be sent before this notice"), contract.index("GITHUB_OUTPUT"))
+
+
+class StableCorrectionWorkflowContract(unittest.TestCase):
+    def test_correction_uses_reviewed_main_source_after_the_original_publication(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release-discord-notification.yml").read_text(encoding="utf-8"))
+        job = workflow["jobs"]["correct"]
+        self.assertEqual(job["if"], "${{ inputs.operation == 'correct' }}")
+        self.assertEqual(job["environment"]["name"], "release-publication")
+        contract = job["steps"][0]["run"]
+        for required in ('refs/heads/main', 'test "$PRODUCT_VERSION" = 0.15.0',
+                         'summary_source_sha=$GITHUB_SHA', 'stable-discord-correction-$PRODUCT_VERSION"',
+                         '.isPrerelease', '.isDraft',
+                         '.head_sha', '.conclusion == "success"', 'duplicate send refused'):
+            self.assertIn(required, contract)
+        self.assertEqual(job["steps"][1]["with"]["ref"], "${{ steps.contract.outputs.summary_source_sha }}")
+        commands = [step for step in job["steps"] if "scripts/publish-stable-discord-update.py" in step.get("run", "")]
+        self.assertEqual(len(commands), 2)
+        self.assertIn("--validate-only", commands[0]["run"])
+        self.assertNotIn("--validate-only", commands[1]["run"])
+        for step in commands:
+            self.assertEqual(step["env"]["AIGENT_HIVE_SUBSCRIBER_APPROVAL"], "${{ vars.AIGENT_HIVE_SUBSCRIBER_APPROVAL }}")
+            self.assertEqual(step["env"]["AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL"], "${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}")
+            self.assertIn("--summary-approval", step["run"])
+            self.assertIn("--correction", step["run"])
+        for step in job["steps"]:
+            for forbidden in ("npm publish", "gh release create", "git push", "gh secret"):
+                self.assertNotIn(forbidden, step.get("run", ""))

@@ -9,20 +9,19 @@ summary: "안정판 게시 전 구독자 안내문 승인 필수, 누락 공지�
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-discord-notification.yml#sha256:05cbd3bebb278b5b4fe3780f536033a896fb83212d9749e5f0005ae10afd73e6"
-  - "repo:.github/workflows/release-publish.yml#sha256:241b1121f2b95690858514f9bcc8af27f6bd9084d125b14ff0e5df31cd401a3d"
+  - "repo:.github/workflows/release-discord-notification.yml#sha256:82dcb039bd8d5ddf0a4084d982e0743698ed3d98f8fbf6af61e2161222669e2f"
+  - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/decisions/subscriber-approval-via-main-2026-11-12.md#sha256:132fde7fd96e010174e23d95f237053f5bfc425c10e7906875ac473c51a311d1"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:1cc98f5afa3e10399575b307a14591208b5f3ee2157192362e799cfbdd6409fd"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:04aa8a37aaa8843451dcd3512f0dac1cba68a651695ce7637d0ede74dbf5ff6a"
   - "repo:tests/results/discord-notification-0.12.0.md#sha256:48eb0e36599335dab851fb2631e0338e4581392baf256615f5778e6053e5eabf"
   - "repo:tests/results/discord-sectioned-notification-0.12.0.md#sha256:40aaa2a04ecd3d673e28b09be83c2fb4a81f82f0297d931cd9eea407131077d1"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:456e507860ad43d9c2ed1f69a6304e7802e1a8a5"
+reviewed_revision: "git:84ce26fa4163718ec88f9ee63c8e298f0dfa7aaa"
 status: active
 ---
 
 # 안정판 Discord 구독자 알림
 
-검토된 develop→main PR로 원문·한 줄 SHA-256 파일 승인. `release-publication` 변수 `AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr` 필요, 누락·다른 값은 게시 전 검사·전송 거부. 출시별 설정 불필요, 옛 지문 비밀값 삭제 가능.
-출시 소스만 사용, main·후보·공개 출시 결합과 버전별 중복 차단 유지. 다른 커밋 재전송 폐기. 파일명·바이트·전체 2,000자·목록·섹션 검증 유지. Release 성공 뒤 배너→안내 전송, 시험판·webhook 노출 제외. 로컬 검사와 실제 Discord 수신 구분. 상세: 2026-11-12 결정.
+main 검토 PR의 원문·지문 승인, AIGENT_HIVE_SUBSCRIBER_APPROVAL=main-pr 필수. 누락·다른 값의 검사·전송 거부. 출시별 설정 불필요, 옛 비밀값 삭제 가능. 파일명·바이트·한 줄 지문·2,000자·목록·섹션 검증. 정식 Release 뒤 배너→본문, 시험판 알림·웹훅 노출 제외. 일반 복구의 출시 소스 연결·중복 차단 유지. 0.15.0 정정: 0.15.1 전 main 검토 문구, ID 수정·삭제교체, 없으면 명시 정정. 정정 대기 중 새 안내 차단, 불확실 전송의 unknown 기록. 새 ID·안전한 수신 기록 보존, 본문·토큰 기록 제외. PR 승인과 발송 권한, 로컬 검사와 실제 수신의 구분. 상세: 2026-11-12 결정.
