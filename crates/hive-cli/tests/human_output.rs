@@ -103,7 +103,13 @@ fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
         let output = run(&args, "ko");
         assert!(output.status.success());
         let text = String::from_utf8_lossy(&output.stdout);
-        let first = text.lines().next().unwrap_or("");
+        let mut lines = text.lines();
+        if args[0] == "doctor" {
+            // Release and install workflows match this exact line.
+            let identity = format!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
+            assert_eq!(lines.next(), Some(identity.as_str()));
+        }
+        let first = lines.next().unwrap_or("");
         assert!(
             first.ends_with("완료.") && first.matches("완료").count() == 1,
             "{first}"

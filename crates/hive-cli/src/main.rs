@@ -2366,6 +2366,8 @@ fn doctor() -> Result<(), String> {
         env::current_dir().map_err(|error| format!("cannot read current directory: {error}"))?;
     let marker = source_marker_path(&current_directory);
 
+    // Release and install checks match this exact identity line.
+    println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
     emit_json_result(&ActionResult {
         schema_version: 1,
         action: "InspectInstallation",
