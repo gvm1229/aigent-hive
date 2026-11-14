@@ -1043,7 +1043,14 @@ fn project_upgrade_candidate_impl(
     if matches!(answers.primary_host.as_str(), "codex" | "claude")
         && effective_preferences.is_none()
     {
-        skill_delivery::apply(target_dir, &mut files, plugin, &answers.primary_host)?;
+        let remove_copies = may_remove_plugin_copies(target_dir)?;
+        skill_delivery::apply(
+            target_dir,
+            &mut files,
+            plugin,
+            &answers.primary_host,
+            remove_copies,
+        )?;
     }
     let mut baseline = files.clone();
     if !plugin.is_empty() {
@@ -4579,7 +4586,16 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         let empty = skill_delivery::VerifiedPlugins::default();
         let plugin =
             effective_preferences.map_or(&empty, |preferences| &preferences.codex_plugin_files);
-        skill_delivery::apply(target, &mut files, plugin, &answers.primary_host)?;
+        // Check plugin coverage on a scratch copy to decide the layout. A full-layout project
+        // records local delivery for every Skill, so its shared copies never depend on which
+        // machine ran the update.
+        let mut probe = files.clone();
+        skill_delivery::apply(target, &mut probe, plugin, &answers.primary_host, false)?;
+        if uses_compact_layout(target, answers, &probe)? {
+            files = probe;
+        } else {
+            skill_delivery::apply(target, &mut files, &empty, &answers.primary_host, false)?;
+        }
     }
     apply_compact_project_layout(target, answers, &mut files, projection_base_files)?;
     Ok(files)
@@ -4613,12 +4629,22 @@ fn render_shared_entrypoints<T: TargetRead + ?Sized>(
     Ok(())
 }
 
-fn apply_compact_project_layout<T: TargetRead + ?Sized>(
+/// An existing full-layout project keeps its shared Skill copies whatever this machine's plugin
+/// state is; only a stored compact choice may drop them.
+fn may_remove_plugin_copies<T: TargetRead + ?Sized>(target: &T) -> Result<bool, RenderError> {
+    read_target_optional(target, Path::new(".hive/setup-answers.yml"))?.map_or(Ok(false), |bytes| {
+        serde_yaml::from_slice::<SetupAnswers>(&bytes)
+            .map(|stored| stored.compact_layout)
+            .map_err(|error| RenderError::Verification(error.to_string()))
+    })
+}
+
+/// The stored choice wins; a new project goes compact only when asked or fully plugin-covered.
+fn uses_compact_layout<T: TargetRead + ?Sized>(
     target: &T,
     answers: &SetupAnswers,
-    files: &mut BTreeMap<PathBuf, Vec<u8>>,
-    projection_base_files: BTreeMap<PathBuf, Vec<u8>>,
-) -> Result<(), RenderError> {
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<bool, RenderError> {
     let eligible = answers.persistent_roles.is_empty()
         && answers.approved_optional_skills.is_empty()
         && answers.approved_fallback_hooks.is_empty();
@@ -4632,12 +4658,23 @@ fn apply_compact_project_layout<T: TargetRead + ?Sized>(
                 .map_err(|error| RenderError::Verification(error.to_string()))
         })
         .transpose()?;
-    let compact_choice = installed
+    let choice = installed
         .as_ref()
         .map_or(answers.compact_layout || plugin_covers_all, |stored| {
             stored.compact_layout
         });
-    if eligible && compact_choice {
+    Ok(eligible && choice)
+}
+
+fn apply_compact_project_layout<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+    projection_base_files: BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), RenderError> {
+    if uses_compact_layout(target, answers, files)? {
+        // Only a compact project drops copies the verified plugin already provides.
+        skill_delivery::remove_plugin_copies(files, &answers.primary_host)?;
         let mut compact = answers.clone();
         compact.compact_layout = true;
         files.insert(
@@ -11454,9 +11491,10 @@ mod tests {
             global_preferences: Some(preferences),
         };
         execute_setup(&request).unwrap();
-        assert!(!target
+        // Partial plugin coverage keeps the full layout, so every shared copy stays.
+        assert!(target
             .join(".agents/skills/prompt-refine/SKILL.md")
-            .exists());
+            .is_file());
         assert!(target
             .join(".agents/skills/project-setup/SKILL.md")
             .is_file());
@@ -11464,19 +11502,17 @@ mod tests {
         execute_setup(&request).unwrap();
         request.mode = SetupMode::Apply;
         assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
-        request.mode = SetupMode::Validate;
+        // A teammate without the plugin sees the same valid project and no changes.
         request
             .global_preferences
             .as_mut()
             .unwrap()
             .codex_plugin_files
             .clear();
-        assert!(execute_setup(&request).is_err());
-        request.mode = SetupMode::Apply;
+        request.mode = SetupMode::Validate;
         execute_setup(&request).unwrap();
-        assert!(target
-            .join(".agents/skills/prompt-refine/SKILL.md")
-            .is_file());
+        request.mode = SetupMode::Apply;
+        assert_eq!(execute_setup(&request).unwrap().changed_paths.len(), 0);
     }
     #[test]
     fn legacy_policy_uses_daily_work_once_and_keeps_subsequent_custom_or_empty_selection() {

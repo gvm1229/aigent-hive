@@ -4565,43 +4565,32 @@ mod tests {
     }
 
     #[test]
-    fn project_upgrade_cleans_plugin_copies_and_restores_local_delivery_when_unavailable() {
+    fn full_layout_project_keeps_shared_copies_on_machines_with_and_without_the_plugin() {
         let temporary = tempdir().unwrap();
         let root = temporary.path().canonicalize().unwrap();
         let plugin = plugin_project_fixture(&root);
         let cap = target_dir(&root);
         let plan = prepare_with_plugin(&cap, &plugin).unwrap();
         apply(&cap, &plan).unwrap();
-        assert!(!root.join(".agents/skills/prompt-refine/SKILL.md").exists());
-        assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
-        assert_eq!(
-            prepare_with_plugin(&cap, &plugin)
-                .unwrap()
-                .changed_paths
-                .len(),
-            0
-        );
-        let restore = prepare_with_plugin(
-            &cap,
-            &hive_render::skill_delivery::VerifiedPlugins::default(),
-        )
-        .unwrap();
-        apply(&cap, &restore).unwrap();
+        // A machine with the plugin must not remove the copies a teammate without it needs.
         assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
-        assert_eq!(
-            prepare_with_plugin(
-                &cap,
-                &hive_render::skill_delivery::VerifiedPlugins::default()
-            )
-            .unwrap()
-            .changed_paths
-            .len(),
-            0
-        );
+        assert!(root.join(".agents/skills/project-setup/SKILL.md").is_file());
+        for machine in [
+            plugin.clone(),
+            hive_render::skill_delivery::VerifiedPlugins::default(),
+        ] {
+            assert_eq!(
+                prepare_with_plugin(&cap, &machine)
+                    .unwrap()
+                    .changed_paths
+                    .len(),
+                0
+            );
+        }
     }
 
     #[test]
-    fn project_upgrade_restores_the_active_host_skill_when_its_plugin_is_missing() {
+    fn full_layout_project_keeps_both_host_copies_whatever_plugin_this_machine_has() {
         for host in ["codex", "claude"] {
             let temporary = tempdir().unwrap();
             let root = temporary.path().canonicalize().unwrap();
@@ -4619,15 +4608,7 @@ mod tests {
             } else {
                 ".agents/skills/prompt-refine/SKILL.md"
             });
-            assert!(!portable.exists());
-            assert!(!primary.exists());
-            let restore = prepare_with_plugin(
-                &cap,
-                &hive_render::skill_delivery::VerifiedPlugins::default(),
-            )
-            .unwrap();
-            apply(&cap, &restore).unwrap();
-            assert!(portable.is_file());
+            assert!(portable.is_file(), "{host}");
             assert!(primary.is_file(), "{host}");
             assert!(prepare_with_plugin(
                 &cap,
@@ -4658,14 +4639,14 @@ mod tests {
             apply(&cap, &plan).unwrap();
             assert_eq!(fs::read(changed).unwrap(), custom);
             assert!(root.join(".agents/skills/prompt-refine/SKILL.md").is_file());
+            // A full-layout project delivers every Skill locally; the plugin is not recorded.
             let ledger: Value = serde_json::from_slice(
                 &fs::read(root.join(hive_render::skill_delivery::PROVIDERS_PATH)).unwrap(),
             )
             .unwrap();
-            assert!(ledger["local_skills"]["prompt-refine"]
-                .as_str()
-                .unwrap()
-                .contains("resource"));
+            assert!(ledger["skills"]
+                .as_object()
+                .is_none_or(serde_json::Map::is_empty));
             assert_eq!(
                 prepare_with_plugin(&cap, &plugin)
                     .unwrap()

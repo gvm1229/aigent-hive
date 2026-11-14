@@ -110,6 +110,7 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
     plugin: &VerifiedPlugins,
     host: &str,
+    remove_copies: bool,
 ) -> Result<(), RenderError> {
     let empty = PluginSkillFiles::new();
     let plugin = if plugin.hosts.contains(host) {
@@ -176,16 +177,38 @@ pub(crate) fn apply<T: TargetRead + ?Sized>(
             continue;
         }
         ledger.skills.insert(name.clone(), digest(&expected));
-        for root in [".agents", ".claude"] {
-            if root == ".claude" && host != "claude" {
-                continue;
-            }
-            let prefix = PathBuf::from(format!("{root}/skills/{name}"));
-            files.retain(|path, _| !path.starts_with(&prefix));
+        if remove_copies {
+            drop_copies(files, &name, host);
         }
     }
     files.insert(PathBuf::from(PROVIDERS_PATH), encode(&ledger)?);
     Ok(())
+}
+
+/// Drops the copies a verified plugin provides, as recorded in the provider ledger.
+pub(crate) fn remove_plugin_copies(
+    files: &mut BTreeMap<PathBuf, Vec<u8>>,
+    host: &str,
+) -> Result<(), RenderError> {
+    let Some(bytes) = files.get(Path::new(PROVIDERS_PATH)) else {
+        return Ok(());
+    };
+    let ledger: SkillProviders =
+        serde_json::from_slice(bytes).map_err(|error| RenderError::Internal(error.to_string()))?;
+    for name in ledger.skills.keys() {
+        drop_copies(files, name, host);
+    }
+    Ok(())
+}
+
+fn drop_copies(files: &mut BTreeMap<PathBuf, Vec<u8>>, name: &str, host: &str) {
+    for root in [".agents", ".claude"] {
+        if root == ".claude" && host != "claude" {
+            continue;
+        }
+        let prefix = PathBuf::from(format!("{root}/skills/{name}"));
+        files.retain(|path, _| !path.starts_with(&prefix));
+    }
 }
 
 fn local_skill_reason<T: TargetRead + ?Sized>(
@@ -392,7 +415,7 @@ mod tests {
                 .iter()
                 .map(|(path, bytes)| (PathBuf::from(path), bytes.clone()))
                 .collect();
-            apply(&target, &mut files, &plugin, host).unwrap();
+            apply(&target, &mut files, &plugin, host, true).unwrap();
             assert_eq!(
                 files.contains_key(Path::new(".agents/skills/prompt-refine/SKILL.md")),
                 host == "claude"
@@ -430,7 +453,7 @@ mod tests {
             std::fs::create_dir_all(temporary.path().join(&path).parent().unwrap()).unwrap();
             std::fs::write(temporary.path().join(&path), &local).unwrap();
             let plugin = VerifiedPlugins::for_host("claude", primary.files);
-            apply(&target, &mut files, &plugin, "claude").unwrap();
+            apply(&target, &mut files, &plugin, "claude", true).unwrap();
             let ledger: SkillProviders =
                 serde_json::from_slice(&files[Path::new(PROVIDERS_PATH)]).unwrap();
             assert!(ledger.skills.is_empty(), "{root}");
@@ -478,6 +501,7 @@ mod tests {
                 &mut files,
                 &VerifiedPlugins::for_host("codex", plugin),
                 "codex",
+                true,
             )
             .unwrap();
             let ledger: SkillProviders =
