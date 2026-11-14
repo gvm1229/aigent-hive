@@ -12,7 +12,7 @@ sources:
   - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
   - "repo:crates/hive-cli/src/human_output.rs#sha256:ac6e4cc075655aa9ee8eabfc58fb6257dbd729861bb97c643084cd006139ebf6"
   - "repo:crates/hive-cli/src/main.rs#sha256:e6b86bf4af697433cb5d1181c9bdfbff3f6eb04efebf5912a6b483faf6c43c5c"
-  - "repo:crates/hive-cli/tests/human_output.rs#sha256:06fd069981cb0310b0bbe53e3f53ceb63dc37cd5bc5d1ac19d5ca1c1406b515a"
+  - "repo:crates/hive-cli/tests/human_output.rs#sha256:99363198c2d71e2224e6cda2e5805b7163082c4ac1385c2f9642c6a7060e4455"
 links: [inert-summon-contract, usage-threshold-provenance]
 reviewed_revision: "git:43dad991f214a9afdc50524cf2b7f32c22ae46a1"
 status: active

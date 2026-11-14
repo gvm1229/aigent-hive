@@ -1,7 +1,12 @@
 use std::{fs, process::Command};
 
+fn secure_tempdir() -> tempfile::TempDir {
+    let root = fs::canonicalize(std::env::temp_dir()).expect("canonical temporary root");
+    tempfile::tempdir_in(root).expect("temporary directory")
+}
+
 fn run(arguments: &[&str], language: &str) -> std::process::Output {
-    let root = tempfile::tempdir().unwrap();
+    let root = secure_tempdir();
     let config = root.path().join(".hive/config");
     fs::create_dir_all(&config).unwrap();
     fs::write(
@@ -92,7 +97,7 @@ fn every_command_family_defaults_to_human_errors_in_both_languages() {
 
 #[test]
 fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
-    let root = tempfile::tempdir().unwrap();
+    let root = secure_tempdir();
     let target = root.path().to_str().unwrap();
     for args in [vec!["doctor"], vec!["check-target", target]] {
         let output = run(&args, "ko");
@@ -175,7 +180,7 @@ fn usage_help_lists_the_usage_commands() {
 #[test]
 fn project_setup_description_works_without_the_output_option() {
     for language in ["ko", "en"] {
-        let root = tempfile::tempdir().unwrap();
+        let root = secure_tempdir();
         let config = root.path().join(".hive/config");
         fs::create_dir_all(&config).unwrap();
         fs::write(
@@ -229,7 +234,7 @@ usage_guard:
 
 /// A configured home and plain project, as a person would have after `hive setup`.
 fn configured_home(language: &str) -> tempfile::TempDir {
-    let root = tempfile::tempdir().unwrap();
+    let root = secure_tempdir();
     let config = root.path().join(".hive/config");
     fs::create_dir_all(&config).unwrap();
     fs::create_dir_all(root.path().join("project")).unwrap();
@@ -457,7 +462,7 @@ fn every_printed_next_step_is_a_command_hive_accepts() {
         let home = configured_home(language);
         let root = home.path().to_str().unwrap().to_owned();
         let project = home.path().join("project").to_str().unwrap().to_owned();
-        let empty = tempfile::tempdir().unwrap();
+        let empty = secure_tempdir();
         for (home_dir, arguments) in [
             (
                 empty.path(),
