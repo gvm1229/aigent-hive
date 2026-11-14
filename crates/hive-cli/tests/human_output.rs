@@ -226,3 +226,96 @@ usage_guard:
         assert!(!text.contains("diagnostic"), "{text}");
     }
 }
+
+/// A configured home and plain project, as a person would have after `hive setup`.
+fn configured_home(language: &str) -> tempfile::TempDir {
+    let root = tempfile::tempdir().unwrap();
+    let config = root.path().join(".hive/config");
+    fs::create_dir_all(&config).unwrap();
+    fs::create_dir_all(root.path().join("project")).unwrap();
+    fs::write(
+        config.join("user-setup.yml"),
+        format!(
+            "schema_version: 1\ninterface_language: {language}\nwiki:\n  enabled: true\n  language: both\n\
+             profile:\n  contexts:\n  - web-developer\npersona:\n  id: balanced\nselected_hosts:\n- codex\n\
+             skills:\n  mode: individual\n  selected:\n  - user-setup\nusage_guard:\n  enabled: false\n  \
+             stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n"
+        ),
+    )
+    .unwrap();
+    root
+}
+
+#[test]
+fn every_family_reads_as_plain_text_in_both_languages() {
+    for language in ["ko", "en"] {
+        let home = configured_home(language);
+        let root = home.path().to_str().unwrap().to_owned();
+        let project = home.path().join("project").to_str().unwrap().to_owned();
+        let commands: Vec<Vec<String>> = [
+            vec!["storage"],
+            vec!["usage", "monitor", "status", "--user-root", &root],
+            vec!["roster", "--target", &project, "--user-root", &root],
+            vec!["setup", "--show", "--target", &project],
+            vec![
+                "setup",
+                "--target",
+                &project,
+                "--describe",
+                "--section",
+                "hosts",
+            ],
+            vec!["report", "preview", "--target", &project],
+            vec!["update", "--check", "--user-root", &root],
+            vec!["usage", "check"],
+            vec!["role", "validate", "--role", "nope"],
+            vec!["knowledge", "list", "--target", &project],
+            vec!["session", "check", "--target", &project],
+        ]
+        .into_iter()
+        .map(|args| args.into_iter().map(str::to_owned).collect())
+        .collect();
+        for arguments in commands {
+            let output = Command::new(env!("CARGO_BIN_EXE_hive"))
+                .args(&arguments)
+                .env("USERPROFILE", home.path())
+                .env("HOME", home.path())
+                .output()
+                .unwrap();
+            let text = String::from_utf8_lossy(&output.stdout).into_owned();
+            let context = format!("{language} {arguments:?}:\n{text}");
+            assert!(!text.trim().is_empty(), "{context}");
+            assert!(!text.trim_start().starts_with('{'), "{context}");
+            assert!(!text.to_ascii_lowercase().contains("json"), "{context}");
+            assert!(!text.contains(r"\?\"), "{context}");
+            if language == "ko" {
+                assert!(
+                    text.lines().next().unwrap().matches("완료").count() <= 1,
+                    "{context}"
+                );
+            }
+            let lines: Vec<&str> = text.lines().collect();
+            let mut seen = std::collections::HashMap::new();
+            for (index, line) in lines.iter().enumerate() {
+                // A heading must have something under it.
+                if line.ends_with(':') && !line.starts_with(['-', ' ']) {
+                    let next = lines.get(index + 1).copied().unwrap_or("");
+                    assert!(
+                        next.starts_with(['-', ' ']),
+                        "empty heading {line:?} in {context}"
+                    );
+                }
+                // One label must not show two different values.
+                if let Some((label, value)) = line.split_once(": ") {
+                    if !line.starts_with(['-', ' ']) && !value.is_empty() {
+                        let previous = seen.insert(label.to_owned(), value.to_owned());
+                        assert!(
+                            previous.is_none_or(|old| old == value),
+                            "conflicting {label:?} in {context}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
