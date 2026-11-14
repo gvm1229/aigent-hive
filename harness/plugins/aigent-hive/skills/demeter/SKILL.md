@@ -1,6 +1,6 @@
 ---
 name: demeter
-description: "(demeter) Use only when the user names demeter, 데메테르."
+description: "(demeter) Saves, searches and maintains Hive knowledge and moves it to another computer. Use only when the user names demeter, 데메테르."
 ---
 
 # Demeter

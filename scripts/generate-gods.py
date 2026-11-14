@@ -23,6 +23,8 @@ class God:
     korean: str
     purpose_en: str
     purpose_ko: str
+    summary_en: str
+    summary_ko: str
     ownership_ko: str
     role: str
     aliases: list[str]
@@ -40,11 +42,12 @@ class God:
 
     @property
     def description_en(self) -> str:
-        return f"({self.name}) Use only when the user names {self.names}."
+        # What the Skill does comes first; the names only decide when it is called.
+        return f"({self.name}) {self.summary_en} Use only when the user names {self.names}."
 
     @property
     def description_ko(self) -> str:
-        return f"({self.name}) 명시한 신 이름에만 사용: {self.names}."
+        return f"({self.name}) {self.summary_ko}. 사용자가 {self.names} 중 하나를 부를 때만 사용."
 
 
 def load_table(path: Path = TABLE) -> list[God]:
@@ -52,7 +55,7 @@ def load_table(path: Path = TABLE) -> list[God]:
     if set(data) != {"schema_version", "gods"} or data["schema_version"] != 1:
         raise ValueError("invalid god table schema")
     result = []
-    scalar = {"name", "korean", "purpose_en", "purpose_ko", "ownership_ko", "role"}
+    scalar = {"name", "korean", "purpose_en", "purpose_ko", "summary_en", "summary_ko", "ownership_ko", "role"}
     for row in data["gods"]:
         if set(row) != {field.name for field in fields(God)}:
             raise ValueError("unknown or missing god field")
@@ -149,7 +152,7 @@ def outputs(gods: list[God]) -> dict[Path, str]:
     guide = ROOT / "docs/skills.md"
     text = guide.read_text(encoding="utf-8")
     for god in gods:
-        row = f"| `{god.name}` | 기존 {god.purpose_ko} 기능의 신 이름 입구 | {god.korean} 호출 |"
+        row = f"| `{god.name}` | {god.summary_ko} | {god.korean} 호출 |"
         text, count = re.subn(rf"(?m)^\| `{re.escape(god.name)}` \|[^\n]*$", row, text)
         if count != 1:
             raise ValueError(f"expected one god guide row: {god.name}")

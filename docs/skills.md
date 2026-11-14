@@ -46,15 +46,15 @@
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
 | `judge-evidence` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
 | `adversarial-judge` | 제한된 clean-context 독립 Judge 요청 준비 | 명시적 반례·권한·복구 결손 검토 |
-| `athena` | 기존 계획 기능의 신 이름 입구 | 아테나 호출 |
-| `artemis` | 기존 조사 기능의 신 이름 입구 | 아르테미스 호출 |
-| `hephaistos` | 기존 구현 기능의 신 이름 입구 | 헤파이스토스 호출 |
-| `apollon` | 기존 글쓰기 기능의 신 이름 입구 | 아폴론 호출 |
-| `eileithyia` | 기존 설정 기능의 신 이름 입구 | 에일레이티이아 호출 |
-| `poseidon` | 기존 조율 기능의 신 이름 입구 | 포세이돈 호출 |
-| `demeter` | 기존 지식 기능의 신 이름 입구 | 데메테르 호출 |
-| `aither` | 기존 사용량 관리 기능의 신 이름 입구 | 아이테르 호출 |
-| `hades` | 기존 정리 기능의 신 이름 입구 | 하데스 호출 |
+| `athena` | 작업 계획과 완료 기준을 구현 전에 저장하고 결과를 별도로 검토 | 아테나 호출 |
+| `artemis` | 코드 변경 없이 자료를 조사하고 문제 원인을 진단 | 아르테미스 호출 |
+| `hephaistos` | 저장한 계획을 구현하고 결과 코드를 정리 | 헤파이스토스 호출 |
+| `apollon` | 글을 쓰고 다듬으며 요청문과 프롬프트를 정리 | 아폴론 호출 |
+| `eileithyia` | 사용자나 프로젝트의 Hive를 설정하고 업데이트를 설치 | 에일레이티이아 호출 |
+| `poseidon` | 여러 작업의 역할을 배정하고 작업 간 인계를 기록 | 포세이돈 호출 |
+| `demeter` | Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전 | 데메테르 호출 |
+| `aither` | 사용량을 확인하고 사용량 보호 기준을 관리 | 아이테르 호출 |
+| `hades` | Hive 저장 공간을 측정하고 정리할 파일을 미리 보여 줌 | 하데스 호출 |
 
 9신 입구: 정본 이름·별칭 명시 요청 전용, 일반 작업 문구는 기존 전문 Skill 소속. `harness/gods.toml`에서 위 신 입구 행 생성, 기존 기능·승인 경계 유지. 소스 개발 브랜치의 추가 항목이며 공개 안정판의 설치 범위는 README 안내 기준. [기능 소속·역할 이전](architecture/god-ownership.md) 참조.
 

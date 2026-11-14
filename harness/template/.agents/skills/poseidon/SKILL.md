@@ -1,6 +1,6 @@
 ---
 name: poseidon
-description: "(poseidon) Use only when the user names poseidon, 포세이돈."
+description: "(poseidon) Assigns roles across several tasks and records handoffs between them. Use only when the user names poseidon, 포세이돈."
 ---
 
 # Poseidon
