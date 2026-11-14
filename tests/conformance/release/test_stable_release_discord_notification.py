@@ -619,7 +619,9 @@ class StableNotificationCorrection(unittest.TestCase):
 class StableNoticeOrdering(unittest.TestCase):
     def test_pending_correction_blocks_direct_send_and_newer_recovery(self) -> None:
         pending = (ROOT / "docs/releases/discord-pending-corrections.txt").read_text(encoding="utf-8").split()
-        self.assertEqual(pending, ["0.15.0"])
+        # 0.15.0 was corrected on 2026-11-14 (run 43554636724); listed versions must be valid.
+        for version in pending:
+            self.assertRegex(version, r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
         publish = yaml.safe_load((ROOT / ".github/workflows/release-publish.yml").read_text(encoding="utf-8"))
         steps = {step.get("name"): step for step in publish["jobs"]["publish"]["steps"]}
         guard = steps["Validate stable Discord subscriber update"]["run"]

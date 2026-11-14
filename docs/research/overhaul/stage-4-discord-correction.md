@@ -38,6 +38,13 @@ gh workflow run release-discord-notification.yml --ref main -f operation=correct
 - ID로 원래 글을 읽고 버전 제목이 같을 때만 PATCH. 수정 불가 응답이면 삭제 뒤 정정 글, 삭제도 불가하면 정정 글과 유지관리자 수동 삭제 기록
 - 웹훅 주소·토큰 입력 금지, 비밀은 GitHub 환경 안에서만 사용
 
+## 실행 결과
+
+- 2026-11-14 [PR #96](https://github.com/gvm1229/aigent-hive/pull/96) develop 병합, [PR #97](https://github.com/gvm1229/aigent-hive/pull/97) main 병합 `72e640b2`. 두 PR의 CI 통과, develop 푸시 실행은 같은 커밋의 PR 실행에 밀려 취소된 뒤 재실행
+- [정정 실행 43554636724](https://github.com/gvm1229/aigent-hive/actions/runs/43554636724) 성공. 수신 기록: `operation: edited`, GET 200·PATCH 200, 원래 메시지 `1570581574905499885` 제자리 수정, 수동 삭제 불필요, 승인 지문 `sha256:1759aa37…96d3`
+- 수신자의 실제 열람은 미확인
+- 정정 대기 목록 비움. 0.15.1 정식은 안내 동시 전송 가능, recover도 0.15.0 정정 수신 기록 확인 통과
+
 ## 증명 범위와 한계
 
 - Windows의 로컬 HTTP 모의 서버로 수정·같은 본문·삭제 후 교체·ID 부재·권한 거부·잘못된 대상·일시 실패·리디렉션·잘못된 응답·승인/지문 거부 검사
