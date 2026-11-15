@@ -141,16 +141,14 @@ pub(super) fn parse_retrieval_request(
             current_collection_id: None,
             query: required(options, "--query")?.to_owned(),
             // Host-supplied Korean, English and inflected variants, separated by `;`.
-            query_expansions: optional(options, "--expansions")
-                .map(|value| {
-                    value
-                        .split(';')
-                        .map(str::trim)
-                        .filter(|term| !term.is_empty())
-                        .map(str::to_owned)
-                        .collect()
-                })
-                .unwrap_or_default(),
+            query_expansions: optional(options, "--expansions").map_or_else(Vec::new, |value| {
+                value
+                    .split(';')
+                    .map(str::trim)
+                    .filter(|term| !term.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            }),
             top_k: parse_bounded_usize(optional(options, "--top-k"), 5, 1, 100, "--top-k")?,
             byte_budget: parse_bounded_usize(
                 optional(options, "--byte-budget"),

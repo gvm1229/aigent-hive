@@ -3035,20 +3035,18 @@ pub fn advise_subject(
             .then(left.subject.cmp(&right.subject))
     });
     suggestions.truncate(limit);
-    let near_duplicates = requested
-        .map(|requested| {
-            let leaf = requested.rsplit('/').next().unwrap_or(requested);
-            subjects
-                .keys()
-                .filter(|subject| **subject != requested)
-                .filter(|subject| {
-                    compact_subject(subject) == compact_subject(requested)
-                        || subject.rsplit('/').next() == Some(leaf)
-                })
-                .map(|subject| (*subject).to_owned())
-                .collect()
-        })
-        .unwrap_or_default();
+    let near_duplicates = requested.map_or_else(Vec::new, |requested| {
+        let leaf = requested.rsplit('/').next().unwrap_or(requested);
+        subjects
+            .keys()
+            .filter(|subject| **subject != requested)
+            .filter(|subject| {
+                compact_subject(subject) == compact_subject(requested)
+                    || subject.rsplit('/').next() == Some(leaf)
+            })
+            .map(|subject| (*subject).to_owned())
+            .collect()
+    });
     SubjectAdvice {
         requested: requested.map(str::to_owned),
         existing: requested.is_some_and(|subject| subjects.contains_key(subject)),
@@ -5737,7 +5735,7 @@ mod tests {
             .suggestions
             .iter()
             .all(|item| item.subject != "ops/deploy"));
-        assert!(advice.near_duplicates.is_empty());
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
         let advice = advise_subject(
             &claims,
             USER_ROOT_COLLECTION_ID,
@@ -5766,7 +5764,7 @@ mod tests {
             5,
         );
         assert!(advice.existing);
-        assert!(advice.near_duplicates.is_empty());
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
     }
 
     #[test]

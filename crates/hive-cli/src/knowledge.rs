@@ -5988,7 +5988,7 @@ mod tests {
         let generation = data["store"]["generation"].as_u64().expect("generation");
 
         let repeated = run_remember(&batch_arguments(user.path(), &batch)).expect("batch no-op");
-        assert!(repeated.changed_paths.is_empty());
+        assert_eq!(repeated.changed_paths, Vec::<String>::new());
         let repeated = repeated.data.expect("no-op data");
         assert!(repeated["plans"]
             .as_array()
@@ -6174,7 +6174,7 @@ mod tests {
             "json".to_owned(),
         ])
         .expect("preview");
-        assert!(preview.changed_paths.is_empty());
+        assert_eq!(preview.changed_paths, Vec::<String>::new());
         assert_eq!(claim_bytes(user.path()), before);
         let data = preview.data.expect("preview data");
         let proposals = data["proposals"].as_array().expect("proposals");
@@ -6378,7 +6378,7 @@ mod tests {
         )
         .expect("unknown field batch");
         assert!(run_remember(&batch_arguments(user.path(), &unknown)).is_err());
-        assert!(user_root_claim_files(user.path()).is_empty());
+        assert_eq!(user_root_claim_files(user.path()), Vec::<PathBuf>::new());
     }
 
     #[test]
