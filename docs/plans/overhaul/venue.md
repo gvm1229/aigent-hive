@@ -7,7 +7,11 @@
 - `cloud`: 코드·문서·계획 작성, 가짜 실행기 시험, Rust·Python 적합성 시험, CI, PR, develop 병합
 - `local`: 이 Windows PC 전용. 실제 로그인 호스트의 설치·갱신·플러그인·Skill 표시, 구독 모델 왕복, Codex 위임, 데스크톱 앱, 실제 `~/.hive`, npm·Discord 자격 증명
 - `split`: cloud 부분 뒤 local 부분. local 부분은 괄호로 표기
-- 워크플로 실행(`gh workflow run`)의 cloud 가능 여부 미확인. 첫 cloud 시도 결과를 이 파일에 기록, 실패 시 공개 시험·정식 게시는 local
+- 워크플로 실행(`gh workflow run`)의 cloud 가능 여부: 미확인 유지. 2026-11-15 단계 5 cloud 세션 기록:
+  - 이 cloud 환경의 정책상 `gh` CLI는 코드 검색 전용, `gh workflow run` 미시도
+  - GitHub MCP 연결로 Actions 읽기 성공(워크플로 8개 목록). 실행 도구 `actions_run_trigger`는 존재하나 미실행
+  - 미실행 이유: OV153-008의 선행 조건(단계 검토·develop 병합·시험 의도 커밋) 미충족. 실행 가능한 워크플로가 모두 출시·게시 계열이라 시험 삼아 실행할 무해한 대상 없음
+  - 다음 cloud 세션이 OV153-008에서 MCP `actions_run_trigger`로 `release.yml` 실행을 1회 시도하고 결과 기록. 실패 시 공개 시험·정식 게시는 local
 - 표기: 항목의 `state` 줄 다음에 `  - 장소: cloud` / `local` / `split(local: <단계>)`. 표기 없는 항목은 local로 취급
 - 가짜 실행기·CI 통과는 실제 호스트 근거가 아님. 0.15.2의 실제 호스트 결함 세 건은 이 PC에서만 발견([OV152-001](../../research/overhaul/OV152-001.md))
 - cloud 세션에는 실행 가능한 `hive`가 없으므로 [07](../../../.agents/directives/07-installed-usage-guard.md)의 해당 경로에 따라 사전 확인 생략·보고
