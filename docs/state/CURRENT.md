@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 제품 버전: `0.15.2`
-- 공개 안정판: `0.15.1` (2026-11-15). 이 PC 사용자 갱신 실패·Claude·Antigravity 미설치 확인 ([실측](../research/overhaul/OV152-001.md))
+- 공개 안정판: `0.15.1` (2026-11-15), 정식 `0.15.2` 진행 중. [0.15.2-test.4 세 OS 수용](../research/overhaul/OV152-006.md)·[이 PC 다섯 앱 확인](../research/overhaul/OV152-007.md)
 - 작업: 0.15.2 호스트 설치 복구. [소유 계획](../plans/active/0.15.2-host-install.md)·[수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)
 - 현재 요청: 다섯 호스트의 Hive 플러그인·Skill 확인, 실패 수정 뒤 새 정식 출시. 재정비 단계 5 이후 보류 유지
 - 구독자 글: 0.15.1 안내 전송 완료, 0.15.2 안내는 정식 게시와 함께
@@ -18,9 +18,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.2`
-- 현재 등록 항목: 7/10 완료
+- 현재 등록 항목: 9/10 완료
 
-- `agent-owned`: `OV152-006`, `OV152-007`, `OV152-008`
+- `agent-owned`: `OV152-008`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음

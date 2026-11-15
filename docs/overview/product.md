@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.1 release-date=2026-11-15 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-15 -->
 
 ## 목적
 
@@ -65,7 +65,7 @@ provider-neutral 로컬 agent harness.
 | 실행 중 중단·알림 | 선택형 Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 하한·실제 초기화·60초 조회 공백 중단, 앱 유지·직접 재개·이유 안내 | [0.13.1 안내](../releases/0.13.1.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.15.1` release](../releases/0.15.1.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.15.2` release](../releases/0.15.2.md) |
 
 ## Artifact 흐름
 
@@ -83,7 +83,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.15.1` (released 2026-11-15)
+- Current public stable version: `0.15.2` (released 2026-11-15)
+- `0.15.2`: Codex·Claude Code·Antigravity 동시 설치 안내, Claude 남은 등록 정리, Antigravity CLI 1.2.x 지원, 갱신·설치 실패 복구
 - `0.15.1`: 쉬운 한국어·영어 명령 결과, 로컬 프로젝트 감지·한 번 확인, Hive 지식 기록 규칙, Skill 설명의 하는 일 표시
 - `0.15.0`: 신 입구 9개·역할별 모델 설정·비활성 작업 봉투 미리보기, 기존 명령·고정 역할 보존
 - `0.14.2`: 1 MiB 초과·128 MiB 이하인 오래된 감시 프로그램 정리 복구, 현재·직전·Windows 잠금 파일 보존

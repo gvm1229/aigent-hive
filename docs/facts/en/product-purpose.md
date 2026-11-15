@@ -9,7 +9,7 @@ summary: "Hive supplies a local harness around subscription-authenticated agent 
 tags: [product, purpose]
 aliases: ["Hive purpose"]
 sources:
-  - "repo:docs/overview/product.md#sha256:18a1ece3b56bc5020cfbf663066740bfd1f91b0f1383cec522019d4093ddf9b9"
+  - "repo:docs/overview/product.md#sha256:f8f76a49f5507af92770fb06383ab34a6319648c19df646829f1bf2c8630cd07"
 links: [product-non-goals, supported-hosts]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
 status: active
