@@ -24,7 +24,7 @@
   - 변경: 한·영 질의 40개 이상(HTML 디자인 선호 사례, "색"·"글꼴" 같은 짧은 한국어 질의 포함)과 합성 지식 저장소, 과적합 방지용 보류 묶음 분리
   - 확인: 질의별 기대 사실과 현재 적중 표, 전체 회수율 수치
 - [x] [OVX-003] 실제 기억 저장소의 세 사실 존재 확인
-  - state: complete; evidence: repo:docs/research/overhaul/OVX-003.md#sha256:49cf248d7549f650d98d5acaadf296fcf61da7f1164e9c5757547d2029c18149
+  - state: complete; evidence: repo:docs/research/overhaul/OVX-003.md#sha256:dc553937347b3249698aac91d470b592adb724a9c29046239e83ffebda227e67
   - 근거: [세 사실의 존재·범위](../../research/overhaul/OVX-003.md)
   - 변경: `~/.hive/knowledge/Claims`에서 미니멀 스타일·색·피할 디자인 사실 검색, 읽기 전용
   - 확인: 3개 각각 존재/부재 기록. 부재면 원인은 기록 규칙, 0.15.2의 OV152-002 우선

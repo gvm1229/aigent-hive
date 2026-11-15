@@ -1,35 +1,35 @@
 # Aigent Hive 활성 계획
 
-> Revision: 512
+> Revision: 513
 > 기준일: 2026-11-15
-> Product version: `0.15.2`
-> 공개 Stable: `0.15.1`
-> 현재 단계: 0.15.2 호스트 설치 복구 구현
-> 공개 시험: `0.15.2-test.1` 미실행
-> 작업 브랜치: `develop`
+> Product version: `0.15.3`
+> 공개 Stable: `0.15.2`
+> 현재 단계: 재정비 단계 5 0.15.3 기억 회수 구현(cloud 세션)
+> 공개 시험: `0.15.3-test.1` 미실행
+> 작업 브랜치: `feature/overhaul-5-0.15.3-memory`
 
 ## 목표와 결정
 
-- [소유 계획](active/0.15.2-host-install.md): 갱신 재개·되돌리기·색인·Claude 마켓 결함 수정, 공개 시험·이 PC 다섯 호스트 확인·정식
-- [시작 요청과 실측](../research/overhaul/OV152-001.md): 유지관리자의 수정·새 정식 출시 요청
-- 재정비 단계 5 이후 보류 유지
+- [소유 계획](active/0.15.3-memory.md): 한 턴의 여러 사실 기록·사실당 주제·주제 묶음 회수·회수 Skill 후속 조회·기존 지식 주제 부여·회수율 평가
+- [시작 승인과 버전 전환](../research/overhaul/OV153-001.md): 유지관리자 "Start stage 5 in a cloud session"
+- [실행 장소 규칙](overhaul/venue.md): 실제 호스트·PC 설치·자격 증명 단계는 local 넘기기
 
 ## Completion index
 
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 호스트 설치 복구 | 10 | 0 | 100.0% |
-| **현재 범위 합계** | **10** | **0** | **100.0%** |
+| 기억 회수 | 1 | 9 | 10.0% |
+| **현재 범위 합계** | **1** | **9** | **10.0%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [0.15.2-host-install.md](active/0.15.2-host-install.md) | `OV152-001–008` | 호스트 설치 복구 |
+| [0.15.3-memory.md](active/0.15.3-memory.md) | `OV153-001–010` | 기억 회수 |
 
 ## 이전 근거
 
-- [재정비 순서](overhaul/README.md)·[정식 0.15.1 근거](../research/overhaul/OV151-010.md)
-- [이전 활성 계획 색인](../archive/plans/0.15.1-closeout.md)
+- [재정비 순서](overhaul/README.md)·[정식 0.15.2 근거](../research/overhaul/OV152-008.md)
+- [이전 활성 계획 색인](../archive/plans/0.15.2-closeout.md)

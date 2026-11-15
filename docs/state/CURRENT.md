@@ -1,27 +1,22 @@
 # 현재 상태
 
-- 제품 버전: `0.15.2`
-- 공개 안정판·PC 설치: `0.15.2` (2026-11-16). [정식 근거](../research/overhaul/OV152-008.md)·[test.4 수용](../research/overhaul/OV152-006.md)·[다섯 앱 확인](../research/overhaul/OV152-007.md)
-- 작업: 0.15.2 호스트 설치 복구. [소유 계획](../plans/active/0.15.2-host-install.md)·[수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)
-- 현재 요청: 0.15.2 정식 완료. 남은 재정비는 [실행 장소 규칙](../plans/overhaul/venue.md)에 따라 클라우드·로컬 구분, 다음은 단계 5 0.15.3 기억 회수(시작 승인 대기)
-- 구독자 글: 0.15.2 안내 정식 게시와 함께 전송 완료
+- 제품 버전: `0.15.3`
+- 공개 안정판·PC 설치: `0.15.2` (2026-11-16). [정식 근거](../research/overhaul/OV152-008.md)
+- 작업: 재정비 단계 5 0.15.3 기억 회수, 브랜치 `feature/overhaul-5-0.15.3-memory`. [소유 계획](../plans/active/0.15.3-memory.md)·[시작 근거](../research/overhaul/OV153-001.md)
+- 현재 요청: 유지관리자 "Start stage 5 in a cloud session". cloud 항목 진행, local 단계는 [실행 장소 규칙](../plans/overhaul/venue.md)의 넘기기
+- 다음 local 작업: 없음
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
-- [정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md)·[이전 정식 근거](../research/overhaul/OV150-013.md) 보존
-
-- [최종 CLI·안내 검증](../research/overhaul/stage-4-human-output.md): Rust 1,475개 통과·5개 수동 제외, Python 1,211개 중 1,167개 통과·44개 제외. fmt·clippy·문서·문체·지침·계획·Source Wiki 통과, Windows 밖 실행·실제 설치·Discord 전송 미검증
-- [이전 판별 검토·측정](../research/overhaul/stage-4-review.md): 보류 종류 19/20·출력 사실 53/53, 고정 검색 22/40의 당시 근거 보존. 감지기·검색 구현·동결 정답 변경 없음
-- 이번 고정 실행 파일 사본 3개·184,858,624바이트 정리. 전체 산출물의 기존 검토 필요 467개·보존 1개·최소 29.52GiB·미측정 21경로는 별도 조치 필요, 임의 삭제 없음
-
+- [0.15.2 종료 상태](../archive/state/0.15.2-closeout.md)·[0.15.2 수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)·[정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md) 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
-- 구현 목표: `0.15.2`
-- 현재 등록 항목: 10/10 완료
+- 구현 목표: `0.15.3`
+- 현재 등록 항목: 1/10 완료
 
-- `agent-owned`: 없음
-- `awaiting-user-authority`: 없음
+- `agent-owned`: `OV153-002`, `OV153-003`, `OV153-004`, `OV153-005`, `OV153-006`, `OV153-007`, `OV153-008`, `OV153-009`
+- `awaiting-user-authority`: `OV153-010`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
