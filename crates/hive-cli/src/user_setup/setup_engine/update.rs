@@ -297,7 +297,7 @@ fn retire_stale_monitor_preview(
     {
         return Ok(false);
     }
-    store.record_failure(progress)?;
+    store.record_retired_failure(progress)?;
     let backup = user_setup::progress_store::recovery_path(progress)?;
     if let Some(bytes) =
         crate::user_install::read_user_setup_file(cap, &backup, user_setup::MAX_USER_SETUP_BYTES)
@@ -659,6 +659,30 @@ mod tests {
             fresh.legacy_migration.unwrap().monitor_choice,
             crate::usage_monitor::inspect_saved_choice(root.path()).unwrap()
         );
+    }
+
+    #[test]
+    fn resumed_update_retires_stale_preview_started_by_an_earlier_product() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, original) = stale_legacy_progress(root.path(), |_| {});
+        // The stuck operation was recorded by the public build this update replaces.
+        let operation_id = store.load().unwrap().progress.unwrap().operation_id;
+        let receipt_path = root
+            .path()
+            .join(format!(".hive/history/lifecycle/{operation_id}.json"));
+        let mut receipt: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&receipt_path).unwrap()).unwrap();
+        receipt["product_version"] = json!("0.0.1");
+        receipt["migration"]["policy_version"] = json!("0.0.1");
+        std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+
+        assert!(retire(root.path(), &store, &original));
+
+        assert!(store.load().unwrap().progress.is_none());
+        let receipt: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&receipt_path).unwrap()).unwrap();
+        assert_eq!(receipt["product_version"], "0.0.1");
+        assert_eq!(receipt["phase"], "recoverable-failure");
     }
 
     #[test]
