@@ -10082,6 +10082,7 @@ mod tests {
                 ("0.14.2", 77),
                 ("0.15.0", 95),
                 ("0.15.1", 95),
+                ("0.15.2", 95),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10253,6 +10254,7 @@ mod tests {
                         | "0.14.2"
                         | "0.15.0"
                         | "0.15.1"
+                        | "0.15.2"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
