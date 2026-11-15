@@ -17,15 +17,16 @@ use hive_projection::{
     compile_user_projection_localized, DescriptorLanguage, Host as ProjectionHost,
 };
 use host_state::{
-    codex_compensation_command, compensate_host_mutations, expected_antigravity_plugin_state,
-    expected_claude_marketplace_path, expected_codex_marketplace_root,
-    expected_codex_plugin_source_path, is_recoverable_dangling_codex_marketplace,
-    normalize_host_path, probe_antigravity_state, probe_antigravity_state_if_required,
-    probe_claude_state, probe_claude_state_if_required, probe_codex_state,
-    probe_codex_state_if_required, resolve_pending_host_transition, sanitized_command_diagnostic,
-    validate_antigravity_activation, validate_antigravity_prestate, validate_claude_activation,
-    validate_claude_prestate, validate_codex_activation, validate_codex_prestate,
-    validate_installed_host,
+    codex_compensation_command, compensate_host_mutations, dangling_claude_marketplace_path,
+    expected_antigravity_plugin_state, expected_claude_marketplace_path,
+    expected_codex_marketplace_root, expected_codex_plugin_source_path,
+    is_recoverable_dangling_codex_marketplace, normalize_host_path, probe_antigravity_state,
+    probe_antigravity_state_if_required, probe_claude_state, probe_claude_state_if_required,
+    probe_codex_state, probe_codex_state_if_required, remove_dangling_claude_marketplace,
+    resolve_pending_host_transition, restore_missing_codex_marketplace_manifest,
+    sanitized_command_diagnostic, validate_antigravity_activation, validate_antigravity_prestate,
+    validate_claude_activation, validate_claude_prestate, validate_codex_activation,
+    validate_codex_prestate, validate_installed_host,
 };
 #[cfg(test)]
 use host_state::{
@@ -2532,14 +2533,24 @@ fn execute(
             validate_codex_prestate(arguments, codex.as_ref())?;
             validate_claude_prestate(arguments, claude.as_ref())?;
             validate_antigravity_prestate(arguments, &plan, antigravity.as_ref())?;
-            Ok(success_result(
+            let mut result = success_result(
                 operation,
                 arguments,
                 &plan,
                 "hive.user-install-dry-run-complete",
                 "user installation dry run completed",
                 None,
-            ))
+            );
+            if let Some(path) = dangling_claude_marketplace_path(arguments, claude.as_ref())? {
+                result.message = format!(
+                    "{}; apply will remove the unloadable Claude aigent-hive marketplace registered at missing path {path}",
+                    result.message
+                );
+                if let Some(data) = result.data.as_mut() {
+                    data["dangling_claude_marketplace_removal"] = json!(path);
+                }
+            }
+            Ok(result)
         }
         UserMode::Validate => {
             if !plan.changed_paths.is_empty() {
@@ -2661,7 +2672,14 @@ fn execute_apply(
     validate_codex_prestate(arguments, codex_before.as_ref())?;
     validate_claude_prestate(arguments, claude_before.as_ref())?;
     validate_antigravity_prestate(arguments, plan, antigravity_before.as_ref())?;
+    let claude_before = remove_dangling_claude_marketplace(
+        arguments,
+        claude_before,
+        host_executable.as_ref(),
+        runner,
+    )?;
     let applied_changed_paths = plan.changed_paths.clone();
+    let mut index_rebuild_deferred = false;
     let mut transaction = apply_plan(
         arguments,
         plan,
@@ -2687,6 +2705,7 @@ fn execute_apply(
             Ok(())
         } else {
             rebuild_root_index(arguments, &mut transaction)
+                .map(|deferred| index_rebuild_deferred = deferred)
         }
     })
     .and_then(|()| {
@@ -2799,13 +2818,29 @@ fn execute_apply(
     if let Some(data) = result.data.as_mut() {
         data["user_projection"] = json!({"paths": projection.reports});
     }
+    if index_rebuild_deferred {
+        let path = arguments.user_root.to_string_lossy();
+        let quoted = if cfg!(windows) {
+            path.replace('\'', "''")
+        } else {
+            path.replace('\'', "'\"'\"'")
+        };
+        let rebuild = format!(
+            "run hive index rebuild --user-root '{quoted}' to rebuild the disposable knowledge index"
+        );
+        result.next_action = Some(match result.next_action.take() {
+            Some(existing) => format!("{existing}; then {rebuild}"),
+            None => rebuild,
+        });
+    }
     Ok(result)
 }
 
+/// Returns `true` when the disposable index was left for an explicit `hive index rebuild`.
 fn rebuild_root_index(
     arguments: &UserArguments,
     transaction: &mut UserTransaction,
-) -> Result<(), InstallError> {
+) -> Result<bool, InstallError> {
     let installed = crate::user_setup::load_operational_config(&arguments.root_cap)
         .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
     let setup = arguments
@@ -2813,20 +2848,27 @@ fn rebuild_root_index(
         .as_ref()
         .map(|(config, _)| config)
         .or(installed.as_ref());
-    let Some(setup) = setup else { return Ok(()) };
+    let Some(setup) = setup else { return Ok(false) };
     if !setup.wiki.enabled {
-        return index_removal::apply(arguments, transaction);
+        return index_removal::apply(arguments, transaction).map(|()| false);
     }
     if setup.wiki.backend == crate::user_setup::WikiBackend::Notion {
-        return Ok(());
+        return Ok(false);
     }
-    prepare_user_root_index(arguments)
-        .map(|_| ())
-        .map_err(|error| {
-            InstallError::Verification(format!(
-                "user-scope knowledge index preparation failed after installation: {error}"
-            ))
-        })
+    match prepare_user_root_index(arguments) {
+        Ok(_) => Ok(false),
+        Err(error) if index_rebuild_needs_explicit_consent(&error) => Ok(true),
+        Err(error) => Err(InstallError::Verification(format!(
+            "user-scope knowledge index preparation failed after installation: {error}"
+        ))),
+    }
+}
+
+/// The store refuses to repair an index whose scope includes other collections without an
+/// explicit `hive index rebuild`; the disposable index then stays untouched.
+fn index_rebuild_needs_explicit_consent(error: &hive_wiki::WikiError) -> bool {
+    matches!(error, hive_wiki::WikiError::Conflict(message)
+        if message.starts_with("index recovery needs an explicit hive index rebuild"))
 }
 
 fn prepare_user_root_index(
@@ -5493,6 +5535,7 @@ fn recover(
             None,
         )?;
     }
+    restore_missing_codex_marketplace_manifest(arguments, &backup)?;
     if backup.pending_host_transition.is_some() {
         let executable = executable.as_ref().ok_or_else(|| {
             InstallError::Internal("qualified recovery host executable is missing".to_owned())
@@ -5506,8 +5549,6 @@ fn recover(
             true,
         )?;
     }
-    let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
-    restore_root_index_after_rollback(arguments, &backup_relative, &backup)?;
     compensate_host_mutations(
         arguments,
         &backup_relative,
@@ -5516,6 +5557,8 @@ fn recover(
         runner,
         true,
     )?;
+    let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
+    restore_root_index_after_rollback(arguments, &backup_relative, &backup)?;
     let recovered_backup_bytes = read_optional_regular(
         &arguments.root_cap,
         &backup_relative.join("manifest.json"),
@@ -6078,13 +6121,13 @@ fn reconcile_root_index_after_rollback(
     if !index_existed {
         return remove_disposable_root_index(&arguments.root_cap);
     }
-    prepare_user_root_index(arguments)
-        .map(|_| ())
-        .map_err(|error| {
-            InstallError::Verification(format!(
-                "root knowledge index reconstruction failed during rollback; existing index was preserved: {error}"
-            ))
-        })
+    match prepare_user_root_index(arguments) {
+        Ok(_) => Ok(()),
+        Err(error) if index_rebuild_needs_explicit_consent(&error) => Ok(()),
+        Err(error) => Err(InstallError::Verification(format!(
+            "root knowledge index reconstruction failed during rollback; existing index was preserved: {error}"
+        ))),
+    }
 }
 
 fn restore_root_index_after_rollback(
@@ -6148,6 +6191,26 @@ fn rollback_after_failure(
     runner: &impl CommandRunner,
     primary: InstallError,
 ) -> InstallError {
+    // Compensate host registrations while the Hive marketplace files they point at
+    // still exist; a host cannot list a registered marketplace whose manifest is gone.
+    // When a confirmed mutation cannot be compensated, keep the files and journal so the
+    // registration stays loadable for explicit recovery. With no confirmed mutation, only
+    // an unresolved first transition remains; files roll back as before and recovery
+    // handles a dangling Hive marketplace.
+    let confirmed = !transaction.backup.host_mutations.is_empty();
+    let compensation = compensate_host_mutations(
+        arguments,
+        &transaction.backup_relative,
+        &mut transaction.backup,
+        executable,
+        runner,
+        false,
+    );
+    if confirmed {
+        if let Err(error) = compensation {
+            return InstallError::Internal(format!("{}; {}", primary.message(), error.message()));
+        }
+    }
     if let Err(error) =
         restore_backup_files(arguments, &transaction.backup_relative, &transaction.backup)
     {
@@ -6168,14 +6231,7 @@ fn rollback_after_failure(
             error.message()
         ));
     }
-    if let Err(error) = compensate_host_mutations(
-        arguments,
-        &transaction.backup_relative,
-        &mut transaction.backup,
-        executable,
-        runner,
-        false,
-    ) {
+    if let Err(error) = compensation {
         return InstallError::Internal(format!("{}; {}", primary.message(), error.message()));
     }
     if let Err(cleanup) = remove_transaction_journal(arguments, &transaction.journal_relative) {
@@ -7678,6 +7734,7 @@ mod tests {
         ForeignAfterFailedForward,
         ForeignAfterFailedCompensation,
         DanglingCodexMarketplace,
+        DanglingClaudeMarketplace,
         RejectClaudeMarketplaceSource,
     }
 
@@ -7686,6 +7743,9 @@ mod tests {
         calls: Mutex<Vec<String>>,
         qualified_host: Mutex<String>,
         marketplace_installed: Mutex<bool>,
+        codex_marketplace_added: Mutex<bool>,
+        claude_marketplace_dangling: Mutex<bool>,
+        claude_dangling_path: Mutex<PathBuf>,
         plugin_installed: Mutex<bool>,
         plugin_stale: Mutex<bool>,
         plugin_enabled: Mutex<bool>,
@@ -7729,11 +7789,25 @@ mod tests {
                 root: root.canonicalize().expect("canonical fake host root"),
                 calls: Mutex::new(Vec::new()),
                 qualified_host: Mutex::new(String::new()),
-                marketplace_installed: Mutex::new(false),
+                marketplace_installed: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::DanglingClaudeMarketplace
+                )),
+                codex_marketplace_added: Mutex::new(false),
+                claude_marketplace_dangling: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::DanglingClaudeMarketplace
+                )),
+                claude_dangling_path: Mutex::new(
+                    root.canonicalize()
+                        .expect("canonical fake host root")
+                        .join("deleted-temp/marketplaces/claude"),
+                ),
                 plugin_installed: Mutex::new(matches!(
                     sabotage,
                     HostSabotage::LatentCodexPluginActivation
                         | HostSabotage::StaleCodexHivePluginActivation
+                        | HostSabotage::DanglingClaudeMarketplace
                 )),
                 plugin_stale: Mutex::new(matches!(
                     sabotage,
@@ -7805,13 +7879,38 @@ mod tests {
                     stdout: Vec::new(),
                 });
             }
+            // Real Codex refuses to list marketplaces when a root it registered lost its manifest.
+            if command == "plugin marketplace list --json"
+                && !claude
+                && *self.marketplace_installed.lock().expect("marketplace")
+                && *self.codex_marketplace_added.lock().expect("added")
+                && !self
+                    .root
+                    .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+                    .is_file()
+            {
+                return Some(CommandOutput {
+                    stderr: b"marketplace root does not contain a supported manifest".to_vec(),
+                    exit_code: Some(1),
+                    success: false,
+                    stdout: Vec::new(),
+                });
+            }
             match (command, claude) {
                 ("plugin marketplace list --json", true) => {
+                    let path = if *self.claude_marketplace_dangling.lock().expect("dangling") {
+                        self.claude_dangling_path
+                            .lock()
+                            .expect("dangling path")
+                            .clone()
+                    } else {
+                        self.root.join(".hive/marketplaces/claude")
+                    };
                     let entries = if *self.marketplace_installed.lock().expect("marketplace") {
                         vec![json!({
                             "name": "aigent-hive",
                             "source": "directory",
-                            "path": self.root.join(".hive/marketplaces/claude"),
+                            "path": path,
                             "installLocation": self.root.join(".claude/plugins/marketplaces/aigent-hive")
                         })]
                     } else {
@@ -7828,7 +7927,11 @@ mod tests {
                     let entries = if *self.plugin_installed.lock().expect("plugin") {
                         vec![json!({
                             "id": "aigent-hive@aigent-hive",
-                            "version": env!("CARGO_PKG_VERSION"),
+                            "version": if *self.claude_marketplace_dangling.lock().expect("dangling") {
+                                "0.7.0"
+                            } else {
+                                env!("CARGO_PKG_VERSION")
+                            },
                             "scope": "user",
                             "enabled": *self.plugin_enabled.lock().expect("enabled"),
                             "status": "enabled"
@@ -7946,6 +8049,7 @@ mod tests {
                 | HostSabotage::ForeignAfterFailedForward
                 | HostSabotage::ForeignAfterFailedCompensation
                 | HostSabotage::DanglingCodexMarketplace
+                | HostSabotage::DanglingClaudeMarketplace
                 | HostSabotage::RejectClaudeMarketplaceSource => {}
             }
             Ok(CommandOutput {
@@ -8214,6 +8318,8 @@ mod tests {
                         return Err(SensorError::Failed);
                     }
                     *self.marketplace_installed.lock().expect("marketplace") = true;
+                    *self.codex_marketplace_added.lock().expect("added") =
+                        self.qualified_host.lock().expect("host").as_str() == "codex";
                     if matches!(self.sabotage, HostSabotage::FailAfterMarketplaceMutation) {
                         return Err(SensorError::Failed);
                     }
@@ -8266,6 +8372,7 @@ mod tests {
                         });
                     }
                     *installed = false;
+                    *self.claude_marketplace_dangling.lock().expect("dangling") = false;
                 }
                 "plugin disable aigent-hive@aigent-hive --scope user" => {
                     *self.plugin_enabled.lock().expect("enabled") = false;
@@ -9949,6 +10056,7 @@ mod tests {
                 ("0.14.1", 77),
                 ("0.14.2", 77),
                 ("0.15.0", 95),
+                ("0.15.1", 95),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10119,6 +10227,7 @@ mod tests {
                         | "0.14.1"
                         | "0.14.2"
                         | "0.15.0"
+                        | "0.15.1"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -11901,8 +12010,13 @@ mod tests {
         assert!(error
             .message()
             .contains("failed before its exact structured transition"));
-        assert!(!temporary.path().join(".codex/AGENTS.md").exists());
-        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        // The confirmed marketplace registration could not be compensated automatically,
+        // so its files stay loadable until explicit recovery.
+        assert!(temporary.path().join(".codex/AGENTS.md").is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+            .is_file());
         assert_eq!(runner.external_state(), (true, false));
         assert!(temporary
             .path()
@@ -12391,6 +12505,153 @@ mod tests {
     }
 
     #[test]
+    fn claude_install_replaces_a_dangling_unowned_aigent_hive_marketplace() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+
+        execute(UserOperation::Install, &arguments, &runner).expect("install");
+
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(!*runner.claude_marketplace_dangling.lock().expect("dangling"));
+        let calls = runner.calls.lock().expect("calls");
+        let position = |expected: &str| {
+            calls
+                .iter()
+                .position(|call| call == expected)
+                .unwrap_or_else(|| panic!("missing call: {expected}"))
+        };
+        let uninstall = position("plugin uninstall aigent-hive@aigent-hive --scope user");
+        let remove = position("plugin marketplace remove aigent-hive --scope user");
+        let add = calls
+            .iter()
+            .position(|call| call.starts_with("plugin marketplace add "))
+            .expect("marketplace add");
+        let install = position("plugin install aigent-hive@aigent-hive --scope user");
+        assert!(uninstall < remove && remove < add && add < install);
+    }
+
+    #[test]
+    fn claude_install_keeps_rejecting_an_aigent_hive_marketplace_at_an_existing_path() {
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir_all(temporary.path().join("deleted-temp/marketplaces/claude"))
+            .expect("existing foreign marketplace path");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("existing foreign source");
+
+        assert_eq!(
+            error.message(),
+            "Claude aigent-hive marketplace is bound to an unexpected source"
+        );
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .all(|call| !call.contains(" remove ") && !call.contains(" uninstall ")));
+    }
+
+    #[test]
+    fn claude_dry_run_reports_the_dangling_marketplace_it_will_remove() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::DryRun);
+
+        let result = execute(UserOperation::Install, &arguments, &runner).expect("dry run");
+
+        assert!(result.message.contains("will remove the unloadable Claude"));
+        assert!(
+            result.data.as_ref().expect("data")["dangling_claude_marketplace_removal"]
+                .as_str()
+                .is_some_and(|path| path.ends_with("claude"))
+        );
+        assert_eq!(runner.external_state(), (true, true));
+    }
+
+    #[test]
+    fn claude_dangling_uninstall_failure_aborts_before_removing_the_marketplace() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        *runner.compensation_failures.lock().expect("failures") = 1;
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("uninstall failure");
+
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(*runner.claude_marketplace_dangling.lock().expect("dangling"));
+        assert!(runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .all(|call| !call.contains("marketplace remove")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_dangling_marketplace_on_an_unreachable_drive_is_refused() {
+        let temporary = tempdir().expect("tempdir");
+        let missing_drive = (b'D'..=b'Z')
+            .rev()
+            .map(|letter| format!("{}:\\", char::from(letter)))
+            .find(|root| fs::metadata(root).is_err())
+            .expect("an unused drive letter");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        *runner.claude_dangling_path.lock().expect("dangling path") =
+            PathBuf::from(format!("{missing_drive}Temp\\marketplaces\\claude"));
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("unreachable volume");
+
+        assert_eq!(
+            error.message(),
+            "Claude aigent-hive marketplace is bound to an unexpected source"
+        );
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .all(|call| !call.contains(" remove ") && !call.contains(" uninstall ")));
+    }
+
+    #[test]
+    fn claude_install_keeps_rejecting_a_dangling_marketplace_when_hive_owns_claude() {
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir_all(temporary.path().join(".hive/install")).expect("install dir");
+        fs::write(temporary.path().join(".hive/install/claude.json"), b"{}\n")
+            .expect("ownership manifest");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+
+        assert!(execute(UserOperation::Install, &arguments, &runner).is_err());
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .all(|call| !call.contains(" remove ") && !call.contains(" uninstall ")));
+    }
+
+    #[test]
     fn crash_before_command_then_foreign_exact_state_stays_unresolved() {
         for host in [UserHost::Codex, UserHost::Claude] {
             let temporary = tempdir().expect("tempdir");
@@ -12583,6 +12844,159 @@ mod tests {
         assert_eq!(runner.external_state(), (false, false));
         assert!(!temporary.path().join(".codex/AGENTS.md").exists());
         assert!(!temporary.path().join(".hive/install/codex.json").exists());
+    }
+
+    #[test]
+    fn post_activation_failure_compensates_codex_before_removing_marketplace_files() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::DeleteInstalledSkill);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("validation failure");
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .exists());
+        assert!(!temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+            .exists());
+        let calls = runner.calls.lock().expect("calls");
+        assert!(calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+    }
+
+    #[test]
+    fn recover_compensates_codex_registration_whose_marketplace_files_were_already_removed() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("install");
+        let ownership: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/codex.json")).expect("ownership"),
+        )
+        .expect("ownership JSON");
+        let backup_relative = PathBuf::from(ownership.last_backup.expect("backup"));
+        let backup: UserBackupManifest = serde_json::from_slice(
+            &fs::read(
+                temporary
+                    .path()
+                    .join(&backup_relative)
+                    .join("manifest.json"),
+            )
+            .expect("backup manifest"),
+        )
+        .expect("backup JSON");
+        // Reproduce the pre-fix rollback order: files restored before host compensation.
+        let journal = UserTransactionJournal {
+            schema_version: 1,
+            host: UserHost::Codex,
+            plan_digest: backup.plan_digest.clone(),
+            backup: portable(&backup_relative),
+        };
+        let journal_path = temporary
+            .path()
+            .join(".hive/install-transactions/codex.json");
+        fs::create_dir_all(journal_path.parent().expect("journal parent")).expect("journal dir");
+        fs::write(&journal_path, json_line(&journal).expect("journal JSON")).expect("journal");
+        restore_backup_files(&arguments, &backup_relative, &backup).expect("early file restore");
+        let manifest = temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+        assert!(!manifest.exists());
+        assert_eq!(runner.external_state(), (true, true));
+
+        let recovered = recover(&arguments, &runner).expect("recover stuck Codex registration");
+
+        assert_eq!(recovered.code, "hive.user-install-recovered");
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(!journal_path.exists());
+        assert!(!manifest.exists());
+    }
+
+    #[test]
+    fn codex_install_defers_an_index_rebuild_that_needs_explicit_collection_consent() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let external = tempdir().expect("external directory");
+        fs::write(external.path().join("note.md"), b"# external note\n").expect("note");
+        hive_wiki::store::RagStore::open(temporary.path())
+            .expect("store")
+            .register_collection(hive_wiki::store::CollectionRegistration {
+                collection_id: None,
+                kind: hive_wiki::collection::CollectionKind::Directory,
+                state: hive_wiki::collection::CollectionState::Attached,
+                aliases: vec!["reviewed-directory".to_owned()],
+                local_locator: Some(
+                    hive_wiki::shared::canonical_root(external.path()).expect("external root"),
+                ),
+                source_project_id: None,
+                default_visibility: hive_wiki::collection::CollectionVisibility::ProjectPrivate,
+                portable_identity: None,
+                reviewed_inventory_digest: Some(format!("sha256:{}", "0".repeat(64))),
+            })
+            .expect("attached directory collection");
+        let index = temporary
+            .path()
+            .join(hive_wiki::shared::SHARED_INDEX_RELATIVE);
+        if index.exists() {
+            fs::remove_file(&index).expect("remove disposable index");
+        }
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        let result = execute(UserOperation::Install, &arguments, &runner).expect("install");
+
+        assert_eq!(result.code, "hive.user-install-complete");
+        assert!(result
+            .next_action
+            .as_deref()
+            .expect("index rebuild next action")
+            .contains("hive index rebuild --user-root"));
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(!index.exists());
+        assert_eq!(
+            fs::read(external.path().join("note.md")).expect("external note"),
+            b"# external note\n"
+        );
+        assert_eq!(
+            fs::read_dir(external.path())
+                .expect("external entries")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn rollback_compensation_failure_keeps_marketplace_files_and_journal() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::FailAfterPluginMutationAndCompensation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("compensation failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+            .is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/marketplaces/codex/plugins/aigent-hive/.codex-plugin/plugin.json")
+            .is_file());
+        assert!(temporary.path().join(".codex/AGENTS.md").is_file());
     }
 
     #[test]

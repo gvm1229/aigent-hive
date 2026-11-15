@@ -10,7 +10,7 @@ tags: [reset, session, usage]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:ccdb3fbd321eef3dd9d91c412832203b68fd71bab30689c8a9095f6fd89520f3"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:b538f69c8e52a9e078bfc0f5eb4739551f24ccacbaa7f88ad13cd946aeb9931a"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5e8568062b3902e2ae075b2170b43c65c8ef176e916f0b9cf42bb3f4a20b3fa5"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:6effcddaa5061365989f4ce449664b30f59bebc1eaf15f6fdf08f2d9e741a102"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:e59ef8b5bfe8b2024bb68a6940e23bf9ea45a4af611d7f5d2078f11c1cdfe228"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:f8b3f933a7275d5375d60aa08b30e1434e2a9c5037125708d5627269b78b210a"

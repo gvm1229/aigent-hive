@@ -10,8 +10,8 @@ tags: [claude, installation, windows]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:9903f35f13ae28c9853cdf99ab17c42876e8a5b12c91100e7f4c51cc04147c09"
-  - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:8c2ada111bbfd27361a56a75a38c2c379c3517110233590717cd97caa6f5c8be"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:6283b5e6fa4bd96d5f3422994aaa983da6dfa800d87f229523aa2230a35cdc0d"
+  - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:59f8176e46103122a4735a3df9c61573dd55a9f0dbb2b3c1a39e133c7c1cfac7"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
   - "repo:tests/results/legacy/af6a478d5074c2d3a277.md#sha256:ff1b2012dc26150493fa439cf4eab9f546d64549640d94622d9e1ee9704ff9bd"
   - "repo:tests/results/runs/20261001T234717-11673280f355.md#sha256:72fa345ddb6e4feff83592041055cf32edb4a3bd3347cee6a5af5423328ea692"

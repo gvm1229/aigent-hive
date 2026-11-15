@@ -2,7 +2,7 @@
 use super::{interactive, legacy, recovery, terminal::Terminal};
 use crate::user_setup::{
     self,
-    progress_store::{ProgressPhase, ProgressStore},
+    progress_store::{ProgressPhase, ProgressSnapshot, ProgressStore},
     InterfaceLanguage, SetupError, UserSetupConfig,
 };
 use crate::ActionResult;
@@ -185,7 +185,19 @@ fn complete_bound<R: BufRead, W: Write>(
     if mode != InteractionMode::NeedsInput {
         store.recover_pending_state()?;
     }
-    let snapshot = store.load()?;
+    let mut snapshot = store.load()?;
+    if mode != InteractionMode::NeedsInput
+        && retire_stale_monitor_preview(
+            &root,
+            &cap,
+            &store,
+            &snapshot,
+            existing.as_deref(),
+            legacy_parent.is_none(),
+        )?
+    {
+        snapshot = store.load()?;
+    }
     if let (Some(context), Some(progress)) = (
         legacy_parent,
         snapshot
@@ -244,6 +256,94 @@ fn complete_bound<R: BufRead, W: Write>(
         before.as_ref(),
         application,
     )
+}
+
+/// An interrupted update that never checkpointed settings can bind a monitor choice that no
+/// longer exists; resuming it would fail the same way forever. Retire that operation as a
+/// recoverable failure so the next route previews the live monitor choice again. Answered
+/// questions or a recorded monitor stop for the operation keep the saved progress.
+fn retire_stale_monitor_preview(
+    root: &Path,
+    cap: &cap_std::fs::Dir,
+    store: &ProgressStore,
+    snapshot: &ProgressSnapshot,
+    existing: Option<&[u8]>,
+    lease: bool,
+) -> Result<bool, SetupError> {
+    if stale_monitor_candidate(snapshot, existing).is_none() {
+        return Ok(false);
+    }
+    let _lease = if lease {
+        Some(crate::user_install::lock_user_setup(cap).map_err(SetupError::Conflict)?)
+    } else {
+        None
+    };
+    // Recheck under the lease: another process may have advanced the operation meanwhile.
+    let snapshot = store.load()?;
+    let existing = crate::user_install::read_user_setup_file(
+        cap,
+        Path::new(user_setup::USER_SETUP_RELATIVE),
+        user_setup::MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    let Some((progress, saved)) = stale_monitor_candidate(&snapshot, existing.as_deref()) else {
+        return Ok(false);
+    };
+    let monitor_error =
+        |error: crate::run::AdapterError| SetupError::Conflict(error.message().into());
+    if crate::usage_monitor::setup_stop_recorded(root, &progress.operation_id, &saved.config_digest)
+        .map_err(monitor_error)?
+        || crate::usage_monitor::inspect_saved_choice(root).map_err(monitor_error)? == *saved
+    {
+        return Ok(false);
+    }
+    store.record_failure(progress)?;
+    let backup = user_setup::progress_store::recovery_path(progress)?;
+    if let Some(bytes) =
+        crate::user_install::read_user_setup_file(cap, &backup, user_setup::MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?
+            .filter(|bytes| {
+                user_setup::progress_store::optional_digest(Some(bytes))
+                    == progress.base_config_digest
+            })
+    {
+        crate::user_install::replace_user_setup_file(cap, &backup, Some(&bytes), None)
+            .map_err(SetupError::Conflict)?;
+    }
+    store.clear(&snapshot)?;
+    Ok(true)
+}
+
+/// Interrupted progress whose settings were never checkpointed and whose monitor-bound
+/// questions are unanswered, with the monitor choice its preview saved.
+fn stale_monitor_candidate<'a>(
+    snapshot: &'a ProgressSnapshot,
+    existing: Option<&[u8]>,
+) -> Option<(
+    &'a user_setup::progress_store::SetupProgress,
+    &'a crate::usage_monitor::SavedMonitorChoice,
+)> {
+    let progress = snapshot.progress.as_ref().filter(|progress| {
+        matches!(
+            progress.phase,
+            ProgressPhase::Applying | ProgressPhase::RecoverableFailure
+        )
+    })?;
+    let saved = progress
+        .legacy_migration
+        .as_ref()
+        .map(|binding| &binding.monitor_choice)
+        .or(progress.monitor_stop.as_ref())?;
+    let answered = match &progress.legacy_migration {
+        Some(binding) => binding
+            .questions
+            .iter()
+            .any(|id| progress.answered_questions.contains_key(id)),
+        None => !progress.answered_questions.is_empty(),
+    };
+    (!answered
+        && user_setup::progress_store::optional_digest(existing) == progress.base_config_digest)
+        .then_some((progress, saved))
 }
 
 fn finish_result<R: BufRead, W: Write>(
@@ -501,6 +601,96 @@ mod tests {
         assert_eq!(std::fs::read(&path).unwrap(), original);
         assert_eq!(std::fs::read(&draft_path).unwrap(), draft);
         assert!(!root.path().join(".hive/history/lifecycle").exists());
+    }
+
+    fn stale_legacy_progress(
+        root: &Path,
+        configure: impl FnOnce(&mut user_setup::progress_store::SetupProgress),
+    ) -> (ProgressStore, Vec<u8>) {
+        let config = existing();
+        let path = root.join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let original = user_setup::canonical_config(&config).unwrap();
+        std::fs::write(&path, &original).unwrap();
+        let store = ProgressStore::open(root, None).unwrap();
+        let mut progress = legacy::transition_progress(root, &store, &config).unwrap();
+        // The preview saw a monitor configuration that the failed update no longer has.
+        progress.legacy_migration.as_mut().unwrap().monitor_choice =
+            crate::usage_monitor::SavedMonitorChoice {
+                enabled: false,
+                configured: true,
+                config_digest: hive_core::sha256_digest(b"vanished monitor configuration"),
+            };
+        progress.phase = ProgressPhase::Applying;
+        configure(&mut progress);
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        store.record_applying(&progress).unwrap();
+        (store, original)
+    }
+
+    fn retire(root: &Path, store: &ProgressStore, original: &[u8]) -> bool {
+        let cap = crate::user_install::open_user_root_for_setup(root).unwrap();
+        retire_stale_monitor_preview(
+            root,
+            &cap,
+            store,
+            &store.load().unwrap(),
+            Some(original),
+            true,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn resumed_legacy_update_rederives_preview_when_saved_monitor_choice_is_gone() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, original) = stale_legacy_progress(root.path(), |_| {});
+
+        assert!(retire(root.path(), &store, &original));
+
+        assert!(store.load().unwrap().progress.is_none());
+        assert_eq!(
+            std::fs::read(root.path().join(user_setup::USER_SETUP_RELATIVE)).unwrap(),
+            original
+        );
+        let config = existing();
+        let fresh = legacy::transition_progress(root.path(), &store, &config).unwrap();
+        assert_eq!(
+            fresh.legacy_migration.unwrap().monitor_choice,
+            crate::usage_monitor::inspect_saved_choice(root.path()).unwrap()
+        );
+    }
+
+    #[test]
+    fn resumed_legacy_update_keeps_answered_or_already_stopped_progress() {
+        let answered = tempfile::tempdir().unwrap();
+        let (store, original) = stale_legacy_progress(answered.path(), |progress| {
+            progress
+                .answered_questions
+                .insert("usage-enforcement".into(), 1);
+        });
+        assert!(!retire(answered.path(), &store, &original));
+        assert!(store.load().unwrap().progress.is_some());
+
+        let stopped = tempfile::tempdir().unwrap();
+        let (store, original) = stale_legacy_progress(stopped.path(), |_| {});
+        let operation_id = store.load().unwrap().progress.unwrap().operation_id;
+        let journal = stopped
+            .path()
+            .join(".hive/runtime/usage-monitor/disable.json");
+        std::fs::create_dir_all(journal.parent().unwrap()).unwrap();
+        std::fs::write(
+            &journal,
+            serde_json::to_vec(&json!({
+                "operation_id": operation_id,
+                "before_digest": hive_core::sha256_digest(b"vanished monitor configuration"),
+                "after_digest": "absent"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(!retire(stopped.path(), &store, &original));
+        assert!(store.load().unwrap().progress.is_some());
     }
 
     #[cfg(windows)]

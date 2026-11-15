@@ -9,7 +9,7 @@ summary: "Project refresh updates facts while preserving a recorded kind choice.
 tags: [onboarding, project]
 aliases: ["Project setup"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:29da4ca9b29f58ec853dab54eef3cbfa0119896206ab352335bb1cb05a50b817"
+  - "repo:crates/hive-render/src/lib.rs#sha256:5a973a73a17da2cfb5027adade1b1c402c8ac950cae0bb2f43dc1a3533c143ac"
   - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:68d3ff4ada0f4f64af24a1f11b881c51ae650de438af02c7bf0b84a459c5cc0f"
   - "repo:docs/research/overhaul/OV151-007.md#sha256:69efaab07a728c908284c141ffa519f5fcf2b313a8cb0ec23d486e4bc489ff55"
 links: [global-onboarding, shared-index]

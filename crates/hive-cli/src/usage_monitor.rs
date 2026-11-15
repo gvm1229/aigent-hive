@@ -251,6 +251,27 @@ pub(crate) fn inspect_saved_choice(user_root: &Path) -> Result<SavedMonitorChoic
     })
 }
 
+/// Whether `disable.json` records this setup operation's stop from `expected_digest` to the
+/// current configuration, the same match `quiesce_for_setup` accepts. Only the latest stop is
+/// journaled, so a later operation's stop overwrites the record and both checks then miss it.
+pub(crate) fn setup_stop_recorded(
+    user_root: &Path,
+    operation_id: &str,
+    expected_digest: &str,
+) -> Result<bool, AdapterError> {
+    let root = PinnedTarget::open_usage(user_root)?;
+    let journal: Option<Value> = load(&root, transition::JOURNAL)?;
+    let current = root
+        .read_optional(Path::new(CONFIG), 65536)?
+        .as_deref()
+        .map_or_else(|| "absent".to_owned(), sha256_digest);
+    Ok(journal.is_some_and(|journal| {
+        journal["operation_id"] == operation_id
+            && journal["before_digest"] == expected_digest
+            && journal["after_digest"] == current.as_str()
+    }))
+}
+
 pub(crate) fn quiesce_for_setup(
     user_root: &Path,
     choice: &SavedMonitorChoice,

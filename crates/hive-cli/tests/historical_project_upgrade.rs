@@ -427,7 +427,7 @@ fn compiled_cli_converges_after_one_apply_with_a_conflicting_092_projection() {
 
 #[test]
 fn refresh_previews_detection_and_rolls_back_before_confirmed_migration() {
-    for version in ["0.14.0", "0.14.1", "0.14.2", "0.15.0"] {
+    for version in ["0.14.0", "0.14.1", "0.14.2", "0.15.0", "0.15.1"] {
         let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir(&target).unwrap();
