@@ -44,11 +44,34 @@ def fake_codex(directory, environment):
     environment["HIVE_TEST_HOST_LOG"] = str(directory.parent / "host-calls.jsonl")
 
 
+def read_shared(path):
+    """Read without blocking Hive's atomic rename of the same file on Windows."""
+    if os.name != "nt":
+        return path.read_text(encoding="utf-8")
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+                                     wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    handle = kernel32.CreateFileW(str(path), 0x80000000, 0x7, None, 3, 0x80, None)
+    if handle in (None, wintypes.HANDLE(-1).value):
+        raise OSError(ctypes.get_last_error(), "cannot open progress file", str(path))
+    try:
+        import msvcrt
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+    except OSError:
+        kernel32.CloseHandle(handle)
+        raise
+    with open(descriptor, "rb") as stream:
+        return stream.read().decode("utf-8")
+
+
 def journal(user, project):
     paths = sorted((user / ".hive/config/setup-progress/projects").glob("*.yml")) if project else [user / ".hive/config/setup-progress/user.yml"]
     for path in paths:
         try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            data = yaml.safe_load(read_shared(path))
             if isinstance(data, dict):
                 return data
         except (OSError, yaml.YAMLError):

@@ -63,10 +63,15 @@ public static class SetupConsoleFixture {
             return ReadConsoleOutputCharacter(output,text,(uint)count,start,out read) ? text.ToString() : "console unreadable";
         }
     }
+    // Hive renames progress files atomically; share Delete so polling never blocks that rename.
+    static string ReadShared(string path) {
+        using(var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))
+        using(var reader=new StreamReader(stream)) return reader.ReadToEnd();
+    }
     static void WaitStep(Process child, string path, string step) {
         var deadline=Stopwatch.StartNew();
         while(deadline.ElapsedMilliseconds<15000 && !child.HasExited) {
-            try { if(File.Exists(path) && File.ReadAllText(path).Contains("step: "+step)) return; }
+            try { if(File.Exists(path) && ReadShared(path).Contains("step: "+step)) return; }
             catch(IOException) { }
             Thread.Sleep(25);
         }
@@ -80,7 +85,7 @@ public static class SetupConsoleFixture {
         while(deadline.ElapsedMilliseconds<15000 && !child.HasExited) {
             if(Directory.Exists(directory)) foreach(string path in Directory.GetFiles(directory,"*.yml")) {
                 try {
-                    if(File.ReadAllText(path).Contains("step: "+step)) {
+                    if(ReadShared(path).Contains("step: "+step)) {
                         // The journal precedes rendering. Wait for the actual console question before typing.
                         string screen=OwnConsoleTail();
                         if((screen.Contains(promptKo) || screen.Contains(promptEn)) && screen.TrimEnd().EndsWith(">")) return path;
@@ -119,7 +124,7 @@ public static class SetupConsoleFixture {
         if(publicUpdate) Send(input,"yes\r");
         while(!child.HasExited && deadline.ElapsedMilliseconds<(publicUpdate ? 600000 : 30000)) {
             try {
-                string state=File.ReadAllText(path);
+                string state=ReadShared(path);
                 if(state.Contains("phase: previewed") && !confirmed) { Send(input,"yes\r"); confirmed=true; }
                 else if(state.Contains("phase: awaiting-answers")) {
                     var step=Regex.Match(state,@"(?m)^step: ([a-z0-9-]+)");
@@ -162,7 +167,7 @@ public static class SetupConsoleFixture {
                     } catch(System.ComponentModel.Win32Exception) { candidate.Dispose(); }
                 }
                 try {
-                    string state=File.ReadAllText(progress);
+                    string state=ReadShared(progress);
                     if(currentStart<0 && late && state.Contains("phase: awaiting-answers")) {
                         foreach(var candidate in Process.GetProcessesByName("hive")) {
                             try {
@@ -174,7 +179,7 @@ public static class SetupConsoleFixture {
                     }
                     if(slow && host==null && File.Exists(Path.Combine(args[1],"slow-pid"))) {
                         int hostId;
-                        if(Int32.TryParse(File.ReadAllText(Path.Combine(args[1],"slow-pid")),out hostId)) {
+                        if(Int32.TryParse(ReadShared(Path.Combine(args[1],"slow-pid")),out hostId)) {
                             host=Process.GetProcessById(hostId);
                             if(host.Handle==IntPtr.Zero || !String.Equals(PlainPath(host.MainModule.FileName),PlainPath(Environment.GetEnvironmentVariable("HIVE_TEST_PYTHON")),StringComparison.OrdinalIgnoreCase))
                                 throw new InvalidOperationException("test host identity differs");
