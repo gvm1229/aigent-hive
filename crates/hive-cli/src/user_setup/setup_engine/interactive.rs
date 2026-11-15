@@ -1739,6 +1739,45 @@ mod tests {
     }
 
     #[test]
+    fn one_interactive_setup_selects_several_apps() {
+        for hosts in ["1,2", "1 2"] {
+            let root = tempfile::tempdir().unwrap();
+            let store = ProgressStore::open(root.path(), None).unwrap();
+            let mut progress = conversation(&store);
+            let mut terminal = Terminal {
+                reader: Cursor::new(format!("2\n\n1\n{hosts}\n").into_bytes()),
+                writer: Vec::new(),
+                language: InterfaceLanguage::En,
+            };
+            assert!(collect(
+                &store,
+                &mut progress,
+                &catalog().unwrap().questions,
+                &options(root.path()),
+                &mut terminal
+            )
+            .unwrap());
+            assert!(String::from_utf8(terminal.writer)
+                .unwrap()
+                .contains("Choose one or more: enter numbers or names"));
+            let bytes = serde_json::to_vec(&progress.answers).unwrap();
+            let config = user_setup::parse_and_validate_config(&bytes).unwrap();
+            assert_eq!(
+                config.selected_hosts,
+                [
+                    user_setup::SelectedHost::Codex,
+                    user_setup::SelectedHost::Claude
+                ]
+            );
+            assert_eq!(
+                config.preference_decisions["/selected_hosts"].origin,
+                DecisionOrigin::Explicit
+            );
+            assert!(!root.path().join(user_setup::USER_SETUP_RELATIVE).exists());
+        }
+    }
+
+    #[test]
     fn interruption_preserves_language_and_resume_does_not_repeat_answered_questions() {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
