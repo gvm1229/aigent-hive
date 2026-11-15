@@ -9,15 +9,15 @@ summary: "Hive user-level capture and recall apply in every selected-host projec
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:83139680efc6f06e7accaec5c445d8c8a9481af51b6550ffe7cd6f9c81f38bfa"
-  - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b3f259173a92bf050ca26df5b462330ea4ce9d96bb9bca431b6a54700ddfea36"
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:6b4d501127b0ba69d8d40d07cb57da9992ca34380d7c728f17e39deb9b6b11ee"
+  - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:0e91b6b2cab1dc7040d6eba5061e89a6b954d8a6e395489b3c51d30309834197"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:35c9814239dde8505142300ca75f046ed17ac6c36e717a70bb2c358c312ee239"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:307f40fbc24d404398dc5852f746f03f8599379fd22716f54cfc1ae13a3600af"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2af34b6fb5c77401e0a946d09ba445c5ac13e15550133349fab10b227293e2cf"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
-  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:7231f60877fd7d269ff3d3b9cc7851daefb42f75baef1682dacb4d9644feffe6"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673"
+  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:081294d725ca6af1c97f3a815e665e61c59bd18b3259b02c7aa8eaea15e99010"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:2233fdf8eca297da93e9ae5785598ba1d96fcf84e39ebf44cc9cfa212a23e556"
   - "repo:harness/skills/usage-guard/references/control.md#sha256:4c71dbbc592620844bff81765151014d4a657924d03aea602c08bc517e1c8727"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"

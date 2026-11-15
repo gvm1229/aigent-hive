@@ -11,7 +11,7 @@ aliases: []
 sources:
   - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:1005e13b2b4b354a8846e3b6d080ba6e738b87e4cb54a88f2e2b8bb5316dd0bd"
   - "repo:crates/hive-wiki/src/semantic_graph.rs#sha256:211c9a8cee0dd8217be535dcdc4c355d4fd50442693f90fd22945674b153adad"
-  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:7231f60877fd7d269ff3d3b9cc7851daefb42f75baef1682dacb4d9644feffe6"
+  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:081294d725ca6af1c97f3a815e665e61c59bd18b3259b02c7aa8eaea15e99010"
   - "repo:tests/results/semantic-host-0.11.2.json#sha256:b8e9e8f9e987993f82ed584c2dea46e6b8d70ca0ab51f86b55b48b435ccdaaac"
 links: [knowledge-storage, source-graph-public-qualification]
 reviewed_revision: "git:0ee29cc7a10c6786f5d325569f85182e654cd4b1"

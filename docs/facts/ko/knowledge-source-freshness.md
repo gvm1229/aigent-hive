@@ -9,7 +9,7 @@ summary: "과거 기록의 무결성과 현재 원본의 일치 여부를 분리
 tags: [freshness, knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:35c9814239dde8505142300ca75f046ed17ac6c36e717a70bb2c358c312ee239"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
   - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:e609abd004c690bcdce2822313645ba7dd733fa9114e778c6305314c4ada0813"
   - "repo:schemas/knowledge-retrieval-result.schema.json#sha256:6d8499cf211d663d928c3fa1a31a0e375e6c970736414a1298f1b42180953ac9"
