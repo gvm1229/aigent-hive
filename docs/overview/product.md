@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-15 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-16 -->
 
 ## 목적
 
@@ -83,7 +83,7 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.15.2` (released 2026-11-15)
+- Current public stable version: `0.15.2` (released 2026-11-16)
 - `0.15.2`: Codex·Claude Code·Antigravity 동시 설치 안내, Claude 남은 등록 정리, Antigravity CLI 1.2.x 지원, 갱신·설치 실패 복구
 - `0.15.1`: 쉬운 한국어·영어 명령 결과, 로컬 프로젝트 감지·한 번 확인, Hive 지식 기록 규칙, Skill 설명의 하는 일 표시
 - `0.15.0`: 신 입구 9개·역할별 모델 설정·비활성 작업 봉투 미리보기, 기존 명령·고정 역할 보존

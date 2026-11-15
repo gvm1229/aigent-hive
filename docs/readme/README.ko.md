@@ -12,7 +12,7 @@
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-15 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-16 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
@@ -42,7 +42,7 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.15.2 (released 2026-11-15)
+AIgent Hive v0.15.2 (released 2026-11-16)
 ```
 
 ### macOS·Linux curl

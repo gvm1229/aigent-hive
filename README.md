@@ -12,7 +12,7 @@
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-15 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-16 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
@@ -47,7 +47,7 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.15.2 (released 2026-11-15)
+AIgent Hive v0.15.2 (released 2026-11-16)
 ```
 
 ### macOS and Linux with curl
