@@ -19,6 +19,6 @@
   72 hours. No globs, parent deletion, age-only deletion or automatic deadline renewal.
 - Share one build tree. Tests default to `CARGO_INCREMENTAL=0`; an override
   needs bounded reuse. No target per test/retry. Review all consumers before cleanup.
-- Daily: `python scripts/test-artifacts.py daily --apply`; remove reviewed output only.
-  Report unresolved reviews and storage above 20 GiB. Inspect unknown/expired ownership;
-  archive small evidence before releasing reproductions. See `docs/guides/test-cleanup.md`.
+- Hard rule: run `python scripts/test-artifacts.py daily --apply`; remove reviewed output.
+  Under 50 GiB free disk, clean before suites; report storage over 20 GiB. Inspect unknown
+  ownership; archive small evidence first. See `docs/guides/test-cleanup.md`.
