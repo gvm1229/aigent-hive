@@ -650,14 +650,9 @@ pub(super) fn remove_dangling_claude_marketplace(
             ));
         }
     }
-    let command = [
-        "plugin",
-        "marketplace",
-        "remove",
-        "aigent-hive",
-        "--scope",
-        "user",
-    ];
+    // A leaked registration may live only in Claude's known-marketplace list, which
+    // `--scope user` leaves in place; without a scope Claude removes it everywhere.
+    let command = ["plugin", "marketplace", "remove", "aigent-hive"];
     let output = runner
         .run(executable, &command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
         .map_err(|error| {

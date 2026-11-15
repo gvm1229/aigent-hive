@@ -281,7 +281,18 @@ impl UserHost {
         match self {
             Self::Codex => ">=0.145.0 <1.0.0",
             Self::Claude => ">=2.1.0 <3.0.0",
+            // agy 1.2.x keeps the `plugin` subcommands and `plugin list` JSON schema
+            // that Hive drives, so the whole 1.x line is supported.
+            Self::Antigravity => ">=1.1.7 <2.0.0",
+        }
+    }
+
+    /// The range products before 0.15.2 recorded in user ownership manifests; historical
+    /// manifests stay authentic under it.
+    const fn pre_0_15_2_version_range(self) -> &'static str {
+        match self {
             Self::Antigravity => ">=1.1.7 <1.2.0",
+            Self::Codex | Self::Claude => self.version_range(),
         }
     }
 }
@@ -3890,7 +3901,7 @@ fn authenticated_user_inventory(
         && request.source_release_digest == request.current_source_release_digest
     {
         let host_version_range = if host == UserHost::Antigravity
-            && request.installed_host_version_range == ">=1.1.7 <2.0.0"
+            && request.installed_host_version_range == host.pre_0_15_2_version_range()
         {
             request.installed_host_version_range
         } else {
@@ -3988,7 +3999,8 @@ fn developer_authenticated_user_inventory(
 ) -> Option<AuthenticatedUserInventory> {
     if package_version != format!("{}-dev", env!("CARGO_PKG_VERSION"))
         || request.product_version != env!("CARGO_PKG_VERSION")
-        || request.installed_host_version_range != host.version_range()
+        || (request.installed_host_version_range != host.version_range()
+            && request.installed_host_version_range != host.pre_0_15_2_version_range())
         || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
         || request.installed_entries.is_empty()
         || request.source_release_digest
@@ -4012,7 +4024,7 @@ fn test_three_user_inventory(
     request: &InventoryAuthentication<'_>,
 ) -> Option<AuthenticatedUserInventory> {
     if request.product_version != "0.9.0"
-        || request.installed_host_version_range != host.version_range()
+        || request.installed_host_version_range != host.pre_0_15_2_version_range()
         || request.current_entries.is_empty()
     {
         return None;
@@ -4153,7 +4165,7 @@ fn pre_scope_routing_test_inventory(
     request: &InventoryAuthentication<'_>,
 ) -> Option<AuthenticatedUserInventory> {
     if request.product_version != "0.9.0"
-        || request.installed_host_version_range != host.version_range()
+        || request.installed_host_version_range != host.pre_0_15_2_version_range()
         || request.current_entries.is_empty()
     {
         return None;
@@ -4203,7 +4215,7 @@ fn historical_080_user_inventory(
         ".hive/knowledge/Wiki/log.md",
         ".hive/knowledge/suppression.yml",
     ];
-    if installed_host_version_range != host.version_range()
+    if installed_host_version_range != host.pre_0_15_2_version_range()
         || !installed_entries
             .windows(2)
             .all(|pair| pair[0].path < pair[1].path)
@@ -6305,7 +6317,7 @@ fn probe_supported_host_version(
     let (minimum, maximum) = match host {
         UserHost::Codex => ((0, 145, 0), (1, 0, 0)),
         UserHost::Claude => ((2, 1, 0), (3, 0, 0)),
-        UserHost::Antigravity => ((1, 1, 7), (1, 2, 0)),
+        UserHost::Antigravity => ((1, 1, 7), (2, 0, 0)),
     };
     if parsed < minimum || parsed >= maximum {
         return Err(InstallError::Unsupported(format!(
@@ -6921,7 +6933,7 @@ fn read_installed_manifest(
 
 fn recognized_host_version_range(host: UserHost, range: &str) -> bool {
     range == host.version_range()
-        || (host == UserHost::Antigravity && matches!(range, ">=1.1.7 <2.0.0" | ">=2.3.1 <3.0.0"))
+        || (host == UserHost::Antigravity && matches!(range, ">=1.1.7 <1.2.0" | ">=2.3.1 <3.0.0"))
 }
 
 fn valid_sha256(value: &str) -> bool {
@@ -8275,6 +8287,7 @@ mod tests {
             Ok(QualifiedExecutable::synthetic(program))
         }
 
+        #[allow(clippy::too_many_lines)]
         fn run(
             &self,
             _program: &QualifiedExecutable,
@@ -8360,7 +8373,10 @@ mod tests {
                 | "plugin uninstall aigent-hive@aigent-hive --scope user" => {
                     return self.remove_plugin();
                 }
+                "plugin marketplace remove aigent-hive --scope user"
+                    if *self.claude_marketplace_dangling.lock().expect("dangling") => {}
                 "plugin marketplace remove aigent-hive --json"
+                | "plugin marketplace remove aigent-hive"
                 | "plugin marketplace remove aigent-hive --scope user" => {
                     let mut installed = self.marketplace_installed.lock().expect("marketplace");
                     if !*installed {
@@ -9113,7 +9129,7 @@ mod tests {
             schema_version: 1,
             product_version: "0.8.0".to_owned(),
             host,
-            host_version_range: host.version_range().to_owned(),
+            host_version_range: host.pre_0_15_2_version_range().to_owned(),
             source_release_digest,
             plan_digest: String::new(),
             last_backup: None,
@@ -9619,8 +9635,8 @@ mod tests {
             (
                 UserHost::Antigravity,
                 "1.1.7\n",
-                "1.1.99\n",
-                "1.2.0\n",
+                "1.2.17\n",
+                "2.0.0\n",
                 "agy 1.1.7\n",
             ),
         ] {
@@ -9663,6 +9679,15 @@ mod tests {
                 .expect("supported agy"),
             "1.1.7"
         );
+        let runner = VersionRunner {
+            stdout: b"1.2.17\n".to_vec(),
+            success: true,
+        };
+        assert_eq!(
+            probe_supported_host_version(UserHost::Antigravity, &executable, &runner)
+                .expect("supported agy 1.2.x"),
+            "1.2.17"
+        );
     }
 
     #[test]
@@ -9670,7 +9695,7 @@ mod tests {
         for (host, stdout) in [
             (UserHost::Codex, b"codex-cli 1.0.0\n".as_slice()),
             (UserHost::Claude, b"3.0.0 (Claude Code)\n".as_slice()),
-            (UserHost::Antigravity, b"1.2.0\n".as_slice()),
+            (UserHost::Antigravity, b"2.0.0\n".as_slice()),
         ] {
             let temporary = tempdir().expect("tempdir");
             let arguments = args(temporary.path(), host, UserMode::Apply);
@@ -10263,6 +10288,35 @@ mod tests {
     }
 
     #[test]
+    fn v0_15_1_antigravity_manifest_with_pre_0_15_2_range_updates_and_validates() {
+        let temporary = tempdir().expect("tempdir");
+        seed_historical_09x_user_install(temporary.path(), "0.15.1", UserHost::Antigravity);
+        let manifest_path = temporary.path().join(".hive/install/antigravity.json");
+        let historical: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("0.15.1 manifest"))
+                .expect("0.15.1 manifest JSON");
+        assert_eq!(historical.host_version_range, ">=1.1.7 <1.2.0");
+        let runner = AntigravityRunner::new(temporary.path());
+        execute(
+            UserOperation::Update,
+            &args(temporary.path(), UserHost::Antigravity, UserMode::Apply),
+            &runner,
+        )
+        .expect("0.15.1 antigravity upgrade");
+        let upgraded: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("upgraded manifest"))
+                .expect("upgraded manifest JSON");
+        assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(upgraded.host_version_range, ">=1.1.7 <2.0.0");
+        execute(
+            UserOperation::Update,
+            &args(temporary.path(), UserHost::Antigravity, UserMode::Validate),
+            &runner,
+        )
+        .expect("upgraded antigravity validates");
+    }
+
+    #[test]
     fn v0_10_1_user_install_applies_and_validates_for_every_host() {
         for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
             let temporary = tempdir().expect("tempdir");
@@ -10782,7 +10836,7 @@ mod tests {
             &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
         )
         .expect("manifest JSON");
-        assert_eq!(manifest.host_version_range, ">=1.1.7 <1.2.0");
+        assert_eq!(manifest.host_version_range, ">=1.1.7 <2.0.0");
         assert!(manifest
             .entries
             .iter()
@@ -11464,7 +11518,7 @@ mod tests {
                 .as_ref()
                 .expect("data")
                 .get("host_version_range"),
-            Some(&serde_json::Value::String(">=1.1.7 <1.2.0".to_owned()))
+            Some(&serde_json::Value::String(">=1.1.7 <2.0.0".to_owned()))
         );
         let manifest: UserOwnershipManifest = serde_json::from_slice(
             &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
@@ -12523,7 +12577,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("missing call: {expected}"))
         };
         let uninstall = position("plugin uninstall aigent-hive@aigent-hive --scope user");
-        let remove = position("plugin marketplace remove aigent-hive --scope user");
+        let remove = position("plugin marketplace remove aigent-hive");
         let add = calls
             .iter()
             .position(|call| call.starts_with("plugin marketplace add "))
