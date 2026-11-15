@@ -6102,6 +6102,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn subject_assignment_previews_applies_and_restores_660_synthetic_claims() {
         let user = temp_root();
         write_user_setup(user.path(), true);

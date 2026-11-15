@@ -3073,7 +3073,7 @@ pub fn propose_subject(claim: &CanonicalClaim) -> (String, &'static str) {
         .filter(|word| {
             word.len() >= 2
                 && !word.bytes().all(|byte| byte.is_ascii_digit())
-                && !(word.len() >= 16 && word.bytes().all(|byte| byte.is_ascii_hexdigit()))
+                && (word.len() < 16 || !word.bytes().all(|byte| byte.is_ascii_hexdigit()))
                 && !STOPWORDS.contains(&word.as_str())
         })
         .map(|word| {

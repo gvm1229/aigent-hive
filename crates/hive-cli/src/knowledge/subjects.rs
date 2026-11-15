@@ -143,6 +143,7 @@ fn preview(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     ))
 }
 
+#[allow(clippy::too_many_lines)]
 fn apply(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(
         arguments,
