@@ -1287,9 +1287,9 @@ fn localized_skill_text(
         ),
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",
-            "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.",
+            "(knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work; never save secrets, raw conversations, or uncertain guesses.",
             "유용한 지식 남기기",
-            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식 하나를 골라 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
+            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식을 골라 한 번에 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
         ),
         "knowledge-recall" => (
             "Search knowledge (knowledge-recall)",
@@ -3436,7 +3436,7 @@ description: Inspect one local file without changing it.
         assert!(english_metadata.contains("(knowledge-capture) At the end of a Wiki-enabled turn"));
         assert!(korean_metadata.contains("display_name: \"유용한 지식 남기기\""));
         assert!(korean_metadata.contains("(knowledge-capture) 대화를 마칠 때"));
-        assert!(korean_metadata.contains("사실·선호·방식 하나를 골라"));
+        assert!(korean_metadata.contains("사실·선호·방식을 골라 한 번에"));
     }
 
     #[test]

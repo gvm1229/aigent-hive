@@ -2,8 +2,10 @@ mod remember;
 pub(crate) mod semantic_graph;
 use remember::run_remember;
 mod retrieve;
+mod subjects;
 use crate::knowledge_scan::scan_directory;
 use retrieve::{parse_retrieval_request, resolve_retrieval_collection, run_retrieve};
+use subjects::run_subjects;
 #[path = "knowledge_transfer.rs"]
 mod transfer;
 #[path = "vector.rs"]
@@ -30,8 +32,9 @@ use hive_wiki::notion::{
 };
 use hive_wiki::portable::{encode_bundle, BundleLimits, BundleScope};
 use hive_wiki::rag::{
-    plan_remember, AssertionStatus, CanonicalClaim, ClaimKind, ClaimProvenance, RagError,
-    RagVisibility, RememberRequest, RememberSourceKind, RetrievalRequest, RetrievalScope,
+    advise_subject, plan_remember, plan_remember_batch, AssertionStatus, CanonicalClaim, ClaimKind,
+    ClaimProvenance, RagError, RagVisibility, RememberRequest, RememberSourceKind,
+    RetrievalRequest, RetrievalScope,
 };
 use hive_wiki::scan::{validate_claims, ReviewedClaim, ScanInventory};
 use hive_wiki::shared::{
@@ -76,8 +79,11 @@ USAGE:
     hive knowledge lint --target <dir> [--user-root <dir>] [--output json]
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
-    hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) [--output json]
-    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
+    hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow] [--subject <area/topic>]|--batch <facts.json>) [--output json]
+    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>] [--expansions <term;term>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
+    hive knowledge subjects preview --user-root <dir> [--collection user-root] [--output json]
+    hive knowledge subjects apply --user-root <dir> --review <review.json> --confirm-subject-assignment yes [--output json]
+    hive knowledge subjects restore --user-root <dir> --operation <id> --confirm-subject-restore yes [--output json]
     hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--output json]
     hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--output json]
     hive knowledge collection attach|map --user-root <dir> --collection <id-or-alias> --target <dir> --authorization-id <id> --authorization-token <token> [--output json]
@@ -252,6 +258,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("RememberKnowledge", &error)),
             Some("retrieve") => run_retrieve(&arguments[1..])
                 .unwrap_or_else(|error| failure("RetrieveKnowledge", &error)),
+            Some("subjects") => run_subjects(&arguments[1..])
+                .unwrap_or_else(|error| failure("KnowledgeSubjects", &error)),
             #[cfg(feature = "notion-preview")]
             Some("notion") => run_notion(&arguments[1..])
                 .unwrap_or_else(|error| failure("NotionKnowledge", &error)),
@@ -3708,6 +3716,7 @@ fn build_scan_promotion_request(source: &CanonicalClaim) -> Result<RememberReque
         status: source.status,
         visibility: RagVisibility::Shared,
         normalized_fact: source.normalized_fact.clone(),
+        subject: None,
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::ReviewedArtifact,
             summary: "Explicitly approved reviewed scan promotion".to_owned(),
@@ -4686,6 +4695,7 @@ mod tests {
             status: AssertionStatus::UserStated,
             visibility: RagVisibility::Shared,
             normalized_fact: "Prefer concise reusable commit guidance.".to_owned(),
+            subject: None,
             provenance: ClaimProvenance {
                 source_kind: RememberSourceKind::UserStatement,
                 summary: "Reviewed durable user preference".to_owned(),
@@ -4722,6 +4732,7 @@ mod tests {
             status: AssertionStatus::Verified,
             visibility,
             normalized_fact: fact.to_owned(),
+            subject: None,
             provenance: ClaimProvenance {
                 source_kind: RememberSourceKind::ReviewedArtifact,
                 summary: "Reviewed authorization fixture".to_owned(),
@@ -5914,6 +5925,459 @@ mod tests {
 
         let repeated = run_remember(&arguments).expect("user statement no-op");
         assert_eq!(repeated.changed_paths.len(), 0);
+    }
+
+    fn write_remember_batch(root: &Path, name: &str, facts: &serde_json::Value) -> PathBuf {
+        let path = root.join(name);
+        fs::write(
+            &path,
+            serde_json::to_vec(&json!({"schema_version": 1, "facts": facts})).expect("batch"),
+        )
+        .expect("write batch");
+        path
+    }
+
+    fn batch_arguments(user: &Path, batch: &Path) -> Vec<String> {
+        vec![
+            "--user-root".to_owned(),
+            user.to_string_lossy().into_owned(),
+            "--batch".to_owned(),
+            batch.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]
+    }
+
+    fn user_root_claim_files(user: &Path) -> Vec<PathBuf> {
+        let directory = user.join(".hive/knowledge/Claims/user-root");
+        let Ok(entries) = fs::read_dir(directory) else {
+            return Vec::new();
+        };
+        let mut files = entries
+            .map(|entry| entry.expect("claim entry").path())
+            .collect::<Vec<_>>();
+        files.sort();
+        files
+    }
+
+    #[test]
+    fn batch_remember_writes_three_facts_in_one_publication_and_is_idempotent() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let batch = write_remember_batch(
+            user.path(),
+            "design.json",
+            &json!([
+                {"normalized_fact": "HTML pages use a minimal visual style.", "claim_key": "design-visual-style", "kind": "preference"},
+                {"normalized_fact": "HTML pages use a muted blue and gray palette.", "claim_key": "design-color-palette", "kind": "preference"},
+                {"normalized_fact": "HTML pages avoid heavy gradients and drop shadows.", "claim_key": "design-avoid", "kind": "preference"}
+            ]),
+        );
+        let first = run_remember(&batch_arguments(user.path(), &batch)).expect("batch insert");
+        assert_eq!(first.status, "success");
+        let data = first.data.expect("batch data");
+        let plans = data["plans"].as_array().expect("plans");
+        assert_eq!(plans.len(), 3);
+        assert!(plans.iter().all(|plan| plan["disposition"] == "insert"));
+        assert_eq!(user_root_claim_files(user.path()).len(), 3);
+        let store = RagStore::open(user.path()).expect("store");
+        store
+            .validate_current()
+            .expect("canonical Markdown and index");
+        let generation = data["store"]["generation"].as_u64().expect("generation");
+
+        let repeated = run_remember(&batch_arguments(user.path(), &batch)).expect("batch no-op");
+        assert!(repeated.changed_paths.is_empty());
+        let repeated = repeated.data.expect("no-op data");
+        assert!(repeated["plans"]
+            .as_array()
+            .expect("plans")
+            .iter()
+            .all(|plan| plan["disposition"] == "noop"));
+        assert_eq!(repeated["store"]["generation"].as_u64(), Some(generation));
+
+        // One more batch publishes exactly one more generation for its two facts.
+        let more = write_remember_batch(
+            user.path(),
+            "more.json",
+            &json!([
+                {"normalized_fact": "Buttons use rounded corners.", "claim_key": "design-buttons"},
+                {"normalized_fact": "Body text uses a 16 pixel base size.", "claim_key": "design-text-size", "kind": "convention"}
+            ]),
+        );
+        let second = run_remember(&batch_arguments(user.path(), &more)).expect("second batch");
+        let second = second.data.expect("second data");
+        assert_eq!(second["store"]["generation"].as_u64(), Some(generation + 1));
+        assert_eq!(user_root_claim_files(user.path()).len(), 5);
+    }
+
+    #[test]
+    fn subject_group_retrieval_returns_the_whole_html_design_subject_for_one_hit() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let unregistered = temp_root();
+        let batch = write_remember_batch(
+            user.path(),
+            "html-design.json",
+            &json!([
+                {"normalized_fact": "HTML pages use a minimal visual style with generous whitespace.", "claim_key": "html-design-style", "subject": "design/html-style"},
+                {"normalized_fact": "HTML colors stay within muted navy, slate and off-white.", "claim_key": "html-design-colors", "subject": "design/html-style"},
+                {"normalized_fact": "Avoid neon gradients, drop shadows and decorative animation.", "claim_key": "html-design-avoid", "subject": "design/html-style"},
+                {"normalized_fact": "Release builds run the minimal smoke test first.", "claim_key": "release-smoke", "subject": "ops/release"}
+            ]),
+        );
+        let written = run_remember(&batch_arguments(user.path(), &batch)).expect("batch");
+        let subjects = &written.data.expect("data")["subjects"];
+        assert_eq!(subjects.as_array().expect("advice").len(), 4);
+
+        let hits = run_retrieve(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            unregistered.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "auto".to_owned(),
+            "--query".to_owned(),
+            "HTML visual style".to_owned(),
+            "--top-k".to_owned(),
+            "1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("subject retrieval")
+        .data
+        .expect("retrieval data")["hits"]
+            .as_array()
+            .expect("hits")
+            .clone();
+        let keys = hits
+            .iter()
+            .map(|hit| hit["title"].as_str().expect("title").to_owned())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            keys,
+            BTreeSet::from([
+                "html-design-avoid".to_owned(),
+                "html-design-colors".to_owned(),
+                "html-design-style".to_owned()
+            ]),
+            "{hits:#?}"
+        );
+        assert!(hits.iter().all(|hit| hit["subject"] == "design/html-style"));
+        assert_eq!(hits[0]["title"], "html-design-style");
+        assert!(hits[1..]
+            .iter()
+            .all(|hit| hit["matched_field"] == "subject"));
+
+        // A subject-less fact keeps the single-hit behavior.
+        run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "Changelogs use past tense.".to_owned(),
+            "--claim-key".to_owned(),
+            "changelog-tense".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("plain fact");
+        let plain = auto_retrieval_hits(user.path(), unregistered.path(), "changelog past tense");
+        assert!(plain.iter().any(|hit| hit["title"] == "changelog-tense"));
+        assert!(plain
+            .iter()
+            .filter(|hit| hit["title"] == "changelog-tense")
+            .all(|hit| hit.get("subject").is_none()));
+    }
+
+    fn claim_bytes(user: &Path) -> std::collections::BTreeMap<PathBuf, Vec<u8>> {
+        user_root_claim_files(user)
+            .into_iter()
+            .map(|path| {
+                let bytes = fs::read(&path).expect("claim bytes");
+                (path, bytes)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn subject_assignment_previews_applies_and_restores_660_synthetic_claims() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "Synthetic fact zero stays in place.".to_owned(),
+            "--claim-key".to_owned(),
+            "synthetic-area0-topic0".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("registry initialization");
+        let store = RagStore::open(user.path()).expect("store");
+        let generation = ensure_rag_registry(user.path(), &store)
+            .expect("registry")
+            .generation
+            + 1;
+        let mut working = store
+            .load_canonical_snapshot(generation)
+            .expect("snapshot")
+            .claims;
+        let mut plans = Vec::new();
+        for index in 1..660 {
+            let request = RememberRequest {
+                collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+                claim_key: format!("synthetic-area{}-topic{}", index % 12, index),
+                claim_id: None,
+                locator: format!("user-root/synthetic-{index}"),
+                kind: ClaimKind::Preference,
+                status: AssertionStatus::UserStated,
+                visibility: RagVisibility::Shared,
+                normalized_fact: format!(
+                    "Synthetic fact number {index} belongs to area {}.",
+                    index % 12
+                ),
+                subject: None,
+                provenance: ClaimProvenance {
+                    source_kind: RememberSourceKind::UserStatement,
+                    summary: "Synthetic subject assignment fixture".to_owned(),
+                    locator: format!("request:synthetic-{index}"),
+                    digest: sha256_digest(format!("synthetic-{index}").as_bytes()),
+                },
+                sources: vec![format!("request:synthetic-{index}")],
+                supersedes: Vec::new(),
+                expected_active_digest: None,
+                observed_at: None,
+                verified_at: None,
+            };
+            let plan = plan_remember(&working, &request, generation).expect("plan");
+            working.push(plan.new_claim.clone().expect("new claim"));
+            plans.push(plan);
+        }
+        store
+            .apply_remember_plans(&plans)
+            .expect("bulk synthetic write");
+        let before = claim_bytes(user.path());
+        assert_eq!(before.len(), 660);
+        let index_before = fs::read(user.path().join(SHARED_INDEX_RELATIVE)).expect("index");
+
+        let user_arg = user.path().to_string_lossy().into_owned();
+        let preview = run_subjects(&[
+            "preview".to_owned(),
+            "--user-root".to_owned(),
+            user_arg.clone(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("preview");
+        assert!(preview.changed_paths.is_empty());
+        assert_eq!(claim_bytes(user.path()), before);
+        let data = preview.data.expect("preview data");
+        let proposals = data["proposals"].as_array().expect("proposals");
+        assert_eq!(proposals.len(), 660);
+        assert!(proposals
+            .iter()
+            .all(|proposal| proposal["rule"] == "claim-key"));
+        assert_eq!(
+            proposals[0]["subject"]
+                .as_str()
+                .map(|subject| subject.starts_with("synthetic/")),
+            Some(true)
+        );
+
+        // Host review: keep the rule result except one renamed subject.
+        let assignments = proposals
+            .iter()
+            .enumerate()
+            .map(|(index, proposal)| {
+                json!({
+                    "claim_id": proposal["claim_id"],
+                    "expected_digest": proposal["expected_digest"],
+                    "subject": if index == 0 { json!("synthetic/reviewed") } else { proposal["subject"].clone() },
+                })
+            })
+            .collect::<Vec<_>>();
+        let review_path = user.path().join("review.json");
+        fs::write(
+            &review_path,
+            serde_json::to_vec(&json!({"schema_version": 1, "preview_digest": data["preview_digest"], "assignments": assignments})).expect("review"),
+        )
+        .expect("write review");
+        let apply_arguments = vec![
+            "apply".to_owned(),
+            "--user-root".to_owned(),
+            user_arg.clone(),
+            "--review".to_owned(),
+            review_path.to_string_lossy().into_owned(),
+        ];
+        assert!(
+            run_subjects(&apply_arguments).is_err(),
+            "confirmation is required"
+        );
+        let mut confirmed = apply_arguments.clone();
+        confirmed.extend(["--confirm-subject-assignment".to_owned(), "yes".to_owned()]);
+        let applied = run_subjects(&confirmed)
+            .expect("apply")
+            .data
+            .expect("apply data");
+        assert_eq!(applied["assigned"], 660);
+        let operation = applied["operation_id"]
+            .as_str()
+            .expect("operation")
+            .to_owned();
+        let store = RagStore::open(user.path()).expect("store");
+        store.validate_current().expect("valid store after apply");
+        let generation = ensure_rag_registry(user.path(), &store)
+            .expect("registry")
+            .generation
+            + 1;
+        let claims = store
+            .load_canonical_snapshot(generation)
+            .expect("snapshot")
+            .claims;
+        assert!(claims.iter().all(|claim| claim.subject.is_some()));
+        assert_ne!(claim_bytes(user.path()), before);
+        // A stale review is refused after apply.
+        assert!(run_subjects(&confirmed).is_err());
+
+        let restore = vec![
+            "restore".to_owned(),
+            "--user-root".to_owned(),
+            user_arg,
+            "--operation".to_owned(),
+            operation,
+            "--confirm-subject-restore".to_owned(),
+            "yes".to_owned(),
+        ];
+        let restored = run_subjects(&restore)
+            .expect("restore")
+            .data
+            .expect("restore data");
+        assert_eq!(restored["restored"], 660);
+        assert_eq!(claim_bytes(user.path()), before);
+        RagStore::open(user.path())
+            .expect("store")
+            .validate_current()
+            .expect("valid store after restore");
+        assert_ne!(
+            fs::read(user.path().join(SHARED_INDEX_RELATIVE)).expect("index"),
+            Vec::<u8>::new()
+        );
+        let _ = index_before;
+        assert!(
+            run_subjects(&restore).is_err(),
+            "a restore record is used once"
+        );
+    }
+
+    #[test]
+    fn batch_remember_rolls_back_every_fact_when_one_fact_fails() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "Reports use a dark theme.".to_owned(),
+            "--claim-key".to_owned(),
+            "report-theme".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("existing single fact");
+        let before = user_root_claim_files(user.path())
+            .into_iter()
+            .map(|path| (path.clone(), fs::read(path).expect("claim bytes")))
+            .collect::<Vec<_>>();
+        let index_before = fs::read(user.path().join(SHARED_INDEX_RELATIVE)).expect("index");
+
+        let conflicting = write_remember_batch(
+            user.path(),
+            "conflict.json",
+            &json!([
+                {"normalized_fact": "Reports start with a one-line summary.", "claim_key": "report-summary"},
+                {"normalized_fact": "Reports use a light theme.", "claim_key": "report-theme"},
+                {"normalized_fact": "Reports cite every number.", "claim_key": "report-citations"}
+            ]),
+        );
+        let Err(error) = run_remember(&batch_arguments(user.path(), &conflicting)) else {
+            panic!("divergent current truth must reject the whole batch");
+        };
+        assert!(error.to_string().contains("batch fact 2"), "{error}");
+
+        let credential = write_remember_batch(
+            user.path(),
+            "credential.json",
+            &json!([
+                {"normalized_fact": "Reports start with a one-line summary.", "claim_key": "report-summary"},
+                {"normalized_fact": "The access token is ghp_abcdefghijklmnopqrstuvwxyz012345.", "claim_key": "report-token"}
+            ]),
+        );
+        let Err(error) = run_remember(&batch_arguments(user.path(), &credential)) else {
+            panic!("credential must reject the whole batch");
+        };
+        assert_eq!(error.code(), "hive.knowledge-invalid-input");
+
+        let duplicate = write_remember_batch(
+            user.path(),
+            "duplicate.json",
+            &json!([
+                {"normalized_fact": "Reports use tables.", "claim_key": "report-layout"},
+                {"normalized_fact": "Reports use lists.", "claim_key": "report-layout"}
+            ]),
+        );
+        let Err(error) = run_remember(&batch_arguments(user.path(), &duplicate)) else {
+            panic!("repeated key must reject the whole batch");
+        };
+        assert!(error.to_string().contains("repeats current-truth key"));
+
+        let after = user_root_claim_files(user.path())
+            .into_iter()
+            .map(|path| (path.clone(), fs::read(path).expect("claim bytes")))
+            .collect::<Vec<_>>();
+        assert_eq!(after, before);
+        assert_eq!(
+            fs::read(user.path().join(SHARED_INDEX_RELATIVE)).expect("index"),
+            index_before
+        );
+        RagStore::open(user.path())
+            .expect("store")
+            .validate_current()
+            .expect("unchanged valid store");
+    }
+
+    #[test]
+    fn batch_remember_rejects_mixed_inputs_and_bad_shape() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let batch = write_remember_batch(
+            user.path(),
+            "one.json",
+            &json!([{"normalized_fact": "A fact.", "claim_key": "fact"}]),
+        );
+        let mut mixed = batch_arguments(user.path(), &batch);
+        mixed.extend(["--claim-key".to_owned(), "fact".to_owned()]);
+        assert!(run_remember(&mixed).is_err());
+        let empty = write_remember_batch(user.path(), "empty.json", &json!([]));
+        assert!(run_remember(&batch_arguments(user.path(), &empty)).is_err());
+        let facts = (0..9)
+            .map(|index| json!({"normalized_fact": format!("Fact number {index}."), "claim_key": format!("fact-{index}")}))
+            .collect::<Vec<_>>();
+        let oversized = write_remember_batch(user.path(), "oversized.json", &json!(facts));
+        assert!(run_remember(&batch_arguments(user.path(), &oversized)).is_err());
+        let unknown = user.path().join("unknown.json");
+        fs::write(
+            &unknown,
+            br#"{"schema_version":1,"facts":[{"normalized_fact":"A.","claim_key":"a","extra":1}]}"#,
+        )
+        .expect("unknown field batch");
+        assert!(run_remember(&batch_arguments(user.path(), &unknown)).is_err());
+        assert!(user_root_claim_files(user.path()).is_empty());
     }
 
     #[test]
