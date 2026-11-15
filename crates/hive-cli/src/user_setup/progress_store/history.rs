@@ -69,9 +69,26 @@ fn valid_migration(receipt: &Receipt) -> bool {
 }
 
 fn migration_matches(receipt: &Receipt, progress: &SetupProgress) -> bool {
+    migration_matches_recorded(receipt, progress, false)
+}
+
+/// With `recorded_policy`, the expected policy is the one the receipt's own product wrote.
+fn migration_matches_recorded(
+    receipt: &Receipt,
+    progress: &SetupProgress,
+    recorded_policy: bool,
+) -> bool {
     valid_migration(receipt)
         && receipt.migration.as_ref().is_none_or(|migration| {
-            MigrationSummary::from_progress(progress).as_ref() == Some(migration)
+            MigrationSummary::from_progress(progress)
+                .map(|mut expected| {
+                    if recorded_policy {
+                        expected.policy_version.clone_from(&receipt.product_version);
+                    }
+                    expected
+                })
+                .as_ref()
+                == Some(migration)
         })
 }
 
@@ -192,6 +209,24 @@ pub(super) fn record(
     progress: &SetupProgress,
     phase: ProgressPhase,
 ) -> Result<(), SetupError> {
+    record_inner(store, progress, phase, false)
+}
+
+/// Closes a stale operation that an earlier product version started. Every other identity
+/// check still applies; only the recorded product version may predate this binary.
+pub(super) fn record_retired_failure(
+    store: &ProgressStore,
+    progress: &SetupProgress,
+) -> Result<(), SetupError> {
+    record_inner(store, progress, ProgressPhase::RecoverableFailure, true)
+}
+
+fn record_inner(
+    store: &ProgressStore,
+    progress: &SetupProgress,
+    phase: ProgressPhase,
+    allow_prior_product: bool,
+) -> Result<(), SetupError> {
     store.verify_directory_binding()?;
     let relative = path(&progress.operation_id)?;
     let before = store.read_state(&relative, LIMIT)?;
@@ -229,7 +264,10 @@ pub(super) fn record(
     };
     if receipt.schema_version != 1
         || receipt.operation != "setup"
-        || receipt.product_version != env!("CARGO_PKG_VERSION")
+        || (receipt.product_version != env!("CARGO_PKG_VERSION")
+            && !(allow_prior_product
+                && before.is_some()
+                && receipt_predates_binary(&receipt.product_version)))
         || receipt.binding != store.binding
         || receipt.operation_id != progress.operation_id
         || receipt.before_digest != progress.base_config_digest
@@ -238,7 +276,7 @@ pub(super) fn record(
             != declaration_digest(&progress.answers).map_err(SetupError::Internal)?
         || receipt.intent_digest.as_ref() != Some(&intent_digest(progress)?)
         || receipt.catalog_digest != progress.catalog_digest
-        || !migration_matches(&receipt, progress)
+        || !migration_matches_recorded(&receipt, progress, allow_prior_product)
         || receipt.question_revision != progress.question_revision
         || receipt.cancelled_by_operation.is_some()
         || !valid_cancel_marker(&receipt)
@@ -465,6 +503,21 @@ fn recorded_now() -> Result<u64, SetupError> {
         .ok()
         .and_then(|duration| u64::try_from(duration.as_nanos()).ok())
         .ok_or_else(|| SetupError::Internal("lifecycle clock is unavailable".into()))
+}
+
+fn receipt_predates_binary(recorded: &str) -> bool {
+    let parse = |value: &str| -> Option<Vec<u64>> {
+        value
+            .split(['-', '+'])
+            .next()?
+            .split('.')
+            .map(|part| part.parse().ok())
+            .collect()
+    };
+    matches!(
+        (parse(recorded), parse(env!("CARGO_PKG_VERSION"))),
+        (Some(old), Some(new)) if old < new
+    )
 }
 
 #[cfg(test)]

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "product_version": "0.15.1",
+  "archive": "codex-native.zip",
+  "sha256": "edbebd0e67de37552cd8d9775a3a7a6e8552ce63489c236efa424e074a8d5bc7",
+  "file_count": 99,
+  "generation": "Public npm 0.15.1 Windows executable; npm registry SRI verified at install; SHA-256 40be1c4edb9592f5531e4b595b8354b0a6a4287eb2c52b89f2b5984f3f69a6ef; synthetic setup only; no user installation or settings changed",
+  "source_asset": "git:v0.15.1",
+  "source_binary_sha256": "40be1c4edb9592f5531e4b595b8354b0a6a4287eb2c52b89f2b5984f3f69a6ef",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}

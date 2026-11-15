@@ -1,8 +1,9 @@
 //! Internal host state implementation.
 
 use super::{
-    env, expected_host_state_after, insert_regular_tree_file, persist_backup, probe_host_snapshot,
-    read_optional_regular, read_optional_regular_tree, sha256_digest, AntigravityHostState,
+    env, expected_host_state_after, insert_regular_tree_file, installed_file_permissions,
+    persist_backup, probe_host_snapshot, read_optional_regular, read_optional_regular_tree,
+    render_codex_marketplace, sha256_digest, write_atomic_with_permissions, AntigravityHostState,
     AntigravityPluginState, ClaudeHostState, ClaudeMarketplaceState, ClaudePluginState,
     CodexHostState, CodexMarketplaceState, CodexPluginState, CommandOutput, CommandRunner,
     HostMutation, HostStateSnapshot, HostTransitionPhase, InstallError, Path,
@@ -557,7 +558,8 @@ pub(super) fn validate_claude_prestate(
     }
     if state.marketplace.as_ref().is_some_and(|marketplace| {
         marketplace.source != "directory" || marketplace.path != expected_path
-    }) {
+    }) && dangling_claude_marketplace_path(arguments, Some(state))?.is_none()
+    {
         return Err(InstallError::Conflict(
             "Claude aigent-hive marketplace is bound to an unexpected source".to_owned(),
         ));
@@ -572,6 +574,106 @@ pub(super) fn validate_claude_prestate(
         ));
     }
     Ok(())
+}
+
+/// Returns the registered path of a leaked `aigent-hive` directory marketplace that cannot
+/// load and is safe to replace: no Hive ownership manifest claims it, its volume root (drive
+/// or share) is reachable, and the registered path itself no longer exists. An unreachable
+/// volume may only be unplugged, so that registration is refused as before.
+pub(super) fn dangling_claude_marketplace_path(
+    arguments: &UserArguments,
+    state: Option<&ClaudeHostState>,
+) -> Result<Option<String>, InstallError> {
+    let Some(marketplace) = state.and_then(|state| state.marketplace.as_ref()) else {
+        return Ok(None);
+    };
+    let path = Path::new(&marketplace.path);
+    if marketplace.source != "directory"
+        || marketplace.path == expected_claude_marketplace_path(arguments)?
+        || !path.is_absolute()
+        || read_optional_regular(
+            &arguments.root_cap,
+            Path::new(".hive/install/claude.json"),
+            MAX_USER_FILE_BYTES,
+        )?
+        .is_some()
+    {
+        return Ok(None);
+    }
+    let volume_reachable = path
+        .ancestors()
+        .last()
+        .is_some_and(|root| std::fs::metadata(root).is_ok_and(|metadata| metadata.is_dir()));
+    let absent = matches!(
+        std::fs::symlink_metadata(path),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound
+    );
+    Ok((volume_reachable && absent).then(|| marketplace.path.clone()))
+}
+
+/// Removes a dangling Claude `aigent-hive` registration before the transaction starts and
+/// returns the re-probed prestate. The unloadable registration is not restored on rollback.
+pub(super) fn remove_dangling_claude_marketplace(
+    arguments: &UserArguments,
+    state: Option<ClaudeHostState>,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<Option<ClaudeHostState>, InstallError> {
+    let Some(state) = state else {
+        return Ok(None);
+    };
+    if dangling_claude_marketplace_path(arguments, Some(&state))?.is_none() {
+        return Ok(Some(state));
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Claude executable is missing".to_owned())
+    })?;
+    if state.plugin.is_some() {
+        // An unloadable plugin may report failure even after uninstalling; the re-probe
+        // decides, and a still-listed plugin aborts before the marketplace is touched.
+        let _ = runner.run(
+            executable,
+            &[
+                "plugin",
+                "uninstall",
+                "aigent-hive@aigent-hive",
+                "--scope",
+                "user",
+            ],
+            COMMAND_TIMEOUT,
+            COMMAND_OUTPUT_LIMIT,
+        );
+        if probe_claude_state(executable, runner)?.plugin.is_some() {
+            return Err(InstallError::Conflict(
+                "Claude dangling aigent-hive plugin could not be uninstalled; external state was preserved"
+                    .to_owned(),
+            ));
+        }
+    }
+    // A leaked registration may live only in Claude's known-marketplace list, which
+    // `--scope user` leaves in place; without a scope Claude removes it everywhere.
+    let command = ["plugin", "marketplace", "remove", "aigent-hive"];
+    let output = runner
+        .run(executable, &command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+        .map_err(|error| {
+            InstallError::Unsupported(format!(
+                "Claude dangling aigent-hive marketplace removal failed: {error}"
+            ))
+        })?;
+    if !output.success {
+        return Err(InstallError::Unsupported(format!(
+            "Claude dangling aigent-hive marketplace removal exited unsuccessfully: {}",
+            sanitized_command_diagnostic(&command, &output)
+        )));
+    }
+    let observed = probe_claude_state(executable, runner)?;
+    if observed.marketplace.is_some() || observed.plugin.is_some() {
+        return Err(InstallError::Conflict(
+            "Claude dangling aigent-hive registration was not removed; external state was preserved"
+                .to_owned(),
+        ));
+    }
+    Ok(Some(observed))
 }
 
 pub(super) fn validate_claude_activation(
@@ -756,6 +858,7 @@ pub(super) fn compensate_host_mutations(
     runner: &impl CommandRunner,
     allow_dangling_codex_recovery: bool,
 ) -> Result<(), InstallError> {
+    restore_missing_codex_marketplace_manifest(arguments, backup)?;
     if backup.pending_host_transition.is_some() {
         let executable = executable.ok_or_else(|| {
             InstallError::Internal("qualified recovery host executable is missing".to_owned())
@@ -830,6 +933,47 @@ pub(super) fn compensate_host_mutations(
     backup.codex_plugin_was_latent_before_marketplace_add = false;
     persist_backup(arguments, backup_relative, backup)?;
     Ok(())
+}
+
+/// Codex cannot list (or remove) a registered marketplace whose manifest is gone. When a
+/// confirmed Hive marketplace registration outlived the Hive-created manifest, put back the
+/// exact recorded installed bytes so compensation can probe and remove the registration;
+/// the later file restore deletes them again.
+pub(super) fn restore_missing_codex_marketplace_manifest(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    if arguments.host != UserHost::Codex
+        || backup
+            .codex_state_before
+            .as_ref()
+            .is_none_or(|before| before.marketplace.is_some())
+        || !backup
+            .host_mutations
+            .contains(&HostMutation::CodexMarketplaceAdded)
+    {
+        return Ok(());
+    }
+    let manifest = Path::new(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+    let bytes = render_codex_marketplace();
+    let recorded = backup.entries.iter().any(|entry| {
+        Path::new(&entry.path) == manifest
+            && !entry.existed
+            && entry.installed_digest.as_deref() == Some(sha256_digest(&bytes).as_str())
+    });
+    if !recorded
+        || read_optional_regular(&arguments.root_cap, manifest, MAX_USER_FILE_BYTES)?.is_some()
+    {
+        return Ok(());
+    }
+    write_atomic_with_permissions(
+        &arguments.root_cap,
+        manifest,
+        &bytes,
+        installed_file_permissions(false),
+        None,
+        None,
+    )
 }
 
 pub(super) fn resolve_pending_host_transition(

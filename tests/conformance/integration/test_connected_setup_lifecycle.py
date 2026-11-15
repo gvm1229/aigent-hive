@@ -66,7 +66,7 @@ class ConnectedSetupLifecycleConformance(Phase1CliTestCase):
             self.assertEqual(install["data"]["qualified_host_version"], "1.1.7")
             self.assertEqual(
                 install["data"]["host_version_range"],
-                ">=1.1.7 <1.2.0",
+                ">=1.1.7 <2.0.0",
             )
 
         global_answers = self.work_root / "global-answers.yml"

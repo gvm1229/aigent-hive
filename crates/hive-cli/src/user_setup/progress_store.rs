@@ -438,6 +438,10 @@ impl ProgressStore {
         history::record(self, prior, ProgressPhase::RecoverableFailure)
     }
 
+    pub fn record_retired_failure(&self, prior: &SetupProgress) -> Result<(), SetupError> {
+        history::record_retired_failure(self, prior)
+    }
+
     pub fn projection_binding(
         &self,
         progress: &SetupProgress,

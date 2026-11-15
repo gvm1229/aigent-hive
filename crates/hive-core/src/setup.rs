@@ -263,12 +263,26 @@ impl Question {
             InputKind::List => {
                 if line.starts_with('[') {
                     serde_json::from_str(line).map_err(|_| "invalid list input".to_owned())
-                } else {
+                } else if self.options.is_empty() {
                     Ok(Value::Array(
                         line.split(',')
                             .map(|item| Value::String(self.choice_value(item.trim()).to_owned()))
                             .collect(),
                     ))
+                } else {
+                    // Choice lists also accept spaces; an empty comma segment stays invalid.
+                    let mut items = Vec::new();
+                    for segment in line.split(',') {
+                        if segment.trim().is_empty() {
+                            items.push(Value::String(String::new()));
+                        }
+                        items.extend(
+                            segment
+                                .split_whitespace()
+                                .map(|item| Value::String(self.choice_value(item).to_owned())),
+                        );
+                    }
+                    Ok(Value::Array(items))
                 }
             }
             InputKind::Text => Ok(Value::String(line.to_owned())),
@@ -482,6 +496,56 @@ mod tests {
         for value in ["1,1", "1,codex", "0", "3", "[]", "[true]"] {
             assert!(q.parse_line(Some(value), None).is_err());
         }
+    }
+
+    #[test]
+    fn choice_lists_accept_spaces_and_commas_but_free_text_lists_split_on_commas_only() {
+        let mut q = question(InputKind::List);
+        q.options = ["codex", "claude", "antigravity"]
+            .into_iter()
+            .map(|value| Choice {
+                value: value.to_owned(),
+                label: LocalizedText {
+                    en: value.to_owned(),
+                    ko: value.to_owned(),
+                },
+            })
+            .collect();
+        q.minimum = Some(1);
+        q.maximum = Some(2);
+        for line in [
+            "1 2",
+            "1, 2",
+            "1 ,2",
+            "codex claude",
+            "codex,  2",
+            "[\"codex\",\"claude\"]",
+        ] {
+            assert_eq!(
+                q.parse_line(Some(line), None).unwrap(),
+                AnswerInput::Answered {
+                    value: json!(["codex", "claude"]),
+                    origin: DecisionOrigin::Explicit,
+                },
+                "{line}"
+            );
+        }
+        for line in ["1,,2", "1,2,", ",1", "1 2 3", "1 1", "1 codex", "1 4"] {
+            assert!(q.parse_line(Some(line), None).is_err(), "{line}");
+        }
+        q.maximum = Some(3);
+        assert!(q.parse_line(Some("1 2 3"), None).is_ok());
+
+        let mut free = question(InputKind::List);
+        free.maximum = Some(8);
+        assert_eq!(
+            free.parse_line(Some("docs/a b, src"), None).unwrap(),
+            AnswerInput::Answered {
+                value: json!(["docs/a b", "src"]),
+                origin: DecisionOrigin::Explicit,
+            }
+        );
+        assert!(free.parse_line(Some("a,,b"), None).is_err());
     }
 
     #[test]

@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.1 release-date=2026-11-15 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-16 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -91,6 +91,7 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
+| [`0.15.2`](releases/0.15.2.md) | 여러 앱 동시 설치·Claude·Antigravity 설치 복구 |
 | [`0.15.1`](releases/0.15.1.md) | 쉬운 명령 결과·로컬 프로젝트 감지·Hive 지식 기록 규칙 |
 | [`0.15.0`](releases/0.15.0.md) | 신 입구 9개·역할 설정·비활성 작업 미리보기 |
 | [`0.14.2`](releases/0.14.2.md) | 큰 감시 실행 파일 정리 복구 |

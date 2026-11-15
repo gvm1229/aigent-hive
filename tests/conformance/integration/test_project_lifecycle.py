@@ -713,7 +713,7 @@ else:
                     )
                     self.assertEqual(
                         applied_result["data"]["host_version_range"],
-                        ">=1.1.7 <1.2.0",
+                        ">=1.1.7 <2.0.0",
                     )
                     host_calls = [
                         json.loads(line)

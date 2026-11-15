@@ -36,6 +36,22 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
                 writeln!(self.writer, "  {}. {}", index + 1, option.label.get(korean))
                     .map_err(|error| io_error(&error))?;
             }
+            if question.input == InputKind::List
+                && !question.options.is_empty()
+                && question.maximum.is_none_or(|maximum| maximum > 1)
+            {
+                if question.minimum.is_some_and(|minimum| minimum >= 1) {
+                    self.say(
+                        "하나 이상 선택: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2",
+                        "Choose one or more: enter numbers or names separated by commas or spaces, e.g. 1,2",
+                    )?;
+                } else {
+                    self.say(
+                        "여러 개 선택 가능: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2",
+                        "You can choose several: enter numbers or names separated by commas or spaces, e.g. 1,2",
+                    )?;
+                }
+            }
             if question.input == InputKind::Boolean {
                 self.say("예/아니요", "yes/no")?;
             }
@@ -206,6 +222,36 @@ mod tests {
         let output = String::from_utf8(terminal.writer).unwrap();
         assert!(output.contains("Check the answer."));
         assert!(!output.contains("maybe"));
+    }
+
+    #[test]
+    fn app_choice_shows_multi_select_hint_and_accepts_space_separated_numbers() {
+        let catalog = super::super::catalog().unwrap();
+        let question = catalog
+            .questions
+            .iter()
+            .find(|q| q.id == "user-hosts")
+            .unwrap();
+        for (language, hint) in [
+            (
+                InterfaceLanguage::En,
+                "Choose one or more: enter numbers or names separated by commas or spaces, e.g. 1,2",
+            ),
+            (
+                InterfaceLanguage::Ko,
+                "하나 이상 선택: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2",
+            ),
+        ] {
+            let mut terminal = Terminal {
+                reader: Cursor::new(b"1 2\n"),
+                writer: Vec::new(),
+                language,
+            };
+            assert!(
+                matches!(terminal.ask(question, None).unwrap(), AnswerInput::Answered { value, .. } if value == json!(["codex", "claude"]))
+            );
+            assert!(String::from_utf8(terminal.writer).unwrap().contains(hint));
+        }
     }
 
     #[test]

@@ -2629,6 +2629,86 @@ fn frozen_project_base_0_15_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+// Exact public stable v0.15.1 baseline.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_15_1_without_resources,
+    "0.15.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "aither",
+        "amend-directive",
+        "apollon",
+        "artemis",
+        "athena",
+        "code-polish",
+        "custom-subagent-create",
+        "demeter",
+        "eileithyia",
+        "hades",
+        "hephaistos",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "poseidon",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_15_1(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_15_1_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.15.1/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" { files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec()); }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
@@ -2683,6 +2763,8 @@ fn frozen_project_base_0_8_or_0_9(
         project_kind: String,
         primary_host: String,
         approved_optional_skills: Vec<SkillApproval>,
+        #[serde(default)]
+        project_profile: Option<hive_core::project_profile::ProjectProfile>,
     }
 
     #[derive(Deserialize)]
@@ -2921,9 +3003,18 @@ fn frozen_project_base_0_8_or_0_9(
     } else {
         "disabled"
     };
+    // Public 0.15.1 templates carry the user-editable rules seed before the marker, but the
+    // authenticated base holds the Hive marker block only.
+    let agents_template = agents_template
+        .find(MARKER_START)
+        .map_or(agents_template, |start| &agents_template[start..]);
     let mut marker = agents_template
         .replace("{{ project_name }}", &harness.project_name)
         .replace("{{ project_kind }}", &harness.project_kind)
+        .replace(
+            "{{ project_profile_markdown }}",
+            &profile_markdown(answers.project_profile.as_ref()),
+        )
         .replace("{{ setup_mode }}", &harness.setup_mode)
         .replace(
             "{{ preference_provenance }}",
@@ -5075,7 +5166,13 @@ fn project_rules_seed() -> &'static str {
 }
 
 fn project_profile_markdown(answers: &SetupAnswers) -> String {
-    let Some(profile) = &answers.project_profile else {
+    profile_markdown(answers.project_profile.as_ref())
+}
+
+// The frozen public 0.15.1 base renders through this function too; output changes need a new
+// frozen copy so historical 0.15.1 projects keep their authenticated bytes.
+fn profile_markdown(profile: Option<&hive_core::project_profile::ProjectProfile>) -> String {
+    let Some(profile) = profile else {
         return String::new();
     };
     let clean = |text: &str| {
