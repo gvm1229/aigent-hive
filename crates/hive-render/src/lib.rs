@@ -2763,6 +2763,8 @@ fn frozen_project_base_0_8_or_0_9(
         project_kind: String,
         primary_host: String,
         approved_optional_skills: Vec<SkillApproval>,
+        #[serde(default)]
+        project_profile: Option<hive_core::project_profile::ProjectProfile>,
     }
 
     #[derive(Deserialize)]
@@ -3001,9 +3003,18 @@ fn frozen_project_base_0_8_or_0_9(
     } else {
         "disabled"
     };
+    // Public 0.15.1 templates carry the user-editable rules seed before the marker, but the
+    // authenticated base holds the Hive marker block only.
+    let agents_template = agents_template
+        .find(MARKER_START)
+        .map_or(agents_template, |start| &agents_template[start..]);
     let mut marker = agents_template
         .replace("{{ project_name }}", &harness.project_name)
         .replace("{{ project_kind }}", &harness.project_kind)
+        .replace(
+            "{{ project_profile_markdown }}",
+            &profile_markdown(answers.project_profile.as_ref()),
+        )
         .replace("{{ setup_mode }}", &harness.setup_mode)
         .replace(
             "{{ preference_provenance }}",
@@ -5155,7 +5166,13 @@ fn project_rules_seed() -> &'static str {
 }
 
 fn project_profile_markdown(answers: &SetupAnswers) -> String {
-    let Some(profile) = &answers.project_profile else {
+    profile_markdown(answers.project_profile.as_ref())
+}
+
+// The frozen public 0.15.1 base renders through this function too; output changes need a new
+// frozen copy so historical 0.15.1 projects keep their authenticated bytes.
+fn profile_markdown(profile: Option<&hive_core::project_profile::ProjectProfile>) -> String {
+    let Some(profile) = profile else {
         return String::new();
     };
     let clean = |text: &str| {

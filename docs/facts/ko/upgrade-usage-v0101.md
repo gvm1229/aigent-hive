@@ -13,7 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:ccdb3fbd321eef3dd9d91c412832203b68fd71bab30689c8a9095f6fd89520f3"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:6283b5e6fa4bd96d5f3422994aaa983da6dfa800d87f229523aa2230a35cdc0d"
   - "repo:crates/hive-projection/src/lib.rs#sha256:05ece29f62af952b3a7d30fc5fa38a279d161bdde8e8f608cc1924e37c49a699"
-  - "repo:crates/hive-render/src/lib.rs#sha256:5a973a73a17da2cfb5027adade1b1c402c8ac950cae0bb2f43dc1a3533c143ac"
+  - "repo:crates/hive-render/src/lib.rs#sha256:395e1b02d6e50e6460f9c05b0765b5329a6a3dc995de0c102bf5f8edebfe7a78"
   - "repo:docs/guides/installed-usage-guard.md#sha256:96e73fe5c33bb18cf1c2d6e21271df1738c02bc77f06a70fadbcb5b67ea8f5e5"
   - "repo:docs/releases/0.10.3.md#sha256:94a75051e50352ff04de8e649b8382db81ee5b6b2ea95276203bdddeedcc2ea8"
   - "repo:harness/project-bases/registry.yml#sha256:d686ec7a433db992078e0428e25ecf337cae6d9a1a37f341dfe5ac37274bf284"
