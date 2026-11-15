@@ -1,0 +1,1347 @@
+{
+ "schema_version": 1,
+ "inputs_sha256": "38d377134e1fa6b644853ba61a2d0f09eeec51c9af7b3a48c49b31833630f7d6",
+ "host_inputs_sha256": "5189f2612e5b1d4e8237407f22ffdffd8cb7ee96aa9a2f7cecbb7924fa22372e",
+ "runs": [
+  {
+   "label": "exact-token query (before prefix matching)",
+   "binary_version": "AIgent Hive v0.15.3 (released 2026-11-13)",
+   "binary_sha256": "d4cc5a04d74634c928fc4bfd10eab9f8674ec72b192273eb9d837b3116c5f27e",
+   "modes": [
+    {
+     "mode": "baseline",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 22,
+       "group_at_5": 22
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 19,
+       "group_at_5": 19
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 3,
+       "group_at_5": 3
+      }
+     }
+    },
+    {
+     "mode": "subjects",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 22,
+       "group_at_5": 22
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 19,
+       "group_at_5": 19
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 3,
+       "group_at_5": 3
+      }
+     }
+    },
+    {
+     "mode": "subjects+expansions",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 40,
+       "group_at_5": 40
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 30,
+       "group_at_5": 30
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 10,
+       "group_at_5": 10
+      }
+     }
+    }
+   ]
+  },
+  {
+   "label": "prefix query (final)",
+   "binary_version": "AIgent Hive v0.15.3 (released 2026-11-13)",
+   "binary_sha256": "416b9921dd629176d1d2709b231efeeca53e5d2541c0b5da9483474d72f08489",
+   "modes": [
+    {
+     "mode": "baseline",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 32,
+       "group_at_5": 32
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 27,
+       "group_at_5": 27
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 5,
+       "group_at_5": 5
+      }
+     },
+     "rows": [
+      {
+       "query": "미니멀",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "HTML 디자인 선호",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "minimal style",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "간결한 화면 구성",
+       "answer": "minimal",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 2,
+       "group_rank": 2,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "색",
+       "answer": "color",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "남색",
+       "answer": "color",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "preferred colors",
+       "answer": "color",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "어떤 팔레트가 좋을까",
+       "answer": "color",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "글꼴",
+       "answer": "font",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Pretendard",
+       "answer": "font",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "body font",
+       "answer": "font",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "어떤 서체를 쓸까",
+       "answer": "font",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "피할 디자인",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "보라색",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "avoid gradient",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "좋아하지 않는 시각 효과",
+       "answer": "avoid",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "접근성",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "버튼 이름",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "accessible buttons",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "스크린리더용 이름",
+       "answer": "accessibility",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "단위 시험",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "코드 변경",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "run tests first",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "수정 뒤 확인 순서",
+       "answer": "tests",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 2,
+       "group_rank": 2,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "커밋 제목",
+       "answer": "commit",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "한국어",
+       "answer": "commit",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 2,
+       "group_rank": 2,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Korean commit title",
+       "answer": "commit",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "변경 이력의 제목 언어",
+       "answer": "commit",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "안정판",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "유지관리자 승인",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "stable release approval",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "정식 게시 전 필요한 절차",
+       "answer": "release",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "사용자 문서",
+       "answer": "docs",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "쉬운 한국어",
+       "answer": "docs",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "plain Korean documentation",
+       "answer": "docs",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "처음 읽는 사람을 위한 설명",
+       "answer": "docs",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "백업",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "파일 갱신",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "recoverable backup",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "덮어쓰기 전 복구 준비",
+       "answer": "backup",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      }
+     ]
+    },
+    {
+     "mode": "subjects",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 32,
+       "group_at_5": 32
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 27,
+       "group_at_5": 27
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 5,
+       "group_at_5": 5
+      }
+     },
+     "rows": [
+      {
+       "query": "미니멀",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "HTML 디자인 선호",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 5,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "minimal style",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "간결한 화면 구성",
+       "answer": "minimal",
+       "split": "held-out",
+       "returned": 4,
+       "hit_rank": 4,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "색",
+       "answer": "color",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "남색",
+       "answer": "color",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "preferred colors",
+       "answer": "color",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "어떤 팔레트가 좋을까",
+       "answer": "color",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "글꼴",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Pretendard",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "body font",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "어떤 서체를 쓸까",
+       "answer": "font",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "피할 디자인",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "보라색",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "avoid gradient",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "좋아하지 않는 시각 효과",
+       "answer": "avoid",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "접근성",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "버튼 이름",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "accessible buttons",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "스크린리더용 이름",
+       "answer": "accessibility",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "단위 시험",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "코드 변경",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "run tests first",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "수정 뒤 확인 순서",
+       "answer": "tests",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 2,
+       "group_rank": 2,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "커밋 제목",
+       "answer": "commit",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "한국어",
+       "answer": "commit",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Korean commit title",
+       "answer": "commit",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "변경 이력의 제목 언어",
+       "answer": "commit",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "안정판",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "유지관리자 승인",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "stable release approval",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "정식 게시 전 필요한 절차",
+       "answer": "release",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "사용자 문서",
+       "answer": "docs",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "쉬운 한국어",
+       "answer": "docs",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "plain Korean documentation",
+       "answer": "docs",
+       "split": "development",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "처음 읽는 사람을 위한 설명",
+       "answer": "docs",
+       "split": "held-out",
+       "returned": 0,
+       "hit_rank": null,
+       "group_rank": null,
+       "hit_at_5": false,
+       "group_at_5": false
+      },
+      {
+       "query": "백업",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "파일 갱신",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "recoverable backup",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "덮어쓰기 전 복구 준비",
+       "answer": "backup",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      }
+     ]
+    },
+    {
+     "mode": "subjects+expansions",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 40,
+       "group_at_5": 40
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 30,
+       "group_at_5": 30
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 10,
+       "group_at_5": 10
+      }
+     },
+     "rows": [
+      {
+       "query": "미니멀",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "HTML 디자인 선호",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 6,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "minimal style",
+       "answer": "minimal",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "간결한 화면 구성",
+       "answer": "minimal",
+       "split": "held-out",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "색",
+       "answer": "color",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "남색",
+       "answer": "color",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "preferred colors",
+       "answer": "color",
+       "split": "development",
+       "returned": 5,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "어떤 팔레트가 좋을까",
+       "answer": "color",
+       "split": "held-out",
+       "returned": 5,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "글꼴",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Pretendard",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "body font",
+       "answer": "font",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "어떤 서체를 쓸까",
+       "answer": "font",
+       "split": "held-out",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "피할 디자인",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "보라색",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "avoid gradient",
+       "answer": "avoid",
+       "split": "development",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "좋아하지 않는 시각 효과",
+       "answer": "avoid",
+       "split": "held-out",
+       "returned": 4,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "접근성",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "버튼 이름",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "accessible buttons",
+       "answer": "accessibility",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "스크린리더용 이름",
+       "answer": "accessibility",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "단위 시험",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "코드 변경",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "run tests first",
+       "answer": "tests",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "수정 뒤 확인 순서",
+       "answer": "tests",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "커밋 제목",
+       "answer": "commit",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "한국어",
+       "answer": "commit",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "Korean commit title",
+       "answer": "commit",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "변경 이력의 제목 언어",
+       "answer": "commit",
+       "split": "held-out",
+       "returned": 3,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "안정판",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "유지관리자 승인",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "stable release approval",
+       "answer": "release",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "정식 게시 전 필요한 절차",
+       "answer": "release",
+       "split": "held-out",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "사용자 문서",
+       "answer": "docs",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "쉬운 한국어",
+       "answer": "docs",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "plain Korean documentation",
+       "answer": "docs",
+       "split": "development",
+       "returned": 2,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "처음 읽는 사람을 위한 설명",
+       "answer": "docs",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "백업",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "파일 갱신",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "recoverable backup",
+       "answer": "backup",
+       "split": "development",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      },
+      {
+       "query": "덮어쓰기 전 복구 준비",
+       "answer": "backup",
+       "split": "held-out",
+       "returned": 1,
+       "hit_rank": 1,
+       "group_rank": 1,
+       "hit_at_5": true,
+       "group_at_5": true
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
