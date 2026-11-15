@@ -26,7 +26,7 @@
 1. [07](../../../.agents/directives/07-installed-usage-guard.md) 사용량 사전 확인, 차단 시 즉시 중단
 2. 단계 파일·브랜치 확인. 부재 시 아래 새 단계 절차
 3. [재조정](../../../.agents/directives/references/plan-reconciliation.md): 계획·소스·시험·커밋 대조, 완료 근거 반영·불확실 항목 미완료
-4. 첫 `- [ ]`·`state: agent-owned` 중 의존성 완료 항목 선택
+4. 첫 `- [ ]`·`state: agent-owned` 중 의존성 완료 항목 선택. [실행 장소](venue.md)가 현재 세션과 맞는 항목만
 5. [06](../../../.agents/directives/06-session-coordination.md) 세션 기록에 수정 경로 예약
 6. 항목 범위 실행, 설계 문제는 소유자 보고·임의 확장 금지
 7. 확인 실행. 실패는 미완료·중단 메모, 문서 변경은 documentation 검사와 문체 종료 0 필수
@@ -57,7 +57,7 @@
 | 2 | `test/overhaul-2-baseline` |
 | 3 | `feature/overhaul-3-0.15.0-orchestrator` |
 | 4 | `feature/overhaul-4-0.15.1-detection` |
-| 5 | `feature/overhaul-5-0.15.2-memory` |
+| 5 | `feature/overhaul-5-0.15.3-memory` |
 | 6 | `feature/overhaul-6-0.16.0-mediation` |
 | 7 | `feature/overhaul-7-0.17.0-overnight-loop` |
 
@@ -94,11 +94,12 @@
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
-| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 9/12 |
+| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 12/12 |
 | 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청·2026-11-14 재확인(다른 모든 작업보다 먼저) | 6/6 |
-| 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 9/10 |
-| 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
-| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
+| 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 10/10 |
+| 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 정식 진행 |
+| 5 0.15.3 기억 | [0.15.3-memory.md](0.15.3-memory.md) | 있음 | 0.15.2 정식 | 0/10 |
+| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |
 
 ## 불변 조건
