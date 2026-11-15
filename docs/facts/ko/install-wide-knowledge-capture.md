@@ -9,9 +9,9 @@ summary: "Hive 사용자 범위 수집·조회는 프로젝트 설정 없이 설
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:2b63d2decf7b22a9191758a063aa171d12d7b53bc7d2012c5cf8c55ca71f62a3"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:376a541e4f5c908d2ed2c20c31eff580c96a47d3f26d439f77908dc364c4d5a1"
   - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:0e91b6b2cab1dc7040d6eba5061e89a6b954d8a6e395489b3c51d30309834197"
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:35c9814239dde8505142300ca75f046ed17ac6c36e717a70bb2c358c312ee239"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:c6987bd571e15beb92973b8a847c40a698389cfd18fc6644a01193c8a975a5c4"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:2af34b6fb5c77401e0a946d09ba445c5ac13e15550133349fab10b227293e2cf"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
