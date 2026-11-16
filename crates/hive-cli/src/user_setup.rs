@@ -4585,7 +4585,7 @@ usage_guard:
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global setup through the CLI", "# Earlier Setup Hive");
+            .replace("# Agent-driven global setup", "# Earlier Setup Hive");
         base = replaced.into_bytes();
         assert_ne!(base, incoming, "synthetic old heading must differ");
 
@@ -4617,7 +4617,7 @@ usage_guard:
         let incoming = files.get(&path).expect("user-setup source").clone();
         let base = String::from_utf8(incoming.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global setup through the CLI", "# Earlier Setup Hive")
+            .replace("# Agent-driven global setup", "# Earlier Setup Hive")
             .into_bytes();
         assert_ne!(base, incoming, "synthetic old heading must differ");
 
