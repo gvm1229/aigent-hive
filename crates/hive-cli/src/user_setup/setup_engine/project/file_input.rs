@@ -256,28 +256,27 @@ fn validate_file(
 }
 
 /// An untouched terminal draft (questions open or previewed, nothing applied) never blocks an
-/// explicit file or agent setup: the later explicit choices supersede it. A dry run ignores it
-/// without writing. Drafts that reached apply or failure keep the resume-first rule.
+/// explicit file or agent setup: the later explicit choices supersede it. It is dropped only in
+/// memory here; an apply replaces it on disk through the progress compare-and-swap inside the
+/// setup lock, after the patch validated, so a failed apply leaves the draft intact. Drafts
+/// that reached apply or failure keep the resume-first rule.
 fn supersede_untouched_draft(
-    store: &ProgressStore,
     mut snapshot: super::super::super::progress_store::ProgressSnapshot,
-    mode: SetupMode,
-) -> Result<super::super::super::progress_store::ProgressSnapshot, RenderError> {
-    let untouched = snapshot.progress.as_ref().is_some_and(|draft| {
-        matches!(
-            draft.phase,
-            ProgressPhase::AwaitingAnswers | ProgressPhase::Previewed
-        ) && draft.project_context.is_none()
-    });
-    if !untouched {
-        return Ok(snapshot);
+) -> super::super::super::progress_store::ProgressSnapshot {
+    if snapshot.progress.as_ref().is_some_and(is_untouched_draft) {
+        snapshot.progress = None;
     }
-    if mode == SetupMode::Apply {
-        store.clear(&snapshot).map_err(as_render)?;
-        return store.load().map_err(as_render);
-    }
-    snapshot.progress = None;
-    Ok(snapshot)
+    snapshot
+}
+
+/// Whether a saved draft holds only unapplied answers.
+pub(in crate::user_setup) fn is_untouched_draft(
+    draft: &super::super::super::progress_store::SetupProgress,
+) -> bool {
+    matches!(
+        draft.phase,
+        ProgressPhase::AwaitingAnswers | ProgressPhase::Previewed
+    ) && draft.project_context.is_none()
 }
 
 pub(in crate::user_setup) fn execute(
@@ -295,7 +294,7 @@ pub(in crate::user_setup) fn execute(
         store.recover_pending_state().map_err(as_render)?;
     }
     let snapshot = store.load().map_err(as_render)?;
-    let mut snapshot = supersede_untouched_draft(&store, snapshot, arguments.mode)?;
+    let mut snapshot = supersede_untouched_draft(snapshot);
     let pending = snapshot
         .progress
         .as_ref()
@@ -892,6 +891,31 @@ mod tests {
             .unwrap()
             .progress
             .is_none_or(|progress| progress.phase == ProgressPhase::Complete));
+    }
+
+    #[test]
+    fn a_failed_agent_apply_keeps_the_terminal_draft() {
+        let (root, target) = agent_scope();
+        let args = crate::SetupArguments {
+            target: target.path().into(),
+            user_root: root.path().into(),
+            answers: agent_patch(root.path(), "partial.json", &json!({"project_name":"x"})),
+            capabilities: None,
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            input_channel: PreferenceInput::Agent,
+        };
+        let (options, global) = file_scope(&args).unwrap();
+        let store = ProgressStore::open(&options.root, Some(&options.target)).unwrap();
+        let draft = store
+            .new_progress(
+                "project".into(),
+                questions::defaults(&options.target, &global, "codex"),
+            )
+            .unwrap();
+        store.save(&store.load().unwrap(), &draft).unwrap();
+        assert!(execute(&args).is_err());
+        assert_eq!(store.load().unwrap().progress, Some(draft));
     }
 
     #[test]

@@ -230,10 +230,12 @@ fn offer_agent_setup(
     pending: Option<&user_setup::progress_store::SetupProgress>,
     data: &mut Value,
 ) -> Option<String> {
+    // An untouched terminal draft never blocks the agent apply, so it counts as fresh here too.
+    let draft = pending.filter(|progress| super::file_input::is_untouched_draft(progress));
     let fresh = !options.describe
         && unconfigured
         && pending.is_none_or(|progress| {
-            progress.phase == user_setup::progress_store::ProgressPhase::Complete
+            progress.phase == user_setup::progress_store::ProgressPhase::Complete || draft.is_some()
         });
     if !fresh {
         return None;
@@ -250,6 +252,9 @@ fn offer_agent_setup(
         Some(super::agent_command(options))
     };
     data["agent_setup"] = agent;
+    if draft.is_some() {
+        data["agent_setup"]["terminal_draft"] = json!("superseded-on-apply");
+    }
     next_action
 }
 

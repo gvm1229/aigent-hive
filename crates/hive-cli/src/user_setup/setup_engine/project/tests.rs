@@ -1148,3 +1148,25 @@ fn compact_project_creates_knowledge_only_when_first_used() {
     std::fs::remove_file(target.path().join(".hive/knowledge/suppression.yml")).unwrap();
     assert!(hive_wiki::rebuild_index(target.path()).is_err());
 }
+
+#[test]
+fn an_untouched_terminal_draft_still_offers_the_agent_setup() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let draft = store
+        .new_progress(
+            "project".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    store.save(&store.load().unwrap(), &draft).unwrap();
+    let mut opts = options(root.path(), target.path());
+    opts.show = true;
+    let result = preferences::inspect(&opts, &store, None, InterfaceLanguage::En).unwrap();
+    let data = result.data.unwrap();
+    assert_eq!(data["agent_setup"]["terminal_draft"], "superseded-on-apply");
+    assert!(result.next_action.is_some());
+    assert_eq!(store.load().unwrap().progress, Some(draft));
+}
