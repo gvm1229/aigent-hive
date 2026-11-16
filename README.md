@@ -103,7 +103,10 @@ This option installs only the current stable release.
 ## What changed in 0.15.3
 
 - Ask your AI agent to set up Hive for a project. Calling the project-setup Skill makes the agent run setup: in an empty folder it asks about the project one question at a time, and in an existing project it scans the files first, then shows one proposal before applying.
-- Agents apply project setup without a capability file. `hive setup --answers` uses the same saved or detected host capabilities as terminal setup; detected capabilities stay unverified and never enable hooks.
+- Agents preview, apply and validate project setup without a capability file. `hive setup --answers` uses the same saved or detected host capabilities as terminal setup; detected capabilities stay unverified and never enable hooks.
+- A pending setup result tells the agent how to continue: `--show --summary`, then an agent `--dry-run`. The terminal resume command is still listed for people.
+- Terminal setup is easier to read: each question has a numbered title such as `[2/4] Project name`, and the preview groups values into sections. Colour appears only in an interactive terminal without `NO_COLOR`.
+- `hive project upgrade --validate` passes right after a fresh project setup. When files do change, each changed path shows its reason.
 - Record several facts from one turn with `hive knowledge remember --batch <facts.json>`. One rejected fact cancels the whole batch.
 - Give a fact a subject such as `design/visual-style`. A matching fact returns up to 16 more facts of the same subject, and `hive knowledge subjects list|preview|apply|restore` manages subjects.
 - Short Korean search words find stored sentences with particles, so `남색` finds `남색과`. The recall Skill passes Korean and English variants with `--expansions`.

@@ -98,7 +98,10 @@ an optional third-party Skill.
 ## 0.15.3 주요 변경
 
 - AI에게 프로젝트의 Hive 설정을 맡기기 지원. project-setup Skill을 부르면 AI가 직접 설정: 빈 폴더는 프로젝트 내용을 한 번에 하나씩 질문, 기존 프로젝트는 파일을 먼저 살펴본 뒤 한 번의 제안 확인 후 적용
-- AI의 프로젝트 설정 적용에 능력 파일 불필요. `hive setup --answers`가 터미널 설정과 같은 저장·감지 능력 사용, 감지한 능력은 미검증 표시·Hook 미허용
+- AI의 프로젝트 설정 미리보기·적용·검증에 능력 파일 불필요. `hive setup --answers`가 터미널 설정과 같은 저장·감지 능력 사용, 감지한 능력은 미검증 표시·Hook 미허용
+- 설정이 대기 상태로 멈추면 AI가 이어 갈 명령(`--show --summary`, 이어서 에이전트 `--dry-run`) 안내. 사람용 터미널 재개 명령도 함께 표시
+- 터미널 설정 화면 가독성 개선: 질문마다 `[2/4] 프로젝트 이름` 같은 번호 붙은 제목, 미리보기는 구역별 표. 색은 `NO_COLOR` 없는 대화형 터미널에서만
+- 새로 설정한 프로젝트에서 `hive project upgrade --validate` 통과. 실제로 바뀌는 파일은 경로마다 사유 표시
 - `hive knowledge remember --batch <facts.json>`으로 한 턴의 여러 사실을 한 번에 기록. 하나라도 거부되면 전체 취소
 - 사실마다 `design/visual-style` 같은 주제 지정, 맞은 사실과 같은 주제의 사실 최대 16개를 함께 반환. `hive knowledge subjects list|preview|apply|restore`로 주제 관리
 - `남색`으로 `남색과`를 찾는 것처럼 조사가 붙은 저장 문장도 짧은 한국어로 검색. 회수 Skill이 `--expansions`로 한·영 바꿔 쓴 말 함께 전달

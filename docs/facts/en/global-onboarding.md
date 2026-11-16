@@ -9,7 +9,7 @@ summary: "New 0.14.0 setup disables automatic usage stops and reviews existing c
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:eab05c4a4122479b07571f2efb36a809a95eddd47b48d4a1496ac8c6704deb4c"
+  - "repo:README.md#sha256:ad3e635304ff898ed338c383f008a18e423e7ed74cb806e9c55fd1543e4b5d73"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:c71400d914d7d70a9f7e4d5d5bc6cf6447e4300230ad900a25f1ed5096014f66"
   - "repo:crates/hive-core/src/preferences.rs#sha256:838005e60b3255422c2ee143d76e66ef3ef877d7f3a8ff196eb446c0dfdc888d"
   - "repo:docs/archive/plans/foundations/native-usage-sensor.md#sha256:231e96967c32029d539eb82f245399e37156a43c2028be8a01a51215a5455807"
