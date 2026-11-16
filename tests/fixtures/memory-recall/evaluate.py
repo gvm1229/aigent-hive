@@ -29,6 +29,11 @@ facts.update({fact_id: text for fact_id, text in inputs["distractors"]})
 queries = [(query, fact_id, "held-out" if index == 3 else "development")
            for fact_id, _, fact_queries in inputs["facts"] for index, query in enumerate(fact_queries)]
 assert len(queries) == 40 and set(host["expansions"]) == {query for query, _, _ in queries}
+# Precision guard added 2026-11-16 after the stage review: no stored fact answers these, so
+# every returned hit is a false positive. Fixed before its first run; never tuned on results.
+NEGATIVE_QUERIES = ["what is the plan to do an update", "how do I set up the printer",
+                    "weekend hiking trail", "database migration rollback", "is it going to rain",
+                    "favorite movie genre", "주말 등산 코스", "데이터베이스 이전 되돌리기"]
 
 
 def hive(*arguments):
@@ -59,7 +64,7 @@ def run_mode(work, mode):
         arguments = ["knowledge", "retrieve", "--user-root", str(user), "--target", str(user),
                      "--scope", "auto", "--query", query, "--top-k", "5", "--byte-budget", "16384"]
         if mode == "subjects+expansions":
-            arguments += ["--expansions", ";".join(host["expansions"][query])]
+            arguments += ["--expansions", ",".join(host["expansions"][query])]
         hits = hive(*arguments)["data"]["hits"]
         texts = [hit["text"] for hit in hits]
         rank = next((index + 1 for index, text in enumerate(texts) if facts[fact_id] in text), None)
@@ -75,13 +80,20 @@ def run_mode(work, mode):
                      "hit_rank": rank, "group_rank": group_rank,
                      "hit_at_5": rank is not None and rank <= 5,
                      "group_at_5": group_rank is not None and group_rank <= 5})
-    summary = {}
+    negatives = []
+    for query in NEGATIVE_QUERIES:
+        arguments = ["knowledge", "retrieve", "--user-root", str(user), "--target", str(user),
+                     "--scope", "auto", "--query", query, "--top-k", "5", "--byte-budget", "16384"]
+        negatives.append({"query": query, "returned": len(hive(*arguments)["data"]["hits"])})
+    summary = {"negatives": {"queries": len(negatives),
+                             "with_hits": sum(1 for row in negatives if row["returned"]),
+                             "total_hits": sum(row["returned"] for row in negatives)}}
     for split in ("all", "development", "held-out"):
         selected = [row for row in rows if split == "all" or row["split"] == split]
         summary[split] = {"queries": len(selected),
                           "hit_at_5": sum(row["hit_at_5"] for row in selected),
                           "group_at_5": sum(row["group_at_5"] for row in selected)}
-    return {"mode": mode, "summary": summary, "rows": rows}
+    return {"mode": mode, "summary": summary, "rows": rows, "negatives": negatives}
 
 
 (ROOT / "tests/work").mkdir(exist_ok=True)

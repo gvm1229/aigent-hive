@@ -35,9 +35,13 @@ only after a new request receives fresh allowed usage; never write during the ha
    `claim_key` plus `project-profile|decision|convention|preference|workflow`; do not create a
    request JSON or a provenance digest. Use the strict request schema only for reviewed artifacts,
    verified outcomes, replacements, or another supported scope. Do not retain the raw turn.
-   Give each fact one subject of one or two lowercase levels, such as `design/visual-style`.
-   Facts that answer the same later question share a subject. Reuse a subject from the last
-   result's `data.subjects.suggestions`; never create a spelling listed in `near_duplicates`.
+   Give each fact one subject of one or two lowercase English levels, such as
+   `design/visual-style`, even for a Korean fact. Facts that answer the same later question
+   share a subject. Before choosing a new subject, read the existing ones once per turn with
+   `hive knowledge subjects list --user-root <user-root> --output json` and reuse a matching
+   subject. Restating a stored fact with a subject relabels it in place; it never duplicates it.
+   After the write, if `data.subjects` (one entry per fact for `--batch`) lists
+   `near_duplicates`, relabel the new fact to the existing subject in the next turn.
 5. Run exactly one write-through request per turn. For one fact, prefer the simple
    user-statement route:
 
@@ -46,7 +50,9 @@ only after a new request receives fresh allowed usage; never write during the ha
    ```
 
    For two to eight `user-root` facts, write a temporary batch file outside the project and
-   run one batch. Every fact keeps its own `claim_key`; one rejected fact writes none of them:
+   run one batch. Every fact keeps its own `claim_key`; one rejected fact writes none of them.
+   On rejection, drop or correct only the named fact and retry the batch once. Delete the
+   temporary file after the command, whatever its result:
 
    ```text
    {"schema_version":1,"facts":[{"normalized_fact":"<fact>","claim_key":"<stable-key>","kind":"preference","subject":"<area/topic>"}]}
@@ -103,7 +109,7 @@ not permission to read confidential knowledge.
 
 ## Explicit source ingest
 
-For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary one-fact capture does not load that procedure.
+For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary turn capture does not load that procedure.
 
 ## Safety
 

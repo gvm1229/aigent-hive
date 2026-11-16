@@ -52,6 +52,20 @@ use the user root as both `--target` and `--user-root`.
   hive knowledge suppress --target <project-root> --user-root <user-root> --fingerprint <sha256:digest> --source-locator <locator> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
   ```
 
+- Give existing user-root facts a subject only on an explicit maintenance request. Preview
+  writes nothing and pages with `--limit`/`--offset`; `subject` is `null` where no rule
+  applies. Review every proposal yourself, keep facts that answer the same later question
+  together, avoid one catch-all subject, and write the review file with the reported
+  `preview_digest` and each `claim_id`, `expected_digest` and chosen `subject`. Apply only
+  after showing the user the planned subjects; keep the returned `operation_id` for restore:
+
+  ```text
+  hive knowledge subjects list --user-root <user-root> --output json
+  hive knowledge subjects preview --user-root <user-root> --limit 200 --offset 0 --output json
+  hive knowledge subjects apply --user-root <user-root> --review <review.json> --confirm-subject-assignment yes --output json
+  hive knowledge subjects restore --user-root <user-root> --operation <operation-id> --confirm-subject-restore yes --output json
+  ```
+
 ## Optional vector maintenance
 
 - After canonical knowledge changes, refresh the ordinary FTS index first. Vector freshness is

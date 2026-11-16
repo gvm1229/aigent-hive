@@ -984,22 +984,11 @@ impl RagStore {
                     expected.claim_id
                 )));
             }
-            if replacement.claim_id != expected.claim_id
-                || replacement.claim_key != expected.claim_key
-                || replacement.collection_id != expected.collection_id
-                || replacement.locator != expected.locator
-                || replacement.status != expected.status
-                || expected.status == AssertionStatus::Superseded
-                || replacement.normalized_fact != expected.normalized_fact
+            if expected.status == AssertionStatus::Superseded
+                || !is_subject_relabel(expected, replacement)
             {
                 return Err(WikiError::InvalidInput(format!(
-                    "claim `{}` replacement changes its identity, text or status",
-                    expected.claim_id
-                )));
-            }
-            if replacement.digest != claim_digest(replacement) {
-                return Err(WikiError::InvalidInput(format!(
-                    "claim `{}` replacement digest is stale",
+                    "claim `{}` replacement changes more than its subject",
                     expected.claim_id
                 )));
             }
@@ -4053,6 +4042,15 @@ fn advance_scan_promotion_status(
     Ok(source)
 }
 
+/// True when `relabeled` equals the active `existing` claim except subject, revision and digest.
+fn is_subject_relabel(existing: &CanonicalClaim, relabeled: &CanonicalClaim) -> bool {
+    let mut expected = existing.clone();
+    expected.subject.clone_from(&relabeled.subject);
+    expected.revision = relabeled.revision;
+    expected.digest = claim_digest(&expected);
+    existing.status != AssertionStatus::Superseded && expected == *relabeled
+}
+
 fn stage_remember_plan_writes(
     plan: &RememberPlan,
     known: &BTreeSet<&str>,
@@ -4079,6 +4077,27 @@ fn stage_remember_plan_writes(
         ));
     }
     let replacement_id = plan.new_claim.as_ref().map(|claim| claim.claim_id.as_str());
+    if plan.disposition == RememberDisposition::Update {
+        let relabeled = plan.new_claim.as_ref().ok_or_else(|| {
+            WikiError::InvalidInput("subject update requires its relabeled claim".to_owned())
+        })?;
+        validate_store_claim(relabeled, known)?;
+        let existing = current.get(&relabeled.claim_id).ok_or_else(|| {
+            WikiError::Conflict(format!(
+                "claim `{}` disappeared after remember planning",
+                relabeled.claim_id
+            ))
+        })?;
+        if !is_subject_relabel(existing, relabeled) {
+            return Err(WikiError::Conflict(format!(
+                "claim `{}` changed after subject planning",
+                relabeled.claim_id
+            )));
+        }
+        insert_claim_write(writes, relabeled)?;
+        current.insert(relabeled.claim_id.clone(), relabeled.clone());
+        return Ok(());
+    }
     if let Some(new_claim) = &plan.new_claim {
         validate_store_claim(new_claim, known)?;
         if let Some(existing) = current.get(&new_claim.claim_id) {
@@ -4159,7 +4178,7 @@ fn validate_remember_plan_shape(plan: &RememberPlan) -> Result<(), WikiError> {
         {
             Ok(())
         }
-        RememberDisposition::Insert
+        RememberDisposition::Insert | RememberDisposition::Update
             if plan.new_claim.is_some() && plan.superseded_claims.is_empty() =>
         {
             Ok(())

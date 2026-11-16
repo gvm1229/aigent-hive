@@ -166,18 +166,22 @@ fn run_remember_batch(user_root: &Path, path: &Path) -> Result<KnowledgeResult, 
     let snapshot = store.load_canonical_snapshot(revision)?;
     let plans =
         plan_remember_batch(&snapshot.claims, &requests, revision).map_err(map_rag_error)?;
-    let subjects = requests
-        .iter()
-        .map(|request| {
-            advise_subject(
-                &snapshot.claims,
-                &request.collection_id,
-                &request.normalized_fact,
-                request.subject.as_deref(),
-                SUBJECT_SUGGESTION_LIMIT,
-            )
-        })
-        .collect::<Vec<_>>();
+    // Each fact is advised against the store plus the facts before it in this batch.
+    let mut seen_claims = snapshot.claims.clone();
+    let mut subjects = Vec::with_capacity(requests.len());
+    for (request, plan) in requests.iter().zip(&plans) {
+        subjects.push(advise_subject(
+            &seen_claims,
+            &request.collection_id,
+            &request.normalized_fact,
+            request.subject.as_deref(),
+            SUBJECT_SUGGESTION_LIMIT,
+        ));
+        if let Some(claim) = &plan.new_claim {
+            seen_claims.retain(|existing| existing.claim_id != claim.claim_id);
+            seen_claims.push(claim.clone());
+        }
+    }
     let committed = store.apply_remember_plans(&plans)?;
     let changed = plans
         .iter()

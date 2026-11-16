@@ -80,8 +80,9 @@ USAGE:
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
     hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow] [--subject <area/topic>]|--batch <facts.json>) [--output json]
-    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>] [--expansions <term;term>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
-    hive knowledge subjects preview --user-root <dir> [--collection user-root] [--output json]
+    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>] [--expansions \"<term,term>\"]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
+    hive knowledge subjects list --user-root <dir> [--collection user-root] [--output json]
+    hive knowledge subjects preview --user-root <dir> [--collection user-root] [--limit <0..1000>] [--offset <n>] [--output json]
     hive knowledge subjects apply --user-root <dir> --review <review.json> --confirm-subject-assignment yes [--output json]
     hive knowledge subjects restore --user-root <dir> --operation <id> --confirm-subject-restore yes [--output json]
     hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--output json]
@@ -3716,7 +3717,7 @@ fn build_scan_promotion_request(source: &CanonicalClaim) -> Result<RememberReque
         status: source.status,
         visibility: RagVisibility::Shared,
         normalized_fact: source.normalized_fact.clone(),
-        subject: None,
+        subject: source.subject.clone(),
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::ReviewedArtifact,
             summary: "Explicitly approved reviewed scan promotion".to_owned(),
@@ -6170,6 +6171,8 @@ mod tests {
             "preview".to_owned(),
             "--user-root".to_owned(),
             user_arg.clone(),
+            "--limit".to_owned(),
+            "1000".to_owned(),
             "--output".to_owned(),
             "json".to_owned(),
         ])
@@ -6179,9 +6182,10 @@ mod tests {
         let data = preview.data.expect("preview data");
         let proposals = data["proposals"].as_array().expect("proposals");
         assert_eq!(proposals.len(), 660);
+        assert_eq!(data["total"], 660);
         assert!(proposals
             .iter()
-            .all(|proposal| proposal["rule"] == "claim-key"));
+            .all(|proposal| proposal["subject"].is_string()));
         assert_eq!(
             proposals[0]["subject"]
                 .as_str()
@@ -6272,6 +6276,269 @@ mod tests {
             run_subjects(&restore).is_err(),
             "a restore record is used once"
         );
+    }
+
+    fn remember_fact(user: &Path, fact: &str, key: &str, subject: Option<&str>) -> Value {
+        let mut arguments = vec![
+            "--user-root".to_owned(),
+            user.to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            fact.to_owned(),
+            "--claim-key".to_owned(),
+            key.to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        if let Some(subject) = subject {
+            arguments.extend(["--subject".to_owned(), subject.to_owned()]);
+        }
+        run_remember(&arguments)
+            .expect("remember")
+            .data
+            .expect("data")
+    }
+
+    #[test]
+    fn restating_a_fact_with_a_subject_relabels_it_in_place() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        remember_fact(
+            user.path(),
+            "Reports use a dark theme.",
+            "report-theme",
+            None,
+        );
+        let before = user_root_claim_files(user.path());
+        assert_eq!(before.len(), 1);
+        let relabeled = remember_fact(
+            user.path(),
+            "Reports use a dark theme.",
+            "report-theme",
+            Some("design/report"),
+        );
+        assert_eq!(relabeled["plan"]["disposition"], "update");
+        assert_eq!(user_root_claim_files(user.path()), before);
+        let again = remember_fact(
+            user.path(),
+            "Reports use a dark theme.",
+            "report-theme",
+            None,
+        );
+        assert_eq!(again["plan"]["disposition"], "noop");
+        let store = RagStore::open(user.path()).expect("store");
+        store.validate_current().expect("valid store");
+        let generation = ensure_rag_registry(user.path(), &store)
+            .expect("registry")
+            .generation
+            + 1;
+        let claims = store
+            .load_canonical_snapshot(generation)
+            .expect("snapshot")
+            .claims;
+        assert_eq!(claims.len(), 1);
+        assert_eq!(claims[0].subject.as_deref(), Some("design/report"));
+        let list = run_subjects(&[
+            "list".to_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("list")
+        .data
+        .expect("list data");
+        assert_eq!(list["subjects"][0]["subject"], "design/report");
+        assert_eq!(list["claims_without_subject"], 0);
+    }
+
+    #[test]
+    fn replace_active_claims_rejects_changes_beyond_the_subject() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        remember_fact(
+            user.path(),
+            "Release notes stay short.",
+            "release-notes",
+            None,
+        );
+        let store = RagStore::open(user.path()).expect("store");
+        let generation = ensure_rag_registry(user.path(), &store)
+            .expect("registry")
+            .generation
+            + 1;
+        let original = store
+            .load_canonical_snapshot(generation)
+            .expect("snapshot")
+            .claims[0]
+            .clone();
+        let mut widened = original.clone();
+        widened.subject = Some("writing/release".to_owned());
+        widened.visibility = RagVisibility::Confidential;
+        widened.digest = hive_wiki::rag::claim_digest(&widened);
+        assert!(store
+            .replace_active_claims(&[(original.clone(), widened)])
+            .is_err());
+        let mut relabeled = original.clone();
+        relabeled.subject = Some("writing/release".to_owned());
+        relabeled.digest = hive_wiki::rag::claim_digest(&relabeled);
+        store
+            .replace_active_claims(&[(original, relabeled)])
+            .expect("subject-only replacement");
+    }
+
+    #[test]
+    fn subject_groups_flag_truncation_and_never_expose_confidential_members() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let unregistered = temp_root();
+        for index in 0..20 {
+            remember_fact(
+                user.path(),
+                &format!("Palette rule number {index} keeps contrast high."),
+                &format!("palette-{index}"),
+                Some("design/palette"),
+            );
+        }
+        let store = RagStore::open(user.path()).expect("store");
+        let generation = ensure_rag_registry(user.path(), &store)
+            .expect("registry")
+            .generation
+            + 1;
+        let snapshot = store.load_canonical_snapshot(generation).expect("snapshot");
+        let request = RememberRequest {
+            collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+            claim_key: "palette-secret".to_owned(),
+            claim_id: None,
+            locator: "user-root/palette-secret".to_owned(),
+            kind: ClaimKind::Preference,
+            status: AssertionStatus::UserStated,
+            visibility: RagVisibility::Confidential,
+            normalized_fact: "Confidential vendor palette stays private.".to_owned(),
+            subject: Some("design/palette".to_owned()),
+            provenance: ClaimProvenance {
+                source_kind: RememberSourceKind::UserStatement,
+                summary: "Confidential subject member fixture".to_owned(),
+                locator: "request:palette-secret".to_owned(),
+                digest: sha256_digest(b"palette-secret"),
+            },
+            sources: vec!["request:palette-secret".to_owned()],
+            supersedes: Vec::new(),
+            expected_active_digest: None,
+            observed_at: None,
+            verified_at: None,
+        };
+        let plan = plan_remember(&snapshot.claims, &request, generation).expect("plan");
+        store
+            .apply_remember_plan(&plan)
+            .expect("confidential member");
+        let hits = run_retrieve(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            unregistered.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "auto".to_owned(),
+            "--query".to_owned(),
+            "palette rule number 7".to_owned(),
+            "--top-k".to_owned(),
+            "1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("retrieve")
+        .data
+        .expect("data")["hits"]
+            .as_array()
+            .expect("hits")
+            .clone();
+        assert_eq!(hits.len(), 17, "lead plus 16 members");
+        assert_eq!(hits[0]["subject_truncated"], true);
+        assert!(hits[1..]
+            .iter()
+            .all(|hit| hit.get("subject_truncated").is_none()));
+        assert!(hits
+            .iter()
+            .all(|hit| !hit["text"].as_str().expect("text").contains("Confidential")));
+    }
+
+    #[test]
+    fn ovx002_recall_floor_and_negative_queries_hold() {
+        // Frozen OVX-002 inputs: 10 facts, 5 distractors, 40 queries. Floor from OV153-007.
+        let inputs: Value = serde_json::from_str(include_str!(
+            "../../../docs/research/overhaul/OVX-002-inputs.json"
+        ))
+        .expect("frozen inputs");
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let mut answers = std::collections::BTreeMap::new();
+        for fact in inputs["facts"].as_array().expect("facts") {
+            let id = fact[0].as_str().expect("id");
+            let text = fact[1].as_str().expect("text");
+            answers.insert(id.to_owned(), text.to_owned());
+            remember_fact(user.path(), text, &format!("ovx-{id}"), None);
+        }
+        for distractor in inputs["distractors"].as_array().expect("distractors") {
+            let id = distractor[0].as_str().expect("id");
+            remember_fact(
+                user.path(),
+                distractor[1].as_str().expect("text"),
+                &format!("ovx-{id}"),
+                None,
+            );
+        }
+        let search = |query: &str| {
+            run_retrieve(&[
+                "--user-root".to_owned(),
+                user.path().to_string_lossy().into_owned(),
+                "--target".to_owned(),
+                user.path().to_string_lossy().into_owned(),
+                "--scope".to_owned(),
+                "auto".to_owned(),
+                "--query".to_owned(),
+                query.to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("retrieve")
+            .data
+            .expect("data")["hits"]
+                .as_array()
+                .expect("hits")
+                .iter()
+                .map(|hit| hit["text"].as_str().expect("text").to_owned())
+                .collect::<Vec<_>>()
+        };
+        let (mut found, mut held_out) = (0, 0);
+        for fact in inputs["facts"].as_array().expect("facts") {
+            let answer = &answers[fact[0].as_str().expect("id")];
+            for (index, query) in fact[2].as_array().expect("queries").iter().enumerate() {
+                let hits = search(query.as_str().expect("query"));
+                if hits
+                    .iter()
+                    .take(5)
+                    .any(|text| text.contains(answer.as_str()))
+                {
+                    found += 1;
+                    held_out += usize::from(index == 3);
+                }
+            }
+        }
+        assert!(found >= 32, "OVX-002 recall@5 fell to {found}/40");
+        assert!(
+            held_out >= 5,
+            "OVX-002 held-out recall@5 fell to {held_out}/10"
+        );
+        for negative in [
+            "what is the plan to do an update",
+            "how do I set up the printer",
+            "database migration rollback",
+        ] {
+            assert_eq!(search(negative), Vec::<String>::new(), "{negative}");
+        }
     }
 
     #[test]

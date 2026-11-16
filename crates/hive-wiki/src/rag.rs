@@ -635,6 +635,9 @@ pub struct RetrievalHit {
     /// Subject of a claim hit; hits of one subject group are returned together.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subject: Option<String>,
+    /// On a group's first hit: the subject holds more visible claims than were returned.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub subject_truncated: bool,
     /// Current-source validation; absence never asserts current source freshness.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_freshness: Option<SourceFreshness>,
@@ -1173,6 +1176,9 @@ pub fn fuse_semantic_results_with_policy(
             identity.score = entry.0.score;
             identity.matched_field.clone_from(&entry.0.matched_field);
             identity.text.clone_from(&entry.0.text);
+            // Subject grouping is lexical presentation, not citation identity.
+            identity.subject.clone_from(&entry.0.subject);
+            identity.subject_truncated = entry.0.subject_truncated;
             if identity != entry.0
                 || !hit.untrusted_content
                 || !(entry.0.text.starts_with(&hit.text) || hit.text.starts_with(&entry.0.text))
@@ -1181,6 +1187,10 @@ pub fn fuse_semantic_results_with_policy(
                     "fusion citation changed".to_owned(),
                 ));
             }
+            if entry.0.subject.is_none() {
+                entry.0.subject.clone_from(&hit.subject);
+            }
+            entry.0.subject_truncated |= hit.subject_truncated;
             // Prefer the complete canonical text over a budget-truncated copy of the same item.
             if hit.text.len() > entry.0.text.len() {
                 entry.0.text.clone_from(&hit.text);
@@ -1334,6 +1344,8 @@ pub enum RememberDisposition {
     Noop,
     /// The new claim explicitly replaces existing claims.
     Supersede,
+    /// The same active fact receives a new subject in place.
+    Update,
 }
 
 /// Pure canonical changes required by a remember request.
@@ -2210,6 +2222,11 @@ fn semantic_hit(
     score: f64,
 ) -> Result<RetrievalHit, RagError> {
     let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
+    let subject = if candidate.item_kind == "claim" {
+        claim_subject(connection, &candidate.item_id)?
+    } else {
+        None
+    };
     Ok(RetrievalHit {
         source_freshness: None,
         chunk_id: candidate.chunk_id,
@@ -2225,7 +2242,8 @@ fn semantic_hit(
         claim_kind: candidate.claim_kind,
         assertion_status: candidate.assertion_status,
         scan_metadata: candidate.scan_metadata,
-        subject: None,
+        subject,
+        subject_truncated: false,
         score,
         matched_field: "vector".to_owned(),
         sources,
@@ -2468,6 +2486,7 @@ fn retrieve_from_connection(
             None
         };
         let mut members = Vec::new();
+        let mut truncated = false;
         if let Some(subject) = &subject {
             let collection = by_id.get(candidate.collection_id.as_str()).ok_or_else(|| {
                 RagError::RepairRequired(format!(
@@ -2475,15 +2494,26 @@ fn retrieve_from_connection(
                     candidate.collection_id
                 ))
             })?;
+            // Filter by visibility first, then cap by claim, newest first.
+            let mut member_claims = BTreeSet::new();
             for member in subject_group_candidates(connection, &candidate.collection_id, subject)? {
-                if member.chunk_id != candidate.chunk_id
-                    && !emitted.contains(&member.chunk_id)
-                    && is_visible(&member, collection, &resolved_scope, request)
+                if member.item_id == candidate.item_id
+                    || emitted.contains(&member.chunk_id)
+                    || !is_visible(&member, collection, &resolved_scope, request)
                 {
-                    members.push(member);
+                    continue;
                 }
+                if !member_claims.contains(&member.item_id) {
+                    if member_claims.len() == MAX_SUBJECT_GROUP {
+                        truncated = true;
+                        continue;
+                    }
+                    member_claims.insert(member.item_id.clone());
+                }
+                members.push(member);
             }
         }
+        let mut lead_truncated = truncated;
         let group = std::iter::once((candidate, matched_field)).chain(
             members
                 .into_iter()
@@ -2519,6 +2549,7 @@ fn retrieve_from_connection(
                 assertion_status: member.assertion_status,
                 scan_metadata: member.scan_metadata,
                 subject: subject.clone(),
+                subject_truncated: std::mem::take(&mut lead_truncated),
                 score: rank_score,
                 matched_field: member_field,
                 sources,
@@ -2772,7 +2803,10 @@ pub fn plan_remember(
         verified_at: request.verified_at.clone(),
         digest: String::new(),
     };
-    let pre_id_digest = claim_digest(&seed);
+    // The subject is a mutable label: it never changes a claim's identity.
+    let mut identity_seed = seed.clone();
+    identity_seed.subject = None;
+    let pre_id_digest = claim_digest(&identity_seed);
     if seed.claim_id.is_empty() {
         seed.claim_id = format!("claim-{}", raw_digest(&pre_id_digest));
         seed.locator = format!(
@@ -2790,16 +2824,26 @@ pub fn plan_remember(
                 && claim.status != AssertionStatus::Superseded
         })
         .collect::<Vec<_>>();
-    if let Some(exact) = active.iter().find(|claim| {
-        claim.claim_key == seed.claim_key
-            && claim.digest == seed.digest
-            && claim.normalized_fact == seed.normalized_fact
-    }) {
-        if seed.supersedes.is_empty() {
-            let _ = exact;
+    if seed.supersedes.is_empty() {
+        if let Some(same) = active.iter().find(|claim| {
+            claim.claim_key == seed.claim_key && claim.normalized_fact == seed.normalized_fact
+        }) {
+            // Same truth restated: no subject keeps the stored one, a new subject relabels it.
+            if seed.subject.is_none() || same.subject == seed.subject {
+                return Ok(RememberPlan {
+                    disposition: RememberDisposition::Noop,
+                    new_claim: None,
+                    superseded_claims: Vec::new(),
+                });
+            }
+            let mut relabeled = (*same).clone();
+            relabeled.subject.clone_from(&seed.subject);
+            relabeled.revision = revision;
+            relabeled.digest = claim_digest(&relabeled);
+            validate_claim(&relabeled)?;
             return Ok(RememberPlan {
-                disposition: RememberDisposition::Noop,
-                new_claim: None,
+                disposition: RememberDisposition::Update,
+                new_claim: Some(relabeled),
                 superseded_claims: Vec::new(),
             });
         }
@@ -2936,10 +2980,12 @@ pub fn plan_remember_batch(
             }
         }
         if let Some(new_claim) = &plan.new_claim {
-            if !working
-                .iter()
-                .any(|claim| claim.claim_id == new_claim.claim_id)
+            if let Some(slot) = working
+                .iter_mut()
+                .find(|claim| claim.claim_id == new_claim.claim_id)
             {
+                *slot = new_claim.clone();
+            } else {
                 working.push(new_claim.clone());
             }
         }
@@ -3035,15 +3081,13 @@ pub fn advise_subject(
             .then(left.subject.cmp(&right.subject))
     });
     suggestions.truncate(limit);
+    // Only a different spelling of the same words counts: `design/visualstyle` vs
+    // `design/visual-style`. Shared leaves such as `ops/release` and `workflow/release` differ.
     let near_duplicates = requested.map_or_else(Vec::new, |requested| {
-        let leaf = requested.rsplit('/').next().unwrap_or(requested);
         subjects
             .keys()
             .filter(|subject| **subject != requested)
-            .filter(|subject| {
-                compact_subject(subject) == compact_subject(requested)
-                    || subject.rsplit('/').next() == Some(leaf)
-            })
+            .filter(|subject| compact_subject(subject) == compact_subject(requested))
             .map(|subject| (*subject).to_owned())
             .collect()
     });
@@ -3057,10 +3101,10 @@ pub fn advise_subject(
 
 /// Rule-based first-pass subject for an existing claim, before host review.
 ///
-/// The first two meaningful words of the claim key form the subject; a key without such
-/// words falls back to `general/<kind>`. The second value names the rule that applied.
+/// The first two meaningful ASCII words of the claim key form the subject. A key without
+/// such words gets no proposal: a shared catch-all subject would group unrelated facts.
 #[must_use]
-pub fn propose_subject(claim: &CanonicalClaim) -> (String, &'static str) {
+pub fn propose_subject(claim: &CanonicalClaim) -> Option<String> {
     const STOPWORDS: [&str; 10] = [
         "the", "and", "to", "of", "for", "a", "an", "user", "hive", "is",
     ];
@@ -3082,11 +3126,7 @@ pub fn propose_subject(claim: &CanonicalClaim) -> (String, &'static str) {
         .take(2)
         .collect::<Vec<_>>();
     let candidate = words.join("/");
-    if !words.is_empty() && validate_subject(&candidate).is_ok() {
-        (candidate, "claim-key")
-    } else {
-        (format!("general/{}", claim.kind.as_str()), "kind")
-    }
+    (!words.is_empty() && validate_subject(&candidate).is_ok()).then_some(candidate)
 }
 
 /// Select active current truth without interpreting or merging claim text.
@@ -4482,14 +4522,20 @@ fn build_fts_query(query: &str, expansions: &[String]) -> Result<String, RagErro
             "retrieval query must contain searchable Unicode text".to_owned(),
         ));
     }
-    // A token of two or more characters also matches longer stored words, so a Korean
-    // stem finds its particle forms (`남색` finds `남색과`) and an English stem finds its
-    // inflections. Single characters stay exact to keep the candidate set bounded.
+    // A non-ASCII token of two or more characters also matches longer stored words, so a
+    // Korean stem finds its particle forms (`남색` finds `남색과`). An ASCII token needs four
+    // or more characters (`font` finds `fonts`), so short English words such as `do` or `is`
+    // stay exact and do not pull in unrelated documents.
     Ok(tokens
         .into_iter()
         .map(|token| {
             let quoted = format!("\"{}\"", token.replace('"', "\"\""));
-            if token.chars().count() >= 2 {
+            let prefix = if token.is_ascii() {
+                token.len() >= 4
+            } else {
+                token.chars().count() >= 2
+            };
+            if prefix {
                 format!("{quoted}*")
             } else {
                 quoted
@@ -4529,8 +4575,10 @@ fn search_tokens(value: &str) -> Vec<String> {
     tokens
 }
 
-/// Maximum claims returned for one subject group.
+/// Maximum claims returned with one subject group's first hit.
 const MAX_SUBJECT_GROUP: usize = 16;
+/// Maximum indexed chunks inspected for one subject group before visibility filtering.
+const MAX_SUBJECT_GROUP_SCAN: usize = 512;
 
 fn claim_subject(connection: &Connection, claim_id: &str) -> Result<Option<String>, RagError> {
     let tag = connection
@@ -4558,7 +4606,7 @@ fn subject_group_candidates(
                AND c.collection_id = ?1
                AND t.tag = ?2
                AND c.replacement IS NULL
-             ORDER BY c.title ASC, c.item_id ASC, c.ordinal ASC
+             ORDER BY c.revision DESC, c.title ASC, c.item_id ASC, c.ordinal ASC
              LIMIT ?3",
         )
         .map_err(sqlite_error)?;
@@ -4567,7 +4615,7 @@ fn subject_group_candidates(
             params![
                 collection_id,
                 subject_tag(subject),
-                sql_i64_usize("subject group limit", MAX_SUBJECT_GROUP)?
+                sql_i64_usize("subject group scan limit", MAX_SUBJECT_GROUP_SCAN)?
             ],
             candidate_from_row,
         )
@@ -4966,6 +5014,21 @@ fn validate_remember_request(request: &RememberRequest, revision: u64) -> Result
             "provenance.summary contains likely credential material: {error}"
         ))
     })?;
+    if let Some(subject) = &request.subject {
+        validate_subject(subject)?;
+        if subject.split('/').any(|segment| {
+            segment.len() >= 24 && segment.bytes().all(|byte| byte.is_ascii_hexdigit())
+        }) {
+            return Err(RagError::InvalidInput(
+                "subject contains likely credential material".to_owned(),
+            ));
+        }
+        super::reject_likely_credentials(subject.as_bytes()).map_err(|error| {
+            RagError::InvalidInput(format!(
+                "subject contains likely credential material: {error}"
+            ))
+        })?;
+    }
     Ok(())
 }
 
@@ -5186,6 +5249,7 @@ mod tests {
             assertion_status: None,
             scan_metadata: None,
             subject: None,
+            subject_truncated: false,
             score,
             matched_field: "text".to_owned(),
             sources: vec!["reviewed-test".to_owned()],
@@ -5289,6 +5353,21 @@ mod tests {
         assert!(!numbered_literal_token("alpha-beta"));
         assert!(!numbered_literal_token("3개"));
         assert!(!numbered_literal_token("b12"));
+    }
+
+    #[test]
+    fn fusion_accepts_a_subject_on_one_side_and_keeps_it() {
+        let (request, mut lexical, semantic) = literal_fusion_fixture();
+        lexical.hits[0].subject = Some("design/visual-style".to_owned());
+        let fused = fuse_semantic_results_with_policy(&request, lexical, &semantic)
+            .expect("subject-bearing lexical hit fuses with its semantic copy");
+        let first = fused
+            .result
+            .hits
+            .iter()
+            .find(|hit| hit.chunk_id == "first")
+            .expect("fused first hit");
+        assert_eq!(first.subject.as_deref(), Some("design/visual-style"));
     }
 
     #[test]
@@ -5755,7 +5834,7 @@ mod tests {
             Some("docs/color"),
             5,
         );
-        assert_eq!(advice.near_duplicates, vec!["design/color".to_owned()]);
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
         let advice = advise_subject(
             &claims,
             USER_ROOT_COLLECTION_ID,

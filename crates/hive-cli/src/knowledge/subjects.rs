@@ -18,7 +18,9 @@ use std::collections::BTreeMap;
 use std::fs;
 
 const RESTORE_RELATIVE: &str = ".hive/backups/knowledge-subjects";
-const MAX_ASSIGNMENTS: usize = 5000;
+// A restore record costs about 2 KB per assignment; this keeps it under the 4 MiB reader bound.
+const MAX_ASSIGNMENTS: usize = 1000;
+const DEFAULT_PREVIEW_LIMIT: usize = 200;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -27,8 +29,8 @@ struct SubjectProposal {
     claim_key: String,
     expected_digest: String,
     normalized_fact: String,
-    subject: String,
-    rule: String,
+    /// Rule-based proposal; `None` when the key has no usable words and the host decides.
+    subject: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,8 +64,9 @@ pub(super) fn run_subjects(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         Some("preview") => preview(&arguments[1..]),
         Some("apply") => apply(&arguments[1..]),
         Some("restore") => restore(&arguments[1..]),
+        Some("list") => list(&arguments[1..]),
         _ => Err(WikiError::InvalidInput(
-            "knowledge subjects requires preview, apply, or restore".to_owned(),
+            "knowledge subjects requires list, preview, apply, or restore".to_owned(),
         )),
     }
 }
@@ -94,16 +97,12 @@ fn proposals(claims: &[CanonicalClaim], collection_id: &str) -> Vec<SubjectPropo
                 && claim.status != AssertionStatus::Superseded
                 && claim.subject.is_none()
         })
-        .map(|claim| {
-            let (subject, rule) = propose_subject(claim);
-            SubjectProposal {
-                claim_id: claim.claim_id.clone(),
-                claim_key: claim.claim_key.clone(),
-                expected_digest: claim.digest.clone(),
-                normalized_fact: claim.normalized_fact.clone(),
-                subject,
-                rule: rule.to_owned(),
-            }
+        .map(|claim| SubjectProposal {
+            claim_id: claim.claim_id.clone(),
+            claim_key: claim.claim_key.clone(),
+            expected_digest: claim.digest.clone(),
+            normalized_fact: claim.normalized_fact.clone(),
+            subject: propose_subject(claim),
         })
         .collect::<Vec<_>>();
     proposals.sort_by(|left, right| left.claim_id.cmp(&right.claim_id));
@@ -120,13 +119,65 @@ fn preview_digest(proposals: &[SubjectProposal]) -> Result<String, WikiError> {
     Ok(sha256_digest(&bytes))
 }
 
-fn preview(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+fn bounded(
+    options: &[(&str, &str)],
+    name: &str,
+    default: usize,
+    max: usize,
+) -> Result<usize, WikiError> {
+    optional(options, name).map_or(Ok(default), |value| {
+        value
+            .parse::<usize>()
+            .ok()
+            .filter(|parsed| *parsed <= max)
+            .ok_or_else(|| WikiError::InvalidInput(format!("{name} must be 0 through {max}")))
+    })
+}
+
+fn list(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(arguments, &["--user-root", "--collection"])?;
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let collection_id = collection(&options)?;
     let (_store, claims, manifest_digest) = open_store(&user_root)?;
-    let proposals = proposals(&claims, &collection_id);
-    let digest = preview_digest(&proposals)?;
+    let mut subjects = BTreeMap::<String, usize>::new();
+    let mut without_subject = 0_usize;
+    for claim in claims.iter().filter(|claim| {
+        claim.collection_id == collection_id && claim.status != AssertionStatus::Superseded
+    }) {
+        match &claim.subject {
+            Some(subject) => *subjects.entry(subject.clone()).or_default() += 1,
+            None => without_subject += 1,
+        }
+    }
+    let subjects = subjects
+        .into_iter()
+        .map(|(subject, active_claims)| json!({"subject": subject, "active_claims": active_claims}))
+        .collect::<Vec<_>>();
+    Ok(success(
+        "ListKnowledgeSubjects",
+        "hive.knowledge-subjects-listed",
+        "existing subjects were listed; nothing was written",
+        Vec::new(),
+        SHARED_INDEX_RELATIVE,
+        &manifest_digest,
+        json!({"collection_id": collection_id, "subjects": subjects, "claims_without_subject": without_subject}),
+    ))
+}
+
+fn preview(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let options = parse_options(
+        arguments,
+        &["--user-root", "--collection", "--limit", "--offset"],
+    )?;
+    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let collection_id = collection(&options)?;
+    let limit = bounded(&options, "--limit", DEFAULT_PREVIEW_LIMIT, MAX_ASSIGNMENTS)?;
+    let offset = bounded(&options, "--offset", 0, usize::MAX)?;
+    let (_store, claims, manifest_digest) = open_store(&user_root)?;
+    let all = proposals(&claims, &collection_id);
+    let digest = preview_digest(&all)?;
+    let total = all.len();
+    let proposals = all.into_iter().skip(offset).take(limit).collect::<Vec<_>>();
     Ok(success(
         "PreviewKnowledgeSubjects",
         "hive.knowledge-subjects-previewed",
@@ -137,6 +188,8 @@ fn preview(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         json!({
             "collection_id": collection_id,
             "preview_digest": digest,
+            "total": total,
+            "offset": offset,
             "proposals": proposals,
             "review_format": {"schema_version": 1, "preview_digest": digest, "assignments": [{"claim_id": "<claim_id>", "expected_digest": "<expected_digest>", "subject": "<area/topic>"}]},
         }),
@@ -192,7 +245,14 @@ fn apply(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         .map(|proposal| proposal.claim_id.as_str())
         .collect::<std::collections::BTreeSet<_>>();
     let mut pairs = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
     for assignment in &review.assignments {
+        if !seen.insert(assignment.claim_id.as_str()) {
+            return Err(WikiError::InvalidInput(format!(
+                "claim `{}` is assigned more than once",
+                assignment.claim_id
+            )));
+        }
         validate_subject(&assignment.subject)
             .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
         if !previewed.contains(assignment.claim_id.as_str()) {

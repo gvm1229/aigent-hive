@@ -140,10 +140,10 @@ pub(super) fn parse_retrieval_request(
             })?,
             current_collection_id: None,
             query: required(options, "--query")?.to_owned(),
-            // Host-supplied Korean, English and inflected variants, separated by `;`.
+            // Host-supplied Korean, English and inflected variants, separated by `,`.
             query_expansions: optional(options, "--expansions").map_or_else(Vec::new, |value| {
                 value
-                    .split(';')
+                    .split(',')
                     .map(str::trim)
                     .filter(|term| !term.is_empty())
                     .map(str::to_owned)

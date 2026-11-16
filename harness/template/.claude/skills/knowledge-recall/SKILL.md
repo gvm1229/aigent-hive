@@ -21,15 +21,16 @@ non-installation. Source-workspace and already activated user-level contracts re
    source lookup; never use consumer knowledge paths in the source workspace.
 3. Otherwise resolve the bound `<user-root>`, keep the exact verified
    `<current-project-root>`, and run one automatic lookup. Add `--expansions` with up to eight
-   `;`-separated Korean, English and inflected forms of the query's key words, for example
-   `디자인;design;styles` for a short Korean query:
+   comma-separated Korean, English and inflected forms of the query's key words, quoted as one
+   argument, for example `"디자인,design,styles"` for a short Korean query:
 
    ```text
-   hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --expansions <term;term> --top-k 5 --byte-budget 16384 --output json
+   hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --expansions "<term,term>" --top-k 5 --byte-budget 16384 --output json
    ```
 
-   A claim hit with a `subject` arrives with the other facts of that subject; `top-k` counts
-   these subject groups. Read the whole group before deciding what is missing.
+   A claim hit with a `subject` arrives with up to 16 more facts of that subject, newest
+   first; `top-k` counts these subject groups. `subject_truncated=true` on the group's first
+   hit means more facts exist: run one follow-up with the subject's words when they matter.
    If the hits do not cover what the task needs, run at most two follow-up lookups with
    different key words or expansions, never the same query again. Stop when hits repeat or a
    lookup returns nothing new.
