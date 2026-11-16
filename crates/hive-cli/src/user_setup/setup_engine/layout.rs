@@ -10,9 +10,14 @@ pub(super) const WIDTH: usize = 80;
 /// Indent for the help, choice and default block under a title line.
 pub(super) const INDENT: &str = "  ";
 
-/// Whether decoration is allowed for one output stream.
-pub(super) fn decoration_allowed(stream_is_terminal: bool, no_color: Option<&str>) -> bool {
-    stream_is_terminal && no_color.is_none_or(str::is_empty)
+/// Whether decoration is allowed for one output stream. `escape_codes` is false for a Windows
+/// console that may not interpret escape sequences (outside Windows Terminal or VS Code).
+pub(super) fn decoration_allowed(
+    stream_is_terminal: bool,
+    no_color: Option<&str>,
+    escape_codes: bool,
+) -> bool {
+    stream_is_terminal && escape_codes && no_color.is_none_or(str::is_empty)
 }
 
 #[cfg(not(test))]
@@ -23,6 +28,9 @@ fn decorated() -> bool {
         decoration_allowed(
             std::io::stderr().is_terminal(),
             std::env::var("NO_COLOR").ok().as_deref(),
+            !cfg!(windows)
+                || std::env::var_os("WT_SESSION").is_some()
+                || std::env::var_os("TERM_PROGRAM").is_some(),
         )
     })
 }
@@ -291,10 +299,10 @@ pub(super) fn assert_snapshot(name: &str, actual: &str) {
         .join("../../tests/fixtures/setup/screens")
         .join(name);
     // Snapshots drop trailing spaces (such as after the `> ` input marker) so they stay clean text.
-    let trimmed: String = actual
-        .lines()
-        .map(|line| format!("{}\n", line.trim_end()))
-        .collect();
+    let trimmed = actual.lines().fold(String::new(), |mut text, line| {
+        writeln!(text, "{}", line.trim_end()).expect("formatting a String");
+        text
+    });
     if std::env::var_os("HIVE_UPDATE_SNAPSHOTS").is_some() {
         std::fs::write(&path, &trimmed).unwrap();
     }
@@ -314,10 +322,11 @@ mod tests {
 
     #[test]
     fn decoration_needs_a_terminal_and_no_no_color_value() {
-        assert!(decoration_allowed(true, None));
-        assert!(decoration_allowed(true, Some("")));
-        assert!(!decoration_allowed(true, Some("1")));
-        assert!(!decoration_allowed(false, None));
+        assert!(decoration_allowed(true, None, true));
+        assert!(decoration_allowed(true, Some(""), true));
+        assert!(!decoration_allowed(true, Some("1"), true));
+        assert!(!decoration_allowed(false, None, true));
+        assert!(!decoration_allowed(true, None, false));
     }
 
     #[test]
