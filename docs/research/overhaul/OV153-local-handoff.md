@@ -80,6 +80,25 @@ hive install --scope user --hosts codex,claude,antigravity --validate --output j
 - 기대: `hive.user-install-multi-host-valid`
 - 실패 시: 호스트 응답과 실행 명령을 `docs/research/overhaul/OV153-010.md`에 기록, 해당 항목을 `agent-owned`로 되돌림. 수정은 cloud에서 0.15.3-test.3로
 
+## 3a. 보고된 두 명령 재현(OV153-011 A4)
+
+새 빈 폴더에서 0.15.2 보고의 두 명령을 test.2로 재현. 사용자 설정 완료 상태의 `$HOME` 사용.
+
+```powershell
+New-Item -ItemType Directory $HOME\hive-a4-empty
+$patch = Join-Path $env:TEMP 'hive-a4-patch.json'
+'{"schema_version":1,"kind":"hive.setup-answer-patch","answers":{"setup_mode":"expedited","project_name":"hive-a4-empty","project_kind":"general","primary_host":"claude"}}' | Set-Content -Encoding utf8 $patch
+hive setup --target $HOME\hive-a4-empty --user-root $HOME --answers $patch --input-channel agent --dry-run --output json
+hive setup --target $HOME\hive-a4-empty --user-root $HOME --non-interactive --dry-run --output json
+hive setup --target $HOME\hive-a4-empty --user-root $HOME --answers $patch --input-channel agent --apply --output json
+hive setup --target $HOME\hive-a4-empty --user-root $HOME --answers $patch --input-channel agent --validate --output json
+```
+
+- 기대 1(현상 1): `status=success`, `hive.setup-dry-run-complete`, `data.capabilities.source=saved-or-detected-by-cli`, 폴더 비어 있음. `missing required option --capabilities` 없음
+- 기대 2(현상 2): `hive.project-setup-input-pending`, `next_action`에 `--show --summary`와 `--input-channel agent --dry-run`, 문구에 능력 파일 선택 사항 안내. 터미널 재개는 `data.terminal_next_action`에만
+- 기대 3: 적용 `hive.setup-complete`, 검증 `hive.setup-valid`
+- 실패 시: 출력 JSON 전체를 `OV153-010.md`에 기록, OV153-011을 `agent-owned`로 되돌림
+
 ## 4. 통과 뒤 정식 0.15.3(1–3 통과 뒤에만)
 
 정식 공개 문서는 cloud에서 준비 완료(출시일 자리 `2026-11-16`). 출시일이 다르면 아래 파일의 날짜만 바꿈: `README.md`, `docs/readme/README.ko.md`, `docs/hive-install-guide.ko.html`, `docs/overview/product.md`, `docs/01-index.md`, `docs/releases/README.md`, `docs/public-stable-release.json`. 바꾼 뒤 `python scripts/check-public-stable-docs.py` 통과 확인.
