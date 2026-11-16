@@ -205,7 +205,7 @@ pub(super) fn inspect(
         stored.is_none(),
         pending.as_ref(),
         &mut data,
-    )?;
+    );
     let mut result = report(
         "success",
         0,
@@ -229,20 +229,47 @@ fn offer_agent_setup(
     unconfigured: bool,
     pending: Option<&user_setup::progress_store::SetupProgress>,
     data: &mut Value,
-) -> Result<Option<String>, SetupError> {
+) -> Option<String> {
     let fresh = !options.describe
         && unconfigured
         && pending.is_none_or(|progress| {
             progress.phase == user_setup::progress_store::ProgressPhase::Complete
         });
     if !fresh {
-        return Ok(None);
+        return None;
     }
-    data["agent_setup"] = agent_setup(options, root)?;
-    Ok(Some(super::agent_command(options)))
+    // A read-only status call never fails because the agent proposal is unavailable.
+    let agent = agent_setup(options, root).unwrap_or_else(|error| {
+        json!({"unavailable":true,"reason":error.message().chars().take(240).collect::<String>()})
+    });
+    let next_action = if agent["user_setup_required"] == true {
+        Some(super::user_setup_command(options))
+    } else if agent["unavailable"] == true {
+        None
+    } else {
+        Some(super::agent_command(options))
+    };
+    data["agent_setup"] = agent;
+    next_action
 }
 
-/// The same defaults and detection the terminal would offer, for one agent confirmation message.
+/// Whether the target holds nothing but hidden entries, read with a small bound.
+fn project_state(target: &std::path::Path) -> &'static str {
+    let Ok(entries) = std::fs::read_dir(target) else {
+        return "existing";
+    };
+    let visible = entries
+        .take(256)
+        .filter_map(Result::ok)
+        .any(|entry| !entry.file_name().to_string_lossy().starts_with('.'));
+    if visible {
+        "existing"
+    } else {
+        "empty"
+    }
+}
+
+/// CLI-detected starting values for the agent; the agent's interview or scan decides the answers.
 fn agent_setup(options: &Options, root: &cap_std::fs::Dir) -> Result<Value, SetupError> {
     let Some(config) = user_setup::load_operational_config(root)? else {
         return Ok(json!({"user_setup_required":true,
@@ -264,10 +291,17 @@ fn agent_setup(options: &Options, root: &cap_std::fs::Dir) -> Result<Value, Setu
                     .collect::<Vec<_>>()
             })
     };
+    let state = project_state(&options.target);
+    let mut detected_defaults = json!({"setup_mode":defaults["setup_mode"],
+        "project_name":defaults["project_name"],"primary_host":defaults["primary_host"]});
+    if state == "existing" {
+        detected_defaults["project_kind"] = defaults["project_kind"].clone();
+    }
     Ok(json!({
+        "project_state":state,
+        "requires_user_confirmation":true,
         "required_answers":["setup_mode","project_name","project_kind","primary_host"],
-        "proposed_answers":{"setup_mode":defaults["setup_mode"],"project_name":defaults["project_name"],
-            "project_kind":defaults["project_kind"],"primary_host":defaults["primary_host"]},
+        "detected_defaults":detected_defaults,
         "selected_hosts":config.selected_hosts.iter().map(|host| host.as_str()).collect::<Vec<_>>(),
         "detected":{"languages":names("languages"),"frameworks":names("frameworks"),
             "package_managers":names("package_managers")},

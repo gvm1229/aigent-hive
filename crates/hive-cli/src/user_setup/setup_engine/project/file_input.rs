@@ -255,6 +255,31 @@ fn validate_file(
     )
 }
 
+/// An untouched terminal draft (questions open or previewed, nothing applied) never blocks an
+/// explicit file or agent setup: the later explicit choices supersede it. A dry run ignores it
+/// without writing. Drafts that reached apply or failure keep the resume-first rule.
+fn supersede_untouched_draft(
+    store: &ProgressStore,
+    mut snapshot: super::super::super::progress_store::ProgressSnapshot,
+    mode: SetupMode,
+) -> Result<super::super::super::progress_store::ProgressSnapshot, RenderError> {
+    let untouched = snapshot.progress.as_ref().is_some_and(|draft| {
+        matches!(
+            draft.phase,
+            ProgressPhase::AwaitingAnswers | ProgressPhase::Previewed
+        ) && draft.project_context.is_none()
+    });
+    if !untouched {
+        return Ok(snapshot);
+    }
+    if mode == SetupMode::Apply {
+        store.clear(&snapshot).map_err(as_render)?;
+        return store.load().map_err(as_render);
+    }
+    snapshot.progress = None;
+    Ok(snapshot)
+}
+
 pub(in crate::user_setup) fn execute(
     arguments: &crate::SetupArguments,
 ) -> Result<SetupOutcome, RenderError> {
@@ -269,7 +294,8 @@ pub(in crate::user_setup) fn execute(
     if arguments.mode == SetupMode::Apply {
         store.recover_pending_state().map_err(as_render)?;
     }
-    let mut snapshot = store.load().map_err(as_render)?;
+    let snapshot = store.load().map_err(as_render)?;
+    let mut snapshot = supersede_untouched_draft(&store, snapshot, arguments.mode)?;
     let pending = snapshot
         .progress
         .as_ref()
@@ -825,6 +851,47 @@ mod tests {
             std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
             saved
         );
+    }
+
+    #[test]
+    fn an_untouched_terminal_draft_never_blocks_the_agent_apply() {
+        let (root, target) = agent_scope();
+        let required = json!({"setup_mode":"expedited","project_name":"agent-made",
+            "project_kind":"general","primary_host":"codex"});
+        let mut args = crate::SetupArguments {
+            target: target.path().into(),
+            user_root: root.path().into(),
+            answers: agent_patch(root.path(), "first.json", &required),
+            capabilities: None,
+            mode: SetupMode::DryRun,
+            reconfigure_roles: BTreeSet::new(),
+            input_channel: PreferenceInput::Agent,
+        };
+        let (options, global) = file_scope(&args).unwrap();
+        let store = ProgressStore::open(&options.root, Some(&options.target)).unwrap();
+        let draft = store
+            .new_progress(
+                "project".into(),
+                questions::defaults(&options.target, &global, "codex"),
+            )
+            .unwrap();
+        assert_eq!(draft.phase, ProgressPhase::AwaitingAnswers);
+        store.save(&store.load().unwrap(), &draft).unwrap();
+        // A dry run ignores the draft without writing; an apply supersedes it.
+        execute(&args).unwrap();
+        assert!(store.load().unwrap().progress.is_some());
+        args.mode = SetupMode::Apply;
+        execute(&args).unwrap();
+        let settings: Value = serde_yaml::from_slice(
+            &std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(settings["project_name"], "agent-made");
+        assert!(store
+            .load()
+            .unwrap()
+            .progress
+            .is_none_or(|progress| progress.phase == ProgressPhase::Complete));
     }
 
     #[test]

@@ -141,7 +141,32 @@ fn add_completion(result: &ActionResult, data: &Value, summary: &mut Value) {
     summary["effective_usage_policy"] = data["effective_usage_policy"].clone();
     summary["monitor_review"] = data["monitor_review"].clone();
     summary["host"] = data["host"].clone();
+    if !data["capabilities"].is_null() {
+        summary["capabilities"] = data["capabilities"].clone();
+    }
     summary["runtime_qualification"] = json!("not-evaluated-by-setup");
+}
+
+/// The status view: saved state, the answer patch template, the agent proposal and sections.
+fn add_status_summary(code: &str, data: &Value, summary: &mut Value) {
+    add_status(data, summary);
+    summary["answer_patch_template"] = super::answer_patch::template();
+    if let Some(agent) = data.get("agent_setup") {
+        summary["agent_setup"] = agent.clone();
+    }
+    let scope = if code == "hive.project-setup-shown" {
+        hive_core::preferences::PreferenceScope::Project
+    } else {
+        hive_core::preferences::PreferenceScope::User
+    };
+    if let Ok(catalog) = super::catalog() {
+        summary["available_sections"] = json!(catalog
+            .questions
+            .iter()
+            .filter(|question| question.scope == scope)
+            .map(|question| question.section.as_str())
+            .collect::<std::collections::BTreeSet<_>>());
+    }
 }
 
 pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult {
@@ -160,24 +185,7 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
         "details":"Verify with --show --summary --output json using the same explicit roots. Omit --summary only for an explicit detailed inspection. Do not repeat apply to inspect its result."
     });
     if status {
-        add_status(&data, &mut summary);
-        summary["answer_patch_template"] = super::answer_patch::template();
-        if let Some(agent) = data.get("agent_setup") {
-            summary["agent_setup"] = agent.clone();
-        }
-        let scope = if result.code == "hive.project-setup-shown" {
-            hive_core::preferences::PreferenceScope::Project
-        } else {
-            hive_core::preferences::PreferenceScope::User
-        };
-        if let Ok(catalog) = super::catalog() {
-            summary["available_sections"] = json!(catalog
-                .questions
-                .iter()
-                .filter(|question| question.scope == scope)
-                .map(|question| question.section.as_str())
-                .collect::<std::collections::BTreeSet<_>>());
-        }
+        add_status_summary(result.code, &data, &mut summary);
     } else {
         add_completion(&result, &data, &mut summary);
     }
@@ -237,7 +245,10 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
     result.data = Some(summary);
     // The emitter appends one newline to the serialized result.
     let limit = if status { 4095 } else { 8191 };
-    if serde_json::to_vec(&result).is_ok_and(|bytes| bytes.len() > limit) {
+    let over =
+        |result: &ActionResult| serde_json::to_vec(result).is_ok_and(|bytes| bytes.len() > limit);
+    shed_optional_detail(&mut result, &over);
+    if over(&result) {
         result.data = Some(
             json!({"summary":true,"summary_kind":if status {"status"}else{"completion"},
             "details_omitted":true,"changed_path_count":changed,"evidence_count":evidence_count,
@@ -246,6 +257,28 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
         );
     }
     result
+}
+
+/// Shed optional detail first, so the agent keeps its proposal and patch template.
+fn shed_optional_detail(result: &mut ActionResult, over: &dyn Fn(&ActionResult) -> bool) {
+    for (key, inner) in [
+        ("agent_setup", Some("detected")),
+        ("available_sections", None),
+    ] {
+        if !over(result) {
+            return;
+        }
+        let Some(data) = result.data.as_mut() else {
+            return;
+        };
+        let target = match inner {
+            Some(_) => data.get_mut(key),
+            None => Some(data),
+        };
+        if let Some(object) = target.and_then(Value::as_object_mut) {
+            object.remove(inner.unwrap_or(key));
+        }
+    }
 }
 
 pub(super) fn one_question(

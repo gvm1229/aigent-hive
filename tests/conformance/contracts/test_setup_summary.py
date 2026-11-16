@@ -198,11 +198,14 @@ class SetupSummaryConformance(Phase1CliTestCase):
         agent = status["data"]["agent_setup"]
         self.assertEqual(agent["required_answers"],
             ["setup_mode", "project_name", "project_kind", "primary_host"])
-        self.assertEqual(agent["proposed_answers"]["project_name"], "agent-driven")
+        self.assertEqual(agent["project_state"], "existing")
+        self.assertTrue(agent["requires_user_confirmation"])
+        self.assertEqual(agent["detected_defaults"]["project_name"], "agent-driven")
         self.assertIn("--input-channel agent --apply", status["next_action"])
         self.assertNotIn("--capabilities", status["next_action"])
         document = status["data"]["answer_patch_template"]
-        document["answers"] = agent["proposed_answers"]
+        # The agent confirmed these values after its scan; the CLI defaults are only a start.
+        document["answers"] = agent["detected_defaults"]
         patch = self.work_root / "agent-driven.json"
         patch.write_text(json.dumps(document), encoding="utf-8")
         process = subprocess.run(
@@ -212,9 +215,12 @@ class SetupSummaryConformance(Phase1CliTestCase):
             encoding="utf-8", timeout=60, env={**os.environ, "PATH": str(self.work_root / "no-external-tools")},
         )
         self.assertEqual(process.returncode, 0, (process.stdout, process.stderr))
-        self.assertTrue(json.loads(process.stdout)["data"]["completion_verified"])
+        completion = json.loads(process.stdout)["data"]
+        self.assertTrue(completion["completion_verified"])
+        self.assertEqual(completion["capabilities"],
+            {"source": "saved-or-detected-by-cli", "execution_capabilities_verified": False})
         matrix = read_yaml(target / ".hive/config/capability-resolution.yml")
-        self.assertEqual(matrix["host"], agent["proposed_answers"]["primary_host"])
+        self.assertEqual(matrix["host"], agent["detected_defaults"]["primary_host"])
         self.assertEqual(matrix["resolved_owner"], "host-native")
         self.assertEqual(set(matrix["capabilities"].values()), {"unverified"})
         values = read_yaml(target / ".hive/setup-answers.yml")
@@ -223,6 +229,27 @@ class SetupSummaryConformance(Phase1CliTestCase):
         final = self.setup_result("--target", target, "--show", "--summary", limit=4096)
         self.assertTrue(final["data"]["configured"])
         self.assertNotIn("agent_setup", final["data"])
+
+    def test_empty_folder_status_requests_an_interview_not_a_kind_guess(self):
+        target = self.work_root / "empty-start"
+        target.mkdir()
+        status = self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        agent = status["data"]["agent_setup"]
+        self.assertEqual(agent["project_state"], "empty")
+        self.assertTrue(agent["requires_user_confirmation"])
+        self.assertNotIn("project_kind", agent["detected_defaults"])
+        self.assertIn("--input-channel agent --apply", status["next_action"])
+
+    def test_missing_user_setup_routes_the_agent_to_user_setup(self):
+        target = self.work_root / "no-user-setup"
+        target.mkdir()
+        (target / "README.md").write_bytes(b"# Notes\n")
+        config = self.setup_user_root / ".hive/config/user-setup.yml"
+        config.unlink()
+        status = self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        self.assertTrue(status["data"]["agent_setup"]["user_setup_required"])
+        self.assertIn("--scope user", status["next_action"])
+        self.assertNotIn("--answers", status["next_action"])
 
     def test_explicit_project_setup_skill_delivers_only_its_owned_companions(self):
         target = self.work_root / "selected-setup"

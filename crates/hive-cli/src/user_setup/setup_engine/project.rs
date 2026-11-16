@@ -191,6 +191,14 @@ fn agent_command(options: &Options) -> String {
     )
 }
 
+/// Global setup must exist first; the agent finishes it through the user-scope path.
+fn user_setup_command(options: &Options) -> String {
+    format!(
+        "hive setup --scope user --user-root '{}' --show --summary --output json",
+        quote(&options.root)
+    )
+}
+
 fn pending(language: InterfaceLanguage) -> ActionResult {
     report(
         "needs-input",

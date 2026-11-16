@@ -15,11 +15,16 @@ only when the user asks for it. A hidden tool PTY is not a user terminal; never 
 
 1. Inspect both scopes once with the same explicit roots: `hive setup --scope user --user-root
    <user-root> --show --summary --output json` and `hive setup --target <project-root> --user-root
-   <user-root> --show --summary --output json`. For an inspection-only request, report and stop.
-   If `agent_setup.user_setup_required` is true, finish global choices through user-setup first.
-2. Empty folder (no meaningful files): the user is starting a new project. Interview in chat,
-   one question per message: what the project is about, its goal, how they want it developed
-   (stack, process, preferences), then anything still unclear. Never decide these silently.
+   <user-root> --show --summary --output json`. Without a user-named root, use the user's home
+   folder and reuse the root echoed in `next_action`. For an inspection-only request, report and
+   stop. If `agent_setup.user_setup_required` is true, finish global choices through user-setup
+   first. An already configured project has no `agent_setup`: report its state, ask what to
+   change, and patch only those keys. An unfinished terminal draft is superseded by your apply.
+2. Empty folder (`agent_setup.project_state` is `empty`): the user is starting a new project.
+   Interview in chat, one question per message: what the project is about, its goal, how they
+   want it developed (stack, process, preferences), then anything still unclear. Never decide
+   these silently. A plain request such as "set up hive for me" asks you to run setup; it never
+   skips this interview, and no delegation phrase replaces it.
 3. Existing project: scan before deciding, bounded to a structure listing, file-type counts and
    key manifests, README, build and config files. No repository-wide content reading, secrets or
    model calls. The CLI's `agent_setup.detected` facts are input, not the answer. Judge the kind
@@ -27,12 +32,15 @@ only when the user asks for it. A hidden tool PTY is not a user terminal; never 
    a web app; C++ with `.uasset` an Unreal game or an Unreal simulation, so look further. When
    still ambiguous, ask the user to confirm with your evidence.
 4. Propose in one message: `setup_mode` (expedited unless the user wants custom), `project_name`
-   (folder name unless the user named it), `project_kind` (a CLI `project-kind` choice),
-   `primary_host` (the current host when it is in `selected_hosts`), and the interview
-   or scan summary. Get confirmation or edits. If the user already delegated ("set it up for me",
-   "use defaults"), apply your evidence-based proposal and report each value and how to change it.
+   (folder name unless the user named it), `project_kind` (a CLI `project-kind` choice decided
+   from the interview or scan, not from `agent_setup.detected_defaults` alone), `primary_host`
+   (the current host when it is in `selected_hosts`; otherwise ask, or add it through
+   user-setup), and the interview or scan summary. Get confirmation or edits before apply.
+   Only for an existing project with unambiguous scan evidence, an explicit "use your judgment"
+   lets you apply the proposal and then report each value and how to change it.
 5. Copy `answer_patch_template`, keep `kind` and `schema_version`, fill only `answers`, save it as
-   `<patch-file>`, then run the status `next_action`:
+   `<patch-file>` in the system temporary folder (outside the project; delete it afterwards),
+   then run the status `next_action`:
    `hive setup --target <project-root> --user-root <user-root> --answers <patch-file> --input-channel agent --apply --summary --output json`.
    No capability file is needed: the CLI uses the same saved or detected host capabilities as
    terminal setup. Pass `--capabilities` only with trusted supplied material; never fabricate one.
@@ -43,9 +51,9 @@ only when the user asks for it. A hidden tool PTY is not a user terminal; never 
    AI reply calls for state inspection, never repeated apply. Resume incomplete work with the
    CLI's exact `next_action`; do not restart answered questions.
 
-Interview or scan facts that the setup fields cannot hold (purpose, goal, development
-preferences) go into the user-editable `AGENTS.md` area outside Hive markers: show the exact draft
-and obtain confirmation first, and preserve all existing user text. With Wiki enabled you may
+After a verified apply, interview or scan facts that the setup fields cannot hold (purpose, goal,
+development preferences) go into the user-editable `AGENTS.md` area outside Hive markers: show the
+exact draft and obtain confirmation first, and preserve all existing user text. With Wiki enabled you may
 also record them as project knowledge. Never invoke a provider API or a separate model process.
 
 Read [structured choices](references/structured-choices.md) for patch details, custom overrides

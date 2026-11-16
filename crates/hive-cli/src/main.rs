@@ -790,6 +790,10 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let result = match parsed {
         Ok(arguments) => {
             let setup_mode = arguments.mode;
+            // Like the terminal, say where capability data came from; it never proves execution.
+            let capabilities = serde_json::json!({"capabilities":{
+                "source": if arguments.capabilities.is_some() {"provided-document"} else {"saved-or-detected-by-cli"},
+                "execution_capabilities_verified": false}});
             match user_setup::execute_project_file(&arguments) {
                 Ok(outcome) => ActionResult {
                     schema_version: 1,
@@ -820,7 +824,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
                         },
                     ],
                     next_action: None,
-                    data: None,
+                    data: Some(capabilities),
                 },
                 Err(error) => failure_result(&error),
             }
@@ -2518,6 +2522,42 @@ mod tests {
             version_output_for("0.9.0", "0.9.0-test.2", "2026-08-06"),
             "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)"
         );
+    }
+
+    #[test]
+    fn setup_parsing_accepts_an_omitted_capabilities_file() {
+        let parsed = parse_setup(
+            &[
+                "--target",
+                "t",
+                "--answers",
+                "a.json",
+                "--user-root",
+                "u",
+                "--apply",
+                "--input-channel",
+                "agent",
+            ]
+            .map(str::to_owned),
+        )
+        .expect("agent setup without --capabilities");
+        assert!(parsed.capabilities.is_none());
+        let explicit = parse_setup(
+            &[
+                "--target",
+                "t",
+                "--answers",
+                "a.json",
+                "--user-root",
+                "u",
+                "--apply",
+                "--capabilities",
+                "c.json",
+            ]
+            .map(str::to_owned),
+        )
+        .expect("explicit capabilities");
+        assert_eq!(explicit.capabilities, Some(PathBuf::from("c.json")));
     }
 
     #[test]

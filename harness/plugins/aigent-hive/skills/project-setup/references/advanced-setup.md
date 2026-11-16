@@ -1,7 +1,7 @@
 # Explicit advanced setup
 
 Read only for an explicitly requested advanced capability, optional Skill/hook, or supplied host
-evidence. The CLI owns questions and validates these constraints. Do not start another questionnaire,
+evidence. The CLI validates these constraints. Ask only what the advanced choice needs; never
 construct capability evidence from guesses, or launch a Judge or subagent for ordinary setup.
 
 4. Resolve the v0.9 owner and capabilities.

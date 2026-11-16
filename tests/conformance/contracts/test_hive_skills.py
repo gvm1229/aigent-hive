@@ -176,8 +176,12 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
                          "No capability file is needed", "never fabricate one", "Never invent roles"):
             self.assertIn(required, " ".join(project.split()))
         self.assertNotIn("--capabilities <trusted-capabilities-file>", project)
+        self.assertIn("never skips this interview", " ".join(project.split()))
+        self.assertNotIn('"set it up for me"', project)
+        self.assertIn("project_state", project)
         user = (SKILL_ROOT / "user-setup/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("one personal preference per message", " ".join(user.split()))
+        self.assertIn("never invent them", " ".join(user.split()))
         questions = (SKILL_ROOT / "user-setup/references/questions.md").read_text(encoding="utf-8")
         self.assertIn("--question", questions)
         self.assertNotIn("Enabled (recommended)", questions)

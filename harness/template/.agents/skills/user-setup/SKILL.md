@@ -16,8 +16,9 @@ Global setup never authorizes project inspection or setup.
    problems only, read [workflow](references/workflow.md).
 2. Ask the needed choices in chat, one personal preference per message, starting with an unset
    interface language, then `selected_hosts` (offer the current host) and quick or custom setup.
-   Use `--describe --question <question-id>` for exact options; skip saved choices. If the user
-   delegated ("use defaults"), use factory defaults only for a quick setup and report each value.
+   Use `--describe --question <question-id>` for exact options; skip saved choices. Always ask the
+   interface language and `selected_hosts`; never invent them. Only after they are answered, an
+   explicit "use defaults" keeps factory defaults for the remaining quick-setup choices; report each.
    The terminal `hive setup --scope user --user-root <user-root>` is optional, only on request.
    A hidden tool PTY is not a user terminal; never wait for hidden input.
 3. For a named setting, read only [reconfiguration](references/reconfiguration.md). Copy
