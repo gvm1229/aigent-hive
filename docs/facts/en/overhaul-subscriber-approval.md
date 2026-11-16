@@ -9,7 +9,7 @@ summary: "Subscriber notices are preapproved until the whole overhaul plan is co
 tags: [overhaul, release, subscriber]
 aliases: [overhaul-subscriber-approval]
 sources:
-  - "repo:docs/plans/overhaul/README.md#sha256:d40970896a1fb21205f24ff82635d37f43d142d45686236a3da544c1ad8430b7"
+  - "repo:docs/plans/overhaul/README.md#sha256:f9fa13049533e5368609b2563826d70d017d63639c6fa1d98dbc1d51ccbdc626"
 links: [stable-release-discord-subscriber-notification]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

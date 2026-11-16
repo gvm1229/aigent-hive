@@ -14,7 +14,7 @@
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
-- 단계 5: 2026-11-15 cloud 세션 시작, `feature/overhaul-5-0.15.3-memory`. [시작 근거](../../research/overhaul/OV153-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV153-001–009 완료(검토·develop 병합·0.15.3-test.1 세 OS 수용), OV153-010은 [local 넘기기](../../research/overhaul/OV153-010-local.md)
+- 단계 5: 2026-11-15 cloud 세션 시작, `feature/overhaul-5-0.15.3-memory`. [시작 근거](../../research/overhaul/OV153-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV153-001–009 완료(검토·develop 병합·0.15.3-test.1 세 OS 수용), OV153-010은 [local 넘기기](../../research/overhaul/OV153-local-handoff.md)
 - 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
 
 ## 승인
