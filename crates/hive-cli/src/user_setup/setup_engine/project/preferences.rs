@@ -112,6 +112,7 @@ fn decision(value: &Value, origin: DecisionOrigin) -> Result<PreferenceDecision,
     .map_err(SetupError::Internal)
 }
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn inspect(
     options: &Options,
     store: &ProgressStore,
@@ -198,17 +199,13 @@ pub(super) fn inspect(
     } else {
         json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
     };
-    let fresh = !options.describe
-        && stored.is_none()
-        && pending.as_ref().is_none_or(|progress| {
-            progress.phase == user_setup::progress_store::ProgressPhase::Complete
-        });
-    let next_action = if fresh {
-        data["agent_setup"] = agent_setup(options, &root)?;
-        Some(super::agent_command(options))
-    } else {
-        None
-    };
+    let next_action = offer_agent_setup(
+        options,
+        &root,
+        stored.is_none(),
+        pending.as_ref(),
+        &mut data,
+    )?;
     let mut result = report(
         "success",
         0,
@@ -223,6 +220,26 @@ pub(super) fn inspect(
     );
     result.next_action = next_action;
     Ok(result)
+}
+
+/// An unconfigured project offers the agent path with its proposal as the first-class next action.
+fn offer_agent_setup(
+    options: &Options,
+    root: &cap_std::fs::Dir,
+    unconfigured: bool,
+    pending: Option<&user_setup::progress_store::SetupProgress>,
+    data: &mut Value,
+) -> Result<Option<String>, SetupError> {
+    let fresh = !options.describe
+        && unconfigured
+        && pending.is_none_or(|progress| {
+            progress.phase == user_setup::progress_store::ProgressPhase::Complete
+        });
+    if !fresh {
+        return Ok(None);
+    }
+    data["agent_setup"] = agent_setup(options, root)?;
+    Ok(Some(super::agent_command(options)))
 }
 
 /// The same defaults and detection the terminal would offer, for one agent confirmation message.
@@ -240,13 +257,12 @@ fn agent_setup(options: &Options, root: &cap_std::fs::Dir) -> Result<Value, Setu
     let names = |key: &str| {
         defaults["project_profile"][key]
             .as_array()
-            .map(|facts| {
+            .map_or_else(Vec::new, |facts| {
                 facts
                     .iter()
                     .map(|fact| fact["name"].clone())
                     .collect::<Vec<_>>()
             })
-            .unwrap_or_default()
     };
     Ok(json!({
         "required_answers":["setup_mode","project_name","project_kind","primary_host"],
