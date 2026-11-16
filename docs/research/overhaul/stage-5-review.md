@@ -49,4 +49,6 @@
 
 ## 검증
 
-- 대상 시험(새 시험 포함 11개 묶음·OVX-002 하한)·clippy(Rust 1.97·1.100)·fmt·출시 노트 검사 통과. 전체 시험과 재검토 결과는 이어서 기록
+- 2차 지적 반영 뒤 같은 소스로 한 번에 실행: `cargo test --workspace` 1,554개 통과·실패 0·4개 제외. clippy `-D warnings`(Rust 1.97·1.100)·fmt 통과
+- Python documentation·release·security·integration(105개) 통과. contract는 이 cloud 환경의 기존 8개만 실패(root 권한 2·Copier 부재 5·jsonschema 날짜 형식 1), `HIVE_BIN` 지정 시 한국어 핵심 12개 통과
+- GitHub CI 전 항목 통과(헤드 `0c457246`). 앞 헤드의 macOS 시험 1개(`update_bridge::macos`, 이 PR 미변경 경로)는 다음 실행에서 통과
