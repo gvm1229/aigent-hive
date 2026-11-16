@@ -164,7 +164,7 @@ pub(super) fn inspect(
             "global settings changed during inspection; retry the read-only command".into(),
         ));
     }
-    let data = if options.describe {
+    let mut data = if options.describe {
         let selected_section = if let Some(id) = &options.question {
             super::super::catalog()?
                 .questions
@@ -198,7 +198,18 @@ pub(super) fn inspect(
     } else {
         json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
     };
-    Ok(report(
+    let fresh = !options.describe
+        && stored.is_none()
+        && pending.as_ref().is_none_or(|progress| {
+            progress.phase == user_setup::progress_store::ProgressPhase::Complete
+        });
+    let next_action = if fresh {
+        data["agent_setup"] = agent_setup(options, &root)?;
+        Some(super::agent_command(options))
+    } else {
+        None
+    };
+    let mut result = report(
         "success",
         0,
         if options.question.is_some() {
@@ -209,7 +220,44 @@ pub(super) fn inspect(
         language,
         ["프로젝트 설정 조회 결과", "Project setup inspection"],
         Some(data),
-    ))
+    );
+    result.next_action = next_action;
+    Ok(result)
+}
+
+/// The same defaults and detection the terminal would offer, for one agent confirmation message.
+fn agent_setup(options: &Options, root: &cap_std::fs::Dir) -> Result<Value, SetupError> {
+    let Some(config) = user_setup::load_operational_config(root)? else {
+        return Ok(json!({"user_setup_required":true,
+            "reason":"Finish global user setup first; project file setup reads its saved preferences."}));
+    };
+    let host = config
+        .selected_hosts
+        .first()
+        .map_or("codex", |host| host.as_str());
+    let defaults =
+        super::questions::defaults(&options.target, &global_preferences(&options.root)?, host);
+    let names = |key: &str| {
+        defaults["project_profile"][key]
+            .as_array()
+            .map(|facts| {
+                facts
+                    .iter()
+                    .map(|fact| fact["name"].clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    };
+    Ok(json!({
+        "required_answers":["setup_mode","project_name","project_kind","primary_host"],
+        "proposed_answers":{"setup_mode":defaults["setup_mode"],"project_name":defaults["project_name"],
+            "project_kind":defaults["project_kind"],"primary_host":defaults["primary_host"]},
+        "selected_hosts":config.selected_hosts.iter().map(|host| host.as_str()).collect::<Vec<_>>(),
+        "detected":{"languages":names("languages"),"frameworks":names("frameworks"),
+            "package_managers":names("package_managers")},
+        "capabilities":"saved-or-detected-by-cli",
+        "consent_answers_default_empty":["persistent_roles","approved_optional_skills","approved_fallback_hooks","knowledge_include_paths"]
+    }))
 }
 
 fn described(

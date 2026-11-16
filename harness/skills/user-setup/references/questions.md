@@ -17,6 +17,6 @@ Neither describe nor a summary grants mutation, external delivery or monitor con
 For already supplied custom choices, use only the relevant section to obtain the exact
 `question.key`, input type and options. Copy those keys without renaming them; do not guess from labels.
 
-For normal completion, let the visible CLI terminal ask and validate inputs. Do not mirror those
-questions in chat, reconstruct the full answer document, or change saved language from the language
-of an unrelated user message.
+For normal agent-driven completion, ask one pending question at a time in chat from this view and
+let the CLI validate the patch. Do not reconstruct the full answer document, or change saved
+language from the language of an unrelated user message.

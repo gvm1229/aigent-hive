@@ -190,6 +190,40 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertIsNone(values["preference_decisions"]["/project_name"]["decided_at"])
         self.assertEqual(note.read_bytes(), b"Preserve this user file.\n")
 
+    def test_agent_applies_status_proposal_without_a_capability_file(self):
+        target = self.work_root / "agent-driven"
+        target.mkdir()
+        (target / "README.md").write_bytes(b"# Synthetic notes\n")
+        status = self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        agent = status["data"]["agent_setup"]
+        self.assertEqual(agent["required_answers"],
+            ["setup_mode", "project_name", "project_kind", "primary_host"])
+        self.assertEqual(agent["proposed_answers"]["project_name"], "agent-driven")
+        self.assertIn("--input-channel agent --apply", status["next_action"])
+        self.assertNotIn("--capabilities", status["next_action"])
+        document = status["data"]["answer_patch_template"]
+        document["answers"] = agent["proposed_answers"]
+        patch = self.work_root / "agent-driven.json"
+        patch.write_text(json.dumps(document), encoding="utf-8")
+        process = subprocess.run(
+            [str(self.hive_binary), "setup", "--target", str(target), "--user-root",
+             str(self.setup_user_root), "--answers", str(patch), "--input-channel", "agent",
+             "--apply", "--summary", "--output", "json"], input="", capture_output=True, text=True,
+            encoding="utf-8", timeout=60, env={**os.environ, "PATH": str(self.work_root / "no-external-tools")},
+        )
+        self.assertEqual(process.returncode, 0, (process.stdout, process.stderr))
+        self.assertTrue(json.loads(process.stdout)["data"]["completion_verified"])
+        matrix = read_yaml(target / ".hive/config/capability-resolution.yml")
+        self.assertEqual(matrix["host"], agent["proposed_answers"]["primary_host"])
+        self.assertEqual(matrix["resolved_owner"], "host-native")
+        self.assertEqual(set(matrix["capabilities"].values()), {"unverified"})
+        values = read_yaml(target / ".hive/setup-answers.yml")
+        self.assertEqual(values["preference_decisions"]["/project_name"]["input_channel"], "agent")
+        self.assertEqual(values["approved_fallback_hooks"], [])
+        final = self.setup_result("--target", target, "--show", "--summary", limit=4096)
+        self.assertTrue(final["data"]["configured"])
+        self.assertNotIn("agent_setup", final["data"])
+
     def test_explicit_project_setup_skill_delivers_only_its_owned_companions(self):
         target = self.work_root / "selected-setup"
         target.mkdir()

@@ -1,8 +1,9 @@
 //! Explicit project documents use the terminal's preserving preparation and apply journal.
 use super::{
     commit_prepared, existing, finish_existing_apply, global_preferences, json, preferences,
-    prepare_settings_raw, questions, request, user_setup, write_answers, InteractionRequest,
-    InterfaceLanguage, Options, ProgressPhase, ProgressStore, SetupError, Value,
+    prepare_settings_raw, questions, request, resolve_capabilities, user_setup, write_answers,
+    InteractionRequest, InterfaceLanguage, Options, ProgressPhase, ProgressStore, SetupError,
+    Value,
 };
 use hive_core::preferences::{
     DecisionOrigin, PreferenceDecision, PreferenceDecisions, PreferenceInput, PreferenceScope,
@@ -224,7 +225,7 @@ fn file_scope(
         describe: false,
         section: None,
         question: None,
-        capabilities: Some(arguments.capabilities.clone()),
+        capabilities: arguments.capabilities.clone(),
         reconfigure_roles: arguments.reconfigure_roles.clone(),
     };
     Ok((options, global))
@@ -261,11 +262,6 @@ pub(in crate::user_setup) fn execute(
     let input =
         user_setup::read_bounded_regular(&arguments.answers, user_setup::MAX_USER_SETUP_BYTES)
             .map_err(as_render)?;
-    let cap_bytes =
-        user_setup::read_bounded_regular(&arguments.capabilities, user_setup::MAX_USER_SETUP_BYTES)
-            .map_err(as_render)?;
-    hive_core::run::CapabilityResolution::parse_json(&cap_bytes)
-        .map_err(|e| RenderError::Input(e.to_string()))?;
     let output = crate::user_install::open_user_root_for_setup(&options.target)
         .map_err(RenderError::Conflict)?;
     let saved = existing::read(&output).map_err(as_render)?;
@@ -292,6 +288,17 @@ pub(in crate::user_setup) fn execute(
             .map_err(as_render)?,
         &questions::defaults(&options.target, &global, "codex"),
     )?;
+    let cap_bytes = if let Some(path) = &arguments.capabilities {
+        let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)
+            .map_err(as_render)?;
+        hive_core::run::CapabilityResolution::parse_json(&bytes)
+            .map_err(|e| RenderError::Input(e.to_string()))?;
+        bytes
+    } else {
+        // Without supplied material, use the terminal setup's saved-or-detected resolution.
+        let (matrix, _) = resolve_capabilities(&options, &answers).map_err(as_render)?;
+        serde_json::to_vec(&matrix).map_err(|e| RenderError::Internal(e.to_string()))?
+    };
     let mut caps =
         tempfile::NamedTempFile::new().map_err(|e| RenderError::Internal(e.to_string()))?;
     caps.write_all(&cap_bytes)
@@ -651,8 +658,10 @@ mod tests {
             target: target.path().into(),
             user_root: root.path().into(),
             answers,
-            capabilities: Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+            capabilities: Some(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+            ),
             mode: SetupMode::DryRun,
             reconfigure_roles: BTreeSet::new(),
             input_channel: PreferenceInput::Agent,
@@ -685,5 +694,152 @@ mod tests {
             std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
             saved
         );
+    }
+
+    fn agent_patch(root: &Path, name: &str, answers: &Value) -> std::path::PathBuf {
+        let path = root.join(name);
+        std::fs::write(
+            &path,
+            serde_json::to_vec(
+                &json!({"schema_version":1,"kind":"hive.setup-answer-patch","answers":answers}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        path
+    }
+
+    fn agent_scope() -> (tempfile::TempDir, tempfile::TempDir) {
+        let root = crate::test_tempdir();
+        let target = crate::test_tempdir();
+        let mut global = super::super::super::default_answers(Some(InterfaceLanguage::En));
+        global["selected_hosts"] = json!(["codex"]);
+        let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, serde_json::to_vec(&global).unwrap()).unwrap();
+        (root, target)
+    }
+
+    fn saved_capabilities(target: &Path) -> Value {
+        serde_yaml::from_slice(
+            &std::fs::read(target.join(".hive/config/capability-resolution.yml")).unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn agent_patch_without_capabilities_uses_the_terminal_capability_resolution() {
+        let (root, target) = agent_scope();
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json");
+        let required = json!({"setup_mode":"expedited","project_name":"agent-made",
+            "project_kind":"general","primary_host":"codex"});
+        let mut args = crate::SetupArguments {
+            target: target.path().into(),
+            user_root: root.path().into(),
+            answers: agent_patch(root.path(), "first.json", &required),
+            capabilities: Some(fixture.clone()),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            input_channel: PreferenceInput::Agent,
+        };
+        execute(&args).unwrap();
+        let explicit: Value = serde_json::from_slice(&std::fs::read(&fixture).unwrap()).unwrap();
+        assert_eq!(saved_capabilities(target.path()), explicit);
+
+        args.capabilities = None;
+        args.answers = agent_patch(
+            root.path(),
+            "rename.json",
+            &json!({"project_name":"renamed"}),
+        );
+        execute(&args).unwrap();
+        let (options, _) = file_scope(&args).unwrap();
+        let settings: Value = serde_yaml::from_slice(
+            &std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(settings["project_name"], "renamed");
+        assert_eq!(
+            settings["preference_decisions"]["/project_name"]["input_channel"],
+            "agent"
+        );
+        let (terminal, facts) = resolve_capabilities(&options, &settings).unwrap();
+        assert_eq!(facts["capabilities"], "stored-project-document");
+        assert_eq!(saved_capabilities(target.path()), terminal);
+        assert_eq!(terminal, explicit);
+        args.mode = SetupMode::Validate;
+        execute(&args).unwrap();
+    }
+
+    #[test]
+    fn omitted_capabilities_never_grant_hooks_or_invent_consented_choices() {
+        let (root, target) = agent_scope();
+        let required = json!({"setup_mode":"expedited","project_name":"agent-made",
+            "project_kind":"general","primary_host":"codex"});
+        let mut args = crate::SetupArguments {
+            target: target.path().into(),
+            user_root: root.path().into(),
+            answers: agent_patch(root.path(), "first.json", &required),
+            capabilities: Some(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+            ),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            input_channel: PreferenceInput::Agent,
+        };
+        execute(&args).unwrap();
+        let settings: Value = serde_yaml::from_slice(
+            &std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
+        )
+        .unwrap();
+        for key in [
+            "persistent_roles",
+            "approved_optional_skills",
+            "approved_fallback_hooks",
+            "knowledge_include_paths",
+        ] {
+            assert_eq!(settings[key], json!([]), "{key}");
+        }
+        let saved = std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap();
+        let hooks: Value = serde_yaml::from_slice(
+            &std::fs::read(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../tests/fixtures/setup/answers-partial-hooks.yml"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        args.capabilities = None;
+        args.answers = agent_patch(
+            root.path(),
+            "hooks.json",
+            &json!({"approved_fallback_hooks":hooks["approved_fallback_hooks"]}),
+        );
+        for mode in [SetupMode::DryRun, SetupMode::Apply] {
+            args.mode = mode;
+            assert!(execute(&args).is_err());
+        }
+        assert_eq!(
+            std::fs::read(target.path().join(".hive/setup-answers.yml")).unwrap(),
+            saved
+        );
+    }
+
+    #[test]
+    fn a_new_agent_patch_still_requires_the_four_initial_choices() {
+        let (root, target) = agent_scope();
+        let args = crate::SetupArguments {
+            target: target.path().into(),
+            user_root: root.path().into(),
+            answers: agent_patch(root.path(), "partial.json", &json!({"project_name":"x"})),
+            capabilities: None,
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            input_channel: PreferenceInput::Agent,
+        };
+        assert!(execute(&args).is_err());
+        assert!(!target.path().join(".hive").exists());
     }
 }

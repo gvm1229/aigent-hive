@@ -84,7 +84,7 @@ USAGE:
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
     hive setup --target <dir> --user-root <dir> --show --summary [--output json]
     hive setup --target <dir> --user-root <dir> --describe --question <question-id> [--output json]
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
+    hive setup --target <dir> --answers <yml> [--capabilities <json>] --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
     hive source-wiki lint --target <source-root> [--output json]
     hive source-wiki index --target <source-root> [--output json]
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
@@ -139,13 +139,16 @@ Create or validate an installed Aigent Hive consumer harness.
 USAGE:
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--output json]
+    hive setup --target <dir> --answers <yml> [--capabilities <json>] --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
 
 MODES:
     --summary    Compact status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
+
+Without --capabilities, file setup uses the same saved or detected host capability data as
+terminal setup. Detection never verifies execution support or grants hooks.
 ";
 
 const STALE_MARKER: &[u8] = b"{\"schema_version\":1,\"stale\":true}\n";
@@ -229,7 +232,7 @@ struct HookResult {
 struct SetupArguments {
     target: PathBuf,
     answers: PathBuf,
-    capabilities: PathBuf,
+    capabilities: Option<PathBuf>,
     user_root: PathBuf,
     mode: SetupMode,
     reconfigure_roles: BTreeSet<String>,
@@ -1063,7 +1066,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     Ok(SetupArguments {
         target: PathBuf::from(required(target, "--target")?),
         answers: PathBuf::from(required(answers, "--answers")?),
-        capabilities: PathBuf::from(required(capabilities, "--capabilities")?),
+        capabilities: capabilities.map(PathBuf::from),
         user_root: PathBuf::from(required(user_root, "--user-root")?),
         mode: mode.ok_or_else(|| {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
@@ -2521,7 +2524,7 @@ mod tests {
     fn setup_help_has_the_exact_supported_invocation() {
         assert!(is_help_request(&["--help".to_owned()]));
         assert!(SETUP_USAGE.contains(
-            "hive setup --target <dir> --answers <yml> --capabilities <json> \
+            "hive setup --target <dir> --answers <yml> [--capabilities <json>] \
              --user-root <dir> (--dry-run|--apply|--validate)"
         ));
         assert!(SETUP_USAGE.contains("--output json"));

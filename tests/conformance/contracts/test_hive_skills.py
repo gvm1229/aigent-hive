@@ -166,6 +166,18 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             self.assertIn("--input-channel agent", text)
             self.assertNotIn("## Setup Question Sequence", text)
             self.assertNotIn("## Required order", text)
+            self.assertIn("you, the AI agent", text)
+            self.assertIn("optional", text)
+            self.assertNotIn("give this one command", text)
+            self.assertNotIn("repeated AI questions", text)
+        project = (SKILL_ROOT / "project-setup/SKILL.md").read_text(encoding="utf-8")
+        for required in ("--scope user --user-root", "one question per message", "scan before deciding",
+                         "ask the user to confirm with your evidence", "--input-channel agent --apply",
+                         "No capability file is needed", "never fabricate one", "Never invent roles"):
+            self.assertIn(required, " ".join(project.split()))
+        self.assertNotIn("--capabilities <trusted-capabilities-file>", project)
+        user = (SKILL_ROOT / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("one personal preference per message", " ".join(user.split()))
         questions = (SKILL_ROOT / "user-setup/references/questions.md").read_text(encoding="utf-8")
         self.assertIn("--question", questions)
         self.assertNotIn("Enabled (recommended)", questions)

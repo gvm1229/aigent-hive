@@ -3,24 +3,27 @@ name: user-setup
 description: (user-setup) Configure global Aigent Hive preferences or answer new setup questions; use project-setup for a named project harness.
 ---
 
-# Global setup through the CLI
+# Agent-driven global setup
 
-The CLI owns questions, defaults, language, preview, application and recovery. This Skill starts
-that flow and explains its result. Global setup never authorizes project inspection or setup.
+Invoking this Skill means the user wants you, the AI agent, to run setup in chat. The CLI owns the
+question catalog, defaults, validation, preview, application and recovery; you ask and apply.
+Global setup never authorizes project inspection or setup.
 
 1. Use the CLI-selected default user root or the already identified explicit user root. Keep it
    consistent; do not guess another root from the current repository. Inspect once with
    `hive setup --scope user --user-root <user-root> --show --summary --output json`.
    For inspection-only requests, report this state without starting setup. For executable discovery
    problems only, read [workflow](references/workflow.md).
-2. Use a terminal that the user can see and type into for `hive setup --scope user --user-root
-   <user-root>`. The CLI asks for an unset language first and reuses saved choices. A hidden tool
-   PTY is not a user terminal. Without a user terminal, give this one command and the reason;
-   do not wait for hidden input or replace the CLI with repeated AI questions.
-3. For a named setting or already supplied choices, read only
-   [reconfiguration](references/reconfiguration.md). Copy `answer_patch_template` from the status
-   result without changing its `kind` or `schema_version`; fill only `answers` with supplied choices.
-   Save the complete document as `<patch-file>`. For an authorized change, use the complete command:
+2. Ask the needed choices in chat, one personal preference per message, starting with an unset
+   interface language, then `selected_hosts` (offer the current host) and quick or custom setup.
+   Use `--describe --question <question-id>` for exact options; skip saved choices. If the user
+   delegated ("use defaults"), use factory defaults only for a quick setup and report each value.
+   The terminal `hive setup --scope user --user-root <user-root>` is optional, only on request.
+   A hidden tool PTY is not a user terminal; never wait for hidden input.
+3. For a named setting, read only [reconfiguration](references/reconfiguration.md). Copy
+   `answer_patch_template` from the status result without changing its `kind` or `schema_version`;
+   fill only `answers` with the user's choices. Save the complete document as `<patch-file>`.
+   For an authorized change, use the complete command:
    `hive setup --scope user --user-root <user-root> --answers <patch-file> --input-channel agent --apply --summary --output json`.
    Keep the explicit `--apply` mode; use the full preview if separate consent is needed.
    The CLI does not read answer documents from stdin. Get any unknown field key from the CLI's
@@ -35,9 +38,9 @@ that flow and explains its result. Global setup never authorizes project inspect
    completion at most 8KiB. An enabled saved flag is not proof of a running monitor. Pending or
    failed work stays incomplete. Read [recovery](references/recovery.md) only for that failure.
 
-The normal AI role is start and result explanation. Do not collect another questionnaire, translate
-CLI questions, repeatedly fetch a schema, or launch a Judge/subagent for ordinary setup. Explicit
-question explanations use [the question view](references/questions.md). Use the selected interface
+Do not keep a separate questionnaire, re-ask saved choices, repeatedly fetch a schema, or launch a
+Judge/subagent for ordinary setup. Explicit question explanations use
+[the question view](references/questions.md). Use the selected interface
 language for explanations; [language](references/language.md) is only a writing reference.
 
 New setups default blocking and interruption off; existing choices are preserved or explicitly

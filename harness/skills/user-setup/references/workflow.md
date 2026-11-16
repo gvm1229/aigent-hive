@@ -6,10 +6,10 @@ or `command -v hive` on POSIX. Keep the returned executable and the same selecte
 Do not recursively search package/plugin folders or recreate the renderer manually.
 
 Inspect state once: `hive setup --scope user --user-root <user-root> --show --summary --output json`.
-Run the normal user-facing terminal command: `hive setup --scope user --user-root <user-root>`.
-Without such a terminal, provide that command; a tool-only PTY does not supply human input.
-The CLI handles the first language choice, quick/custom setup, questions, preview, confirmation,
-app activation and validation. It preserves prior choices, unknown migration origins and foreign bytes.
+The agent asks the user's choices in chat and applies them with `--answers <patch-file>
+--input-channel agent --apply`. The terminal `hive setup --scope user --user-root <user-root>` is
+optional, only on request; a tool-only PTY does not supply human input. The CLI validates choices,
+previews, applies, activates apps and validates. It preserves prior choices, unknown migration origins and foreign bytes.
 
 For an interrupted operation use its exact resume command. Do not replay setup after an AI API or
 transport error without inspecting saved state. Optional unanswered questions do not block ordinary

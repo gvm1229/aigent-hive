@@ -166,16 +166,26 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     crate::emit_action_result(&result)
 }
 
+fn quote(path: &Path) -> String {
+    if cfg!(windows) {
+        path.to_string_lossy().replace('\'', "''")
+    } else {
+        path.to_string_lossy().replace('\'', "'\"'\"'")
+    }
+}
+
 fn resume_command(options: &Options) -> String {
-    let quote = |path: &Path| {
-        if cfg!(windows) {
-            path.to_string_lossy().replace('\'', "''")
-        } else {
-            path.to_string_lossy().replace('\'', "'\"'\"'")
-        }
-    };
     format!(
         "hive setup --target '{}' --user-root '{}' --resume",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+/// An AI agent applies supplied choices without a capability file; the CLI resolves capabilities.
+fn agent_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --apply --summary --output json",
         quote(&options.target),
         quote(&options.root)
     )
@@ -370,32 +380,37 @@ fn prepare_files(
     answers: &Value,
 ) -> Result<(tempfile::NamedTempFile, tempfile::NamedTempFile, Value), SetupError> {
     let answer_file = write_answers(answers)?;
-    let (matrix, facts) = if let Some(path) = &options.capabilities {
-        let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
-        hive_core::run::CapabilityResolution::parse_json(&bytes)
-            .map_err(|e| SetupError::Verification(e.to_string()))?;
-        (
-            serde_json::from_slice(&bytes)
-                .map_err(|_| SetupError::Input("invalid capabilities".into()))?,
-            json!({"capabilities":"provided-document"}),
-        )
-    } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {
-        (
-            matrix,
-            json!({"capabilities":"stored-project-document","execution_capabilities_revalidated":false}),
-        )
-    } else {
-        capabilities::inspect(
-            answers["primary_host"]
-                .as_str()
-                .ok_or_else(|| SetupError::Input("project host missing".into()))?,
-        )?
-    };
+    let (matrix, facts) = resolve_capabilities(options, answers)?;
     let mut capability_file =
         tempfile::NamedTempFile::new().map_err(|e| SetupError::Internal(e.to_string()))?;
     serde_json::to_writer(capability_file.as_file_mut(), &matrix)
         .map_err(|e| SetupError::Internal(e.to_string()))?;
     Ok((answer_file, capability_file, facts))
+}
+
+/// Terminal and agent file setup share one capability source order: supplied, saved, detected.
+fn resolve_capabilities(options: &Options, answers: &Value) -> Result<(Value, Value), SetupError> {
+    if let Some(path) = &options.capabilities {
+        let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
+        hive_core::run::CapabilityResolution::parse_json(&bytes)
+            .map_err(|e| SetupError::Verification(e.to_string()))?;
+        Ok((
+            serde_json::from_slice(&bytes)
+                .map_err(|_| SetupError::Input("invalid capabilities".into()))?,
+            json!({"capabilities":"provided-document"}),
+        ))
+    } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {
+        Ok((
+            matrix,
+            json!({"capabilities":"stored-project-document","execution_capabilities_revalidated":false}),
+        ))
+    } else {
+        capabilities::inspect(
+            answers["primary_host"]
+                .as_str()
+                .ok_or_else(|| SetupError::Input("project host missing".into()))?,
+        )
+    }
 }
 
 fn write_answers(answers: &Value) -> Result<tempfile::NamedTempFile, SetupError> {

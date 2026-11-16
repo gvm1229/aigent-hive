@@ -1,10 +1,11 @@
 # Named changes and structured choices
 
-Inspect the same user root once with `--show --summary --output json`. For terminal input, use
-`hive setup --scope user --user-root <user-root> --section <catalog-section>` for the requested area.
+Inspect the same user root once with `--show --summary --output json`. Ask the requested area's
+choices in chat. Only if the user prefers the terminal, use
+`hive setup --scope user --user-root <user-root> --section <catalog-section>`.
 The CLI owns the question text and preview. Do not ask an already answered choice again in chat.
 
-When the user already supplied choices, a small local JSON/YAML transport can contain:
+For the user's choices, a small local JSON/YAML transport can contain:
 
 Copy `answer_patch_template` from the initial status response. Keep its `schema_version` and
 `kind` unchanged and fill only `answers`. Do not invent a format name or use a different wrapper.

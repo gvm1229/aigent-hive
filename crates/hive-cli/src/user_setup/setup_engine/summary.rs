@@ -162,6 +162,9 @@ pub(crate) fn compact(mut result: ActionResult, requested: bool) -> ActionResult
     if status {
         add_status(&data, &mut summary);
         summary["answer_patch_template"] = super::answer_patch::template();
+        if let Some(agent) = data.get("agent_setup") {
+            summary["agent_setup"] = agent.clone();
+        }
         let scope = if result.code == "hive.project-setup-shown" {
             hive_core::preferences::PreferenceScope::Project
         } else {
