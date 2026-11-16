@@ -1,7 +1,8 @@
 # 0.15.3 local 인계 — local 세션 시작점
 
 - 작성: 2026-11-17 cloud 세션. cloud 범위 작업 전부 완료 뒤의 유일한 local 진입 문서
-- 대상 시험판: `aigent-hive@0.15.3-test.2`(후보 TEST2_CANDIDATE, develop `TEST2_COMMIT`, 세 OS 수용 TEST2_ACCEPTANCE). 근거 [시험판 기록](OV153-011-test2.md)
+- 남은 원격 브랜치: `origin/fix/ov153-011-agent-setup`(develop에 병합 완료, cloud 세션의 원격 삭제 거부). 유지관리자 확인 뒤 `git push origin --delete fix/ov153-011-agent-setup`
+- 대상 시험판: `aigent-hive@0.15.3-test.2`(후보 [43958758956](https://github.com/gvm1229/aigent-hive/actions/runs/43958758956), develop `e82cf758`, 세 OS 수용 [43968031264](https://github.com/gvm1229/aigent-hive/actions/runs/43968031264)). 근거 [시험판 기록](OV153-011-test2.md)
 - 포함: 기억 회수(OV153-002–007), 에이전트 주도 설정([OV153-011](OV153-011.md), 추가 범위 A1–A4), 설정 화면 가독성([OV153-012](OV153-012.md)), 변경 0건 프로젝트 갱신 검증([OV153-013](OV153-013.md))
 - 결과 기록: 근거는 `docs/research/overhaul/OV153-010.md`. 통과한 항목은 계획에서 `complete`, 실패한 항목은 `agent-owned`로 되돌리고 실패 근거 첨부([넘기기 규칙](../../plans/overhaul/venue.md#넘기기))
 - 금지: `claude -p`, 공급자 API 호출, 자격 증명 파일 작성
@@ -137,7 +138,7 @@ hive project upgrade --target $HOME\hive-a4-empty --user-root $HOME --validate -
 정식 공개 문서는 cloud에서 준비 완료(출시일 자리 `2026-11-16`). 출시일이 다르면 아래 파일의 날짜만 바꿈: `README.md`, `docs/readme/README.ko.md`, `docs/hive-install-guide.ko.html`, `docs/overview/product.md`, `docs/01-index.md`, `docs/releases/README.md`, `docs/public-stable-release.json`. 바꾼 뒤 `python scripts/check-public-stable-docs.py` 통과 확인.
 
 1. develop→main PR(일반 병합). 이 PR이 구독자 안내 [0.15.3.subscriber.ko.md](../../releases/0.15.3.subscriber.ko.md) 승인
-2. `release.yml`을 `main`에서 실행: `product_version=0.15.3`, `package_version=0.15.3`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.15.3-test.2`, `acceptance_run_id=TEST2_ACCEPTANCE`
+2. `release.yml`을 `main`에서 실행: `product_version=0.15.3`, `package_version=0.15.3`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.15.3-test.2`, `acceptance_run_id=43968031264`
 3. `release-publish.yml`: `channel=stable`, 2의 후보 run ID, `send_subscriber_update=true`. npm 전파 지연(종료 6)이면 같은 입력에 `recover_published_packages=true`로 재실행
 4. 확인: npm 6개 `latest=0.15.3`, GitHub Release `v0.15.3` 정식, 구독자 전송 단계 success
 5. 이 PC: `npm install -g aigent-hive@0.15.3`, `hive --version`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계의 validate 재확인
