@@ -563,22 +563,27 @@ fn apply<R: BufRead, W: Write>(
 ) -> Result<ActionResult, SetupError> {
     let (answers, caps, facts) = prepare_files(options, &progress.answers)?;
     let preview = prepare_settings(options, answers.path(), caps.path(), global)?.outcome;
-    terminal.say(
-        "프로젝트 설정 미리보기: 선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.",
-        "Project preview: write Hive files only in the selected target; preserve user files.",
-    )?;
-    questions::preview(&progress.answers, global, terminal)?;
+    let korean = terminal.language == InterfaceLanguage::Ko;
     writeln!(
         terminal.writer,
-        "{}: {}",
-        if terminal.language == InterfaceLanguage::Ko {
-            "변경 파일 수"
+        "\n{}",
+        super::layout::title(if korean {
+            "프로젝트 설정 미리보기"
         } else {
-            "Changed file count"
-        },
-        preview.changed_paths.len()
+            "Project preview"
+        })
     )
     .map_err(|e| SetupError::Internal(e.to_string()))?;
+    terminal.say(
+        "  선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.",
+        "  Write Hive files only in the selected target; preserve user files.",
+    )?;
+    questions::preview(
+        &progress.answers,
+        global,
+        preview.changed_paths.len(),
+        terminal,
+    )?;
     if facts["capabilities"] == "stored-project-document" {
         terminal.say(
             "기존 프로젝트의 기능 자료를 사용합니다. 실제 실행 지원을 새로 검증한 결과는 아닙니다.",

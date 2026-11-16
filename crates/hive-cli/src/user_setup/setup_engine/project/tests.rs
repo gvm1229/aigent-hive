@@ -1208,3 +1208,68 @@ fn a_fresh_terminal_quick_setup_has_no_project_upgrade() {
         .join(".hive/config/project-overrides.json")
         .exists());
 }
+
+/// OV153-012: the quick project screen at 80 columns without colour, compared with a snapshot.
+fn quick_project_screen(language: InterfaceLanguage) -> String {
+    let root = crate::test_tempdir();
+    let parent = crate::test_tempdir();
+    let target = parent.path().join("snapshot-target");
+    std::fs::create_dir(&target).unwrap();
+    let mut answers = super::super::default_answers(None);
+    answers["interface_language"] = json!(if language == InterfaceLanguage::Ko {
+        "ko"
+    } else {
+        "en"
+    });
+    let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, serde_json::to_vec(&answers).unwrap()).unwrap();
+    let mut opts = options(root.path(), &target);
+    opts.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+    );
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nSnapshot project\n\n\nno\n".to_vec()),
+        writer: Vec::new(),
+        language,
+    };
+    let result = execute(&opts, InteractionMode::Terminal, &mut terminal).unwrap();
+    assert_eq!(result.code, "hive.project-setup-input-pending");
+    String::from_utf8(terminal.writer).unwrap()
+}
+
+#[test]
+fn quick_project_screen_matches_the_plain_80_column_snapshot() {
+    for (language, name) in [
+        (InterfaceLanguage::Ko, "project-quick.ko.txt"),
+        (InterfaceLanguage::En, "project-quick.en.txt"),
+    ] {
+        let screen = quick_project_screen(language);
+        assert!(!screen.contains('\u{1b}'), "{screen}");
+        assert!(screen.chars().all(|c| c == '\n' || !c.is_control()));
+        for line in screen.lines() {
+            assert!(
+                super::super::layout::width(line) <= super::super::layout::WIDTH,
+                "{line}"
+            );
+        }
+        for step in ["[1/4]", "[2/4]", "[3/4]", "[4/4]"] {
+            assert!(screen.contains(step), "{step}");
+        }
+        super::super::layout::assert_snapshot(name, &screen);
+    }
+}
+
+#[test]
+fn decoration_only_adds_colour_around_the_same_lines() {
+    super::super::layout::force_decoration(true);
+    let decorated = quick_project_screen(InterfaceLanguage::En);
+    super::super::layout::force_decoration(false);
+    assert!(decorated.contains("\u{1b}[1;36m[1/4] Setup mode\u{1b}[0m"));
+    let stripped = decorated
+        .replace("\u{1b}[1;36m", "")
+        .replace("\u{1b}[1m", "")
+        .replace("\u{1b}[0m", "");
+    assert_eq!(stripped, quick_project_screen(InterfaceLanguage::En));
+}

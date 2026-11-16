@@ -593,8 +593,24 @@ fn collect<R: BufRead, W: Write>(
     let needs_language = progress.answers.get("interface_language").is_none()
         || (progress.selected_section.as_deref() == Some("language")
             && !answered(progress, selected("user-language")?));
-    if needs_language && !ask(store, progress, selected("user-language")?, terminal)? {
-        return Ok(false);
+    // Step numbers: questions asked so far and the total still planned with the current answers.
+    let mut asked = 0;
+    let planned = |progress: &Conversation, quick: bool, from: usize| {
+        questions[from..]
+            .iter()
+            .filter(|q| will_ask_user(progress, q, options, quick))
+            .count()
+    };
+    if needs_language {
+        let quick = progress.setup_mode.as_deref() != Some("custom");
+        let step = Some((
+            1,
+            1 + usize::from(progress.setup_mode.is_none()) + planned(progress, quick, 0),
+        ));
+        if !ask(store, progress, selected("user-language")?, step, terminal)? {
+            return Ok(false);
+        }
+        asked += 1;
     }
     terminal.language = if progress.answers["interface_language"] == "ko" {
         InterfaceLanguage::Ko
@@ -634,20 +650,39 @@ fn collect<R: BufRead, W: Write>(
         } else {
             "user-mode".clone_into(&mut progress.step);
             persist(store, progress)?;
-            let answer = terminal.ask(selected("user-mode")?, None)?;
+            let step = Some((asked + 1, asked + 1 + planned(progress, true, 0)));
+            let answer = terminal.ask_step(selected("user-mode")?, None, step)?;
             let AnswerInput::Answered { value, .. } = answer else {
                 return Ok(false);
             };
+            asked += 1;
             progress.setup_mode = value.as_str().map(str::to_owned);
         }
         persist(store, progress)?;
     }
     let quick = progress.setup_mode.as_deref() == Some("expedited");
-    for question in questions
-        .iter()
-        .filter(|q| q.scope == PreferenceScope::User)
-    {
-        if matches!(
+    for (index, question) in questions.iter().enumerate() {
+        if !will_ask_user(progress, question, options, quick) {
+            continue;
+        }
+        let step = Some((asked + 1, asked + planned(progress, quick, index).max(1)));
+        if !ask(store, progress, question, step, terminal)? {
+            return Ok(false);
+        }
+        asked += 1;
+    }
+    Ok(true)
+}
+
+/// Whether the user question loop still asks `question` with the current answers.
+fn will_ask_user(
+    progress: &Conversation,
+    question: &Question,
+    options: &Options,
+    quick: bool,
+) -> bool {
+    question.scope == PreferenceScope::User
+        && !matches!(
             question.id.as_str(),
             "user-language"
                 | "user-mode"
@@ -655,26 +690,11 @@ fn collect<R: BufRead, W: Write>(
                 | "user-index-rebuild"
                 | "user-monitor-activation"
                 | "user-vector-search"
-        ) {
-            continue;
-        }
-        if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
-            continue;
-        }
-        if !selected_question(progress, question, options, quick) {
-            continue;
-        }
-        if !question.applicable(&progress.answers) {
-            continue;
-        }
-        if answered(progress, question) && options.resume {
-            continue;
-        }
-        if !ask(store, progress, question, terminal)? {
-            return Ok(false);
-        }
-    }
-    Ok(true)
+        )
+        && (question.id != "user-hosts" || progress.update_hosts.is_empty())
+        && selected_question(progress, question, options, quick)
+        && question.applicable(&progress.answers)
+        && (!answered(progress, question) || !options.resume)
 }
 
 fn choose_section<R: BufRead, W: Write>(
@@ -710,13 +730,15 @@ fn ask<R: BufRead, W: Write>(
     store: &ProgressStore,
     progress: &mut Conversation,
     question: &Question,
+    step: Option<(usize, usize)>,
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
     persist(store, progress)?;
     let current = progress.answers.pointer(&question.key);
     let (value, origin) = loop {
-        let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
+        let AnswerInput::Answered { value, origin } = terminal.ask_step(question, current, step)?
+        else {
             return Ok(false);
         };
         if question.id == "user-context-description"
@@ -1069,8 +1091,39 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
     answers: &Value,
     terminal: &mut Terminal<R, W>,
 ) -> Result<hive_core::setup::QuestionCatalog, SetupError> {
-    terminal.say("적용 전 확인: 선택한 앱의 Hive 설정과 지침 갱신. 기존 사용자 자료 보존.","Preview: update Hive settings and instructions for the selected apps. Preserve existing user data.")?;
+    use super::layout::{self, Row};
+    let korean = terminal.language == InterfaceLanguage::Ko;
+    let mut lines = vec![
+        String::new(),
+        layout::title(if korean {
+            "적용 전 확인"
+        } else {
+            "Preview"
+        }),
+    ];
+    lines.extend(layout::block(
+        if korean {
+            "선택한 앱의 Hive 설정과 지침 갱신. 기존 사용자 자료 보존."
+        } else {
+            "Update Hive settings and instructions for the selected apps. Preserve existing user data."
+        },
+        layout::INDENT,
+    ));
     let displayed = catalog()?;
+    let groups: [(&str, &str, &[&str]); 5] = [
+        (
+            "일반",
+            "General",
+            &[
+                "language", "setup", "persona", "review", "profile", "hosts", "updates",
+            ],
+        ),
+        ("기능", "Features", &["skills"]),
+        ("지식", "Knowledge", &["wiki", "vector"]),
+        ("사용량", "Usage", &["usage"]),
+        ("알림", "Notifications", &["notifications"]),
+    ];
+    let mut rows: Vec<Vec<Row>> = groups.iter().map(|_| Vec::new()).collect();
     for question in displayed
         .questions
         .iter()
@@ -1080,20 +1133,27 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
             .pointer(&question.key)
             .or_else(|| cleared_description(answers, question).then_some(&Value::Null))
         {
-            writeln!(
-                terminal.writer,
-                "{} {}",
-                question
-                    .prompt
-                    .get(terminal.language == InterfaceLanguage::Ko),
-                super::terminal::display_value(
-                    question,
-                    value,
-                    terminal.language == InterfaceLanguage::Ko
-                )
-            )
-            .map_err(|error| SetupError::Input(error.to_string()))?;
+            let group = groups
+                .iter()
+                .position(|(_, _, sections)| sections.contains(&question.section.as_str()))
+                .unwrap_or(0);
+            rows[group].push(Row {
+                name: layout::question_title(&question.id, korean).to_owned(),
+                values: layout::values(question, value, korean),
+            });
         }
+    }
+    for ((ko, en, _), rows) in groups.iter().zip(rows) {
+        if rows.is_empty() {
+            continue;
+        }
+        lines.push(String::new());
+        lines.push(layout::section(if korean { ko } else { en }));
+        lines.extend(layout::table(&rows).lines().map(str::to_owned));
+    }
+    for line in lines {
+        writeln!(terminal.writer, "{line}")
+            .map_err(|error| SetupError::Input(error.to_string()))?;
     }
     Ok(displayed)
 }
@@ -1344,7 +1404,7 @@ mod tests {
             reader: Cursor::new(b"{\"missing\":30}\n{\"known-project\":101}\n{\"known-project\":19}\n{\"known-project\":40}\n"),
             writer: Vec::new(), language: InterfaceLanguage::En,
         };
-        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        assert!(ask(&store, &mut progress, question, None, &mut terminal).unwrap());
         let config =
             user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
                 .unwrap();
@@ -1614,7 +1674,10 @@ mod tests {
         display_preview(&progress.answers, &mut preview).unwrap();
         assert!(String::from_utf8(preview.writer)
             .unwrap()
-            .contains("Describe any additional background. None"));
+            .lines()
+            .any(
+                |line| line.trim_start().starts_with("More background") && line.ends_with(": None")
+            ));
         let mut resume_options = options(root.path());
         resume_options.resume = true;
         let mut resumed = Terminal {
@@ -2128,7 +2191,7 @@ mod tests {
             writer: Vec::new(),
             language: InterfaceLanguage::En,
         };
-        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        assert!(ask(&store, &mut progress, question, None, &mut terminal).unwrap());
         assert_eq!(progress.answers["skills"], json!({"mode":"all"}));
         assert_eq!(progress.answered_questions.len(), 1);
         assert!(String::from_utf8(terminal.writer)

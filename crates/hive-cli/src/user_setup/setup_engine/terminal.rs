@@ -1,4 +1,5 @@
 use super::super::{InterfaceLanguage, SetupError};
+use super::layout;
 use hive_core::setup::{AnswerInput, InputKind, Question};
 use serde_json::Value;
 use std::io::{BufRead, Write};
@@ -24,51 +25,77 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
         question: &Question,
         current: Option<&Value>,
     ) -> Result<AnswerInput, SetupError> {
+        self.ask_step(question, current, None)
+    }
+
+    /// Asks one question under a title line; `step` is `(number, total)` when known.
+    pub fn ask_step(
+        &mut self,
+        question: &Question,
+        current: Option<&Value>,
+        step: Option<(usize, usize)>,
+    ) -> Result<AnswerInput, SetupError> {
         let korean = self.language == InterfaceLanguage::Ko;
+        let heading = question_heading(question, step, korean);
         loop {
-            writeln!(self.writer, "\n{}", question.prompt.get(korean))
-                .map_err(|error| io_error(&error))?;
+            let mut lines = vec![String::new(), layout::title(&heading), String::new()];
+            lines.extend(layout::block(question.prompt.get(korean), layout::INDENT));
             if !question.help.get(korean).is_empty() {
-                writeln!(self.writer, "{}", question.help.get(korean))
-                    .map_err(|error| io_error(&error))?;
+                lines.extend(layout::block(question.help.get(korean), layout::INDENT));
             }
+            let shown = current.or(question.default.as_ref());
             for (index, option) in question.options.iter().enumerate() {
-                writeln!(self.writer, "  {}. {}", index + 1, option.label.get(korean))
-                    .map_err(|error| io_error(&error))?;
+                let marker =
+                    choice_marker(&option.value, current, question.default.as_ref(), korean);
+                let text = format!("{}. {}{marker}", index + 1, option.label.get(korean));
+                lines.extend(layout::wrap(&text, "    ", "       "));
             }
             if question.input == InputKind::List
                 && !question.options.is_empty()
                 && question.maximum.is_none_or(|maximum| maximum > 1)
             {
-                if question.minimum.is_some_and(|minimum| minimum >= 1) {
-                    self.say(
-                        "하나 이상 선택: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2",
-                        "Choose one or more: enter numbers or names separated by commas or spaces, e.g. 1,2",
-                    )?;
+                let hint = if question.minimum.is_some_and(|minimum| minimum >= 1) {
+                    if korean {
+                        "하나 이상 선택: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2"
+                    } else {
+                        "Choose one or more: enter numbers or names separated by commas or spaces, e.g. 1,2"
+                    }
+                } else if korean {
+                    "여러 개 선택 가능: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2"
                 } else {
-                    self.say(
-                        "여러 개 선택 가능: 번호나 이름을 쉼표나 공백으로 구분해 입력, 예: 1,2",
-                        "You can choose several: enter numbers or names separated by commas or spaces, e.g. 1,2",
-                    )?;
-                }
+                    "You can choose several: enter numbers or names separated by commas or spaces, e.g. 1,2"
+                };
+                lines.extend(layout::block(hint, layout::INDENT));
             }
             if question.input == InputKind::Boolean {
-                self.say("예/아니요", "yes/no")?;
+                lines.extend(layout::block(
+                    if korean { "예/아니요" } else { "yes/no" },
+                    layout::INDENT,
+                ));
             }
-            if let Some(default) = current.or(question.default.as_ref()) {
+            if let Some(default) = shown {
                 let label = if korean {
                     "Enter로 유지/선택"
                 } else {
                     "Enter to keep/select"
                 };
-                writeln!(
-                    self.writer,
-                    "{label}: {}",
-                    display_value(question, default, korean)
-                )
-                .map_err(|error| io_error(&error))?;
+                let value = display_value(question, default, korean);
+                if question.input == InputKind::Structured {
+                    // JSON stays on one line so it can be copied back unchanged.
+                    lines.push(format!("{}{label}: {value}", layout::INDENT));
+                } else {
+                    lines.extend(layout::wrap(
+                        &format!("{label}: {value}"),
+                        layout::INDENT,
+                        "    ",
+                    ));
+                }
             }
-            write!(self.writer, "> ").map_err(|error| io_error(&error))?;
+            lines.push(String::new());
+            for line in lines {
+                writeln!(self.writer, "{line}").map_err(|error| io_error(&error))?;
+            }
+            write!(self.writer, "{} ", layout::input_marker()).map_err(|error| io_error(&error))?;
             self.writer.flush().map_err(|error| io_error(&error))?;
             let Some(line) = read_line(&mut self.reader)? else {
                 return Ok(AnswerInput::Interrupted);
@@ -84,12 +111,13 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
     }
 
     pub fn confirm(&mut self) -> Result<bool, SetupError> {
+        writeln!(self.writer, "\n{}", layout::separator()).map_err(|error| io_error(&error))?;
         self.say(
             "이 변경을 적용할까요? [예/아니요, 기본: 아니요]",
             "Apply these changes? [yes/no, default: no]",
         )?;
         loop {
-            write!(self.writer, "> ").map_err(|error| io_error(&error))?;
+            write!(self.writer, "{} ", layout::input_marker()).map_err(|error| io_error(&error))?;
             self.writer.flush().map_err(|error| io_error(&error))?;
             let Some(line) = read_line(&mut self.reader)? else {
                 return Ok(false);
@@ -100,6 +128,39 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
                 _ => self.say("예 또는 아니요를 입력해 주세요.", "Enter yes or no.")?,
             }
         }
+    }
+}
+
+/// Title line: `[2/4] Project name`, or the short title alone when the count is unknown.
+fn question_heading(question: &Question, step: Option<(usize, usize)>, korean: bool) -> String {
+    let title = layout::question_title(&question.id, korean);
+    match step {
+        Some((number, total)) => format!("[{number}/{}] {title}", total.max(number)),
+        None => format!("[{}] {title}", if korean { "질문" } else { "Question" }),
+    }
+}
+
+/// Marks the choice that Enter keeps: the current value, otherwise the offered default.
+fn choice_marker(
+    value: &str,
+    current: Option<&Value>,
+    default: Option<&Value>,
+    korean: bool,
+) -> &'static str {
+    let holds = |candidate: Option<&Value>| {
+        candidate.is_some_and(|held| {
+            held.as_str() == Some(value)
+                || held
+                    .as_array()
+                    .is_some_and(|items| items.iter().any(|item| item.as_str() == Some(value)))
+        })
+    };
+    match (holds(current), current.is_none() && holds(default), korean) {
+        (true, _, true) => " (현재값)",
+        (true, _, false) => " (current)",
+        (false, true, true) => " (기본값)",
+        (false, true, false) => " (default)",
+        _ => "",
     }
 }
 
@@ -250,7 +311,9 @@ mod tests {
             assert!(
                 matches!(terminal.ask(question, None).unwrap(), AnswerInput::Answered { value, .. } if value == json!(["codex", "claude"]))
             );
-            assert!(String::from_utf8(terminal.writer).unwrap().contains(hint));
+            let output = String::from_utf8(terminal.writer).unwrap();
+            // Wrapping at 80 columns may break the hint across lines; its words stay unchanged.
+            assert!(output.split_whitespace().collect::<Vec<_>>().join(" ").contains(hint));
         }
     }
 

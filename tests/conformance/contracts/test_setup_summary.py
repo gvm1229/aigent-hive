@@ -309,6 +309,24 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertIn("--resume", result["data"]["terminal_next_action"])
         self.assertEqual(list(target.iterdir()), [])
 
+    def test_readable_setup_screen_has_no_control_bytes_without_a_terminal(self):
+        # OV153-012: decoration needs a terminal and no NO_COLOR; otherwise the same plain layout.
+        screens = []
+        for extra in ({}, {"NO_COLOR": "1"}):
+            process = subprocess.run(
+                [str(self.hive_binary), "setup", "--scope", "user", "--user-root",
+                 str(self.setup_user_root), "--show"], input="", capture_output=True, text=True,
+                encoding="utf-8", timeout=30,
+                env={**os.environ, "PATH": str(self.work_root / "no-external-tools"), **extra})
+            self.assertEqual(process.returncode, 0, process.stderr)
+            for stream in (process.stdout, process.stderr):
+                self.assertNotIn("\x1b", stream)
+            self.assertIn("\nPreview\n", process.stderr)
+            self.assertIn("\nUsage\n", process.stderr)
+            self.assertIn("  Remaining-quota threshold  : 20\n", process.stderr)
+            screens.append(process.stderr)
+        self.assertEqual(screens[0], screens[1])
+
     def test_empty_folder_status_requests_an_interview_not_a_kind_guess(self):
         target = self.work_root / "empty-start"
         target.mkdir()

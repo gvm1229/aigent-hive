@@ -27,6 +27,7 @@ pub(in crate::user_setup) use project::execute_file as execute_project_file;
 pub(in crate::user_setup) use project::run as run_project;
 mod host_scope;
 pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
+mod layout;
 mod legacy;
 pub(in crate::user_setup) mod messages;
 mod recovery;
