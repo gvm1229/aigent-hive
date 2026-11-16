@@ -318,14 +318,19 @@ fn execute<R: BufRead, W: Write>(
         } else {
             path.replace('\'', "'\"'\"'")
         };
-        route_pending_to_agent(&mut result, &quoted, options.review);
+        route_pending_to_agent(&mut result, &quoted, options.review, terminal.language);
     }
     Ok(result)
 }
 
 /// A pending result never points only to a terminal: an AI agent continues through the status
 /// and answer-file preview path, and a person can still resume in a terminal.
-fn route_pending_to_agent(result: &mut crate::ActionResult, quoted_root: &str, review: bool) {
+fn route_pending_to_agent(
+    result: &mut crate::ActionResult,
+    quoted_root: &str,
+    review: bool,
+    language: InterfaceLanguage,
+) {
     let terminal = format!(
         "hive setup --scope user --resume --user-root '{quoted_root}'{}",
         if review { " --review" } else { "" }
@@ -343,7 +348,15 @@ fn route_pending_to_agent(result: &mut crate::ActionResult, quoted_root: &str, r
             ),
         ]
     };
-    result.next_action = Some(agent.join("; "));
+    result.next_action = Some(agent.join("\n"));
+    if review {
+        result.message.clone_from(&(if language == InterfaceLanguage::En {
+            "Monitor withdrawal review is pending. An AI agent previews it with --review --dry-run and confirms with --review-answers; a person can continue in a terminal."
+        } else {
+            "감시 종료 검토가 아직 끝나지 않았습니다. AI 에이전트는 --review --dry-run으로 미리 보고 --review-answers로 확인하며, 사람은 터미널에서 이어서 진행할 수 있습니다."
+        })
+        .to_owned());
+    }
     let mut data = result.data.take().unwrap_or_else(|| json!({}));
     if let Some(object) = data.as_object_mut() {
         object.insert("agent_next_actions".into(), json!(agent));
@@ -1322,7 +1335,7 @@ mod tests {
     fn a_pending_user_setup_offers_the_agent_path_before_the_terminal() {
         for review in [false, true] {
             let mut result = pending(InterfaceLanguage::En, "hive.setup-needs-input");
-            route_pending_to_agent(&mut result, "/tmp/u", review);
+            route_pending_to_agent(&mut result, "/tmp/u", review, InterfaceLanguage::En);
             let next = result.next_action.as_deref().unwrap();
             let data = result.data.as_ref().unwrap();
             assert!(data["terminal_next_action"]

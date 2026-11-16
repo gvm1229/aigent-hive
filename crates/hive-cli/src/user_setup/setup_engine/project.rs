@@ -151,8 +151,14 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
                 .map_err(SetupError::Input)?;
             let mut result = execute(&options, mode, &mut terminal)
                 .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
+            let routed_user_setup = result
+                .data
+                .as_ref()
+                .is_some_and(|data| data.get("agent_next_actions").is_some());
             if result.code == "hive.project-setup-input-pending" {
                 route_pending_to_agent(&mut result, &options);
+            } else if result.status == "needs-input" && routed_user_setup {
+                // Global setup pending inside project setup keeps its user-scope agent path.
             } else if result.exit_code != 0 {
                 result.next_action = Some(resume_command(&options));
             }
@@ -196,7 +202,7 @@ fn agent_command(options: &Options) -> String {
 /// An agent previews its answer patch before applying; the preview never writes the target.
 fn agent_preview_command(options: &Options) -> String {
     format!(
-        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --dry-run --summary --output json",
+        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --dry-run --output json",
         quote(&options.target),
         quote(&options.root)
     )
@@ -214,7 +220,7 @@ fn status_command(options: &Options) -> String {
 /// terminal resume stays available for a person.
 fn route_pending_to_agent(result: &mut ActionResult, options: &Options) {
     let agent = [status_command(options), agent_preview_command(options)];
-    result.next_action = Some(agent.join("; "));
+    result.next_action = Some(agent.join("\n"));
     let mut data = result.data.take().unwrap_or_else(|| json!({}));
     if let Some(object) = data.as_object_mut() {
         object.insert("agent_next_actions".into(), json!(agent));

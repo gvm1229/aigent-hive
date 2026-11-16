@@ -339,3 +339,24 @@ fn a_wrong_output_value_keeps_its_cause() {
         assert!(render(&value, language, "storage").contains("--output accepts only json"));
     }
 }
+
+#[test]
+fn a_pending_setup_shows_the_agent_path_and_the_terminal_resume() {
+    let pending = json!({"action":"SetupHarness","status":"needs-input","exit_code":2,
+        "code":"hive.project-setup-input-pending","message":"Project setup is pending.",
+        "next_action":"hive setup --target '/p' --user-root '/u' --show --summary --output json\nhive setup --target '/p' --user-root '/u' --answers <patch-file> --input-channel agent --dry-run --output json",
+        "data":{"terminal_next_action":"hive setup --target '/p' --user-root '/u' --resume"}});
+    for (language, label) in [
+        (InterfaceLanguage::En, "Continue in a terminal: "),
+        (InterfaceLanguage::Ko, "터미널에서 이어가기: "),
+    ] {
+        let text = render(&pending, language, "setup");
+        assert!(text.contains("--show --summary"), "{text}");
+        assert!(
+            text.contains(&format!(
+                "{label}hive setup --target '/p' --user-root '/u' --resume"
+            )),
+            "{text}"
+        );
+    }
+}

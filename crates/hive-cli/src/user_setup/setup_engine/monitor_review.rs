@@ -120,14 +120,19 @@ pub(super) fn run<R: BufRead, W: Write>(
         // Runtime observations describe the current state; they are not consent inputs.
         data["actual_monitor_state"] = usage_monitor::setup_status(root);
         result.data = Some(data);
-        result.next_action = Some(format!(
-            "{} --review",
-            crate::update_bridge::resume_command(root).replacen(
-                "hive update",
-                "hive setup --scope user --resume",
-                1
+        result.next_action = Some(if dry_run {
+            format!(
+                "{} --review",
+                crate::update_bridge::resume_command(root).replacen(
+                    "hive update",
+                    "hive setup --scope user --resume",
+                    1
+                )
             )
-        ));
+        } else {
+            // The caller turns this marker into the agent review path plus the terminal resume.
+            "hive setup --scope user --resume".to_owned()
+        });
         return Ok(result);
     }
     let channel = if let Some(path) = answers {

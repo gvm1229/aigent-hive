@@ -168,6 +168,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             output.push_str(&readable_command(next));
         }
     }
+    output.push_str(&terminal_resume(value, language));
     if data["session_recheck_required"] == true {
         output.push_str(&choose(
             language,
@@ -301,6 +302,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
             |next| readable_command(&next),
         );
         write!(output, "\nNext: {remedy}").expect("formatting a String");
+        output.push_str(&terminal_resume(value, language));
         return output;
     }
     let topic = ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료");
@@ -326,7 +328,22 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
         || "--help로 사용 방법을 확인하고, 표시된 입력을 고친 뒤 다시 실행하세요.".to_owned(),
         |next| next_ko(&next),
     ));
+    output.push_str(&terminal_resume(value, language));
     output
+}
+
+/// A pending setup lists the agent path first; a person still sees the terminal resume.
+fn terminal_resume(value: &Value, language: InterfaceLanguage) -> String {
+    value["data"]["terminal_next_action"]
+        .as_str()
+        .filter(|next| !next.is_empty())
+        .map_or_else(String::new, |terminal| {
+            choose(
+                language,
+                "\n터미널에서 이어가기: ",
+                "\nContinue in a terminal: ",
+            ) + &readable_command(terminal)
+        })
 }
 
 fn code_sentence(code: &str) -> Option<(&'static str, &'static str)> {
