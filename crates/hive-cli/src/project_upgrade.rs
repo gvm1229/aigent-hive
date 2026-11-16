@@ -601,6 +601,7 @@ fn prepare_candidate(
             change_reasons.insert(OVERRIDES_PATH.to_owned(), "project-override-ledger");
         }
     }
+    let before_cleanup = final_files.keys().cloned().collect::<BTreeSet<_>>();
     plan_legacy_derived_index_cleanup(
         target,
         &mut final_files,
@@ -608,9 +609,9 @@ fn prepare_candidate(
         &candidate.product_version,
     )?;
     for path in final_files.keys() {
-        change_reasons
-            .entry(path.clone())
-            .or_insert("legacy-derived-index-cleanup");
+        if !before_cleanup.contains(path) {
+            change_reasons.insert(path.clone(), "legacy-derived-index-cleanup");
+        }
     }
     let mut changed_paths = final_files.keys().cloned().collect::<Vec<_>>();
     changed_paths.sort();

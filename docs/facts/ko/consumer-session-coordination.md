@@ -9,7 +9,7 @@ summary: "직접 사용자 편집 통제 주장 없이 작은 경로 점유로 �
 tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:05cc3c9e69e277d272d3aa7e372ab20a5da2cd8f5f1b21c45f03d9d6eda9607c"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:81c8223df0cba01511f0da69e8bc2b79bca26a22fa0439af874f6b4ed320606e"
   - "repo:crates/hive-cli/src/session.rs#sha256:017435bb594baffef5c36d9b90404aa676429ef00bd674173b4fd46a982f0aae"
   - "repo:docs/archive/plans/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
