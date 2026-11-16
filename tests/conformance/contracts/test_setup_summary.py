@@ -263,6 +263,35 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertEqual(validated.returncode, 0, (validated.stdout, validated.stderr))
         self.assertEqual(result["code"], "hive.setup-valid")
 
+    def test_fresh_agent_apply_has_no_project_upgrade(self):
+        # OV153-013: identical content is not a change; zero changes mean current and valid.
+        target = self.work_root / "fresh-upgrade"
+        target.mkdir()
+        patch = self.work_root / "fresh-upgrade.json"
+        patch.write_text(json.dumps({"schema_version": 1, "kind": "hive.setup-answer-patch",
+            "answers": {"setup_mode": "expedited", "project_name": "fresh-upgrade",
+                "project_kind": "general", "primary_host": "codex"}}), encoding="utf-8")
+        applied, _ = self.run_reported_command("--target", target, "--user-root", self.setup_user_root,
+            "--answers", patch, "--input-channel", "agent", "--apply")
+        self.assertEqual(applied.returncode, 0, applied.stdout)
+        before = snapshot_tree(target)
+        for mode, action in (("--scan", "ScanProjectUpgrade"), ("--validate", "ValidateProjectUpgrade")):
+            process = subprocess.run(
+                [str(self.hive_binary), "project", "upgrade", "--target", str(target), "--user-root",
+                 str(self.setup_user_root), mode, "--output", "json"], input="", capture_output=True,
+                text=True, encoding="utf-8", timeout=60,
+                env={**os.environ, "PATH": str(self.work_root / "no-external-tools")})
+            self.assertEqual(process.returncode, 0, (mode, process.stdout))
+            result = json.loads(process.stdout)
+            self.assertEqual(result["action"], action)
+            self.assertEqual(result["code"], "hive.project-upgrade-current")
+            self.assertEqual(result["changed_paths"], [])
+            self.assertEqual(result["data"]["change_reasons"], [])
+            self.assertTrue(all(report["disposition"] == "unchanged"
+                for report in result["data"]["reports"]))
+        self.assertEqual(snapshot_tree(target), before)
+        self.assertFalse((target / ".hive/config/project-overrides.json").exists())
+
     def test_non_interactive_pending_result_offers_the_agent_path(self):
         # OV153-011 A2: no pending result points only to a terminal.
         target = self.work_root / "pending-empty"

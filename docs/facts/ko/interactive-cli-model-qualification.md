@@ -14,7 +14,7 @@ tags:
 aliases: []
 sources:
 - repo:docs/research/cli-model-validation-0.14.0.md#sha256:13d1c983971e95ec5b8a7b927451a4272f6215c63ab86f9d8da3b2ed8652807e
-- repo:tests/conformance/contracts/test_setup_summary.py#sha256:6256af524a6036bec1956f9d872a6b797244effe63497578147b93e4540b337d
+- repo:tests/conformance/contracts/test_setup_summary.py#sha256:5b3e6744c28b171d72a895f1d5cc1a1d641b90971a71f655d2dff4e969471a55
 - repo:tests/fixtures/interactive-cli/model-fixed-choices.json#sha256:89b5913b061ecb20908a1ea47c0fe7cd61206c3f49c6fb7e4077735f52cc8f38
 - repo:tests/fixtures/interactive-cli/model-project-receipt.py#sha256:2a3c75ff8e8b01df54958cd5718def0ab6786e2b483ad057362eb7456370dee3
 links:

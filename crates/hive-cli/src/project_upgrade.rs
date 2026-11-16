@@ -130,6 +130,7 @@ struct UpgradePlan {
     normalized_fields: Vec<String>,
     skill_merges: Vec<SkillSelectionMerge>,
     reports: Vec<PathReport>,
+    change_reasons: Vec<Value>,
     final_files: BTreeMap<String, Option<Vec<u8>>>,
     expected_before: BTreeMap<String, ExpectedBefore>,
     changed_paths: Vec<String>,
@@ -397,6 +398,22 @@ fn validate_skill_merge_options(
     Ok(())
 }
 
+/// Test view of a fresh `--scan`: the changed paths and their reported reasons.
+#[cfg(test)]
+pub(crate) fn scan_changes_for_test(
+    target: &Path,
+    plugin: &hive_render::skill_delivery::VerifiedPlugins,
+) -> (Vec<String>, Vec<Value>) {
+    let dir = open_target_capability(target).expect("target capability");
+    let plan = prepare_with_plugin(&dir, plugin).expect("upgrade plan");
+    let result = plan_result(&plan, CommandMode::Scan);
+    assert_eq!(
+        result.code == "hive.project-upgrade-current",
+        plan.changed_paths.is_empty()
+    );
+    (plan.changed_paths, plan.change_reasons)
+}
+
 #[allow(clippy::too_many_lines)]
 #[cfg(test)]
 fn prepare_with_plugin(
@@ -473,6 +490,8 @@ fn prepare_candidate(
     let mut reports = Vec::new();
     let mut final_files = BTreeMap::new();
     let mut overrides = Vec::new();
+    // Every changed path carries one reason; identical bytes are never a change.
+    let mut change_reasons = BTreeMap::new();
     for path in paths {
         validate_merge_path(Path::new(&path))?;
         let base_bytes = base_files.get(&path).map(Vec::as_slice);
@@ -515,6 +534,7 @@ fn prepare_candidate(
         let changed = local_full.as_deref() != final_full.as_deref();
         if changed {
             final_files.insert(path.clone(), final_full);
+            change_reasons.insert(path.clone(), "projection-content");
         }
         if let (Some(incoming), Some(final_bytes)) = (incoming, merged.bytes.as_deref()) {
             if final_bytes != incoming {
@@ -542,7 +562,9 @@ fn prepare_candidate(
         });
     }
     for (path, bytes) in candidate.support_files {
-        insert_exact_if_changed(target, &mut final_files, path, bytes)?;
+        if insert_exact_if_changed(target, &mut final_files, path.clone(), bytes)? {
+            change_reasons.entry(path).or_insert("setup-support-file");
+        }
     }
     for path in candidate.deleted_support_files {
         validate_mutation_path(&path)?;
@@ -552,30 +574,47 @@ fn prepare_candidate(
             ));
         }
         if read_full_optional(target, &path)?.is_some() {
-            final_files.insert(path.to_string_lossy().into_owned(), None);
+            let path = path.to_string_lossy().into_owned();
+            final_files.insert(path.clone(), None);
+            change_reasons.insert(path, "retired-support-file");
         }
     }
-    insert_exact_if_changed(
+    if insert_exact_if_changed(
         target,
         &mut final_files,
         BASE_PATH.to_owned(),
         candidate.base_ledger,
-    )?;
-    let override_bytes = render_override_ledger(&candidate.product_version, overrides)?;
-    insert_exact_if_changed(
-        target,
-        &mut final_files,
-        OVERRIDES_PATH.to_owned(),
-        override_bytes,
-    )?;
+    )? {
+        change_reasons.insert(BASE_PATH.to_owned(), "project-base-ledger");
+    }
+    // An empty override ledger and an absent one mean the same: no recorded local override.
+    // Writing the empty ledger into a project that has none would be a change with no content.
+    let override_absent = read_full_optional(target, Path::new(OVERRIDES_PATH))?.is_none();
+    if !(overrides.is_empty() && override_absent) {
+        let override_bytes = render_override_ledger(&candidate.product_version, overrides)?;
+        if insert_exact_if_changed(
+            target,
+            &mut final_files,
+            OVERRIDES_PATH.to_owned(),
+            override_bytes,
+        )? {
+            change_reasons.insert(OVERRIDES_PATH.to_owned(), "project-override-ledger");
+        }
+    }
     plan_legacy_derived_index_cleanup(
         target,
         &mut final_files,
         &source_version,
         &candidate.product_version,
     )?;
+    for path in final_files.keys() {
+        change_reasons
+            .entry(path.clone())
+            .or_insert("legacy-derived-index-cleanup");
+    }
     let mut changed_paths = final_files.keys().cloned().collect::<Vec<_>>();
     changed_paths.sort();
+    let change_reasons = change_reasons_for(&changed_paths, &change_reasons)?;
     let expected_before = changed_paths
         .iter()
         .map(|path| {
@@ -606,11 +645,31 @@ fn prepare_candidate(
         normalized_fields: candidate.normalized_fields,
         skill_merges: candidate.skill_merges,
         reports,
+        change_reasons,
         final_files,
         expected_before,
         changed_paths,
         plan_digest: sha256_digest(&canonical),
     })
+}
+
+/// One reported reason per changed path, in path order. A changed path without a reason is
+/// an internal error: no change may leave the report list silently.
+fn change_reasons_for(
+    changed_paths: &[String],
+    reasons: &BTreeMap<String, &'static str>,
+) -> Result<Vec<Value>, UpdateError> {
+    changed_paths
+        .iter()
+        .map(|path| {
+            reasons
+                .get(path)
+                .map(|reason| json!({"path": path, "reason": reason}))
+                .ok_or_else(|| {
+                    UpdateError::Internal(format!("changed path has no upgrade report: {path}"))
+                })
+        })
+        .collect()
 }
 
 fn plan_legacy_derived_index_cleanup(
@@ -932,12 +991,13 @@ fn insert_exact_if_changed(
     final_files: &mut BTreeMap<String, Option<Vec<u8>>>,
     path: String,
     bytes: Vec<u8>,
-) -> Result<(), UpdateError> {
+) -> Result<bool, UpdateError> {
     validate_mutation_path(Path::new(&path))?;
     if read_full_optional(target, Path::new(&path))?.as_deref() != Some(bytes.as_slice()) {
         final_files.insert(path, Some(bytes));
+        return Ok(true);
     }
-    Ok(())
+    Ok(false)
 }
 
 fn materialize_final(
@@ -2770,6 +2830,7 @@ fn plan_result(plan: &UpgradePlan, mode: CommandMode) -> ProjectResult {
             "skill_merges": plan.skill_merges,
             "plan_digest": plan.plan_digest,
             "reports": plan.reports,
+            "change_reasons": plan.change_reasons,
             "omitted_guidance_paths": omitted_guidance_paths
         })),
     }
@@ -2889,6 +2950,7 @@ mod tests {
             normalized_fields: Vec::new(),
             skill_merges: Vec::new(),
             reports: Vec::new(),
+            change_reasons: Vec::new(),
             final_files: BTreeMap::from([(path.to_owned(), after.map(<[u8]>::to_vec))]),
             expected_before: BTreeMap::from([(
                 path.to_owned(),
@@ -2927,6 +2989,7 @@ mod tests {
             normalized_fields: Vec::new(),
             skill_merges: Vec::new(),
             reports: Vec::new(),
+            change_reasons: Vec::new(),
             final_files,
             expected_before,
             changed_paths,
@@ -4935,5 +4998,21 @@ mod tests {
             read_base_ledger(&target_dir(temporary.path()), None),
             Err(UpdateError::Verification(_))
         ));
+    }
+
+    #[test]
+    fn every_changed_path_needs_a_reported_reason() {
+        let paths = vec!["a".to_owned(), "b".to_owned()];
+        let mut reasons = BTreeMap::new();
+        reasons.insert("a".to_owned(), "projection-content");
+        assert!(change_reasons_for(&paths, &reasons).is_err());
+        reasons.insert("b".to_owned(), "project-base-ledger");
+        assert_eq!(
+            change_reasons_for(&paths, &reasons).unwrap(),
+            vec![
+                json!({"path":"a","reason":"projection-content"}),
+                json!({"path":"b","reason":"project-base-ledger"})
+            ]
+        );
     }
 }

@@ -1170,3 +1170,41 @@ fn an_untouched_terminal_draft_still_offers_the_agent_setup() {
     assert!(result.next_action.is_some());
     assert_eq!(store.load().unwrap().progress, Some(draft));
 }
+
+/// OV153-013: right after a terminal quick setup, a project upgrade scan finds nothing to change.
+#[test]
+fn a_fresh_terminal_quick_setup_has_no_project_upgrade() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    global(root.path());
+    let mut opts = options(root.path(), target.path());
+    opts.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+    );
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nMy project\n\n\nyes\n".to_vec()),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    let result = execute(&opts, InteractionMode::Terminal, &mut terminal).unwrap();
+    assert_eq!(
+        result.exit_code,
+        0,
+        "{}\n{}",
+        result.message,
+        String::from_utf8_lossy(&terminal.writer)
+    );
+    assert!(target
+        .path()
+        .join(".hive/config/project-base.json")
+        .is_file());
+    let plugin =
+        crate::user_install::validated_project_plugin_files(root.path()).unwrap_or_default();
+    let (changed, reasons) = crate::project_upgrade::scan_changes_for_test(target.path(), &plugin);
+    assert_eq!(changed, Vec::<String>::new(), "{reasons:?}");
+    assert!(!target
+        .path()
+        .join(".hive/config/project-overrides.json")
+        .exists());
+}
