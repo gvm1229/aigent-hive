@@ -32,7 +32,7 @@
 | ID | 지적 | 처리 |
 | --- | --- | --- |
 | N1 | 같은 키·같은 사실이면 공개 범위·상태·종류·시각이 달라도 no-op | 그 값이 모두 같을 때만 no-op·주제 변경, 다르면 기존 "explicit supersedes" 충돌. `restatement_is_noop_or_relabel_only_when_the_truth_metadata_matches` |
-| S7 잔여 | 바뀐 사실 하나가 복원 전체를 막음, 실패한 적용의 복원 기록 잔존 | 바뀐 사실은 건너뛰고 `skipped_changed`로 보고, 적용 실패 시 기록 삭제. 660개 시험에 바뀐 사실 1개 포함 |
+| S7 잔여 | 바뀐 사실 하나의 복원 전체 차단, 실패한 적용의 복원 기록 잔존 | 바뀐 사실은 건너뛰고 `skipped_changed`로 보고, 적용 실패 시 기록 삭제. 660개 시험에 바뀐 사실 1개 포함 |
 | O2 잔여 | 주제 자격 증명 검사가 기록 경로에만 | `validate_subject`로 이동해 `subjects apply` 포함. `subject_validation_rejects_credential_like_segments` |
 | N2 | 자동 스캔 승격이 주제 변경 계획에 스캔 메타데이터를 덧씌울 잠재 위험 | `update`는 덧씌우기 제외 |
 | N3 | 부정 질의가 짧은 영어 접두 회귀를 잡지 못함 | `fts_prefix_matching_skips_short_ascii_words` |
