@@ -16,6 +16,8 @@
 ## 진행 기본값
 
 - 2026-11-16 유지관리자: cloud 세션은 다음 정식 버전에 남은 cloud 작업을 local 작업만 남을 때까지 계속. 중간 보고 대기·확인 요청 없이 진행, local 단계에 닿으면 아래 넘기기로 종료. 목적은 cloud 세션 관리 없이 local 세션으로 바로 넘기기
+- 2026-11-17 유지관리자: local 실행을 명시하지 않은 작업은 cloud 세션이 기본. 원문 "unless explicitly requested to run on the local machine, it is to be automatically assumed that I want things to run on the cloud session". 기다렸다가 local 세션에 넘기는 방식 유지
+- 2026-11-17 유지관리자: 세션 장기화 금지. 단계 완료·버전 출시·넘기기 문서 작성 같은 이정표에서 세션 종료, 새 세션이 저장소의 넘기기 문서로 이어 받기. 원문 "If a milestone is reached, then a new session is to be spawned. To lessen the token usage due to context overload."
 
 ## 넘기기
 
