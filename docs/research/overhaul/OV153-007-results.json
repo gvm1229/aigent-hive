@@ -71,13 +71,85 @@
    ]
   },
   {
-   "label": "prefix query (final)",
+   "label": "prefix query, 2+ characters (pre-review)",
    "binary_version": "AIgent Hive v0.15.3 (released 2026-11-13)",
    "binary_sha256": "416b9921dd629176d1d2709b231efeeca53e5d2541c0b5da9483474d72f08489",
    "modes": [
     {
      "mode": "baseline",
      "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 32,
+       "group_at_5": 32
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 27,
+       "group_at_5": 27
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 5,
+       "group_at_5": 5
+      }
+     }
+    },
+    {
+     "mode": "subjects",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 32,
+       "group_at_5": 32
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 27,
+       "group_at_5": 27
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 5,
+       "group_at_5": 5
+      }
+     }
+    },
+    {
+     "mode": "subjects+expansions",
+     "summary": {
+      "all": {
+       "queries": 40,
+       "hit_at_5": 40,
+       "group_at_5": 40
+      },
+      "development": {
+       "queries": 30,
+       "hit_at_5": 30,
+       "group_at_5": 30
+      },
+      "held-out": {
+       "queries": 10,
+       "hit_at_5": 10,
+       "group_at_5": 10
+      }
+     }
+    }
+   ]
+  },
+  {
+   "label": "prefix query, non-ASCII 2+ / ASCII 4+ characters (final, after stage review)",
+   "binary_version": "AIgent Hive v0.15.3 (released 2026-11-13)",
+   "binary_sha256": "877b38b5dddf9dc2cc248b64e05d406f359765e819096f135d51a56194790323",
+   "modes": [
+    {
+     "mode": "baseline",
+     "summary": {
+      "negatives": {
+       "queries": 8,
+       "with_hits": 0,
+       "total_hits": 0
+      },
       "all": {
        "queries": 40,
        "hit_at_5": 32,
@@ -495,11 +567,50 @@
        "hit_at_5": true,
        "group_at_5": true
       }
+     ],
+     "negatives": [
+      {
+       "query": "what is the plan to do an update",
+       "returned": 0
+      },
+      {
+       "query": "how do I set up the printer",
+       "returned": 0
+      },
+      {
+       "query": "weekend hiking trail",
+       "returned": 0
+      },
+      {
+       "query": "database migration rollback",
+       "returned": 0
+      },
+      {
+       "query": "is it going to rain",
+       "returned": 0
+      },
+      {
+       "query": "favorite movie genre",
+       "returned": 0
+      },
+      {
+       "query": "주말 등산 코스",
+       "returned": 0
+      },
+      {
+       "query": "데이터베이스 이전 되돌리기",
+       "returned": 0
+      }
      ]
     },
     {
      "mode": "subjects",
      "summary": {
+      "negatives": {
+       "queries": 8,
+       "with_hits": 0,
+       "total_hits": 0
+      },
       "all": {
        "queries": 40,
        "hit_at_5": 32,
@@ -917,11 +1028,50 @@
        "hit_at_5": true,
        "group_at_5": true
       }
+     ],
+     "negatives": [
+      {
+       "query": "what is the plan to do an update",
+       "returned": 0
+      },
+      {
+       "query": "how do I set up the printer",
+       "returned": 0
+      },
+      {
+       "query": "weekend hiking trail",
+       "returned": 0
+      },
+      {
+       "query": "database migration rollback",
+       "returned": 0
+      },
+      {
+       "query": "is it going to rain",
+       "returned": 0
+      },
+      {
+       "query": "favorite movie genre",
+       "returned": 0
+      },
+      {
+       "query": "주말 등산 코스",
+       "returned": 0
+      },
+      {
+       "query": "데이터베이스 이전 되돌리기",
+       "returned": 0
+      }
      ]
     },
     {
      "mode": "subjects+expansions",
      "summary": {
+      "negatives": {
+       "queries": 8,
+       "with_hits": 0,
+       "total_hits": 0
+      },
       "all": {
        "queries": 40,
        "hit_at_5": 40,
@@ -1338,6 +1488,40 @@
        "group_rank": 1,
        "hit_at_5": true,
        "group_at_5": true
+      }
+     ],
+     "negatives": [
+      {
+       "query": "what is the plan to do an update",
+       "returned": 0
+      },
+      {
+       "query": "how do I set up the printer",
+       "returned": 0
+      },
+      {
+       "query": "weekend hiking trail",
+       "returned": 0
+      },
+      {
+       "query": "database migration rollback",
+       "returned": 0
+      },
+      {
+       "query": "is it going to rain",
+       "returned": 0
+      },
+      {
+       "query": "favorite movie genre",
+       "returned": 0
+      },
+      {
+       "query": "주말 등산 코스",
+       "returned": 0
+      },
+      {
+       "query": "데이터베이스 이전 되돌리기",
+       "returned": 0
       }
      ]
     }

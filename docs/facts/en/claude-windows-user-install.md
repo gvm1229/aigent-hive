@@ -10,7 +10,7 @@ tags: [claude, installation, windows]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2af34b6fb5c77401e0a946d09ba445c5ac13e15550133349fab10b227293e2cf"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:79fba164c3bbdb35b99976d38e0aef6ad0c69b6b3f791e6c71dacad1c795a1f8"
   - "repo:crates/hive-cli/src/user_install/host_state.rs#sha256:1c9419944fca63a5dd5aeb9d8cd0711bf3ffdf692051ebac8995f630d1ab2f0f"
   - "repo:scripts/qualify-claude-user-install.py#sha256:29efd013c8f258c979e14095297db8e277737bfdbb63620ec776dd315fe2de52"
   - "repo:tests/results/legacy/af6a478d5074c2d3a277.md#sha256:ff1b2012dc26150493fa439cf4eab9f546d64549640d94622d9e1ee9704ff9bd"
