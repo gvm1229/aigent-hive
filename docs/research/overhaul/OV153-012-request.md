@@ -2,7 +2,7 @@
 
 - 기준일: 2026-11-17
 - 계기: `korean-ai-job-search`에서 `hive setup --target … --user-root …` 빠른 설정 실행 화면
-- 관찰: 질문 4개 뒤 미리보기 20여 줄이 같은 들여쓰기·같은 모양으로 붙어 출력. 질문·도움말·선택지·기본값·입력 줄 사이 구분 부족, 제목·구역·강조 없음. 미리보기는 `질문 문장 + 값`을 한 줄씩 이어 붙여 질문이 다시 묻는 것처럼 읽힘. 기능 목록은 한 줄 JSON, 빈 값 줄(`지식에 포함할 경로를 …`)도 그대로 표시
+- 관찰: 질문 4개 뒤 미리보기 20여 줄이 같은 들여쓰기·같은 모양으로 붙어 출력. 질문·도움말·선택지·기본값·입력 줄 사이 구분 부족, 제목·구역·강조 없음. 미리보기는 `질문 문장 + 값`을 한 줄씩 이어 붙인 형태라 같은 질문의 반복과 비슷한 모양. 기능 목록은 한 줄 JSON, 빈 값 줄(`지식에 포함할 경로를 …`)도 그대로 표시
 - 위치: `crates/hive-cli/src/user_setup/setup_engine/terminal.rs`(`say`·`ask`·`confirm`), `crates/hive-cli/src/user_setup/setup_engine/project.rs:504` 미리보기, `crates/hive-cli/src/user_setup/setup_engine/project/questions.rs:184` 기능·후크 요약. 사용자 설정(user-setup)도 같은 `Terminal` 사용
 
 ## 유지관리자 원문
