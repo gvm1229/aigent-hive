@@ -42,7 +42,8 @@ only after a new request receives fresh allowed usage; never write during the ha
    subject. Restating a stored fact with a subject relabels it in place; it never duplicates it.
    After the write, if `data.subjects` (one entry per fact for `--batch`) lists
    `near_duplicates`, relabel the new fact to the existing subject in the next turn.
-5. Run exactly one write-through request per turn. For one fact, prefer the simple
+5. Run exactly one write-through request per turn, plus at most one retry of a rejected
+   batch. For one fact, prefer the simple
    user-statement route:
 
    ```text

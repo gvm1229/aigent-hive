@@ -6257,12 +6257,30 @@ mod tests {
             "--confirm-subject-restore".to_owned(),
             "yes".to_owned(),
         ];
+        // One claim relabeled again after apply drifts: restore skips it and reports it.
+        remember_fact(
+            user.path(),
+            "Synthetic fact number 5 belongs to area 5.",
+            "synthetic-area5-topic5",
+            Some("synthetic/changed"),
+        );
         let restored = run_subjects(&restore)
             .expect("restore")
             .data
             .expect("restore data");
-        assert_eq!(restored["restored"], 660);
-        assert_eq!(claim_bytes(user.path()), before);
+        assert_eq!(restored["restored"], 659);
+        assert_eq!(
+            restored["skipped_changed"].as_array().map(Vec::len),
+            Some(1)
+        );
+        let after = claim_bytes(user.path());
+        assert_eq!(
+            before
+                .iter()
+                .filter(|(path, bytes)| after.get(*path) != Some(*bytes))
+                .count(),
+            1
+        );
         RagStore::open(user.path())
             .expect("store")
             .validate_current()

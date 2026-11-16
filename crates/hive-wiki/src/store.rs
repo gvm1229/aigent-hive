@@ -1106,7 +1106,8 @@ impl RagStore {
                     let mut promoted = promoted_claim_from_plan(&plan, &claims, &request)?;
                     writes.extend(remember_plan_writes(&plan, &known)?);
                     apply_remember_plan_to_claims(&mut claims, &plan);
-                    if plan.new_claim.is_some() {
+                    // A subject relabel never stamps scan metadata onto an existing claim.
+                    if plan.new_claim.is_some() && plan.disposition != RememberDisposition::Update {
                         promoted
                             .scan_metadata
                             .clone_from(&promoted_source.scan_metadata);

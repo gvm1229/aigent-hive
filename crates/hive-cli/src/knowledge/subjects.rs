@@ -303,7 +303,14 @@ fn apply(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     // The restore record exists before the canonical write, so an interrupted apply
     // still has its exact originals.
     write_record(&record_path, &record)?;
-    let committed = store.replace_active_claims(&pairs)?;
+    let committed = match store.replace_active_claims(&pairs) {
+        Ok(committed) => committed,
+        Err(error) => {
+            // Nothing was written, so the record restores nothing; drop it.
+            let _ = fs::remove_file(&record_path);
+            return Err(error);
+        }
+    };
     let mut changed_paths = committed.changed_paths.clone();
     changed_paths.push(format!("{RESTORE_RELATIVE}/{operation_id}.json"));
     Ok(success(
@@ -347,13 +354,22 @@ fn restore(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "subject restore record is malformed".to_owned(),
         ));
     }
-    let (store, _, _) = open_store(&user_root)?;
-    let pairs = record
-        .applied
+    let (store, claims, _) = open_store(&user_root)?;
+    let current = claims
         .iter()
-        .cloned()
-        .zip(record.originals.iter().cloned())
-        .collect::<Vec<_>>();
+        .map(|claim| (claim.claim_id.as_str(), claim))
+        .collect::<BTreeMap<_, _>>();
+    // Claims changed since apply (for example relabeled again) are skipped and reported;
+    // every unchanged claim returns to its exact original bytes.
+    let mut pairs = Vec::new();
+    let mut drifted = Vec::new();
+    for (applied, original) in record.applied.iter().zip(&record.originals) {
+        if current.get(applied.claim_id.as_str()) == Some(&applied) {
+            pairs.push((applied.clone(), original.clone()));
+        } else {
+            drifted.push(applied.claim_id.clone());
+        }
+    }
     let committed = store.replace_active_claims(&pairs)?;
     let restored_path = record_path.with_extension("restored.json");
     fs::rename(&record_path, &restored_path)
@@ -365,7 +381,7 @@ fn restore(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         committed.changed_paths.clone(),
         SHARED_INDEX_RELATIVE,
         &committed.manifest_digest,
-        json!({"operation_id": operation, "restored": pairs.len(), "store": committed}),
+        json!({"operation_id": operation, "restored": pairs.len(), "skipped_changed": drifted, "store": committed}),
     ))
 }
 

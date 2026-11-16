@@ -2828,6 +2828,19 @@ pub fn plan_remember(
         if let Some(same) = active.iter().find(|claim| {
             claim.claim_key == seed.claim_key && claim.normalized_fact == seed.normalized_fact
         }) {
+            // A changed visibility, status, kind or time is a new truth, never a silent no-op.
+            if same.kind != seed.kind
+                || same.status != seed.status
+                || same.visibility != seed.visibility
+                || same.observed_at != seed.observed_at
+                || same.verified_at != seed.verified_at
+                || same.scan_metadata != seed.scan_metadata
+            {
+                return Err(RagError::Conflict(format!(
+                    "current truth `{}` already has an active claim with different metadata; provide explicit supersedes",
+                    seed.claim_key
+                )));
+            }
             // Same truth restated: no subject keeps the stored one, a new subject relabels it.
             if seed.subject.is_none() || same.subject == seed.subject {
                 return Ok(RememberPlan {
@@ -3958,7 +3971,19 @@ pub fn validate_subject(subject: &str) -> Result<(), RagError> {
             "subject must have one or two lowercase segments such as design/visual-style; got `{subject}`"
         )));
     }
-    Ok(())
+    if segments
+        .iter()
+        .any(|segment| segment.len() >= 24 && segment.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    {
+        return Err(RagError::InvalidInput(
+            "subject contains likely credential material".to_owned(),
+        ));
+    }
+    super::reject_likely_credentials(subject.as_bytes()).map_err(|error| {
+        RagError::InvalidInput(format!(
+            "subject contains likely credential material: {error}"
+        ))
+    })
 }
 
 fn claim_chunks(claim: &CanonicalClaim) -> Vec<IndexedChunk> {
@@ -5016,18 +5041,6 @@ fn validate_remember_request(request: &RememberRequest, revision: u64) -> Result
     })?;
     if let Some(subject) = &request.subject {
         validate_subject(subject)?;
-        if subject.split('/').any(|segment| {
-            segment.len() >= 24 && segment.bytes().all(|byte| byte.is_ascii_hexdigit())
-        }) {
-            return Err(RagError::InvalidInput(
-                "subject contains likely credential material".to_owned(),
-            ));
-        }
-        super::reject_likely_credentials(subject.as_bytes()).map_err(|error| {
-            RagError::InvalidInput(format!(
-                "subject contains likely credential material: {error}"
-            ))
-        })?;
     }
     Ok(())
 }
@@ -5906,6 +5919,55 @@ mod tests {
             replacement_plan.superseded_claims[0].status,
             AssertionStatus::Superseded
         );
+    }
+
+    #[test]
+    fn restatement_is_noop_or_relabel_only_when_the_truth_metadata_matches() {
+        let collection = USER_ROOT_COLLECTION_ID;
+        let first = plan_remember(&[], &remember_request(collection, "Use tabs."), 1)
+            .expect("insert")
+            .new_claim
+            .expect("claim");
+        let existing = vec![first.clone()];
+        let same =
+            plan_remember(&existing, &remember_request(collection, "Use tabs."), 2).expect("noop");
+        assert_eq!(same.disposition, RememberDisposition::Noop);
+        let mut labeled = remember_request(collection, "Use tabs.");
+        labeled.subject = Some("tools/editor".to_owned());
+        let relabel = plan_remember(&existing, &labeled, 2).expect("update");
+        assert_eq!(relabel.disposition, RememberDisposition::Update);
+        assert_eq!(
+            relabel.new_claim.expect("relabeled").claim_id,
+            first.claim_id
+        );
+        let mut confidential = remember_request(collection, "Use tabs.");
+        confidential.visibility = RagVisibility::Confidential;
+        assert!(matches!(
+            plan_remember(&existing, &confidential, 2),
+            Err(RagError::Conflict(_))
+        ));
+        let mut verified = remember_request(collection, "Use tabs.");
+        verified.status = AssertionStatus::Verified;
+        verified.verified_at = Some("2026-11-16T00:00:00Z".to_owned());
+        assert!(matches!(
+            plan_remember(&existing, &verified, 2),
+            Err(RagError::Conflict(_))
+        ));
+    }
+
+    #[test]
+    fn fts_prefix_matching_skips_short_ascii_words() {
+        let query = build_fts_query("do is font 남색 색", &[]).expect("query");
+        assert_eq!(
+            query,
+            "\"do\" OR \"is\" OR \"font\"* OR \"남색\"* OR \"색\""
+        );
+    }
+
+    #[test]
+    fn subject_validation_rejects_credential_like_segments() {
+        assert!(validate_subject(&format!("keys/{}", "a1b2c3d4".repeat(4))).is_err());
+        assert!(validate_subject("design/visual-style").is_ok());
     }
 
     #[test]
