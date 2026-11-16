@@ -1,15 +1,11 @@
 {
   "schema_version": 1,
   "product_version": "0.15.3",
-  "package_version": "0.15.3-test.1",
+  "package_version": "0.15.3-test.2",
   "plan_ids": [
-    "OV153-001",
-    "OV153-002",
-    "OV153-003",
-    "OV153-004",
-    "OV153-005",
-    "OV153-006",
-    "OV153-007"
+    "OV153-011",
+    "OV153-012",
+    "OV153-013"
   ],
-  "product_tree_sha256": "sha256:ced232f4b73af066b07bb6fc4ce47574c29c15fdb9082c7f0a4e90353b6575a4"
+  "product_tree_sha256": "sha256:a915de92726e17963ab55f99caaa1e4859e9795f1ad3cab34ba06d95658ffd58"
 }
