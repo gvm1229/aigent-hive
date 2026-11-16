@@ -10,7 +10,7 @@ tags: [development, installation, version]
 aliases: ["Dev install", "Local developer build"]
 sources:
   - "repo:crates/hive-cli/build.rs#sha256:c7738445caec1081e42e203eb5568eae0d997a0009037a1d74c8c4804e3de8b7"
-  - "repo:crates/hive-cli/src/main.rs#sha256:feed555a235d5e96c0459e8f91341d968262f74fbfaca85304565924b27dffab"
+  - "repo:crates/hive-cli/src/main.rs#sha256:00e4b09bed9e84a0a18473e003e36ea616e152654fdac1e13382347d03722d86"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:79fba164c3bbdb35b99976d38e0aef6ad0c69b6b3f791e6c71dacad1c795a1f8"
   - "repo:docs/research/developer-install-recovery.md#sha256:552390190deb914cf2dfd84106461b994b7ee3587a5ce954102cfa62f74d9925"
   - "repo:scripts/dev-install.sh#sha256:49d7e923900b37bf30b8678e150bfb7f21ad4427876da5031b46aac04df8560e"

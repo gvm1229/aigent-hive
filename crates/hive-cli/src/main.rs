@@ -147,8 +147,9 @@ MODES:
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
 
-Without --capabilities, file setup uses the same saved or detected host capability data as
-terminal setup. Detection never verifies execution support or grants hooks.
+--capabilities is optional for --dry-run, --apply and --validate. Without it, file setup uses
+the same saved or detected host capability data as terminal setup; no command generates a
+capability file. Detection never verifies execution support or grants hooks.
 ";
 
 const STALE_MARKER: &[u8] = b"{\"schema_version\":1,\"stale\":true}\n";
@@ -2568,6 +2569,9 @@ mod tests {
              --user-root <dir> (--dry-run|--apply|--validate)"
         ));
         assert!(SETUP_USAGE.contains("--output json"));
+        assert!(SETUP_USAGE
+            .contains("--capabilities is optional for --dry-run, --apply and --validate"));
+        assert!(SETUP_USAGE.contains("no command generates a"));
     }
 
     #[test]

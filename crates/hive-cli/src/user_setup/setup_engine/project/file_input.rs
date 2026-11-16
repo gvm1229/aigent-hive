@@ -11,6 +11,10 @@ use hive_core::preferences::{
 use hive_render::{RenderError, SetupMode, SetupOutcome};
 use std::{io::Write, path::Path};
 
+/// Error text for a rejected capability file: the file is optional, never generated.
+pub(super) const OPTIONAL_CAPABILITIES: &str =
+    "--capabilities is optional; omit it to use the saved or detected host capabilities";
+
 fn as_render(error: SetupError) -> RenderError {
     match error {
         SetupError::Input(message) => RenderError::Input(message),
@@ -317,7 +321,7 @@ pub(in crate::user_setup) fn execute(
         let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)
             .map_err(as_render)?;
         hive_core::run::CapabilityResolution::parse_json(&bytes)
-            .map_err(|e| RenderError::Input(e.to_string()))?;
+            .map_err(|e| RenderError::Input(format!("{e}; {OPTIONAL_CAPABILITIES}")))?;
         bytes
     } else {
         // Without supplied material, use the terminal setup's saved-or-detected resolution.

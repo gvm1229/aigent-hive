@@ -151,7 +151,9 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
                 .map_err(SetupError::Input)?;
             let mut result = execute(&options, mode, &mut terminal)
                 .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
-            if result.exit_code != 0 {
+            if result.code == "hive.project-setup-input-pending" {
+                route_pending_to_agent(&mut result, &options);
+            } else if result.exit_code != 0 {
                 result.next_action = Some(resume_command(&options));
             }
             Ok(result)
@@ -191,6 +193,39 @@ fn agent_command(options: &Options) -> String {
     )
 }
 
+/// An agent previews its answer patch before applying; the preview never writes the target.
+fn agent_preview_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --dry-run --summary --output json",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+fn status_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --show --summary --output json",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+/// A pending project setup never points only to a terminal: the agent path comes first and the
+/// terminal resume stays available for a person.
+fn route_pending_to_agent(result: &mut ActionResult, options: &Options) {
+    let agent = [status_command(options), agent_preview_command(options)];
+    result.next_action = Some(agent.join("; "));
+    let mut data = result.data.take().unwrap_or_else(|| json!({}));
+    if let Some(object) = data.as_object_mut() {
+        object.insert("agent_next_actions".into(), json!(agent));
+        object.insert(
+            "terminal_next_action".into(),
+            json!(resume_command(options)),
+        );
+    }
+    result.data = Some(data);
+}
+
 /// Global setup must exist first; the agent finishes it through the user-scope path.
 fn user_setup_command(options: &Options) -> String {
     format!(
@@ -206,8 +241,8 @@ fn pending(language: InterfaceLanguage) -> ActionResult {
         "hive.project-setup-input-pending",
         language,
         [
-            "프로젝트 설정이 아직 끝나지 않았습니다. 터미널에서 이어서 진행해 주세요.",
-            "Project setup is pending. Continue in a terminal.",
+            "프로젝트 설정이 아직 끝나지 않았습니다. AI 에이전트는 설정 요약(--show --summary)과 답변 파일 미리보기(--input-channel agent --dry-run)로, 사람은 터미널에서 이어서 진행할 수 있습니다. 능력 파일(--capabilities)은 선택 사항입니다.",
+            "Project setup is pending. An AI agent continues with the setup summary (--show --summary) and an answer-file preview (--input-channel agent --dry-run); a person can continue in a terminal. A capability file (--capabilities) is optional.",
         ],
         None,
     )
@@ -400,11 +435,16 @@ fn prepare_files(
 fn resolve_capabilities(options: &Options, answers: &Value) -> Result<(Value, Value), SetupError> {
     if let Some(path) = &options.capabilities {
         let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
-        hive_core::run::CapabilityResolution::parse_json(&bytes)
-            .map_err(|e| SetupError::Verification(e.to_string()))?;
+        hive_core::run::CapabilityResolution::parse_json(&bytes).map_err(|e| {
+            SetupError::Verification(format!("{e}; {}", file_input::OPTIONAL_CAPABILITIES))
+        })?;
         Ok((
-            serde_json::from_slice(&bytes)
-                .map_err(|_| SetupError::Input("invalid capabilities".into()))?,
+            serde_json::from_slice(&bytes).map_err(|_| {
+                SetupError::Input(format!(
+                    "invalid capabilities; {}",
+                    file_input::OPTIONAL_CAPABILITIES
+                ))
+            })?,
             json!({"capabilities":"provided-document"}),
         ))
     } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {

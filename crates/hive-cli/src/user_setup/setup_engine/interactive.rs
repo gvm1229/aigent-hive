@@ -318,12 +318,38 @@ fn execute<R: BufRead, W: Write>(
         } else {
             path.replace('\'', "'\"'\"'")
         };
-        result.next_action = Some(format!(
-            "hive setup --scope user --resume --user-root '{quoted}'{}",
-            if options.review { " --review" } else { "" }
-        ));
+        route_pending_to_agent(&mut result, &quoted, options.review);
     }
     Ok(result)
+}
+
+/// A pending result never points only to a terminal: an AI agent continues through the status
+/// and answer-file preview path, and a person can still resume in a terminal.
+fn route_pending_to_agent(result: &mut crate::ActionResult, quoted_root: &str, review: bool) {
+    let terminal = format!(
+        "hive setup --scope user --resume --user-root '{quoted_root}'{}",
+        if review { " --review" } else { "" }
+    );
+    let agent = if review {
+        [
+            format!("{terminal} --dry-run --output json"),
+            format!("{terminal} --review-answers <answers-file> --output json"),
+        ]
+    } else {
+        [
+            format!("hive setup --scope user --user-root '{quoted_root}' --show --summary --output json"),
+            format!(
+                "hive setup --scope user --user-root '{quoted_root}' --answers <patch-file> --input-channel agent --dry-run --output json"
+            ),
+        ]
+    };
+    result.next_action = Some(agent.join("; "));
+    let mut data = result.data.take().unwrap_or_else(|| json!({}));
+    if let Some(object) = data.as_object_mut() {
+        object.insert("agent_next_actions".into(), json!(agent));
+        object.insert("terminal_next_action".into(), json!(terminal));
+    }
+    result.data = Some(data);
 }
 
 fn execute_inner<R: BufRead, W: Write>(
@@ -1191,8 +1217,8 @@ pub(super) fn pending(language: InterfaceLanguage, code: &'static str) -> crate:
         2,
         code,
         language,
-        "설정이 아직 끝나지 않았습니다. 터미널에서 이어서 진행해 주세요.",
-        "Setup is pending. Continue in a terminal.",
+        "설정이 아직 끝나지 않았습니다. AI 에이전트는 설정 요약(--show --summary)과 답변 파일 미리보기(--input-channel agent --dry-run)로, 사람은 터미널에서 이어서 진행할 수 있습니다.",
+        "Setup is pending. An AI agent continues with the setup summary (--show --summary) and an answer-file preview (--input-channel agent --dry-run); a person can continue in a terminal.",
         None,
         Some("hive setup --scope user --resume".to_owned()),
     )
@@ -1231,6 +1257,32 @@ fn result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pending_user_setup_offers_the_agent_path_before_the_terminal() {
+        for review in [false, true] {
+            let mut result = pending(InterfaceLanguage::En, "hive.setup-needs-input");
+            route_pending_to_agent(&mut result, "/tmp/u", review);
+            let next = result.next_action.as_deref().unwrap();
+            let data = result.data.as_ref().unwrap();
+            assert!(data["terminal_next_action"]
+                .as_str()
+                .unwrap()
+                .contains("--resume"));
+            assert_eq!(data["agent_next_actions"].as_array().unwrap().len(), 2);
+            if review {
+                assert!(next.contains("--review --dry-run"));
+                assert!(next.contains("--review-answers <answers-file>"));
+            } else {
+                assert!(next.contains("--show --summary"));
+                assert!(next.contains("--input-channel agent --dry-run"));
+                assert!(!next.contains("--resume"));
+            }
+        }
+        assert!(pending(InterfaceLanguage::En, "hive.setup-input-pending")
+            .message
+            .contains("--show --summary"));
+    }
     use std::io::Cursor;
 
     #[test]

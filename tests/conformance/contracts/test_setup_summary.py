@@ -230,6 +230,56 @@ class SetupSummaryConformance(Phase1CliTestCase):
         self.assertTrue(final["data"]["configured"])
         self.assertNotIn("agent_setup", final["data"])
 
+    def run_reported_command(self, *flags):
+        process = subprocess.run(
+            [str(self.hive_binary), "setup", *map(str, flags), "--output", "json"],
+            input="", capture_output=True, text=True, encoding="utf-8", timeout=60,
+            env={**os.environ, "PATH": str(self.work_root / "no-external-tools")},
+        )
+        result = json.loads(process.stdout)
+        Draft202012Validator(ACTION_RESULT_SCHEMA).validate(result)
+        return process, result
+
+    def test_reported_agent_command_previews_applies_and_validates_without_capabilities(self):
+        # OV153-011 A1: the exact command from the 0.15.2 report, on a new empty project.
+        target = self.work_root / "reported-empty"
+        target.mkdir()
+        patch = self.work_root / "reported-patch.json"
+        patch.write_text(json.dumps({"schema_version": 1, "kind": "hive.setup-answer-patch",
+            "answers": {"setup_mode": "expedited", "project_name": "reported-empty",
+                "project_kind": "general", "primary_host": "claude"}}), encoding="utf-8")
+        base = ("--target", target, "--user-root", self.setup_user_root, "--answers", patch,
+                "--input-channel", "agent")
+        preview, result = self.run_reported_command(*base, "--dry-run")
+        self.assertEqual(preview.returncode, 0, (preview.stdout, preview.stderr))
+        self.assertEqual(result["code"], "hive.setup-dry-run-complete")
+        self.assertEqual(result["data"]["capabilities"]["source"], "saved-or-detected-by-cli")
+        self.assertEqual(list(target.iterdir()), [])
+        applied, result = self.run_reported_command(*base, "--apply")
+        self.assertEqual(applied.returncode, 0, (applied.stdout, applied.stderr))
+        self.assertEqual(result["code"], "hive.setup-complete")
+        self.assertEqual(read_yaml(target / ".hive/setup-answers.yml")["approved_fallback_hooks"], [])
+        validated, result = self.run_reported_command(*base, "--validate")
+        self.assertEqual(validated.returncode, 0, (validated.stdout, validated.stderr))
+        self.assertEqual(result["code"], "hive.setup-valid")
+
+    def test_non_interactive_pending_result_offers_the_agent_path(self):
+        # OV153-011 A2: no pending result points only to a terminal.
+        target = self.work_root / "pending-empty"
+        target.mkdir()
+        process, result = self.run_reported_command(
+            "--target", target, "--user-root", self.setup_user_root, "--non-interactive", "--dry-run")
+        self.assertEqual(process.returncode, 2, process.stdout)
+        self.assertEqual(result["code"], "hive.project-setup-input-pending")
+        self.assertIn("--show --summary", result["next_action"])
+        self.assertIn("--input-channel agent --dry-run", result["next_action"])
+        self.assertNotIn("--resume", result["next_action"])
+        self.assertNotIn("--capabilities <", result["next_action"])
+        self.assertIn("optional", result["message"])
+        self.assertEqual(len(result["data"]["agent_next_actions"]), 2)
+        self.assertIn("--resume", result["data"]["terminal_next_action"])
+        self.assertEqual(list(target.iterdir()), [])
+
     def test_empty_folder_status_requests_an_interview_not_a_kind_guess(self):
         target = self.work_root / "empty-start"
         target.mkdir()

@@ -40,10 +40,13 @@ only when the user asks for it. A hidden tool PTY is not a user terminal; never 
    lets you apply the proposal and then report each value and how to change it.
 5. Copy `answer_patch_template`, keep `kind` and `schema_version`, fill only `answers`, save it as
    `<patch-file>` in the system temporary folder (outside the project; delete it afterwards),
-   then run the status `next_action`:
+   preview it with `--dry-run` in place of `--apply` (writes nothing), then run the status `next_action`:
    `hive setup --target <project-root> --user-root <user-root> --answers <patch-file> --input-channel agent --apply --summary --output json`.
-   No capability file is needed: the CLI uses the same saved or detected host capabilities as
-   terminal setup. Pass `--capabilities` only with trusted supplied material; never fabricate one.
+   No capability file is needed: `--capabilities` is optional for `--dry-run`, `--apply` and
+   `--validate`, and the CLI uses the same saved or detected host capabilities as terminal setup.
+   No command generates one. Pass `--capabilities` only with trusted supplied material; never fabricate one.
+   A pending result (`hive.project-setup-input-pending`) lists `--show --summary` and the agent
+   `--dry-run` in `next_action`; continue there, not in a terminal.
 6. Check status, exit code, `completion_verified`, capability limits and pending action, then
    verify once with `--show --summary --output json`. Keep completion within 8KiB and status within
    4KiB. Pending, unsupported or failed operations stay incomplete. Standalone `--validate` takes
