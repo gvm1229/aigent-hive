@@ -27,8 +27,9 @@ Read before any threshold, disable, enable, or toggle operation.
      hive usage threshold --user-root <user-root> --remaining-percent <percent> --output json
      ```
 
-     This changes only the default threshold. An app with saved per-host window choices uses its
-     own 5-hour and weekly thresholds; change those through `hive setup --scope user --section usage`.
+     This sets the default threshold and the threshold of every guarded limit of every app with
+     saved per-host window choices; `data.host_windows_updated` lists those apps. To give one app
+     or one limit a different threshold, use `hive setup --scope user --section usage` instead.
 
    - A project threshold requires an explicit integer and a valid installed project harness.
      Never reinterpret a non-Hive target request as a global change:

@@ -236,11 +236,13 @@ pub(super) fn display_title(id: &str, korean: bool) -> String {
     super::host_windows::instance(id).map_or_else(
         || question_title(id, korean).to_owned(),
         |(template, host)| {
-            format!(
-                "{} · {}",
-                super::host_windows::host_label(host),
+            // A provider-only host answers one threshold, titled like the single legacy one.
+            let title = if host == super::host_windows::PROVIDER_ONLY_HOST {
+                question_title("usage-threshold", korean)
+            } else {
                 question_title(template, korean)
-            )
+            };
+            format!("{} · {title}", super::host_windows::host_label(host))
         },
     )
 }

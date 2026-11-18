@@ -10,8 +10,8 @@ tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
   - "repo:crates/hive-cli/src/discord.rs#sha256:4dfee283b0d3b1aae546df1a415405326757ef8b1d68263f62cd407c5519e586"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:25c7e428f470d17ad43e96e8f379a1a5ac259dc7da7d3780927a38b9da7f3bdd"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:acbf2bce77a81d61db65f3f32150fbded0cfb11ae5df426dd2ca3f7b9a25faee"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:961308d023ba65120df3d2270eb836816bb7fa9ee54f5fc7573495c06d38bcf0"
   - "repo:docs/archive/plans/foundations/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/archive/plans/releases/0.9.0/discord-onboarding-v09.md#sha256:91a27ed57ddd259ac0a3270ee9242243f0a567bdae3fc756b90f76303c01c037"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:160bc8bc434f1547e1fb3dad23902b740304323c800b92ece62ccda10a61114e"

@@ -289,6 +289,32 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(result["data"]["global_threshold_remaining_percent"], 0)
         self.assertEqual(result["data"]["threshold_remaining_percent"], 10)
 
+    def test_global_threshold_moves_every_guarded_host_window(self) -> None:
+        user_root = self.work_root / "windows-user"
+        config = user_root / ".hive/config/user-setup.yml"
+        config.parent.mkdir(parents=True)
+        config.write_text(USER_CONFIG.replace(
+            "  project_overrides: {}\n",
+            "  project_overrides: {}\n  host_windows:\n    codex:\n      five_hour_limit: true\n"
+            "      guard: both\n      five_hour_stop_remaining_percent: 30\n"
+            "      weekly_stop_remaining_percent: 10\n"), encoding="utf-8")
+        process, result = self.invoke("usage", "threshold", "--user-root", str(user_root),
+                                      "--remaining-percent", "15")
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["code"], "hive.usage-global-threshold-updated")
+        self.assertEqual(result["data"]["host_windows_updated"], ["codex"])
+        text = config.read_text(encoding="utf-8")
+        self.assertIn("five_hour_stop_remaining_percent: 15", text)
+        self.assertIn("weekly_stop_remaining_percent: 15", text)
+        status, result = self.invoke("usage", "status", "--target", str(self.consumer),
+                                    "--user-root", str(user_root), "--session-id", "windows-project",
+                                    "--process-id", "101")
+        self.assertEqual(status.returncode, 0, result)
+        self.assertEqual(result["data"]["threshold_remaining_percent"], 15)
+        self.assertEqual(result["data"]["guarded_windows"], [
+            {"window": "session", "threshold_remaining_percent": 15},
+            {"window": "weekly", "threshold_remaining_percent": 15}])
+
     def test_token_summary_preserves_historical_overrun_without_guard_authority(self) -> None:
         historical = json.loads((REPOSITORY_ROOT / "tests/results/readiness-host-acceptance-2026-09-27.json").read_text(encoding="utf-8"))
         request = {

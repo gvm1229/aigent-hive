@@ -997,7 +997,7 @@ const USAGE_HELP: Detailed = Detailed {
     ],
     optional: &[
         ("--host <호스트>", "codex, claude, antigravity 중 하나", "One of codex, claude, antigravity"),
-        ("--remaining-percent <0..99>", "보호 기준 남은 양 % (threshold)", "Stop threshold % (threshold)"),
+        ("--remaining-percent <0..99>", "모든 보호 한도의 남은 양 기준 % (threshold)", "Threshold %, all guarded limits (threshold)"),
         ("--output json", "기계용 JSON 출력", "Machine-readable JSON output"),
     ],
     examples: &["hive usage threshold --user-root <user-root> --remaining-percent 20",

@@ -2206,8 +2206,14 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
-    for windows in config.usage_guard.host_windows.values() {
+    for (host, windows) in &config.usage_guard.host_windows {
         windows.validate().map_err(SetupError::Input)?;
+        // Antigravity reports only provider pools; its one threshold uses the weekly-only shape.
+        if host.as_str() == "antigravity" && windows.five_hour_limit {
+            return Err(SetupError::Input(
+                "antigravity has no 5-hour window; store its single threshold as five_hour_limit: false with guard: weekly".to_owned(),
+            ));
+        }
     }
     if config.schema_version == 1
         && !config.usage_guard.projection_enabled()
@@ -3605,10 +3611,14 @@ pub(crate) struct UsageThresholdUpdate {
     pub(crate) current: u8,
     pub(crate) changed_paths: Vec<String>,
     pub(crate) config_bytes: Vec<u8>,
+    /// Hosts whose per-host guarded windows now use the requested threshold.
+    pub(crate) host_windows_updated: Vec<String>,
 }
 
-/// Update only the authenticated global usage threshold while keeping the user projection
-/// manifest bound to the new canonical preferences. Project-local thresholds are intentionally
+/// Update the authenticated global usage threshold while keeping the user projection manifest
+/// bound to the new canonical preferences. The value replaces the single legacy threshold and
+/// the threshold of every guarded window of every host with per-host window choices, so one
+/// command never leaves a host on an older floor. Project-local thresholds are intentionally
 /// outside this path.
 #[allow(clippy::too_many_lines)]
 pub(crate) fn set_operational_usage_threshold(
@@ -3631,12 +3641,28 @@ pub(crate) fn set_operational_usage_threshold(
     let mut config = parse_and_validate_installed_config(&prior_bytes)
         .map_err(|error| error.message().to_owned())?;
     let previous = config.usage_guard.stop_remaining_percent;
-    if previous == remaining_percent {
+    let host_windows_updated: Vec<String> = config
+        .usage_guard
+        .host_windows
+        .keys()
+        .map(|host| host.as_str().to_owned())
+        .collect();
+    let windows_match = config.usage_guard.host_windows.values().all(|windows| {
+        [
+            windows.five_hour_stop_remaining_percent,
+            windows.weekly_stop_remaining_percent,
+        ]
+        .into_iter()
+        .flatten()
+        .all(|threshold| threshold == remaining_percent)
+    });
+    if previous == remaining_percent && windows_match {
         return Ok(UsageThresholdUpdate {
             previous,
             current: remaining_percent,
             changed_paths: Vec::new(),
             config_bytes: prior_bytes,
+            host_windows_updated,
         });
     }
     if let Some((project, threshold)) = config
@@ -3650,6 +3676,16 @@ pub(crate) fn set_operational_usage_threshold(
         ));
     }
     config.usage_guard.stop_remaining_percent = remaining_percent;
+    for windows in config.usage_guard.host_windows.values_mut() {
+        for threshold in [
+            &mut windows.five_hour_stop_remaining_percent,
+            &mut windows.weekly_stop_remaining_percent,
+        ] {
+            if threshold.is_some() {
+                *threshold = Some(remaining_percent);
+            }
+        }
+    }
     // Apply the same provenance rule that the reload uses, so the published candidate and the
     // reloaded setup agree. The changed value becomes an external change with a new fingerprint.
     let declarations = serde_json::to_value(&config)
@@ -3726,6 +3762,7 @@ pub(crate) fn set_operational_usage_threshold(
         current: remaining_percent,
         changed_paths,
         config_bytes: desired,
+        host_windows_updated,
     })
 }
 
