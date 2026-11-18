@@ -364,6 +364,16 @@ impl InstallError {
             | Self::Internal(message) => message,
         }
     }
+
+    fn with_suffix(self, suffix: &str) -> Self {
+        match self {
+            Self::Input(message) => Self::Input(message + suffix),
+            Self::Conflict(message) => Self::Conflict(message + suffix),
+            Self::Unsupported(message) => Self::Unsupported(message + suffix),
+            Self::Verification(message) => Self::Verification(message + suffix),
+            Self::Internal(message) => Self::Internal(message + suffix),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -738,15 +748,33 @@ fn execute_uninstall(
     }
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
+    let mut installed = Vec::new();
     for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
         let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
         let manifest = read_installed_manifest(&arguments.root_cap, &manifest_relative, host)?;
         let host_evidence = manifest.is_some()
             || owned_path_exists(&arguments.root_cap, host_uninstall_root(host))?;
-        if host_evidence {
-            remove_host_activation(host, runner)?;
+        installed.push((host, manifest_relative, manifest, host_evidence));
+    }
+    // Remove every host activation before deleting any Hive file, so a host that refuses
+    // deactivation leaves all projections and ownership manifests in place for a re-apply.
+    for (host, _, _, host_evidence) in &installed {
+        if *host_evidence {
+            remove_host_activation(*host, runner).map_err(|error| {
+                let restore = if removed_hosts.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "; Hive files were kept; restore the deactivated hosts with hive install --scope user --hosts {} --apply",
+                        removed_hosts.join(",")
+                    )
+                };
+                error.with_suffix(&restore)
+            })?;
             removed_hosts.push(host.as_str());
         }
+    }
+    for (_, manifest_relative, manifest, _) in installed {
         if let Some(manifest) = manifest {
             for entry in manifest.entries {
                 let path = PathBuf::from(entry.path);
@@ -857,14 +885,7 @@ fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result
                 "--scope",
                 "user",
             ],
-            &[
-                "plugin",
-                "marketplace",
-                "remove",
-                "aigent-hive",
-                "--scope",
-                "user",
-            ],
+            &["plugin", "marketplace", "remove", "aigent-hive"],
         ],
         UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
     };
@@ -1805,16 +1826,69 @@ pub(crate) fn authenticated_saved_projection_hosts(
     Ok(hosts)
 }
 
+/// Authenticate a projection written by an earlier Hive release with the same release inventory
+/// and installed-byte checks the install path applies before it replaces prior ownership.
+fn authenticate_prior_release_projection_host(
+    arguments: &UserArguments,
+    manifest: &UserOwnershipManifest,
+) -> Result<(), InstallError> {
+    let recomputed = inventory_digest(
+        manifest.host,
+        &manifest.product_version,
+        &manifest.host_version_range,
+        Path::new(&manifest.guidance_path),
+        &manifest.source_release_digest,
+        &manifest.entries,
+    );
+    if manifest.host != arguments.host || manifest.plan_digest != recomputed {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest is not internally reproducible: {}",
+            arguments.host.as_str()
+        )));
+    }
+    let desired = build_desired_user_files(arguments, arguments.setup_override.as_ref())?;
+    let current_entries = ownership_entries(&desired.files);
+    let current_source_release_digest = source_release_digest(&desired.files);
+    let authenticated = authenticated_user_inventory(
+        manifest.host,
+        &InventoryAuthentication {
+            product_version: &manifest.product_version,
+            installed_host_version_range: &manifest.host_version_range,
+            source_release_digest: &manifest.source_release_digest,
+            installed_entries: &manifest.entries,
+            installed_guidance_path: Path::new(&manifest.guidance_path),
+            current_guidance_path: &desired.guidance_relative,
+            current_source_release_digest: &current_source_release_digest,
+            current_entries: &current_entries,
+            authenticated_prior: None,
+        },
+    )
+    .ok_or_else(|| {
+        InstallError::Conflict(format!(
+            "installed ownership manifest does not match an authenticated Hive release: {}",
+            arguments.host.as_str()
+        ))
+    })?;
+    validate_manifest_against_authenticated_inventory(manifest, &authenticated)?;
+    validate_authenticated_installed_bytes(&arguments.root_cap, &authenticated)
+}
+
 fn authenticate_saved_projection_host(
     arguments: &UserArguments,
     manifest: &UserOwnershipManifest,
 ) -> Result<(), InstallError> {
     if manifest.product_version != env!("CARGO_PKG_VERSION") {
-        return Err(InstallError::Conflict(format!(
-            "installed ownership manifest is not bound to the running Hive product: {}",
-            arguments.host.as_str()
-        )));
+        return authenticate_prior_release_projection_host(arguments, manifest);
     }
+    authenticate_current_projection_host(arguments, manifest).or_else(|current_error| {
+        authenticate_prior_release_projection_host(arguments, manifest).map_err(|_| current_error)
+    })
+}
+
+fn authenticate_current_projection_host(
+    arguments: &UserArguments,
+    manifest: &UserOwnershipManifest,
+) -> Result<(), InstallError> {
     if manifest.plan_digest
         != inventory_digest(
             manifest.host,
@@ -3930,6 +4004,9 @@ fn authenticated_user_inventory(
     {
         return Some(developer);
     }
+    if let Some(sibling) = same_product_package_inventory(host, request) {
+        return Some(sibling);
+    }
     if let Some(historical) = test_three_user_inventory(host, request) {
         return Some(historical);
     }
@@ -4003,6 +4080,48 @@ fn developer_authenticated_user_inventory(
             && request.installed_host_version_range != host.pre_0_15_2_version_range())
         || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
         || request.installed_entries.is_empty()
+        || request.source_release_digest
+            != source_release_digest_from_entries(request.installed_entries)
+    {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest: request.source_release_digest.to_owned(),
+        guidance_path: portable(request.installed_guidance_path),
+        entries: request.installed_entries.to_vec(),
+    })
+}
+
+/// Authenticate a projection written by another package of the running product version, such as
+/// a numbered public test before its stable promotion. Every installed entry must name a path the
+/// running product owns with the same ownership and mode, so the replacement can only rewrite
+/// files the running product itself owns; paths added by the running product are allowed.
+fn same_product_package_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    let current = request
+        .current_entries
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry))
+        .collect::<BTreeMap<_, _>>();
+    let same_layout = request.installed_entries.iter().all(|installed| {
+        current.get(installed.path.as_str()).is_some_and(|entry| {
+            installed.ownership == entry.ownership
+                && installed.executable == entry.executable
+                && installed.unix_mode == entry.unix_mode
+        })
+    });
+    if request.product_version != env!("CARGO_PKG_VERSION")
+        || (request.installed_host_version_range != host.version_range()
+            && request.installed_host_version_range != host.pre_0_15_2_version_range())
+        || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
+        || request.installed_entries.is_empty()
+        || !same_layout
         || request.source_release_digest
             != source_release_digest_from_entries(request.installed_entries)
     {
@@ -9058,6 +9177,169 @@ mod tests {
         fs::write(&manifest_path, b"not JSON\n").expect("malformed manifest");
         let error = authenticated_saved_projection_hosts(temporary.path()).expect_err("malformed");
         assert!(error.contains("installed ownership manifest is malformed"));
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_authenticated_prior_release_hosts() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let historical = seed_historical_user_install(temporary.path(), UserHost::Codex);
+        assert_ne!(historical.product_version, env!("CARGO_PKG_VERSION"));
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("prior scope");
+        assert_eq!(hosts, ["codex"]);
+
+        let protected = historical
+            .entries
+            .iter()
+            .find(|entry| is_managed_ownership(&entry.ownership))
+            .expect("managed entry");
+        fs::write(temporary.path().join(&protected.path), b"tampered\n").expect("tamper");
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    struct ClaudeRefusingRunner<'a> {
+        inner: &'a StatefulHostRunner,
+        qualified: Mutex<String>,
+    }
+
+    impl CommandRunner for ClaudeRefusingRunner<'_> {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            *self.qualified.lock().expect("qualified") = program.to_owned();
+            self.inner.qualify(program)
+        }
+
+        fn run(
+            &self,
+            program: &QualifiedExecutable,
+            arguments: &[&str],
+            timeout: Duration,
+            output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            if *self.qualified.lock().expect("qualified") == "claude" {
+                return Err(SensorError::Failed);
+            }
+            self.inner.run(program, arguments, timeout, output_limit)
+        }
+    }
+
+    #[test]
+    fn uninstall_keeps_every_hive_file_when_a_later_host_refuses_deactivation() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let install = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        }
+        let refusing = ClaudeRefusingRunner {
+            inner: &runner,
+            qualified: Mutex::new(String::new()),
+        };
+
+        let error = execute_uninstall(&uninstall_args(temporary.path()), &refusing)
+            .err()
+            .expect("claude refusal must stop uninstall");
+
+        assert!(error.message().contains(
+            "restore the deactivated hosts with hive install --scope user --hosts codex --apply"
+        ));
+        assert!(temporary.path().join(".hive/install/codex.json").exists());
+        assert!(temporary.path().join(".hive/install/claude.json").exists());
+    }
+
+    #[test]
+    fn claude_activation_removal_clears_a_marketplace_known_only_outside_user_settings() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+
+        remove_host_activation(UserHost::Claude, &runner).expect("known-list marketplace removed");
+
+        assert!(!*runner.marketplace_installed.lock().expect("marketplace"));
+    }
+
+    fn rewrite_as_sibling_package(root: &Path, extra_path: Option<&str>) {
+        let manifest_path = root.join(".hive/install/codex.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("manifest")).expect("JSON");
+        let index = manifest
+            .entries
+            .iter()
+            .position(|entry| is_managed_ownership(&entry.ownership))
+            .expect("managed entry");
+        let bytes = b"earlier package of the same product\n";
+        fs::write(root.join(&manifest.entries[index].path), bytes).expect("sibling bytes");
+        manifest.entries[index].digest = sha256_digest(bytes);
+        if let Some(path) = extra_path {
+            let mut extra = manifest.entries[index].clone();
+            extra.path = path.to_owned();
+            fs::create_dir_all(root.join(path).parent().expect("parent")).expect("parent");
+            fs::write(root.join(path), bytes).expect("extra bytes");
+            manifest.entries.push(extra);
+            manifest
+                .entries
+                .sort_by(|left, right| left.path.cmp(&right.path));
+        }
+        manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(&manifest_path, json_line(&manifest).expect("JSON")).expect("manifest");
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_sibling_package_of_the_same_product() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), None);
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("sibling");
+        assert_eq!(hosts, ["codex"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_sibling_package_claiming_foreign_paths() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), Some("notes/user-owned.md"));
+
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_forged_prior_release_manifest() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let mut forged = seed_historical_user_install(temporary.path(), UserHost::Codex);
+        forged.product_version = "0.5.9".to_owned();
+        forged.plan_digest = inventory_digest(
+            forged.host,
+            &forged.product_version,
+            &forged.host_version_range,
+            Path::new(&forged.guidance_path),
+            &forged.source_release_digest,
+            &forged.entries,
+        );
+        fs::write(
+            temporary.path().join(".hive/install/codex.json"),
+            json_line(&forged).expect("forged manifest JSON"),
+        )
+        .expect("forged manifest");
+
+        let error = authenticated_saved_projection_hosts(temporary.path()).expect_err("forged");
+        assert!(error.contains("does not match an authenticated Hive release"));
     }
 
     fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {

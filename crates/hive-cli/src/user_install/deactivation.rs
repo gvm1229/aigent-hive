@@ -216,14 +216,7 @@ fn transitions(before: &HostStateSnapshot) -> Vec<(&'static [&'static str], Host
             }
             if state.marketplace.take().is_some() {
                 steps.push((
-                    &[
-                        "plugin",
-                        "marketplace",
-                        "remove",
-                        "aigent-hive",
-                        "--scope",
-                        "user",
-                    ][..],
+                    &["plugin", "marketplace", "remove", "aigent-hive"][..],
                     HostStateSnapshot::Claude(state),
                 ));
             }

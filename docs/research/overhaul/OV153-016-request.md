@@ -20,3 +20,12 @@
 - C2 인증된 이전 버전 호스트는 갱신의 투영 재적용 대상에 포함
 - C3 시험: 이전 공개 버전 투영이 있는 사용자 루트에서 인증 성공, 변조 시 실패 유지
 - C4 local 확인: 정식 0.15.3 설치 뒤 `hive update` 성공
+
+## 추가 범위(같은 날 1단계 우회 중 발견)
+
+- 재현: test.2에서 `hive install --scope user --hosts codex,claude,antigravity --apply` → exit 5, "claude still reports a Hive-owned activation after uninstall". 이후 Codex·Claude의 `aigent-hive` 플러그인과 `~/.codex/AGENTS.md`의 Hive 묶음, `.hive/install/codex.json`이 사라진 상태로 남음(Antigravity 유지). 지식 파일 578개 유지
+- 원인 1: Claude CLI 2.1.325의 `claude plugin marketplace remove aigent-hive --scope user`가 사용자 설정 밖(알려진 마켓플레이스 목록)에만 있는 등록을 `not_configured`로 남김. "Omit --scope to remove it from all scopes" 안내
+- 원인 2: 보존 재설치의 제거 단계(`execute_uninstall`)가 호스트마다 활성화 제거와 파일 삭제를 이어서 하므로, 뒤 호스트가 실패하면 앞 호스트만 완전히 제거된 상태로 멈춤. 오류에 복구 안내 없음
+- 이 PC 복구: 범위 없는 `claude plugin marketplace remove aigent-hive` 뒤 호스트별 `hive install --scope user --host <h> --apply`, 마지막 `--hosts codex,claude,antigravity --validate` → `hive.user-install-multi-host-valid`
+- C5 Claude 마켓플레이스 제거는 범위 없이 실행(설치·비활성화·조정 경로 모두)
+- C6 제거 단계는 모든 호스트의 활성화 제거가 끝난 뒤에만 파일 삭제. 실패 시 투영·소유 기록 유지, 오류에 비활성화된 호스트의 복구 명령 표시
