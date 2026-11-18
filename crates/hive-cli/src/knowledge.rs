@@ -64,7 +64,7 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
-const KNOWLEDGE_USAGE: &str = "\
+pub(crate) const KNOWLEDGE_USAGE: &str = "\
 Canonical Markdown knowledge and disposable SQLite index.
 
 USAGE:
@@ -106,7 +106,7 @@ USAGE:
 ";
 
 #[cfg(feature = "notion-preview")]
-const NOTION_KNOWLEDGE_USAGE: &str = "\
+pub(crate) const NOTION_KNOWLEDGE_USAGE: &str = "\
     hive knowledge notion sync --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> [--output json]
     hive knowledge notion rebuild --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> [--output json]
     hive knowledge notion retrieve --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> (--request <request.json>|--query <text> [--scope global] [--top-k <1..100>] [--byte-budget <bytes>]) [--output json]

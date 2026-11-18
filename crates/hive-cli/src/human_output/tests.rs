@@ -96,7 +96,7 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
     let value = json!({"action":"QueryKnowledge","status":"error","exit_code":2,
         "message":"knowledge query requires --target","code":"hive.invalid-input"});
     assert_eq!(render(&value, InterfaceLanguage::Ko, "knowledge"),
-        "처리 실패: 지식 검색. 필요한 옵션 --target을(를) 지정하지 않았습니다.\n다음 단계: --target 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 --help로 볼 수 있습니다.");
+        "처리 실패: 지식 검색. 필요한 옵션 --target을(를) 지정하지 않았습니다.\n예시: hive knowledge lint --target .\n다음 단계: --target 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 hive knowledge --help로 볼 수 있습니다.");
     let english = render(&value, InterfaceLanguage::En, "knowledge");
     assert!(english.starts_with("Failed. The required option --target is missing."));
     assert!(english.contains("Next:"));
