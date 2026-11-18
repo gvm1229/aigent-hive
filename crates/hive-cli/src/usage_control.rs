@@ -1306,10 +1306,12 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         && (pending_reset
             || (current_halt
                 && current_policy
-                && halt
-                    .marker
-                    .as_ref()
-                    .is_some_and(|marker| marker.decision != "observed" && !warning)));
+                && halt.marker.as_ref().is_some_and(|marker| {
+                    marker.decision != "observed"
+                        && !warning
+                        // Enforce no longer blocks on a missing measurement after a session opt-out.
+                        && !(marker.decision == "usage-unknown" && session_disabled(&config, &loaded))
+                })));
     let recheck_required = config.observation_required(&loaded)
         && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
@@ -1534,6 +1536,12 @@ fn enforce_captured(
     let refreshed_control = load_control(runtime, &binding)?;
     if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
         return Ok(policy_changed_result(&binding, &config));
+    }
+    // A session opt-out removes the threshold check, so a missing measurement cannot block.
+    // A measured zero quota still blocks while the separate zero-quota guard stays enabled.
+    if observation.decision == Some("usage-unknown") && session_disabled(&config, &loaded) {
+        trace.normalized = None;
+        return Ok(session_disabled_result(&binding, &config, &observation));
     }
     if warning_only {
         let mut result = observation_warning::result(
@@ -2345,6 +2353,58 @@ fn allowed_result(
             "threshold_remaining_percent": config.threshold,
             "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "measured_at": observation.measured_at,
+            "scope": "automatic-dispatch-preflight",
+            "authorizes_dispatch": false,
+        })),
+    }
+}
+
+/// Whether the current binding's control explicitly turned an installed ordinary safeguard off.
+fn session_disabled(config: &InstalledUsageConfig, loaded: &LoadedControl) -> bool {
+    config.ordinary_enabled()
+        && loaded.state == OverrideState::Current
+        && loaded
+            .control
+            .as_ref()
+            .is_some_and(|control| !control.guard_enabled)
+}
+
+fn session_disabled_result(
+    binding: &SessionBinding,
+    config: &InstalledUsageConfig,
+    observation: &TurnObservation,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "CheckUsage",
+        status: "success",
+        exit_code: 0,
+        code: "hive.usage-session-bypassed",
+        message: "usage safeguard is disabled for this session binding; the missing measurement does not block and no halt was recorded".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: config.config_locator.clone(),
+            digest: sha256_digest(&config.bytes),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "guard_enabled": false,
+            "policy_evaluated": true,
+            "policy_schema_version": if config.policy.is_some() {2} else {1},
+            "enforcement_enabled": !config.enforcement_disabled(),
+            "enforced": false,
+            "observation_required": true,
+            "observation_available": false,
+            "missing_windows": observation.missing_windows,
+            "zero_quota_guard_enabled": true,
+            "session_override": "current",
+            "host_scope": binding.host_scope,
+            "session_id_digest": binding.session_digest,
+            "process_id": binding.process_id,
+            "threshold_remaining_percent": config.threshold,
+            "global_threshold_remaining_percent": config.global_threshold,
+            "project_threshold_remaining_percent": config.project_threshold,
             "scope": "automatic-dispatch-preflight",
             "authorizes_dispatch": false,
         })),
@@ -3953,6 +4013,73 @@ mod tests {
             "hive.usage-allowed"
         );
         assert_eq!(check(None, None, Some(5.0)).code, "hive.usage-limited");
+    }
+
+    #[test]
+    fn session_disable_makes_a_missing_measurement_non_blocking_without_a_halt() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let parsed = ParsedBinding {
+            session_id: "disabled-unknown".into(),
+            process_id: 11,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: None,
+            host: Some("claude".into()),
+            run_id: None,
+        };
+        let unknown = enforce(&args).unwrap();
+        assert_eq!(unknown.code, "hive.usage-unknown");
+        assert_eq!(
+            unknown.data.as_ref().unwrap()["missing_windows"],
+            json!(["session", "weekly"])
+        );
+        assert!(unknown.next_action.is_some());
+        let halt_file = project.path().join(halt_path(&bound));
+        assert!(halt_file.exists());
+        control_session(&SessionArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            user_root: None,
+            host: Some("claude".into()),
+            action: SessionAction::Disable,
+            confirm_disable: true,
+            confirm_reset_guard_disable: false,
+            confirm_zero_quota_guard_disable: false,
+        })
+        .unwrap();
+        let shown = status(&StatusArguments {
+            target: project.path().into(),
+            binding: parsed,
+            user_root: None,
+            host: Some("claude".into()),
+        })
+        .unwrap();
+        assert_eq!(shown.exit_code, 0, "{:?}", shown.data);
+        let before = fs::read(&halt_file).unwrap();
+        for _ in 0..2 {
+            let result = enforce(&args).unwrap();
+            assert_eq!(result.exit_code, 0);
+            assert_eq!(result.code, "hive.usage-session-bypassed");
+            assert!(result
+                .changed_paths
+                .iter()
+                .all(|path| !path.contains("halt")));
+            assert_eq!(fs::read(&halt_file).unwrap(), before);
+        }
+        // A measured zero quota still blocks while the zero-quota guard remains on.
+        write_windows(project.path(), &bound, Some(50.0), Some(0.0));
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-quota-exhausted");
     }
 
     fn write_current_capture(
