@@ -20,11 +20,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.3`
-- 현재 등록 항목: 9/16 완료
+- 현재 등록 항목: 12/16 완료
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `OV153-011`, `OV153-012`, `OV153-013`, `OV153-014`, `OV153-015`, `OV153-016`, `OV153-010`
+- `awaiting-external-evidence`: `OV153-011`, `OV153-012`, `OV153-013`, `OV153-010`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
