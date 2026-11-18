@@ -10,9 +10,9 @@ tags: [cli, compatibility, output]
 aliases: ["human-readable CLI"]
 sources:
   - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
-  - "repo:crates/hive-cli/src/human_output.rs#sha256:162ab141d04644df4a44e92237b57fb45f04818666d7bbffb2c8ed27cabd08f2"
-  - "repo:crates/hive-cli/src/main.rs#sha256:00e4b09bed9e84a0a18473e003e36ea616e152654fdac1e13382347d03722d86"
-  - "repo:crates/hive-cli/tests/human_output.rs#sha256:717e0bef3a101dc5ae5d24c95320cfb234cd17306b35c6667834b2779745e8f0"
+  - "repo:crates/hive-cli/src/human_output.rs#sha256:f5f1b5a153c04b52733c028530a50a29c2f4744f473bb769e329afd02117406a"
+  - "repo:crates/hive-cli/src/main.rs#sha256:7fc5b1b31339f6a712d50877bc29722fdedf9fa402ae269d1b52f034d1ffa7e0"
+  - "repo:crates/hive-cli/tests/human_output.rs#sha256:8486343385d3a9edf6bb88fc89278437065cccb1c6658a45c0e8030f95818fbc"
 links: [inert-summon-contract, usage-threshold-provenance]
 reviewed_revision: "git:43dad991f214a9afdc50524cf2b7f32c22ae46a1"
 status: active
@@ -20,4 +20,4 @@ status: active
 
 # Human CLI Output
 
-The 0.15.1 source defaults user-facing CLI results to the configured Korean or English. A shared renderer shows the result, changed values, relevant files, recovery and next steps. Explicit --output json keeps supported machine schemas, values and exit codes. Previously unsupported JSON requests remain unsupported. Private worker names, hook, policy hook, usage capture and Discord inbound commands always keep their existing wire protocols. Setup summaries and commands such as usage show no longer require the output option. This describes unreleased source behavior, not an installed or published 0.15.1 release.
+The 0.15.1 source defaults user-facing CLI results to the configured Korean or English. A shared renderer shows the result, changed values, relevant files, recovery and next steps. Explicit --output json keeps supported machine schemas, values and exit codes. Previously unsupported JSON requests remain unsupported, except that 0.15.3 adds JSON results for doctor and check-target. Private worker names, hook, policy hook, usage capture and Discord inbound commands always keep their existing wire protocols. Setup summaries and commands such as usage show no longer require the output option. This describes unreleased source behavior, not an installed or published 0.15.1 release.

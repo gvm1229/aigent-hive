@@ -10,7 +10,7 @@
 - **정식 0.15.3 보류**(2026-11-17 유지관리자): [에이전트 주도 프로젝트 설정 OV153-011](../research/overhaul/OV153-011-request.md) 포함 전 출시 금지. 시험판 재수용·이 PC 확인 뒤 출시
 - **0.15.3 범위 추가**(2026-11-17 유지관리자): [대화형 설정 화면 가독성 OV153-012](../research/overhaul/OV153-012-request.md). 기능·문구 유지, 질문 구분·제목·구역·꾸밈 추가
 - **cloud 위임**(2026-11-17): OV153-011 구현부터 test.2 수용·문서 준비까지 cloud 세션 담당, local 단계만 남으면 종료. [위임 순서](../research/overhaul/OV153-cloud-mandate.md)
-- **0.15.3 범위 추가**(2026-11-19 유지관리자): [호스트별 5시간·주간 사용량 보호 OV153-014](../research/overhaul/OV153-014-request.md)·[CLI 오타 추천과 도움말 OV153-015](../research/overhaul/OV153-015-request.md). 구현 뒤 0.15.3-test.3, local 확인은 test.3 기준
+- **0.15.3 범위 추가**(2026-11-19 유지관리자): [호스트별 5시간·주간 사용량 보호 OV153-014](../research/overhaul/OV153-014-request.md)·[CLI 오타 추천과 도움말 OV153-015](../research/overhaul/OV153-015-request.md). [npm 설치 뒤 갱신 결함 OV153-016](../research/overhaul/OV153-016-request.md) 추가. 구현 근거 [014](../research/overhaul/OV153-014.md)·[015](../research/overhaul/OV153-015.md)·[016](../research/overhaul/OV153-016.md), 이 PC 확인 [OV153-010](../research/overhaul/OV153-010.md). 구현 뒤 0.15.3-test.3, local 확인은 test.3 기준
 - **local 세션 시작점**: [0.15.3 local 인계](../research/overhaul/OV153-local-handoff.md). test.2 설치, 실제 Claude·Codex 세션의 Skill 설정(빈 폴더·기존 프로젝트), A4 재현, OV153-012 실제 터미널, OV153-013 재현, 통과 뒤 정식 OV153-010. cloud 남은 작업 없음
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외

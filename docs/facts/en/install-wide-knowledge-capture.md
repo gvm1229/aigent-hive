@@ -9,11 +9,11 @@ summary: "Hive user-level capture and recall apply in every selected-host projec
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:9d4a9694f24b3a7d01c34c7eab0c1172434edc8005128880634680c187d2bc69"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32db20fc6252cd4a5dcf6fac16ff4e7da275a8c0ca41ddd93c3eb6f6b1f28f68"
   - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b2dab4ddd8cc0336bccd28c1bd61ba66901a2984b5306040ef994cdf355b1e35"
   - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a0cf1b55b6cfc9d02920f117d25fb752e25267093d1be960b33267b8f6b0a94c"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:1fe0bce6a0f2644d5ac55745866fd929b0af4e55e02cc908a51e9c309d0fb146"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:d8306ac5295378b396357da94a7b6adc7579a63b3bcfa906d477bbeca8e2d4c0"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:45d922abbe2b266f1b0a0ae757da4eb0abb13eccb3b640f54d8d2e321016c3b9"
