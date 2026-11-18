@@ -460,3 +460,15 @@ fn wrapping_keeps_every_word_and_indents_syntax() {
     assert!(wrapped.lines().skip(1).all(|l| l.starts_with("        ")));
     assert_eq!(normalized(&wrapped), normalized(&line));
 }
+
+#[test]
+fn option_shaped_value_after_a_known_option_reaches_the_parser() {
+    let arguments = |words: &[&str]| {
+        words
+            .iter()
+            .map(|word| (*word).to_owned())
+            .collect::<Vec<_>>()
+    };
+    assert!(precheck(&arguments(&["knowledge", "query", "--text", "--verbose"])).is_none());
+    assert!(precheck(&arguments(&["install", "--scope", "user", "--flags"])).is_some());
+}

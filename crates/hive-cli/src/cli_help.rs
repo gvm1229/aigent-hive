@@ -671,9 +671,16 @@ pub(crate) fn precheck(arguments: &[String]) -> Option<ExitCode> {
             }));
         }
     }
-    let unknown = rest
-        .iter()
-        .find(|argument| looks_like_option(argument) && !known_anywhere(argument))?;
+    // An option-looking word right after a known option may be that option's value (for example
+    // `--text --verbose`), so only the command's own parser may reject it.
+    let unknown = rest.iter().enumerate().find_map(|(index, argument)| {
+        let after_known_option = index
+            .checked_sub(1)
+            .and_then(|previous| rest.get(previous))
+            .is_some_and(|previous| looks_like_option(previous) && known_anywhere(previous));
+        (looks_like_option(argument) && !known_anywhere(argument) && !after_known_option)
+            .then_some(argument)
+    })?;
     let mut candidates: Vec<&'static str> = command.options.to_vec();
     candidates.extend(
         GLOBAL_OPTIONS
