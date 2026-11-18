@@ -307,10 +307,12 @@ pub(crate) fn current_dispatch_binding(
     let halt = load_halt(target, &binding)?;
     let warning = observation_warning::is_current(&config, &halt)?;
     if matches!(halt.state, OverrideState::Stale | OverrideState::Damaged)
-        || halt
-            .marker
-            .as_ref()
-            .is_some_and(|marker| marker.decision != "observed" && !warning)
+        || halt.marker.as_ref().is_some_and(|marker| {
+            marker.decision != "observed"
+                    && !warning
+                    // Same rule as status: a session opt-out ignores an old missing-measurement halt.
+                    && !(marker.decision == "usage-unknown" && session_disabled(&config, &control))
+        })
     {
         return Err(AdapterError::OwnerBlocked(
             "usage session is halted and cannot authorize loop preparation".to_owned(),
@@ -441,6 +443,19 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             if !observation_warning::is_current(&config, &halt)? {
                 return Err(AdapterError::Conflict(
                     "the warning policy evaluation changed before dispatch".to_owned(),
+                ));
+            }
+            target.verify_current()?;
+            return runtime.verify_current();
+        }
+        // After a session opt-out a missing measurement is bypassed without a halt, so there is
+        // no observation to recheck. The proof holds only while the same binding stays disabled;
+        // any measurement that enforce did take is rechecked below, so a measured 0% still blocks.
+        if preflight.result.code == "hive.usage-session-bypassed" && preflight.snapshot().is_none()
+        {
+            if !session_disabled(&config, &control) {
+                return Err(AdapterError::Conflict(
+                    "usage session control changed before dispatch authorization".to_owned(),
                 ));
             }
             target.verify_current()?;
@@ -1364,6 +1379,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "threshold_remaining_percent": config.threshold,
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
+            "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
             "zero_quota_guard_enabled": config.preflight_zero_enabled(&loaded),
@@ -2537,7 +2553,10 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
                 "hive.usage-global-threshold-unchanged"
             },
             message: if changed {
-                "global usage threshold was updated atomically".to_owned()
+                format!(
+                    "global usage threshold was updated atomically, including every guarded window of: [{}]",
+                    update.host_windows_updated.join(", ")
+                )
             } else {
                 "global usage threshold already matched the requested value".to_owned()
             },
@@ -2553,6 +2572,8 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
                 "previous_remaining_percent": update.previous,
                 "threshold_remaining_percent": update.current,
                 "stored_global_threshold_remaining_percent": update.current,
+                "host_windows_updated": update.host_windows_updated,
+                "applies_to": "legacy-threshold-and-every-guarded-host-window",
                 "session_recheck_required": changed,
             })),
         });
@@ -2931,13 +2952,16 @@ pub(crate) fn read_effective_config(
         .flatten();
     let project_threshold =
         installed_project.then_some(configured_project_threshold.unwrap_or(effective.threshold));
-    effective.threshold = project_threshold
-        .unwrap_or(guard.stop_remaining_percent)
-        .max(guard.stop_remaining_percent);
+    let thresholds = effective_thresholds(
+        guard,
+        &effective.primary_host,
+        project_threshold,
+        configured_project_threshold,
+    )?;
+    effective.threshold = thresholds.strictest();
     effective.global_threshold = Some(guard.stop_remaining_percent);
     effective.project_threshold = project_threshold;
-    effective.guarded_windows =
-        guarded_windows(guard, &effective.primary_host, configured_project_threshold)?;
+    effective.guarded_windows = thresholds.windows;
     effective.guard_enabled = guard.threshold_enabled();
     effective.policy.clone_from(&guard.policy);
     effective.codexbar_fallback_enabled =
@@ -2971,6 +2995,47 @@ pub(crate) fn read_effective_config(
         UsageTargetClass::Project
     };
     Ok(effective)
+}
+
+/// One host's effective thresholds. Every reader (enforce, status, dispatch verification,
+/// `setup --show`, the monitor) takes its floors from [`effective_thresholds`].
+pub(crate) struct EffectiveThresholds {
+    /// The single legacy floor, used only when `windows` is `None`.
+    pub(crate) legacy: u8,
+    /// The host's guarded windows with their floors; `None` keeps the legacy threshold.
+    pub(crate) windows: Option<Vec<GuardedWindow>>,
+}
+
+impl EffectiveThresholds {
+    /// The strictest floor in force, reported as `threshold_remaining_percent`.
+    pub(crate) fn strictest(&self) -> u8 {
+        self.windows
+            .as_deref()
+            .and_then(|windows| {
+                windows
+                    .iter()
+                    .map(GuardedWindow::stop_remaining_percent)
+                    .max()
+            })
+            .unwrap_or(self.legacy)
+    }
+}
+
+/// Resolve one host's floors from the global legacy threshold, the host's window choice and a
+/// project floor. `legacy_project` raises the legacy threshold; `window_project` (an explicit
+/// project override) raises every guarded window floor.
+pub(crate) fn effective_thresholds(
+    guard: &crate::user_setup::UsageGuardPreferences,
+    host: &str,
+    legacy_project: Option<u8>,
+    window_project: Option<u8>,
+) -> Result<EffectiveThresholds, AdapterError> {
+    Ok(EffectiveThresholds {
+        legacy: legacy_project
+            .unwrap_or(guard.stop_remaining_percent)
+            .max(guard.stop_remaining_percent),
+        windows: guarded_windows(guard, host, window_project)?,
+    })
 }
 
 /// Convert one host's stored window choice. A project override raises every guarded floor.
@@ -3015,23 +3080,27 @@ pub(crate) fn host_window_summary(
     guard: &crate::user_setup::UsageGuardPreferences,
     host: &str,
 ) -> serde_json::Value {
-    let legacy = || {
-        json!({"host":host,"mode":"legacy","selection":"session-then-weekly",
-            "threshold_remaining_percent":guard.stop_remaining_percent})
+    let thresholds = effective_thresholds(guard, host, None, None).unwrap_or(EffectiveThresholds {
+        legacy: guard.stop_remaining_percent,
+        windows: None,
+    });
+    let Some(guarded) = thresholds.windows.as_deref() else {
+        return json!({"host":host,"mode":"legacy","selection":"session-then-weekly",
+            "threshold_remaining_percent":thresholds.legacy});
     };
-    match guarded_windows(guard, host, None) {
-        Ok(Some(guarded)) => {
-            let windows = guard
-                .host_windows
-                .iter()
-                .find_map(|(selected, windows)| (selected.as_str() == host).then_some(windows));
-            json!({"host":host,"mode":"per-window",
-                "five_hour_limit":windows.map(|windows| windows.five_hour_limit),
-                "guard":windows.map(|windows| windows.guard),
-                "windows":guarded_windows_json(&guarded)})
-        }
-        Ok(None) | Err(_) => legacy(),
+    if host == "antigravity" {
+        // Antigravity reports only provider pools; its single threshold applies to each pool.
+        return json!({"host":host,"mode":"per-window","guard":"provider",
+            "windows":[{"window":"provider","threshold_remaining_percent":thresholds.strictest()}]});
     }
+    let windows = guard
+        .host_windows
+        .iter()
+        .find_map(|(selected, windows)| (selected.as_str() == host).then_some(windows));
+    json!({"host":host,"mode":"per-window",
+        "five_hour_limit":windows.map(|windows| windows.five_hour_limit),
+        "guard":windows.map(|windows| windows.guard),
+        "windows":guarded_windows_json(guarded)})
 }
 
 fn window_label(window: UsageWindow) -> &'static str {
@@ -3914,6 +3983,127 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_shows_one_provider_threshold_and_rejects_a_five_hour_shape() {
+        let user = temporary_target();
+        write_version_two_policy(
+            user.path(),
+            "antigravity",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        let path = user.path().join(".hive/config/user-setup.yml");
+        let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let parse = |config: &Value| {
+            crate::user_setup::parse_and_validate_installed_config(
+                serde_yaml::to_string(config).unwrap().as_bytes(),
+            )
+        };
+        config["usage_guard"]["host_windows"] = json!({"antigravity":{"five_hour_limit":false,
+            "guard":"weekly","weekly_stop_remaining_percent":25}});
+        let stored = parse(&config).unwrap();
+        assert_eq!(
+            super::host_window_summary(&stored.usage_guard, "antigravity"),
+            json!({"host":"antigravity","mode":"per-window","guard":"provider",
+                "windows":[{"window":"provider","threshold_remaining_percent":25}]})
+        );
+        config["usage_guard"]["host_windows"] = json!({"antigravity":{"five_hour_limit":true,
+            "guard":"weekly","weekly_stop_remaining_percent":25}});
+        assert!(parse(&config).is_err());
+    }
+
+    #[test]
+    fn global_threshold_command_moves_every_guarded_window_and_every_reader_agrees() {
+        let project = temporary_target();
+        let user = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        write_version_two_policy(
+            user.path(),
+            "claude",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        set_host_windows(
+            user.path(),
+            Some(json!({"five_hour_limit":true,"guard":"both",
+                "five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10})),
+        );
+        let parsed = ParsedBinding {
+            session_id: "threshold-command".into(),
+            process_id: 9,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: Some(user.path().into()),
+            host: Some("claude".into()),
+            run_id: None,
+        };
+        write_windows(project.path(), &bound, Some(20.0), Some(50.0));
+        let before = enforce(&args).unwrap();
+        assert_eq!(before.code, "hive.usage-limited");
+        assert_eq!(
+            before.data.as_ref().unwrap()["threshold_remaining_percent"],
+            30
+        );
+        let set = |percent| {
+            set_threshold(&ThresholdArguments {
+                target: None,
+                user_root: Some(user.path().into()),
+                remaining_percent: percent,
+            })
+            .unwrap()
+        };
+        let updated = set(15);
+        assert_eq!(updated.code, "hive.usage-global-threshold-updated");
+        assert_eq!(
+            updated.data.as_ref().unwrap()["host_windows_updated"],
+            json!(["claude"])
+        );
+        assert!(updated.message.contains("claude"));
+        // Enforce, status, `setup --show` and the stored file now read the same floors.
+        let both = json!([{"window":"session","threshold_remaining_percent":15},
+            {"window":"weekly","threshold_remaining_percent":15}]);
+        let allowed = enforce(&args).unwrap();
+        assert_eq!(allowed.code, "hive.usage-allowed", "{:?}", allowed.data);
+        assert_eq!(
+            allowed.data.as_ref().unwrap()["threshold_remaining_percent"],
+            15
+        );
+        assert_eq!(allowed.data.as_ref().unwrap()["guarded_windows"], both);
+        let shown = status(&StatusArguments {
+            target: project.path().into(),
+            binding: parsed,
+            user_root: Some(user.path().into()),
+            host: Some("claude".into()),
+        })
+        .unwrap();
+        assert_eq!(
+            shown.data.as_ref().unwrap()["threshold_remaining_percent"],
+            15
+        );
+        assert_eq!(shown.data.as_ref().unwrap()["guarded_windows"], both);
+        let stored = crate::user_setup::parse_and_validate_installed_config(
+            &fs::read(user.path().join(".hive/config/user-setup.yml")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(stored.usage_guard.stop_remaining_percent, 15);
+        assert_eq!(
+            super::host_window_summary(&stored.usage_guard, "claude")["windows"],
+            both
+        );
+        // The weekly floor moved up from 10 to 15 as well.
+        write_windows(project.path(), &bound, Some(90.0), Some(12.0));
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-limited");
+        assert_eq!(set(15).code, "hive.usage-global-threshold-unchanged");
+    }
+
+    #[test]
     #[allow(clippy::too_many_lines)]
     fn per_host_windows_check_only_the_guarded_windows_against_their_thresholds() {
         let project = temporary_target();
@@ -4089,6 +4279,167 @@ mod tests {
         // A measured zero quota still blocks while the zero-quota guard remains on.
         write_windows(project.path(), &bound, Some(50.0), Some(0.0));
         assert_eq!(enforce(&args).unwrap().code, "hive.usage-quota-exhausted");
+    }
+
+    /// Contract between enforce and dispatch: every exit-0 enforce code either authorizes
+    /// automatic dispatch through `verify_dispatch_preflight` or is rejected by
+    /// `dispatch_preflight` itself. A blocked result never passes.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn every_exit_zero_enforce_code_has_a_matching_dispatch_verification() {
+        #[derive(Clone, Copy)]
+        enum Setup {
+            Measured(f64),
+            Missing,
+            SessionDisabledMissing,
+            SessionDisabledZeroOff,
+            SessionDisabledMeasuredZero,
+            MasterOff,
+            PreflightOff,
+            WarnOnMissing,
+            NonHive,
+        }
+        // (setup, enforce code, exit code, dispatch_preflight accepts, verify passes)
+        let table = [
+            (Setup::Measured(75.0), "hive.usage-allowed", 0, true, true),
+            // A blocked result never reaches verification; with a run it needs run evidence.
+            (Setup::Missing, "hive.usage-unknown", 3, false, false),
+            (
+                Setup::SessionDisabledMissing,
+                "hive.usage-session-bypassed",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::SessionDisabledZeroOff,
+                "hive.usage-session-bypassed",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::SessionDisabledMeasuredZero,
+                "hive.usage-quota-exhausted",
+                3,
+                false,
+                false,
+            ),
+            (Setup::MasterOff, "hive.usage-disabled", 0, true, true),
+            (
+                Setup::PreflightOff,
+                "hive.usage-preflight-disabled",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::WarnOnMissing,
+                "hive.usage-observation-warning",
+                0,
+                true,
+                true,
+            ),
+            (Setup::NonHive, "hive.usage-not-configured", 0, false, false),
+        ];
+        for (setup, code, exit, accepted, verified) in table {
+            let user = temporary_target();
+            let mut policy = hive_core::preferences::UsageProtection {
+                enforcement_enabled: !matches!(setup, Setup::MasterOff),
+                ..Default::default()
+            };
+            if !matches!(setup, Setup::PreflightOff) {
+                policy.preflight.threshold_enabled = true;
+                policy.preflight.zero_quota_enabled = true;
+            }
+            policy.preflight.observation_failure = if matches!(setup, Setup::WarnOnMissing) {
+                hive_core::preferences::PreflightFailure::Warn
+            } else {
+                hive_core::preferences::PreflightFailure::Block
+            };
+            write_version_two_policy(user.path(), "claude", policy);
+            let project = temporary_target();
+            if !matches!(setup, Setup::NonHive) {
+                fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+                fs::write(
+                    project.path().join(".hive/config/harness.toml"),
+                    installed_config("claude", true, false),
+                )
+                .unwrap();
+            }
+            let parsed = ParsedBinding {
+                session_id: "dispatch-contract".to_owned(),
+                process_id: 9,
+            };
+            let bound = bind_session(&parsed, "claude");
+            match setup {
+                Setup::Measured(remaining) => {
+                    write_windows(project.path(), &bound, Some(remaining), Some(remaining));
+                }
+                Setup::SessionDisabledMeasuredZero => {
+                    write_windows(project.path(), &bound, Some(50.0), Some(0.0));
+                }
+                _ => {}
+            }
+            let session = |action, zero| SessionArguments {
+                target: project.path().into(),
+                binding: parsed.clone(),
+                user_root: Some(user.path().to_owned()),
+                host: Some("claude".into()),
+                action,
+                confirm_disable: true,
+                confirm_reset_guard_disable: false,
+                confirm_zero_quota_guard_disable: zero,
+            };
+            if matches!(
+                setup,
+                Setup::SessionDisabledMissing
+                    | Setup::SessionDisabledZeroOff
+                    | Setup::SessionDisabledMeasuredZero
+            ) {
+                control_session(&session(SessionAction::Disable, false)).unwrap();
+            }
+            if matches!(setup, Setup::SessionDisabledZeroOff) {
+                control_session(&session(SessionAction::DisableZeroQuotaGuard, true)).unwrap();
+            }
+            let preflight = super::dispatch_preflight(
+                project.path(),
+                "claude",
+                "dispatch-contract",
+                9,
+                Some(user.path()),
+                "no-run",
+                None,
+                |_| Ok(()),
+            );
+            assert_eq!(preflight.is_ok(), accepted, "{code}: {:?}", preflight.err());
+            let Ok(preflight) = preflight else {
+                let direct = enforce(&EnforceArguments {
+                    target: project.path().into(),
+                    binding: parsed.clone(),
+                    account_digest: None,
+                    user_root: Some(user.path().to_owned()),
+                    host: Some("claude".into()),
+                    run_id: None,
+                })
+                .unwrap();
+                assert_eq!((direct.code, direct.exit_code), (code, exit));
+                continue;
+            };
+            assert_eq!(preflight.result.code, code);
+            assert_eq!(preflight.result.exit_code, exit, "{code}");
+            assert_eq!(
+                super::verify_dispatch_preflight(&preflight).is_ok(),
+                verified,
+                "{code}: {:?}",
+                super::verify_dispatch_preflight(&preflight).err()
+            );
+            if matches!(setup, Setup::SessionDisabledMissing) {
+                // Re-enabling the session invalidates the bypass proof.
+                control_session(&session(SessionAction::Enable, false)).unwrap();
+                assert!(super::verify_dispatch_preflight(&preflight).is_err());
+            }
+        }
     }
 
     fn write_current_capture(

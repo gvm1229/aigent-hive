@@ -2,6 +2,10 @@
 //!
 //! A template key contains `{host}`. Expansion keeps the catalog order and repeats the whole
 //! template group for each selected host, in the stored host order.
+//!
+//! Antigravity reports only provider-defined quota pools, never a 5-hour or weekly window, so
+//! it gets a single remaining-quota question. Its answer is stored in the weekly-only shape,
+//! and evaluation applies that threshold to every provider pool.
 use super::super::SetupError;
 use hive_core::setup::Question;
 use serde_json::{json, Value};
@@ -12,6 +16,8 @@ const GUARD: &str = "usage-host-guard";
 const FIVE_HOUR_THRESHOLD: &str = "usage-host-five-hour-threshold";
 const WEEKLY_THRESHOLD: &str = "usage-host-weekly-threshold";
 const HOSTS: [&str; 3] = ["codex", "claude", "antigravity"];
+/// Host whose usage sensor reports only provider-defined pools.
+pub(super) const PROVIDER_ONLY_HOST: &str = "antigravity";
 
 fn is_template(question: &Question) -> bool {
     question.key.contains(PLACEHOLDER)
@@ -27,17 +33,37 @@ pub(super) fn host_label(host: &str) -> &str {
     }
 }
 
-fn instantiate(template: &Question, host: &str) -> Question {
+fn instantiate(template: &Question, host: &str) -> Option<Question> {
+    let provider_only = host == PROVIDER_ONLY_HOST;
+    if provider_only && template.id != WEEKLY_THRESHOLD {
+        return None;
+    }
     let mut question = template.clone();
     question.id = format!("{}-{host}", template.id);
     question.key = template.key.replace(PLACEHOLDER, host);
+    if provider_only {
+        // No window choice is asked; only the master protection switch gates the threshold.
+        question
+            .when
+            .retain(|condition| !condition.key.contains(PLACEHOLDER));
+    }
     for condition in &mut question.when {
         condition.key = condition.key.replace(PLACEHOLDER, host);
     }
     let label = host_label(host);
-    question.prompt.ko = template.prompt.ko.replace(PLACEHOLDER, label);
-    question.prompt.en = template.prompt.en.replace(PLACEHOLDER, label);
-    question
+    if provider_only {
+        question.prompt.ko =
+            format!("{label}의 남은 사용량 기준을 0부터 99 사이 정수로 입력해 주세요.");
+        question.prompt.en = format!("Enter the {label} remaining-quota threshold from 0 to 99.");
+        question.help.ko =
+            "5시간·주간 구분 없이 모든 사용량 묶음에 적용. 남은 비율이 이 값 이하이면 작업을 막음."
+                .into();
+        question.help.en = "Applies to every quota pool; there is no 5-hour or weekly window. Work is blocked at or below this value.".into();
+    } else {
+        question.prompt.ko = template.prompt.ko.replace(PLACEHOLDER, label);
+        question.prompt.en = template.prompt.en.replace(PLACEHOLDER, label);
+    }
+    Some(question)
 }
 
 /// Selected hosts in their stored order.
@@ -64,7 +90,11 @@ pub(super) fn expand(questions: &[Question], answers: &Value) -> Vec<Question> {
         } else if !inserted {
             inserted = true;
             for host in &hosts {
-                expanded.extend(templates.iter().map(|template| instantiate(template, host)));
+                expanded.extend(
+                    templates
+                        .iter()
+                        .filter_map(|template| instantiate(template, host)),
+                );
             }
         }
     }
@@ -92,6 +122,15 @@ pub(super) fn prepare(answers: &mut Value, question: &Question) {
         }
         if !windows[host].is_object() {
             windows[host] = json!({});
+        }
+        if host == PROVIDER_ONLY_HOST {
+            // The single threshold is stored in the weekly-only shape without asking.
+            let entry = &mut windows[host];
+            entry["five_hour_limit"] = json!(false);
+            entry["guard"] = json!("weekly");
+            if let Some(entry) = entry.as_object_mut() {
+                entry.remove("five_hour_stop_remaining_percent");
+            }
         }
     }
 }
@@ -149,25 +188,54 @@ mod tests {
     #[test]
     fn each_selected_host_gets_one_question_group_in_host_order() {
         for hosts in [json!(["claude"]), json!(["claude", "codex", "antigravity"])] {
-            let count = hosts.as_array().unwrap().len();
             let answers = json!({"selected_hosts":hosts,
                 "usage_guard":{"enforcement_enabled":true}});
-            let limits: Vec<String> = usage_questions(&answers)
+            let groups: Vec<String> = usage_questions(&answers)
                 .into_iter()
-                .filter(|q| instance(&q.id).is_some_and(|(t, _)| t == LIMIT))
+                .filter(|q| {
+                    instance(&q.id).is_some_and(|(t, h)| {
+                        t == LIMIT || (h == PROVIDER_ONLY_HOST && t == WEEKLY_THRESHOLD)
+                    })
+                })
                 .map(|q| q.id)
                 .collect();
-            assert_eq!(limits.len(), count);
             let expected: Vec<String> = hosts
                 .as_array()
                 .unwrap()
                 .iter()
-                .map(|h| format!("{LIMIT}-{}", h.as_str().unwrap()))
+                .map(|h| match h.as_str().unwrap() {
+                    PROVIDER_ONLY_HOST => format!("{WEEKLY_THRESHOLD}-{PROVIDER_ONLY_HOST}"),
+                    host => format!("{LIMIT}-{host}"),
+                })
                 .collect();
-            assert_eq!(limits, expected);
+            assert_eq!(groups, expected);
         }
         let off = json!({"selected_hosts":["claude"],"usage_guard":{"enforcement_enabled":false}});
         assert!(usage_questions(&off).is_empty());
+    }
+
+    #[test]
+    fn antigravity_gets_one_threshold_question_stored_in_the_weekly_shape() {
+        let answers = json!({"selected_hosts":["antigravity"],
+            "usage_guard":{"enforcement_enabled":true}});
+        let questions = usage_questions(&answers);
+        assert_eq!(questions.len(), 1);
+        assert_eq!(
+            questions[0].id,
+            format!("{WEEKLY_THRESHOLD}-{PROVIDER_ONLY_HOST}")
+        );
+        assert!(questions[0]
+            .prompt
+            .en
+            .contains("Antigravity remaining-quota"));
+        assert!(!questions[0].prompt.ko.contains("주간"));
+        let mut stored = json!({"usage_guard":{"host_windows":{"antigravity":{
+            "five_hour_stop_remaining_percent":5}}}});
+        prepare(&mut stored, &questions[0]);
+        assert_eq!(
+            stored["usage_guard"]["host_windows"]["antigravity"],
+            json!({"five_hour_limit":false,"guard":"weekly"})
+        );
     }
 
     #[test]

@@ -26,7 +26,9 @@ usage protection is on. Ask them in this order for one app before the next app: 
 subscription has a 5-hour limit; (2) only after yes, which limits to guard: 5-hour only, weekly
 only, or both; without a 5-hour limit, guard weekly only and skip this question; (3) one
 remaining-percent threshold from 0 to 99 for a single guarded limit, or two separate thresholds
-for both. Name the app in each question. The keys are
+for both. Antigravity reports only provider quota pools: ask it only one remaining-percent
+threshold, stored as `five_hour_limit: false`, `guard: weekly` and
+`weekly_stop_remaining_percent`, and applied to every pool. Name the app in each question. The keys are
 `/usage_guard/host_windows/<host>/{five_hour_limit,guard,five_hour_stop_remaining_percent,weekly_stop_remaining_percent}`
 and the concrete question IDs end with `-<host>`. Never answer for another app or reuse one app's
 answer for another.

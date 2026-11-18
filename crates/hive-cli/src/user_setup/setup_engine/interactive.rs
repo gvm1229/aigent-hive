@@ -1673,12 +1673,13 @@ mod tests {
             ),
             (
                 &["codex", "claude", "antigravity"],
-                "no\n15\nyes\n1\n25\nyes\n2\n5\n",
+                // Antigravity has only provider pools, so it gets one threshold question.
+                "no\n15\nyes\n1\n25\n5\n",
                 json!({"codex":{"five_hour_limit":false,"guard":"weekly",
                         "weekly_stop_remaining_percent":15},
                     "claude":{"five_hour_limit":true,"guard":"five-hour",
                         "five_hour_stop_remaining_percent":25},
-                    "antigravity":{"five_hour_limit":true,"guard":"weekly",
+                    "antigravity":{"five_hour_limit":false,"guard":"weekly",
                         "weekly_stop_remaining_percent":5}}),
             ),
         ];
@@ -1706,15 +1707,28 @@ mod tests {
             )
             .unwrap());
             let screen = String::from_utf8(terminal.writer).unwrap();
-            assert_eq!(screen.matches("· 5시간 한도 여부").count(), hosts.len());
-            for (index, host) in hosts.iter().enumerate() {
+            let heading = |host: &str| {
                 let label = super::super::host_windows::host_label(host);
-                let position = screen
-                    .find(&format!("{label} · 5시간 한도 여부"))
-                    .expect("host heading");
+                if host == super::super::host_windows::PROVIDER_ONLY_HOST {
+                    format!("{label} · 잔여량 기준")
+                } else {
+                    format!("{label} · 5시간 한도 여부")
+                }
+            };
+            let provider_only = hosts
+                .iter()
+                .filter(|host| **host == super::super::host_windows::PROVIDER_ONLY_HOST)
+                .count();
+            assert_eq!(
+                screen.matches("· 5시간 한도 여부").count(),
+                hosts.len() - provider_only
+            );
+            assert_eq!(screen.matches("· 잔여량 기준").count(), provider_only);
+            for (index, host) in hosts.iter().enumerate() {
+                assert_eq!(screen.matches(&heading(host)).count(), 1);
+                let position = screen.find(&heading(host)).expect("host heading");
                 if let Some(next) = hosts.get(index + 1) {
-                    let next_label = super::super::host_windows::host_label(next);
-                    assert!(position < screen.find(&format!("{next_label} · 5시간")).unwrap());
+                    assert!(position < screen.find(&heading(next)).unwrap());
                 }
             }
             assert!(screen
