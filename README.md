@@ -6,20 +6,20 @@
 
 > A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.15.2-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.15.3-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.2 release-date=2026-11-16 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-16 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.15.2` is the current public release.
+Stable `0.15.3` is the current public release.
 
 ## Roles and named feature entries
 
@@ -29,7 +29,7 @@ this release has no enablement path. See [feature ownership and role migration](
 
 ## Install the current stable release
 
-`0.15.2` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.15.3` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -38,7 +38,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.15.2
+npm install -g aigent-hive@0.15.3
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -47,26 +47,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.15.2 (released 2026-11-16)
+AIgent Hive v0.15.3 (released 2026-11-16)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.15.2/install.sh | sh
+  https://unpkg.com/aigent-hive@0.15.3/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.15.2/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.15.3/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.2/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.3/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -82,7 +82,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.15.2. The stable install guidance is
+Install the current stable release 0.15.3. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -100,7 +100,19 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.15.2
+## What changed in 0.15.3
+
+- Ask your AI agent to set up Hive for a project. Calling the project-setup Skill makes the agent run setup: in an empty folder it asks about the project one question at a time, and in an existing project it scans the files first, then shows one proposal before applying.
+- Agents preview, apply and validate project setup without a capability file. `hive setup --answers` uses the same saved or detected host capabilities as terminal setup; detected capabilities stay unverified and never enable hooks.
+- A pending setup result tells the agent how to continue: `--show --summary`, then an agent `--dry-run`. The terminal resume command is still listed for people.
+- Terminal setup is easier to read: each question has a numbered title such as `[2/4] Project name`, and the preview groups values into sections. Colour appears only in an interactive terminal without `NO_COLOR`.
+- `hive project upgrade --validate` passes right after a fresh project setup. When files do change, each changed path shows its reason.
+- Record several facts from one turn with `hive knowledge remember --batch <facts.json>`. One rejected fact cancels the whole batch.
+- Give a fact a subject such as `design/visual-style`. A matching fact returns up to 16 more facts of the same subject, and `hive knowledge subjects list|preview|apply|restore` manages subjects.
+- Short Korean search words find stored sentences with particles, so `남색` finds `남색과`. The recall Skill passes Korean and English variants with `--expansions`.
+- After a fact receives a subject, Hive 0.15.2 and earlier refuse that knowledge store. Downgrade is unsupported.
+
+## Earlier changes in 0.15.2
 
 - Install into Codex, Claude Code and Antigravity in one setup. The app question says you can choose several, and accepts numbers or names separated by commas or spaces, such as `1,2`.
 - Claude Code installation replaces an `aigent-hive` registration left pointing at a deleted folder, so Hive's plugin and Skills appear in the Claude CLI and app.
@@ -156,7 +168,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 
 ## Supported targets
 
-| Platform | Native target | 0.15.2 evidence |
+| Platform | Native target | 0.15.3 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -167,7 +179,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 The accepted public test covers setup, cancellation, recovery, updates, removal and
 reinstallation on Windows x64, Linux x64 and macOS arm64. Windows also covers actual Codex
 CLI registration and an idle monitor. This does not prove live desktop-model or quota sensing
-on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.2` uses explicit macOS ad-hoc signing and publishes Windows as
+on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.3` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
