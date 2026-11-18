@@ -5,7 +5,7 @@
 
 ## 보고
 
-- 유지관리자: `hive install`로 시작하는 명령인 줄은 알았지만 플래그를 몰라 `hive --help`를 열었더니 읽기 어려운 긴 글(65줄의 명령 형식 나열)이라 포기. 같은 일을 여러 번 겪음
+- 유지관리자: `hive install`로 시작하는 명령인 줄은 알았지만 플래그를 몰라 `hive --help`를 열었더니 읽기 어려운 긴 글(65줄의 명령 형식 나열)이라 포기. 같은 일 여러 차례 반복
 - 현재 동작: `hive instal` → "Unknown command: instal", `hive install --flags` → "Unknown option: --flags", 두 경우 모두 "--help로 사용 방법을 확인" 안내만 있음. 추천 없음
 
 ## 범위(0.15.3 필수)

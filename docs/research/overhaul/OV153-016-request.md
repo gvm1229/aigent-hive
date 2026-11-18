@@ -5,13 +5,13 @@
 
 ## 재현
 
-- `hive update --user-root $HOME --non-interactive --confirm --output json` → exit 2, `hive.update-failed`, "installed ownership manifest is not bound to the running Hive product: codex", `steps.core=not-started`. `--channel test`도 같음
+- `hive update --user-root $HOME --non-interactive --confirm --output json` → exit 2, `hive.update-failed`, "installed ownership manifest is not bound to the running Hive product: codex", `steps.core=not-started`. `--channel test` 결과 동일
 - 같은 상태의 `hive install --scope user --hosts codex,claude,antigravity --dry-run --output json` → `hive.user-install-multi-host-dry-run-complete`(이전 투영 인증 성공)
 
 ## 원인
 
 - `crates/hive-cli/src/update_activation.rs`의 갱신 흐름이 먼저 `user_install::authenticated_saved_projection_hosts`를 부르고, `authenticate_saved_projection_host`가 `manifest.product_version != CARGO_PKG_VERSION`이면 바로 거부
-- 설치 경로(`validate_prior_ownership`)는 `authenticated_user_inventory`로 이전 공개 버전의 투영을 인증하므로, 두 경로의 인증 기준이 다름
+- 설치 경로(`validate_prior_ownership`)는 `authenticated_user_inventory`로 이전 공개 버전의 투영을 인증하므로, 두 경로의 인증 기준 불일치
 - 결과: 안내된 갱신 순서(npm으로 새 버전 설치 → `hive update`)가 이전 버전 투영이 있는 모든 PC에서 실패
 
 ## 범위(0.15.3 필수)
