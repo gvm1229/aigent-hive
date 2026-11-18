@@ -111,14 +111,14 @@ fn preserve_terminal_answers(
     };
     let records: PreferenceDecisions = serde_json::from_value(saved.clone())
         .map_err(|error| SetupError::Verification(error.to_string()))?;
-    let catalog = super::catalog()?;
+    let questions = super::host_windows::expand(&super::catalog()?.questions, &progress.answers);
     for (path, record) in records {
         if record.input_channel == PreferenceInput::Terminal
             && matches!(
                 record.origin,
                 DecisionOrigin::Explicit | DecisionOrigin::AcceptedDefault
             )
-            && catalog.questions.iter().any(|question| {
+            && questions.iter().any(|question| {
                 question.key == path
                     && record.question_id.as_deref() == Some(question.id.as_str())
                     && record.question_revision == Some(question.revision)

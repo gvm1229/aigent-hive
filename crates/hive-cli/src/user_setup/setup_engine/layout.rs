@@ -231,6 +231,20 @@ pub(super) fn values(
     }
 }
 
+/// Short title; a per-host question names its app first, such as `Claude Code · Guarded limits`.
+pub(super) fn display_title(id: &str, korean: bool) -> String {
+    super::host_windows::instance(id).map_or_else(
+        || question_title(id, korean).to_owned(),
+        |(template, host)| {
+            format!(
+                "{} · {}",
+                super::host_windows::host_label(host),
+                question_title(template, korean)
+            )
+        },
+    )
+}
+
 /// Short title for a question; the full question sentence stays in the block below it.
 pub(super) fn question_title(id: &str, korean: bool) -> &'static str {
     let (ko, en) = match id {
@@ -253,6 +267,10 @@ pub(super) fn question_title(id: &str, korean: bool) -> &'static str {
         "usage-warnings" => ("사용량 안내", "Usage notices"),
         "usage-threshold" | "project-threshold" => ("잔여량 기준", "Remaining-quota threshold"),
         "usage-project-overrides" => ("프로젝트별 기준", "Project thresholds"),
+        "usage-host-five-hour-limit" => ("5시간 한도 여부", "5-hour limit"),
+        "usage-host-guard" => ("보호할 한도", "Guarded limits"),
+        "usage-host-five-hour-threshold" => ("5시간 잔여량 기준", "5-hour threshold"),
+        "usage-host-weekly-threshold" => ("주간 잔여량 기준", "Weekly threshold"),
         "usage-preflight-threshold" => ("시작 전 기준 이하", "Before start: threshold"),
         "usage-preflight-reset" => ("시작 전 기간 초기화", "Before start: period reset"),
         "usage-preflight-zero-quota" => ("시작 전 0%", "Before start: zero quota"),
@@ -367,6 +385,42 @@ mod tests {
             },
         ];
         assert_eq!(table(&rows), "  이름 : a\n  Kind : b\n         c\n");
+    }
+
+    #[test]
+    fn host_window_question_names_the_app_in_the_step_title() {
+        let answers = serde_json::json!({"selected_hosts":["claude"]});
+        let questions = super::super::host_windows::expand(
+            &super::super::catalog().unwrap().questions,
+            &answers,
+        );
+        let current = serde_json::json!("both");
+        for (language, name) in [
+            (
+                crate::user_setup::InterfaceLanguage::Ko,
+                "host-guard.ko.txt",
+            ),
+            (
+                crate::user_setup::InterfaceLanguage::En,
+                "host-guard.en.txt",
+            ),
+        ] {
+            let mut screen = String::new();
+            for (id, value, step, input) in [
+                ("usage-host-five-hour-limit-claude", None, (5, 9), "yes\n"),
+                ("usage-host-guard-claude", Some(&current), (6, 9), "\n"),
+            ] {
+                let question = questions.iter().find(|q| q.id == id).unwrap();
+                let mut terminal = super::super::terminal::Terminal {
+                    reader: std::io::Cursor::new(input.as_bytes()),
+                    writer: Vec::new(),
+                    language,
+                };
+                terminal.ask_step(question, value, Some(step)).unwrap();
+                screen.push_str(&String::from_utf8(terminal.writer).unwrap());
+            }
+            assert_snapshot(name, &screen);
+        }
     }
 
     #[test]

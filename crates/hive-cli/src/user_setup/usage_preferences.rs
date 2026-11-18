@@ -1,7 +1,9 @@
 //! Read v1 selections without changing their meaning; write the selected policy version.
 
-use super::DiscordGuardPreferences;
-use hive_core::preferences::{MidwayPreferences, PreflightPreferences, UsageProtection};
+use super::{DiscordGuardPreferences, SelectedHost};
+use hive_core::preferences::{
+    HostUsageWindows, MidwayPreferences, PreflightPreferences, UsageProtection,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 
@@ -16,6 +18,8 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) popup_enabled: Option<bool>,
     pub(crate) discord: DiscordGuardPreferences,
     pub(crate) project_overrides: BTreeMap<String, u8>,
+    /// Per-host window choices. A host without an entry keeps the single legacy threshold.
+    pub(crate) host_windows: BTreeMap<SelectedHost, HostUsageWindows>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -34,6 +38,8 @@ struct WirePreferences {
     discord: DiscordGuardPreferences,
     #[serde(default)]
     project_overrides: BTreeMap<String, u8>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    host_windows: BTreeMap<SelectedHost, HostUsageWindows>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     enforcement_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -85,6 +91,7 @@ impl<'de> Deserialize<'de> for UsageGuardPreferences {
             popup_enabled,
             discord: wire.discord,
             project_overrides: wire.project_overrides,
+            host_windows: wire.host_windows,
         })
     }
 }
@@ -102,6 +109,7 @@ impl Serialize for UsageGuardPreferences {
                 .then_some(self.quota_reset_guard_enabled),
             discord: self.discord.clone(),
             project_overrides: self.project_overrides.clone(),
+            host_windows: self.host_windows.clone(),
             enforcement_enabled: self
                 .policy
                 .as_ref()

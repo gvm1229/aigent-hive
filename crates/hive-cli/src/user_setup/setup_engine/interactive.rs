@@ -609,7 +609,9 @@ fn collect<R: BufRead, W: Write>(
     // Step numbers: questions asked so far and the total still planned with the current answers.
     let mut asked = 0;
     let planned = |progress: &Conversation, quick: bool, from: usize| {
-        questions[from..]
+        super::host_windows::expand(questions, &progress.answers)
+            .get(from..)
+            .unwrap_or_default()
             .iter()
             .filter(|q| will_ask_user(progress, q, options, quick))
             .count()
@@ -634,7 +636,7 @@ fn collect<R: BufRead, W: Write>(
     if progress.fresh && progress.answers["preference_decisions"]["/wiki/language"].is_null() {
         progress.answers["wiki"]["language"] = progress.answers["interface_language"].clone();
     }
-    for question in questions
+    for question in super::host_windows::expand(questions, &progress.answers)
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
@@ -674,12 +676,21 @@ fn collect<R: BufRead, W: Write>(
         persist(store, progress)?;
     }
     let quick = progress.setup_mode.as_deref() == Some("expedited");
-    for (index, question) in questions.iter().enumerate() {
-        if !will_ask_user(progress, question, options, quick) {
+    // Host questions depend on the selected hosts, so expand again after every answer.
+    let mut index = 0;
+    while let Some(question) = super::host_windows::expand(questions, &progress.answers)
+        .get(index)
+        .cloned()
+    {
+        index += 1;
+        if !will_ask_user(progress, &question, options, quick) {
             continue;
         }
-        let step = Some((asked + 1, asked + planned(progress, quick, index).max(1)));
-        if !ask(store, progress, question, step, terminal)? {
+        let step = Some((
+            asked + 1,
+            asked + planned(progress, quick, index - 1).max(1),
+        ));
+        if !ask(store, progress, &question, step, terminal)? {
             return Ok(false);
         }
         asked += 1;
@@ -747,6 +758,7 @@ fn ask<R: BufRead, W: Write>(
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
+    super::host_windows::prepare(&mut progress.answers, question);
     persist(store, progress)?;
     let current = progress.answers.pointer(&question.key);
     let (value, origin) = loop {
@@ -806,6 +818,11 @@ fn ask<R: BufRead, W: Write>(
     }
     if question.id == "user-wiki" && value == json!(false) {
         progress.index_rebuild_scope = None;
+    }
+    for key in super::host_windows::settle(&mut progress.answers, question)? {
+        if let Some(records) = progress.answers["preference_decisions"].as_object_mut() {
+            records.remove(&key);
+        }
     }
     let mut decision = PreferenceDecision::new(
         &value,
@@ -1074,8 +1091,8 @@ fn record_bundle_acceptance(
     displayed: &hive_core::setup::QuestionCatalog,
 ) -> Result<(), SetupError> {
     // The bundle confirmation records acceptance only for choices displayed above.
-    let accepted_questions: Vec<_> = displayed
-        .questions
+    let expanded = super::host_windows::expand(&displayed.questions, &progress.answers);
+    let accepted_questions: Vec<_> = expanded
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(&progress.answers))
         .collect();
@@ -1137,8 +1154,7 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
         ("알림", "Notifications", &["notifications"]),
     ];
     let mut rows: Vec<Vec<Row>> = groups.iter().map(|_| Vec::new()).collect();
-    for question in displayed
-        .questions
+    for question in super::host_windows::expand(&displayed.questions, answers)
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(answers))
     {
@@ -1151,7 +1167,7 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
                 .position(|(_, _, sections)| sections.contains(&question.section.as_str()))
                 .unwrap_or(0);
             rows[group].push(Row {
-                name: layout::question_title(&question.id, korean).to_owned(),
+                name: layout::display_title(&question.id, korean),
                 values: layout::values(question, value, korean),
             });
         }
@@ -1635,6 +1651,78 @@ mod tests {
             .contains("How much request content"));
         user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
             .unwrap();
+    }
+
+    #[test]
+    fn usage_section_asks_each_selected_host_once_and_stores_its_windows() {
+        let cases: [(&[&str], &str, Value); 2] = [
+            (
+                &["claude"],
+                "yes\n3\n30\n10\n",
+                json!({"claude":{"five_hour_limit":true,"guard":"both",
+                    "five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10}}),
+            ),
+            (
+                &["codex", "claude", "antigravity"],
+                "no\n15\nyes\n1\n25\nyes\n2\n5\n",
+                json!({"codex":{"five_hour_limit":false,"guard":"weekly",
+                        "weekly_stop_remaining_percent":15},
+                    "claude":{"five_hour_limit":true,"guard":"five-hour",
+                        "five_hour_stop_remaining_percent":25},
+                    "antigravity":{"five_hour_limit":true,"guard":"weekly",
+                        "weekly_stop_remaining_percent":5}}),
+            ),
+        ];
+        for (hosts, host_answers, expected) in cases {
+            let root = tempfile::tempdir().unwrap();
+            let store = ProgressStore::open(root.path(), None).unwrap();
+            let mut progress = conversation(&store);
+            progress.answers = super::super::default_answers(Some(InterfaceLanguage::Ko));
+            progress.answers["selected_hosts"] = json!(hosts);
+            progress.setup_mode = Some("custom".into());
+            progress.selected_section = Some("usage".into());
+            // Protection on, then defaults for notices, threshold and project thresholds.
+            let input = format!("yes\n\n\n\n{host_answers}{}", "\n".repeat(20));
+            let mut terminal = Terminal {
+                reader: Cursor::new(input.into_bytes()),
+                writer: Vec::new(),
+                language: InterfaceLanguage::Ko,
+            };
+            assert!(collect(
+                &store,
+                &mut progress,
+                &catalog().unwrap().questions,
+                &options(root.path()),
+                &mut terminal
+            )
+            .unwrap());
+            let screen = String::from_utf8(terminal.writer).unwrap();
+            assert_eq!(screen.matches("· 5시간 한도 여부").count(), hosts.len());
+            for (index, host) in hosts.iter().enumerate() {
+                let label = super::super::host_windows::host_label(host);
+                let position = screen
+                    .find(&format!("{label} · 5시간 한도 여부"))
+                    .expect("host heading");
+                if let Some(next) = hosts.get(index + 1) {
+                    let next_label = super::super::host_windows::host_label(next);
+                    assert!(position < screen.find(&format!("{next_label} · 5시간")).unwrap());
+                }
+            }
+            assert!(screen
+                .lines()
+                .all(|line| super::super::layout::width(line) <= 80));
+            assert_eq!(progress.answers["usage_guard"]["host_windows"], expected);
+            let config = user_setup::parse_and_validate_config(
+                &serde_json::to_vec(&progress.answers).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(config.usage_guard.host_windows.len(), hosts.len());
+            assert_eq!(
+                progress.answers["preference_decisions"]
+                    ["/usage_guard/host_windows/claude/five_hour_limit"]["origin"],
+                "explicit"
+            );
+        }
     }
 
     #[test]

@@ -26,6 +26,7 @@ pub(in crate::user_setup) use file_input::{execute as execute_file, file_options
 pub(in crate::user_setup) use project::execute_file as execute_project_file;
 pub(in crate::user_setup) use project::run as run_project;
 mod host_scope;
+mod host_windows;
 pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
 mod layout;
 mod legacy;
@@ -217,7 +218,10 @@ fn question_section(
         (None, Some(id)) => catalog()?
             .questions
             .into_iter()
-            .find(|q| q.scope == scope && q.id == id)
+            .find(|q| {
+                let template = host_windows::instance(id).map_or(id, |(template, _)| template);
+                q.scope == scope && q.id == template
+            })
             .map(|q| q.section)
             .ok_or_else(|| SetupError::Input("unknown setup question".into())),
         _ => Err(SetupError::Input(
@@ -232,7 +236,15 @@ fn section_data(
     current: Option<&Value>,
 ) -> Result<Value, SetupError> {
     let catalog = catalog()?;
-    let questions = catalog.section(scope, section);
+    // Without stored hosts the per-host questions stay templates that name `{host}`.
+    let expanded = current.map_or_else(
+        || catalog.questions.clone(),
+        |current| host_windows::expand(&catalog.questions, current),
+    );
+    let questions: Vec<_> = expanded
+        .iter()
+        .filter(|q| q.scope == scope && q.section == section)
+        .collect();
     if questions.is_empty() {
         return Err(SetupError::Input(
             "unknown setup question section".to_owned(),

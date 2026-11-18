@@ -133,7 +133,7 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
 
 /// Title line: `[2/4] Project name`, or the short title alone when the count is unknown.
 fn question_heading(question: &Question, step: Option<(usize, usize)>, korean: bool) -> String {
-    let title = layout::question_title(&question.id, korean);
+    let title = layout::display_title(&question.id, korean);
     match step {
         Some((number, total)) => format!("[{number}/{}] {title}", total.max(number)),
         None => format!("[{}] {title}", if korean { "질문" } else { "Question" }),
