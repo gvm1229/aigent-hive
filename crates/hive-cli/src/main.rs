@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod cli_help;
 mod custom_agent_cli;
 mod discord;
 mod display_options;
@@ -72,13 +73,13 @@ OUTPUT:
     Readable results use your saved language. Add --output json for machine output.
 
 USAGE:
-    hive doctor
+    hive doctor [--output json]
     hive roster --help
     hive summon --help
     hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
-    hive check-target <path>
+    hive check-target <path> [--output json]
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
@@ -279,6 +280,13 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
     {
         return gods::run_alias(god, &arguments[1..]);
     }
+    if let Some(code) = cli_help::precheck(&arguments) {
+        return code;
+    }
+    if let Some(text) = cli_help::help_request(&arguments, human_output::language()) {
+        print!("{text}");
+        return ExitCode::SUCCESS;
+    }
     if let Some(family) = family_help_request(&arguments) {
         print_family_help(family);
         return ExitCode::SUCCESS;
@@ -363,12 +371,10 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
             update_discovery::run(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
-        Some("doctor" | "check-target") if !wants_json(&arguments) => {
-            match run_human(arguments.into_iter()) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(message) => human_output::error(&message),
-            }
-        }
+        Some("doctor" | "check-target") => match run_human(arguments.into_iter()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => human_output::error(&message),
+        },
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {
@@ -761,7 +767,7 @@ fn print_family_help(family: &str) {
 USAGE:"
     );
     for line in family_usage_lines(family) {
-        println!("{line}");
+        print!("{}", cli_help::wrap(line));
     }
 }
 
@@ -2315,10 +2321,11 @@ fn parse_hook(arguments: &[String]) -> Result<HookArguments, String> {
 fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
     match arguments.next().as_deref() {
         Some("doctor") => {
-            reject_extra_arguments(arguments)?;
+            reject_extra_arguments(without_json_output(arguments))?;
             doctor()
         }
         Some("check-target") => {
+            let mut arguments = without_json_output(arguments);
             let target = arguments
                 .next()
                 .ok_or_else(|| format!("missing target path\n\n{USAGE}"))?;
@@ -2330,7 +2337,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             Ok(())
         }
         Some("-h" | "--help") | None => {
-            print!("{USAGE}");
+            print!("{}", cli_help::top_help(human_output::language()));
             Ok(())
         }
         Some(command) => Err(format!("unknown command: {command}\n\n{USAGE}")),
@@ -2362,6 +2369,18 @@ fn version_output_for(product: &str, package: &str, release_date: &str) -> Strin
     }
 }
 
+/// `--output json` only selects the display; it is not an extra argument.
+fn without_json_output(arguments: impl Iterator<Item = String>) -> std::vec::IntoIter<String> {
+    let mut kept: Vec<String> = arguments.collect();
+    if let Some(index) = kept
+        .windows(2)
+        .position(|pair| pair[0] == "--output" && pair[1] == "json")
+    {
+        kept.drain(index..index + 2);
+    }
+    kept.into_iter()
+}
+
 fn reject_extra_arguments(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
     if let Some(argument) = arguments.next() {
         return Err(format!("unexpected argument: {argument}\n\n{USAGE}"));
@@ -2374,8 +2393,10 @@ fn doctor() -> Result<(), String> {
         env::current_dir().map_err(|error| format!("cannot read current directory: {error}"))?;
     let marker = source_marker_path(&current_directory);
 
-    // Release and install checks match this exact identity line.
-    println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
+    // Release and install checks match this exact identity line; JSON stays one document.
+    if !human_output::machine() {
+        println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
+    }
     emit_json_result(&ActionResult {
         schema_version: 1,
         action: "InspectInstallation",

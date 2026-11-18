@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_CONFIRMATION_BYTES: usize = 256 * 1024;
 
-const UPDATE_USAGE: &str = "\
+pub(crate) const UPDATE_USAGE: &str = "\
 Verify and activate a local Aigent Hive release bundle.
 
 USAGE:

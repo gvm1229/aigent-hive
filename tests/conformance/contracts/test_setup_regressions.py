@@ -618,9 +618,20 @@ class Phase1CliSurface(Phase1CliTestCase):
         )
 
         self.assertEqual(process.returncode, 0, process.stderr)
-        self.assertIn("hive setup", process.stdout)
-        self.assertIn("--validate", process.stdout)
-        self.assertIn("hive hook", process.stdout)
+        # The top-level help lists one line per command; syntax lives in `hive <command> --help`.
+        lines = process.stdout.splitlines()
+        self.assertTrue(any(line.startswith("  setup ") for line in lines), process.stdout)
+        self.assertTrue(any(line.startswith("  hook ") for line in lines), process.stdout)
+        self.assertIn("hive <", process.stdout)
+        setup = subprocess.run(
+            [str(self.hive_binary), "setup", "--help"],
+            cwd=self.work_root,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(setup.returncode, 0, setup.stderr)
+        self.assertIn("--validate", setup.stdout)
 
     def test_setup_help_lists_exact_supported_invocation_without_json_failure(
         self,

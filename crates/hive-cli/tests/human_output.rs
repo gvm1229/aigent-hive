@@ -96,7 +96,7 @@ fn every_command_family_defaults_to_human_errors_in_both_languages() {
 }
 
 #[test]
-fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
+fn doctor_and_target_are_readable_and_accept_json_output() {
     let root = secure_tempdir();
     let target = root.path().to_str().unwrap();
     for args in [vec!["doctor"], vec!["check-target", target]] {
@@ -117,10 +117,11 @@ fn doctor_and_target_are_readable_and_keep_their_prior_json_refusal() {
         let mut args = args;
         args.extend(["--output", "json"]);
         let output = run(&args, "ko");
-        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(output.status.code(), Some(0));
+        // The JSON form is one document: no identity line before it.
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(value["action"], "UnknownAction");
-        assert_eq!(value["code"], "hive.unknown-action");
+        assert_eq!(value["status"], "success");
+        assert_ne!(value["action"], "UnknownAction");
     }
 }
 
