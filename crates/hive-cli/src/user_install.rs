@@ -4068,7 +4068,8 @@ fn authenticated_user_inventory(
 /// A local `-dev` binary is intentionally not a public release identity. It may therefore use
 /// the currently installed, internally reproducible user manifest as its three-way base, but
 /// only after the ordinary manifest and live-byte checks in `validate_prior_ownership` run.
-/// Public stable and `-test[.N]` builds never enter this branch.
+/// Public stable and `-test[.N]` builds never enter this branch; they use the narrower
+/// `same_product_package_inventory` for another package of the same product version.
 fn developer_authenticated_user_inventory(
     host: UserHost,
     request: &InventoryAuthentication<'_>,
@@ -4099,7 +4100,18 @@ fn developer_authenticated_user_inventory(
 /// Authenticate a projection written by another package of the running product version, such as
 /// a numbered public test before its stable promotion. Every installed entry must name a path the
 /// running product owns with the same ownership and mode, so the replacement can only rewrite
-/// files the running product itself owns; paths added by the running product are allowed.
+/// files the running product itself owns; paths added by the running product are allowed. A path
+/// the running product dropped is accepted only as a managed file inside Hive's own `.hive/` tree
+/// (never knowledge or configuration), where retiring it cannot touch user-authored files.
+fn retirable_hive_tree_entry(entry: &UserOwnershipEntry) -> bool {
+    let path = Path::new(&entry.path);
+    is_managed_ownership(&entry.ownership)
+        && path.starts_with(".hive")
+        && !path.starts_with(".hive/knowledge")
+        && !path.starts_with(".hive/config")
+        && !entry.path.contains("..")
+}
+
 fn same_product_package_inventory(
     host: UserHost,
     request: &InventoryAuthentication<'_>,
@@ -4110,11 +4122,14 @@ fn same_product_package_inventory(
         .map(|entry| (entry.path.as_str(), entry))
         .collect::<BTreeMap<_, _>>();
     let same_layout = request.installed_entries.iter().all(|installed| {
-        current.get(installed.path.as_str()).is_some_and(|entry| {
-            installed.ownership == entry.ownership
-                && installed.executable == entry.executable
-                && installed.unix_mode == entry.unix_mode
-        })
+        current.get(installed.path.as_str()).map_or_else(
+            || retirable_hive_tree_entry(installed),
+            |entry| {
+                installed.ownership == entry.ownership
+                    && installed.executable == entry.executable
+                    && installed.unix_mode == entry.unix_mode
+            },
+        )
     });
     if request.product_version != env!("CARGO_PKG_VERSION")
         || (request.installed_host_version_range != host.version_range()
@@ -9304,6 +9319,34 @@ mod tests {
 
         let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("sibling");
         assert_eq!(hosts, ["codex"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_sibling_package_paths_dropped_from_hive_tree() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(
+            temporary.path(),
+            Some(".hive/marketplaces/codex/plugins/aigent-hive/skills/retired/SKILL.md"),
+        );
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("dropped path");
+        assert_eq!(hosts, ["codex"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_sibling_package_claiming_knowledge() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), Some(".hive/knowledge/Claims/user.md"));
+
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
     }
 
     #[test]
