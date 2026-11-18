@@ -1522,3 +1522,4 @@
 | [failed](runs/20261118T210248-5bfc2c29d009.md) | OV153-014·015·016 병합 뒤 Rust 전체 단위 시험 | b8dafbdd4723cecade1852ba4eb20ef3c2aebad3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T212519-7a7f8456b7c6.md) | OV153-014 단계 검토 반영: cargo test hive-core·hive-cli | 3e210fc01529bf59de6c6226b2aaac2757620ad3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T213116-5a0f45de4c15.md) | OV153-014 단계 검토 반영: 사용량·설정·Skill 계약 | 3e210fc01529bf59de6c6226b2aaac2757620ad3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T214055-4757d9fd43a7.md) | OV153 단계 검토 반영 뒤 Rust 전체 단위 시험 | 50eee283a454bdc04448ed3641860a2000d27a88 | Windows-11-10.0.26300-SP0 |
