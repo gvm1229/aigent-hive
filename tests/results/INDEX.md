@@ -1405,3 +1405,8 @@
 | [passed](runs/20261113T064157-a4b7edc85cb8.md) | Python conformance: integration | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T065503-1b3f7f292fc7.md) | Python conformance: release | bb4238aa8212c9d6a1210982d63a4d88506a7e0d | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261113T070715-79357959c673.md) | Python conformance: documentation | 82aab2a0caf184224484e20abdae32075f627f22 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261118T201555-c6b3fa2740d0.md) | OV153-014 사용량 제어 계약 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T201708-a14b305f0773.md) | OV153-014 hive-core·hive-cli 단위 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261118T202439-2f5312b2b847.md) | OV153-014 사용량·설정 계약 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T203147-9968be660869.md) | OV153-014 Skill 투영·정적 계약 재시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T203550-56c57025023c.md) | OV153-014 최종 hive-core·hive-cli 단위 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
