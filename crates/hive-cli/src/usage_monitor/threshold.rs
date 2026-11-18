@@ -183,7 +183,7 @@ pub(super) fn observe(
             threshold_percent: if block.threshold_percent == 0.0 {
                 0
             } else {
-                policy.threshold
+                policy.window_threshold(block.window)
             },
             confirmed: false,
             turn_digest: policy.turn_digest.clone(),
@@ -228,7 +228,7 @@ pub(super) fn handled(
             && receipt.target_digest == policy.target_digest
             && receipt.policy_digest == policy.policy_digest
             && receipt.control_digest == policy.control_digest
-            && receipt.threshold_percent == policy.threshold
+            && receipt.threshold_percent == policy.window_threshold(receipt.window)
             && snapshots.iter().any(|sample| {
                 sample.account_scope_digest == receipt.account_digest
                     && sample.quota_pool == receipt.quota_pool
@@ -252,6 +252,7 @@ mod tests {
             policy_digest: sha256_digest(&[threshold]),
             control_digest: "absent".into(),
             threshold,
+            guarded_windows: None,
             enabled: true,
             zero_enabled: true,
             turn_digest: Some(sha256_digest(b"first-turn")),
@@ -272,6 +273,70 @@ mod tests {
             resets_at_unix_seconds: 1000,
             source_confidence: SourceConfidence::High,
         }]
+    }
+
+    fn windows(session: f64, weekly: f64, at: u64) -> Vec<UsageSnapshot> {
+        let mut snapshots = sample(session, at);
+        let mut weekly_sample = snapshots[0].clone();
+        weekly_sample.quota_window = UsageWindow::Weekly;
+        weekly_sample.remaining_percent = weekly;
+        snapshots.push(weekly_sample);
+        snapshots
+    }
+
+    #[test]
+    fn monitor_checks_only_the_host_guarded_windows_with_their_own_floors() {
+        use hive_core::usage_guard::GuardedWindow;
+        let mut weekly_only = policy("weekly-only", 20);
+        weekly_only.guarded_windows =
+            Some(vec![GuardedWindow::new(UsageWindow::Weekly, 15).unwrap()]);
+        // An exhausted, unguarded 5-hour window neither stops nor counts as zero quota.
+        let mut state = MonitorState::new();
+        observe(
+            &mut state,
+            &[weekly_only.clone()],
+            &windows(0.0, 50.0, 100),
+            100,
+        );
+        assert!(state.incident.is_none());
+        assert_eq!(state.threshold_policy_errors, 0);
+        // The weekly window stops at its own 15% floor, not the legacy 20%.
+        observe(
+            &mut state,
+            &[weekly_only.clone()],
+            &windows(90.0, 16.0, 110),
+            110,
+        );
+        assert!(state.incident.is_none());
+        observe(
+            &mut state,
+            &[weekly_only.clone()],
+            &windows(90.0, 15.0, 120),
+            120,
+        );
+        assert_eq!(state.incident.as_ref().unwrap().reason, "usage-threshold");
+        assert_eq!(state.threshold_receipts[0].window, UsageWindow::Weekly);
+        assert_eq!(state.threshold_receipts[0].threshold_percent, 15);
+        state.threshold_receipts[0].confirmed = true;
+        assert!(handled(&state, &weekly_only, &windows(90.0, 14.0, 121)));
+        // Both windows: either one at its floor stops.
+        let mut both = policy("both", 20);
+        both.guarded_windows = Some(vec![
+            GuardedWindow::new(UsageWindow::Session, 30).unwrap(),
+            GuardedWindow::new(UsageWindow::Weekly, 10).unwrap(),
+        ]);
+        let mut state = MonitorState::new();
+        observe(&mut state, &[both.clone()], &windows(30.0, 90.0, 100), 100);
+        assert_eq!(state.threshold_receipts[0].window, UsageWindow::Session);
+        assert_eq!(state.threshold_receipts[0].threshold_percent, 30);
+        assert_eq!(both.window_threshold(UsageWindow::Weekly), 10);
+        assert_eq!(both.window_threshold(UsageWindow::Provider), 30);
+        // Legacy: no entry keeps the single threshold with session precedence.
+        let legacy = policy("legacy", 20);
+        assert_eq!(legacy.window_threshold(UsageWindow::Weekly), 20);
+        let mut state = MonitorState::new();
+        observe(&mut state, &[legacy], &windows(50.0, 5.0, 100), 100);
+        assert!(state.incident.is_none());
     }
 
     #[test]

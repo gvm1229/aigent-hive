@@ -463,8 +463,9 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
         .with_stop_remaining_percent(config.threshold)
         .map_err(|_| AdapterError::Safety("dispatch usage policy is invalid".to_owned()))?;
         if !matches!(
-            evaluate_guard_decision(
+            evaluate_host_decision(
                 &policy,
+                config.guarded_windows.as_deref(),
                 &snapshot.core_snapshots(),
                 now,
                 effective_enabled(&control, config.guard_enabled),
@@ -2109,23 +2110,6 @@ fn missing_measurement_next_action(config: &InstalledUsageConfig, windows: &[&st
     )
 }
 
-fn evaluate_guard_decision(
-    policy: &UsagePolicy,
-    snapshots: &[hive_core::usage_guard::UsageSnapshot],
-    now: i64,
-    threshold_enabled: bool,
-    zero_enabled: bool,
-) -> UsageDecision {
-    evaluate_host_decision(
-        policy,
-        None,
-        snapshots,
-        now,
-        threshold_enabled,
-        zero_enabled,
-    )
-}
-
 /// Apply the selected checks to the guarded windows only; `None` keeps legacy precedence.
 fn evaluate_host_decision(
     policy: &UsagePolicy,
@@ -3025,6 +3009,31 @@ fn guarded_windows(
     .map(Some)
 }
 
+/// One host's saved window choice as shown by `setup --show` and monitor status. Project
+/// overrides can still raise each floor for a registered project.
+pub(crate) fn host_window_summary(
+    guard: &crate::user_setup::UsageGuardPreferences,
+    host: &str,
+) -> serde_json::Value {
+    let legacy = || {
+        json!({"host":host,"mode":"legacy","selection":"session-then-weekly",
+            "threshold_remaining_percent":guard.stop_remaining_percent})
+    };
+    match guarded_windows(guard, host, None) {
+        Ok(Some(guarded)) => {
+            let windows = guard
+                .host_windows
+                .iter()
+                .find_map(|(selected, windows)| (selected.as_str() == host).then_some(windows));
+            json!({"host":host,"mode":"per-window",
+                "five_hour_limit":windows.map(|windows| windows.five_hour_limit),
+                "guard":windows.map(|windows| windows.guard),
+                "windows":guarded_windows_json(&guarded)})
+        }
+        Ok(None) | Err(_) => legacy(),
+    }
+}
+
 fn window_label(window: UsageWindow) -> &'static str {
     match window {
         UsageWindow::Session => "session",
@@ -3037,7 +3046,7 @@ fn guarded_windows_json(guarded: &[GuardedWindow]) -> serde_json::Value {
     json!(guarded
         .iter()
         .map(|entry| json!({"window":window_label(entry.window()),
-            "threshold_remaining_percent":entry.stop_threshold_percent()}))
+            "threshold_remaining_percent":entry.stop_remaining_percent()}))
         .collect::<Vec<_>>())
 }
 

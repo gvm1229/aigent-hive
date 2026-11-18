@@ -36,6 +36,7 @@ fn summarize(status: &Value, stopped: bool) -> Value {
     };
     json!({
         "configuration":if absent {"absent"} else if verified {"verified"} else {"unverified"},
+        "usage_windows":status["usage_windows"],
         "saved_enabled":status["verified_saved_selection"],"controller_state":state,
         "stop_verified":stopped,"monitoring_verified":status["monitoring_verified"],
         "configured_version":status["configured_monitor_version"],"running_version":status["running_monitor_version"],

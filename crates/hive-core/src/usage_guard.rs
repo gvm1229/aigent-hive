@@ -485,6 +485,12 @@ impl GuardedWindow {
         self.window
     }
 
+    /// Setup-approved percentage, as stored.
+    #[must_use]
+    pub const fn stop_remaining_percent(&self) -> u8 {
+        self.stop_threshold_percent
+    }
+
     /// Remaining percentage at or below which this window blocks.
     #[must_use]
     pub fn stop_threshold_percent(&self) -> f64 {

@@ -1212,6 +1212,15 @@ fn inspect_settings<R: BufRead, W: Write>(
                 .as_ref()
                 .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
         });
+    let usage_windows = config.map_or_else(Vec::new, |config| {
+        config
+            .selected_hosts
+            .iter()
+            .map(|host| {
+                crate::usage_control::host_window_summary(&config.usage_guard, host.as_str())
+            })
+            .collect::<Vec<_>>()
+    });
     let monitor = crate::usage_monitor::setup_status(root);
     let root_cap =
         crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
@@ -1252,7 +1261,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
             "feature_preferences":feature_preferences,"vector_runtime_verification":"not-performed",
-            "manual_usage_commands":manual_commands,
+            "manual_usage_commands":manual_commands,"usage_windows":usage_windows,
             "migration_preview":migration,"pending_questions":config.map_or_else(Vec::new, user_setup::migration::pending_questions)}),
         ),
         None,
@@ -1884,11 +1893,71 @@ mod tests {
             "not-configured"
         );
         assert_eq!(data["actual_monitor_state"]["sensor_queries"], 0);
+        assert_eq!(data["usage_windows"][0]["mode"], "legacy");
+        assert_eq!(data["usage_windows"][0]["threshold_remaining_percent"], 5);
+        assert_eq!(
+            data["actual_monitor_state"]["usage_windows"],
+            data["usage_windows"][0]
+        );
         assert_eq!(terminal.reader.position(), 0);
         assert_eq!(terminal.writer, Vec::<u8>::new());
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert!(!root.path().join(".hive/runtime").exists());
         assert!(!root.path().join(".hive/config/setup-progress").exists());
+    }
+
+    #[test]
+    fn show_and_monitor_status_report_the_same_per_host_windows() {
+        let root = tempfile::tempdir().unwrap();
+        let mut stored = fresh_answers();
+        stored["interface_language"] = json!("en");
+        stored["selected_hosts"] = json!(["codex", "claude"]);
+        stored["usage_guard"]["host_windows"] = json!({
+            "codex":{"five_hour_limit":false,"guard":"weekly","weekly_stop_remaining_percent":12}});
+        let bytes = serde_json::to_vec(&stored).unwrap();
+        user_setup::parse_and_validate_config(&bytes).unwrap();
+        let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let mut options = options(root.path());
+        options.show = true;
+        options.interaction.json = true;
+        let mut terminal = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let data = execute(&options, InteractionMode::NonInteractive, &mut terminal)
+            .unwrap()
+            .data
+            .unwrap();
+        let codex = &data["usage_windows"][0];
+        assert_eq!(codex["host"], "codex");
+        assert_eq!(codex["mode"], "per-window");
+        assert_eq!(
+            codex["windows"],
+            json!([{"window":"weekly","threshold_remaining_percent":12}])
+        );
+        assert_eq!(data["usage_windows"][1]["mode"], "legacy");
+        assert_eq!(data["actual_monitor_state"]["usage_windows"], *codex);
+        let mut text = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        display_preview(&stored, &mut text).unwrap();
+        let screen = String::from_utf8(text.writer).unwrap();
+        assert!(!screen.contains("Codex · Weekly threshold"));
+        stored["usage_guard"]["enforcement_enabled"] = json!(true);
+        let mut text = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        display_preview(&stored, &mut text).unwrap();
+        let screen = String::from_utf8(text.writer).unwrap();
+        assert!(screen.contains("Codex · Weekly threshold"), "{screen}");
+        assert!(screen.contains("Codex · 5-hour limit"));
     }
 
     #[test]
