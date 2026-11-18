@@ -9,13 +9,13 @@ summary: "기존 소진 보호의 이전 보존과 신규0.14.0 v2 기본 비활
 tags: [exhaustion, session, usage, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:1545e670dfd7be94e0d46f9e019d18c4489c2dfebb3c5e5ae7a3fd69d2b5b074"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:25c7e428f470d17ad43e96e8f379a1a5ac259dc7da7d3780927a38b9da7f3bdd"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
   - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
-  - "repo:crates/hive-core/src/usage_guard.rs#sha256:0e7c19b084c1cf3fe24b5626ba7683b23de6c679dc1b76de400738b77f04db3a"
+  - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/archive/plans/usage-defaults-0.14.0.md#sha256:61da2591b7e2adbd852472c1ccbab817e695ca424f0ae35f80bc196a77ea8d99"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:26f34a3f463b6cb2cf55da617e2c948406b73101dbe7d61e6a201e462f13a0cd"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:d7f959371462801c9122ee5b4983e0add521d18d5fd9a0060a75c36b43d56724"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862"
   - "repo:harness/skills/usage-guard/references/control.md#sha256:e5b4222c1cf23358d674230e8827da1db5de0f7527f55760727445140bb3d89a"
   - "repo:tests/results/public-zero-0.12.0-test.2.json#sha256:f64d29840b056f157c60f0a5f6556c2e5b62990beb8c9c6bfb3285b4aafd7354"

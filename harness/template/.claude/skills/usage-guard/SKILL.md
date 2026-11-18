@@ -130,7 +130,9 @@ replace the fixed executable and exact owned task, and refuse to report success 
 or fresh-observation verification fails. Disabled monitoring stays disabled.
 
 The running monitor shares the existing maximum global/project floor, selected usage window,
-current-session exclusions, and independent zero-quota protection. Children inherit their owning
+current-session exclusions, and independent zero-quota protection. With saved per-host window
+choices it checks only Codex's guarded windows, each at its own floor, exactly like preflight;
+`status` and `hive setup --scope user --show` report the same choice in `usage_windows`. Children inherit their owning
 conversation's policy. Unverified cwd/ownership is reported as unavailable, never replaced with
 another project's higher floor. A first valid reading already at/below the floor also stops the
 applicable active conversations. The notice states measured remaining quota, applied floor and

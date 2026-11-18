@@ -9,12 +9,12 @@ summary: "0.13.1 reset comparison excludes expired observations and prior-proces
 tags: [reset, session, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:1545e670dfd7be94e0d46f9e019d18c4489c2dfebb3c5e5ae7a3fd69d2b5b074"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5e8568062b3902e2ae075b2170b43c65c8ef176e916f0b9cf42bb3f4a20b3fa5"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:25c7e428f470d17ad43e96e8f379a1a5ac259dc7da7d3780927a38b9da7f3bdd"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5dce6f068cc25d0cfb9fc416b81e1373a7440112365b7cb292b04adf2d6c408b"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:6effcddaa5061365989f4ce449664b30f59bebc1eaf15f6fdf08f2d9e741a102"
-  - "repo:crates/hive-core/src/usage_guard.rs#sha256:0e7c19b084c1cf3fe24b5626ba7683b23de6c679dc1b76de400738b77f04db3a"
+  - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:f8b3f933a7275d5375d60aa08b30e1434e2a9c5037125708d5627269b78b210a"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:26f34a3f463b6cb2cf55da617e2c948406b73101dbe7d61e6a201e462f13a0cd"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:d7f959371462801c9122ee5b4983e0add521d18d5fd9a0060a75c36b43d56724"
   - "repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9"
   - "repo:docs/research/release-0.13.0.md#sha256:6b143f2aa5a5a0f4f6a484412470eef818af07151a983edfab5c3988e5cf7840"
   - "repo:docs/research/session-stop-0.12.1.md#sha256:50b5ba7baa1b9c2ed7bf96669115860655bb2fe0b7b5d7df7ac5fa628c650437"

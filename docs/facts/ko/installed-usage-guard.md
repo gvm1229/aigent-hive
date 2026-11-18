@@ -9,8 +9,8 @@ summary: "설정 대상 경계·앱 유지·잠금 없는 재개와 감시 상�
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:1545e670dfd7be94e0d46f9e019d18c4489c2dfebb3c5e5ae7a3fd69d2b5b074"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:26f34a3f463b6cb2cf55da617e2c948406b73101dbe7d61e6a201e462f13a0cd"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:25c7e428f470d17ad43e96e8f379a1a5ac259dc7da7d3780927a38b9da7f3bdd"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:d7f959371462801c9122ee5b4983e0add521d18d5fd9a0060a75c36b43d56724"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active

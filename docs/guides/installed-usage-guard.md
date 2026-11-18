@@ -54,6 +54,7 @@ Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 f
 - 평가: 보호하기로 고른 한도만 각자의 기준으로 확인. 고르지 않은 한도의 소진·측정 없음은 차단 사유 아님. 0%·초기화 보호도 고른 한도에만 적용. 프로젝트별 기준은 각 한도의 하한을 올림
 - 측정 없음: 고른 한도의 측정이 없으면 `hive.usage-unknown` 유지. 결과의 `missing_windows`와 문구가 빠진 한도를 표시하고 `next_action`이 세션 기록 설정·세션 해제·동의한 대체 조회를 안내
 - 세션 해제 뒤: `hive usage session --action disable --confirm-session-disable` 뒤 같은 연결의 `enforce`: 측정이 없어도 `hive.usage-session-bypassed`(종료 코드 0), 새 차단 기록 없음. `status`도 같은 판단. 측정된 0%는 0% 보호의 별도 해제 전까지 차단
+- 실행 중 감시(Codex): 시작 전 검사와 같은 앱별 선택·한도별 기준 적용. 앱 항목이 없으면 단일 기준. `hive usage monitor status`와 `hive setup --scope user --show`의 `usage_windows`에 같은 선택 표시
 - Codex 30일 한도: codex-cli 0.167의 43,200분 단일 창은 주간 자리의 긴 한도로 해석. 그 밖의 알 수 없는 창 길이는 계속 차단
 
 ## Quota Reset Guard
