@@ -18,6 +18,9 @@ Answer directly after the required pre-quick-answer gates complete.
   separate `$aigent-hive:knowledge-capture` completion gate review only that statement. Ordinary
   questions, greetings, acknowledgements, quick-answers, and agent inference remain write-free.
 - Keep the quick-answer proportionate to the question.
+- For a Hive command question, point to the CLI help instead of listing flags from memory:
+  `hive --help` lists commands by purpose, and `hive <command> --help` shows required and
+  optional options with examples. A mistyped command or option prints close suggestions.
 
 ## Boundary
 
