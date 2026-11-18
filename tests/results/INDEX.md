@@ -1519,3 +1519,4 @@
 | [passed](runs/20261118T203933-936a129152a3.md) | OV153-015 Python 계약: CLI 표면·Skill 투영(투영 동기화 뒤) | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T204821-24218bcdca7d.md) | OV153-014 감시 반영 hive-core·hive-cli 단위 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T205353-6d645efe0cee.md) | OV153-014 감시 반영 사용량·설정·Skill 계약 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261118T210248-5bfc2c29d009.md) | OV153-014·015·016 병합 뒤 Rust 전체 단위 시험 | b8dafbdd4723cecade1852ba4eb20ef3c2aebad3 | Windows-11-10.0.26300-SP0 |
