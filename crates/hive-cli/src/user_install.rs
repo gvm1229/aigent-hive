@@ -364,6 +364,16 @@ impl InstallError {
             | Self::Internal(message) => message,
         }
     }
+
+    fn with_suffix(self, suffix: &str) -> Self {
+        match self {
+            Self::Input(message) => Self::Input(message + suffix),
+            Self::Conflict(message) => Self::Conflict(message + suffix),
+            Self::Unsupported(message) => Self::Unsupported(message + suffix),
+            Self::Verification(message) => Self::Verification(message + suffix),
+            Self::Internal(message) => Self::Internal(message + suffix),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -738,15 +748,33 @@ fn execute_uninstall(
     }
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
+    let mut installed = Vec::new();
     for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
         let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
         let manifest = read_installed_manifest(&arguments.root_cap, &manifest_relative, host)?;
         let host_evidence = manifest.is_some()
             || owned_path_exists(&arguments.root_cap, host_uninstall_root(host))?;
-        if host_evidence {
-            remove_host_activation(host, runner)?;
+        installed.push((host, manifest_relative, manifest, host_evidence));
+    }
+    // Remove every host activation before deleting any Hive file, so a host that refuses
+    // deactivation leaves all projections and ownership manifests in place for a re-apply.
+    for (host, _, _, host_evidence) in &installed {
+        if *host_evidence {
+            remove_host_activation(*host, runner).map_err(|error| {
+                let restore = if removed_hosts.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "; Hive files were kept; restore the deactivated hosts with hive install --scope user --hosts {} --apply",
+                        removed_hosts.join(",")
+                    )
+                };
+                error.with_suffix(&restore)
+            })?;
             removed_hosts.push(host.as_str());
         }
+    }
+    for (_, manifest_relative, manifest, _) in installed {
         if let Some(manifest) = manifest {
             for entry in manifest.entries {
                 let path = PathBuf::from(entry.path);
@@ -857,12 +885,7 @@ fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result
                 "--scope",
                 "user",
             ],
-            &[
-                "plugin",
-                "marketplace",
-                "remove",
-                "aigent-hive",
-            ],
+            &["plugin", "marketplace", "remove", "aigent-hive"],
         ],
         UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
     };
@@ -9175,6 +9198,56 @@ mod tests {
         assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
     }
 
+    struct ClaudeRefusingRunner<'a> {
+        inner: &'a StatefulHostRunner,
+        qualified: Mutex<String>,
+    }
+
+    impl CommandRunner for ClaudeRefusingRunner<'_> {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            *self.qualified.lock().expect("qualified") = program.to_owned();
+            self.inner.qualify(program)
+        }
+
+        fn run(
+            &self,
+            program: &QualifiedExecutable,
+            arguments: &[&str],
+            timeout: Duration,
+            output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            if *self.qualified.lock().expect("qualified") == "claude" {
+                return Err(SensorError::Failed);
+            }
+            self.inner.run(program, arguments, timeout, output_limit)
+        }
+    }
+
+    #[test]
+    fn uninstall_keeps_every_hive_file_when_a_later_host_refuses_deactivation() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let install = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        }
+        let refusing = ClaudeRefusingRunner {
+            inner: &runner,
+            qualified: Mutex::new(String::new()),
+        };
+
+        let error = execute_uninstall(&uninstall_args(temporary.path()), &refusing)
+            .err()
+            .expect("claude refusal must stop uninstall");
+
+        assert!(error.message().contains(
+            "restore the deactivated hosts with hive install --scope user --hosts codex --apply"
+        ));
+        assert!(temporary.path().join(".hive/install/codex.json").exists());
+        assert!(temporary.path().join(".hive/install/claude.json").exists());
+    }
+
     #[test]
     fn claude_activation_removal_clears_a_marketplace_known_only_outside_user_settings() {
         let temporary = tempdir().expect("tempdir");
@@ -9204,7 +9277,9 @@ mod tests {
             fs::create_dir_all(root.join(path).parent().expect("parent")).expect("parent");
             fs::write(root.join(path), bytes).expect("extra bytes");
             manifest.entries.push(extra);
-            manifest.entries.sort_by(|left, right| left.path.cmp(&right.path));
+            manifest
+                .entries
+                .sort_by(|left, right| left.path.cmp(&right.path));
         }
         manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
         manifest.plan_digest = inventory_digest(
