@@ -142,6 +142,72 @@ impl UsageProtection {
     }
 }
 
+/// Quota windows that one host's protection checks.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GuardedWindows {
+    /// Only the 5-hour rolling window.
+    FiveHour,
+    /// Only the weekly window.
+    Weekly,
+    /// Both windows, each against its own threshold.
+    Both,
+}
+
+/// One host's answers to the per-host usage window questions.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostUsageWindows {
+    /// Whether the host subscription has a 5-hour limit.
+    pub five_hour_limit: bool,
+    /// Windows that protection checks. Without a 5-hour limit only `weekly` is valid.
+    pub guard: GuardedWindows,
+    /// Remaining-percent floor for the 5-hour window, present only when it is guarded.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub five_hour_stop_remaining_percent: Option<u8>,
+    /// Remaining-percent floor for the weekly window, present only when it is guarded.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weekly_stop_remaining_percent: Option<u8>,
+}
+
+impl HostUsageWindows {
+    /// Whether the 5-hour window is guarded.
+    #[must_use]
+    pub const fn five_hour_guarded(&self) -> bool {
+        matches!(self.guard, GuardedWindows::FiveHour | GuardedWindows::Both)
+    }
+
+    /// Whether the weekly window is guarded.
+    #[must_use]
+    pub const fn weekly_guarded(&self) -> bool {
+        matches!(self.guard, GuardedWindows::Weekly | GuardedWindows::Both)
+    }
+
+    /// Reject a selection that the setup questions cannot produce.
+    ///
+    /// # Errors
+    /// Returns a message without echoing the stored values.
+    pub fn validate(&self) -> Result<(), String> {
+        if !self.five_hour_limit && self.guard != GuardedWindows::Weekly {
+            return Err("a host without a 5-hour limit can guard only the weekly window".into());
+        }
+        let matches = |guarded: bool, threshold: Option<u8>| {
+            threshold.map_or(!guarded, |value| guarded && value <= 99)
+        };
+        if !matches(
+            self.five_hour_guarded(),
+            self.five_hour_stop_remaining_percent,
+        ) || !matches(self.weekly_guarded(), self.weekly_stop_remaining_percent)
+        {
+            return Err(
+                "each guarded usage window needs one threshold from 0 to 99, and only guarded windows have one"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+}
+
 /// Meaning of a stored choice; never an execution authorization.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -393,6 +459,25 @@ pub fn reconcile_decisions(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn host_windows_accept_only_question_shaped_selections() {
+        let both: HostUsageWindows = serde_json::from_value(json!({"five_hour_limit":true,
+            "guard":"both","five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10}))
+        .unwrap();
+        assert!(both.validate().is_ok());
+        assert!(both.five_hour_guarded() && both.weekly_guarded());
+        for invalid in [
+            json!({"five_hour_limit":false,"guard":"five-hour","five_hour_stop_remaining_percent":5}),
+            json!({"five_hour_limit":true,"guard":"both","weekly_stop_remaining_percent":5}),
+            json!({"five_hour_limit":true,"guard":"weekly","weekly_stop_remaining_percent":5,
+                "five_hour_stop_remaining_percent":5}),
+            json!({"five_hour_limit":false,"guard":"weekly","weekly_stop_remaining_percent":100}),
+        ] {
+            let windows: HostUsageWindows = serde_json::from_value(invalid).unwrap();
+            assert!(windows.validate().is_err());
+        }
+    }
 
     #[test]
     fn fresh_policy_never_senses_or_interrupts_for_notices() {
