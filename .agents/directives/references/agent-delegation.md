@@ -5,8 +5,8 @@ Repository agent rules (maintainer, 2026-11-12). Items marked **maintainer PC** 
 ## Roles and launch
 
 - An orchestrator/executor split is allowed: one host plans and reviews; Codex executes heavy work.
-- **Maintainer PC:** launch Codex through `python C:/Users/hojin/.claude/scripts/codex-run.py --brief <file> --workdir <dir> --log <log> --report <report>`; the watchdog runs `codex exec -m gpt-6.1-sol --dangerously-bypass-approvals-and-sandbox -c service_tier="priority"`. The default sandbox cannot read its own PID for 07 or write `.agents/work/active-sessions/`.
-- Use `gpt-6.1-sol`. Fast mode (`service_tier = "priority"`) is allowed. Codex ULTRAFAST is prohibited: high token use and no support in the maintainer's GPT plan. Never use Claude fast mode.
+- **Maintainer PC:** launch Codex through `python C:/Users/hojin/.claude/scripts/codex-run.py --brief <file> --workdir <dir> --log <log> --report <report> --model gpt-6-luna`; the watchdog runs `codex exec -m <model> --dangerously-bypass-approvals-and-sandbox -c service_tier="priority"`. The default sandbox cannot read its own PID for 07 or write `.agents/work/active-sessions/`.
+- Use `gpt-6-luna`, the Codex config default; on 2026-11-19 Codex rejected `gpt-6.1-sol` for ChatGPT sign-in ("not supported when using Codex with a ChatGPT account"). Fast mode (`service_tier = "priority"`) is allowed. Codex ULTRAFAST is prohibited: high token use and no support in the maintainer's GPT plan. Never use Claude fast mode.
 - Official `codex exec` is allowed; subscription-account `claude -p` headless print mode is prohibited. Codex must use the maintainer's subscribed ChatGPT sign-in; never inspect credential files to check it.
 - For 07 preflight, `--user-root` is the HOME directory, e.g. `C:/Users/hojin` on the **maintainer PC**, never `~/.hive`; use the exact executor PID/session and target worktree.
 - Write briefs with quoted heredocs (PowerShell: literal here-strings); Windows backslash paths break string literals. Executors fix failures caused by their edits, including stale hashes, links and indexes; stop only the work dependent on out-of-scope failures, subject to 01/07 stops.
