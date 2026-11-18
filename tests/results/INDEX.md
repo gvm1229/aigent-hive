@@ -1410,3 +1410,5 @@
 | [failed](runs/20261118T202439-2f5312b2b847.md) | OV153-014 사용량·설정 계약 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T203147-9968be660869.md) | OV153-014 Skill 투영·정적 계약 재시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T203550-56c57025023c.md) | OV153-014 최종 hive-core·hive-cli 단위 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T204821-24218bcdca7d.md) | OV153-014 감시 반영 hive-core·hive-cli 단위 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T205353-6d645efe0cee.md) | OV153-014 감시 반영 사용량·설정·Skill 계약 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |
