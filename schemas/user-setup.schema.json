@@ -299,6 +299,47 @@
           },
           "default": {}
         },
+        "host_windows": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "codex",
+              "claude",
+              "antigravity"
+            ]
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "five_hour_limit",
+              "guard"
+            ],
+            "properties": {
+              "five_hour_limit": {
+                "type": "boolean"
+              },
+              "guard": {
+                "enum": [
+                  "five-hour",
+                  "weekly",
+                  "both"
+                ]
+              },
+              "five_hour_stop_remaining_percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              },
+              "weekly_stop_remaining_percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            }
+          },
+          "default": {}
+        },
         "discord": {
           "type": "object",
           "additionalProperties": false,
@@ -568,6 +609,47 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 99
+          },
+          "default": {}
+        },
+        "host_windows": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "codex",
+              "claude",
+              "antigravity"
+            ]
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "five_hour_limit",
+              "guard"
+            ],
+            "properties": {
+              "five_hour_limit": {
+                "type": "boolean"
+              },
+              "guard": {
+                "enum": [
+                  "five-hour",
+                  "weekly",
+                  "both"
+                ]
+              },
+              "five_hour_stop_remaining_percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              },
+              "weekly_stop_remaining_percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            }
           },
           "default": {}
         },

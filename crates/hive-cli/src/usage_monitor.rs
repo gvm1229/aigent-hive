@@ -502,8 +502,20 @@ fn monitor_status(root: &PinnedTarget) -> Result<Value, AdapterError> {
         "verified_saved_selection":selection.as_ref().ok().copied().flatten(),
         "selection_error":selection.as_ref().err().map(AdapterError::message),
         "disable":load::<Value>(root, transition::JOURNAL)?,
-        "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false}),
+        "scope":"local-windows-codex","resume_lock":false,"server_billing_interruption_verified":false,
+        "usage_windows":codex_usage_windows(root)}),
     )
+}
+
+/// The same per-host window choice that preflight applies to Codex, or null when unreadable.
+fn codex_usage_windows(root: &PinnedTarget) -> Value {
+    root.read_optional(Path::new(".hive/config/user-setup.yml"), 65536)
+        .ok()
+        .flatten()
+        .and_then(|bytes| crate::user_setup::parse_and_validate_installed_config(&bytes).ok())
+        .map_or(Value::Null, |config| {
+            crate::usage_control::host_window_summary(&config.usage_guard, "codex")
+        })
 }
 
 fn configuration(root: &Path) -> Result<Configuration, AdapterError> {

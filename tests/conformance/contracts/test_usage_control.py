@@ -1583,9 +1583,12 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         binding = ("--target", str(self.consumer), "--session-id", "session-bypass", "--process-id", "903")
         unknown, unknown_result = self.invoke("usage", "enforce", *binding,
                                              extra_environment={"PATH": str(empty_path)})
-        self.assertEqual(unknown.returncode, 3, unknown_result)
+        # A session opt-out turns a missing measurement into a non-blocking result without a halt.
+        self.assertEqual(unknown.returncode, 0, unknown_result)
         self.assertTrue(unknown_result["data"]["zero_quota_guard_enabled"])
-        self.assertEqual(unknown_result["code"], "hive.usage-unknown")
+        self.assertEqual(unknown_result["code"], "hive.usage-session-bypassed")
+        self.assertFalse(unknown_result["data"]["observation_available"])
+        self.assertFalse(any("halt" in path for path in unknown_result["changed_paths"]))
         opted_out, opt_out_result = self.invoke("usage", "session", *binding,
             "--action", "disable-zero-quota-guard", "--confirm-zero-quota-guard-disable")
         self.assertEqual(opted_out.returncode, 0, opt_out_result)
@@ -1623,6 +1626,11 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "enable",
         )
         self.assertEqual(enabled.returncode, 0, enabled.stderr)
+        # The non-blocking unknown kept the latched measurement as the reset baseline, so the
+        # first recheck reports the increase once; the next request rechecks normally.
+        reset, reset_result = self.invoke("usage", "enforce", *binding, sensor_case="allow")
+        self.assertEqual(reset.returncode, 3, reset_result)
+        self.assertEqual(reset_result["code"], "hive.usage-reset")
         blocked, blocked_result = self.invoke(
             "usage",
             "enforce",

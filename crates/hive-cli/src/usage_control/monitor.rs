@@ -1,13 +1,15 @@
 //! Policy sharing and process-bound overrides for the opt-in live monitor.
 use super::{
     bind_runtime_session, effective_enabled, effective_policy_digest, effective_zero_quota_enabled,
-    evaluate_guard_decision, load_control, read_effective_config, AdapterError, EnforceArguments,
+    evaluate_host_decision, load_control, read_effective_config, AdapterError, EnforceArguments,
     InstalledUsageConfig, LoadedControl, OverrideState, ParsedBinding, Path, PathBuf, PinnedTarget,
     SessionBinding,
 };
 use hive_core::{
     sha256_digest,
-    usage_guard::{UsageBlock, UsageDecision, UsagePolicy, UsageSnapshot},
+    usage_guard::{
+        GuardedWindow, UsageBlock, UsageDecision, UsagePolicy, UsageSnapshot, UsageWindow,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +21,8 @@ pub(crate) struct MonitorPolicy {
     pub policy_digest: String,
     pub control_digest: String,
     pub threshold: u8,
+    /// The host's chosen windows, shared with preflight; `None` keeps `threshold` for all.
+    pub guarded_windows: Option<Vec<GuardedWindow>>,
     pub enabled: bool,
     pub zero_enabled: bool,
     pub turn_digest: Option<String>,
@@ -59,6 +63,7 @@ fn from_config(
             .bytes()
             .map_or_else(|| "absent".into(), sha256_digest),
         threshold: config.threshold,
+        guarded_windows: config.guarded_windows.clone(),
         enabled: effective_enabled(
             loaded,
             config
@@ -152,6 +157,30 @@ pub(crate) fn monitor_policy(
     from_config(&config, &binding, &loaded, &target).map(Some)
 }
 
+impl MonitorPolicy {
+    /// Floor applied to one window: its own guarded threshold, the strictest guarded threshold
+    /// for a provider-defined window, or the single legacy threshold.
+    pub(crate) fn window_threshold(&self, window: UsageWindow) -> u8 {
+        self.guarded_windows
+            .as_deref()
+            .map_or(self.threshold, |guarded| {
+                guarded
+                    .iter()
+                    .find(|entry| entry.window() == window)
+                    .map_or_else(
+                        || {
+                            guarded
+                                .iter()
+                                .map(GuardedWindow::stop_remaining_percent)
+                                .max()
+                                .unwrap_or(self.threshold)
+                        },
+                        GuardedWindow::stop_remaining_percent,
+                    )
+            })
+    }
+}
+
 pub(crate) fn evaluate_monitor_policy(
     policy: &MonitorPolicy,
     snapshots: &[UsageSnapshot],
@@ -168,8 +197,9 @@ pub(crate) fn evaluate_monitor_policy(
     )
     .with_stop_remaining_percent(policy.threshold)
     .map_err(|_| AdapterError::Safety("monitor-threshold-invalid".into()))?;
-    match evaluate_guard_decision(
+    match evaluate_host_decision(
         &core,
+        policy.guarded_windows.as_deref(),
         snapshots,
         i64::try_from(at).unwrap_or(i64::MAX),
         policy.enabled,

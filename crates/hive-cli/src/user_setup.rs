@@ -2206,6 +2206,9 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
+    for windows in config.usage_guard.host_windows.values() {
+        windows.validate().map_err(SetupError::Input)?;
+    }
     if config.schema_version == 1
         && !config.usage_guard.projection_enabled()
         && config.usage_guard.codexbar_fallback_enabled

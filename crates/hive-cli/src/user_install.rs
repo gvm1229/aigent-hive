@@ -9683,6 +9683,7 @@ mod tests {
                 policy: None,
                 discord: DiscordGuardPreferences::default(),
                 project_overrides: BTreeMap::new(),
+                host_windows: BTreeMap::new(),
             },
             preference_decisions: BTreeMap::new(),
         };

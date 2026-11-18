@@ -1464,6 +1464,36 @@
 | [running](runs/20261114T082307-9be32cda089c.md) | Python conformance: documentation, security, contract, integration, release | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261114T083216-f32651e099f3.md) | 개발 검증: uv.EXE | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261114T083333-b92dc9c75ec0.md) | 개발 검증: uv.EXE | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T083714-2966d1bd8f16.md) | 개발 검증: cargo.EXE | 661d8fb6abc0585fe1620eeb0a6eb05aaf931eb6 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T083748-649e011c7631.md) | 개발 검증: cargo.EXE | 661d8fb6abc0585fe1620eeb0a6eb05aaf931eb6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084450-727073715623.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084522-6034128b6730.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084606-761a52e01a17.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T085425-84c56e614dba.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T085428-b2ffda000dea.md) | Python conformance: documentation, security, contract, integration, release | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092456-6738637ba09b.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092618-11db2cbe1e43.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092853-00aee2765bfb.md) | Python conformance: integration | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T094736-ce33fbe40ac7.md) | Python conformance: release | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T095142-0f826aef571e.md) | Python conformance: documentation | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T101913-d6e0b8d0b06e.md) | Python conformance: documentation | 7cb80963864f11e979e5663ea0a49ea05aff95c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T131345-45663a12d5c3.md) | Python conformance: documentation | a819c585766708ca7b1a53750f51c61f1d9eecec | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261114T191809-a4cd20c4b9d3.md) | Python conformance: documentation | 68b5fd651b67b4bb7d9863c55e732fdfa7221f60 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T235259-1c696fe7e4bb.md) | Python conformance: documentation | 7467e3b5b1a0de9e6364ac52e4b0e936a2f4368d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T062431-a0d1d769e33f.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T062918-6ccdbbc0e0ce.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T063149-d020b7e47f48.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T065552-d8f40903d890.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T072904-0bf4eb9ccbc3.md) | Python conformance: documentation | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T073020-034eff478e4a.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T073300-767525e90497.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T075406-dc231e04de7a.md) | Python conformance: security | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T083428-cafa91811588.md) | Python conformance: documentation | 2e3dfb9acdc878719132c5420f6cdf561b0eec36 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T083550-763dce5626db.md) | Python conformance: integration | 2e3dfb9acdc878719132c5420f6cdf561b0eec36 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T143249-b15ca502da74.md) | Python conformance: documentation | 77dd6c104fbfafd8b5f229c6553e597712d50664 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T150545-1bccfa97cdd8.md) | Python conformance: release | 9b01a015bef027be464ab6d08139409419343815 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T164236-3f3d283d6fcd.md) | Python conformance: documentation | eb159bfdd6b0b32bec8282d673c2c357563b08f4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T173832-d9fe5e356e88.md) | Python conformance: documentation | 7730d74b258c6a5b79c6a23c5ff78cfd8f9bc500 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261115T175150-0c60ff9927ed.md) | Python conformance: release | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [failed](runs/20261115T175457-9b8f4816021c.md) | Python conformance: release | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [failed](runs/20261115T175617-8b56decacd48.md) | Python conformance: documentation | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
@@ -1506,9 +1536,16 @@
 | [failed](runs/20261116T203116-1591e6230f66.md) | Python conformance: contract | 6997a3f80a72ff9d2f7b45b52052e14252b36c8d | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [passed](runs/20261116T205610-9f9923f51bf2.md) | Python conformance: release | 6997a3f80a72ff9d2f7b45b52052e14252b36c8d | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [passed](runs/20261116T223458-f5e81b0370ad.md) | Python conformance: documentation | e82cf758e6fc9682e0a9714e84612985d7ae345d | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
+| [failed](runs/20261118T201555-c6b3fa2740d0.md) | OV153-014 사용량 제어 계약 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T201708-a14b305f0773.md) | OV153-014 hive-core·hive-cli 단위 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261118T201721-86341e8cb403.md) | OV153-015 hive-cli 전체 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T201901-3df85963bb8b.md) | OV153-015 hive-cli 전체 시험(전용 빌드 폴더) | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261118T202439-2f5312b2b847.md) | OV153-014 사용량·설정 계약 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261118T202505-7636e6dd29cc.md) | OV153-015 Python 계약: CLI 표면·Skill 투영 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261118T202924-c967ede15a17.md) | OV153-015 Python 계약: CLI 표면·Skill 투영(재빌드 뒤) | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T203147-9968be660869.md) | OV153-014 Skill 투영·정적 계약 재시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T203323-b1ce526d4740.md) | OV153-015 최종 Rust 시험: hive-cli·hive-projection·hive-render | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T203550-56c57025023c.md) | OV153-014 최종 hive-core·hive-cli 단위 시험 | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T203933-936a129152a3.md) | OV153-015 Python 계약: CLI 표면·Skill 투영(투영 동기화 뒤) | cd6c64ddd209a8de2222748e7589b9a9fc7a3c20 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T204821-24218bcdca7d.md) | OV153-014 감시 반영 hive-core·hive-cli 단위 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T205353-6d645efe0cee.md) | OV153-014 감시 반영 사용량·설정·Skill 계약 시험 | bae5fde839291b4f539c0a6d6810886566e45e04 | Windows-11-10.0.26300-SP0 |

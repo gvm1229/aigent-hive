@@ -161,6 +161,8 @@ impl UsagePolicy {
 pub enum UsagePolicyError {
     /// The setup-approved stop threshold must be in `0..=99`.
     StopThresholdOutOfRange { value: u8 },
+    /// Only session and weekly windows can be selected for guarding.
+    UnguardableWindow,
 }
 
 /// A typed reason that automatic continuation cannot safely be decided.
@@ -448,6 +450,173 @@ pub fn evaluate_usage(
     })
 }
 
+/// One cadence window that the user chose to guard, with its own stop threshold.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct GuardedWindow {
+    window: UsageWindow,
+    stop_threshold_percent: u8,
+}
+
+impl GuardedWindow {
+    /// Guard a session or weekly window at a setup-approved percentage.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UsagePolicyError::StopThresholdOutOfRange`] unless the percentage is in
+    /// `0..=99`, or [`UsagePolicyError::UnguardableWindow`] for a provider-defined window.
+    pub fn new(window: UsageWindow, stop_threshold_percent: u8) -> Result<Self, UsagePolicyError> {
+        if window == UsageWindow::Provider {
+            return Err(UsagePolicyError::UnguardableWindow);
+        }
+        if stop_threshold_percent > 99 {
+            return Err(UsagePolicyError::StopThresholdOutOfRange {
+                value: stop_threshold_percent,
+            });
+        }
+        Ok(Self {
+            window,
+            stop_threshold_percent,
+        })
+    }
+
+    /// The guarded window.
+    #[must_use]
+    pub const fn window(&self) -> UsageWindow {
+        self.window
+    }
+
+    /// Setup-approved percentage, as stored.
+    #[must_use]
+    pub const fn stop_remaining_percent(&self) -> u8 {
+        self.stop_threshold_percent
+    }
+
+    /// Remaining percentage at or below which this window blocks.
+    #[must_use]
+    pub fn stop_threshold_percent(&self) -> f64 {
+        f64::from(self.stop_threshold_percent)
+    }
+}
+
+/// Keep only the measurements of guarded windows, so that unguarded windows never block.
+///
+/// Every quota pool must report every guarded window. A pool that reports only a
+/// provider-defined window keeps it, because its cadence is not asserted.
+///
+/// # Errors
+///
+/// Returns [`UsageUnknownReason::MissingWindow`] naming the first guarded window without a
+/// measurement. An empty `guarded` slice is treated as missing weekly data.
+pub fn select_guarded_snapshots(
+    guarded: &[GuardedWindow],
+    snapshots: &[UsageSnapshot],
+) -> Result<Vec<UsageSnapshot>, UsageUnknownReason> {
+    let first = guarded
+        .first()
+        .map_or(UsageWindow::Weekly, GuardedWindow::window);
+    let pools = snapshots
+        .iter()
+        .map(raw_quota_pool)
+        .collect::<BTreeSet<_>>();
+    if pools.is_empty() || guarded.is_empty() {
+        return Err(UsageUnknownReason::MissingWindow { window: first });
+    }
+    for pool in pools {
+        let in_pool = |window| {
+            snapshots
+                .iter()
+                .any(|snapshot| raw_quota_pool(snapshot) == pool && snapshot.quota_window == window)
+        };
+        if in_pool(UsageWindow::Provider) {
+            continue;
+        }
+        if let Some(missing) = guarded.iter().find(|entry| !in_pool(entry.window)) {
+            return Err(UsageUnknownReason::MissingWindow {
+                window: missing.window,
+            });
+        }
+    }
+    Ok(snapshots
+        .iter()
+        .filter(|snapshot| {
+            snapshot.quota_window == UsageWindow::Provider
+                || guarded
+                    .iter()
+                    .any(|entry| entry.window == snapshot.quota_window)
+        })
+        .cloned()
+        .collect())
+}
+
+/// Evaluate each guarded window against its own threshold.
+///
+/// `snapshots` should come from [`select_guarded_snapshots`]. Unlike [`evaluate_usage`], no
+/// window takes precedence: every guarded window must be valid and above its threshold. A
+/// provider-defined window uses the strictest guarded threshold.
+#[must_use]
+pub fn evaluate_guarded_usage(
+    policy: &UsagePolicy,
+    guarded: &[GuardedWindow],
+    snapshots: &[UsageSnapshot],
+    now_unix_seconds: i64,
+) -> UsageDecision {
+    let selected = match select_guarded_snapshots(guarded, snapshots) {
+        Ok(selected) => selected,
+        Err(reason) => return UsageDecision::Unknown(reason),
+    };
+    let strictest = guarded
+        .iter()
+        .map(GuardedWindow::stop_threshold_percent)
+        .fold(0.0, f64::max);
+    let mut blocked: Option<UsageBlock> = None;
+    for snapshot in &selected {
+        let pool = raw_quota_pool(snapshot);
+        if let Err(reason) = unique_snapshot(&selected, pool, snapshot.quota_window) {
+            return UsageDecision::Unknown(reason);
+        }
+        if snapshot.quota_window != UsageWindow::Provider
+            && selected.iter().any(|other| {
+                raw_quota_pool(other) == pool && other.quota_window == UsageWindow::Provider
+            })
+        {
+            return UsageDecision::Unknown(UsageUnknownReason::ConflictingWindowKinds {
+                quota_pool: pool.to_owned(),
+            });
+        }
+        if let Some(reason) = validate_snapshot(policy, snapshot, now_unix_seconds) {
+            return UsageDecision::Unknown(reason);
+        }
+        let threshold = guarded
+            .iter()
+            .find(|entry| entry.window == snapshot.quota_window)
+            .map_or(strictest, GuardedWindow::stop_threshold_percent);
+        if snapshot.remaining_percent <= threshold
+            && blocked
+                .as_ref()
+                .is_none_or(|block| snapshot.remaining_percent < block.remaining_percent)
+        {
+            blocked = Some(UsageBlock {
+                window: snapshot.quota_window,
+                remaining_percent: snapshot.remaining_percent,
+                threshold_percent: threshold,
+            });
+        }
+    }
+    if let Some(block) = blocked {
+        return UsageDecision::Block(block);
+    }
+    let policy_expiry = now_unix_seconds.saturating_add(policy.permit_deadline_seconds());
+    UsageDecision::Allow(UsagePermit {
+        expires_at_unix_seconds: selected
+            .iter()
+            .map(|snapshot| snapshot.expires_at_unix_seconds)
+            .min()
+            .unwrap_or(policy_expiry)
+            .min(policy_expiry),
+        consumed: false,
+    })
+}
+
 /// Evaluate exhaustion independently of the ordinary threshold; the caller selects this check.
 /// Every supplied quota window is checked, including a weekly window hidden by session precedence.
 #[must_use]
@@ -681,12 +850,90 @@ fn validate_monotonicity(
 #[cfg(test)]
 mod tests {
     use super::{
-        detect_usage_reset, evaluate_observation_only, evaluate_usage, evaluate_zero_quota,
-        SourceConfidence, UsageDecision, UsagePermitError, UsagePolicy, UsagePolicyError,
-        UsageSnapshot, UsageUnknownReason, UsageWindow,
+        detect_usage_reset, evaluate_guarded_usage, evaluate_observation_only, evaluate_usage,
+        evaluate_zero_quota, select_guarded_snapshots, GuardedWindow, SourceConfidence,
+        UsageDecision, UsagePermitError, UsagePolicy, UsagePolicyError, UsageSnapshot,
+        UsageUnknownReason, UsageWindow,
     };
 
     const NOW: i64 = 1_000;
+
+    fn guard(window: UsageWindow, threshold: u8) -> GuardedWindow {
+        GuardedWindow::new(window, threshold).unwrap()
+    }
+
+    #[test]
+    fn guarded_windows_ignore_unguarded_exhaustion_and_missing_data() {
+        let weekly = [guard(UsageWindow::Weekly, 10)];
+        // A: the 5-hour window is exhausted but only weekly is guarded.
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &weekly, &pair(0.0, 50.0), NOW),
+            UsageDecision::Allow(_)
+        ));
+        let selected = select_guarded_snapshots(&weekly, &pair(0.0, 50.0)).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert!(matches!(
+            evaluate_zero_quota(&policy(), &selected, NOW),
+            UsageDecision::Allow(_)
+        ));
+        // A missing unguarded session measurement does not matter.
+        let weekly_only = [snapshot(UsageWindow::Weekly, 50.0)];
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &weekly, &weekly_only, NOW),
+            UsageDecision::Allow(_)
+        ));
+        // A guarded weekly window at its threshold blocks.
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &weekly, &pair(90.0, 10.0), NOW),
+            UsageDecision::Block(block) if block.window == UsageWindow::Weekly
+        ));
+    }
+
+    #[test]
+    fn both_windows_use_their_own_thresholds_without_session_precedence() {
+        let both = [
+            guard(UsageWindow::Session, 30),
+            guard(UsageWindow::Weekly, 10),
+        ];
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &both, &pair(31.0, 11.0), NOW),
+            UsageDecision::Allow(_)
+        ));
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &both, &pair(30.0, 90.0), NOW),
+            UsageDecision::Block(block) if block.window == UsageWindow::Session
+                && (block.threshold_percent - 30.0).abs() < f64::EPSILON
+        ));
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &both, &pair(90.0, 10.0), NOW),
+            UsageDecision::Block(block) if block.window == UsageWindow::Weekly
+                && (block.threshold_percent - 10.0).abs() < f64::EPSILON
+        ));
+    }
+
+    #[test]
+    fn a_missing_guarded_window_is_named() {
+        let five_hour = [guard(UsageWindow::Session, 20)];
+        for snapshots in [vec![], vec![snapshot(UsageWindow::Weekly, 80.0)]] {
+            assert!(matches!(
+                evaluate_guarded_usage(&policy(), &five_hour, &snapshots, NOW),
+                UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
+                    window: UsageWindow::Session
+                })
+            ));
+        }
+        let mut stale = pair(90.0, 90.0);
+        stale[0].expires_at_unix_seconds = NOW;
+        assert!(matches!(
+            evaluate_guarded_usage(&policy(), &five_hour, &stale, NOW),
+            UsageDecision::Unknown(UsageUnknownReason::StaleMeasurement { .. })
+        ));
+        assert_eq!(
+            GuardedWindow::new(UsageWindow::Provider, 10),
+            Err(UsagePolicyError::UnguardableWindow)
+        );
+        assert!(GuardedWindow::new(UsageWindow::Weekly, 100).is_err());
+    }
 
     #[test]
     fn reset_observation_validation_does_not_apply_a_threshold_or_zero_stop() {
