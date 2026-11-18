@@ -1335,8 +1335,6 @@ pub(super) fn reconcile_claude_marketplace(
                 "marketplace",
                 "remove",
                 "aigent-hive",
-                "--scope",
-                "user",
             ],
             HostMutation::ClaudeMarketplaceAdded,
             &current,

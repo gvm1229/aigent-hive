@@ -862,8 +862,6 @@ fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result
                 "marketplace",
                 "remove",
                 "aigent-hive",
-                "--scope",
-                "user",
             ],
         ],
         UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
@@ -9175,6 +9173,17 @@ mod tests {
             .expect("managed entry");
         fs::write(temporary.path().join(&protected.path), b"tampered\n").expect("tamper");
         assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    #[test]
+    fn claude_activation_removal_clears_a_marketplace_known_only_outside_user_settings() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+
+        remove_host_activation(UserHost::Claude, &runner).expect("known-list marketplace removed");
+
+        assert!(!*runner.marketplace_installed.lock().expect("marketplace"));
     }
 
     fn rewrite_as_sibling_package(root: &Path, extra_path: Option<&str>) {

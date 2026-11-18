@@ -221,8 +221,6 @@ fn transitions(before: &HostStateSnapshot) -> Vec<(&'static [&'static str], Host
                         "marketplace",
                         "remove",
                         "aigent-hive",
-                        "--scope",
-                        "user",
                     ][..],
                     HostStateSnapshot::Claude(state),
                 ));
